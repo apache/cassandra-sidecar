@@ -78,14 +78,14 @@ dependencies {
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
 
     compileOnly('org.jetbrains:annotations:23.0.0')
-    compileOnly(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
+    compileOnly(group: 'io.netty', name: 'netty-codec-http', version: "${project.nettyVersion}")
 
     testImplementation(platform('org.junit:junit-bom:5.9.2'))
     testImplementation('org.junit.jupiter:junit-jupiter')
     testImplementation("org.assertj:assertj-core:3.24.2")
     testImplementation('org.mockito:mockito-core:4.10.0')
     testImplementation('com.squareup.okhttp3:mockwebserver:4.10.0')
-    testImplementation(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
+    testImplementation(group: 'io.netty', name: 'netty-codec-http', version: "${project.nettyVersion}")
 
     testFixturesImplementation(testFixtures(project(":client-common")))
     testFixturesImplementation(platform('org.junit:junit-bom:5.9.2'))
@@ -94,7 +94,7 @@ dependencies {
     testFixturesImplementation('org.mockito:mockito-core:4.10.0')
     testFixturesImplementation('com.squareup.okhttp3:mockwebserver:4.10.0')
     testFixturesImplementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
-    testFixturesCompileOnly(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
+    testFixturesCompileOnly(group: 'io.netty', name: 'netty-codec-http', version: "${project.nettyVersion}")
 }
 
 java {

@@ -56,7 +56,7 @@ dependencies {
     compileOnly(group: 'org.slf4j', name: 'slf4j-api', version: "${project.slf4jVersion}")
     compileOnly(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
     compileOnly(group: 'org.jetbrains', name: 'annotations', version: '23.0.0')
-    compileOnly(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
+    compileOnly(group: 'io.netty', name: 'netty-codec-http', version: "${project.nettyVersion}")
     compileOnly(group: 'com.google.guava', name: 'guava', version: "${project.guavaVersion}")
 
     testImplementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
@@ -65,7 +65,7 @@ dependencies {
     testImplementation("org.assertj:assertj-core:3.24.2")
     testImplementation("org.junit.jupiter:junit-jupiter-api:${project.junitVersion}")
     testImplementation("org.junit.jupiter:junit-jupiter-params:${project.junitVersion}")
-    testImplementation(group: 'io.netty', name: 'netty-codec-http', version: '4.1.69.Final')
+    testImplementation(group: 'io.netty', name: 'netty-codec-http', version: "${project.nettyVersion}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}")
 }
 

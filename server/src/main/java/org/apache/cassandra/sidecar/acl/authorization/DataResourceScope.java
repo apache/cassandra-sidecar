@@ -53,14 +53,8 @@ public class DataResourceScope implements ResourceScope
      */
     public static final String DATA_WITH_KEYSPACE = String.format("data/{%s}", KEYSPACE);
 
-    // TODO remove this hack once VariableAwareExpression bug is fixed
-    // VariableAwareExpression in vertx-auth-common package has a bug during String.substring() call, hence
-    // we cannot set resources that do not end in curly braces (e.g. data/keyspace/*) in
-    // PermissionBasedAuthorizationImpl or WildcardPermissionBasedAuthorizationImpl. data/{%s}/{TABLE_WILDCARD} treats
-    // TABLE_WILDCARD as a variable. This hack allows to read resource level permissions that could be set for all
-    // tables through data/<keyspace_name>/*. Bug should be fixed in 4.5.12
-    // Note: DATA_WITH_KEYSPACE_ALL_TABLES authorizes for all tables under the keyspace excluding the keyspace itself
-    public static final String DATA_WITH_KEYSPACE_ALL_TABLES = String.format("data/{%s}/{TABLE_WILDCARD}", KEYSPACE);
+    // DATA_WITH_KEYSPACE_ALL_TABLES authorizes for all tables under the keyspace excluding the keyspace itself
+    public static final String DATA_WITH_KEYSPACE_ALL_TABLES = String.format("data/{%s}/*", KEYSPACE);
 
     public static final String DATA_WITH_KEYSPACE_TABLE = String.format("data/{%s}/{%s}", KEYSPACE, TABLE);
 

@@ -208,14 +208,6 @@ public class AccessProtectedRouteBuilder
             {
                 authZContext.variables().add(TABLE, table);
             }
-
-            // TODO remove this hack once VariableAwareExpression bug is fixed
-            // VariableAwareExpression in vertx-auth-common package has a bug during String.substring() call, hence
-            // we cannot set resources that do not end in curly braces (e.g. data/keyspace/*) in
-            // PermissionBasedAuthorizationImpl or WildcardPermissionBasedAuthorizationImpl. hence we treat
-            // TABLE_WILDCARD as a variable and set it always. This hack allows to read
-            // resource level permissions that could be set for all tables through data/<keyspace_name>/*
-            authZContext.variables().add("TABLE_WILDCARD", "*");
         };
     }
 }
