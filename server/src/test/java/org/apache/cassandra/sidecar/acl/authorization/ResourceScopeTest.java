@@ -80,7 +80,7 @@ class ResourceScopeTest
         assertThat(TABLE_SCOPE.expandedResources()).hasSize(4)
                                                    .contains("data",
                                                              "data/{keyspace}",
-                                                             "data/{keyspace}/{TABLE_WILDCARD}",
+                                                             "data/{keyspace}/*",
                                                              "data/{keyspace}/{table}");
     }
 
