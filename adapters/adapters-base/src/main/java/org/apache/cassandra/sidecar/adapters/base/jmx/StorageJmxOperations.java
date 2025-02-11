@@ -128,17 +128,6 @@ public interface StorageJmxOperations
     Map<List<String>, List<String>> getRangeToEndpointWithPortMap(String keyspace);
 
     /**
-     * This method returns the N endpoints that are responsible for storing the
-     * specified key i.e for replication.
-     *
-     * @param keyspaceName keyspace name
-     * @param cf           Column family name
-     * @param key          Key for which we need to find the endpoint return value -
-     *                     the endpoint responsible for this key
-     */
-    List<String> getNaturalEndpointsWithPort(String keyspaceName, String cf, String key);
-
-    /**
      * Retrieve the list of pending node endpoints by token range for the given keyspace
      *
      * @param keyspace the keyspace in Cassandra

@@ -36,7 +36,7 @@ sourceCompatibility = 1.8
 test {
     useJUnitPlatform()
     if (Os.isFamily(Os.FAMILY_MAC)) {
-        jvmArgs "-XX:+MaxFDLimit"
+        jvmArgs "-XX:-MaxFDLimit"
     }
     testLogging {
         events "passed", "skipped", "failed"

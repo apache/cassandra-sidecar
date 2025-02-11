@@ -66,6 +66,7 @@ dependencies {
     implementation(group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.14.3')
 
     api(testFixtures(project(path: ":test-common")))
+
     testImplementation(platform("org.junit:junit-bom:${project.junitVersion}"))
     testImplementation('org.junit.jupiter:junit-jupiter')
     testImplementation("org.assertj:assertj-core:${assertjCoreVersion}")

@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.config.yaml;
 
 import java.time.Duration;
 
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 
@@ -29,15 +30,8 @@ import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
  */
 public class SidecarClientConfigurationImpl implements SidecarClientConfiguration
 {
-
     @Override
     public boolean useSsl()
-    {
-        return false;
-    }
-
-    @Override
-    public boolean preferOpenSSL()
     {
         return false;
     }
@@ -55,15 +49,15 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     }
 
     @Override
-    public long requestTimeoutMillis()
+    public MillisecondBoundConfiguration requestTimeout()
     {
-        return 0;
+        return null;
     }
 
     @Override
-    public long requestIdleTimeoutMillis()
+    public MillisecondBoundConfiguration requestIdleTimeout()
     {
-        return 0;
+        return null;
     }
 
     @Override
@@ -73,9 +67,9 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     }
 
     @Override
-    public long connectionPoolCleanerPeriodMillis()
+    public MillisecondBoundConfiguration connectionPoolCleanerPeriod()
     {
-        return 0;
+        return null;
     }
 
     @Override

@@ -36,6 +36,7 @@ import com.datastax.driver.core.policies.ExponentialReconnectionPolicy;
 import com.datastax.driver.core.policies.ReconnectionPolicy;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
 
@@ -59,6 +60,7 @@ public class TemporaryCqlSessionProvider implements CQLSessionProvider
         this.contactPoints = contactPoints;
     }
 
+    @NotNull
     @Override
     public synchronized Session get()
     {

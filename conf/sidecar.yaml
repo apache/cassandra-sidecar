@@ -236,6 +236,12 @@ healthcheck:
   initial_delay: 0ms
   execute_interval: 30s
 
+sidecar_peer_health:
+  enabled: true
+  execute_interval: 30s
+  health_check_retries: 5
+  health_check_retry_delay: 10s
+
 metrics:
   registry_name: cassandra_sidecar
   vertx:

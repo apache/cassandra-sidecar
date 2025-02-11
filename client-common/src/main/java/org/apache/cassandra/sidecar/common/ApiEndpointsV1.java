@@ -29,7 +29,6 @@ public final class ApiEndpointsV1
 
     public static final String HEALTH = "/__health";
     public static final String CASSANDRA = "/cassandra";
-    public static final String PEERS = "/peers";
 
     public static final String NATIVE = "/native";
     public static final String JMX = "/jmx";
@@ -62,8 +61,6 @@ public final class ApiEndpointsV1
     public static final String CASSANDRA_HEALTH_ROUTE = API_V1 + CASSANDRA + HEALTH;
     public static final String CASSANDRA_NATIVE_HEALTH_ROUTE = API_V1 + CASSANDRA + NATIVE + HEALTH;
     public static final String CASSANDRA_JMX_HEALTH_ROUTE = API_V1 + CASSANDRA + JMX + HEALTH;
-
-    public static final String SIDECAR_PEERS_HEALTH_ROUTE = API_V1 + PEERS + HEALTH;
 
     @Deprecated  // NOTE: Uses singular forms of "keyspace" and "table"
     public static final String DEPRECATED_SNAPSHOTS_ROUTE = API_V1 + "/keyspace/" + KEYSPACE_PATH_PARAM +

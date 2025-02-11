@@ -49,13 +49,10 @@ import io.vertx.ext.web.Router;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.codecs.SidecarInstanceCodecs;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
-import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthProvider;
-import org.apache.cassandra.sidecar.coordination.SidecarPeerProvider;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.HealthCheckPeriodicTask;
 import org.apache.cassandra.sidecar.tasks.KeyStoreCheckPeriodicTask;
@@ -82,9 +79,6 @@ public class Server
     protected final PeriodicTaskExecutor periodicTaskExecutor;
     protected final HttpServerOptionsProvider optionsProvider;
     protected final SidecarMetrics metrics;
-    protected final SidecarPeerProvider sidecarPeerProvider;
-    protected final SidecarPeerHealthProvider sidecarPeerHealthProvider;
-    protected final SidecarInstanceCodecs sidecarInstanceCodecs;
     protected final List<ServerVerticle> deployedServerVerticles = new CopyOnWriteArrayList<>();
     // Keeps track of all the Cassandra instance identifiers where CQL is ready
     private final Set<Integer> cqlReadyInstanceIds = Collections.synchronizedSet(new HashSet<>());
@@ -97,10 +91,7 @@ public class Server
                   ExecutorPools executorPools,
                   PeriodicTaskExecutor periodicTaskExecutor,
                   HttpServerOptionsProvider optionsProvider,
-                  SidecarMetrics metrics,
-                  SidecarPeerProvider sidecarPeerProvider,
-                  SidecarPeerHealthProvider sidecarPeerHealthProvider,
-                  SidecarInstanceCodecs sidecarInstanceCodecs)
+                  SidecarMetrics metrics)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
@@ -110,9 +101,6 @@ public class Server
         this.periodicTaskExecutor = periodicTaskExecutor;
         this.optionsProvider = optionsProvider;
         this.metrics = metrics;
-        this.sidecarPeerProvider = sidecarPeerProvider;
-        this.sidecarPeerHealthProvider = sidecarPeerHealthProvider;
-        this.sidecarInstanceCodecs = sidecarInstanceCodecs;
     }
 
     /**
@@ -155,16 +143,6 @@ public class Server
         return notifyServerStopping(deploymentId)
                .compose(v -> vertx.undeploy(deploymentId))
                .onSuccess(v -> LOGGER.info("Successfully stopped Cassandra Sidecar"));
-    }
-
-    /**
-     * Undeploy the server deployment, stopping all the {@link ServerVerticle verticles}.
-     *
-     * @return a future completed with the result
-     */
-    public Future<Void> stop()
-    {
-        return stop(getDeploymentId());
     }
 
     /**
@@ -337,8 +315,6 @@ public class Server
 
         MessageConsumer<JsonObject> cqlReadyConsumer = vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address());
         cqlReadyConsumer.handler(message -> onCqlReady(cqlReadyConsumer, message));
-
-
         return Future.succeededFuture(deploymentId);
     }
 
@@ -396,14 +372,5 @@ public class Server
                                      .put("cassandraInstanceIds", cassandraInstanceIds);
 
         vertx.eventBus().publish(ON_ALL_CASSANDRA_CQL_READY.address(), allReadyMessage);
-    }
-
-
-    /**
-     * Gets the server vertx Deployment Id to be used at stop time.
-     */
-    private String getDeploymentId()
-    {
-        return vertx.deploymentIDs().stream().findFirst().orElseThrow();
     }
 }

@@ -24,7 +24,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,9 +52,9 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
  * listeners when other Sidecar(s) goes DOWN or OK.
  */
 @Singleton
-public class SidecarPeerHealthMonitor implements PeriodicTask
+public class SidecarPeerHealthMonitorTask implements PeriodicTask
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SidecarPeerHealthMonitor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SidecarPeerHealthMonitorTask.class);
 
     private final Vertx vertx;
     private final SidecarPeerHealthConfiguration config;
@@ -65,22 +64,17 @@ public class SidecarPeerHealthMonitor implements PeriodicTask
     private final Map<SidecarInstance, SidecarPeerHealthProvider.Health> status = new ConcurrentHashMap<>();
 
     @Inject
-    public SidecarPeerHealthMonitor(Vertx vertx,
-                                    SidecarConfiguration sidecarConfiguration,
-                                    SidecarPeerProvider sidecarPeerProvider,
-                                    SidecarPeerHealthProvider healthProvider,
-                                    SidecarInstanceCodecs sidecarInstanceCodecs)
+    public SidecarPeerHealthMonitorTask(Vertx vertx,
+                                        SidecarConfiguration sidecarConfiguration,
+                                        SidecarPeerProvider sidecarPeerProvider,
+                                        SidecarPeerHealthProvider healthProvider,
+                                        SidecarInstanceCodecs sidecarInstanceCodecs)
     {
         this.vertx = vertx;
         this.config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         this.sidecarPeerProvider = sidecarPeerProvider;
         this.healthProvider = healthProvider;
         vertx.eventBus().registerDefaultCodec(InstanceMetadataImpl.class, sidecarInstanceCodecs);
-    }
-
-    public Set<SidecarInstance> sidecarPeers()
-    {
-        return ImmutableSet.copyOf(status.keySet());
     }
 
     @NotNull
@@ -125,25 +119,19 @@ public class SidecarPeerHealthMonitor implements PeriodicTask
             return Future.succeededFuture();
         }
 
-        List<Future<Future<SidecarPeerHealthProvider.Health>>> futures =
+        List<Future<SidecarPeerHealthProvider.Health>> futures =
         sidecarPeers.stream()
-                    .map(instance -> {
-                        Future<SidecarPeerHealthProvider.Health> future = healthProvider.health(instance)
-                                                                                     .onSuccess(health -> {
-                                                                                         updateHealth(instance, health);
-                                                                                     })
-                                                                                     .onFailure(throwable -> {
-                                                                                         LOGGER.error("Failed to run health check, marking instance as DOWN host={} port={}",
-                                                                                                      instance.hostname(), instance.port(), throwable);
-                                                                                         markDown(instance);
-                                                                                     });
-                             return Future.succeededFuture(future);
-                         }
-
-                    ).collect(Collectors.toList());
+                    .map(instance -> healthProvider.health(instance)
+                                                   .onSuccess(health -> updateHealth(instance, health))
+                                                   .onFailure(throwable -> {
+                                                       LOGGER.error("Failed to run health check, marking instance as DOWN host={} port={}",
+                                                                    instance.hostname(), instance.port(), throwable);
+                                                       markDown(instance);
+                                                   }))
+                    .collect(Collectors.toList());
 
         return Future.all(futures)
-                     .onComplete( f -> {
+                     .onComplete(f -> {
                          if (f.succeeded())
                          {
                              status.keySet().retainAll(sidecarPeers);
@@ -198,10 +186,5 @@ public class SidecarPeerHealthMonitor implements PeriodicTask
     public Map<SidecarInstance, SidecarPeerHealthProvider.Health> getStatus()
     {
         return status;
-    }
-
-    public SidecarPeerHealthProvider.Health getInstanceStatus(SidecarInstance sidecarInstance)
-    {
-        return status.get(sidecarInstance);
     }
 }

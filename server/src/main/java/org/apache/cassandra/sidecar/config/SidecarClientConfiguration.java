@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.config;
 
 import org.apache.cassandra.sidecar.client.SidecarClientConfig;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 
 /**
  * Configuration for sidecar client
@@ -29,11 +30,6 @@ public interface SidecarClientConfiguration extends SidecarClientConfig
      * @return {@code true} if SSL should be used for Sidecar client connections
      */
     boolean useSsl();
-
-    /**
-     * @return {@code true} if OpenSSL is preferred when available, {@code false} to use JDK's SSL implementation
-     */
-    boolean preferOpenSSL();
 
     /**
      * @return {@code true} if the keystore is configured, and the {@link KeyStoreConfiguration#path()} and
@@ -64,14 +60,14 @@ public interface SidecarClientConfiguration extends SidecarClientConfig
     KeyStoreConfiguration truststore();
 
     /**
-     * @return the client request timeout value in milliseconds for the connection to be established
+     * @return the client request timeout value for the connection to be established
      */
-    long requestTimeoutMillis();
+    MillisecondBoundConfiguration requestTimeout();
 
     /**
-     * @return the client idle timeout in milliseconds before the connection is considered as stale
+     * @return the client idle timeout before the connection is considered as stale
      */
-    long requestIdleTimeoutMillis();
+    MillisecondBoundConfiguration requestIdleTimeout();
 
     // Pooling options
 
@@ -81,10 +77,10 @@ public interface SidecarClientConfiguration extends SidecarClientConfig
     int connectionPoolMaxSize();
 
     /**
-     * @return the connection pool cleaner period in milliseconds, a non-positive value disables expiration checks
-     * and connections will remain in the pool until they are closed.
+     * @return the connection pool cleaner period, a non-positive value disables expiration checks and connections
+     * will remain in the pool until they are closed.
      */
-    long connectionPoolCleanerPeriodMillis();
+    MillisecondBoundConfiguration connectionPoolCleanerPeriod();
 
     /**
      * Return the configured number of event-loop the pool use.

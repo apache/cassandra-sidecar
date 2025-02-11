@@ -47,6 +47,7 @@ import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import org.apache.cassandra.testing.IClusterExtension;
 import org.apache.cassandra.testing.Partitioner;
 import org.apache.cassandra.testing.TestTokenSupplier;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.distributed.shared.NetworkTopology.dcAndRack;
 import static org.apache.cassandra.distributed.shared.NetworkTopology.networkTopology;
@@ -269,6 +270,7 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
         return delegate.stream(s, s1);
     }
 
+    @NotNull
     @Override
     public Iterator<I> iterator()
     {

@@ -20,8 +20,10 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioner;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
+import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -95,29 +97,9 @@ public abstract class TokenRingProvider
     @Nullable
     public String localDc()
     {
-        NodeSettings nodeSettings = firstAvailableOperationFromDelegate(CassandraAdapterDelegate::nodeSettings);
-        return nodeSettings == null ? null : nodeSettings.datacenter();
+        NodeSettings nodeSettings = fetcher.callOnFirstAvailableInstance(instance-> instance.delegate().nodeSettings());
+        return nodeSettings.datacenter();
     }
-
-    // TODO: shared
-    <O> O firstAvailableOperationFromDelegate(Function<CassandraAdapterDelegate, O> mapper)
-    {
-        for (InstanceMetadata instance : instancesMetadata.instances())
-        {
-            try
-            {
-                CassandraAdapterDelegate delegate = instance.delegate();
-                return mapper.apply(delegate);
-            }
-            catch (CassandraUnavailableException exception)
-            {
-                // no-op; try the next instance
-                LOGGER.debug("CassandraAdapterDelegate is not available for instance. instance={}", instance, exception);
-            }
-        }
-        return null;
-    }
-
 
     /**
      * Returns the partitioner
@@ -127,7 +109,7 @@ public abstract class TokenRingProvider
      */
     public Partitioner partitioner()
     {
-        String[] tokens = fetcher.anyInstance().delegate().nodeSettings().partitioner().split("\\.");
+        String[] tokens = fetcher.callOnFirstAvailableInstance(instance -> instance.delegate().nodeSettings().partitioner().split("\\."));
         return Partitioners.from(tokens[tokens.length - 1]);
     }
 

@@ -45,7 +45,6 @@ import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
-import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 
 /**
  * Provider class for retrieving the singleton {@link SidecarClient} instance
@@ -85,41 +84,41 @@ public class SidecarClientProvider implements Provider<SidecarClient>
         WebClient webClient = WebClient.wrap(httpClient, webClientOptions);
 
         HttpClientConfig httpClientConfig = new HttpClientConfig.Builder<>()
-                .ssl(webClientOptions().isSsl())
-                .timeoutMillis(clientConfig.requestTimeoutMillis())
-                .idleTimeoutMillis((int) clientConfig.requestIdleTimeoutMillis())
-                .userAgent("cassandra-sidecar/" + sidecarVersionProvider.sidecarVersion())
-                .build();
+                                            .ssl(webClientOptions().isSsl())
+                                            .timeoutMillis(clientConfig.requestTimeout().toMillis())
+                                            .idleTimeoutMillis(clientConfig.requestIdleTimeout().toIntMillis())
+                                            .userAgent("cassandra-sidecar/" + sidecarVersionProvider.sidecarVersion())
+                                            .build();
 
         VertxHttpClient vertxHttpClient = new VertxHttpClient(vertx, webClient, httpClientConfig);
         RetryPolicy defaultRetryPolicy = new ExponentialBackoffRetryPolicy(clientConfig.maxRetries(),
-                clientConfig.retryDelayMillis(),
-                clientConfig.maxRetryDelayMillis());
+                                                                           clientConfig.retryDelayMillis(),
+                                                                           clientConfig.maxRetryDelayMillis());
         VertxRequestExecutor requestExecutor = new VertxRequestExecutor(vertxHttpClient);
         SidecarInstance instance = new SidecarInstanceImpl(webClientOptions.getDefaultHost(), webClientOptions.getDefaultPort());
         ArrayList<SidecarInstance> instances = new ArrayList<>();
         instances.add(instance);
         SimpleSidecarInstancesProvider instancesProvider = new SimpleSidecarInstancesProvider(instances);
         return new SidecarClient(instancesProvider,
-                requestExecutor,
-                clientConfig,
-                defaultRetryPolicy);
+                                 requestExecutor,
+                                 clientConfig,
+                                 defaultRetryPolicy);
     }
 
     private WebClientOptions webClientOptions()
     {
         WebClientOptions options = new WebClientOptions();
         options.getPoolOptions()
-                .setCleanerPeriod((int) clientConfig.connectionPoolCleanerPeriodMillis())
-                .setEventLoopSize(clientConfig.connectionPoolEventLoopSize())
-                .setHttp1MaxSize(10)
-                .setMaxWaitQueueSize(clientConfig.connectionPoolMaxWaitQueueSize());
+               .setCleanerPeriod(clientConfig.connectionPoolCleanerPeriod().toIntMillis())
+               .setEventLoopSize(clientConfig.connectionPoolEventLoopSize())
+               .setHttp1MaxSize(clientConfig.connectionPoolMaxSize())
+               .setMaxWaitQueueSize(clientConfig.connectionPoolMaxWaitQueueSize());
 
-        boolean useSsl = false;
+        boolean useSsl = clientConfig.useSsl();
         if (sslConfig.isKeystoreConfigured())
         {
             options.setKeyStoreOptions(new JksOptions().setPath(sslConfig.keystore().path())
-                    .setPassword(sslConfig.keystore().password()));
+                                                       .setPassword(sslConfig.keystore().password()));
             if (sslConfig.preferOpenSSL() && OpenSSLEngineOptions.isAvailable())
             {
                 LOGGER.info("Using OpenSSL for encryption in Webclient Options");
@@ -135,7 +134,7 @@ public class SidecarClientProvider implements Provider<SidecarClient>
         if (sslConfig.truststore() != null && sslConfig.truststore().isConfigured())
         {
             options.setTrustStoreOptions(new JksOptions().setPath(sslConfig.truststore().path())
-                    .setPassword(sslConfig.truststore().password()));
+                                                         .setPassword(sslConfig.truststore().password()));
         }
 
         options.setSsl(useSsl);

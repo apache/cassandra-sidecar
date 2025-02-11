@@ -30,7 +30,6 @@ import com.datastax.driver.core.Token;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
@@ -179,7 +178,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
             perDcHosts.computeIfAbsent(host.getDatacenter(), (dc) -> new ArrayList<>())
                       .add(new CassandraInstance(tokenToString(minToken), getIpFromHost(dnsResolver, host)));
         }
-        perDcHosts.forEach((dc, hosts) -> hosts.sort(Comparator.comparing(o -> new BigInteger(o.token()))));
+        perDcHosts.forEach((dc, hosts) -> hosts.sort(Comparator.comparing(o -> new BigInteger(o.token))));
 
         return perDcHosts.entrySet().stream()
                          .collect(Collectors.toMap(Map.Entry::getKey, e -> calculateTokenRanges(partitioner, e.getValue())));
@@ -203,7 +202,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
         // RingTopologyRefresher.calculate...
         return calculateTokenRanges(sortedPerDcHosts, 1, partitioner)
                .entries().stream()
-               .collect(Collectors.groupingBy(e -> e.getKey().nodeName(), Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+               .collect(Collectors.groupingBy(e -> e.getKey().node, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
     }
 
     private Map<Host, Integer> localInstanceIds()
@@ -220,14 +219,14 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
                        .collect(Collectors.toMap(entry -> ipToHost.get(entry.getKey()), entry -> localIps.get(entry.getKey())));
     }
 
-    private  Metadata validatedMetadata(List<InstanceMetadata> localInstances)
+    private Metadata validatedMetadata(List<InstanceMetadata> localInstances)
     {
         if (localInstances.isEmpty())
         {
             LOGGER.warn("No local instances found");
             throw new RuntimeException("No local instances found");
         }
-        return firstAvailableOperationFromDelegate(CassandraAdapterDelegate::metadata);
+        return fetcher.callOnFirstAvailableInstance(instanceMetadata -> instanceMetadata.delegate().metadata());
     }
 
     private static Map<String, Map<Host, Set<TokenRange>>> perKeySpaceTokenRangesOfAllInstances(final Metadata metadata)
@@ -264,8 +263,8 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
         {
             CassandraInstance instance = instances.get(index);
             int disjointReplica = (instances.size() + index - replicationFactor) % instances.size();
-            BigInteger rangeStart = new BigInteger((instances.get(disjointReplica)).token());
-            BigInteger rangeEnd = new BigInteger(instance.token());
+            BigInteger rangeStart = new BigInteger((instances.get(disjointReplica)).token);
+            BigInteger rangeEnd = new BigInteger(instance.token);
             if (rangeStart.compareTo(rangeEnd) >= 0)
             {
                 tokenRanges.put(instance, Range.openClosed(rangeStart, partitioner.maximumToken().toBigInteger()));
@@ -278,5 +277,20 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
             }
         }
         return tokenRanges;
+    }
+
+    /**
+     * Class to encapsule Cassandra instance data
+     */
+    private static class CassandraInstance
+    {
+        private final String token;
+        private final String node;
+
+        public CassandraInstance(String token, String node)
+        {
+            this.token = token;
+            this.node = node;
+        }
     }
 }

@@ -297,8 +297,12 @@ class SidecarConfigurationTest
     @Test
     void testSidecarPeerHealthConfiguration() throws IOException
     {
-        Path yamlPath = yaml("config/sidecar_down_detector_config.yaml");
-        SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+        String yaml = "sidecar_peer_health:\n" +
+                      "  enabled: false\n" +
+                      "  execute_interval: 1s\n" +
+                      "  health_check_retries: 1\n" +
+                      "  health_check_retry_delay: 2s";
+        SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.readYamlConfiguration(yaml);
         assertThat(sidecarConfiguration).isNotNull();
         SidecarPeerHealthConfiguration config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         assertThat(config).isNotNull();
