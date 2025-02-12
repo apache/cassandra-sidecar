@@ -32,7 +32,6 @@ import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 
 import com.datastax.driver.core.DataType;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Range: (start, end] - start exclusive and end inclusive
@@ -43,7 +42,6 @@ public class TokenRange
                                                                          .thenComparing(TokenRange::end);
 
     public final Range<Token> range;
-    private volatile Token firstToken = null;
 
     /**
      * Unwrap the java driver's token range if necessary and convert the unwrapped ranges list.
@@ -162,25 +160,6 @@ public class TokenRange
     public BigInteger endAsBigInt()
     {
         return range.upperEndpoint().toBigInteger();
-    }
-
-    /**
-     * @return the first token enclosed in the range. It returns null if the range is empty, e.g. (v, v]
-     */
-    @Nullable
-    public Token firstToken()
-    {
-        if (range.isEmpty())
-        {
-            return null;
-        }
-
-        // it is ok to race
-        if (firstToken == null)
-        {
-            firstToken = range.lowerEndpoint().increment();
-        }
-        return firstToken;
     }
 
     /**

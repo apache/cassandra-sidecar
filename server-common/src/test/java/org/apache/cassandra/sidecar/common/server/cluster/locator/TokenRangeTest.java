@@ -49,18 +49,6 @@ class TokenRangeTest
     }
 
     @Test
-    void testFirstToken()
-    {
-        TokenRange range = new TokenRange(1, 100);
-        assertThat(range.firstToken()).isEqualTo(Token.from(2));
-        // test the first token refer is the same
-        assertThat(range.firstToken()).isSameAs(range.firstToken());
-
-        TokenRange emptyRange = new TokenRange(1, 1);
-        assertThat(emptyRange.firstToken()).isNull();
-    }
-
-    @Test
     void testCreateRangeWithInvalidParams()
     {
         assertThatThrownBy(() -> new TokenRange(1, -1))
