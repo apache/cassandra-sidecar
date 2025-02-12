@@ -20,9 +20,6 @@ package org.apache.cassandra.sidecar.coordination;
 
 import java.util.Set;
 
-import org.apache.cassandra.sidecar.client.SidecarInstance;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-
 /**
  * Provides a set of Sidecar peers to monitor and failover when they go DOWN
  */
@@ -31,5 +28,5 @@ public interface SidecarPeerProvider
     /**
      * @return a set of Sidecar peers to monitor
      */
-    Set<SidecarInstance> get();
+    Set<PeerInstance> get();
 }

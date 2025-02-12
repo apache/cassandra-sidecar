@@ -34,6 +34,8 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import org.apache.cassandra.sidecar.client.HttpClientConfig;
 import org.apache.cassandra.sidecar.client.SidecarClient;
+import org.apache.cassandra.sidecar.client.SidecarClientConfig;
+import org.apache.cassandra.sidecar.client.SidecarClientConfigImpl;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.client.SimpleSidecarInstancesProvider;
@@ -92,16 +94,23 @@ public class SidecarClientProvider implements Provider<SidecarClient>
 
         VertxHttpClient vertxHttpClient = new VertxHttpClient(vertx, webClient, httpClientConfig);
         RetryPolicy defaultRetryPolicy = new ExponentialBackoffRetryPolicy(clientConfig.maxRetries(),
-                                                                           clientConfig.retryDelayMillis(),
-                                                                           clientConfig.maxRetryDelayMillis());
+                                                                           clientConfig.retryDelay().toMillis(),
+                                                                           clientConfig.retryDelay().toMillis());
         VertxRequestExecutor requestExecutor = new VertxRequestExecutor(vertxHttpClient);
         SidecarInstance instance = new SidecarInstanceImpl(webClientOptions.getDefaultHost(), webClientOptions.getDefaultPort());
         ArrayList<SidecarInstance> instances = new ArrayList<>();
         instances.add(instance);
         SimpleSidecarInstancesProvider instancesProvider = new SimpleSidecarInstancesProvider(instances);
+
+        SidecarClientConfig config = SidecarClientConfigImpl.builder()
+                                                            .retryDelayMillis(clientConfig.retryDelay().toMillis())
+                                                            .maxRetryDelayMillis(clientConfig.maxRetryDelay().toMillis())
+                                                            .maxRetries(clientConfig.maxRetries())
+                                                            .build();
+
         return new SidecarClient(instancesProvider,
                                  requestExecutor,
-                                 clientConfig,
+                                 config,
                                  defaultRetryPolicy);
     }
 

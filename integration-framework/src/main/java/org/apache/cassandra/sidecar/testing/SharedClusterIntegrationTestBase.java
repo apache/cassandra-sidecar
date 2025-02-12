@@ -26,6 +26,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -76,6 +77,7 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
@@ -84,6 +86,7 @@ import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.S3ProxyConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
@@ -91,10 +94,14 @@ import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.S3ClientConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SidecarClientConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SidecarPeerHealthConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
+import org.apache.cassandra.sidecar.coordination.SidecarHttpHealthProvider;
+import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitorTask;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerProvider;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
@@ -162,9 +169,16 @@ public abstract class SharedClusterIntegrationTestBase
     protected Server server;
     protected TestVersion testVersion;
     protected MtlsTestHelper mtlsTestHelper;
+<<<<<<< HEAD
     private final CountDownLatch sidecarSchemaReadyLatch = new CountDownLatch(1);
     private IsolatedDTestClassLoaderWrapper classLoaderWrapper;
     private Injector sidecarServerInjector;
+=======
+    protected IsolatedDTestClassLoaderWrapper classLoaderWrapper;
+    protected Injector sidecarServerInjector;
+    protected HashMap<Server, String> serverDeploymentIds;
+    protected HashMap<Server, SidecarPeerHealthMonitorTask> peerHealthMonitors;
+>>>>>>> 50d464dc (Refactor and improvements)
 
     static
     {
@@ -182,6 +196,9 @@ public abstract class SharedClusterIntegrationTestBase
 
         classLoaderWrapper = new IsolatedDTestClassLoaderWrapper();
         classLoaderWrapper.initializeDTestJarClassLoader(testVersion, TestVersion.class);
+
+        serverDeploymentIds = new HashMap<>();
+        peerHealthMonitors = new HashMap<>();
 
         beforeClusterProvisioning();
         cluster = provisionClusterWithRetries(this.testVersion);
@@ -373,7 +390,8 @@ public abstract class SharedClusterIntegrationTestBase
         {
             sidecarServerInjector = Guice.createInjector(Modules.override(new MainModule()).with(Modules.override(testModule).with(customModule)));
         }
-        else {
+        else
+        {
             sidecarServerInjector = Guice.createInjector(Modules.override(new MainModule()).with(testModule));
         }
         Vertx vertx = sidecarServerInjector.getInstance(Vertx.class);
@@ -382,11 +400,16 @@ public abstract class SharedClusterIntegrationTestBase
                  sidecarSchemaReadyLatch.countDown();
              });
         Server sidecarServer = sidecarServerInjector.getInstance(Server.class);
+        SidecarPeerHealthMonitorTask peerHealthMonitorTask = sidecarServerInjector.getInstance(SidecarPeerHealthMonitorTask.class);
         sidecarServer.start()
-                     .onSuccess(s -> context.completeNow())
+                     .onSuccess(deploymentId -> {
+                         serverDeploymentIds.put(sidecarServer, deploymentId);
+                         peerHealthMonitors.put(sidecarServer, peerHealthMonitorTask);
+                         context.completeNow();
+                     })
                      .onFailure(context::failNow);
 
-        context.awaitCompletion(5, TimeUnit.SECONDS);
+        assertThat(context.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         return sidecarServer;
     }
 
@@ -660,10 +683,13 @@ public abstract class SharedClusterIntegrationTestBase
                                                                                  5242880, DEFAULT_API_CALL_TIMEOUT,
                                                                                  buildTestS3ProxyConfig());
 
+            SidecarClientConfiguration sidecarClientConfiguration = new SidecarClientConfigurationImpl();
+
             SidecarConfigurationImpl.Builder builder = SidecarConfigurationImpl.builder()
                                                                                .serviceConfiguration(conf)
                                                                                .sslConfiguration(sslConfiguration)
                                                                                .s3ClientConfiguration(s3ClientConfig)
+                                                                               .sidecarClientConfiguration(sidecarClientConfiguration)
                                                                                .sidecarPeerHealthConfiguration(sidecarPeerHealthConfiguration);
             if (configurationOverrides != null)
             {

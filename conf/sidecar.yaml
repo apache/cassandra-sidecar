@@ -242,6 +242,19 @@ sidecar_peer_health:
   health_check_retries: 5
   health_check_retry_delay: 10s
 
+sidecar_client:
+  use_ssl: true
+  request_timeout: 1s
+  request_idle_timeout: 1s
+  connection_pool_max_size: 10
+  connection_pool_clearing_period: 10s
+  connection_pool_event_loop_size: 10
+  connection_pool_max_wait_queue_size: 10
+  max_retries: 3
+  retry_delay: 1s
+  max_retry_delay: 2s
+
+
 metrics:
   registry_name: cassandra_sidecar
   vertx:

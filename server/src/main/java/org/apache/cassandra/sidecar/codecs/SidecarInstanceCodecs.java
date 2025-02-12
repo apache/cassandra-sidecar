@@ -59,7 +59,7 @@ public class SidecarInstanceCodecs implements MessageCodec<InstanceMetadataImpl,
     @Override
     public String name()
     {
-        return "SidecarInstance";
+        return "PeerInstance";
     }
 
     @Override

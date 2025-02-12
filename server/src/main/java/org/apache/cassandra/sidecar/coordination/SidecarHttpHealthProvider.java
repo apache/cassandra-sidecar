@@ -24,7 +24,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.client.SidecarClient;
-import org.apache.cassandra.sidecar.client.SidecarInstance;
+import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.client.retry.BasicRetryPolicy;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -50,13 +50,14 @@ public class SidecarHttpHealthProvider implements SidecarPeerHealthProvider
     }
 
     @Override
-    public Future<Health> health(SidecarInstance instance)
+    public Future<Health> health(PeerInstance instance)
     {
         try
         {
             SidecarClient client = clientProvider.get();
             CompletableFuture<HealthResponse> healthRequest = client.executeRequestAsync(client.requestBuilder()
-                                                                                               .singleInstanceSelectionPolicy(instance)
+                                                                                               .singleInstanceSelectionPolicy(new SidecarInstanceImpl(instance.hostname(),
+                                                                                                                                                      instance.port()))
                                                                                                .retryPolicy(retryPolicy())
                                                                                                .sidecarHealthRequest()
                                                                                                .build());

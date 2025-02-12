@@ -24,40 +24,12 @@ import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfigur
 /**
  * Configuration for sidecar client
  */
-public interface SidecarClientConfiguration extends SidecarClientConfig
+public interface SidecarClientConfiguration
 {
     /**
      * @return {@code true} if SSL should be used for Sidecar client connections
      */
     boolean useSsl();
-
-    /**
-     * @return {@code true} if the keystore is configured, and the {@link KeyStoreConfiguration#path()} and
-     * {@link KeyStoreConfiguration#password()} parameters are provided
-     */
-    default boolean isKeystoreConfigured()
-    {
-        return keystore() != null && keystore().isConfigured();
-    }
-
-    /**
-     * @return the configuration for the keystore
-     */
-    KeyStoreConfiguration keystore();
-
-    /**
-     * @return {@code true} if the truststore is configured, and the {@link KeyStoreConfiguration#path()} and
-     * {@link KeyStoreConfiguration#password()} parameters are provided
-     */
-    default boolean isTruststoreConfigured()
-    {
-        return truststore() != null && truststore().isConfigured();
-    }
-
-    /**
-     * @return the configuration for the truststore
-     */
-    KeyStoreConfiguration truststore();
 
     /**
      * @return the client request timeout value for the connection to be established
@@ -99,4 +71,19 @@ public interface SidecarClientConfiguration extends SidecarClientConfig
      * a ConnectionPoolTooBusyException.  If the value is set to a negative number then the queue will be unbounded.
      */
     int connectionPoolMaxWaitQueueSize();
+
+    /**
+     * @return the maximum number of retries for a failed call.
+     */
+    int maxRetries();
+
+    /**
+     * @return the delay between retries.
+     */
+    MillisecondBoundConfiguration retryDelay();
+
+    /**
+     * @return the max delay between retries.
+     */
+    MillisecondBoundConfiguration maxRetryDelay();
 }

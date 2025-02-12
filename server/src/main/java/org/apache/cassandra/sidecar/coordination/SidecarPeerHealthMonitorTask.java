@@ -33,7 +33,6 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.codecs.SidecarInstanceCodecs;
@@ -61,7 +60,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     private final SidecarPeerProvider sidecarPeerProvider;
     private final SidecarPeerHealthProvider healthProvider;
 
-    private final Map<SidecarInstance, SidecarPeerHealthProvider.Health> status = new ConcurrentHashMap<>();
+    private final Map<PeerInstance, SidecarPeerHealthProvider.Health> status = new ConcurrentHashMap<>();
 
     @Inject
     public SidecarPeerHealthMonitorTask(Vertx vertx,
@@ -100,7 +99,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     {
         try
         {
-            run().onComplete(v -> promise.tryComplete());
+            run().onComplete(v -> promise.tryComplete()).wait(10000);
         }
         catch (Throwable t)
         {
@@ -112,7 +111,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     // internal methods
     protected Future<CompositeFuture> run()
     {
-        Set<SidecarInstance> sidecarPeers = sidecarPeerProvider.get();
+        Set<PeerInstance> sidecarPeers = sidecarPeerProvider.get();
         if (sidecarPeers.isEmpty())
         {
             LOGGER.warn("No Sidecar sidecarPeers detected");
@@ -122,7 +121,9 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         List<Future<SidecarPeerHealthProvider.Health>> futures =
         sidecarPeers.stream()
                     .map(instance -> healthProvider.health(instance)
-                                                   .onSuccess(health -> updateHealth(instance, health))
+                                                   .onSuccess(health -> {
+                                                       updateHealth(instance, health);
+                                                   })
                                                    .onFailure(throwable -> {
                                                        LOGGER.error("Failed to run health check, marking instance as DOWN host={} port={}",
                                                                     instance.hostname(), instance.port(), throwable);
@@ -144,7 +145,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     }
 
     // listener notifications
-    protected void updateHealth(SidecarInstance instance, SidecarPeerHealthProvider.Health health)
+    protected void updateHealth(PeerInstance instance, SidecarPeerHealthProvider.Health health)
     {
         switch (health)
         {
@@ -160,7 +161,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         }
     }
 
-    protected void markOk(SidecarInstance instance)
+    protected void markOk(PeerInstance instance)
     {
         if (compareAndUpdate(instance, SidecarPeerHealthProvider.Health.OK))
         {
@@ -169,7 +170,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         }
     }
 
-    protected void markDown(SidecarInstance instance)
+    protected void markDown(PeerInstance instance)
     {
         if (compareAndUpdate(instance, SidecarPeerHealthProvider.Health.DOWN))
         {
@@ -178,12 +179,12 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         }
     }
 
-    protected boolean compareAndUpdate(SidecarInstance instance, SidecarPeerHealthProvider.Health newStatus)
+    protected boolean compareAndUpdate(PeerInstance instance, SidecarPeerHealthProvider.Health newStatus)
     {
         return status.put(instance, newStatus) != newStatus;
     }
 
-    public Map<SidecarInstance, SidecarPeerHealthProvider.Health> getStatus()
+    public Map<PeerInstance, SidecarPeerHealthProvider.Health> getStatus()
     {
         return status;
     }

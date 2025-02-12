@@ -46,11 +46,6 @@ public class InnerDcTokenAdjacentPeerTestProvider extends InnerDcTokenAdjacentPe
             this.port = port;
         }
 
-        public IInstance getInstance()
-        {
-            return instance;
-        }
-
         public Server getServer()
         {
             return sidecarServer;

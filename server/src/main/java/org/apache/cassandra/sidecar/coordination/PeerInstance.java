@@ -18,25 +18,18 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
-
-import io.vertx.core.Future;
-
 /**
- * Interface to provide health information for other Sidecar instances
+ * Holds information about the Cassandra Sidecar Instance host and port
  */
-public interface SidecarPeerHealthProvider
+public interface PeerInstance
 {
     /**
-     * Possible Health states
+     * @return the port where the Cassandra Sidecar instance is listening
      */
-    enum Health
-    {
-        OK, DOWN, UNKNOWN
-    }
+    int port();
 
     /**
-     * @param instance the instance where the health check will be executed
-     * @return a future with the {@link Health} of the {@code instance}
+     * @return the hostname where the Cassandra Sidecar instance is running
      */
-    Future<Health> health(PeerInstance instance);
+    String hostname();
 }

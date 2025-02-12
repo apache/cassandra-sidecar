@@ -27,8 +27,6 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import org.apache.cassandra.sidecar.client.SidecarInstance;
-import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
@@ -65,7 +63,7 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         this.dnsResolver = dnsResolver;
     }
 
-    public Set<SidecarInstance> get()
+    public Set<PeerInstance> get()
     {
         Map<Integer, InstanceMetadata> localInstances = instancesMetadata
                                                         .instances()
@@ -136,7 +134,7 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
                        return pair;
                    }
                })
-               .map(pair -> new SidecarInstanceImpl(pair.getValue(), sidecarServicePort(pair.getKey())))
+               .map(pair -> new PeerInstanceImpl(pair.getValue(), sidecarServicePort(pair.getKey())))
                .collect(Collectors.toSet());
     }
 

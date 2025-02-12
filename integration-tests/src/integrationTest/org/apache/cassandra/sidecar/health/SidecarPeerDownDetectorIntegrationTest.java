@@ -4,8 +4,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.web.client.HttpResponse;
 import org.apache.cassandra.distributed.api.ICluster;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
@@ -14,6 +12,8 @@ import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarPeerHealthConfigurationImpl;
+import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitorTask;
+import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthProvider;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.testing.InnerDcTokenAdjacentPeerTestProvider.TestSidecarHostInfo;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
@@ -30,9 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegrationTestBase
@@ -53,13 +51,13 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
     {
         Supplier<List<TestSidecarHostInfo>> supplier = () -> sidecarServerList;
         PeersModule peersModule = new PeersModule(supplier);
-        for (IInstance instance : cluster)
+        for (IInstance cassandraInstance : cluster)
         {
             // Provider de una lista de Sidecar servers
             LOGGER.info("Starting Sidecar instance for Cassandra instance {}",
-                        instance.config().num());
-            Server server = startSidecarWithInstances(List.of(instance), peersModule);
-            sidecarServerList.add(new TestSidecarHostInfo(instance, server, server.actualPort()));
+                        cassandraInstance.config().num());
+            Server server = startSidecarWithInstances(List.of(cassandraInstance), peersModule);
+            sidecarServerList.add(new TestSidecarHostInfo(cassandraInstance, server, server.actualPort()));
         }
 
         assertThat(sidecarServerList.size()).as("Each Cassandra Instance will be managed by a single Sidecar instance")
@@ -100,8 +98,8 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
     void stopSidecarInstanceForTest(int instanceId) throws Exception
     {
         assertThat(sidecarServerList).isNotEmpty();
-        TestSidecarHostInfo server = sidecarServerList.get(instanceId);
-        server.getServer().stop().toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
+        Server server = sidecarServerList.get(instanceId).getServer();
+        server.stop(serverDeploymentIds.get(server)).toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     }
 
     void startSidecarInstanceForTest(int instanceId) throws Exception
@@ -140,34 +138,37 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
     }
 
     @Test
-    void oneBuddyDownTest() throws Exception
+    void onePeerDownTest() throws Exception
     {
-        HttpResponse<Buffer> response = getBlocking(trustedClient().get(server.actualPort(), "localhost", "/api/v1/peers/__health")
-                                                                   .send());
-        assertTrue(response.bodyAsJsonObject().isEmpty());
-        Thread.sleep(10000);
-        response = getBlocking(trustedClient().get(server.actualPort(), "localhost", "/api/v1/peers/__health")
-                                              .send());
-
-        assertEquals("OK", response.bodyAsJsonObject().getJsonObject("localhost2").getString("status"));
-
+        SidecarPeerHealthMonitorTask monitor = peerHealthMonitors.get(sidecarServerList.get(0).getServer());
+        // Monitor hasn't had time to perform checks
+        assertTrue(monitor.getStatus().isEmpty());
+        Thread.sleep(5000);
+        // After some time, peer is up
+        checkHostUp(monitor, "localhost2");
         stopSidecarInstanceForTest(1);
-
-        Thread.sleep(10000);
-
-        response = getBlocking(trustedClient().get(server.actualPort(), "localhost", "/api/v1/peers/__health")
-                                              .send());
-
-        assertEquals("DOWN", response.bodyAsJsonObject().getJsonObject("localhost2").getString("status"));
-
+        Thread.sleep(5000);
+        // After killing peer sidecar instance, monitor caches up and the host is down
+        checkHostDown(monitor, "localhost2");
         startSidecarInstanceForTest(1);
+        Thread.sleep(5000);
+        // After restarting peer sidecar instance, monitor caches up and the host is down
+        checkHostUp(monitor, "localhost2");
+    }
 
-        Thread.sleep(10000);
+    private boolean checkHostUp(SidecarPeerHealthMonitorTask monitor, String hostname)
+    {
+        return checkHostStatus(monitor, hostname, SidecarPeerHealthProvider.Health.OK);
+    }
 
-        response = getBlocking(trustedClient().get(server.actualPort(), "localhost", "/api/v1/peers/__health")
-                                              .send());
+    private boolean checkHostDown(SidecarPeerHealthMonitorTask monitor, String hostname)
+    {
+        return checkHostStatus(monitor, hostname, SidecarPeerHealthProvider.Health.DOWN);
+    }
 
-        assertEquals("OK", response.bodyAsJsonObject().getJsonObject("localhost2").getString("status"));
+    private boolean checkHostStatus(SidecarPeerHealthMonitorTask monitor, String hostname, SidecarPeerHealthProvider.Health status)
+    {
+        return monitor.getStatus().entrySet().stream().filter(e -> e.getKey().hostname().equals(hostname)).findAny().orElseThrow().getValue().equals(status);
     }
 
     @Override

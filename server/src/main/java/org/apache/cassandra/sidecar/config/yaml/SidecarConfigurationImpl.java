@@ -510,6 +510,17 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         }
 
         /**
+         * Sets the {@code sidecarClientConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param sidecarClientConfiguration the {@code sidecarClientConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder sidecarClientConfiguration(SidecarClientConfiguration sidecarClientConfiguration)
+        {
+            return update(b -> b.sidecarClientConfiguration = sidecarClientConfiguration);
+        }
+
+        /**
          * Sets the {@code metricsConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param metricsConfiguration the {@code metricsConfiguration} to set
