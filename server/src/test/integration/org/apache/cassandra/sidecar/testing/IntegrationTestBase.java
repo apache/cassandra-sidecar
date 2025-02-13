@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import com.google.common.collect.ImmutableMap;
+
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -288,7 +288,7 @@ public abstract class IntegrationTestBase
 
     protected void createTestKeyspace()
     {
-        createTestKeyspace(ImmutableMap.of(DATA_CENTER_PREFIX + 1, 1));
+        createTestKeyspace(Map.of(DATA_CENTER_PREFIX + 1, 1));
     }
 
     protected void createTestKeyspace(Map<String, Integer> rf)
@@ -299,7 +299,7 @@ public abstract class IntegrationTestBase
     protected void createKeyspace(String keyspaceName, Map<String, Integer> rf)
     {
         int attempts = 1;
-        ArrayList<Throwable> thrown = new ArrayList<>(5);
+        List<Throwable> thrown = new ArrayList<>(5);
         while (attempts <= 5)
         {
             try

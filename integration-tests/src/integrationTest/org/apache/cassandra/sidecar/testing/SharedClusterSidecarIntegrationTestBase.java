@@ -33,6 +33,28 @@ public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClus
 {
     private WebClient trustedClient;
     private WebClient noAuthClient;
+    private WebClient simpleClient;
+
+    @Override
+    protected void beforeClusterShutdown()
+    {
+        super.beforeClusterShutdown();
+
+        if (trustedClient != null)
+        {
+            trustedClient.close();
+        }
+
+        if (noAuthClient != null)
+        {
+            noAuthClient.close();
+        }
+
+        if (simpleClient != null)
+        {
+            simpleClient.close();
+        }
+    }
 
     /**
      * @return a client that configures the truststore and the client keystore
@@ -73,5 +95,16 @@ public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClus
                                          .setSsl(true);
         noAuthClient = WebClient.create(vertx(), clientOptions);
         return noAuthClient;
+    }
+
+    public WebClient simpleClient()
+    {
+        if (simpleClient != null)
+        {
+            return simpleClient;
+        }
+
+        simpleClient = WebClient.create(vertx());
+        return simpleClient;
     }
 }
