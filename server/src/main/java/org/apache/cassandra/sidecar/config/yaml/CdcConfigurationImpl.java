@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 
@@ -32,20 +33,48 @@ import org.apache.cassandra.sidecar.config.CdcConfiguration;
 public class CdcConfigurationImpl implements CdcConfiguration
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CdcConfigurationImpl.class);
+    public static final String IS_ENABLED_PROPERTY = "is_enabled";
+    public static final String CONFIGURATION_REFRESH_TIME_PROPERTY = "config_refresh_time";
     public static final String SEGMENT_HARD_LINK_CACHE_EXPIRY_PROPERTY = "segment_hardlink_cache_expiry";
+    public static final boolean DEFAULT_IS_ENABLED = false;
+    public static final MillisecondBoundConfiguration DEFAULT_CDC_CONFIG_REFRESH_TIME =
+            MillisecondBoundConfiguration.parse("30s");
     public static final SecondBoundConfiguration DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY =
-    SecondBoundConfiguration.parse("5m");
+            SecondBoundConfiguration.parse("5m");
 
+    protected boolean isEnabled;
+    protected MillisecondBoundConfiguration cdcConfigRefreshTime;
     protected SecondBoundConfiguration segmentHardLinkCacheExpiry;
+
 
     public CdcConfigurationImpl()
     {
         this.segmentHardLinkCacheExpiry = DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY;
+        this.cdcConfigRefreshTime = DEFAULT_CDC_CONFIG_REFRESH_TIME;
+        this.isEnabled = DEFAULT_IS_ENABLED;
     }
 
-    public CdcConfigurationImpl(SecondBoundConfiguration segmentHardLinkCacheExpiry)
+    public CdcConfigurationImpl(boolean isEnabled,
+                                MillisecondBoundConfiguration cdcConfigRefreshTime,
+                                SecondBoundConfiguration segmentHardLinkCacheExpiry)
     {
+        this.isEnabled = isEnabled;
+        this.cdcConfigRefreshTime = cdcConfigRefreshTime;
         this.segmentHardLinkCacheExpiry = segmentHardLinkCacheExpiry;
+    }
+
+    @Override
+    @JsonProperty(value = IS_ENABLED_PROPERTY)
+    public boolean isEnabled()
+    {
+        return isEnabled;
+    }
+
+    @Override
+    @JsonProperty(value = CONFIGURATION_REFRESH_TIME_PROPERTY)
+    public MillisecondBoundConfiguration cdcConfigRefreshTime()
+    {
+        return cdcConfigRefreshTime;
     }
 
     @Override
@@ -73,5 +102,11 @@ public class CdcConfigurationImpl implements CdcConfiguration
     {
         LOGGER.warn("'segment_hardlink_cache_expiry_in_secs' is deprecated, use 'segment_hardlink_cache_expiry' instead");
         setSegmentHardLinkCacheExpiry(new SecondBoundConfiguration(segmentHardlinkCacheExpiryInSecs, TimeUnit.SECONDS));
+    }
+
+    @Override
+    public String kafkaClientPrivateKeyPath()
+    {
+        return null;
     }
 }

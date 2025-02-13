@@ -140,8 +140,13 @@ import org.apache.cassandra.sidecar.routes.TableStatsHandler;
 import org.apache.cassandra.sidecar.routes.TimeSkewHandler;
 import org.apache.cassandra.sidecar.routes.TokenRangeReplicaMapHandler;
 import org.apache.cassandra.sidecar.routes.cassandra.NodeSettingsHandler;
+import org.apache.cassandra.sidecar.routes.cdc.DeleteCdcConfigRequestValidationHandler;
+import org.apache.cassandra.sidecar.routes.cdc.DeleteServiceConfigHandler;
+import org.apache.cassandra.sidecar.routes.cdc.GetServiceConfigHandler;
 import org.apache.cassandra.sidecar.routes.cdc.ListCdcDirHandler;
 import org.apache.cassandra.sidecar.routes.cdc.StreamCdcSegmentHandler;
+import org.apache.cassandra.sidecar.routes.cdc.UpdateCdcConfigRequestValidationHandler;
+import org.apache.cassandra.sidecar.routes.cdc.UpdateServiceConfigHandler;
 import org.apache.cassandra.sidecar.routes.restore.AbortRestoreJobHandler;
 import org.apache.cassandra.sidecar.routes.restore.CreateRestoreJobHandler;
 import org.apache.cassandra.sidecar.routes.restore.CreateRestoreSliceHandler;
@@ -351,6 +356,11 @@ public class MainModule extends AbstractModule
                               AbortRestoreJobHandler abortRestoreJobHandler,
                               CreateRestoreSliceHandler createRestoreSliceHandler,
                               RestoreJobProgressHandler restoreJobProgressHandler,
+                              UpdateServiceConfigHandler updateServiceConfigHandler,
+                              UpdateCdcConfigRequestValidationHandler updateCDCConfigRequestValidationHandler,
+                              DeleteServiceConfigHandler deleteServiceConfigHandler,
+                              DeleteCdcConfigRequestValidationHandler deleteCDCConfigRequestValidationHandler,
+                              GetServiceConfigHandler getServiceConfigHandler,
                               ConnectedClientStatsHandler connectedClientStatsHandler,
                               OperationalJobHandler operationalJobHandler,
                               ListOperationalJobsHandler listOperationalJobsHandler,
@@ -605,6 +615,25 @@ public class MainModule extends AbstractModule
                                     .endpoint(ApiEndpointsV1.STREAM_CDC_SEGMENTS_ROUTE)
                                     .handler(streamCdcSegmentHandler)
                                     .build();
+
+        protectedRouteBuilderFactory.get().router(router).method(HttpMethod.PUT)
+                .endpoint(ApiEndpointsV1.SERVICE_CONFIG_ROUTE)
+                .setBodyHandler(true)
+                .handler(updateCDCConfigRequestValidationHandler)
+                .handler(updateServiceConfigHandler)
+                .build();
+
+        protectedRouteBuilderFactory.get().router(router).method(HttpMethod.DELETE)
+                .endpoint(ApiEndpointsV1.SERVICE_CONFIG_ROUTE)
+                .setBodyHandler(true)
+                .handler(deleteCDCConfigRequestValidationHandler)
+                .handler(deleteServiceConfigHandler)
+                .build();
+
+        protectedRouteBuilderFactory.get().router(router).method(HttpMethod.GET)
+                .endpoint(ApiEndpointsV1.GET_SERVICES_CONFIG_ROUTE)
+                .handler(getServiceConfigHandler)
+                .build();
 
         return router;
     }

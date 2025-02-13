@@ -15,28 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.cassandra.sidecar.config;
+package org.apache.cassandra.sidecar.db;
 
-import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import java.util.Map;
+import java.util.Optional;
 
 /**
- * This class encapsulates configuration values for cdc.
+ * CDC configs are stored inside "configs" table of sidecar keyspace. This is an interface for
+ * database accessor of "configs" table
  */
-public interface CdcConfiguration
+public interface ConfigAccessor
 {
-    /**
-     * @return segment hard link cache expiration time used in {@link org.apache.cassandra.sidecar.cdc.CdcLogCache}
-     */
-    SecondBoundConfiguration segmentHardLinkCacheExpiry();
+    ServiceConfig getConfig();
 
-    /**
-     *
-     * @return returns if cdc feature is enabled
-     */
-    boolean isEnabled();
+    ServiceConfig storeConfig(final Map<String, String> config);
 
-    String kafkaClientPrivateKeyPath();
+    Optional<ServiceConfig> storeConfigIfNotExists(final Map<String, String> config);
 
-    MillisecondBoundConfiguration cdcConfigRefreshTime();
+    void deleteConfig();
+
+    boolean isSchemaInitialized();
 }

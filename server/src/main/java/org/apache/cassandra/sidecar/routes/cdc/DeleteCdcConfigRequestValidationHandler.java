@@ -15,28 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.cassandra.sidecar.config;
+package org.apache.cassandra.sidecar.routes.cdc;
 
-import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import com.google.inject.Singleton;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.RoutingContext;
+
 
 /**
- * This class encapsulates configuration values for cdc.
+ * Deleting a service config from "configs" table in sidecar keyspace should perform some
+ * validation checks before deleting the config. {@link DeleteCdcConfigRequestValidationHandler}
+ * performs those validations before the delete operation.
  */
-public interface CdcConfiguration
+@Singleton
+public class DeleteCdcConfigRequestValidationHandler implements Handler<RoutingContext>
 {
-    /**
-     * @return segment hard link cache expiration time used in {@link org.apache.cassandra.sidecar.cdc.CdcLogCache}
-     */
-    SecondBoundConfiguration segmentHardLinkCacheExpiry();
-
-    /**
-     *
-     * @return returns if cdc feature is enabled
-     */
-    boolean isEnabled();
-
-    String kafkaClientPrivateKeyPath();
-
-    MillisecondBoundConfiguration cdcConfigRefreshTime();
+    @Override
+    public void handle(RoutingContext context)
+    {
+        final JsonObject payload = context.getBodyAsJson();
+        ServiceConfigValidators.verifyValidService(context, payload);
+        context.next();
+    }
 }

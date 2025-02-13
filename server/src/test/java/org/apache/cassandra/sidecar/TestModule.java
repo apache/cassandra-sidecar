@@ -110,7 +110,7 @@ public class TestModule extends AbstractModule
     {
         ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl(5, SecondBoundConfiguration.parse("5s"));
         SSTableUploadConfiguration uploadConfiguration = new SSTableUploadConfigurationImpl(0F);
-        CdcConfiguration cdcConfiguration = new CdcConfigurationImpl(SecondBoundConfiguration.parse("1s"));
+        CdcConfiguration cdcConfiguration = new CdcConfigurationImpl(false, MillisecondBoundConfiguration.parse("5m"), SecondBoundConfiguration.parse("1s"));
         SchemaKeyspaceConfiguration schemaKeyspaceConfiguration =
         SchemaKeyspaceConfigurationImpl.builder()
                                        .isEnabled(true)

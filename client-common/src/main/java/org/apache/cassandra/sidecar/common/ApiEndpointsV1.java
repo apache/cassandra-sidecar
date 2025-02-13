@@ -121,6 +121,12 @@ public final class ApiEndpointsV1
     public static final String LIST_CDC_SEGMENTS_ROUTE = API_V1 + CDC_PATH + "/segments";
     public static final String STREAM_CDC_SEGMENTS_ROUTE = LIST_CDC_SEGMENTS_ROUTE + "/" + SEGMENT_PATH_PARAM;
 
+    public static final String SERVICES_PATH = "/services";
+    public static final String SERVICE_PARAM = ":service";
+    public static final String CONFIG = "/config";
+    public static final String SERVICE_CONFIG_ROUTE = API_V1 + SERVICES_PATH + SERVICE_PARAM + CONFIG;
+    public static final String GET_SERVICES_CONFIG_ROUTE = API_V1 + SERVICES_PATH;
+
 
     public static final String CONNECTED_CLIENT_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/connected-clients";
 

@@ -15,28 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.cassandra.sidecar.config;
+package org.apache.cassandra.sidecar.common.request;
 
-import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import io.netty.handler.codec.http.HttpMethod;
+import org.apache.cassandra.sidecar.common.request.data.GetServicesConfigPayload;
 
 /**
- * This class encapsulates configuration values for cdc.
+ * Represents a request for getting configurations for services from "configs" table inside
+ * sidecar internal keyspace.
  */
-public interface CdcConfiguration
+public class GetServiceConfigRequest extends JsonRequest<GetServicesConfigPayload>
 {
     /**
-     * @return segment hard link cache expiration time used in {@link org.apache.cassandra.sidecar.cdc.CdcLogCache}
+     * Constructs a Sidecar request with the given {@code requestURI}. Defaults to {@code ssl} enabled.
      */
-    SecondBoundConfiguration segmentHardLinkCacheExpiry();
+    public GetServiceConfigRequest()
+    {
+        super("/api/v1/services");
+    }
 
-    /**
-     *
-     * @return returns if cdc feature is enabled
-     */
-    boolean isEnabled();
-
-    String kafkaClientPrivateKeyPath();
-
-    MillisecondBoundConfiguration cdcConfigRefreshTime();
+    @Override
+    public HttpMethod method()
+    {
+        return HttpMethod.GET;
+    }
 }

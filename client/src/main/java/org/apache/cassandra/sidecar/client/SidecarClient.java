@@ -20,6 +20,7 @@
 package org.apache.cassandra.sidecar.client;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -38,16 +39,21 @@ import org.apache.cassandra.sidecar.client.selection.RandomInstanceSelectionPoli
 import org.apache.cassandra.sidecar.common.request.AbortRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.CreateRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.CreateRestoreJobSliceRequest;
+import org.apache.cassandra.sidecar.common.request.GetServiceConfigRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.ListCdcSegmentsRequest;
+import org.apache.cassandra.sidecar.common.request.PutServiceConfigRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobProgressRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobSummaryRequest;
+import org.apache.cassandra.sidecar.common.request.ServiceConfig;
 import org.apache.cassandra.sidecar.common.request.StreamCdcSegmentRequest;
 import org.apache.cassandra.sidecar.common.request.UpdateRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.Digest;
+import org.apache.cassandra.sidecar.common.request.data.GetServicesConfigPayload;
+import org.apache.cassandra.sidecar.common.request.data.PutCdcServiceConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.RestoreJobProgressRequestParams;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
@@ -543,6 +549,20 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                 .singleInstanceSelectionPolicy(sidecarInstance)
                 .request(new StreamCdcSegmentRequest(segment, range))
                 .build(), streamConsumer);
+    }
+
+    public CompletableFuture<GetServicesConfigPayload> getServiceConfig()
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                .request(new GetServiceConfigRequest())
+                .build());
+    }
+
+    public CompletableFuture<PutCdcServiceConfigPayload> putCdcServiceConfig(ServiceConfig serviceConfig, Map<String, String> config)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                .request(new PutServiceConfigRequest(serviceConfig, new PutCdcServiceConfigPayload(config)))
+                .build());
     }
 
     /**

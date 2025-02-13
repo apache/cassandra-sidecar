@@ -15,28 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.cassandra.sidecar.config;
-
-import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+package org.apache.cassandra.sidecar.common.request;
 
 /**
- * This class encapsulates configuration values for cdc.
+ * "configs" table inside internal sidecar keyspace stores configs for Kafka and CDC. ServiceConfig identifies
+ * the service of the configs.
  */
-public interface CdcConfiguration
+public enum ServiceConfig
 {
-    /**
-     * @return segment hard link cache expiration time used in {@link org.apache.cassandra.sidecar.cdc.CdcLogCache}
-     */
-    SecondBoundConfiguration segmentHardLinkCacheExpiry();
+    CDC("cdc"),
+    KAFKA("kafka");
 
-    /**
-     *
-     * @return returns if cdc feature is enabled
-     */
-    boolean isEnabled();
+    private final String serviceConfig;
 
-    String kafkaClientPrivateKeyPath();
+    ServiceConfig(String serviceConfig)
+    {
+        this.serviceConfig = serviceConfig;
+    }
 
-    MillisecondBoundConfiguration cdcConfigRefreshTime();
+    public String getServiceConfig()
+    {
+        return serviceConfig;
+    }
 }
