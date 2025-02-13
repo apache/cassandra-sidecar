@@ -73,7 +73,7 @@ Alternatively, you can run against a local CCM cluster. Cassandra Sidecar provid
 CCM cluster named `sidecardemo`. You can use the gradle wrapper to run the project connected to a 3-node CCM cluster
 as follows:
 
-    $ ./gradlew run -Dsidecar.config=file:///$PWD/samples/conf/sidecar-ccm.yaml
+    $ ./gradlew run -Dsidecar.config=file:///$PWD/examples/conf/sidecar-ccm.yaml
 
 Please see [samples](samples/README.md) for details.
 
