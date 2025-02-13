@@ -143,7 +143,8 @@ public class RestoreJobDiscoverer implements PeriodicTask
     @Override
     public DurationSpec delay()
     {
-        // delay value is re-evaluated when rescheduling
+        // The delay value is evaluated on scheduling the next run
+        // see, org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor.executeAndScheduleNext
         return hasInflightJobs()
                ? restoreJobConfig.jobDiscoveryActiveLoopDelay()
                : restoreJobConfig.jobDiscoveryIdleLoopDelay();
@@ -205,7 +206,6 @@ public class RestoreJobDiscoverer implements PeriodicTask
                     "inflightJobsCount={} delayMs={} jobDiscoveryRecencyDays={}",
                     inflightJobsCount, delay(), jobDiscoveryRecencyDays);
 
-        boolean hasInflightJobBefore = hasInflightJobs();
         // reset in-flight jobs
         inflightJobsCount = 0;
         RunContext context = new RunContext();
@@ -232,13 +232,6 @@ public class RestoreJobDiscoverer implements PeriodicTask
                     "abortedJobs={}",
                     inflightJobsCount, jobDiscoveryRecencyDays, context.expiredJobs, context.abortedJobs);
         metrics.activeJobs.metric.setValue(inflightJobsCount);
-
-        boolean hasInflightJobsNow = hasInflightJobs();
-        // need to update delay time; reschedule self
-        if (hasInflightJobBefore != hasInflightJobsNow)
-        {
-            periodicTaskExecutor.reschedule(this);
-        }
     }
 
     @Override
