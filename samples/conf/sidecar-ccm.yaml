@@ -17,7 +17,7 @@
 #
 
 #
-# Cassandra Sidecar configuration file for a 3-node CCM cluster with name test
+# Cassandra Sidecar configuration file for a 3-node CCM cluster with name sidecardemo
 #
 cassandra_instances:
   - id: 1
@@ -29,31 +29,31 @@ cassandra_instances:
     # commitlog dir, cdc dir, hints dir and saved caches dir. If data_dirs, commitlog_dir,
     # cdc_dir, hints_dir and saved_caches_dir are configured explicitly, then they will be used.
     # Otherwise, default paths based on storage directory will be used.
-    #storage_dir: ~/.ccm/test/node1
+    #storage_dir: ~/.ccm/sidecardemo/node1
 
     # List of directories where Cassandra stores data on disk. If not set, the default directory
     # is <storage_dir>/data
     data_dirs:
-      - ~/.ccm/test/node1/data0
+      - ~/.ccm/sidecardemo/node1/data0
 
     # A temporary directory used to stage sstables before importing them into Cassandra.
-    staging_dir: ~/.ccm/test/node1/sstable-staging
+    staging_dir: ~/.ccm/sidecardemo/node1/sstable-staging
 
     # Directory where Cassandra stores mutations. If not set, the default directory is
     # <storage_dir>/cdc_raw.
-    cdc_dir: ~/.ccm/test/node1/cdc_raw
+    cdc_dir: ~/.ccm/sidecardemo/node1/cdc_raw
 
     # Directory where Cassandra stores the commit logs. If not set, the default directory
     # is <storage_dir>/commitlog
-    commitlog_dir: ~/.ccm/test/node1/commitlog
+    commitlog_dir: ~/.ccm/sidecardemo/node1/commitlog
 
     # Directory where Cassandra stores hints. If not set, the default directory is
     # <storage_dir>/hints.
-    hints_dir: ~/.ccm/test/node1/hints
+    hints_dir: ~/.ccm/sidecardemo/node1/hints
 
     # Directory where Cassandra stores the saved caches. If not set, the default directory
     # is <storage_dir>/saved_caches
-    saved_caches_dir: ~/.ccm/test/node1/saved_caches
+    saved_caches_dir: ~/.ccm/sidecardemo/node1/saved_caches
 
     # Directory where Cassandra stores the data of the local system keyspaces.
     # By default, Cassandra stores the data of the local system keyspaces in the
@@ -76,31 +76,31 @@ cassandra_instances:
     # commitlog dir, cdc dir, hints dir and saved caches dir. If data_dirs, commitlog_dir,
     # cdc_dir, hints_dir and saved_caches_dir are configured explicitly, then they will be used.
     # Otherwise, default paths based on storage directory will be used.
-    #storage_dir: ~/.ccm/test/node2
+    #storage_dir: ~/.ccm/sidecardemo/node2
 
     # List of directories where Cassandra stores data on disk. If not set, the default directory
     # is <storage_dir>/data
     data_dirs:
-      - ~/.ccm/test/node2/data0
+      - ~/.ccm/sidecardemo/node2/data0
 
     # A temporary directory used to stage sstables before importing them into Cassandra.
-    staging_dir: ~/.ccm/test/node2/sstable-staging
+    staging_dir: ~/.ccm/sidecardemo/node2/sstable-staging
 
     # Directory where Cassandra stores mutations. If not set, the default directory is
     # <storage_dir>/cdc_raw.
-    cdc_dir: ~/.ccm/test/node2/cdc_raw
+    cdc_dir: ~/.ccm/sidecardemo/node2/cdc_raw
 
     # Directory where Cassandra stores the commit logs. If not set, the default directory
     # is <storage_dir>/commitlog
-    commitlog_dir: ~/.ccm/test/node2/commitlog
+    commitlog_dir: ~/.ccm/sidecardemo/node2/commitlog
 
     # Directory where Cassandra stores hints. If not set, the default directory is
     # <storage_dir>/hints.
-    hints_dir: ~/.ccm/test/node2/hints
+    hints_dir: ~/.ccm/sidecardemo/node2/hints
 
     # Directory where Cassandra stores the saved caches. If not set, the default directory
     # is <storage_dir>/saved_caches
-    saved_caches_dir: ~/.ccm/test/node2/saved_caches
+    saved_caches_dir: ~/.ccm/sidecardemo/node2/saved_caches
 
     # Directory where Cassandra stores the data of the local system keyspaces.
     # By default, Cassandra stores the data of the local system keyspaces in the
@@ -123,31 +123,31 @@ cassandra_instances:
     # commitlog dir, cdc dir, hints dir and saved caches dir. If data_dirs, commitlog_dir,
     # cdc_dir, hints_dir and saved_caches_dir are configured explicitly, then they will be used.
     # Otherwise, default paths based on storage directory will be used.
-    #storage_dir: ~/.ccm/test/node3
+    #storage_dir: ~/.ccm/sidecardemo/node3
 
     # List of directories where Cassandra stores data on disk. If not set, the default directory
     # is <storage_dir>/data
     data_dirs:
-      - ~/.ccm/test/node3/data0
+      - ~/.ccm/sidecardemo/node3/data0
 
     # A temporary directory used to stage sstables before importing them into Cassandra.
-    staging_dir: ~/.ccm/test/node3/sstable-staging
+    staging_dir: ~/.ccm/sidecardemo/node3/sstable-staging
 
     # Directory where Cassandra stores mutations. If not set, the default directory is
     # <storage_dir>/cdc_raw.
-    cdc_dir: ~/.ccm/test/node3/cdc_raw
+    cdc_dir: ~/.ccm/sidecardemo/node3/cdc_raw
 
     # Directory where Cassandra stores the commit logs. If not set, the default directory
     # is <storage_dir>/commitlog
-    commitlog_dir: ~/.ccm/test/node3/commitlog
+    commitlog_dir: ~/.ccm/sidecardemo/node3/commitlog
 
     # Directory where Cassandra stores hints. If not set, the default directory is
     # <storage_dir>/hints.
-    hints_dir: ~/.ccm/test/node3/hints
+    hints_dir: ~/.ccm/sidecardemo/node3/hints
 
     # Directory where Cassandra stores the saved caches. If not set, the default directory
     # is <storage_dir>/saved_caches
-    saved_caches_dir: ~/.ccm/test/node3/saved_caches
+    saved_caches_dir: ~/.ccm/sidecardemo/node3/saved_caches
 
     # Directory where Cassandra stores the data of the local system keyspaces.
     # By default, Cassandra stores the data of the local system keyspaces in the

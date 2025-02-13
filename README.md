@@ -70,10 +70,12 @@ Apache Cassandra running on the host & port specified in `conf/sidecar.yaml`.
     $ ./gradlew run
 
 Alternatively, you can run against a local CCM cluster. Cassandra Sidecar provides a configuration for a 3-node
-CCM cluster named `test`. You can use the gradle wrapper to run the project connected to a 3-node CCM cluster as
-follows:
+CCM cluster named `sidecardemo`. You can use the gradle wrapper to run the project connected to a 3-node CCM cluster
+as follows:
 
-    $ ./gradlew run -Dsidecar.config=file:///$PWD/conf/sidecar-ccm.yaml
+    $ ./gradlew run -Dsidecar.config=file:///$PWD/samples/conf/sidecar-ccm.yaml
+
+Please see [samples](samples/README.md) for details.
 
 Configuring Cassandra Instance
 ------------------------------
