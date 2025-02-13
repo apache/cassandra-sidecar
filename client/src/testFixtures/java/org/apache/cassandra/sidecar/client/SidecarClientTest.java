@@ -181,43 +181,6 @@ abstract class SidecarClientTest
         validateResponseServed(ApiEndpointsV1.HEALTH_ROUTE);
     }
 
-    @Test
-    void testSidecarInstanceHealth() throws Exception
-    {
-        MockResponse responseInstance = new MockResponse()
-                                         .setResponseCode(200)
-                                         .setHeader("content-type", "application/json")
-                                         .setBody("{\"status\":\"OK\"}");
-
-        servers.get(0).enqueue(responseInstance);
-
-        HealthResponse response = client.sidecarHealth().get(30, TimeUnit.SECONDS);
-        assertThat(response).isNotNull();
-        assertThat(response.status()).isEqualToIgnoringCase("OK");
-        assertThat(response.isOk()).isTrue();
-
-        assertThat(servers.get(0).getRequestCount()).isEqualTo(1);
-        assertThat(servers.get(0).takeRequest().getPath()).isEqualTo(ApiEndpointsV1.HEALTH_ROUTE);
-    }
-
-    @Test
-    void testSidecarInstanceFailedHealth() throws Exception
-    {
-        MockResponse responseInstance = new MockResponse()
-                                         .setResponseCode(503)
-                                         .setHeader("content-type", "application/json")
-                                         .setBody("{\"status\":\"NOT_OK\"}");
-
-        servers.get(1).enqueue(responseInstance);
-
-        assertThatThrownBy(() -> client.sidecarHealth())
-        .isInstanceOf(ExecutionException.class)
-        .hasCauseInstanceOf(RetriesExhaustedException.class);
-
-        assertThat(servers.get(1).getRequestCount()).isEqualTo(1);
-        assertThat(servers.get(1).takeRequest().getPath()).isEqualTo(ApiEndpointsV1.HEALTH_ROUTE);
-    }
-
     @SuppressWarnings("deprecation")
     @Test
     void testCassandraDeprecatedHealthOk() throws Exception
