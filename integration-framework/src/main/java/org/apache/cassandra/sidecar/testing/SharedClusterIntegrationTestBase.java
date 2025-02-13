@@ -26,6 +26,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +78,7 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
@@ -95,6 +97,7 @@ import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarClientConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SidecarPeerHealthConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
@@ -617,6 +620,24 @@ public abstract class SharedClusterIntegrationTestBase
                                                                 wrapper))
                          .collect(Collectors.toList());
             return new InstancesMetadataImpl(instanceMetadataList, dnsResolver);
+        }
+
+        @Provides
+        @Singleton
+        @Named("sidecarInstanceSupplier")
+        public Supplier<List<InnerDcTokenAdjacentPeerTestProvider.TestSidecarHostInfo>> supplier()
+        {
+            return ArrayList::new;
+        }
+
+        @Provides
+        @Singleton
+        public SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration()
+        {
+            return new SidecarPeerHealthConfigurationImpl(false,
+                                                          new MillisecondBoundConfiguration(1, TimeUnit.SECONDS),
+                                                          1,
+                                                          new MillisecondBoundConfiguration(500, TimeUnit.MILLISECONDS));
         }
 
         @Provides
