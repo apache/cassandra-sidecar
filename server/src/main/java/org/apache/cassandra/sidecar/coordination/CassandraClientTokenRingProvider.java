@@ -112,7 +112,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
 
     @Override
     protected Map<String, List<Range<BigInteger>>> getAllTokenRanges(Partitioner partitioner,
-                                                                     @Nullable String dc)
+                                                                     String dc)
     {
         checkAndReloadReloadCaches();
         return assignedRangesOfAllInstancesByDcCache.entrySet()
@@ -287,7 +287,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
             if (rangeStart.compareTo(rangeEnd) >= 0)
             {
                 tokenRanges.put(instance, Range.openClosed(rangeStart, partitioner.maximumToken().toBigInteger()));
-                if (!rangeEnd.equals(partitioner.minimumToken()))
+                if (!rangeEnd.equals(partitioner.minimumToken().toBigInteger()))
                     tokenRanges.put(instance, Range.openClosed(partitioner.minimumToken().toBigInteger(), rangeEnd));
             }
             else

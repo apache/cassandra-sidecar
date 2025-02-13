@@ -56,8 +56,9 @@ public class SidecarHttpHealthProvider implements SidecarPeerHealthProvider
         {
             SidecarClient client = clientProvider.get();
             CompletableFuture<HealthResponse> healthRequest = client.executeRequestAsync(client.requestBuilder()
-                                                                                               .singleInstanceSelectionPolicy(new SidecarInstanceImpl(instance.hostname(),
-                                                                                                                                                      instance.port()))
+                                                                                               .singleInstanceSelectionPolicy(
+                                                                                               new SidecarInstanceImpl(instance.hostname(),
+                                                                                                                       instance.port()))
                                                                                                .retryPolicy(retryPolicy())
                                                                                                .sidecarHealthRequest()
                                                                                                .build());

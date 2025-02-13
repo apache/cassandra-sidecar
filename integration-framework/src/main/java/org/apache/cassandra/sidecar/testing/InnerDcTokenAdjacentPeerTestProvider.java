@@ -31,6 +31,9 @@ import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvide
 import org.apache.cassandra.sidecar.coordination.InnerDcTokenAdjacentPeerProvider;
 import org.apache.cassandra.sidecar.server.Server;
 
+/**
+ * Text helper to find out server ports on integration tests.
+ */
 public class InnerDcTokenAdjacentPeerTestProvider extends InnerDcTokenAdjacentPeerProvider
 {
     private final Supplier<List<TestSidecarHostInfo>> sidecarServerSupplier;
@@ -49,9 +52,16 @@ public class InnerDcTokenAdjacentPeerTestProvider extends InnerDcTokenAdjacentPe
     protected int sidecarServicePort(Host host)
     {
         return sidecarServerSupplier.get().stream()
-                                    .filter(s -> s.instance.broadcastAddress().getHostName().equals(host.getBroadcastAddress().getHostName())).findAny().orElseThrow().getPort();
+                                    .filter(s -> s.instance.broadcastAddress().getHostName()
+                                                           .equals(host.getBroadcastAddress().getHostName()))
+                                    .findAny()
+                                    .orElseThrow()
+                                    .getPort();
     }
 
+    /**
+     * Class encapsulating different bits of information needed on integration tests.
+     */
     public static class TestSidecarHostInfo
     {
         IInstance instance;

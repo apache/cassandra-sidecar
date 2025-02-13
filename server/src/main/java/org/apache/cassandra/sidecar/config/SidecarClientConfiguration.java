@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.config;
 
-import org.apache.cassandra.sidecar.client.SidecarClientConfig;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 
 /**

@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.time.Duration;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
@@ -101,7 +100,16 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
         );
     }
 
-    public SidecarClientConfigurationImpl(boolean useSsl, MillisecondBoundConfiguration requestTimeout, MillisecondBoundConfiguration requestIdleTimeout, int connectionPoolMaxSize, MillisecondBoundConfiguration connectionPoolClearingPeriod, int connectionPoolEventLoopSize, int connectionPoolEventMaxWaitQueueSize, int maxRetries, MillisecondBoundConfiguration retryDelay, MillisecondBoundConfiguration maxRetryDelay)
+    public SidecarClientConfigurationImpl(boolean useSsl,
+                                          MillisecondBoundConfiguration requestTimeout,
+                                          MillisecondBoundConfiguration requestIdleTimeout,
+                                          int connectionPoolMaxSize,
+                                          MillisecondBoundConfiguration connectionPoolClearingPeriod,
+                                          int connectionPoolEventLoopSize,
+                                          int connectionPoolEventMaxWaitQueueSize,
+                                          int maxRetries,
+                                          MillisecondBoundConfiguration retryDelay,
+                                          MillisecondBoundConfiguration maxRetryDelay)
     {
         this.useSsl = useSsl;
         this.requestTimeout = requestTimeout;

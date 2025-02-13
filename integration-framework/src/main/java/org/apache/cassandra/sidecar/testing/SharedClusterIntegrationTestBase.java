@@ -77,7 +77,6 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
-import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
@@ -96,11 +95,9 @@ import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarClientConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.SidecarPeerHealthConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
-import org.apache.cassandra.sidecar.coordination.SidecarHttpHealthProvider;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitorTask;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerProvider;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
@@ -628,9 +625,15 @@ public abstract class SharedClusterIntegrationTestBase
                                                        CassandraClientTokenRingProvider cassandraClientTokenRingProvider,
                                                        SidecarConfiguration configuration,
                                                        DnsResolver dnsResolver,
-                                                       @Named("sidecarInstanceSupplier") Supplier<List<InnerDcTokenAdjacentPeerTestProvider.TestSidecarHostInfo>> supplier)
+                                                       @Named("sidecarInstanceSupplier")
+                                                               Supplier<List
+                                                                        <InnerDcTokenAdjacentPeerTestProvider.TestSidecarHostInfo>> supplier)
         {
-            return new InnerDcTokenAdjacentPeerTestProvider(instancesMetadata, cassandraClientTokenRingProvider, configuration.serviceConfiguration(), dnsResolver, supplier);
+            return new InnerDcTokenAdjacentPeerTestProvider(instancesMetadata,
+                                                            cassandraClientTokenRingProvider,
+                                                            configuration.serviceConfiguration(),
+                                                            dnsResolver,
+                                                            supplier);
         }
 
         @Provides

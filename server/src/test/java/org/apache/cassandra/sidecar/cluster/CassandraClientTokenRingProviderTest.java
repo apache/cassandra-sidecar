@@ -62,9 +62,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 
+/**
+ * Tests for Cassandra Client token ring provider
+ */
 public class CassandraClientTokenRingProviderTest
 {
-    private final CassandraClientTokenRingProvider tokenRingProvider = new CassandraClientTokenRingProvider(mockInstancesMetadata(), mockInstanceMetadataFetcher(), mockDnsResolver());
+    private final CassandraClientTokenRingProvider tokenRingProvider = new CassandraClientTokenRingProvider(mockInstancesMetadata(),
+                                                                                                            mockInstanceMetadataFetcher(),
+                                                                                                            mockDnsResolver());
 
     @Test
     public void testPrimaryRangesOfAllInstancesByDc()
@@ -129,8 +134,9 @@ public class CassandraClientTokenRingProviderTest
 
         Set<TokenRange> result = new HashSet<>();
         Map<String, List<Host>> hostByDc = allHosts.stream().collect(Collectors.groupingBy(Host::getDatacenter));
-        for (String dc : hostByDc.keySet())
+        for (Map.Entry<String, List<Host>> entry : hostByDc.entrySet())
         {
+            String dc = entry.getKey();
             List<Token> tokens = hostByDc.get(dc).stream().map(Host::getTokens).flatMap(Collection::stream)
                                          .sorted(((Comparator<Token>) Comparable::compareTo).reversed())
                                          .collect(Collectors.toList());
@@ -165,10 +171,19 @@ public class CassandraClientTokenRingProviderTest
 
         // DC2 is offset by 1 token so there will be 1 '1-range' token range at minToken
         List<Range<BigInteger>> dc2Ranges = tokens.get("DC2").values().stream().flatMap(Collection::stream).collect(Collectors.toList());
-        List<Range<BigInteger>> oneTokenRanges = dc2Ranges.stream().filter(range -> range.upperEndpoint().subtract(range.lowerEndpoint()).abs().compareTo(BigInteger.ONE) <= 0).collect(Collectors.toList());
+        List<Range<BigInteger>> oneTokenRanges = dc2Ranges.stream().filter(range ->
+                                                                           range.upperEndpoint()
+                                                                                .subtract(range.lowerEndpoint())
+                                                                                .abs()
+                                                                                .compareTo(BigInteger.ONE) <= 0)
+                                                          .collect(Collectors.toList());
         assertEquals(1, oneTokenRanges.size());
         assertEquals(Range.openClosed(BigInteger.valueOf(Long.MIN_VALUE), BigInteger.valueOf(Long.MIN_VALUE + 1)), oneTokenRanges.get(0));
-        assertTrue(dc2Ranges.stream().filter(f -> f != oneTokenRanges.get(0)).allMatch(range -> range.upperEndpoint().subtract(range.lowerEndpoint()).abs().compareTo(BigInteger.ONE) > 0));
+        assertTrue(dc2Ranges.stream().filter(f -> f != oneTokenRanges.get(0))
+                            .allMatch(range -> range.upperEndpoint()
+                                                    .subtract(range.lowerEndpoint())
+                                                    .abs()
+                                                    .compareTo(BigInteger.ONE) > 0));
     }
 
     private static Host mockHost(String node, String ip, String token, String dc)

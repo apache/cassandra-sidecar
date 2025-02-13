@@ -19,6 +19,17 @@
 
 package org.apache.cassandra.sidecar.health;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -38,19 +49,9 @@ import org.apache.cassandra.sidecar.testing.InnerDcTokenAdjacentPeerTestProvider
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
@@ -98,7 +99,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
         @Provides
         @Singleton
         @Named("sidecarInstanceSupplier")
-        public Supplier<List <TestSidecarHostInfo>> supplier()
+        public Supplier<List<TestSidecarHostInfo>> supplier()
         {
             return supplier;
         }
