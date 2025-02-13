@@ -169,16 +169,11 @@ public abstract class SharedClusterIntegrationTestBase
     protected Server server;
     protected TestVersion testVersion;
     protected MtlsTestHelper mtlsTestHelper;
-<<<<<<< HEAD
     private final CountDownLatch sidecarSchemaReadyLatch = new CountDownLatch(1);
     private IsolatedDTestClassLoaderWrapper classLoaderWrapper;
     private Injector sidecarServerInjector;
-=======
-    protected IsolatedDTestClassLoaderWrapper classLoaderWrapper;
-    protected Injector sidecarServerInjector;
     protected HashMap<Server, String> serverDeploymentIds;
     protected HashMap<Server, SidecarPeerHealthMonitorTask> peerHealthMonitors;
->>>>>>> 50d464dc (Refactor and improvements)
 
     static
     {
