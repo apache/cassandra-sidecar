@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,9 +50,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class PeriodicTaskExecutorTest
 {
-    private final Vertx vertx = Vertx.vertx();
-    private final ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
-    private final ClusterLease clusterLease = new ClusterLease();
+    private static final Vertx vertx = Vertx.vertx();
+    private static final ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
+    private static final ClusterLease clusterLease = new ClusterLease();
     private PeriodicTaskExecutor taskExecutor;
 
     @BeforeEach
@@ -68,6 +69,13 @@ class PeriodicTaskExecutorTest
         {
             taskExecutor.close(Promise.promise());
         }
+    }
+
+    @AfterAll
+    static void teardown()
+    {
+        executorPools.close();
+        vertx.close();
     }
 
     @Test
