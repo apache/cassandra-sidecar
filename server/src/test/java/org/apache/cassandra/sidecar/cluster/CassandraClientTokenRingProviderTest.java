@@ -56,6 +56,7 @@ import org.jetbrains.annotations.NotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
@@ -267,11 +268,12 @@ public class CassandraClientTokenRingProviderTest
         return instanceMetadata;
     }
 
-
-
     private InstanceMetadataFetcher mockInstanceMetadataFetcher()
     {
-        return mock(InstanceMetadataFetcher.class);
+        InstanceMetadataFetcher fetcher = mock(InstanceMetadataFetcher.class);
+        Metadata metadata = getMetadata();
+        when(fetcher.callOnFirstAvailableInstance(any())).thenReturn(metadata);
+        return fetcher;
     }
 
     private static class MockToken extends Token
