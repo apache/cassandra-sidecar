@@ -297,25 +297,21 @@ class SidecarConfigurationTest
     @Test
     void testSidecarPeerHealthConfiguration() throws IOException
     {
-        String yaml = "sidecar_peer_health:\n" +
-                      "  enabled: false\n" +
-                      "  execute_interval: 1s\n" +
-                      "  health_check_retries: 1\n" +
-                      "  health_check_retry_delay: 2s\n";
-        SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.readYamlConfiguration(yaml);
+        Path yamlPath = yaml("config/sidecar_peer_health_options.yaml");
+        SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         assertThat(sidecarConfiguration).isNotNull();
         SidecarPeerHealthConfiguration config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         assertThat(config).isNotNull();
-        assertThat(config.enabled()).isFalse();
-        assertThat(config.executeInterval().toMillis()).isEqualTo(1_000);
-        assertThat(config.healthCheckRetries()).isEqualTo(1);
-        assertThat(config.healthCheckRetryDelay().toMillis()).isEqualTo(2_000);
+        assertThat(config.enabled()).isTrue();
+        assertThat(config.executeInterval().toMillis()).isEqualTo(30_000);
+        assertThat(config.healthCheckRetries()).isEqualTo(5);
+        assertThat(config.healthCheckRetryDelay().toMillis()).isEqualTo(10_000);
     }
 
     @Test
     void testVertxFilesystemOptionsConfiguration() throws IOException
     {
-        Path yamlPath = yaml("config/sidecar_peer_health_options.yaml");
+        Path yamlPath = yaml("config/sidecar_vertx_filesystem_options.yaml");
         SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         assertThat(sidecarConfiguration).isNotNull();
         assertThat(sidecarConfiguration.serviceConfiguration()).isNotNull();
