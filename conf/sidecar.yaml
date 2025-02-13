@@ -254,6 +254,16 @@ sidecar_client:
   retry_delay: 1s
   max_retry_delay: 2s
 
+ssl:
+  enabled:  false
+  keystore:
+    type: PKCS12
+    path: path/to/keystore.p12
+    password: password
+  truststore:
+    type: PKCS12
+    path: path/to/keystore.p12
+    password: password
 
 metrics:
   registry_name: cassandra_sidecar
