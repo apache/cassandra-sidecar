@@ -124,7 +124,7 @@ public class SidecarClientProvider implements Provider<SidecarClient>
                .setMaxWaitQueueSize(clientConfig.connectionPoolMaxWaitQueueSize());
 
         boolean useSsl = clientConfig.useSsl();
-        if (sslConfig.isKeystoreConfigured())
+        if (sslConfig != null && sslConfig.isKeystoreConfigured())
         {
             options.setKeyStoreOptions(new JksOptions().setPath(sslConfig.keystore().path())
                                                        .setPassword(sslConfig.keystore().password()));
@@ -140,7 +140,7 @@ public class SidecarClientProvider implements Provider<SidecarClient>
             }
         }
 
-        if (sslConfig.truststore() != null && sslConfig.truststore().isConfigured())
+        if (sslConfig != null && sslConfig.truststore() != null && sslConfig.truststore().isConfigured())
         {
             options.setTrustStoreOptions(new JksOptions().setPath(sslConfig.truststore().path())
                                                          .setPassword(sslConfig.truststore().password()));
