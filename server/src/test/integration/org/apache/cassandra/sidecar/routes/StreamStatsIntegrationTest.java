@@ -74,7 +74,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
 
         TestState testState = new TestState();
         testStart.countDown();
-        loopAssert(10, 500, () -> {
+        loopAssert(20, 500, () -> {
             if (nodetoolError.get() != null)
             {
                 throw nodetoolError.get();
@@ -146,10 +146,12 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
 
     void populateDataAtNode2Only(UpgradeableCluster cluster, QualifiedTableName tableName)
     {
+        // disable compaction for the table to have more files to stream
+        cluster.stream()
+               .forEach(node -> node.nodetoolResult("disableautocompaction", tableName.keyspace(), tableName.tableName())
+                                    .asserts().success());
         IInstance node = cluster.get(2);
-        // disable compaction for the table to have more file to stream
-        node.nodetoolResult("disableautocompaction", tableName.keyspace(), tableName.tableName()).asserts().success();
-        for (int i = 1; i <= 100; i++)
+        for (int i = 1; i <= 200; i++)
         {
             node.executeInternal("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
                                  "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', " + i + ", 'Benjamin PRADES');");
