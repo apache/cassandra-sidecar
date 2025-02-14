@@ -256,7 +256,7 @@ public class PeriodicTaskExecutor implements Closeable
         if (scheduleDecision == ScheduleDecision.EXECUTE)
         {
             Promise<Void> taskRunPromise = Promise.promise();
-            taskRunPromise.future().onSuccess(ignored -> promise.tryComplete(ScheduleDecision.EXECUTE));
+            taskRunPromise.future().onComplete(ignored -> promise.tryComplete(ScheduleDecision.EXECUTE));
             try
             {
                 periodicTask.execute(taskRunPromise);
@@ -264,7 +264,7 @@ public class PeriodicTaskExecutor implements Closeable
             catch (Throwable throwable)
             {
                 LOGGER.warn("Periodic task failed to execute. task='{}' execCount={}", periodicTask.name(), execCount, throwable);
-                promise.tryFail(throwable);
+                taskRunPromise.tryFail(throwable);
             }
         }
         else
