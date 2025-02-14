@@ -154,7 +154,7 @@ public class PeriodicTaskExecutor implements Closeable
             return;
         }
         long startTime = System.nanoTime();
-        internalPool.<Result>executeBlocking(promise -> executeInternal(promise, key, execCount), false)
+        internalPool.<ScheduleDecision>executeBlocking(promise -> executeInternal(promise, key, execCount), false)
                     .onComplete(outcome -> {
                         LOGGER.debug("Task run finishes. task='{}' outcome={} execCount={}", key, outcome, execCount);
                         runPromise.complete(); // mark the completion, regardless of the result from last run
@@ -162,7 +162,7 @@ public class PeriodicTaskExecutor implements Closeable
 
                         DurationSpec delay;
                         long priorExecutionDurationMillis;
-                        if (outcome.result() == Result.RESCHEDULED)
+                        if (outcome.result() == ScheduleDecision.RESCHEDULE)
                         {
                             priorExecutionDurationMillis = 0;
                             delay = key.task.initialDelay();
@@ -248,37 +248,28 @@ public class PeriodicTaskExecutor implements Closeable
         }
     }
 
-    private void executeInternal(Promise<Result> promise, PeriodicTaskKey key, long execCount)
+    private void executeInternal(Promise<ScheduleDecision> promise, PeriodicTaskKey key, long execCount)
     {
         PeriodicTask periodicTask = key.task;
-        switch (consolidateScheduleDecision(periodicTask))
+        ScheduleDecision scheduleDecision = consolidateScheduleDecision(periodicTask);
+        LOGGER.debug("{} task. task='{}' execCount={}", scheduleDecision, key, execCount);
+        if (scheduleDecision == ScheduleDecision.EXECUTE)
         {
-            case SKIP:
-                LOGGER.trace("Skip executing task. task='{}' execCount={}", key, execCount);
-                promise.tryComplete();
-                return;
-
-            case EXECUTE:
-                break;
-
-            case RESCHEDULE:
-            default:
-                LOGGER.debug("Rescheduling the task. task='{}' execCount={}", key, execCount);
-                promise.tryComplete(Result.RESCHEDULED);
-                return;
+            Promise<Void> taskRunPromise = Promise.promise();
+            taskRunPromise.future().onSuccess(ignored -> promise.tryComplete(ScheduleDecision.EXECUTE));
+            try
+            {
+                periodicTask.execute(taskRunPromise);
+            }
+            catch (Throwable throwable)
+            {
+                LOGGER.warn("Periodic task failed to execute. task='{}' execCount={}", periodicTask.name(), execCount, throwable);
+                promise.tryFail(throwable);
+            }
         }
-
-        Promise<Void> taskRunPromise = Promise.promise();
-        taskRunPromise.future().onSuccess(ignored -> promise.tryComplete());
-        try
+        else
         {
-            LOGGER.debug("Executing task. task='{}' execCount={}", key, execCount);
-            periodicTask.execute(taskRunPromise);
-        }
-        catch (Throwable throwable)
-        {
-            LOGGER.warn("Periodic task failed to execute. task='{}' execCount={}", periodicTask.name(), execCount, throwable);
-            promise.tryFail(throwable);
+            promise.tryComplete(scheduleDecision);
         }
     }
 
@@ -341,15 +332,6 @@ public class PeriodicTaskExecutor implements Closeable
         {
             return fqcnAndName;
         }
-    }
-
-    enum Result
-    {
-        /**
-         * Tells the run completion handler whether task is rescheduled.
-         * If it is rescheduled, the delay is adjusted to the initial delay of the task
-         */
-        RESCHEDULED
     }
 
     @VisibleForTesting

@@ -24,17 +24,17 @@ package org.apache.cassandra.sidecar.tasks;
 public enum ScheduleDecision
 {
     /**
-     * Execute the upcoming run
+     * Execute the current run and continue to schedule the next run in {@link PeriodicTask#delay()}
      */
     EXECUTE,
 
     /**
-     * Skip the upcoming run, but do not change the schedule
+     * Skip the current run and continue to schedule the next run in {@link PeriodicTask#delay()}
      */
     SKIP,
 
     /**
-     * Skip the upcoming run and reschedule the {@link PeriodicTask}
+     * Similar to {@link SKIP}. Skip the current run, but schedule the next run in {@link PeriodicTask#initialDelay()}
      */
     RESCHEDULE;
 }
