@@ -19,8 +19,8 @@
 package org.apache.cassandra.sidecar.utils;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,13 +97,29 @@ public class InstanceMetadataFetcher
     }
 
     /**
-     * Iterate through the local instances and call the function on the first available instance, i.e. no CassandraUnavailableException
-     * or OperationUnavailableException is thrown for the operations
+     * Iterate through the local instances and run the {@link Consumer} on the first available one,
+     * so no {@link CassandraUnavailableException} or {@link OperationUnavailableException} is thrown for the operations
      *
-     * @param function function applies to {@link InstanceMetadata}
-     * @return function eval result. Null can be returned when all local instances are exhausted
+     * @param consumer a {@link Consumer} that processes {@link InstanceMetadata} and returns no result
+     * @throws CassandraUnavailableException if all local instances were exhausted
+     */
+    public void runOnFirstAvailableInstance(Consumer<InstanceMetadata> consumer) throws CassandraUnavailableException
+    {
+        callOnFirstAvailableInstance(metadata ->
+        {
+            consumer.accept(metadata);
+            return null;
+        });
+    }
+
+    /**
+     * Iterate through the local instances and call the {@link Function} on the first available one,
+     * so no {@link CassandraUnavailableException} or {@link OperationUnavailableException} is thrown for the operations
+     *
      * @param <T> type of the result
-     * @throws CassandraUnavailableException when all local instances are exhausted.
+     * @param function a {@link Function} that maps {@link InstanceMetadata} to {@link T}
+     * @return evaluation result of the {@code function}; can be {@code null} if all local instances were exhausted
+     * @throws CassandraUnavailableException if all local instances were exhausted
      */
     @NotNull
     public <T> T callOnFirstAvailableInstance(Function<InstanceMetadata, T> function) throws CassandraUnavailableException

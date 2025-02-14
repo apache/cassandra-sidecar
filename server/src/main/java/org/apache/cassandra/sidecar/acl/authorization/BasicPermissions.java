@@ -63,6 +63,9 @@ public class BasicPermissions
     public static final Permission READ_OPERATIONAL_JOB = new DomainAwarePermission("OPERATIONAL_JOB:READ", OPERATION_SCOPE);
     public static final Permission DECOMMISSION_NODE = new DomainAwarePermission("NODE:DECOMMISSION", OPERATION_SCOPE);
 
+    // Permissions related to Schema Reporting
+    public static final Permission REPORT_SCHEMA = new DomainAwarePermission("SCHEMA:REPORT", CLUSTER_SCOPE);
+
     // cassandra cluster related permissions
     public static final Permission READ_SCHEMA = new DomainAwarePermission("SCHEMA:READ", CLUSTER_SCOPE);
     public static final Permission READ_SCHEMA_KEYSPACE_SCOPED = new DomainAwarePermission("SCHEMA:READ", KEYSPACE_SCOPE);

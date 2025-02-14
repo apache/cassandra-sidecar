@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.utils;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-
+import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -32,15 +32,36 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
+import org.jetbrains.annotations.NotNull;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
+/**
+ * Unit tests for {@link InstanceMetadataFetcher}
+ */
 class InstanceMetadataFetcherTest
 {
     @TempDir
     Path tempDir;
+
+    @Test
+    void testRunOnFirstAvailableInstance()
+    {
+        List<InstanceMetadata> instances = ImmutableList.of(instance(1, "127.0.0.1", false),
+                                                            instance(2, "127.0.0.2", true),
+                                                            instance(3, "127.0.0.3", true));
+        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolver.DEFAULT);
+        InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
+
+        fetcher.runOnFirstAvailableInstance(metadata ->
+                assertThat(metadata.delegate())
+                        .describedAs("The delegate of instance 2 should be used")
+                        .isNotNull()
+                        .isSameAs(instances.get(1).delegate())
+        );
+    }
 
     @Test
     void testCallOnFirstAvailableInstance()
@@ -50,11 +71,13 @@ class InstanceMetadataFetcherTest
                                                          instance(3, "127.0.0.3", true));
         InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolver.DEFAULT);
         InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
+
         CassandraAdapterDelegate delegate = fetcher.callOnFirstAvailableInstance(InstanceMetadata::delegate);
+
         assertThat(delegate)
-        .describedAs("The delegate of instance 2 should be returned")
-        .isNotNull()
-        .isSameAs(instances.get(1).delegate());
+                .describedAs("The delegate of instance 2 should be returned")
+                .isNotNull()
+                .isSameAs(instances.get(1).delegate());
     }
 
     @Test
@@ -64,12 +87,14 @@ class InstanceMetadataFetcherTest
                                                          instance(2, "127.0.0.2", false));
         InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolver.DEFAULT);
         InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
+
         assertThatThrownBy(() -> fetcher.callOnFirstAvailableInstance(InstanceMetadata::delegate))
-        .isExactlyInstanceOf(CassandraUnavailableException.class)
-        .hasMessageContaining("All local Cassandra nodes are exhausted. But none is available");
+                .isExactlyInstanceOf(CassandraUnavailableException.class)
+                .hasMessageContaining("All local Cassandra nodes are exhausted. But none is available");
     }
 
-    private InstanceMetadata instance(int id, String host, boolean isAvailable)
+    @NotNull
+    private InstanceMetadata instance(int id, @NotNull String host, boolean isAvailable)
     {
         InstanceMetadataImpl.Builder builder = InstanceMetadataImpl.builder()
                                                                    .id(id)
@@ -79,7 +104,7 @@ class InstanceMetadataFetcherTest
                                                                    .metricRegistry(new MetricRegistry());
         if (isAvailable)
         {
-            builder.delegate(mock(CassandraAdapterDelegate.class));
+            builder = builder.delegate(mock(CassandraAdapterDelegate.class));
         }
         return builder.build();
     }

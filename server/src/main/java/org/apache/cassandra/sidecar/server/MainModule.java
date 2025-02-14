@@ -141,6 +141,7 @@ import org.apache.cassandra.sidecar.routes.KeyspaceSchemaHandler;
 import org.apache.cassandra.sidecar.routes.ListOperationalJobsHandler;
 import org.apache.cassandra.sidecar.routes.NodeDecommissionHandler;
 import org.apache.cassandra.sidecar.routes.OperationalJobHandler;
+import org.apache.cassandra.sidecar.routes.ReportSchemaHandler;
 import org.apache.cassandra.sidecar.routes.RingHandler;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.SchemaHandler;
@@ -364,6 +365,7 @@ public class MainModule extends AbstractModule
                               SSTableCleanupHandler ssTableCleanupHandler,
                               StreamCdcSegmentHandler streamCdcSegmentHandler,
                               ListCdcDirHandler listCdcDirHandler,
+                              ReportSchemaHandler reportSchemaHandler,
                               RestoreRequestValidationHandler validateRestoreJobRequest,
                               DiskSpaceProtectionHandler diskSpaceProtection,
                               ValidateTableExistenceHandler validateTableExistence,
@@ -629,6 +631,14 @@ public class MainModule extends AbstractModule
         protectedRouteBuilderFactory.get().router(router).method(HttpMethod.GET)
                                     .endpoint(ApiEndpointsV1.STREAM_CDC_SEGMENTS_ROUTE)
                                     .handler(streamCdcSegmentHandler)
+                                    .build();
+
+        // Schema Reporting
+        protectedRouteBuilderFactory.get()
+                                    .router(router)
+                                    .method(HttpMethod.PUT)
+                                    .endpoint(ApiEndpointsV1.REPORT_SCHEMA_ROUTE)
+                                    .handler(reportSchemaHandler)
                                     .build();
 
         protectedRouteBuilderFactory.get().router(router).method(HttpMethod.PUT)
@@ -975,7 +985,8 @@ public class MainModule extends AbstractModule
             @NotNull
             protected String initialize()
             {
-                return fetcher.callOnFirstAvailableInstance(i -> i.delegate().storageOperations().clusterName());
+                return fetcher.callOnFirstAvailableInstance(instance ->
+                        instance.delegate().storageOperations().clusterName());
             }
         };
 

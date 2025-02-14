@@ -1,5 +1,6 @@
 0.1.0
 -----
+ * Create Endpoint that Triggers an Immediate Schema Report (CASSSIDECAR-203)
  * Add JWT Authentication support in Sidecar (CASSSIDECAR-160)
  * Add Token Ring Peer Health monitor (CASSSIDECAR-206)
  * Config APIs for storing CDC/Kafka configs for CDC feature (CASSSIDECAR-211)
@@ -12,7 +13,7 @@
  * Sidecar schema initialization can be executed on multiple thread (CASSSIDECAR-200)
  * Make sidecar operations resilient to down Cassandra nodes (CASSSIDECAR-201)
  * Fix Cassandra instance not found error (CASSSIDECAR-192)
- * Implemented Schema Reporter for Integration with DataHub (CASSSIDECAR-191)
+ * Implement Schema Reporter for Integration with DataHub (CASSSIDECAR-191)
  * Add sidecar endpoint to retrieve stream stats (CASSSIDECAR-180)
  * Add sidecar endpoint to retrieve cassandra gossip health (CASSSIDECAR-173)
  * Fix SidecarSchema stuck at initialization due to ClusterLeaseTask scheduling (CASSSIDECAR-189)

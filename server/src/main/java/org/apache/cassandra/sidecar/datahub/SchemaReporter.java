@@ -113,13 +113,23 @@ public class SchemaReporter
     /**
      * Public method for converting and reporting the Cassandra schema
      *
-     * @param cluster a {@link Cluster} to extract Cassandra schema from
+     * @param cluster the {@link Cluster} to extract Cassandra schema from
      */
     public void process(@NotNull Cluster cluster)
     {
+        process(cluster.getMetadata());
+    }
+
+    /**
+     * Public method for converting and reporting the Cassandra schema
+     *
+     * @param metadata the {@link Metadata} to extract Cassandra schema from
+     */
+    public void process(@NotNull Metadata metadata)
+    {
         try (Emitter emitter = emitterFactory.emitter())
         {
-            stream(cluster.getMetadata())
+            stream(metadata)
                     .forEach(ThrowableUtils.consumer(emitter::emit));
         }
         catch (Exception exception)
