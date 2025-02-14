@@ -181,8 +181,9 @@ public class PeriodicTaskExecutor implements Closeable
      * Unschedule and close the {@link PeriodicTask} iff it has been scheduled.
      *
      * @param task the task to unschedule
+     * @return future of task unscheduling
      */
-    public void unschedule(PeriodicTask task)
+    public Future<Void> unschedule(PeriodicTask task)
     {
         PeriodicTaskKey key = new PeriodicTaskKey(task);
         AtomicBoolean alreadyUnscheduled = new AtomicBoolean(false);
@@ -197,14 +198,14 @@ public class PeriodicTaskExecutor implements Closeable
         });
         if (timerId == null)
         {
-            LOGGER.debug("No such task. task='{}'", key);
-            return;
+            LOGGER.debug("No such task to unschedule. task='{}'", key);
+            return Future.failedFuture("No such task to unschedule");
         }
 
         if (alreadyUnscheduled.get())
         {
             LOGGER.debug("Task is already unscheduled. task='{}'", key);
-            return;
+            return Future.failedFuture("Task is already unscheduled");
         }
 
         LOGGER.debug("Unscheduling task. task='{}' timerId={}", key, timerId);
@@ -213,23 +214,23 @@ public class PeriodicTaskExecutor implements Closeable
         // If so, close the task once the run is completed; the task entry is removed on the next schedule.
         // Otherwise, the task entry should be removed here, as there are no more schedules.
         boolean removeEntry = !activeRuns.containsKey(key);
-        activeRuns
-        .getOrDefault(key, Future.succeededFuture())
-        .andThen(ignored -> {
-            try
-            {
-                task.close();
-            }
-            catch (Throwable cause)
-            {
-                // just log any error while closing and continue
-                LOGGER.warn("Failed to close task during unscheduling. task='{}'", key, cause);
-            }
-            if (removeEntry)
-            {
-                timerIds.remove(key);
-            }
-        });
+        return activeRuns
+               .getOrDefault(key, Future.succeededFuture())
+               .andThen(ignored -> {
+                   try
+                   {
+                       task.close();
+                   }
+                   catch (Throwable cause)
+                   {
+                       // just log any error while closing and continue
+                       LOGGER.warn("Failed to close task during unscheduling. task='{}'", key, cause);
+                   }
+                   if (removeEntry)
+                   {
+                       timerIds.remove(key);
+                   }
+               });
     }
 
     @Override
@@ -338,5 +339,11 @@ public class PeriodicTaskExecutor implements Closeable
     Map<PeriodicTaskKey, Long> timerIds()
     {
         return timerIds;
+    }
+
+    @VisibleForTesting
+    Map<PeriodicTaskKey, Future<Void>> activeRuns()
+    {
+        return activeRuns;
     }
 }
