@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.restore;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -140,7 +139,7 @@ public class RestoreJobManagerGroup
         {
             LOGGER.debug("No RestoreJobManager found for Cassandra instance. No ranges to discard. instanceId={}",
                          instanceMetadata.id());
-            return Collections.emptySet();
+            return Set.of();
         }
         return manager.discardOverlappingRanges(restoreJob, otherRanges);
     }

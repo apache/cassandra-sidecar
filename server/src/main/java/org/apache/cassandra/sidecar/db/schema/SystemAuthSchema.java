@@ -22,7 +22,7 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.google.inject.Singleton;
-import org.apache.cassandra.sidecar.common.server.exceptions.SchemaUnavailableException;
+import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.jetbrains.annotations.NotNull;
 
 /**

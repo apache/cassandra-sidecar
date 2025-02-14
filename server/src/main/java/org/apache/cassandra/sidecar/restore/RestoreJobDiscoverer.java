@@ -288,11 +288,11 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
             }
             else // both new and old ranges exist and they differs
             {
-                TokenRange.Pair diff = TokenRange.diff(rangesFromOld, rangesFromNew);
+                TokenRange.SymmetricDiffResult symmetricDiffResult = TokenRange.symmetricDiff(rangesFromOld, rangesFromNew);
                 // ranges that are no longer in the new topology are lost
-                lostRanges.put(instanceId, diff.left);
+                lostRanges.put(instanceId, symmetricDiffResult.onlyInLeft);
                 // ranges that are new in the new topology are gained
-                gainedRanges.put(instanceId, diff.right);
+                gainedRanges.put(instanceId, symmetricDiffResult.onlyInRight);
             }
         }
 
@@ -380,7 +380,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         ringTopologyRefresher.register(job, this);
         if (shouldFindSlicesAndSubmit(job))
         {
-            findSlicesAndSubmit(job, true);
+            findSlicesAndSubmit(job);
             // Mark the flag. It prevents finding slices (which is expensive) until the flag is unset.
             jobIdsByDay.markSlicesDiscovered(job);
         }
@@ -403,9 +403,9 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
 
     // find all slices of the job that should be downloaded to the local instances,
     // according to the cluster token ownership
-    private void findSlicesAndSubmit(RestoreJob restoreJob, boolean forceRefresh)
+    private void findSlicesAndSubmit(RestoreJob restoreJob)
     {
-        localTokenRangesProvider.localTokenRanges(restoreJob.keyspaceName, forceRefresh)
+        localTokenRangesProvider.localTokenRanges(restoreJob.keyspaceName, true)
                                 .forEach((instanceId, ranges) -> findSlicesOfCassandraNodeAndSubmit(restoreJob, instanceId, ranges));
     }
 
@@ -460,8 +460,8 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         Set<TokenRange> existingRanges = overlappingRanges.stream()
                                                           .map(RestoreRange::tokenRange)
                                                           .collect(Collectors.toSet());
-        TokenRange.Pair diff = TokenRange.diff(existingRanges, otherRanges);
-        Set<TokenRange> remainedRanges = diff.left;
+        TokenRange.SymmetricDiffResult symmetricDiffResult = TokenRange.symmetricDiff(existingRanges, otherRanges);
+        Set<TokenRange> remainedRanges = symmetricDiffResult.onlyInLeft;
         findSlicesOfCassandraNodeAndSubmit(restoreJob, instanceId, remainedRanges);
     }
 

@@ -19,14 +19,11 @@
 package org.apache.cassandra.sidecar.common.server.cluster.locator;
 
 import java.math.BigInteger;
-import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
@@ -38,9 +35,6 @@ import com.datastax.driver.core.DataType;
  */
 public class TokenRange
 {
-    public static final Comparator<TokenRange> NATURAL_ORDER = Comparator.comparing(TokenRange::start)
-                                                                         .thenComparing(TokenRange::end);
-
     public final Range<Token> range;
 
     /**
@@ -94,15 +88,15 @@ public class TokenRange
 
     /**
      * Diff the two set of {@link TokenRange}s. The connected token ranges in each set are merged before diffing.
-     * The result {@link Pair#left} contains the token ranges that are only in the input {@code left} token range set, and
-     * the result {@link Pair#right} contains the token ranges that are only in the input {@code right} token range set.
+     * The result {@link SymmetricDiffResult#onlyInLeft} contains the token ranges that are only in the input {@code left} token range set, and
+     * the result {@link SymmetricDiffResult#onlyInRight} contains the token ranges that are only in the input {@code right} token range set.
      * @param left token range set
      * @param right token range set
-     * @return {@link Pair} where its left contains the token ranges that are only in the input {@code left} token range set, and
+     * @return {@link SymmetricDiffResult} where its left contains the token ranges that are only in the input {@code left} token range set, and
      *         its right contains the token ranges that are only in the input {@code right} token range set.
      */
     @SuppressWarnings("UnstableApiUsage")
-    public static Pair diff(Set<TokenRange> left, Set<TokenRange> right)
+    public static SymmetricDiffResult symmetricDiff(Set<TokenRange> left, Set<TokenRange> right)
     {
         RangeSet<Token> mergedLeft = TreeRangeSet.create();
         RangeSet<Token> mergedRight = TreeRangeSet.create();
@@ -112,7 +106,7 @@ public class TokenRange
         resultLeft.removeAll(mergedRight);
         RangeSet<Token> resultRight = TreeRangeSet.create(mergedRight);
         resultRight.removeAll(mergedLeft);
-        return new Pair(resultLeft.asRanges(), resultRight.asRanges());
+        return new SymmetricDiffResult(resultLeft.asRanges(), resultRight.asRanges());
     }
 
     public TokenRange(long start, long end)
@@ -172,16 +166,16 @@ public class TokenRange
     }
 
     /**
-     * Two ranges are overlapping when their intersection is non-empty. For example,
+     * Two ranges are intersecting when their intersection is non-empty. For example,
      * <p>Ranges {@code (0, 3]} and {@code (1, 4]} are overlapping. The intersection is {@code (1, 3]}
      * <p>Ranges {@code (0, 3]} and {@code (5, 7]} are not overlapping, as there is no intersection
      * <p>Ranges {@code (0, 3]} and {@code (3, 5]} are not overlapping, as the intersection {@code (3, 3]} is empty
      *
      * <p>Note that the semantics is different from {@link Range#isConnected(Range)}
      *
-     * @return true if this range overlaps with the other range; otherwise, false
+     * @return true if this range intersects with the other range; otherwise, false
      */
-    public boolean overlaps(TokenRange other)
+    public boolean intersects(TokenRange other)
     {
         return this.range.lowerEndpoint().compareTo(other.range.upperEndpoint()) < 0
                && other.range.lowerEndpoint().compareTo(this.range.upperEndpoint()) < 0;
@@ -189,7 +183,7 @@ public class TokenRange
 
     /**
      * Two ranges connect with each other when 1) they overlap or 2) their ends are connected.
-     * <p>For 1), refer to {@link #overlaps(TokenRange)}
+     * <p>For 1), refer to {@link #intersects(TokenRange)}
      * <p>For 2), see the following examples. The ranges {@code (0, 3]} and {@code (3, 5]} are connected.
      * The ranges {@code (0, 3]} and {@code (4, 6]} are not connected.
      *
@@ -254,25 +248,24 @@ public class TokenRange
     }
 
     /**
-     * Pair of {@link TokenRange} sets
+     * Pair of {@link TokenRange} sets that represent the result of symmetric diff
      */
-    public static class Pair
+    public static class SymmetricDiffResult
     {
-        public final ImmutableSet<TokenRange> left;
-        public final ImmutableSet<TokenRange> right;
+        public final Set<TokenRange> onlyInLeft;
+        public final Set<TokenRange> onlyInRight;
 
-        private Pair(Set<Range<Token>> left, Set<Range<Token>> right)
+        private SymmetricDiffResult(Set<Range<Token>> onlyInLeft, Set<Range<Token>> onlyInRight)
         {
-            this.left = toImmutableSet(left);
-            this.right = toImmutableSet(right);
+            this.onlyInLeft = toUnmodifiableSet(onlyInLeft);
+            this.onlyInRight = toUnmodifiableSet(onlyInRight);
         }
 
-        private static ImmutableSet<TokenRange> toImmutableSet(Set<Range<Token>> ranges)
+        private static Set<TokenRange> toUnmodifiableSet(Set<Range<Token>> ranges)
         {
-            Iterator<TokenRange> it = ranges.stream()
-                                            .map(r -> new TokenRange(r.lowerEndpoint(), r.upperEndpoint()))
-                                            .iterator();
-            return ImmutableSet.copyOf(it);
+            return ranges.stream()
+                         .map(r -> new TokenRange(r.lowerEndpoint(), r.upperEndpoint()))
+                         .collect(Collectors.toUnmodifiableSet());
         }
     }
 }

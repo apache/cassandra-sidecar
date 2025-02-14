@@ -126,7 +126,7 @@ public class RestoreSlice
             return this;
         }
 
-        if (localTokenRange.overlaps(sliceRange))
+        if (localTokenRange.intersects(sliceRange))
         {
             TokenRange intersection = localTokenRange.intersection(sliceRange);
             // Adjust the slice range to match with localTokenRange

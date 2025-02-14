@@ -492,7 +492,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
                     break;
                 }
 
-                hasOverlap = owningRange.overlaps(sstableRange);
+                hasOverlap = owningRange.intersects(sstableRange);
 
                 if (hasOverlap)
                 {

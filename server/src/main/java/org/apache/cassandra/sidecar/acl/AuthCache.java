@@ -30,7 +30,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
-import org.apache.cassandra.sidecar.common.server.exceptions.SchemaUnavailableException;
+import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;

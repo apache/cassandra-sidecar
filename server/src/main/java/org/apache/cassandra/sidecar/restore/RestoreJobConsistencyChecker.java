@@ -184,7 +184,7 @@ public class RestoreJobConsistencyChecker
             TokenRange tokenRange = new TokenRange(Token.from(replicaInfo.start()), Token.from(replicaInfo.end()));
             Map<String, List<String>> replicasByDc = replicaInfo.replicasByDatacenter();
             Map<String, Set<String>> mapping = new HashMap<>(replicasByDc.size());
-            replicasByDc.forEach((k, instances) -> mapping.put(k, new HashSet<>(instances)));
+            replicasByDc.forEach((dc, instances) -> mapping.put(dc, new HashSet<>(instances)));
             InstanceSetByDc instanceSetByDc = new InstanceSetByDc(mapping);
             replicasPerRange.put(tokenRange.range, instanceSetByDc);
         }

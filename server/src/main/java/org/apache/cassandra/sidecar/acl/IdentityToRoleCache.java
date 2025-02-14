@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.acl;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.common.server.exceptions.SchemaUnavailableException;
+import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;

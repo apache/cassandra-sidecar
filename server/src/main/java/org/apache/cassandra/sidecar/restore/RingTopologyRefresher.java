@@ -189,7 +189,7 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
     {
         if (topology == null)
         {
-            return Collections.emptyMap();
+            return Map.of();
         }
 
         // todo: this assumes one C* node per IP address
@@ -212,21 +212,14 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
             {
                 for (String instanceEndpoint : instanceOfDc)
                 {
-                    // skip the non-local nodes
-                    if (!localEndpointsToMetadata.containsKey(instanceEndpoint))
+                    InstanceMetadata instanceMetadata = localEndpointsToMetadata.get(instanceEndpoint);
+                    if (instanceMetadata == null)
                     {
+                        // skip the non-local nodes
                         continue;
                     }
-
-                    InstanceMetadata instanceMetadata = localEndpointsToMetadata.get(instanceEndpoint);
-                    localTokenRanges.compute(instanceMetadata.id(), (key, value) -> {
-                        if (value == null)
-                        {
-                            value = new HashSet<>();
-                        }
-                        value.add(range);
-                        return value;
-                    });
+                    localTokenRanges.computeIfAbsent(instanceMetadata.id(), k -> new HashSet<>())
+                                    .add(range);
                 }
             }
         }
@@ -284,7 +277,7 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
     {
         String ip = ipOf(instanceMetadata);
         Integer port = allNodes.get(ip);
-        if (port == null)
+        if (ip == null || port == null)
         {
             // the configured local instance is not in the C* ring yet (not even joining). Exit early for such node
             return;
@@ -336,17 +329,13 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
         // returns keyspace name
         String register(RestoreJob restoreJob)
         {
-            // the job is already registered
-            if (!allJobs.add(restoreJob.jobId))
+            // the job is not yet registered
+            if (allJobs.add(restoreJob.jobId))
             {
-                return restoreJob.keyspaceName;
+                jobsByKeyspace.computeIfAbsent(restoreJob.keyspaceName, ks -> ConcurrentHashMap.newKeySet())
+                              .add(restoreJob.jobId);
             }
 
-            jobsByKeyspace.compute(restoreJob.keyspaceName, (ks, jobs) -> {
-                Set<UUID> jobsSet = jobs == null ? ConcurrentHashMap.newKeySet() : jobs;
-                jobsSet.add(restoreJob.jobId);
-                return jobsSet;
-            });
             return restoreJob.keyspaceName;
         }
 
@@ -422,7 +411,9 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
             try
             {
                 TokenRangeReplicasResponse topology = loader.apply(keyspace);
-                return mapping.compute(keyspace, (key, existing) -> {
+                RingTopologyChangeContext context = new RingTopologyChangeContext(keyspace, topology);
+                mapping.compute(keyspace, (key, existing) -> {
+                    context.existing = existing;
                     if (existing == null)
                     {
                         // fulfill promise after retrieving the initial topology
@@ -431,7 +422,7 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
                             promise.tryComplete(topology);
                             return promise;
                         });
-                        asyncDispatcher.onRingTopologyChanged(keyspace, null, topology);
+                        context.shouldDispatch = true;
                         return topology;
                     }
                     else if (existing.writeReplicas().equals(topology.writeReplicas()))
@@ -442,10 +433,15 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
                     else
                     {
                         LOGGER.info("Ring topology of keyspace is changed. keyspace={}", keyspace);
-                        asyncDispatcher.onRingTopologyChanged(keyspace, existing, topology);
+                        context.shouldDispatch = true;
                         return topology;
                     }
                 });
+                if (context.shouldDispatch)
+                {
+                    asyncDispatcher.onRingTopologyChanged(context.keyspace, context.existing, context.current);
+                }
+                return topology;
             }
             catch (Throwable cause)
             {
@@ -487,6 +483,20 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
         Map<String, Promise<TokenRangeReplicasResponse>> promisesUnsafe()
         {
             return promises;
+        }
+
+        private static class RingTopologyChangeContext
+        {
+            final String keyspace;
+            final TokenRangeReplicasResponse current;
+            TokenRangeReplicasResponse existing;
+            boolean shouldDispatch = false;
+
+            RingTopologyChangeContext(String keyspace, TokenRangeReplicasResponse current)
+            {
+                this.keyspace = keyspace;
+                this.current = current;
+            }
         }
     }
 }

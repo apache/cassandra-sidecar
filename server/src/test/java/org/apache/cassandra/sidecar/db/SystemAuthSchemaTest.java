@@ -24,7 +24,7 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Session;
-import org.apache.cassandra.sidecar.common.server.exceptions.SchemaUnavailableException;
+import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
