@@ -84,7 +84,10 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         });
     }
 
-    private void startRepairAsync(IUpgradeableInstance node, CountDownLatch testStart, QualifiedTableName tableName, AtomicReference<RuntimeException> nodetoolError)
+    private void startRepairAsync(IUpgradeableInstance node,
+                                  CountDownLatch testStart,
+                                  QualifiedTableName tableName,
+                                  AtomicReference<RuntimeException> nodetoolError)
     {
         startAsync("Repairing node" + node.config().num(),
                    () -> {

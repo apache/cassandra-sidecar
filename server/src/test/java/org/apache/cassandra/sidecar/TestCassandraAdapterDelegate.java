@@ -42,9 +42,9 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     NodeSettings nodeSettings;
     boolean isNativeUp = false;
 
-    public TestCassandraAdapterDelegate()
+    public TestCassandraAdapterDelegate(Vertx vertx)
     {
-        super(Vertx.vertx(), 1, null, null, null, null, null, "localhost", 9042, new InstanceHealthMetrics(registry(1)));
+        super(vertx, 1, null, null, null, null, null, "localhost", 9042, new InstanceHealthMetrics(registry(1)));
     }
 
     @Override
@@ -121,6 +121,7 @@ public class TestCassandraAdapterDelegate extends CassandraAdapterDelegate
     @Override
     public void close()
     {
+        // no resource to close
     }
 
     private <T> T throwOnNull(T value)

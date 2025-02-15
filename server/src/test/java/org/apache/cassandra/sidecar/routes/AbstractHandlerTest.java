@@ -62,6 +62,10 @@ class AbstractHandlerTest
     @AfterEach
     void after() throws InterruptedException
     {
+        if (server == null)
+        {
+            return;
+        }
         CountDownLatch closeLatch = new CountDownLatch(1);
         server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))

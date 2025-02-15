@@ -26,6 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,7 +53,7 @@ import static org.mockito.Mockito.when;
  * Tests {@link MutualTlsAuthenticationImpl}
  */
 @ExtendWith(VertxExtension.class)
-public class MutualTlsAuthenticationProviderTest
+class MutualTlsAuthenticationProviderTest
 {
     private static final CertificateValidator ALLOW_ALL_CERTIFICATE_VALIDATOR = new AllowAllCertificateValidator();
     Vertx vertx;
@@ -60,10 +61,16 @@ public class MutualTlsAuthenticationProviderTest
     SelfSignedCertificate validCert;
 
     @BeforeEach
-    public void setUp() throws CertificateException
+    void setUp() throws CertificateException
     {
         vertx = Vertx.vertx();
         validCert = new SelfSignedCertificate();
+    }
+
+    @AfterEach
+    void cleanup()
+    {
+        vertx.close();
     }
 
     @Test

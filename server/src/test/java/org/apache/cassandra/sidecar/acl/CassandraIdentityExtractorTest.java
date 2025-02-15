@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.acl;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -55,6 +56,13 @@ class CassandraIdentityExtractorTest
     {
         vertx = Vertx.vertx();
         executorPools = createdSharedTestPool(vertx);
+    }
+
+    @AfterEach
+    void teardown()
+    {
+        vertx.close();
+        executorPools.close();
     }
 
     @Test

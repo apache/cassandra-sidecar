@@ -20,16 +20,19 @@ package org.apache.cassandra.sidecar.routes.restore;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import com.codahale.metrics.SharedMetricRegistries;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -177,16 +180,13 @@ public abstract class BaseRestoreJobTests
     }
 
     @AfterEach
-    public void tearDown(VertxTestContext context) throws Throwable
+    public void tearDown() throws Throwable
     {
+        SharedMetricRegistries.clear();
+        CountDownLatch latch = new CountDownLatch(1);
         client.close();
-        vertx.close(result -> context.completeNow());
-        assertThat(context.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
-        assertThat(vertx.deploymentIDs()).isEmpty();
-        if (context.failed())
-        {
-            throw context.causeOfFailure();
-        }
+        server.close().onComplete(ignored -> latch.countDown());
+        Uninterruptibles.awaitUninterruptibly(latch, 10, TimeUnit.SECONDS);
     }
 
     protected void mockCreateRestoreJob(Function<CreateRestoreJobRequestPayload, RestoreJob> func)

@@ -62,7 +62,7 @@ public abstract class AbstractSnapshotPathBuilderTest
     protected File dataDir1;
 
     protected SnapshotPathBuilder instance;
-    protected Vertx vertx = Vertx.vertx();
+    protected Vertx vertx;
     protected ExecutorPools executorPools;
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -174,6 +174,8 @@ public abstract class AbstractSnapshotPathBuilderTest
     {
         dataDir0.delete();
         dataDir1.delete();
+        vertx.close();
+        executorPools.close();
     }
 
     protected abstract SnapshotPathBuilder initialize(Vertx vertx,

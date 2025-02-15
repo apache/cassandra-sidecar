@@ -68,6 +68,7 @@ class VertxRoutingTest
         {
             client.close();
         }
+        server.close();
         vertx.close(result -> context.completeNow());
         assertThat(context.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
     }

@@ -34,6 +34,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.SharedMetricRegistries;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.TableMetadata;
@@ -70,7 +71,6 @@ import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurati
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT;
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesMetadata;
-import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -100,8 +100,6 @@ class BaseUploadsHandlerTest
     void setup() throws InterruptedException, IOException
     {
         canonicalTemporaryPath = temporaryPath.toFile().getCanonicalPath();
-        testDelegate = new TestCassandraAdapterDelegate();
-        TestModule testModule = new TestModule();
         mockSSTableUploadConfiguration = mock(SSTableUploadConfiguration.class);
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(3);
         when(mockSSTableUploadConfiguration.minimumSpacePercentageRequired()).thenReturn(0F);
@@ -126,12 +124,15 @@ class BaseUploadsHandlerTest
         sidecarConfiguration = SidecarConfigurationImpl.builder()
                                                        .serviceConfiguration(serviceConfiguration)
                                                        .build();
-        TestModuleOverride testModuleOverride = new TestModuleOverride(testDelegate);
+        TestModule testModule = new TestModule();
+        TestModuleOverride testModuleOverride = new TestModuleOverride();
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(Modules.override(testModule)
                                                                      .with(testModuleOverride)));
+
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
+        testDelegate = (TestCassandraAdapterDelegate) injector.getInstance(CassandraAdapterDelegate.class);
         client = WebClient.create(vertx);
         ingressFileRateLimiter = injector.getInstance(Key.get(SidecarRateLimiter.class,
                                                               Names.named("IngressFileRateLimiter")));
@@ -158,10 +159,9 @@ class BaseUploadsHandlerTest
     void tearDown() throws InterruptedException
     {
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        registry().removeMatching((name, metric) -> true);
-        registry(1).removeMatching((name, metric) -> true);
+        SharedMetricRegistries.clear();
         client.close();
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close().onComplete(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.debug("Close event received before timeout.");
         else
@@ -205,25 +205,11 @@ class BaseUploadsHandlerTest
 
     class TestModuleOverride extends AbstractModule
     {
-        private final CassandraAdapterDelegate delegate;
-
-        TestModuleOverride(CassandraAdapterDelegate delegate)
-        {
-            this.delegate = delegate;
-        }
-
         @Provides
         @Singleton
-        public InstancesMetadata instancesMetadata(Vertx vertx)
+        public InstancesMetadata instancesMetadata(Vertx vertx, CassandraAdapterDelegate delegate)
         {
             return mockInstancesMetadata(vertx, canonicalTemporaryPath, delegate, null);
-        }
-
-        @Singleton
-        @Provides
-        public CassandraAdapterDelegate delegate()
-        {
-            return delegate;
         }
 
         @Singleton

@@ -33,10 +33,12 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadataImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.MockCassandraFactory;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
@@ -62,7 +64,6 @@ import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ThrottleConfigurationImpl;
-import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
@@ -79,20 +80,11 @@ public class TestModule extends AbstractModule
 
     public TestCassandraAdapterDelegate delegate;
 
-    public TestModule()
-    {
-        this(new TestCassandraAdapterDelegate());
-    }
-
-    public TestModule(TestCassandraAdapterDelegate delegate)
-    {
-        this.delegate = delegate;
-    }
-
     @Singleton
     @Provides
-    public CassandraAdapterDelegate delegate()
+    public CassandraAdapterDelegate delegate(Vertx vertx)
     {
+        this.delegate = new TestCassandraAdapterDelegate(vertx);
         return delegate;
     }
 
@@ -155,9 +147,9 @@ public class TestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public InstancesMetadata instancesMetadata(DnsResolver dnsResolver)
+    public InstancesMetadata instancesMetadata(DnsResolver dnsResolver, CassandraAdapterDelegate delegate)
     {
-        return new InstancesMetadataImpl(instancesMetas(), dnsResolver);
+        return new InstancesMetadataImpl(instancesMetas((TestCassandraAdapterDelegate) delegate), dnsResolver);
     }
 
     @Provides
@@ -170,25 +162,28 @@ public class TestModule extends AbstractModule
                                                              .inboundGlobalFileBandwidthBytesPerSecond());
     }
 
-    public List<InstanceMetadata> instancesMetas()
+    public List<InstanceMetadata> instancesMetas(TestCassandraAdapterDelegate delegate)
     {
-        InstanceMetadata instance1 = mockInstance("localhost",
+        InstanceMetadata instance1 = mockInstance(delegate,
+                                                  "localhost",
                                                   1,
                                                   "src/test/resources/instance1/data",
                                                   "src/test/resources/instance1/sstable-staging",
-                                                  "src/test/resources/instance1/cdc_raw",
+                                                  "src/test/resources/instance1",
                                                   true);
-        InstanceMetadata instance2 = mockInstance("localhost2",
+        InstanceMetadata instance2 = mockInstance(delegate,
+                                                  "localhost2",
                                                   2,
                                                   "src/test/resources/instance2/data",
                                                   "src/test/resources/instance2/sstable-staging",
-                                                  "src/test/resources/instance2/cdc_raw",
+                                                  "src/test/resources/instance2",
                                                   false);
-        InstanceMetadata instance3 = mockInstance("localhost3",
+        InstanceMetadata instance3 = mockInstance(delegate,
+                                                  "localhost3",
                                                   3,
                                                   "src/test/resources/instance3/data",
                                                   "src/test/resources/instance3/sstable-staging",
-                                                  "src/test/resources/instance3/cdc_raw",
+                                                  "src/test/resources/instance3",
                                                   true);
         final List<InstanceMetadata> instanceMetas = new ArrayList<>();
         instanceMetas.add(instance1);
@@ -197,20 +192,11 @@ public class TestModule extends AbstractModule
         return instanceMetas;
     }
 
-    private InstanceMetadata mockInstance(String host, int id, String dataDir, String stagingDir, String cdcDir, boolean isUp)
+    private InstanceMetadata mockInstance(TestCassandraAdapterDelegate delegate,
+                                          String host, int id, String dataDir, String stagingDir, String storageDir, boolean isUp)
     {
-        InstanceMetadata instanceMeta = mock(InstanceMetadata.class);
-        when(instanceMeta.id()).thenReturn(id);
-        when(instanceMeta.host()).thenReturn(host);
-        when(instanceMeta.port()).thenReturn(6475);
-        when(instanceMeta.stagingDir()).thenReturn(stagingDir);
-        when(instanceMeta.cdcDir()).thenReturn(cdcDir);
-        List<String> dataDirectories = Collections.singletonList(dataDir);
-        when(instanceMeta.dataDirs()).thenReturn(dataDirectories);
-        when(instanceMeta.metrics()).thenReturn(new InstanceMetricsImpl(registry(id)));
-
         StorageOperations mockStorageOperations = mock(StorageOperations.class);
-        when(mockStorageOperations.dataFileLocations()).thenReturn(dataDirectories);
+        when(mockStorageOperations.dataFileLocations()).thenReturn(List.of(dataDir));
         Metadata metadata = mock(Metadata.class);
         KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
         when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
@@ -231,8 +217,16 @@ public class TestModule extends AbstractModule
                                                  .build());
         }
         delegate.setIsNativeUp(isUp);
-        when(instanceMeta.delegate()).thenReturn(delegate);
-        return instanceMeta;
+        return InstanceMetadataImpl.builder()
+                                   .id(id)
+                                   .host(host)
+                                   .port(6475)
+                                   .stagingDir(stagingDir)
+                                   .storageDir(storageDir)
+                                   .dataDirs(List.of(dataDir))
+                                   .metricRegistry(registry(id))
+                                   .delegate(delegate)
+                                   .build();
     }
 
     /**

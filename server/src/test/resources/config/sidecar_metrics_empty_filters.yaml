@@ -41,7 +41,7 @@ sidecar:
     timeout: 10s
   allowable_time_skew: 1h
   jmx:
-    max_retries: 42
+    max_retries: 1
     retry_delay: 1234ms
 
 #

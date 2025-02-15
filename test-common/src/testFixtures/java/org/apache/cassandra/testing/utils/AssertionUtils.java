@@ -103,7 +103,7 @@ public class AssertionUtils
         }
         catch (TimeoutException te)
         {
-            throw new AssertionError('(' + hint + ") timed out after " + timeout + ' ' + timeUnit);
+            throw new AssertionError('(' + hint + ") timed out after " + timeout + ' ' + timeUnit, te);
         }
         catch (Exception exception)
         {

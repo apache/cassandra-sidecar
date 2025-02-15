@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -41,6 +42,12 @@ class DigestVerifierFactoryTest
     void setup()
     {
         options = new HeadersMultiMap();
+    }
+
+    @AfterEach
+    void cleanup()
+    {
+        vertx.close();
     }
 
     @Test

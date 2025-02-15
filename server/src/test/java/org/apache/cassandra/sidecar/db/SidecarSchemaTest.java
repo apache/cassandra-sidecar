@@ -104,7 +104,7 @@ public class SidecarSchemaTest
         interceptedExecStmts.clear();
         interceptedPrepStmts.clear();
         CountDownLatch closeLatch = new CountDownLatch(1);
-        vertx.close(result -> closeLatch.countDown());
+        server.close().onComplete(result -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else

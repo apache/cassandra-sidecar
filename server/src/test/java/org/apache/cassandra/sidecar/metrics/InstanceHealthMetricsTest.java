@@ -47,11 +47,11 @@ public class InstanceHealthMetricsTest
     InstanceHealthMetrics metrics;
     JmxClient jmxClient;
     CassandraAdapterDelegate delegate;
+    Vertx vertx = Vertx.vertx();
 
     @BeforeEach
     void setup()
     {
-        Vertx vertx = Vertx.vertx();
         CassandraVersionProvider mockCassandraVersionProvider = mock(CassandraVersionProvider.class);
         CQLSessionProvider mockCqlSessionProvider = mock(CQLSessionProvider.class);
         when(mockCqlSessionProvider.get()).thenThrow(new CassandraUnavailableException(JMX, "not available"));
@@ -67,6 +67,7 @@ public class InstanceHealthMetricsTest
     {
         registry().removeMatching((name, metric) -> true);
         registry(1).removeMatching((name, metric) -> true);
+        vertx.close();
     }
 
     @Test

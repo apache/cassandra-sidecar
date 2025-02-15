@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -55,6 +56,13 @@ class SuperUserCacheTest
     {
         vertx = Vertx.vertx();
         executorPools = createdSharedTestPool(vertx);
+    }
+
+    @AfterEach
+    void cleanup()
+    {
+        vertx.close();
+        executorPools.close();
     }
 
     @Test

@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.server;
 
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.SharedMetricRegistries;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -44,6 +46,7 @@ import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
+import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -63,27 +66,33 @@ class ServerTest
     private Server server;
     private Vertx vertx;
     private WebClient client;
+    private AtomicBoolean serverAlreadyClosedInTest = new AtomicBoolean(false);
 
     @BeforeEach
     void setup()
     {
+        serverAlreadyClosedInTest.set(false);
         configureServer("config/sidecar_single_instance.yaml");
     }
 
     @AfterEach
     void tearDown()
     {
-        registry().removeMatching((name, metric) -> true);
-        if (server != null)
+        SharedMetricRegistries.clear();
+        if (server != null && !serverAlreadyClosedInTest.get())
         {
             try
             {
-                server.close().toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
+                server.close().toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
             }
             catch (Exception ex)
             {
-                LOGGER.error("Unable to close server after 30 seconds", ex);
+                LOGGER.error("Unable to close server after 5 seconds", ex);
             }
+        }
+        if (client != null)
+        {
+            client.close();
         }
     }
 
@@ -153,7 +162,10 @@ class ServerTest
 
         server.start()
               .compose(this::validateHealthEndpoint)
-              .compose(deploymentId -> server.close())
+              .compose(deploymentId -> {
+                  serverAlreadyClosedInTest.set(true);
+                  return server.close();
+              })
               .onFailure(context::failNow);
     }
 
@@ -169,7 +181,10 @@ class ServerTest
 
         server.start()
               .compose(this::validateHealthEndpoint)
-              .compose(deploymentId -> server.close())
+              .compose(deploymentId -> {
+                  serverAlreadyClosedInTest.set(true);
+                  return server.close();
+              })
               .onSuccess(v -> assertThatException().isThrownBy(() -> server.start())
                                                    .withMessageContaining("Vert.x closed"))
               .onFailure(context::failNow);
@@ -222,10 +237,8 @@ class ServerTest
 
                   try
                   {
-                      server.close()
-                            .toCompletionStage()
-                            .toCompletableFuture()
-                            .get(1, TimeUnit.MINUTES);
+                      serverAlreadyClosedInTest.set(true);
+                      getBlocking(server.close(), 1, TimeUnit.MINUTES, "Stop server");
                   }
                   catch (Exception e)
                   {

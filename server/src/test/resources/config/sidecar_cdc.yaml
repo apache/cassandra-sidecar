@@ -59,7 +59,7 @@ sidecar:
   cdc:
     segment_hardlink_cache_expiry: 1m # 1 minute
   jmx:
-    max_retries: 42
+    max_retries: 1
     retry_delay: 1234ms
   schema:
     is_enabled: false

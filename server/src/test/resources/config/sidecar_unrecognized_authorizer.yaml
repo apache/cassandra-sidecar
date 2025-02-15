@@ -56,7 +56,7 @@ sidecar:
       size: 20
       max_execution_time_millis: 900000 # 15 minutes
   jmx:
-    max_retries: 42
+    max_retries: 1
     retry_delay_millis: 1234
   schema:
     is_enabled: false

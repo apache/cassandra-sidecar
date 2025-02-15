@@ -89,6 +89,8 @@ class StorageClientTest
     private static RestoreRange testRange;
     private static RestoreRange largeTestRange;
     private static Path largeFilePath;
+    private static Vertx vertx;
+    private static ExecutorPools executorPools;
     private static TaskExecutorPool taskExecutorPool;
 
     @TempDir
@@ -126,7 +128,18 @@ class StorageClientTest
                                       LARGE_FILE_IN_BYTES);
         putObject(largeTestRange, largeFilePath);
 
-        taskExecutorPool = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl()).internal();
+        vertx = Vertx.vertx();
+        executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
+        taskExecutorPool = executorPools.internal();
+    }
+
+    @AfterAll
+    static void cleanup()
+    {
+        s3Mock.stop();
+        client.close();
+        vertx.close();
+        executorPools.close();
     }
 
     static S3AsyncClient buildS3AsyncClient(Duration apiCallTimeout) throws Exception
@@ -147,13 +160,6 @@ class StorageClientTest
                                         .put(TRUST_ALL_CERTIFICATES, Boolean.TRUE)
                                         .build()))
                             .build();
-    }
-
-    @AfterAll
-    static void cleanup()
-    {
-        s3Mock.stop();
-        client.close();
     }
 
     @Test

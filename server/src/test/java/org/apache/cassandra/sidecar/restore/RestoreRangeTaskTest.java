@@ -42,6 +42,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.codahale.metrics.SharedMetricRegistries;
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -93,6 +94,8 @@ import static org.mockito.Mockito.when;
 
 class RestoreRangeTaskTest
 {
+    private Vertx vertx;
+    private ExecutorPools executorPools;
     private RestoreRange mockRange;
     private StorageClient mockStorageClient;
     private SSTableImporter mockSSTableImporter;
@@ -123,7 +126,9 @@ class RestoreRangeTaskTest
         mockRange = spy(range);
         mockStorageClient = mock(StorageClient.class);
         mockSSTableImporter = mock(SSTableImporter.class);
-        executorPool = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl()).internal();
+        vertx = Vertx.vertx();
+        executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
+        executorPool = executorPools.internal();
         MetricRegistryFactory mockRegistryFactory = mock(MetricRegistryFactory.class);
         when(mockRegistryFactory.getOrCreate()).thenReturn(registry());
         when(mockRegistryFactory.getOrCreate(1)).thenReturn(registry(1));
@@ -136,8 +141,9 @@ class RestoreRangeTaskTest
     @AfterEach
     void clear()
     {
-        registry().removeMatching((name, metric) -> true);
-        registry(1).removeMatching((name, metric) -> true);
+        SharedMetricRegistries.clear();
+        vertx.close();
+        executorPools.close();
     }
 
     @Test

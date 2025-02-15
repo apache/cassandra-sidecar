@@ -125,6 +125,8 @@ class SSTableImporterTest
     void clear()
     {
         SharedMetricRegistries.clear();
+        vertx.close();
+        executorPools.close();
     }
 
     @Test

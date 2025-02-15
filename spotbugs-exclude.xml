@@ -121,6 +121,13 @@
     </Match>
 
     <Match>
+        <!-- Unchecked cast warning -->
+        <Bug pattern="BC_UNCONFIRMED_CAST"/>
+        <Class name="org.apache.cassandra.sidecar.TestModule"/>
+        <Method name="instancesMetadata"/>
+   </Match>
+
+   <Match>
         <Bug pattern="SF_SWITCH_FALLTHROUGH" />
         <Class name="org.apache.cassandra.sidecar.restore.RestoreJobDiscoverer" /><!-- on break by design -->
     </Match>

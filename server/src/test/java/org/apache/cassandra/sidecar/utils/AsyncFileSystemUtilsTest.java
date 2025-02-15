@@ -38,18 +38,21 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AsyncFileSystemUtilsTest
 {
+    private Vertx vertx;
     private ExecutorPools executorPools;
 
     @BeforeEach
     void setup()
     {
-        executorPools = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl());
+        vertx = Vertx.vertx();
+        executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
     }
 
     @AfterEach
     void teardown()
     {
         executorPools.close();
+        vertx.close();
     }
 
     @Test

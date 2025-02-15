@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -54,6 +55,13 @@ class MutualTlsAuthenticationHandlerFactoryTest
     {
         vertx = Vertx.vertx();
         executorPools = createdSharedTestPool(vertx);
+    }
+
+    @AfterEach
+    void cleanup()
+    {
+        vertx.close();
+        executorPools.close();
     }
 
     @Test

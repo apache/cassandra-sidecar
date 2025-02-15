@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -58,6 +59,13 @@ class IdentityToRoleCacheTest
     {
         vertx = Vertx.vertx();
         executorPools = createdSharedTestPool(vertx);
+    }
+
+    @AfterEach
+    void cleanup()
+    {
+        vertx.close();
+        executorPools.close();
     }
 
     @Test

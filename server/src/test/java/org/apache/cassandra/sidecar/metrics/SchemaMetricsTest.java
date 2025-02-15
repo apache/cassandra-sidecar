@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.SharedMetricRegistries;
 import com.datastax.driver.core.Session;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -48,7 +49,6 @@ import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 
-import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -61,7 +61,6 @@ import static org.mockito.Mockito.when;
 class SchemaMetricsTest
 {
     private static final Logger logger = LoggerFactory.getLogger(SidecarSchemaTest.class);
-    private Vertx vertx;
     private SidecarSchema sidecarSchema;
     private SidecarMetrics metrics;
     Server server;
@@ -72,7 +71,6 @@ class SchemaMetricsTest
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(Modules.override(new TestModule())
                                                                      .with(new SchemaFailureSimulateModule())));
-        this.vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);
         sidecarSchema = injector.getInstance(SidecarSchema.class);
         metrics = injector.getInstance(SidecarMetrics.class);
@@ -88,8 +86,8 @@ class SchemaMetricsTest
     void tearDown() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        registry().removeMatching((name, metric) -> true);
-        vertx.close(result -> closeLatch.countDown());
+        SharedMetricRegistries.clear();
+        server.close().onComplete(result -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else

@@ -84,11 +84,12 @@ class CassandraSidecarDaemonTest
         assertThat(path).exists();
 
         System.setProperty("sidecar.config", path.toUri().toString());
+        Vertx vertx = Vertx.vertx();
+        WebClient client = WebClient.create(vertx);
         try
         {
             CassandraSidecarDaemon.main(NO_ARGS);
 
-            WebClient client = WebClient.create(Vertx.vertx());
             loopAssert(10, () -> {
                 HttpResponse<String> response = getBlocking(client.get(9043, "localhost", "/api/v1/__health")
                                                                   .as(BodyCodec.string())
@@ -102,6 +103,8 @@ class CassandraSidecarDaemonTest
         finally
         {
             maybeStopCassandraSidecar();
+            vertx.close();
+            client.close();
         }
     }
 
@@ -118,7 +121,8 @@ class CassandraSidecarDaemonTest
         // Now let's copy the file to the expected location
         Path targetFile = Paths.get("conf/sidecar.yaml");
         List<Path> createdParents = null;
-
+        Vertx vertx = Vertx.vertx();
+        WebClient client = WebClient.create(vertx);
         try
         {
             createdParents = createParents(targetFile.toAbsolutePath());
@@ -126,7 +130,6 @@ class CassandraSidecarDaemonTest
 
             CassandraSidecarDaemon.main(NO_ARGS);
 
-            WebClient client = WebClient.create(Vertx.vertx());
             loopAssert(10, () -> {
                 HttpResponse<String> response = getBlocking(client.get(9043, "localhost", "/api/v1/__health")
                                                                   .as(BodyCodec.string())
@@ -150,6 +153,8 @@ class CassandraSidecarDaemonTest
                     Files.deleteIfExists(createdParent);
                 }
             }
+            vertx.close();
+            client.close();
         }
     }
 

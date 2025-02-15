@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.job;
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +33,6 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
-import org.mockito.MockitoAnnotations;
 
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
@@ -54,7 +54,6 @@ import static org.mockito.Mockito.when;
 class OperationalJobManagerTest
 {
     protected Vertx vertx;
-
     protected ExecutorPools executorPool;
 
     @BeforeEach
@@ -62,7 +61,13 @@ class OperationalJobManagerTest
     {
         vertx = Vertx.vertx();
         executorPool = new ExecutorPools(vertx, new ServiceConfigurationImpl());
-        MockitoAnnotations.openMocks(this);
+    }
+
+    @AfterEach
+    void cleanup()
+    {
+        vertx.close();
+        executorPool.close();
     }
 
     @Test

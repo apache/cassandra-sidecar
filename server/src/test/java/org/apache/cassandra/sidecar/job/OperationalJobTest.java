@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.job;
 import java.util.UUID;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.utils.UUIDs;
@@ -44,7 +45,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class OperationalJobTest
 {
-    private final TaskExecutorPool executorPool = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl()).internal();
+    private final Vertx vertx = Vertx.vertx();
+    private final ExecutorPools executorPools = new ExecutorPools(Vertx.vertx(), new ServiceConfigurationImpl());
+    private final TaskExecutorPool executorPool = executorPools.internal();
 
     public static OperationalJob createOperationalJob(OperationalJobStatus jobStatus)
     {
@@ -115,6 +118,13 @@ class OperationalJobTest
                 return "Operation X";
             }
         };
+    }
+
+    @AfterEach
+    void cleanup()
+    {
+        executorPools.close();
+        vertx.close();
     }
 
     @Test
