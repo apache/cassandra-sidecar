@@ -182,7 +182,7 @@ publishing {
         maven(MavenPublication) {
             from components.java
             groupId rootProject.group
-            artifactId rootProject.name
+            artifactId "sidecar-${archivesBaseName}"
             version System.getenv("CODE_VERSION") ?: "${version}"
         }
     }

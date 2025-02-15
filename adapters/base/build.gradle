@@ -30,8 +30,6 @@ plugins {
     id "com.github.spotbugs"
 }
 
-group 'org.apache.cassandra.sidecar'
-
 version project.version
 
 sourceCompatibility = JavaVersion.VERSION_11
@@ -79,8 +77,8 @@ publishing {
     publications {
         maven(MavenPublication) {
             from components.java
-            groupId project.group
-            artifactId "adapters-base"
+            groupId rootProject.group
+            artifactId "sidecar-adapters-base"
             version System.getenv("CODE_VERSION") ?: "${version}"
         }
     }

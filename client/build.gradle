@@ -31,7 +31,6 @@ plugins {
     id('maven-publish')
 }
 
-group 'org.apache.cassandra.sidecar'
 version project.version
 
 sourceCompatibility = 1.8
@@ -106,8 +105,8 @@ publishing {
     publications {
         maven(MavenPublication) {
             from components.java
-            groupId project.group
-            artifactId "${archivesBaseName}"
+            groupId rootProject.group
+            artifactId "sidecar-${archivesBaseName}"
             version System.getenv("CODE_VERSION") ?: "${version}"
         }
     }

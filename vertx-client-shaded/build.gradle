@@ -35,7 +35,6 @@ plugins {
     id('com.gradleup.shadow') version '8.3.0'
 }
 
-group 'org.apache.cassandra.sidecar'
 version project.version
 
 sourceCompatibility = 1.8
@@ -95,8 +94,8 @@ publishing {
         shadow(MavenPublication) { publication ->
             project.shadow.component(publication)
 
-            groupId project.group
-            artifactId "vertx-client-all"
+            groupId rootProject.group
+            artifactId "sidecar-vertx-client-all"
             version System.getenv("CODE_VERSION") ?: "${version}"
         }
     }

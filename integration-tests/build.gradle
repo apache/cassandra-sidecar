@@ -22,7 +22,6 @@ plugins {
     id('java-library')
 }
 
-group 'org.apache.cassandra.sidecar'
 version project.version
 
 sourceCompatibility = JavaVersion.VERSION_11

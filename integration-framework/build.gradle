@@ -21,7 +21,6 @@ plugins {
     id('java-library')
 }
 
-group 'org.apache.cassandra.sidecar'
 version project.version
 
 ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-4.1.8.jar" // latest supported Cassandra build is 4.1

@@ -25,7 +25,6 @@ plugins {
     id('java-test-fixtures')
 }
 
-group 'org.apache.cassandra.sidecar'
 version project.version
 
 sourceCompatibility = JavaVersion.VERSION_11
@@ -67,8 +66,8 @@ publishing {
     publications {
         maven(MavenPublication) {
             from components.java
-            groupId project.group
-            artifactId "${archivesBaseName}"
+            groupId rootProject.group
+            artifactId "sidecar-${archivesBaseName}"
             version System.getenv("CODE_VERSION") ?: "${version}"
         }
     }
