@@ -113,13 +113,14 @@ class RestoreSliceTest
     }
 
     @Test
-    void testSplitNoOverlap()
+    void testSplitNoIntersection()
     {
         RestoreSlice slice = createTestingSlice(UUIDs.timeBased(), "slice-id", 0L, 10L);
-        // (0, 10] does not overlap with (100, 110]
+        // (0, 10] does not intersect with (100, 110]
         assertThatThrownBy(() -> slice.trimMaybe(new TokenRange(100L, 110L)))
         .isExactlyInstanceOf(IllegalStateException.class)
-        .hasMessage("Token range of the slice does not overlap with the local token range. slice_range: TokenRange(0, 10], local_range: TokenRange(100, 110]");
+        .hasMessage("Token range of the slice does not intersect with the local token range. " +
+                    "slice_range: TokenRange(0, 10], local_range: TokenRange(100, 110]");
     }
 
     public static RestoreSlice createTestingSlice(RestoreJob restoreJob, String sliceId, long startToken, long endToken)

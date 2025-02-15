@@ -138,7 +138,7 @@ public class RestoreSlice
                    .build();
         }
 
-        throw new IllegalStateException("Token range of the slice does not overlap with the local token range. " +
+        throw new IllegalStateException("Token range of the slice does not intersect with the local token range. " +
                                         "slice_range: " + sliceRange +
                                         ", local_range: " + localTokenRange);
     }

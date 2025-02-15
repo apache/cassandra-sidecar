@@ -29,7 +29,6 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
@@ -118,12 +117,6 @@ public class RestoreJobTestUtils
                                             s3ClientPool, importer, rangeDatabaseAccessor,
                                             restoreJobUtil, localTokenRangesProvider, metrics)
                 {
-                    @Override
-                    public void execute(Promise<Void> promise)
-                    {
-                        // disable task processing
-                    }
-
                     @Override
                     public ScheduleDecision scheduleDecision()
                     {
