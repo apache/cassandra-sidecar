@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -66,8 +67,7 @@ class OperationalJobManagerTest
     @AfterEach
     void cleanup()
     {
-        vertx.close();
-        executorPool.close();
+        TestResourceReaper.create().with(vertx).with(executorPool).close();
     }
 
     @Test

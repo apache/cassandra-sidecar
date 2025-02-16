@@ -28,6 +28,7 @@ import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -123,8 +124,7 @@ class OperationalJobTest
     @AfterEach
     void cleanup()
     {
-        executorPools.close();
-        vertx.close();
+        TestResourceReaper.create().with(vertx).with(executorPools).close();
     }
 
     @Test

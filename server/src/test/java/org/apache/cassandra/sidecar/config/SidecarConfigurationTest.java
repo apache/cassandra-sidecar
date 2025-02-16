@@ -112,7 +112,7 @@ class SidecarConfigurationTest
         SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         assertThat(config.serviceConfiguration().jmxConfiguration()).isNotNull();
         JmxConfiguration jmxConfiguration = config.serviceConfiguration().jmxConfiguration();
-        assertThat(jmxConfiguration.maxRetries()).isEqualTo(42);
+        assertThat(jmxConfiguration.maxRetries()).isEqualTo(1);
         assertThat(jmxConfiguration.retryDelay().quantity()).isEqualTo(1234L);
         assertThat(jmxConfiguration.retryDelay().unit()).isEqualTo(TimeUnit.MILLISECONDS);
     }

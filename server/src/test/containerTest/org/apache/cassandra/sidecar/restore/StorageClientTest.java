@@ -41,6 +41,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.adobe.testing.s3mock.testcontainers.S3MockContainer;
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
@@ -136,10 +137,12 @@ class StorageClientTest
     @AfterAll
     static void cleanup()
     {
-        s3Mock.stop();
-        client.close();
-        vertx.close();
-        executorPools.close();
+        TestResourceReaper.create()
+                          .with(executorPools)
+                          .with(vertx)
+                          .with(() -> s3Mock.stop(),
+                                () -> client.close())
+                          .close();
     }
 
     static S3AsyncClient buildS3AsyncClient(Duration apiCallTimeout) throws Exception

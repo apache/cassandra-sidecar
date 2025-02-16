@@ -41,6 +41,7 @@ import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
@@ -103,8 +104,7 @@ class RestoreJobManagerTest
     void teardown()
     {
         // close in the fire-and-forget way
-        executorPools.close();
-        vertx.close();
+        TestResourceReaper.create().with(vertx).with(executorPools).close();
     }
 
     @Test

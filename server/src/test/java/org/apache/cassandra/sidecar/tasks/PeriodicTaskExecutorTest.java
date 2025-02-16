@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -76,8 +77,7 @@ class PeriodicTaskExecutorTest
     @AfterAll
     static void teardown()
     {
-        executorPools.close();
-        vertx.close();
+        TestResourceReaper.create().with(vertx).with(executorPools).close();
     }
 
     @Test

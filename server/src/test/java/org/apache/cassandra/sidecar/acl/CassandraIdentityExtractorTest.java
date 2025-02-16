@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import io.vertx.core.Vertx;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -61,8 +62,7 @@ class CassandraIdentityExtractorTest
     @AfterEach
     void teardown()
     {
-        vertx.close();
-        executorPools.close();
+        TestResourceReaper.create().with(vertx).with(executorPools).close();
     }
 
     @Test

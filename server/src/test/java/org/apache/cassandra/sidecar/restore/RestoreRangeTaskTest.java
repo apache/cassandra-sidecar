@@ -47,6 +47,7 @@ import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.ResourceUtils;
@@ -142,8 +143,7 @@ class RestoreRangeTaskTest
     void clear()
     {
         SharedMetricRegistries.clear();
-        vertx.close();
-        executorPools.close();
+        TestResourceReaper.create().with(executorPools).with(vertx).close();
     }
 
     @Test

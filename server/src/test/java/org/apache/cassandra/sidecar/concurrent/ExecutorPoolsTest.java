@@ -27,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
@@ -64,7 +65,7 @@ class ExecutorPoolsTest
     public void after()
     {
         registry().removeMatching((name, metric) -> true);
-        vertx.close().onComplete(v -> pools.close()).result();
+        TestResourceReaper.create().with(vertx).with(pools).close();
     }
 
     @Test

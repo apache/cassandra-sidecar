@@ -35,6 +35,7 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.HttpException;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
@@ -125,8 +126,7 @@ class SSTableImporterTest
     void clear()
     {
         SharedMetricRegistries.clear();
-        vertx.close();
-        executorPools.close();
+        TestResourceReaper.create().with(vertx).with(executorPools).close();
     }
 
     @Test

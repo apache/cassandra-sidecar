@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.InsufficientStorageException;
@@ -51,8 +52,7 @@ class AsyncFileSystemUtilsTest
     @AfterEach
     void teardown()
     {
-        executorPools.close();
-        vertx.close();
+        TestResourceReaper.create().with(vertx).with(executorPools).close();
     }
 
     @Test

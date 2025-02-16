@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
@@ -61,8 +62,7 @@ class SuperUserCacheTest
     @AfterEach
     void cleanup()
     {
-        vertx.close();
-        executorPools.close();
+        TestResourceReaper.create().with(vertx).with(executorPools).close();
     }
 
     @Test

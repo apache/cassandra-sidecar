@@ -33,6 +33,7 @@ import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
@@ -66,8 +67,7 @@ class CdcLogCacheTest
     @AfterEach
     void teardown()
     {
-        vertx.close();
-        executorPools.close();
+        TestResourceReaper.create().with(vertx).with(executorPools).close();
     }
 
     @Test

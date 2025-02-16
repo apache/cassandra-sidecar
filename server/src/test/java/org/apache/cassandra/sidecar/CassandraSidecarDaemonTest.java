@@ -103,8 +103,7 @@ class CassandraSidecarDaemonTest
         finally
         {
             maybeStopCassandraSidecar();
-            vertx.close();
-            client.close();
+            TestResourceReaper.create().with(vertx).with(client).close();
         }
     }
 
@@ -153,8 +152,7 @@ class CassandraSidecarDaemonTest
                     Files.deleteIfExists(createdParent);
                 }
             }
-            vertx.close();
-            client.close();
+            TestResourceReaper.create().with(vertx).with(client).close();
         }
     }
 

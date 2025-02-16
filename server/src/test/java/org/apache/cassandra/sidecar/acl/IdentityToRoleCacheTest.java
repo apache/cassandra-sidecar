@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.acl.authorization.PermissionFactoryImpl;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
@@ -64,8 +65,7 @@ class IdentityToRoleCacheTest
     @AfterEach
     void cleanup()
     {
-        vertx.close();
-        executorPools.close();
+        TestResourceReaper.create().with(vertx).with(executorPools).close();
     }
 
     @Test
