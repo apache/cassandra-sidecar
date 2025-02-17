@@ -196,9 +196,6 @@ test {
     // ordinarily we don't need integration tests
     // see the integrationTest task
     useJUnitPlatform()
-    if (Os.isFamily(Os.FAMILY_MAC)) {
-        jvmArgs "-XX:-MaxFDLimit"
-    }
     reports {
         junitXml.setRequired(true)
         def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "test").toFile()
@@ -220,8 +217,6 @@ tasks.register("containerTest", Test) {
     if (JavaVersion.current().isJava11Compatible()) {
         jvmArgs(project.ext.JDK11_OPTIONS)
         println("JVM arguments for $project.name are $allJvmArgs")
-    } else {
-        jvmArgs '-XX:-MaxFDLimit'
     }
 
     useJUnitPlatform()
