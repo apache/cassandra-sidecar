@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.client.selection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.apache.cassandra.sidecar.client.SidecarInstance;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.jetbrains.annotations.NotNull;
 
 /**

@@ -22,6 +22,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+
 /**
  * Represents the HTTP response received from the remote Sidecar service
  */

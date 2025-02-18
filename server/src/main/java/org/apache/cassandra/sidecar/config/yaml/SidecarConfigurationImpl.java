@@ -315,7 +315,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     }
 
     @VisibleForTesting
-    static SidecarConfigurationImpl fromYamlString(String yaml) throws IOException
+    public static SidecarConfigurationImpl fromYamlString(String yaml) throws IOException
     {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
                               .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)

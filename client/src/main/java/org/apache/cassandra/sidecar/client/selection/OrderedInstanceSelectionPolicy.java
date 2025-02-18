@@ -20,8 +20,8 @@ package org.apache.cassandra.sidecar.client.selection;
 
 import java.util.Iterator;
 
-import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.client.SidecarInstancesProvider;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.jetbrains.annotations.NotNull;
 
 /**

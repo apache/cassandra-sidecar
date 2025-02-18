@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.client.selection;
 
-import org.apache.cassandra.sidecar.client.SidecarInstance;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 
 /**
  * Defines the selection policy for an instance

@@ -31,6 +31,11 @@ public interface SidecarClientConfiguration
     boolean useSsl();
 
     /**
+     * @return The configuration for SSL connections on the client.
+     */
+    SslConfiguration sslConfiguration();
+
+    /**
      * @return the client request timeout value for the connection to be established
      */
     MillisecondBoundConfiguration requestTimeout();

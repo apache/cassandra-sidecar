@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.client;
 
 import java.util.List;
 
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+
 /**
  * A class that provides the list of {@link SidecarInstance}s. This class allows for statically or dynamically
  * providing a list of instances. It is meant to support expansions and shrink of Cassandra clusters.

@@ -236,12 +236,15 @@ healthcheck:
   initial_delay: 0ms
   execute_interval: 30s
 
+# Sidecar Peer Health Monitor settings
+# Enables a periodic task checking for the health of adjacent Sidecar peers in the token ring
 sidecar_peer_health:
   enabled: true
   execute_interval: 30s
   health_check_retries: 5
   health_check_retry_delay: 10s
 
+# Sidecar client settings used to interact with other sidecars
 sidecar_client:
   use_ssl: true
   request_timeout: 1s
@@ -253,17 +256,15 @@ sidecar_client:
   max_retries: 3
   retry_delay: 1s
   max_retry_delay: 2s
-
-ssl:
-  enabled:  false
-  keystore:
-    type: PKCS12
-    path: path/to/keystore.p12
-    password: password
-  truststore:
-    type: PKCS12
-    path: path/to/keystore.p12
-    password: password
+  ssl:
+    keystore:
+      type: PKCS12
+      path: path/to/keystore.p12
+      password: password
+    truststore:
+      type: PKCS12
+      path: path/to/keystore.p12
+      password: password
 
 metrics:
   registry_name: cassandra_sidecar

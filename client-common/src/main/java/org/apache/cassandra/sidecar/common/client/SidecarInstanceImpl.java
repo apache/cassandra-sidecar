@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.coordination;
+package org.apache.cassandra.sidecar.common.client;
 
 import java.util.Objects;
 
 /**
- * A simple implementation of the {@link PeerInstance} interface
+ * A simple implementation of the {@link SidecarInstance} interface
  */
-public class PeerInstanceImpl implements PeerInstance
+public class SidecarInstanceImpl implements SidecarInstance
 {
     protected int port;
     protected String hostname;
@@ -34,7 +34,7 @@ public class PeerInstanceImpl implements PeerInstance
      * @param hostname the host name where Sidecar is running
      * @param port     the port where Sidecar is running
      */
-    public PeerInstanceImpl(String hostname, int port)
+    public SidecarInstanceImpl(String hostname, int port)
     {
         if (port < 1 || port > 65535)
         {
@@ -77,7 +77,7 @@ public class PeerInstanceImpl implements PeerInstance
         {
             return false;
         }
-        PeerInstanceImpl that = (PeerInstanceImpl) o;
+        SidecarInstanceImpl that = (SidecarInstanceImpl) o;
         return port == that.port && Objects.equals(hostname, that.hostname);
     }
 

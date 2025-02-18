@@ -28,6 +28,7 @@ import org.apache.cassandra.sidecar.client.retry.NoRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.client.selection.InstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.client.selection.SingleInstanceSelectionPolicy;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.request.CassandraJmxHealthRequest;
 import org.apache.cassandra.sidecar.common.request.CassandraNativeHealthRequest;
 import org.apache.cassandra.sidecar.common.request.CleanSSTableUploadSessionRequest;

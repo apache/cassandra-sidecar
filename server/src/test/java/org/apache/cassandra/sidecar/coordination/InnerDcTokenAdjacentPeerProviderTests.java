@@ -43,6 +43,7 @@ import com.datastax.driver.core.Token;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -148,7 +149,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
                                                                                                            return address;
                                                                                                        }
                                                                                                    });
-            final Set<PeerInstance> buddies = provider.get();
+            final Set<SidecarInstance> buddies = provider.get();
             assertEquals(1, buddies.size());
             assertTrue(buddies.stream().findFirst().orElseThrow().hostname().startsWith("dc1-host" + (hostId + 1)));
         }

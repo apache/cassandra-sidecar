@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+
 /**
  * A simple implementation of the {@link HttpResponse}
  */

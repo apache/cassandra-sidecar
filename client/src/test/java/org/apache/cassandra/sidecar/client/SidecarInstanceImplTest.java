@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.client;
 
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
+
 /**
  * Unit tests for the {@link SidecarInstanceImpl} class
  */

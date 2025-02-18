@@ -22,6 +22,8 @@ package org.apache.cassandra.sidecar.client;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+
 /**
  * A {@link SidecarInstancesProvider} that returns Sidecar instances from a list of instances.
  */

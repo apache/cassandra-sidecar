@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.coordination;
 
 
 import io.vertx.core.Future;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 
 /**
  * Interface to provide health information for other Sidecar instances
@@ -38,5 +39,5 @@ public interface SidecarPeerHealthProvider
      * @param instance the instance where the health check will be executed
      * @return a future with the {@link Health} of the {@code instance}
      */
-    Future<Health> health(PeerInstance instance);
+    Future<Health> health(SidecarInstance instance);
 }

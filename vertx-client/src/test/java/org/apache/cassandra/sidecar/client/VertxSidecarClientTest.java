@@ -24,6 +24,7 @@ import java.util.List;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.client.retry.ExponentialBackoffRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
+import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 
 /**
  * Unit tests for the {@link SidecarClient} using vertx

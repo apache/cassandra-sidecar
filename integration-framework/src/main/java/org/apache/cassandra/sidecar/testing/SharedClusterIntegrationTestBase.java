@@ -702,11 +702,12 @@ public abstract class SharedClusterIntegrationTestBase
                                                                                  5242880, DEFAULT_API_CALL_TIMEOUT,
                                                                                  buildTestS3ProxyConfig());
 
-            SidecarClientConfiguration sidecarClientConfiguration = new SidecarClientConfigurationImpl();
+            SidecarClientConfiguration sidecarClientConfiguration = new SidecarClientConfigurationImpl(sslConfiguration);
+
+
 
             SidecarConfigurationImpl.Builder builder = SidecarConfigurationImpl.builder()
                                                                                .serviceConfiguration(conf)
-                                                                               .sslConfiguration(sslConfiguration)
                                                                                .s3ClientConfiguration(s3ClientConfig)
                                                                                .sidecarClientConfiguration(sidecarClientConfiguration)
                                                                                .sidecarPeerHealthConfiguration(sidecarPeerHealthConfiguration);

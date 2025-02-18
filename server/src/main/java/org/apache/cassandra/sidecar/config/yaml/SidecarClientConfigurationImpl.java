@@ -22,6 +22,7 @@ package org.apache.cassandra.sidecar.config.yaml;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
+import org.apache.cassandra.sidecar.config.SslConfiguration;
 
 
 /**
@@ -30,12 +31,11 @@ import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 public class SidecarClientConfigurationImpl implements SidecarClientConfiguration
 {
     public static final String USE_SSL = "use_ssl";
-    public static final String KEYSTORE_CONFIGURATION = "keystore_configuration";
-    public static final String TRUSTSTORE_CONFIGURATION = "truststore_configuration";
+    public static final String SSL_CONFIGURATION = "ssl";
     public static final String REQUEST_TIMEOUT = "request_timeout";
     public static final String REQUEST_IDLE_TIMEOUT = "request_idle_timeout";
     public static final String CONNECTION_POOL_MAX_SIZE = "connection_pool_max_size";
-    public static final String CONNECTION_POOL_CLEARING_PERIOD = "connection_pool_clearing_period";
+    public static final String CONNECTION_POOL_CLEANER_PERIOD = "connection_pool_clearing_period";
     public static final String CONNECTION_POOL_EVENT_LOOP_SIZE = "connection_pool_event_loop_size";
     public static final String CONNECTION_POOL_MAX_WAIT_QUEUE_SIZE = "connection_pool_max_wait_queue_size";
     public static final String MAX_RETRIES = "max_retries";
@@ -43,10 +43,11 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     public static final String MAX_RETRY_DELAY = "max_retry_delay";
 
     public static final boolean DEFAULT_USE_SSL = false;
+    public static final SslConfiguration DEFAULT_SSL_CONFIGURATION = null;
     public static final MillisecondBoundConfiguration DEFAULT_REQUEST_TIMEOUT = MillisecondBoundConfiguration.parse("60s");
     public static final MillisecondBoundConfiguration DEFAULT_REQUEST_IDLE_TIMEOUT = MillisecondBoundConfiguration.parse("60s");
     public static final int DEFAULT_CONNECTION_POOL_MAX_SIZE = 10;
-    public static final MillisecondBoundConfiguration DEFAULT_CONNECTION_POOL_CLEARING_PERIOD = MillisecondBoundConfiguration.parse("60s");
+    public static final MillisecondBoundConfiguration DEFAULT_CONNECTION_POOL_CLEANER_PERIOD = MillisecondBoundConfiguration.parse("60s");
     public static final int DEFAULT_CONNECTION_POOL_EVENT_LOOP_SIZE = 10;
     public static final int DEFAULT_CONNECTION_POOL_MAX_WAIT_QUEUE_SIZE = 10;
     public static final int DEFAULT_MAX_RETRIES = 3;
@@ -57,6 +58,9 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     @JsonProperty(value = USE_SSL)
     protected final boolean useSsl;
 
+    @JsonProperty(value = SSL_CONFIGURATION)
+    protected final SslConfiguration sslConfiguration;
+
     @JsonProperty(value = REQUEST_TIMEOUT)
     protected final MillisecondBoundConfiguration requestTimeout;
 
@@ -66,8 +70,8 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     @JsonProperty(value = CONNECTION_POOL_MAX_SIZE)
     protected final int connectionPoolMaxSize;
 
-    @JsonProperty(value = CONNECTION_POOL_CLEARING_PERIOD)
-    protected final MillisecondBoundConfiguration connectionPoolClearingPeriod;
+    @JsonProperty(value = CONNECTION_POOL_CLEANER_PERIOD)
+    protected final MillisecondBoundConfiguration connectionPoolCleanerPeriod;
 
     @JsonProperty(value = CONNECTION_POOL_EVENT_LOOP_SIZE)
     protected final int connectionPoolEventLoopSize;
@@ -88,10 +92,28 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     {
 
         this(DEFAULT_USE_SSL,
+             DEFAULT_SSL_CONFIGURATION,
              DEFAULT_REQUEST_TIMEOUT,
              DEFAULT_REQUEST_IDLE_TIMEOUT,
              DEFAULT_CONNECTION_POOL_MAX_SIZE,
-             DEFAULT_CONNECTION_POOL_CLEARING_PERIOD,
+             DEFAULT_CONNECTION_POOL_CLEANER_PERIOD,
+             DEFAULT_CONNECTION_POOL_EVENT_LOOP_SIZE,
+             DEFAULT_CONNECTION_POOL_MAX_WAIT_QUEUE_SIZE,
+             DEFAULT_MAX_RETRIES,
+             DEFAULT_RETRY_DELAY,
+             DEFAULT_MAX_RETRY_DELAY
+        );
+    }
+
+    public SidecarClientConfigurationImpl(SslConfiguration sslConfiguration)
+    {
+
+        this(DEFAULT_USE_SSL,
+             sslConfiguration,
+             DEFAULT_REQUEST_TIMEOUT,
+             DEFAULT_REQUEST_IDLE_TIMEOUT,
+             DEFAULT_CONNECTION_POOL_MAX_SIZE,
+             DEFAULT_CONNECTION_POOL_CLEANER_PERIOD,
              DEFAULT_CONNECTION_POOL_EVENT_LOOP_SIZE,
              DEFAULT_CONNECTION_POOL_MAX_WAIT_QUEUE_SIZE,
              DEFAULT_MAX_RETRIES,
@@ -101,10 +123,11 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     }
 
     public SidecarClientConfigurationImpl(boolean useSsl,
+                                          SslConfiguration sslConfiguration,
                                           MillisecondBoundConfiguration requestTimeout,
                                           MillisecondBoundConfiguration requestIdleTimeout,
                                           int connectionPoolMaxSize,
-                                          MillisecondBoundConfiguration connectionPoolClearingPeriod,
+                                          MillisecondBoundConfiguration connectionPoolCleanerPeriod,
                                           int connectionPoolEventLoopSize,
                                           int connectionPoolEventMaxWaitQueueSize,
                                           int maxRetries,
@@ -112,10 +135,11 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
                                           MillisecondBoundConfiguration maxRetryDelay)
     {
         this.useSsl = useSsl;
+        this.sslConfiguration = sslConfiguration;
         this.requestTimeout = requestTimeout;
         this.requestIdleTimeout = requestIdleTimeout;
         this.connectionPoolMaxSize = connectionPoolMaxSize;
-        this.connectionPoolClearingPeriod = connectionPoolClearingPeriod;
+        this.connectionPoolCleanerPeriod = connectionPoolCleanerPeriod;
         this.connectionPoolEventLoopSize = connectionPoolEventLoopSize;
         this.connectionPoolEventMaxWaitQueueSize = connectionPoolEventMaxWaitQueueSize;
         this.maxRetries = maxRetries;
@@ -127,6 +151,12 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     public boolean useSsl()
     {
         return useSsl;
+    }
+
+    @Override
+    public SslConfiguration sslConfiguration()
+    {
+        return sslConfiguration;
     }
 
     @Override
@@ -150,7 +180,7 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     @Override
     public MillisecondBoundConfiguration connectionPoolCleanerPeriod()
     {
-        return connectionPoolClearingPeriod;
+        return connectionPoolCleanerPeriod;
     }
 
     @Override

@@ -48,10 +48,10 @@ import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Token;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioner;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
@@ -83,7 +83,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
 
     @Override
     @Nullable
-    public Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace)
+    public Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace, boolean forceRefresh)
     {
         checkAndReloadReloadCaches();
         Metadata metadata = instancesMetadata.instances().get(0).delegate().metadata();

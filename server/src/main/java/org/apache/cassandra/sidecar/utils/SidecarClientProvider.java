@@ -36,17 +36,16 @@ import org.apache.cassandra.sidecar.client.HttpClientConfig;
 import org.apache.cassandra.sidecar.client.SidecarClient;
 import org.apache.cassandra.sidecar.client.SidecarClientConfig;
 import org.apache.cassandra.sidecar.client.SidecarClientConfigImpl;
-import org.apache.cassandra.sidecar.client.SidecarInstance;
-import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.client.SimpleSidecarInstancesProvider;
 import org.apache.cassandra.sidecar.client.VertxHttpClient;
 import org.apache.cassandra.sidecar.client.VertxRequestExecutor;
 import org.apache.cassandra.sidecar.client.retry.ExponentialBackoffRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.config.SslConfiguration;
 
 /**
  * Provider class for retrieving the singleton {@link SidecarClient} instance
@@ -57,7 +56,6 @@ public class SidecarClientProvider implements Provider<SidecarClient>
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarClientProvider.class);
     private final Vertx vertx;
     private final SidecarClientConfiguration clientConfig;
-    private final SslConfiguration sslConfig;
     private final SidecarVersionProvider sidecarVersionProvider;
     private final SidecarClient client;
 
@@ -68,7 +66,6 @@ public class SidecarClientProvider implements Provider<SidecarClient>
     {
         this.vertx = vertx;
         this.clientConfig = sidecarConfiguration.sidecarClientConfiguration();
-        this.sslConfig = sidecarConfiguration.sslConfiguration();
         this.sidecarVersionProvider = sidecarVersionProvider;
         this.client = initializeSidecarClient();
     }
@@ -124,11 +121,11 @@ public class SidecarClientProvider implements Provider<SidecarClient>
                .setMaxWaitQueueSize(clientConfig.connectionPoolMaxWaitQueueSize());
 
         boolean useSsl = clientConfig.useSsl();
-        if (sslConfig != null && sslConfig.isKeystoreConfigured())
+        if (clientConfig.sslConfiguration() != null && clientConfig.sslConfiguration().isKeystoreConfigured())
         {
-            options.setKeyStoreOptions(new JksOptions().setPath(sslConfig.keystore().path())
-                                                       .setPassword(sslConfig.keystore().password()));
-            if (sslConfig.preferOpenSSL() && OpenSSLEngineOptions.isAvailable())
+            options.setKeyStoreOptions(new JksOptions().setPath(clientConfig.sslConfiguration().keystore().path())
+                                                       .setPassword(clientConfig.sslConfiguration().keystore().password()));
+            if (clientConfig.sslConfiguration().preferOpenSSL() && OpenSSLEngineOptions.isAvailable())
             {
                 LOGGER.info("Using OpenSSL for encryption in Webclient Options");
                 useSsl = true;
@@ -140,10 +137,11 @@ public class SidecarClientProvider implements Provider<SidecarClient>
             }
         }
 
-        if (sslConfig != null && sslConfig.truststore() != null && sslConfig.truststore().isConfigured())
+        if (clientConfig.sslConfiguration() != null && clientConfig.sslConfiguration().truststore() != null
+            && clientConfig.sslConfiguration().truststore().isConfigured())
         {
-            options.setTrustStoreOptions(new JksOptions().setPath(sslConfig.truststore().path())
-                                                         .setPassword(sslConfig.truststore().password()));
+            options.setTrustStoreOptions(new JksOptions().setPath(clientConfig.sslConfiguration().truststore().path())
+                                                         .setPassword(clientConfig.sslConfiguration().truststore().password()));
         }
 
         options.setSsl(useSsl);

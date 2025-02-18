@@ -34,8 +34,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.codecs.SidecarInstanceCodecs;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
@@ -60,7 +60,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     private final SidecarPeerProvider sidecarPeerProvider;
     private final SidecarPeerHealthProvider healthProvider;
 
-    private final Map<PeerInstance, SidecarPeerHealthProvider.Health> status = new ConcurrentHashMap<>();
+    private final Map<SidecarInstance, SidecarPeerHealthProvider.Health> status = new ConcurrentHashMap<>();
 
     @Inject
     public SidecarPeerHealthMonitorTask(Vertx vertx,
@@ -73,7 +73,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         this.config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         this.sidecarPeerProvider = sidecarPeerProvider;
         this.healthProvider = healthProvider;
-        vertx.eventBus().registerDefaultCodec(InstanceMetadataImpl.class, sidecarInstanceCodecs);
+        vertx.eventBus().registerDefaultCodec(SidecarInstance.class, sidecarInstanceCodecs);
     }
 
     @NotNull
@@ -111,7 +111,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     // internal methods
     protected Future<CompositeFuture> run()
     {
-        Set<PeerInstance> sidecarPeers = sidecarPeerProvider.get();
+        Set<SidecarInstance> sidecarPeers = sidecarPeerProvider.get();
         if (sidecarPeers.isEmpty())
         {
             LOGGER.warn("No Sidecar sidecarPeers detected");
@@ -145,7 +145,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     }
 
     // listener notifications
-    protected void updateHealth(PeerInstance instance, SidecarPeerHealthProvider.Health health)
+    protected void updateHealth(SidecarInstance instance, SidecarPeerHealthProvider.Health health)
     {
         switch (health)
         {
@@ -161,7 +161,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         }
     }
 
-    protected void markOk(PeerInstance instance)
+    protected void markOk(SidecarInstance instance)
     {
         if (compareAndUpdate(instance, SidecarPeerHealthProvider.Health.OK))
         {
@@ -170,7 +170,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         }
     }
 
-    protected void markDown(PeerInstance instance)
+    protected void markDown(SidecarInstance instance)
     {
         if (compareAndUpdate(instance, SidecarPeerHealthProvider.Health.DOWN))
         {
@@ -179,12 +179,12 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         }
     }
 
-    protected boolean compareAndUpdate(PeerInstance instance, SidecarPeerHealthProvider.Health newStatus)
+    protected boolean compareAndUpdate(SidecarInstance instance, SidecarPeerHealthProvider.Health newStatus)
     {
         return status.put(instance, newStatus) != newStatus;
     }
 
-    public Map<PeerInstance, SidecarPeerHealthProvider.Health> getStatus()
+    public Map<SidecarInstance, SidecarPeerHealthProvider.Health> getStatus()
     {
         return status;
     }

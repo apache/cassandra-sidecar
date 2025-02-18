@@ -21,45 +21,40 @@ package org.apache.cassandra.sidecar.codecs;
 import com.google.inject.Singleton;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 
 /**
  * Codecs for Sidecar instances
  */
 @Singleton
-public class SidecarInstanceCodecs implements MessageCodec<InstanceMetadataImpl, InstanceMetadataImpl>
+public class SidecarInstanceCodecs implements MessageCodec<SidecarInstance, SidecarInstance>
 {
     @Override
-    public void encodeToWire(Buffer buf, InstanceMetadataImpl instance)
+    public void encodeToWire(Buffer buf, SidecarInstance instance)
     {
         buf.appendInt(instance.port());
-        CommonCodecs.STRING.encodeToWire(buf, instance.host());
+        CommonCodecs.STRING.encodeToWire(buf, instance.hostname());
     }
 
     @Override
-    public InstanceMetadataImpl decodeFromWire(int pos, Buffer buf)
+    public SidecarInstance decodeFromWire(int pos, Buffer buf)
     {
         final int port = buf.getInt(pos);
         pos += 4; // advance 4 bytes after reading int
-        return InstanceMetadataImpl.builder()
-                .host(CommonCodecs.STRING.decodeFromWire(pos, buf))
-                .port(port)
-                .build();
+        return new SidecarInstanceImpl(CommonCodecs.STRING.decodeFromWire(pos, buf), port);
     }
 
     @Override
-    public InstanceMetadataImpl transform(InstanceMetadataImpl instance)
+    public SidecarInstance transform(SidecarInstance instance)
     {
-        return InstanceMetadataImpl.builder()
-                .host(instance.host())
-                .port(instance.port())
-                .build();
+        return new SidecarInstanceImpl(instance.hostname(), instance.port());
     }
 
     @Override
     public String name()
     {
-        return "PeerInstance";
+        return "SidecarInstance";
     }
 
     @Override

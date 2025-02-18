@@ -47,6 +47,8 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
@@ -81,7 +83,7 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         this.dnsResolver = dnsResolver;
     }
 
-    public Set<PeerInstance> get()
+    public Set<SidecarInstance> get()
     {
         Map<Integer, InstanceMetadata> localInstances = instancesMetadata
                                                         .instances()
@@ -91,7 +93,7 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         if (localInstances.isEmpty())
         {
             LOGGER.debug("No local instances found");
-            return new HashSet<>();
+            return Set.of();
         }
 
         Metadata metadata = localInstances.values().stream().findFirst()
@@ -100,7 +102,7 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         if (metadata == null)
         {
             LOGGER.debug("Not yet connect to Cassandra cluster");
-            return new HashSet<>();
+            return Set.of();
         }
 
         final List<KeyspaceMetadata> keyspaces = metadata.getKeyspaces()
@@ -110,7 +112,7 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         if (keyspaces.isEmpty())
         {
             LOGGER.warn("No user keyspaces found");
-            return new HashSet<>();
+            return Set.of();
         }
 
         Set<Host> localHosts = cassandraClientTokenRingProvider.localInstances();
@@ -126,7 +128,7 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         if (!maxRfKeyspace.isPresent())
         {
             LOGGER.info("No keyspace found replicated in DC dc={}", localDc);
-            return new HashSet<>();
+            return Set.of();
         }
 
         int rf = Integer.parseInt(maxRfKeyspace.get().getReplication().get(localDc));
@@ -152,7 +154,7 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
                        return pair;
                    }
                })
-               .map(pair -> new PeerInstanceImpl(pair.getValue(), sidecarServicePort(pair.getKey())))
+               .map(pair -> new SidecarInstanceImpl(pair.getValue(), sidecarServicePort(pair.getKey())))
                .collect(Collectors.toSet());
     }
 

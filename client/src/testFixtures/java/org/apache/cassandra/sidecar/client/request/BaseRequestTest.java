@@ -27,13 +27,13 @@ import org.apache.cassandra.sidecar.client.HttpClient;
 import org.apache.cassandra.sidecar.client.HttpClientConfig;
 import org.apache.cassandra.sidecar.client.RequestContext;
 import org.apache.cassandra.sidecar.client.RequestExecutor;
-import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.client.SimpleSidecarInstancesProvider;
 import org.apache.cassandra.sidecar.client.retry.NoRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.client.selection.InstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.client.selection.OrderedInstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.client.selection.RandomInstanceSelectionPolicy;
+import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 import org.jetbrains.annotations.NotNull;
 
 /**
