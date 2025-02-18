@@ -27,8 +27,8 @@ include "vertx-client-shaded"
 
 // The server code supports Java 11, but it doesn't support Java 8
 if (JavaVersion.current().isJava11Compatible()) {
-    include "adapters:base"
-    include "adapters:cassandra41"
+    include "adapters:adapters-base"
+    include "adapters:adapters-cassandra41"
     include "docs"
     include "server"
     include "server-common"

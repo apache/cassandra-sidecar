@@ -35,8 +35,8 @@ test {
 }
 
 dependencies {
-    implementation(project(":adapters:base"))
-    implementation(project(":adapters:cassandra41"))
+    implementation(project(":adapters:adapters-base"))
+    implementation(project(":adapters:adapters-cassandra41"))
 
     // The dtest jar must be a compile only dependency. We want to avoid having this jar in the
     // classpath while running integration tests. Instead, a dedicated classloader will load the
@@ -84,6 +84,6 @@ dependencies {
     api(project(path: ":server-common"))
 }
 
-compileJava.onlyIf { "true" != System.getenv("skipIntegrationTest") }
-compileTestJava.onlyIf { "true" != System.getenv("skipIntegrationTest") }
-javadoc.onlyIf { "true" != System.getenv("skipIntegrationTest") }
+compileJava.onlyIf { !propertyExists('skipIntegrationTest') }
+compileTestJava.onlyIf { !propertyExists('skipIntegrationTest') }
+javadoc.onlyIf { !propertyExists('skipIntegrationTest') }

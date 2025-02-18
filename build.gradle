@@ -36,6 +36,8 @@ plugins {
     id 'idea'
     id 'java'
     id 'application'
+    // Used to sign built artifacts
+    id 'signing'
 
     // since we're using a specific version here, we delay applying the plugin till the all projects
     id "com.github.spotbugs" version "6.0.20" apply false
@@ -55,7 +57,53 @@ plugins {
     id 'jacoco'
 }
 
-ext.dependencyLocation = (System.getenv("CASSANDRA_DEP_DIR") ?: "${rootDir}/dtest-jars") + "/"
+ext {
+    // A common method to handle loading gradle properties with a default when
+    // no definition is found. The property value is determined by the following
+    // priority order (top is highest priority):
+    //    - gradle property (-Pproperty=value)
+    //    - system property (-Dproperty=value)
+    //    - environment variable
+    //    - default value
+    // See more details on gradle property handling here:
+    //    https://docs.gradle.org/current/userguide/build_environment.html#sec:gradle_properties_and_system_properties
+    propertyWithDefault = { property, defaultValue ->
+        def value = defaultValue
+        def envValue = System.getenv("CASSANDRA_DEP_DIR")
+        if (envValue != null) {
+            value = envValue
+        }
+        def systemValue = System.getProperty(property)
+        if (systemValue != null) {
+            value = systemValue
+        }
+        def projectValue = project.hasProperty(property) ? project.property(property) : null
+        if (projectValue != null) {
+            value = projectValue
+        }
+        return value
+    }
+
+    // Returns true if the property has been set, otherwise false.
+    propertyExists = { property ->
+        System.getenv(property) != null || System.getProperty(property) != null || project.hasProperty(property)
+    }
+
+    dependencyLocation = propertyWithDefault("CASSANDRA_DEP_DIR", "${rootDir}/dtest-jars") + "/"
+
+    // This allows simplified builds and local maven installs.
+    forceSigning = propertyExists("forceSigning")
+    skipSigning = propertyExists("skipSigning")
+    shouldSign =
+            // Always sign artifacts if -PforceSigning is passed.
+            forceSigning ||
+                    // Skip signing artifacts by default if -PskipSigning is passed.
+                    (!skipSigning
+                            // Sign artifacts if the version is not a snapshot, and we are uploading them to maven.
+                            && !version.endsWith("SNAPSHOT")
+                            && project.gradle.startParameter.taskNames.any { it.contains("upload") })
+
+}
 
 // Force checkstyle, rat, and spotBugs to run before test tasks for faster feedback
 def codeCheckTasks = task("codeCheckTasks")
@@ -65,8 +113,7 @@ allprojects {
     apply plugin: 'checkstyle'
 
     // do not run spot-bug on test-specific sub-projects
-    if (!it.name.startsWith('integration-') && !it.name.startsWith("test-"))
-    {
+    if (!it.name.startsWith('integration-') && !it.name.startsWith("test-")) {
         apply plugin: "com.github.spotbugs"
         spotbugs {
             toolVersion = '4.2.3'
@@ -155,6 +202,7 @@ run {
 
 distributions {
     main {
+        distributionBaseName = 'apache-cassandra-sidecar'
         contents {
             from 'LICENSE.txt'
             // Include the "agents" directory in the distribution
@@ -166,6 +214,25 @@ distributions {
                 into('conf')
             }
             setDuplicatesStrategy(DuplicatesStrategy.INCLUDE)
+        }
+    }
+    // Packages the sources as a tarball for distribution
+    sources {
+        distributionBaseName = 'apache-cassandra-sidecar'
+        distributionClassifier = 'src'
+        contents {
+            from '.'
+            include '**/*.*'
+            exclude '**.gradle/**'
+            exclude '**.idea/**'
+            exclude 'agents/**'
+            exclude 'bin/**'
+            exclude 'dtest-jars/**'
+            exclude '**lib/**'
+            exclude '**logs/**'
+            exclude '**/build/**'
+            exclude '**/out/**'
+            exclude '**/target/**'
         }
     }
 }
@@ -261,23 +328,24 @@ tasks.register('copyDocs', Copy) {
  * as a requirement without the install breaking if you want to use a different version
  */
 ospackage {
-    packageName = "cassandra-sidecar"
+    packageName = "apache-cassandra-sidecar"
     version = project.version
     // ospackage puts packages into /opt/[package] by default
     // which is _technically_ the right spot for packages
     link("/usr/local/bin/cassandra-sidecar", "/opt/cassandra-sidecar/bin/cassandra-sidecar")
-    license "Apache License 2.0"
-    description "Sidecar Management Tool for Apache Cassandra"
+    license = "Apache License 2.0"
+    summary = "Sidecar Management Tool for Apache Cassandra"
+    description = "Sidecar Management Tool for Apache Cassandra"
     os = LINUX
-    user "root"
+    user = "root"
 }
 
 buildRpm {
-    group = "build"
+    group = "distribution"
 }
 
 buildDeb {
-    group = "build"
+    group = "distribution"
 }
 
 tasks.register('buildIgnoreRatList', Exec) {
@@ -322,6 +390,8 @@ rat {
     reportDir.set(file("build/reports/rat"))
 }
 
+distZip.dependsOn copyJolokia
+distTar.dependsOn copyJolokia
 installDist.dependsOn copyJolokia
 check.dependsOn codeCheckTasks
 if (JavaVersion.current().isJava11Compatible()) {
@@ -331,4 +401,27 @@ run.dependsOn build
 
 tasks.named('rat').configure {
     dependsOn(buildIgnoreRatList)
+}
+
+tasks.named('distTar').configure {
+    compression = Compression.GZIP
+    archiveExtension = "tar.gz"
+}
+
+tasks.named('sourcesDistTar').configure {
+    compression = Compression.GZIP
+    archiveExtension = "tar.gz"
+}
+
+signing {
+    required { shouldSign }
+    if (shouldSign) {
+        // Use gpg-agent to sign
+        useGpgCmd()
+    }
+    sign distZip
+    sign distTar
+    sign sourcesDistTar
+    sign buildDeb
+    sign buildRpm
 }

@@ -89,16 +89,62 @@ tasks.named('test') {
     dependsOn 'shadowJar'
 }
 
+ext {
+    mavenRepositoryUrl = propertyWithDefault("maven.repository.url", "")
+    // These properties can be set in ~/.gradle/gradle.properties file,
+    // though it would be open text. They can also be set on the cli via
+    // -Pmaven.username and -Pmaven.password
+    mavenUsername = propertyWithDefault("maven.username", "")
+    mavenPassword = propertyWithDefault("maven.password", "")
+}
+
 publishing {
     publications {
         shadow(MavenPublication) { publication ->
             project.shadow.component(publication)
-
             groupId rootProject.group
             artifactId "sidecar-vertx-client-all"
-            version System.getenv("CODE_VERSION") ?: "${version}"
+            version System.getenv("CODE_VERSION") ?: "${project.version}"
+
+            if (mavenRepositoryUrl != "") {
+                pom {
+                    url = "https://cassandra.apache.org/"
+                    licenses {
+                        license {
+                            name = "The Apache License, Version 2.0"
+                            url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                            distribution = "repo"
+                        }
+                    }
+                }
+            }
         }
     }
+
+    if (mavenRepositoryUrl != "") {
+        repositories {
+            maven {
+                url = mavenRepositoryUrl
+                if (mavenUsername != "" && mavenPassword != "") {
+                    credentials {
+                        username = mavenUsername
+                        password = mavenPassword
+                    }
+                }
+            }
+        }
+    }
+}
+
+apply plugin: 'signing'
+signing {
+    required { shouldSign }
+    if (shouldSign) {
+        // Use gpg-agent to sign
+        useGpgCmd()
+    }
+
+    sign publishing.publications
 }
 
 /**

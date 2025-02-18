@@ -18,18 +18,17 @@
  */
 
 
-import org.apache.tools.ant.taskdefs.condition.Os
-
 import java.nio.file.Paths
 
 plugins {
     id 'java-library'
     id 'idea'
     id 'maven-publish'
+    id 'jacoco'
     id "com.github.spotbugs"
 }
 
-version project.version
+apply from: "$rootDir/gradle/common/publishing.gradle"
 
 sourceCompatibility = JavaVersion.VERSION_11
 
@@ -38,8 +37,8 @@ test {
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
     reports {
         junitXml.setRequired(true)
-        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "adapters-cassandra41").toFile()
-        println("Destination directory for adapters-cassandra41 tests: ${destDir}")
+        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "adapters-base").toFile()
+        println("Destination directory for adapters-base tests: ${destDir}")
         junitXml.getOutputLocation().set(destDir)
         html.setRequired(true)
         html.getOutputLocation().set(destDir)
@@ -48,20 +47,19 @@ test {
 
 dependencies {
     api(project(":server-common"))
-    api(project(":adapters:base"))
 
+    api("com.google.guava:guava:${project.rootProject.guavaVersion}")
     compileOnly('org.jetbrains:annotations:23.0.0')
     compileOnly('com.datastax.cassandra:cassandra-driver-core:3.11.3')
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
-}
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-            groupId rootProject.group
-            artifactId "sidecar-adapters-cassandra41"
-            version System.getenv("CODE_VERSION") ?: "${version}"
-        }
-    }
+    testImplementation('com.datastax.cassandra:cassandra-driver-core:3.11.3')
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
+    testImplementation "org.assertj:assertj-core:3.24.2"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
+
+    testImplementation('org.mockito:mockito-core:4.10.0')
+    testImplementation('org.mockito:mockito-inline:4.10.0')
+
 }

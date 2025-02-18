@@ -17,8 +17,6 @@
  */
 
 
-import org.apache.tools.ant.taskdefs.condition.Os
-
 import java.nio.file.Paths
 
 plugins {
@@ -27,7 +25,7 @@ plugins {
     id('maven-publish')
 }
 
-version project.version
+apply from: "$rootDir/gradle/common/publishing.gradle"
 
 sourceCompatibility = 1.8
 
@@ -85,28 +83,6 @@ dependencies {
     testImplementation("org.apache.logging.log4j:log4j-core:2.20.0")
     testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.20.0")
 
-}
-
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-            groupId rootProject.group
-            artifactId "sidecar-${archivesBaseName}"
-            version System.getenv("CODE_VERSION") ?: "${version}"
-        }
-    }
-}
-
-javadoc {
-    if (JavaVersion.current().isJava9Compatible()) {
-        options.addBooleanOption('html5', true)
-    }
 }
 
 check.dependsOn(checkstyleMain, checkstyleTest, jacocoTestReport)

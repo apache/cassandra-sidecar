@@ -17,8 +17,6 @@
  */
 
 
-import org.apache.tools.ant.taskdefs.condition.Os
-
 import java.nio.file.Paths
 
 plugins {
@@ -31,13 +29,9 @@ plugins {
     id('maven-publish')
 }
 
-version project.version
+apply from: "$rootDir/gradle/common/publishing.gradle"
 
 sourceCompatibility = 1.8
-
-repositories {
-    mavenCentral()
-}
 
 test {
     useJUnitPlatform()
@@ -91,28 +85,6 @@ dependencies {
     testFixturesImplementation('com.squareup.okhttp3:mockwebserver:4.10.0')
     testFixturesImplementation(group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: "${project.jacksonVersion}")
     testFixturesCompileOnly(group: 'io.netty', name: 'netty-codec-http', version: "${project.nettyVersion}")
-}
-
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-            groupId rootProject.group
-            artifactId "sidecar-${archivesBaseName}"
-            version System.getenv("CODE_VERSION") ?: "${version}"
-        }
-    }
-}
-
-javadoc {
-    if (JavaVersion.current().isJava9Compatible()) {
-        options.addBooleanOption('html5', true)
-    }
 }
 
 check.dependsOn(checkstyleMain, checkstyleTest, jacocoTestReport)

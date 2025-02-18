@@ -17,20 +17,15 @@
  * under the License.
  */
 
-
-import org.apache.tools.ant.taskdefs.condition.Os
-
 import java.nio.file.Paths
 
 plugins {
     id 'java-library'
     id 'idea'
-    id 'maven-publish'
     id "com.github.spotbugs"
     id 'java-test-fixtures'
 }
-
-version project.version
+apply from: "$rootDir/gradle/common/publishing.gradle"
 
 sourceCompatibility = JavaVersion.VERSION_11
 
@@ -63,22 +58,6 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
 
     testFixturesImplementation("org.assertj:assertj-core:3.24.2")
-}
-
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-            groupId rootProject.group
-            artifactId "sidecar-${archivesBaseName}"
-            version System.getenv("CODE_VERSION") ?: "${version}"
-        }
-    }
 }
 
 compileTestJava {

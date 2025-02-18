@@ -31,6 +31,7 @@ plugins {
     // and produces a docker image
     id('com.google.cloud.tools.jib') version '3.4.4'
 }
+apply from: "$rootDir/gradle/common/publishing.gradle"
 
 sourceCompatibility = JavaVersion.VERSION_11
 
@@ -145,8 +146,8 @@ dependencies {
     testImplementation(testFixtures(project(":test-common")))
 
     implementation(project(":server-common"))
-    implementation(project(":adapters:base"))
-    implementation(project(":adapters:cassandra41"))
+    implementation(project(":adapters:adapters-base"))
+    implementation(project(":adapters:adapters-cassandra41"))
     implementation(project(":vertx-auth-mtls"))
 
     testFixturesApi(testFixtures(project(":server-common")))
@@ -170,22 +171,6 @@ dependencies {
     integrationTestImplementation(group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: "${project.jacksonVersion}")
 
     containerTestImplementation('com.adobe.testing:s3mock-testcontainers:2.17.0') // 3.x version do not support java 11
-}
-
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-            groupId rootProject.group
-            artifactId "sidecar-${archivesBaseName}"
-            version System.getenv("CODE_VERSION") ?: "${version}"
-        }
-    }
 }
 
 test {
