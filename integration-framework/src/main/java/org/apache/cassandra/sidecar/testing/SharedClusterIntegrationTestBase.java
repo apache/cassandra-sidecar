@@ -709,6 +709,7 @@ public abstract class SharedClusterIntegrationTestBase
             SidecarConfigurationImpl.Builder builder = SidecarConfigurationImpl.builder()
                                                                                .serviceConfiguration(conf)
                                                                                .s3ClientConfiguration(s3ClientConfig)
+                                                                               .sslConfiguration(sslConfiguration)
                                                                                .sidecarClientConfiguration(sidecarClientConfiguration)
                                                                                .sidecarPeerHealthConfiguration(sidecarPeerHealthConfiguration);
             if (configurationOverrides != null)
