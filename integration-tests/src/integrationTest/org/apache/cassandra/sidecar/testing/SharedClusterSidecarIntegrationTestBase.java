@@ -33,7 +33,6 @@ public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClus
 {
     private WebClient trustedClient;
     private WebClient noAuthClient;
-    private WebClient simpleClient;
 
     @Override
     protected void beforeClusterShutdown()
@@ -48,11 +47,6 @@ public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClus
         if (noAuthClient != null)
         {
             noAuthClient.close();
-        }
-
-        if (simpleClient != null)
-        {
-            simpleClient.close();
         }
     }
 
@@ -95,16 +89,5 @@ public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClus
                                          .setSsl(true);
         noAuthClient = WebClient.create(vertx(), clientOptions);
         return noAuthClient;
-    }
-
-    public WebClient simpleClient()
-    {
-        if (simpleClient != null)
-        {
-            return simpleClient;
-        }
-
-        simpleClient = WebClient.create(vertx());
-        return simpleClient;
     }
 }
