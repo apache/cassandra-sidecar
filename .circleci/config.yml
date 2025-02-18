@@ -79,6 +79,7 @@ jobs:
       - image: cimg/openjdk:11.0
     environment:
       skipIntegrationTest: true
+    resource_class: large
     steps:
       - setup_remote_docker
       - install_common
