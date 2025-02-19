@@ -1,5 +1,6 @@
 1.0.0
 -----
+ * Add sidecar endpoint to retrieve table stats (CASSSIDECAR-215)
  * Adapt to cluster topology change for restore jobs (CASSSIDECAR-185)
  * Fix PeriodicTaskExecutor double execution due to race from reschedule (CASSSIDECAR-210)
  * Upgrade Netty to 4.1.118.Final and Vert.x to 4.5.13 Version (CASSSIDECAR-207)

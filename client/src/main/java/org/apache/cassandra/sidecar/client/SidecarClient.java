@@ -62,6 +62,7 @@ import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
+import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TimeSkewResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
@@ -647,6 +648,24 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
         return executor.executeRequestAsync(requestBuilder()
                                             .singleInstanceSelectionPolicy(instance)
                                             .connectedClientStatsRequest()
+                                            .build());
+    }
+
+    /**
+     * Executes the table stats request using the default retry policy and provided {@code instance}.
+     *
+     * @param instance the instance where the request will be executed
+     * @param keyspace the keyspace in Cassandra
+     * @param table    the table name in Cassandra
+     * @return a completable future of the table stats
+     */
+    public CompletableFuture<TableStatsResponse> tableStats(SidecarInstance instance,
+                                                            String keyspace,
+                                                            String table)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .tableStatsRequest(keyspace, table)
                                             .build());
     }
 

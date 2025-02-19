@@ -38,6 +38,7 @@ import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsDatabas
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsSummary;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
 import org.apache.cassandra.sidecar.adapters.base.jmx.MetricsJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.StreamManagerJmxOperations;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
@@ -48,7 +49,7 @@ import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.jetbrains.annotations.NotNull;
 
-import static org.apache.cassandra.sidecar.adapters.base.StreamManagerJmxOperations.STREAM_MANAGER_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.jmx.StreamManagerJmxOperations.STREAM_MANAGER_OBJ_NAME;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.MetricsJmxOperations.METRICS_OBJ_TYPE_KEYSPACE_TABLE_FORMAT;
 
 /**
