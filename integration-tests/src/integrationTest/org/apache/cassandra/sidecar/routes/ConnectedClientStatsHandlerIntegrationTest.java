@@ -149,6 +149,8 @@ class ConnectedClientStatsHandlerIntegrationTest extends SharedClusterSidecarInt
         else
         {
             SimpleCassandraVersion releaseVersion = SimpleCassandraVersion.create(cluster.get(1).getReleaseVersionString());
+            SimpleCassandraVersion majorVersion = SimpleCassandraVersion.create(releaseVersion.major, releaseVersion.minor, 0);
+            SimpleCassandraVersion fourZero = SimpleCassandraVersion.create("4.0");
             assertThat(stats.size()).isEqualTo(expectedConnections);
             for (ClientConnectionEntry stat : stats)
             {
@@ -157,7 +159,7 @@ class ConnectedClientStatsHandlerIntegrationTest extends SharedClusterSidecarInt
                 assertThat(stat.driverName()).isEqualTo("DataStax Java Driver");
                 assertThat(stat.driverVersion()).isNotNull();
                 assertThat(stat.username()).isEqualTo("anonymous");
-                if (releaseVersion.isGreaterThan(SimpleCassandraVersion.create("4.0.0")))
+                if (majorVersion.isGreaterThan(fourZero))
                 {
                     assertThat(stat.clientOptions()).isNotNull();
                     assertThat(stat.clientOptions().containsKey("CQL_VERSION")).isTrue();
@@ -166,7 +168,7 @@ class ConnectedClientStatsHandlerIntegrationTest extends SharedClusterSidecarInt
 
             // TODO: Add validations for fields in trunk once dtest jars can advance beyond TCM commit
             if (usingKeyspace
-                && releaseVersion.compareTo(SimpleCassandraVersion.create("5.0.0")) >= 0)
+                && majorVersion.compareTo(SimpleCassandraVersion.create("5.0.0")) >= 0)
             {
                 assertThat(stats.stream().map(ClientConnectionEntry::keyspaceName).collect(Collectors.toSet())).contains(TEST_KEYSPACE);
             }
