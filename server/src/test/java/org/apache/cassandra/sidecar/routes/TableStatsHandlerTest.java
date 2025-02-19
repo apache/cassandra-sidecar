@@ -50,6 +50,7 @@ import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -121,6 +122,43 @@ public class TableStatsHandlerTest
                   context.completeNow();
               }));
     }
+
+    @Test
+    void testHandlerStatsNoTable(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/cassandra/keyspaces/testkeyspace/stats";
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
+              .send(context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testHandlerStatsOnlyTable(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/cassandra/tables/testtable/stats";
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
+              .send(context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testHandlerStatsNoKeyspace(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/cassandra/stats";
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
+              .send(context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
+                  context.completeNow();
+              }));
+    }
+
 
     static class TableStatsTestModule extends AbstractModule
     {

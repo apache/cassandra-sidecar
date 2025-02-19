@@ -519,6 +519,7 @@ public class MainModule extends AbstractModule
 
         protectedRouteBuilderFactory.get().router(router).method(HttpMethod.GET)
                                     .endpoint(ApiEndpointsV1.TABLE_STATS_ROUTE)
+                                    .handler(validateTableExistence)
                                     .handler(tableStatsHandler)
                                     .build();
 
