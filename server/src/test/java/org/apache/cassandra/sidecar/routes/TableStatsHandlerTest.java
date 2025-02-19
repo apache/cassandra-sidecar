@@ -29,6 +29,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Metadata;
+import com.datastax.driver.core.TableMetadata;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -78,10 +81,9 @@ public class TableStatsHandlerTest
     void before() throws InterruptedException
     {
         Module testOverride = Modules.override(new TestModule())
-                                     .with(new TableStatsTestModule());
+                                      .with(new TableStatsTestModule());
         Injector injector = Guice.createInjector(Modules.override(new MainModule())
                                                         .with(testOverride));
-
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
         VertxTestContext context = new VertxTestContext();
@@ -181,6 +183,15 @@ public class TableStatsHandlerTest
             when(mockMetricsOperations.tableStats(any())).thenReturn(response);
             when(delegate.metricsOperations()).thenReturn(mockMetricsOperations);
             when(instanceMetadata.delegate()).thenReturn(delegate);
+
+            KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
+            Metadata mockMetadata = mock(Metadata.class);
+            when(mockMetadata.getKeyspace(KEYSPACE)).thenReturn(mockKeyspaceMetadata);
+            TableMetadata table = mock(TableMetadata.class);
+            when(table.getKeyspace()).thenReturn(mockKeyspaceMetadata);
+            when(table.getName()).thenReturn(TABLE);
+            when(mockKeyspaceMetadata.getTable(TABLE)).thenReturn(table);
+            when(delegate.metadata()).thenReturn(mockMetadata);
 
             InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
             when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
