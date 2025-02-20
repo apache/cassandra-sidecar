@@ -21,7 +21,7 @@ import java.nio.file.Paths
 def integrationMaxHeapSize = System.getenv("INTEGRATION_MAX_HEAP_SIZE") ?: "3000M"
 println("Using ${integrationMaxHeapSize} maxHeapSize")
 
-def integrationMaxParallelForks = (System.getenv("INTEGRATION_MAX_PARALLEL_FORKS") ?: "4") as int
+def integrationMaxParallelForks = (System.getenv("INTEGRATION_MAX_PARALLEL_FORKS") ?: "2") as int
 println("Using ${integrationMaxParallelForks} maxParallelForks")
 
 def integrationEnableMtls = (System.getenv("INTEGRATION_MTLS_ENABLED") ?: "true") as boolean
