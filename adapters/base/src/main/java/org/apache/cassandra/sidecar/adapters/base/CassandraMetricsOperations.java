@@ -152,6 +152,7 @@ public class CassandraMetricsOperations implements MetricsOperations
             throw new IllegalArgumentException("Unsupported value type: " + value.getClass());
         }
     }
+
     /**
      * {@inheritDoc}
      */

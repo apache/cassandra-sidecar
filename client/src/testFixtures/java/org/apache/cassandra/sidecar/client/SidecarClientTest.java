@@ -1329,7 +1329,7 @@ abstract class SidecarClientTest
             assertThat(result.operation()).isEqualTo("test");
             validateResponseServed(server,
                                    ApiEndpointsV1.OPERATIONAL_JOB_ROUTE.replaceAll(OPERATIONAL_JOB_ID_PATH_PARAM, jobId.toString()),
-                                   req -> { });
+                                   req -> {});
         }
     }
 
@@ -1353,7 +1353,7 @@ abstract class SidecarClientTest
             assertThat(result).isNotNull();
             assertThat(result.jobs()).isNotNull();
             assertThat(result.jobs().get(0).jobId()).isEqualTo(jobId);
-            validateResponseServed(server, ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE, req -> { });
+            validateResponseServed(server, ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE, req -> {});
         }
     }
 
@@ -1513,7 +1513,6 @@ abstract class SidecarClientTest
     @Test
     public void testConnectedClientStats() throws Exception
     {
-
         String connectedClientStatsResponseAsString = "{\"clientConnections\":[{\"address\":\"127.0.0.1\",\"port\":54628" +
                                                       ",\"sslEnabled\":false,\"sslCipherSuite\":\"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256\"" +
                                                       ",\"sslProtocol\":\"TLSv1.2\",\"protocolVersion\":\"5\",\"username\":\"anonymous\"" +
@@ -1552,7 +1551,7 @@ abstract class SidecarClientTest
             assertThat(entry.authenticationMode()).isEqualTo("MutualTls");
             assertThat(entry.authenticationMetadata()).containsKey("identity");
             assertThat(entry.clientOptions()).containsKeys("CQL_VERSION", "DRIVER_NAME", "DRIVER_VERSION");
-            validateResponseServed(server, ApiEndpointsV1.CONNECTED_CLIENT_STATS_ROUTE, req -> { });
+            validateResponseServed(server, ApiEndpointsV1.CONNECTED_CLIENT_STATS_ROUTE, req -> {});
         }
     }
 
@@ -1586,7 +1585,7 @@ abstract class SidecarClientTest
                                    ApiEndpointsV1.TABLE_STATS_ROUTE
                                    .replaceAll(KEYSPACE_PATH_PARAM, testKeyspace)
                                    .replaceAll(TABLE_PATH_PARAM, testTable),
-                                   req -> { });
+                                   req -> {});
         }
     }
 
@@ -1677,7 +1676,7 @@ abstract class SidecarClientTest
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
             StreamStatsResponse result = client.streamsStats(sidecarInstance).get(30, TimeUnit.SECONDS);
             assertThat(mapper.writeValueAsString(result)).isEqualTo(expectedResponse);
-            validateResponseServed(server, ApiEndpointsV1.STREAM_STATS_ROUTE, req -> { });
+            validateResponseServed(server, ApiEndpointsV1.STREAM_STATS_ROUTE, req -> {});
         }
     }
 

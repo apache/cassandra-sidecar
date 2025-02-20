@@ -39,9 +39,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Test the table-stats endpoint with cassandra container.
  */
 @ExtendWith(VertxExtension.class)
-public class TableStatsHandlerIntegrationTest extends IntegrationTestBase
+public class TableStatsIntegrationTest extends IntegrationTestBase
 {
-    @CassandraIntegrationTest(numDataDirsPerInstance = 4, nodesPerDc = 2, network = true)
+    @CassandraIntegrationTest(numDataDirsPerInstance = 4, network = true)
     void retrieveTableStats(CassandraTestContext cassandraTestContext)
     {
         createTestKeyspace(ImmutableMap.of("datacenter1", 2));

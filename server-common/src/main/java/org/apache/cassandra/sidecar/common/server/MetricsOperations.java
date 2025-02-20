@@ -40,6 +40,7 @@ public interface MetricsOperations
      * @return the requested stream progress stats
      */
     StreamsProgressStats streamsProgressStats();
+
     /**
      * Retrieve the table stats from the cluster
      * @param tableName qualified table name
