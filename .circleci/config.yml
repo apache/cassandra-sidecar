@@ -195,7 +195,7 @@ jobs:
     docker:
       - image: cimg/openjdk:11.0
     environment:
-      INTEGRATION_MAX_PARALLEL_FORKS: 2
+      INTEGRATION_MAX_PARALLEL_FORKS: 1
       INTEGRATION_MAX_HEAP_SIZE: "3600M"
     resource_class: large
     steps:
