@@ -26,23 +26,27 @@ import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
+import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
+import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 
 import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
 import static org.apache.cassandra.testing.TestUtils.TEST_KEYSPACE;
+import static org.apache.cassandra.testing.TestUtils.TEST_TABLE_PREFIX;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Test the client-stats endpoint with cassandra container.
+ * Test the stats endpoints (that require a single node cluster) with cassandra container.
  */
-class ConnectedClientStatsHandlerIntegrationTest extends SharedClusterSidecarIntegrationTestBase
+class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
     private static final int DEFAULT_CONNECTION_COUNT = 2;
 
@@ -119,6 +123,80 @@ class ConnectedClientStatsHandlerIntegrationTest extends SharedClusterSidecarInt
                                                                    .send());
         assertClientStatsResponse(response, expectedParams);
     }
+
+    @Test
+    void retrieveTableStats()
+    {
+        try (Cluster driverCluster = createDriverCluster(cluster.delegate()); Session session = driverCluster.connect())
+        {
+            createTestKeyspace(TEST_KEYSPACE, Map.of("replication_factor", 1));
+            QualifiedName table = new QualifiedName(TEST_KEYSPACE, TEST_TABLE_PREFIX);
+            createTestTable(table,
+                            "CREATE TABLE %s ( \n" +
+                            "  race_year int, \n" +
+                            "  race_name text, \n" +
+                            "  cyclist_name text, \n" +
+                            "  rank int, \n" +
+                            "  PRIMARY KEY ((race_year, race_name), rank) \n" +
+                            ");");
+
+            /*
+             * "SnapshotSize" table stats metric reports the size of snapshot files which are not links for "live" SSTables.
+             * In order to simulate non-zero data for this metric, we do the following:
+             * 1. Insert data
+             * 2. Create snapshot
+             * 3. Truncate table to ensure snapshot references non-live sstables
+             * 4. Insert more data (and flush) to ensure other metrics, have non-zero values
+             */
+            insertData(session, table);
+            createSnapshot(table);
+            session.execute("TRUNCATE TABLE " + table);
+            insertData(session, table);
+            cluster.stream().forEach(instance -> instance.flush(TEST_KEYSPACE));
+            tableStats(table);
+        }
+    }
+
+    private void insertData(Session session, QualifiedName tableName)
+    {
+        for (int i = 1; i <= 10; i++)
+        {
+            session.execute("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
+                            "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', " + i + ", 'Benjamin PRADES');");
+        }
+    }
+
+    private void createSnapshot(QualifiedName tableName)
+    {
+        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/" + tableName.table() + "-snapshot",
+                                         tableName.keyspace(), tableName.table());
+        HttpResponse<Buffer> resp;
+        resp = getBlocking(trustedClient().put(server.actualPort(), "localhost", testRoute)
+                                 .send());
+        assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+    }
+
+    private void tableStats(QualifiedName tableName)
+    {
+        String testRoute = "/api/v1/cassandra/keyspaces/" + tableName.keyspace() + "/tables/" + tableName.table() + "/stats";
+        HttpResponse<Buffer> resp;
+        resp = getBlocking(trustedClient().get(server.actualPort(), "localhost", testRoute)
+                                 .send());
+        assertTableStatsResponse(tableName, resp);
+    }
+
+    void assertTableStatsResponse(QualifiedName tableName, HttpResponse<Buffer> response)
+    {
+        TableStatsResponse stats = response.bodyAsJson(TableStatsResponse.class);
+        assertThat(stats).isNotNull();
+        assertThat(stats.table()).isEqualTo(tableName.table());
+        assertThat(stats.keyspace()).isEqualTo(tableName.keyspace());
+        assertThat(stats.snapshotsSizeBytes()).isGreaterThan(0);
+        assertThat(stats.sstableCount()).isGreaterThan(0);
+        assertThat(stats.diskSpaceUsedBytes()).isGreaterThan(0);
+        assertThat(stats.totalDiskSpaceUsedBytes()).isGreaterThan(0);
+    }
+
 
     void assertClientStatsResponse(HttpResponse<Buffer> response, Map<String, Boolean> params)
     {
