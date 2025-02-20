@@ -22,8 +22,7 @@ import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
-import org.apache.cassandra.sidecar.routes.cdc.ValidServices;
-import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.routes.cdc.Service;
 
 /**
  * {@link KafkaConfigAccessor} is an accessor class for updating kafka configurations into
@@ -34,17 +33,16 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 public class KafkaConfigAccessor extends ConfigAccessorImpl
 {
     @Inject
-    protected KafkaConfigAccessor(InstanceMetadataFetcher instanceMetadataFetcher,
-                                  ConfigsSchema configsSchema,
+    protected KafkaConfigAccessor(ConfigsSchema configsSchema,
                                   CQLSessionProvider sessionProvider,
                                   SidecarSchema sidecarSchema)
     {
-        super(instanceMetadataFetcher, configsSchema, sessionProvider, sidecarSchema);
+        super(configsSchema, sessionProvider, sidecarSchema);
     }
 
     @Override
-    public ValidServices service()
+    public Service service()
     {
-        return ValidServices.KAFKA;
+        return Service.KAFKA;
     }
 }

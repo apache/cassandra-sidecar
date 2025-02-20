@@ -20,14 +20,14 @@ package org.apache.cassandra.sidecar.routes.cdc;
 /**
  * Enum representing various services inside config table in sidecar internal keyspace.
  */
-public enum ValidServices
+public enum Service
 {
     KAFKA("kafka"),
     CDC("cdc");
 
     public final String serviceName;
 
-    ValidServices(final String serviceName)
+    Service(final String serviceName)
     {
         this.serviceName = serviceName;
     }

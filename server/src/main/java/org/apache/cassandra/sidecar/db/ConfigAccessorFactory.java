@@ -18,7 +18,7 @@
 package org.apache.cassandra.sidecar.db;
 
 import com.google.inject.Inject;
-import org.apache.cassandra.sidecar.routes.cdc.ValidServices;
+import org.apache.cassandra.sidecar.routes.cdc.Service;
 
 /**
  * Factory for creating config objects based on the service name.
@@ -38,12 +38,12 @@ public class ConfigAccessorFactory
 
     public ConfigAccessor getConfigAccessor(final String service)
     {
-        if (service.equals(ValidServices.KAFKA.serviceName))
+        if (service.equals(Service.KAFKA.serviceName))
         {
             return kafkaConfigAccessor;
         }
 
-        if (service.equals(ValidServices.CDC.serviceName))
+        if (service.equals(Service.CDC.serviceName))
         {
             return cdcConfigAccessor;
         }

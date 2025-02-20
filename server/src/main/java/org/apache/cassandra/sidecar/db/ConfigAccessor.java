@@ -26,13 +26,36 @@ import java.util.Optional;
  */
 public interface ConfigAccessor
 {
+    /**
+     * Gets the configs of a service
+     * @return returns configs for the current service
+     */
     ServiceConfig getConfig();
 
+    /**
+     * Persists configs into the "configs" table for the current service
+     *
+     * @param config configs to be persisted
+     * @return returns updated configs
+     */
     ServiceConfig storeConfig(final Map<String, String> config);
 
+    /**
+     * Stores configs of the current service if they are not already present
+     *
+     * @param config new configs
+     * @return updated configs
+     */
     Optional<ServiceConfig> storeConfigIfNotExists(final Map<String, String> config);
 
+    /**
+     * Deletes configs for the given service
+     */
     void deleteConfig();
 
+    /**
+     * Checks if the schema for configs table is initialized
+     * @return
+     */
     boolean isSchemaInitialized();
 }

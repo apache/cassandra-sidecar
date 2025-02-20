@@ -29,8 +29,7 @@ import com.datastax.driver.core.Row;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
-import org.apache.cassandra.sidecar.routes.cdc.ValidServices;
-import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.routes.cdc.Service;
 
 /**
  * Configurations for CDC feature are stored inside a table "config" in an internal sidecar keyspace.
@@ -40,11 +39,10 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema> implements ConfigAccessor
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigAccessorImpl.class);
-    private final ValidServices service = service();
+    private final Service service = service();
     private final SidecarSchema sidecarSchema;
 
-    protected ConfigAccessorImpl(InstanceMetadataFetcher instanceMetadataFetcher,
-                                 ConfigsSchema configsSchema,
+    protected ConfigAccessorImpl(ConfigsSchema configsSchema,
                                  CQLSessionProvider sessionProvider,
                                  SidecarSchema sidecarSchema)
     {
@@ -52,15 +50,14 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
         this.sidecarSchema = sidecarSchema;
     }
 
-    public abstract ValidServices service();
+    public abstract Service service();
 
     @Override
     public ServiceConfig getConfig()
     {
         sidecarSchema.ensureInitialized();
-        BoundStatement statement = tableSchema
-                .selectConfig()
-                .bind(service.serviceName);
+        BoundStatement statement = tableSchema.selectConfig()
+                                              .bind(service.serviceName);
         Row row = execute(statement).one();
         if (row == null || row.isNull(0))
         {
@@ -74,9 +71,8 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
     public ServiceConfig storeConfig(Map<String, String> config)
     {
         sidecarSchema.ensureInitialized();
-        BoundStatement statement = tableSchema
-                .insertConfig()
-                .bind(service.serviceName, config);
+        BoundStatement statement = tableSchema.insertConfig()
+                                              .bind(service.serviceName, config);
         execute(statement);
         return new ServiceConfig(config);
     }
@@ -85,9 +81,8 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
     public Optional<ServiceConfig> storeConfigIfNotExists(Map<String, String> config)
     {
         sidecarSchema.ensureInitialized();
-        BoundStatement statement = tableSchema
-                .insertConfigIfNotExists()
-                .bind(service.serviceName, config);
+        BoundStatement statement = tableSchema.insertConfigIfNotExists()
+                                              .bind(service.serviceName, config);
         ResultSet resultSet = execute(statement);
         if (resultSet.wasApplied())
         {
@@ -100,9 +95,8 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
     public void deleteConfig()
     {
         sidecarSchema.ensureInitialized();
-        BoundStatement deleteStatement = tableSchema
-                .deleteConfig()
-                .bind(service.serviceName);
+        BoundStatement deleteStatement = tableSchema.deleteConfig()
+                                                    .bind(service.serviceName);
         execute(deleteStatement);
     }
 

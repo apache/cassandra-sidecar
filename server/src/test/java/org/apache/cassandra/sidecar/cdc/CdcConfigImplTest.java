@@ -19,13 +19,13 @@
 package org.apache.cassandra.sidecar.cdc;
 
 import java.util.Map;
-import java.util.concurrent.Callable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.common.server.ThrowingRunnable;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
@@ -125,7 +125,7 @@ class CdcConfigImplTest
     @Test
     void testConfigChanged() throws Exception
     {
-        Callable listener = mockCallable();
+        ThrowingRunnable listener = mockRunnable();
         CdcConfigAccessor cdcConfigAccessor = mockCdcConfigAccessor();
         KafkaConfigAccessor kafkaConfigAccessor = mockKafkaConfigAccessor();
         when(cdcConfigAccessor.getConfig().getConfigs()).thenReturn(Map.of("dc", "DC1",
@@ -139,26 +139,26 @@ class CdcConfigImplTest
 
         // do not wait the periodic task execution, we force running it immediately.
         cdcConfig.forceExecuteNotifier();
-        verify(listener, times(1)).call();
+        verify(listener, times(1)).run();
 
         // run the task multiple times, the listener should still be invoked only once
         cdcConfig.forceExecuteNotifier();
         cdcConfig.forceExecuteNotifier();
         cdcConfig.forceExecuteNotifier();
-        verify(listener, times(1)).call();
+        verify(listener, times(1)).run();
 
         // update the config. The listener should be called
         when(cdcConfigAccessor.getConfig().getConfigs()).thenReturn(Map.of("dc", "DC1",
                 "env", "if",
                 "log_only", "true"));
         cdcConfig.forceExecuteNotifier();
-        verify(listener, times(2)).call();
+        verify(listener, times(2)).run();
 
         // run the task multiple times, the listener should not be called since no more changes are made
         cdcConfig.forceExecuteNotifier();
         cdcConfig.forceExecuteNotifier();
         cdcConfig.forceExecuteNotifier();
-        verify(listener, times(2)).call();
+        verify(listener, times(2)).run();
     }
 
     @Test
@@ -209,8 +209,8 @@ class CdcConfigImplTest
         return schemaKeyspaceConfiguration;
     }
 
-    private Callable mockCallable()
+    private ThrowingRunnable mockRunnable()
     {
-        return mock(Callable.class);
+        return mock(ThrowingRunnable.class);
     }
 }

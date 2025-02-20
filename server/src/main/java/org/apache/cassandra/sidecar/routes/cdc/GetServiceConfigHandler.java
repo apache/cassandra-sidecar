@@ -56,11 +56,11 @@ public class GetServiceConfigHandler implements Handler<RoutingContext>, AccessP
     @Override
     public void handle(RoutingContext context)
     {
-        final List<GetServicesConfigPayload.Service> services = new ArrayList<>();
-        for (ValidServices service : ValidServices.values())
+        List<GetServicesConfigPayload.Service> services = new ArrayList<>();
+        for (Service service : Service.values())
         {
-            final ConfigAccessor accessor = configAccessorFactory.getConfigAccessor(service.serviceName);
-            final Map<String, String> config = accessor.getConfig().getConfigs();
+            ConfigAccessor accessor = configAccessorFactory.getConfigAccessor(service.serviceName);
+            Map<String, String> config = accessor.getConfig().getConfigs();
 
             GetServicesConfigPayload.Service serviceConfig = new GetServicesConfigPayload.Service(service.serviceName, config);
 

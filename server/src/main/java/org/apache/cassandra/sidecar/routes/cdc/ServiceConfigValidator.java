@@ -29,24 +29,24 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 
 /**
  * Certain validations on payload and services have to be done before updating or deleting
- * configs for services in "configs" table. {@link ServiceConfigValidators} has static
+ * configs for services in "configs" table. {@link ServiceConfigValidator} has static
  * utility methods for some of those validations.
  */
-public class ServiceConfigValidators
+public class ServiceConfigValidator
 {
-    public static void verifyValidService(RoutingContext context, JsonObject payload)
+    public static void validateService(RoutingContext context, JsonObject payload)
     {
         final String requestService = context.pathParam(ConfigPayloadParams.SERVICE);
-        if (!Stream.of(ValidServices.values()).anyMatch(v -> v.serviceName.equals(requestService)))
+        if (!Stream.of(Service.values()).anyMatch(v -> v.serviceName.equals(requestService)))
         {
-            final Set<String> services = Stream.of(ValidServices.values()).map(v -> v.serviceName).collect(Collectors.toSet());
+            final Set<String> services = Stream.of(Service.values()).map(v -> v.serviceName).collect(Collectors.toSet());
             final String supportedServices = String.join(", ", services);
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid service passed. Supported services: "
                     + supportedServices);
         }
     }
 
-    public static void verifyValidConfig(RoutingContext context, JsonObject payload)
+    public static void validateConfig(RoutingContext context, JsonObject payload)
     {
         try
         {
@@ -58,7 +58,7 @@ public class ServiceConfigValidators
         }
     }
 
-    public static void verifyValidPayload(RoutingContext context, JsonObject payload)
+    public static void validatePayload(RoutingContext context, JsonObject payload)
     {
         if (!payload.containsKey(ConfigPayloadParams.CONFIG))
         {

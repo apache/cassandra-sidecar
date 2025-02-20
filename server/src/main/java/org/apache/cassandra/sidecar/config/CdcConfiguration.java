@@ -36,7 +36,9 @@ public interface CdcConfiguration
      */
     boolean isEnabled();
 
-    String kafkaClientPrivateKeyPath();
-
+    /**
+     *
+     * @return returns how frequently CDC configs are to be refreshed
+     */
     MillisecondBoundConfiguration cdcConfigRefreshTime();
 }

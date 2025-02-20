@@ -41,7 +41,7 @@ public class UpdateServiceConfigHandler implements Handler<RoutingContext>, Acce
     private final ConfigAccessorFactory configAccessorFactory;
 
     @Inject
-    public UpdateServiceConfigHandler(final ConfigAccessorFactory configAccessorFactory)
+    public UpdateServiceConfigHandler(ConfigAccessorFactory configAccessorFactory)
     {
         this.configAccessorFactory = configAccessorFactory;
     }

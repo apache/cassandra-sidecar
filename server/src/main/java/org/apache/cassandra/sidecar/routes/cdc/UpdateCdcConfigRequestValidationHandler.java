@@ -17,28 +17,39 @@
  */
 package org.apache.cassandra.sidecar.routes.cdc;
 
+import java.util.Collections;
+import java.util.Set;
 import com.google.inject.Singleton;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.routes.AccessProtected;
 
 
 /**
  * Updating a service config from "configs" table in sidecar keyspace should perform some
  * validation checks before updating the config.
- * {@link DeleteCdcConfigRequestValidationHandler} performs those validations before the
+ * {@link UpdateCdcConfigRequestValidationHandler} performs those validations before the
  * update operation.
  */
 @Singleton
-public class UpdateCdcConfigRequestValidationHandler implements Handler<RoutingContext>
+public class UpdateCdcConfigRequestValidationHandler implements Handler<RoutingContext>, AccessProtected
 {
     @Override
     public void handle(RoutingContext context)
     {
-        final JsonObject payload = context.getBodyAsJson();
-        ServiceConfigValidators.verifyValidPayload(context, payload);
-        ServiceConfigValidators.verifyValidService(context, payload);
-        ServiceConfigValidators.verifyValidConfig(context, payload);
+        JsonObject payload = context.body().asJsonObject();
+        ServiceConfigValidator.validatePayload(context, payload);
+        ServiceConfigValidator.validateService(context, payload);
+        ServiceConfigValidator.validateConfig(context, payload);
         context.next();
+    }
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        return Collections.singleton(BasicPermissions.CDC.toAuthorization());
     }
 }

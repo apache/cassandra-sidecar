@@ -551,18 +551,31 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                 .build(), streamConsumer);
     }
 
+    /**
+     * Get configs for all the services in the "configs" table inside sidecar's internal
+     * keyspace
+     *
+     * @return List of services and their corresponding configs
+     */
     public CompletableFuture<GetServicesConfigPayload> getServiceConfig()
     {
         return executor.executeRequestAsync(requestBuilder()
-                .request(new GetServiceConfigRequest())
-                .build());
+                       .request(new GetServiceConfigRequest())
+                       .build());
     }
 
+    /**
+     * Update config for a given service in "configs" table in internal sidecar keyspace
+     *
+     * @param serviceConfig service for which the configs are being updated
+     * @param config the updated config
+     * @return updated config
+     */
     public CompletableFuture<PutCdcServiceConfigPayload> putCdcServiceConfig(ServiceConfig serviceConfig, Map<String, String> config)
     {
         return executor.executeRequestAsync(requestBuilder()
-                .request(new PutServiceConfigRequest(serviceConfig, new PutCdcServiceConfigPayload(config)))
-                .build());
+                       .request(new PutServiceConfigRequest(serviceConfig, new PutCdcServiceConfigPayload(config)))
+                       .build());
     }
 
     /**

@@ -17,10 +17,11 @@
  */
 package org.apache.cassandra.sidecar.cdc;
 
-import java.time.Duration;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,13 +31,8 @@ import org.jetbrains.annotations.Nullable;
 public interface CdcConfig
 {
     Logger LOGGER = LoggerFactory.getLogger(CdcConfig.class);
-
     String DEFAULT_JOB_ID = "test-job";
     int DEFAULT_MAX_WATERMARKER_SIZE = 400000;
-
-    CdcConfig STUB = new CdcConfig()
-    {
-    };
 
     /**
      * Topic format
@@ -93,9 +89,9 @@ public interface CdcConfig
         return "DATACENTER1";
     }
 
-    default Duration watermarkWindow()
+    default MinuteBoundConfiguration watermarkWindow()
     {
-        return Duration.ofHours(4);
+        return MinuteBoundConfiguration.parse("60m");
     }
 
     /**
@@ -142,9 +138,9 @@ public interface CdcConfig
         return true;
     }
 
-    default Duration minDelayBetweenMicroBatches()
+    default MillisecondBoundConfiguration minDelayBetweenMicroBatches()
     {
-        return Duration.ofMillis(1000);
+        return MillisecondBoundConfiguration.parse("1s");
     }
 
     default int maxCommitLogsPerInstance()
@@ -173,9 +169,9 @@ public interface CdcConfig
     /**
      * @return the delay in millis between persist calls.
      */
-    default Duration persistDelay()
+    default MillisecondBoundConfiguration persistDelay()
     {
-        return Duration.ofMillis(1000);
+        return MillisecondBoundConfiguration.parse("1s");
     }
 }
 

@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.assertj.core.api.Condition;
@@ -318,6 +319,8 @@ class SidecarConfigurationTest
         CdcConfiguration cdcConfig = sidecarConfiguration.serviceConfiguration().cdcConfiguration();
         assertThat(cdcConfig.segmentHardLinkCacheExpiry().quantity()).isEqualTo(1);
         assertThat(cdcConfig.segmentHardLinkCacheExpiry().unit()).isEqualTo(TimeUnit.MINUTES);
+        assertThat(cdcConfig.isEnabled()).isEqualTo(true);
+        assertThat(cdcConfig.cdcConfigRefreshTime()).isEqualTo(MillisecondBoundConfiguration.parse("10s"));
     }
 
     @Test

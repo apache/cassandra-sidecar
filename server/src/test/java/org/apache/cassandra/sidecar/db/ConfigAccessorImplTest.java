@@ -29,12 +29,10 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
-import org.apache.cassandra.sidecar.routes.cdc.ValidServices;
-import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.routes.cdc.Service;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -44,8 +42,8 @@ import static org.mockito.Mockito.when;
 class ConfigAccessorImplTest
 {
     @ParameterizedTest
-    @EnumSource(ValidServices.class)
-    public void getConfigs(ValidServices service)
+    @EnumSource(Service.class)
+    public void getConfigs(Service service)
     {
         Map<String, String> configs = Map.of("k1", "v1", "k2", "v2");
         ConfigAccessorImpl configAccessor = getConfigAccessor(service, configs, false);
@@ -54,8 +52,8 @@ class ConfigAccessorImplTest
     }
 
     @ParameterizedTest
-    @EnumSource(ValidServices.class)
-    public void testGetConfigsNoConfigsForServiceInTable(ValidServices service)
+    @EnumSource(Service.class)
+    public void testGetConfigsNoConfigsForServiceInTable(Service service)
     {
         Map<String, String> configs = Map.of();
         ConfigAccessorImpl configAccessor = getConfigAccessor(service, configs, false);
@@ -64,8 +62,8 @@ class ConfigAccessorImplTest
     }
 
     @ParameterizedTest
-    @EnumSource(ValidServices.class)
-    public void testGetConfigsNoServiceInTable(ValidServices service)
+    @EnumSource(Service.class)
+    public void testGetConfigsNoServiceInTable(Service service)
     {
         Map<String, String> configs = Map.of();
         ConfigAccessorImpl configAccessor = getConfigAccessor(service, configs, true);
@@ -74,8 +72,8 @@ class ConfigAccessorImplTest
     }
 
     @ParameterizedTest
-    @EnumSource(ValidServices.class)
-    public void testInsertConfigs(ValidServices service)
+    @EnumSource(Service.class)
+    public void testInsertConfigs(Service service)
     {
         Map<String, String> configs = Map.of("k1", "v1", "k2", "v2");
         ConfigAccessorImpl configAccessor = getConfigAccessor(service, configs, false);
@@ -84,25 +82,24 @@ class ConfigAccessorImplTest
     }
 
     @ParameterizedTest
-    @EnumSource(ValidServices.class)
-    public void testDeleteConfigDoesntFail(ValidServices service)
+    @EnumSource(Service.class)
+    public void testDeleteConfigDoesntFail(Service service)
     {
         Map<String, String> configs = Map.of("k1", "v1", "k2", "v2");
         ConfigAccessorImpl configAccessor = getConfigAccessor(service, configs, false);
         configAccessor.deleteConfig();
     }
 
-    private ConfigAccessorImpl getConfigAccessor(ValidServices service, Map<String, String> configs, boolean noRowsExist)
+    private ConfigAccessorImpl getConfigAccessor(Service service, Map<String, String> configs, boolean noRowsExist)
     {
         SidecarSchema mockSidecarSchema = mock(SidecarSchema.class);
-        InstanceMetadataFetcher mockInstanceMetaDataFetcher = getMockInstanceMetaDataFetcher();
         ConfigsSchema mockConfigsSchema = getMockConfigsSchema();
         CQLSessionProvider mockCQLSessionProvider = getMockCQLSessionProvider(configs, noRowsExist);
-        if (service.equals(ValidServices.CDC))
+        if (service.equals(Service.CDC))
         {
-            return new CdcConfigAccessor(mockInstanceMetaDataFetcher, mockConfigsSchema, mockCQLSessionProvider, mockSidecarSchema);
+            return new CdcConfigAccessor(mockConfigsSchema, mockCQLSessionProvider, mockSidecarSchema);
         }
-        return new KafkaConfigAccessor(mockInstanceMetaDataFetcher, mockConfigsSchema, mockCQLSessionProvider, mockSidecarSchema);
+        return new KafkaConfigAccessor(mockConfigsSchema, mockCQLSessionProvider, mockSidecarSchema);
     }
 
     private ConfigsSchema getMockConfigsSchema()
@@ -115,15 +112,6 @@ class ConfigAccessorImplTest
         when(mockConfigsSchema.insertConfig()).thenReturn(preparedStatement);
         when(mockConfigsSchema.deleteConfig()).thenReturn(preparedStatement);
         return mockConfigsSchema;
-    }
-
-    private InstanceMetadataFetcher getMockInstanceMetaDataFetcher()
-    {
-        InstanceMetadata instanceMeta = mock(InstanceMetadata.class);
-
-        InstanceMetadataFetcher instanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
-        when(instanceMetadataFetcher.instance(any())).thenReturn(instanceMeta);
-        return instanceMetadataFetcher;
     }
 
     CQLSessionProvider getMockCQLSessionProvider(Map<String, String> configs, boolean noRowsExist)

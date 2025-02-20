@@ -51,13 +51,13 @@ public class DeleteServiceConfigHandler implements Handler<RoutingContext>, Acce
     @Override
     public void handle(RoutingContext context)
     {
-        final String service = context.pathParam(ConfigPayloadParams.SERVICE);
-        final ConfigAccessor accessor = configAccessorFactory.getConfigAccessor(service);
+        String service = context.pathParam(ConfigPayloadParams.SERVICE);
+        ConfigAccessor accessor = configAccessorFactory.getConfigAccessor(service);
         try
         {
             accessor.deleteConfig();
         }
-        catch (final NoSuchElementException ex)
+        catch (NoSuchElementException ex)
         {
             throw wrapHttpException(HttpResponseStatus.NOT_FOUND, "There is no configuration present for this service.");
         }

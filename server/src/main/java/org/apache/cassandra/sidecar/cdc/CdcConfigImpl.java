@@ -17,13 +17,12 @@
  */
 package org.apache.cassandra.sidecar.cdc;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -34,7 +33,10 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Promise;
 
+import org.apache.cassandra.sidecar.common.server.ThrowingRunnable;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.db.CdcConfigAccessor;
@@ -72,7 +74,7 @@ public class CdcConfigImpl implements CdcConfig
     private final CdcConfiguration cdcConfiguration;
     private final CdcConfigAccessor cdcConfigAccessor;
     private final KafkaConfigAccessor kafkaConfigAccessor;
-    private final List<Callable<?>> configChangeListeners = Collections.synchronizedList(new ArrayList<>());
+    private final List<ThrowingRunnable> configChangeListeners = Collections.synchronizedList(new ArrayList<>());
     private final ConfigRefreshNotifier configRefreshNotifier;
     private volatile Map<String, String> kafkaConfigMappings = Map.of();
     private volatile Map<String, String> cdcConfigMappings = Map.of();
@@ -171,9 +173,9 @@ public class CdcConfigImpl implements CdcConfig
     }
 
     @Override
-    public Duration persistDelay()
+    public MillisecondBoundConfiguration persistDelay()
     {
-        return Duration.ofMillis(getInt(CDC_PERSIST_DELAY_MILLIS, 1000));
+        return new MillisecondBoundConfiguration(getInt(CDC_PERSIST_DELAY_MILLIS, 1000), TimeUnit.SECONDS);
     }
 
     @Override
@@ -183,23 +185,22 @@ public class CdcConfigImpl implements CdcConfig
     }
 
     @Override
-    public Duration watermarkWindow()
+    public MinuteBoundConfiguration watermarkWindow()
     {
         // this prop sets the maximum duration age accepted by CDC, any mutations with write timestamps older than
         // the watermark window will be dropped with log message "Exclude the update due to out of the allowed time window."
-        final int seconds = getInt(WATERMARK_WINDOW_KEY, 259200);
-        return Duration.ofSeconds(seconds);
+        return new MinuteBoundConfiguration(getInt(WATERMARK_WINDOW_KEY, 259200), TimeUnit.SECONDS);
     }
 
     @Override
-    public Duration minDelayBetweenMicroBatches()
+    public MillisecondBoundConfiguration minDelayBetweenMicroBatches()
     {
         // this prop allows us to add a minimum delay between CDC micro batches
         // usually if we need to slow down CDC
         // e.g. if CDC is started with a large backlog of commit log segments and is working hard to process.
         // e.g. or if there is a large data dump or burst of writes that causes high CDC activity.
         final long millis = Long.parseLong(cdcConfigMappings.getOrDefault(MICROBATCH_DELAY_KEY, "1000"));
-        return Duration.ofMillis(millis);
+        return new MillisecondBoundConfiguration(millis, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -242,16 +243,14 @@ public class CdcConfigImpl implements CdcConfig
      *
      * @param listener The listener to call
      */
-    public void registerConfigChangeListener(Callable<?> listener)
+    public void registerConfigChangeListener(ThrowingRunnable listener)
     {
         this.configChangeListeners.add(listener);
     }
 
     private Map<String, Object> getAuthConfigs()
     {
-        Map<String, Object> authConfigs = new HashMap<>();
-        authConfigs.put("pie.queue.kaffe.client.private.key.location", cdcConfiguration.kafkaClientPrivateKeyPath());
-        return authConfigs;
+        return new HashMap<>();
     }
 
     @VisibleForTesting
@@ -281,15 +280,15 @@ public class CdcConfigImpl implements CdcConfig
         @Override
         public void execute(Promise<Void> promise)
         {
-            for (Callable<?> listener : configChangeListeners)
+            for (ThrowingRunnable listener : configChangeListeners)
             {
                 try
                 {
-                    listener.call();
+                    listener.run();
                 }
                 catch (Throwable e)
                 {
-                    LOGGER.error(String.format("There was an error with callback %s", listener), e);
+                    LOGGER.error("There was an error with callback {}", listener, e);
                 }
             }
             promise.tryComplete();

@@ -617,23 +617,23 @@ public class MainModule extends AbstractModule
                                     .build();
 
         protectedRouteBuilderFactory.get().router(router).method(HttpMethod.PUT)
-                .endpoint(ApiEndpointsV1.SERVICE_CONFIG_ROUTE)
-                .setBodyHandler(true)
-                .handler(updateCDCConfigRequestValidationHandler)
-                .handler(updateServiceConfigHandler)
-                .build();
+                                    .endpoint(ApiEndpointsV1.SERVICE_CONFIG_ROUTE)
+                                    .setBodyHandler(true)
+                                    .handler(updateCDCConfigRequestValidationHandler)
+                                    .handler(updateServiceConfigHandler)
+                                    .build();
 
         protectedRouteBuilderFactory.get().router(router).method(HttpMethod.DELETE)
-                .endpoint(ApiEndpointsV1.SERVICE_CONFIG_ROUTE)
-                .setBodyHandler(true)
-                .handler(deleteCDCConfigRequestValidationHandler)
-                .handler(deleteServiceConfigHandler)
-                .build();
+                                    .endpoint(ApiEndpointsV1.SERVICE_CONFIG_ROUTE)
+                                    .setBodyHandler(true)
+                                    .handler(deleteCDCConfigRequestValidationHandler)
+                                    .handler(deleteServiceConfigHandler)
+                                    .build();
 
         protectedRouteBuilderFactory.get().router(router).method(HttpMethod.GET)
-                .endpoint(ApiEndpointsV1.GET_SERVICES_CONFIG_ROUTE)
-                .handler(getServiceConfigHandler)
-                .build();
+                                    .endpoint(ApiEndpointsV1.GET_SERVICES_CONFIG_ROUTE)
+                                    .handler(getServiceConfigHandler)
+                                    .build();
 
         return router;
     }

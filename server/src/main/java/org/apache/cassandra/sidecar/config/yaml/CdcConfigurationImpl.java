@@ -42,9 +42,12 @@ public class CdcConfigurationImpl implements CdcConfiguration
     public static final SecondBoundConfiguration DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY =
             SecondBoundConfiguration.parse("5m");
 
-    protected boolean isEnabled;
-    protected MillisecondBoundConfiguration cdcConfigRefreshTime;
-    protected SecondBoundConfiguration segmentHardLinkCacheExpiry;
+    @JsonProperty(value = IS_ENABLED_PROPERTY)
+    private final boolean isEnabled;
+    @JsonProperty(value = CONFIGURATION_REFRESH_TIME_PROPERTY)
+    private final MillisecondBoundConfiguration cdcConfigRefreshTime;
+    @JsonProperty(value = SEGMENT_HARD_LINK_CACHE_EXPIRY_PROPERTY)
+    private SecondBoundConfiguration segmentHardLinkCacheExpiry;
 
 
     public CdcConfigurationImpl()
@@ -84,12 +87,6 @@ public class CdcConfigurationImpl implements CdcConfiguration
         return segmentHardLinkCacheExpiry;
     }
 
-    @JsonProperty(value = SEGMENT_HARD_LINK_CACHE_EXPIRY_PROPERTY)
-    public void setSegmentHardLinkCacheExpiry(SecondBoundConfiguration segmentHardlinkCacheExpiry)
-    {
-        this.segmentHardLinkCacheExpiry = segmentHardlinkCacheExpiry;
-    }
-
     /**
      * Legacy property {@code segment_hardlink_cache_expiry_in_secs}
      *
@@ -101,12 +98,6 @@ public class CdcConfigurationImpl implements CdcConfiguration
     public void setSegmentHardLinkCacheExpiryInSecs(long segmentHardlinkCacheExpiryInSecs)
     {
         LOGGER.warn("'segment_hardlink_cache_expiry_in_secs' is deprecated, use 'segment_hardlink_cache_expiry' instead");
-        setSegmentHardLinkCacheExpiry(new SecondBoundConfiguration(segmentHardlinkCacheExpiryInSecs, TimeUnit.SECONDS));
-    }
-
-    @Override
-    public String kafkaClientPrivateKeyPath()
-    {
-        return null;
+        this.segmentHardLinkCacheExpiry = new SecondBoundConfiguration(segmentHardlinkCacheExpiryInSecs, TimeUnit.SECONDS);
     }
 }
