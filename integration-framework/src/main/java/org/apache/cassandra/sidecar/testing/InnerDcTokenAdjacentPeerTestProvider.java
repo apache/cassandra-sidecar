@@ -24,7 +24,6 @@ import java.util.function.Supplier;
 
 import com.datastax.driver.core.Host;
 import org.apache.cassandra.distributed.api.IInstance;
-import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;

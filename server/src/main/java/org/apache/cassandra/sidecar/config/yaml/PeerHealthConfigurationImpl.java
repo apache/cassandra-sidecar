@@ -33,7 +33,8 @@ public class PeerHealthConfigurationImpl extends PeriodicTaskConfigurationImpl i
     public static final boolean DEFAULT_ENABLED = true;
     public static final MillisecondBoundConfiguration DEFAULT_FREQUENCY = new MillisecondBoundConfiguration(30, TimeUnit.SECONDS);
     public static final int DEFAULT_SIDECAR_CLIENT_HEALTH_CHECK_RETRIES = 5;
-    public static final MillisecondBoundConfiguration DEFAULT_SIDECAR_CLIENT_HEALTH_CHECK_RETRY_DELAY = new MillisecondBoundConfiguration(10, TimeUnit.SECONDS);;
+    public static final MillisecondBoundConfiguration DEFAULT_SIDECAR_CLIENT_HEALTH_CHECK_RETRY_DELAY
+    = new MillisecondBoundConfiguration(10, TimeUnit.SECONDS);
 
     @JsonProperty(value = "sidecar_client_health_check_retries")
     private final int sidecarClientHealthCheckRetries;

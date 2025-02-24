@@ -41,16 +41,17 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Token;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -90,7 +91,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
     @Test
     public void testInnerDcTokenAdjacentBuddyProvider()
     {
-        InstancesMetadata instancesMetadata = mock(InstancesMetadata.class);
+        InstanceMetadataFetcher metadataFetcher = mock(InstanceMetadataFetcher.class);
         ServiceConfiguration serviceConfiguration = mock(ServiceConfiguration.class);
         when(serviceConfiguration.port()).thenReturn(9043);
 
@@ -106,6 +107,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
                                       .collect(Collectors.toSet());
 
         int numHosts = INSTANCES.size() / 4;
+        when(metadataFetcher.callOnFirstAvailableInstance(any())).thenReturn(metadata);
         for (int i = 0; i < numHosts - 1; i++)
         {
             int hostId = i + 1;
@@ -115,7 +117,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
             mockInstanceMetadata(3, "dc1-host" + hostId + "-i3", metadata),
             mockInstanceMetadata(4, "dc1-host" + hostId + "-i4", metadata)
             );
-            when(instancesMetadata.instances()).thenReturn(localInstances);
+            when(metadataFetcher.allLocalInstances()).thenReturn(localInstances);
 
             CassandraClientTokenRingProvider cachedLocalTokenRanges = mock(CassandraClientTokenRingProvider.class);
             Set<Host> localHosts = allHosts.stream().filter(host -> host.getAddress()
@@ -132,7 +134,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
             when(cachedLocalTokenRanges.localTokenRanges(anyString())).thenReturn(localRanges);
             when(cachedLocalTokenRanges.allInstances()).thenReturn(allHosts);
 
-            final InnerDcTokenAdjacentPeerProvider provider = new InnerDcTokenAdjacentPeerProvider(instancesMetadata,
+            final InnerDcTokenAdjacentPeerProvider provider = new InnerDcTokenAdjacentPeerProvider(metadataFetcher,
                                                                                                    cachedLocalTokenRanges,
                                                                                                    serviceConfiguration,
                                                                                                    new DnsResolver()
