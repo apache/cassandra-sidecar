@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Singleton;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.net.JksOptions;
@@ -52,7 +51,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
  * Provider class for retrieving the singleton {@link SidecarClient} instance
  */
 @Singleton
-public class SidecarClientProvider implements Provider<SidecarClient>
+public class SidecarClientProvider implements Provider<SidecarClient>, AutoCloseable
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarClientProvider.class);
     private final Vertx vertx;
@@ -77,18 +76,9 @@ public class SidecarClientProvider implements Provider<SidecarClient>
         return client;
     }
 
-    public void close(Promise<Void> completion)
+    public void close() throws Exception
     {
-        LOGGER.info("Closing sidecar client...");
-        try
-        {
-            client.close();
-            completion.complete();
-        }
-        catch (Throwable throwable)
-        {
-            completion.fail(throwable);
-        }
+        client.close();
     }
 
     private SidecarClient initializeSidecarClient()
