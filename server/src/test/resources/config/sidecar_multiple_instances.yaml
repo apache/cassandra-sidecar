@@ -172,9 +172,9 @@ healthcheck:
 
 sidecar_peer_health:
   enabled: false
-  frequency: 30000
+  frequency: 30s
   sidecar_client_health_check_retries: 5
-  sidecar_client_health_check_retry_delay: 10000
+  sidecar_client_health_check_retry_delay: 10s
 
 cassandra_input_validation:
   forbidden_keyspaces:
