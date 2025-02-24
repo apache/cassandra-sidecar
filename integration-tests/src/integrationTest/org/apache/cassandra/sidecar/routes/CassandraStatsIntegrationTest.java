@@ -49,11 +49,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
     private static final int DEFAULT_CONNECTION_COUNT = 2;
+    private static final QualifiedName TEST_TABLE = new QualifiedName(TEST_KEYSPACE, TEST_TABLE_PREFIX);
 
     @Override
     protected void initializeSchemaForTest()
     {
         createTestKeyspace(TEST_KEYSPACE, DC1_RF1);
+        createTestTable(TEST_TABLE,
+                        "CREATE TABLE %s ( \n" +
+                        "  race_year int, \n" +
+                        "  race_name text, \n" +
+                        "  cyclist_name text, \n" +
+                        "  rank int, \n" +
+                        "  PRIMARY KEY ((race_year, race_name), rank) \n" +
+                        ");");
     }
 
     @Test
@@ -129,17 +138,6 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     {
         try (Cluster driverCluster = createDriverCluster(cluster.delegate()); Session session = driverCluster.connect())
         {
-            createTestKeyspace(TEST_KEYSPACE, Map.of("replication_factor", 1));
-            QualifiedName table = new QualifiedName(TEST_KEYSPACE, TEST_TABLE_PREFIX);
-            createTestTable(table,
-                            "CREATE TABLE %s ( \n" +
-                            "  race_year int, \n" +
-                            "  race_name text, \n" +
-                            "  cyclist_name text, \n" +
-                            "  rank int, \n" +
-                            "  PRIMARY KEY ((race_year, race_name), rank) \n" +
-                            ");");
-
             /*
              * "SnapshotSize" table stats metric reports the size of snapshot files which are not links for "live" SSTables.
              * In order to simulate non-zero data for this metric, we do the following:
@@ -148,12 +146,12 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
              * 3. Truncate table to ensure snapshot references non-live sstables
              * 4. Insert more data (and flush) to ensure other metrics, have non-zero values
              */
-            insertData(session, table);
-            createSnapshot(table);
-            session.execute("TRUNCATE TABLE " + table);
-            insertData(session, table);
+            insertData(session, TEST_TABLE);
+            createSnapshot(TEST_TABLE);
+            session.execute("TRUNCATE TABLE " + TEST_TABLE);
+            insertData(session, TEST_TABLE);
             cluster.stream().forEach(instance -> instance.flush(TEST_KEYSPACE));
-            tableStats(table);
+            tableStats(TEST_TABLE);
         }
     }
 
