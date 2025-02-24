@@ -18,20 +18,55 @@
 
 package org.apache.cassandra.sidecar.codecs;
 
+import com.google.inject.Singleton;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.core.eventbus.impl.codecs.BooleanMessageCodec;
 import io.vertx.core.eventbus.impl.codecs.ByteArrayMessageCodec;
 import io.vertx.core.eventbus.impl.codecs.IntMessageCodec;
 import io.vertx.core.eventbus.impl.codecs.ShortMessageCodec;
 import io.vertx.core.eventbus.impl.codecs.StringMessageCodec;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 
 /**
- * Codecs common to Sidecar
+ * Codecs for Sidecar instances
  */
-public class CommonCodecs
+@Singleton
+public class SidecarInstanceCodec implements MessageCodec<SidecarInstance, SidecarInstance>
 {
     public static final StringMessageCodec STRING = new StringMessageCodec();
-    public static final ShortMessageCodec SHORT = new ShortMessageCodec();
-    public static final ByteArrayMessageCodec BYTE_ARRAY = new ByteArrayMessageCodec();
-    public static final IntMessageCodec INT = new IntMessageCodec();
-    public static final BooleanMessageCodec BOOL = new BooleanMessageCodec();
+
+    @Override
+    public void encodeToWire(Buffer buf, SidecarInstance instance)
+    {
+        buf.appendInt(instance.port());
+        STRING.encodeToWire(buf, instance.hostname());
+    }
+
+    @Override
+    public SidecarInstance decodeFromWire(int pos, Buffer buf)
+    {
+        int port = buf.getInt(pos);
+        pos += 4; // advance 4 bytes after reading int
+        return new SidecarInstanceImpl(STRING.decodeFromWire(pos, buf), port);
+    }
+
+    @Override
+    public SidecarInstance transform(SidecarInstance instance)
+    {
+        return new SidecarInstanceImpl(instance.hostname(), instance.port());
+    }
+
+    @Override
+    public String name()
+    {
+        return "SidecarInstance";
+    }
+
+    @Override
+    public byte systemCodecID()
+    {
+        return -1;
+    }
 }

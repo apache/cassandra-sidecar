@@ -51,7 +51,7 @@ import org.apache.cassandra.sidecar.config.SchemaReportingConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
+import org.apache.cassandra.sidecar.config.PeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.VertxConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -84,7 +84,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     protected final AccessControlConfiguration accessControlConfiguration;
 
     @JsonProperty("sidecar_peer_health")
-    protected final SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration;
+    protected final PeerHealthConfiguration peerHealthConfiguration;
 
     @JsonProperty("sidecar_client")
     protected final SidecarClientConfiguration sidecarClientConfiguration;
@@ -125,7 +125,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         sslConfiguration = builder.sslConfiguration;
         accessControlConfiguration = builder.accessControlConfiguration;
         healthCheckConfiguration = builder.healthCheckConfiguration;
-        sidecarPeerHealthConfiguration = builder.sidecarPeerHealthConfiguration;
+        peerHealthConfiguration = builder.peerHealthConfiguration;
         sidecarClientConfiguration = builder.sidecarClientConfiguration;
         metricsConfiguration = builder.metricsConfiguration;
         cassandraInputValidationConfiguration = builder.cassandraInputValidationConfiguration;
@@ -217,9 +217,9 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
      */
     @Override
     @JsonProperty("sidecar_peer_health")
-    public SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration()
+    public PeerHealthConfiguration sidecarPeerHealthConfiguration()
     {
-        return sidecarPeerHealthConfiguration;
+        return peerHealthConfiguration;
     }
 
     /**
@@ -401,7 +401,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         = new PeriodicTaskConfigurationImpl(true,
                                             MillisecondBoundConfiguration.ZERO,
                                             MillisecondBoundConfiguration.parse("30s"));
-        private SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration = new SidecarPeerHealthConfigurationImpl();
+        private PeerHealthConfiguration peerHealthConfiguration = new PeerHealthConfigurationImpl();
         private SidecarClientConfiguration sidecarClientConfiguration = new SidecarClientConfigurationImpl();
         private MetricsConfiguration metricsConfiguration = new MetricsConfigurationImpl();
         private CassandraInputValidationConfiguration cassandraInputValidationConfiguration = new CassandraInputValidationConfigurationImpl();
@@ -468,12 +468,12 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         /**
          * Sets the {@code downDetectorConfiguration} and returns a reference to this Builder enabling method chaining.
          *
-         * @param sidecarPeerHealthConfiguration the {@code downDetectorConfiguration} to set
+         * @param peerHealthConfiguration the {@code downDetectorConfiguration} to set
          * @return a reference to this Builder
          */
-        public Builder downDetectorConfiguration(SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration)
+        public Builder downDetectorConfiguration(PeerHealthConfiguration peerHealthConfiguration)
         {
-            return update(b -> b.sidecarPeerHealthConfiguration = sidecarPeerHealthConfiguration);
+            return update(b -> b.peerHealthConfiguration = peerHealthConfiguration);
         }
 
         /**
@@ -501,12 +501,12 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         /**
          * Sets the {@code healthCheckConfiguration} and returns a reference to this Builder enabling method chaining.
          *
-         * @param sidecarPeerHealthConfiguration the {@code healthCheckConfiguration} to set
+         * @param peerHealthConfiguration the {@code healthCheckConfiguration} to set
          * @return a reference to this Builder
          */
-        public Builder sidecarPeerHealthConfiguration(SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration)
+        public Builder sidecarPeerHealthConfiguration(PeerHealthConfiguration peerHealthConfiguration)
         {
-            return update(b -> b.sidecarPeerHealthConfiguration = sidecarPeerHealthConfiguration);
+            return update(b -> b.peerHealthConfiguration = peerHealthConfiguration);
         }
 
         /**

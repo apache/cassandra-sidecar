@@ -300,16 +300,16 @@ class SidecarConfigurationTest
         String yaml = "sidecar_peer_health:\n" +
                       "  enabled: true\n" +
                       "  execute_interval: 30s\n" +
-                      "  health_check_retries: 5\n" +
-                      "  health_check_retry_delay: 10s";
+                      "  sidecar_client_health_check_retries: 5\n" +
+                      "  sidecar_client_health_check_retry_delay: 10s";
         SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.fromYamlString(yaml);
         assertThat(sidecarConfiguration).isNotNull();
-        SidecarPeerHealthConfiguration config = sidecarConfiguration.sidecarPeerHealthConfiguration();
+        PeerHealthConfiguration config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         assertThat(config).isNotNull();
         assertThat(config.enabled()).isTrue();
         assertThat(config.executeInterval().toMillis()).isEqualTo(30_000);
-        assertThat(config.healthCheckRetries()).isEqualTo(5);
-        assertThat(config.healthCheckRetryDelay().toMillis()).isEqualTo(10_000);
+        assertThat(config.sidecarClientHealthCheckRetries()).isEqualTo(5);
+        assertThat(config.sidecarClientHealthCheckRetryDelay().toMillis()).isEqualTo(10_000);
     }
 
     @Test
@@ -550,13 +550,13 @@ class SidecarConfigurationTest
         validateCassandraInputValidationConfigurationFromYaml(config.cassandraInputValidationConfiguration());
     }
 
-    private void validateSidecarPeerHealthConfigurationDefaults(SidecarPeerHealthConfiguration config)
+    private void validateSidecarPeerHealthConfigurationDefaults(PeerHealthConfiguration config)
     {
         assertThat(config).isNotNull();
         assertThat(config.enabled()).isTrue();
         assertThat(config.executeInterval().toMillis()).isEqualTo(30_000);
-        assertThat(config.healthCheckRetries()).isEqualTo(5);
-        assertThat(config.healthCheckRetryDelay().toMillis()).isEqualTo(10_000);
+        assertThat(config.sidecarClientHealthCheckRetries()).isEqualTo(5);
+        assertThat(config.sidecarClientHealthCheckRetryDelay().toMillis()).isEqualTo(10_000);
     }
 
     void validateServiceConfigurationFromYaml(ServiceConfiguration serviceConfiguration)

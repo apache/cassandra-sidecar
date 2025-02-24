@@ -37,6 +37,7 @@ import org.apache.cassandra.sidecar.client.retry.RunnableOnStatusCodeRetryPolicy
 import org.apache.cassandra.sidecar.client.selection.InstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.client.selection.RandomInstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.common.request.AbortRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.AllServicesConfigRequest;
 import org.apache.cassandra.sidecar.common.request.CreateRestoreJobRequest;
@@ -120,6 +121,22 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                             .sidecarHealthRequest()
                                             .retryPolicy(oncePerInstanceRetryPolicy)
                                             .build());
+    }
+
+    /**
+     * Executes the Sidecar health request using the configured selection policy and with no retries
+     *
+     * @return a completable future of the Sidecar health response
+     */
+    public CompletableFuture<HealthResponse> peerHealth(SidecarInstance instance)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                                .singleInstanceSelectionPolicy(
+                                                new SidecarInstanceImpl(instance.hostname(),
+                                                                        instance.port()))
+                                                .retryPolicy(oncePerInstanceRetryPolicy)
+                                                .sidecarHealthRequest()
+                                                .build());
     }
 
     /**

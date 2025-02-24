@@ -248,7 +248,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
         return fetcher.callOnFirstAvailableInstance(instanceMetadata -> instanceMetadata.delegate().metadata());
     }
 
-    private static Map<String, Map<Host, Set<TokenRange>>> perKeySpaceTokenRangesOfAllInstances(final Metadata metadata)
+    private static Map<String, Map<Host, Set<TokenRange>>> perKeySpaceTokenRangesOfAllInstances(Metadata metadata)
     {
         Map<String, Map<Host, Set<TokenRange>>> perKeyspaceTokenRanges = new HashMap<>();
         for (KeyspaceMetadata ks : metadata.getKeyspaces())
@@ -301,7 +301,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
     /**
      * Class to encapsule Cassandra instance data
      */
-    private static class CassandraInstance
+    protected static class CassandraInstance
     {
         private final String token;
         private final String node;

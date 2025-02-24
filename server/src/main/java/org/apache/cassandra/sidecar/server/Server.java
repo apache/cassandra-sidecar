@@ -57,6 +57,7 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.HealthCheckPeriodicTask;
 import org.apache.cassandra.sidecar.tasks.KeyStoreCheckPeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
 import org.apache.cassandra.sidecar.utils.SslUtils;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -78,6 +79,7 @@ public class Server
     protected final Router router;
     protected final PeriodicTaskExecutor periodicTaskExecutor;
     protected final HttpServerOptionsProvider optionsProvider;
+    protected final SidecarClientProvider sidecarClientProvider;
     protected final SidecarMetrics metrics;
     protected final List<ServerVerticle> deployedServerVerticles = new CopyOnWriteArrayList<>();
     // Keeps track of all the Cassandra instance identifiers where CQL is ready
@@ -91,6 +93,7 @@ public class Server
                   ExecutorPools executorPools,
                   PeriodicTaskExecutor periodicTaskExecutor,
                   HttpServerOptionsProvider optionsProvider,
+                  SidecarClientProvider sidecarClientProvider,
                   SidecarMetrics metrics)
     {
         this.vertx = vertx;
@@ -100,6 +103,7 @@ public class Server
         this.router = router;
         this.periodicTaskExecutor = periodicTaskExecutor;
         this.optionsProvider = optionsProvider;
+        this.sidecarClientProvider = sidecarClientProvider;
         this.metrics = metrics;
     }
 
@@ -162,6 +166,10 @@ public class Server
         Promise<Void> periodicTaskExecutorPromise = Promise.promise();
         periodicTaskExecutor.close(periodicTaskExecutorPromise);
         closingFutures.add(periodicTaskExecutorPromise.future());
+
+        Promise<Void> sidecarClientPromise = Promise.promise();
+        sidecarClientProvider.close(sidecarClientPromise);
+        closingFutures.add(sidecarClientPromise.future());
 
         instancesMetadata.instances().forEach(instance -> {
             Promise<Void> closingFutureForInstance = Promise.promise();

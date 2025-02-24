@@ -171,10 +171,10 @@ healthcheck:
   execute_interval: 30s
 
 sidecar_peer_health:
-  enabled: true
-  frequency_millis: 30000
-  health_check_retries: 5
-  health_check_retry_delay_millis: 10000
+  enabled: false
+  frequency: 30000
+  sidecar_client_health_check_retries: 5
+  sidecar_client_health_check_retry_delay: 10000
 
 cassandra_input_validation:
   forbidden_keyspaces:

@@ -33,15 +33,13 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.codecs.SidecarInstanceCodecs;
+import org.apache.cassandra.sidecar.codecs.SidecarInstanceCodec;
 import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
+import org.apache.cassandra.sidecar.config.PeerHealthConfiguration;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
-import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_PEER_DOWN;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_PEER_UP;
@@ -56,7 +54,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarPeerHealthMonitorTask.class);
 
     private final Vertx vertx;
-    private final SidecarPeerHealthConfiguration config;
+    private final PeerHealthConfiguration config;
     private final SidecarPeerProvider sidecarPeerProvider;
     private final SidecarPeerHealthProvider healthProvider;
 
@@ -67,19 +65,13 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
                                         SidecarConfiguration sidecarConfiguration,
                                         SidecarPeerProvider sidecarPeerProvider,
                                         SidecarPeerHealthProvider healthProvider,
-                                        SidecarInstanceCodecs sidecarInstanceCodecs)
+                                        SidecarInstanceCodec sidecarInstanceCodec)
     {
         this.vertx = vertx;
         this.config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         this.sidecarPeerProvider = sidecarPeerProvider;
         this.healthProvider = healthProvider;
-        vertx.eventBus().registerDefaultCodec(SidecarInstance.class, sidecarInstanceCodecs);
-    }
-
-    @NotNull
-    public SidecarPeerHealthProvider.Health status(InstanceMetadata instance)
-    {
-        return status.getOrDefault(instance, SidecarPeerHealthProvider.Health.UNKNOWN);
+        vertx.eventBus().registerDefaultCodec(SidecarInstance.class, sidecarInstanceCodec);
     }
 
     @Override
@@ -99,7 +91,8 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     {
         try
         {
-            run().onComplete(v -> promise.tryComplete()).wait(10000);
+            run().onSuccess(v -> promise.tryComplete())
+                 .onFailure(promise::tryFail);
         }
         catch (Throwable t)
         {
@@ -120,15 +113,20 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
 
         List<Future<SidecarPeerHealthProvider.Health>> futures =
         sidecarPeers.stream()
-                    .map(instance -> healthProvider.health(instance)
-                                                   .onSuccess(health -> {
-                                                       updateHealth(instance, health);
-                                                   })
-                                                   .onFailure(throwable -> {
-                                                       LOGGER.error("Failed to run health check, marking instance as DOWN host={} port={}",
-                                                                    instance.hostname(), instance.port(), throwable);
-                                                       markDown(instance);
-                                                   }))
+                    .map(instance ->
+                         healthProvider.health(instance)
+                                       .andThen(ar -> {
+                                           if (ar.succeeded())
+                                           {
+                                               updateHealth(instance, ar.result());
+                                           }
+                                           else
+                                           {
+                                               LOGGER.error("Failed to run health check, marking instance as DOWN host={} port={}",
+                                                            instance.hostname(), instance.port(), ar.cause());
+                                               markDown(instance);
+                                           }
+                                       }))
                     .collect(Collectors.toList());
 
         return Future.all(futures)
@@ -149,21 +147,18 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     {
         switch (health)
         {
-            case OK:
+            case UP:
                 markOk(instance);
                 break;
             case DOWN:
                 markDown(instance);
-                break;
-            case UNKNOWN:
-                status.remove(instance);
                 break;
         }
     }
 
     protected void markOk(SidecarInstance instance)
     {
-        if (compareAndUpdate(instance, SidecarPeerHealthProvider.Health.OK))
+        if (compareAndUpdate(instance, SidecarPeerHealthProvider.Health.UP))
         {
             LOGGER.info("Sidecar instance is now OK hostname={} port={}", instance.hostname(), instance.port());
             vertx.eventBus().publish(ON_SIDECAR_PEER_UP.address(), instance);

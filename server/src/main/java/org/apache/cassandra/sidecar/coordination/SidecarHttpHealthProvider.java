@@ -24,12 +24,8 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.client.SidecarClient;
-import org.apache.cassandra.sidecar.client.retry.BasicRetryPolicy;
 import org.apache.cassandra.sidecar.common.client.SidecarInstance;
-import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
-import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
 
 
@@ -40,13 +36,11 @@ import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
 @Singleton
 public class SidecarHttpHealthProvider implements SidecarPeerHealthProvider
 {
-    private final SidecarPeerHealthConfiguration config;
     private final SidecarClientProvider clientProvider;
 
     @Inject
-    public SidecarHttpHealthProvider(SidecarConfiguration sidecarConfiguration, SidecarClientProvider clientProvider)
+    public SidecarHttpHealthProvider(SidecarClientProvider clientProvider)
     {
-        this.config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         this.clientProvider = clientProvider;
     }
 
@@ -56,26 +50,15 @@ public class SidecarHttpHealthProvider implements SidecarPeerHealthProvider
         try
         {
             SidecarClient client = clientProvider.get();
-            CompletableFuture<HealthResponse> healthRequest = client.executeRequestAsync(client.requestBuilder()
-                                                                                               .singleInstanceSelectionPolicy(
-                                                                                               new SidecarInstanceImpl(instance.hostname(),
-                                                                                                                       instance.port()))
-                                                                                               .retryPolicy(retryPolicy())
-                                                                                               .sidecarHealthRequest()
-                                                                                               .build());
+            CompletableFuture<HealthResponse> healthRequest = client.peerHealth(instance);
             return Future.fromCompletionStage(healthRequest)
                          .map(healthResponse -> healthResponse.isOk()
-                                                ? Health.OK
+                                                ? Health.UP
                                                 : Health.DOWN);
         }
         catch (Exception e)
         {
             return Future.succeededFuture(Health.DOWN);
         }
-    }
-
-    protected BasicRetryPolicy retryPolicy()
-    {
-        return new BasicRetryPolicy(config.healthCheckRetries(), config.healthCheckRetryDelay().toMillis());
     }
 }

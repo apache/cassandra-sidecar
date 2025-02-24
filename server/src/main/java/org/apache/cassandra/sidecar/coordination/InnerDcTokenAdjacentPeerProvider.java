@@ -53,6 +53,7 @@ import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 
 import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_FORBIDDEN_KEYSPACES;
@@ -66,18 +67,18 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(InnerDcTokenAdjacentPeerProvider.class);
 
-    protected final InstancesMetadata instancesMetadata;
+    protected final InstanceMetadataFetcher instanceFetcher;
     private final CassandraClientTokenRingProvider cassandraClientTokenRingProvider;
     private final ServiceConfiguration serviceConfiguration;
     private final DnsResolver dnsResolver;
 
     @Inject
-    public InnerDcTokenAdjacentPeerProvider(InstancesMetadata instancesMetadata,
+    public InnerDcTokenAdjacentPeerProvider(InstanceMetadataFetcher instanceFetcher,
                                             CassandraClientTokenRingProvider cassandraClientTokenRingProvider,
                                             ServiceConfiguration serviceConfiguration,
                                             DnsResolver dnsResolver)
     {
-        this.instancesMetadata = instancesMetadata;
+        this.instanceFetcher = instanceFetcher;
         this.cassandraClientTokenRingProvider = cassandraClientTokenRingProvider;
         this.serviceConfiguration = serviceConfiguration;
         this.dnsResolver = dnsResolver;
@@ -85,23 +86,14 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
 
     public Set<SidecarInstance> get()
     {
-        Map<Integer, InstanceMetadata> localInstances = instancesMetadata
-                                                        .instances()
-                                                        .stream()
-                                                        .collect(Collectors.toMap(InstanceMetadata::id, Function.identity()));
-
-        if (localInstances.isEmpty())
+        Metadata metadata;
+        try
         {
-            LOGGER.debug("No local instances found");
-            return Set.of();
+            metadata = instanceFetcher.callOnFirstAvailableInstance(instance -> instance.delegate().metadata());
         }
-
-        Metadata metadata = localInstances.values().stream().findFirst()
-                                          .map(in -> in.delegate().metadata())
-                                          .orElse(null);
-        if (metadata == null)
+        catch (Throwable cause)
         {
-            LOGGER.debug("Not yet connect to Cassandra cluster");
+            LOGGER.debug("Unable to retrieve metadata", cause);
             return Set.of();
         }
 

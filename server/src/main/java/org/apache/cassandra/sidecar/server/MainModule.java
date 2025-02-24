@@ -786,20 +786,19 @@ public class MainModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SidecarPeerHealthProvider sidecarHealthProvider(SidecarConfiguration configuration,
-                                                           SidecarClientProvider sidecarClientProvider)
+    public SidecarPeerHealthProvider sidecarHealthProvider(SidecarClientProvider sidecarClientProvider)
     {
-        return new SidecarHttpHealthProvider(configuration, sidecarClientProvider);
+        return new SidecarHttpHealthProvider(sidecarClientProvider);
     }
 
     @Provides
     @Singleton
-    public SidecarPeerProvider sidecarPeerProvider(InstancesMetadata instancesMetadata,
+    public SidecarPeerProvider sidecarPeerProvider(InstanceMetadataFetcher metadataFetcher,
                                                    CassandraClientTokenRingProvider cassandraClientTokenRingProvider,
                                                    SidecarConfiguration configuration,
                                                    DnsResolver dnsResolver)
     {
-        return new InnerDcTokenAdjacentPeerProvider(instancesMetadata, cassandraClientTokenRingProvider, configuration.serviceConfiguration(), dnsResolver);
+        return new InnerDcTokenAdjacentPeerProvider(metadataFetcher, cassandraClientTokenRingProvider, configuration.serviceConfiguration(), dnsResolver);
     }
 
     @Provides

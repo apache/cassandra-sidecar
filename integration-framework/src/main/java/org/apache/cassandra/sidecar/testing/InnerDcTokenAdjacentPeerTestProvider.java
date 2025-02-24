@@ -30,21 +30,22 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
 import org.apache.cassandra.sidecar.coordination.InnerDcTokenAdjacentPeerProvider;
 import org.apache.cassandra.sidecar.server.Server;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 /**
  * Text helper to find out server ports on integration tests.
  */
 public class InnerDcTokenAdjacentPeerTestProvider extends InnerDcTokenAdjacentPeerProvider
 {
-    private final Supplier<List<TestSidecarHostInfo>> sidecarServerSupplier;
+    private Supplier<List<TestSidecarHostInfo>> sidecarServerSupplier;
 
-    public InnerDcTokenAdjacentPeerTestProvider(InstancesMetadata instancesMetadata,
+    public InnerDcTokenAdjacentPeerTestProvider(InstanceMetadataFetcher metadataFetcher,
                                                 CassandraClientTokenRingProvider cassandraClientTokenRingProvider,
                                                 ServiceConfiguration serviceConfiguration,
                                                 DnsResolver dnsResolver,
                                                 Supplier<List<TestSidecarHostInfo>> sidecarServerSupplier)
     {
-        super(instancesMetadata, cassandraClientTokenRingProvider, serviceConfiguration, dnsResolver);
+        super(metadataFetcher, cassandraClientTokenRingProvider, serviceConfiguration, dnsResolver);
         this.sidecarServerSupplier = sidecarServerSupplier;
     }
 

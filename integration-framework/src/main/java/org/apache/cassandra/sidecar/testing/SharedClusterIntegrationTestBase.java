@@ -89,7 +89,7 @@ import org.apache.cassandra.sidecar.config.S3ProxyConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
+import org.apache.cassandra.sidecar.config.PeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.S3ClientConfigurationImpl;
@@ -97,7 +97,7 @@ import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarClientConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.SidecarPeerHealthConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.PeerHealthConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
@@ -108,6 +108,7 @@ import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import org.apache.cassandra.testing.IClusterExtension;
 import org.apache.cassandra.testing.IsolatedDTestClassLoaderWrapper;
@@ -426,7 +427,12 @@ public abstract class SharedClusterIntegrationTestBase
      */
     protected void stopSidecar() throws InterruptedException
     {
-        if (server == null)
+        closeServer(server);
+    }
+
+    protected void closeServer(Server s) throws InterruptedException
+    {
+        if (s == null)
         {
             return;
         }
@@ -632,17 +638,17 @@ public abstract class SharedClusterIntegrationTestBase
 
         @Provides
         @Singleton
-        public SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration()
+        public PeerHealthConfiguration sidecarPeerHealthConfiguration()
         {
-            return new SidecarPeerHealthConfigurationImpl(false,
-                                                          new MillisecondBoundConfiguration(1, TimeUnit.SECONDS),
-                                                          1,
-                                                          new MillisecondBoundConfiguration(500, TimeUnit.MILLISECONDS));
+            return new PeerHealthConfigurationImpl(false,
+                                                   new MillisecondBoundConfiguration(1, TimeUnit.SECONDS),
+                                                   1,
+                                                   new MillisecondBoundConfiguration(500, TimeUnit.MILLISECONDS));
         }
 
         @Provides
         @Singleton
-        public SidecarPeerProvider sidecarPeerProvider(InstancesMetadata instancesMetadata,
+        public SidecarPeerProvider sidecarPeerProvider(InstanceMetadataFetcher metadataFetcher,
                                                        CassandraClientTokenRingProvider cassandraClientTokenRingProvider,
                                                        SidecarConfiguration configuration,
                                                        DnsResolver dnsResolver,
@@ -650,7 +656,7 @@ public abstract class SharedClusterIntegrationTestBase
                                                                Supplier<List
                                                                         <InnerDcTokenAdjacentPeerTestProvider.TestSidecarHostInfo>> supplier)
         {
-            return new InnerDcTokenAdjacentPeerTestProvider(instancesMetadata,
+            return new InnerDcTokenAdjacentPeerTestProvider(metadataFetcher,
                                                             cassandraClientTokenRingProvider,
                                                             configuration.serviceConfiguration(),
                                                             dnsResolver,
@@ -659,7 +665,7 @@ public abstract class SharedClusterIntegrationTestBase
 
         @Provides
         @Singleton
-        public SidecarConfiguration sidecarConfiguration(SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration)
+        public SidecarConfiguration sidecarConfiguration(PeerHealthConfiguration peerHealthConfiguration)
         {
             ServiceConfiguration conf = ServiceConfigurationImpl.builder()
                                                                 .host("0.0.0.0") // binds to all interfaces, potential security issue if left running for long
@@ -711,7 +717,7 @@ public abstract class SharedClusterIntegrationTestBase
                                                                                .s3ClientConfiguration(s3ClientConfig)
                                                                                .sslConfiguration(sslConfiguration)
                                                                                .sidecarClientConfiguration(sidecarClientConfiguration)
-                                                                               .sidecarPeerHealthConfiguration(sidecarPeerHealthConfiguration);
+                                                                               .sidecarPeerHealthConfiguration(peerHealthConfiguration);
             if (configurationOverrides != null)
             {
                 builder = configurationOverrides.apply(builder);
