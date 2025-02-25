@@ -37,7 +37,7 @@ class HttpClientConfigTest
         assertThat(config.timeoutMillis()).isEqualTo(30_000);
         assertThat(config.ssl()).isEqualTo(true);
         assertThat(config.maxPoolSize()).isEqualTo(20);
-        assertThat(config.userAgent()).isEqualTo("sidecar-client/1.0.0");
+        assertThat(config.userAgent()).isEqualTo("sidecar-client/0.1.0");
         assertThat(config.idleTimeoutMillis()).isEqualTo(0);
         assertThat(config.maxChunkSize()).isEqualTo(6291456);
         assertThat(config.receiveBufferSize()).isEqualTo(-1);

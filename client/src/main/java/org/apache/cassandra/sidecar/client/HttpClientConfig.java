@@ -250,7 +250,7 @@ public class HttpClientConfig
 
         /**
          * Set the Web Client {@code userAgent} and returns a reference to this Builder enabling method chaining.
-         * Defaults to sidecar-client/1.0.0
+         * Defaults to sidecar-client/0.1.0
          *
          * @param userAgent the {@code userAgent} to set
          * @return a reference to this Builder
