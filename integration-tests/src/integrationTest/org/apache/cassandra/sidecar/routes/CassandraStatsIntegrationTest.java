@@ -136,31 +136,29 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     @Test
     void retrieveTableStats()
     {
-        try (Cluster driverCluster = createDriverCluster(cluster.delegate()); Session session = driverCluster.connect())
-        {
-            /*
-             * "SnapshotSize" table stats metric reports the size of snapshot files which are not links for "live" SSTables.
-             * In order to simulate non-zero data for this metric, we do the following:
-             * 1. Insert data
-             * 2. Create snapshot
-             * 3. Truncate table to ensure snapshot references non-live sstables
-             * 4. Insert more data (and flush) to ensure other metrics, have non-zero values
-             */
-            insertData(session, TEST_TABLE);
-            createSnapshot(TEST_TABLE);
-            session.execute("TRUNCATE TABLE " + TEST_TABLE);
-            insertData(session, TEST_TABLE);
-            cluster.stream().forEach(instance -> instance.flush(TEST_KEYSPACE));
-            tableStats(TEST_TABLE);
-        }
+        /*
+         * "SnapshotSize" table stats metric reports the size of snapshot files which are not links for "live" SSTables.
+         * In order to simulate non-zero data for this metric, we do the following:
+         * 1. Insert data
+         * 2. Create snapshot
+         * 3. Truncate table to ensure snapshot references non-live sstables
+         * 4. Insert more data (and flush) to ensure other metrics, have non-zero values
+         */
+        insertData(TEST_TABLE);
+        createSnapshot(TEST_TABLE);
+        cluster.schemaChangeIgnoringStoppedInstances("TRUNCATE TABLE " + TEST_TABLE);
+        insertData(TEST_TABLE);
+        cluster.stream().forEach(instance -> instance.flush(TEST_KEYSPACE));
+        tableStats(TEST_TABLE);
     }
 
-    private void insertData(Session session, QualifiedName tableName)
+    private void insertData(QualifiedName tableName)
     {
         for (int i = 1; i <= 10; i++)
         {
-            session.execute("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
-                            "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', " + i + ", 'Benjamin PRADES');");
+            String statement = "INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
+                               "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', " + i + ", 'Benjamin PRADES');";
+            cluster.schemaChangeIgnoringStoppedInstances(statement);
         }
     }
 
