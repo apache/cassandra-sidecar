@@ -1,0 +1,20 @@
+0.1
+===
+
+New features
+------------
+    - Restore capability to Sidecar, for Sidecar to allow restoring data from S3.
+    - Cassandra Analytics Library Support by adding bulk endpoints for bulk reads and bulk writes.
+    - Mutual TLS Authentication support.
+    - Role-based access control authorization mechanism that honors the Cassandra's permissions
+      to allow access to the service.
+    - Health check APIs to determine the health of the native, JMX, Gossip, and service health
+    - Bespoke endpoints that provide ability to access Cassandra operational stats and node management,
+      including table stats, stream task monitoring, decommission of a node.
+    - Sidecar Observability that captures metrics such as HTTP (number of requests created per route,
+      response time taken endpoint wise); metrics per Cassandra instance maintained by Sidecar (instance
+      specific restore metrics, instance specific stream and upload metrics). Server route metrics emitted
+      by Vert.x.
+    - Vert.x-based Client Library that supports accessing endpoints available in Sidecar, with advanced
+      tunables for retries, backoff, timeouts, and other knobs.
+    - Schema reporting and integration with Datahub.

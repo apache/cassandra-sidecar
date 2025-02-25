@@ -1,4 +1,4 @@
-1.0.0
+0.1.0
 -----
  * Add sidecar endpoint to retrieve table stats (CASSSIDECAR-215)
  * Adapt to cluster topology change for restore jobs (CASSSIDECAR-185)

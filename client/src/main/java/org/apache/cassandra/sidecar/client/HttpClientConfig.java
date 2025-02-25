@@ -28,7 +28,7 @@ public class HttpClientConfig
     public static final long DEFAULT_TIMEOUT_MILLIS = 30_000;
     public static final boolean DEFAULT_SSL = true;
     public static final int DEFAULT_MAX_POOL_SIZE = 20;
-    public static final String DEFAULT_USER_AGENT = "sidecar-client/1.0.0";
+    public static final String DEFAULT_USER_AGENT = "sidecar-client/0.1.0";
     public static final int DEFAULT_IDLE_TIMEOUT_MILLIS = 0; // no timeout
     public static final int DEFAULT_MAX_CHUNK_SIZE = 6 * 1024 * 1024; // 6 MiB
     public static final int DEFAULT_RECEIVE_BUFFER_SIZE = -1;
