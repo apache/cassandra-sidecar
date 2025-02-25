@@ -131,12 +131,10 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     public CompletableFuture<HealthResponse> peerHealth(SidecarInstance instance)
     {
         return executor.executeRequestAsync(requestBuilder()
-                                                .singleInstanceSelectionPolicy(
-                                                new SidecarInstanceImpl(instance.hostname(),
-                                                                        instance.port()))
-                                                .retryPolicy(oncePerInstanceRetryPolicy)
-                                                .sidecarHealthRequest()
-                                                .build());
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .retryPolicy(oncePerInstanceRetryPolicy)
+                                            .sidecarHealthRequest()
+                                            .build());
     }
 
     /**
