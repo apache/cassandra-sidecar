@@ -553,7 +553,7 @@ class SidecarConfigurationTest
     private void validateSidecarPeerHealthConfigurationDefaults(PeerHealthConfiguration config)
     {
         assertThat(config).isNotNull();
-        assertThat(config.enabled()).isTrue();
+        assertThat(config.enabled()).isFalse();
         assertThat(config.executeInterval().toMillis()).isEqualTo(30_000);
         assertThat(config.sidecarClientHealthCheckRetries()).isEqualTo(5);
         assertThat(config.sidecarClientHealthCheckRetryDelay().toMillis()).isEqualTo(10_000);
