@@ -62,13 +62,13 @@ public class VertxRequestExecutor extends RequestExecutor
     public void close() throws Exception
     {
         super.close();
-        try
-        {
-            vertx.close().toCompletionStage().toCompletableFuture().get(1, TimeUnit.MINUTES);
-        }
-        catch (InterruptedException | ExecutionException | TimeoutException exception)
-        {
-            logger.warn("Failed to close vertx after 1 minute", exception);
-        }
+//        try
+//        {
+//            vertx.close().toCompletionStage().toCompletableFuture().get(1, TimeUnit.MINUTES);
+//        }
+//        catch (InterruptedException | ExecutionException | TimeoutException exception)
+//        {
+//            logger.warn("Failed to close vertx after 1 minute", exception);
+//        }
     }
 }
