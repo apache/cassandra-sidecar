@@ -18,10 +18,6 @@
 
 package org.apache.cassandra.sidecar.client;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
 import io.vertx.core.Vertx;
 
 import static java.util.Objects.requireNonNull;
@@ -29,46 +25,23 @@ import static java.util.Objects.requireNonNull;
 /**
  * A {@link RequestExecutor} implementation that uses vertx primitives
  */
-public class VertxRequestExecutor extends RequestExecutor
+public class SidecarClientVertxRequestExecutor extends VertxRequestExecutor
 {
     private final Vertx vertx;
 
-    public VertxRequestExecutor(VertxHttpClient httpClient)
+    public SidecarClientVertxRequestExecutor(VertxHttpClient httpClient)
     {
         super(httpClient);
         this.vertx = requireNonNull(httpClient.vertx(), "The vertx instance is required");
     }
 
     /**
-     * Use vertx's primitives to schedule the delay
-     *
-     * @param delayMillis the delay before retrying in milliseconds
-     * @param runnable    the code to execute
+     * @throws Exception Closing the client vertx should not close general Vertx, that's why we are overriding
+     * the close method from the VertxRequestExecutor class.
      */
-    @Override
-    protected void schedule(long delayMillis, Runnable runnable)
-    {
-        if (delayMillis > 0)
-        {
-            vertx.setTimer(delayMillis, p -> runnable.run());
-        }
-        else
-        {
-            runnable.run();
-        }
-    }
-
     @Override
     public void close() throws Exception
     {
-        super.close();
-        try
-        {
-            vertx.close().toCompletionStage().toCompletableFuture().get(1, TimeUnit.MINUTES);
-        }
-        catch (InterruptedException | ExecutionException | TimeoutException exception)
-        {
-            logger.warn("Failed to close vertx after 1 minute", exception);
-        }
+        httpClient.close();
     }
 }

@@ -37,9 +37,9 @@ import org.apache.cassandra.sidecar.client.HttpClientConfig;
 import org.apache.cassandra.sidecar.client.SidecarClient;
 import org.apache.cassandra.sidecar.client.SidecarClientConfig;
 import org.apache.cassandra.sidecar.client.SidecarClientConfigImpl;
+import org.apache.cassandra.sidecar.client.SidecarClientVertxRequestExecutor;
 import org.apache.cassandra.sidecar.client.SimpleSidecarInstancesProvider;
 import org.apache.cassandra.sidecar.client.VertxHttpClient;
-import org.apache.cassandra.sidecar.client.VertxRequestExecutor;
 import org.apache.cassandra.sidecar.client.retry.ExponentialBackoffRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.common.client.SidecarInstance;
@@ -83,6 +83,7 @@ public class SidecarClientProvider implements Provider<SidecarClient>
         try
         {
             client.close();
+            Thread.sleep(100);
             completion.complete();
         }
         catch (Throwable throwable)
@@ -108,7 +109,7 @@ public class SidecarClientProvider implements Provider<SidecarClient>
         RetryPolicy defaultRetryPolicy = new ExponentialBackoffRetryPolicy(clientConfig.maxRetries(),
                                                                            clientConfig.retryDelay().toMillis(),
                                                                            clientConfig.retryDelay().toMillis());
-        VertxRequestExecutor requestExecutor = new VertxRequestExecutor(vertxHttpClient);
+        SidecarClientVertxRequestExecutor requestExecutor = new SidecarClientVertxRequestExecutor(vertxHttpClient);
         SidecarInstance instance = new SidecarInstanceImpl(webClientOptions.getDefaultHost(), webClientOptions.getDefaultPort());
         ArrayList<SidecarInstance> instances = new ArrayList<>();
         instances.add(instance);
