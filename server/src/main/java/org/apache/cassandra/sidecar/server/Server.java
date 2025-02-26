@@ -167,9 +167,7 @@ public class Server
         periodicTaskExecutor.close(periodicTaskExecutorPromise);
         closingFutures.add(periodicTaskExecutorPromise.future());
 
-        Promise<Void> closeSidecarClientPromise = Promise.promise();
-        sidecarClientProvider.close(closeSidecarClientPromise);
-        closingFutures.add(closeSidecarClientPromise.future());
+        sidecarClientProvider.close();
 
         instancesMetadata.instances().forEach(instance -> {
             Promise<Void> closingFutureForInstance = Promise.promise();
@@ -197,7 +195,6 @@ public class Server
         });
 
         return Future.all(closingFutures)
-
                      .andThen(v1 -> {
                          LOGGER.debug("Closing executor pools");
                          executorPools.close();

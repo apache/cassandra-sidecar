@@ -30,7 +30,7 @@ import org.apache.cassandra.sidecar.config.PeerHealthConfiguration;
  */
 public class PeerHealthConfigurationImpl extends PeriodicTaskConfigurationImpl implements PeerHealthConfiguration
 {
-    public static final boolean DEFAULT_ENABLED = true;
+    public static final boolean DEFAULT_ENABLED = false;
     public static final MillisecondBoundConfiguration DEFAULT_FREQUENCY = new MillisecondBoundConfiguration(30, TimeUnit.SECONDS);
     public static final int DEFAULT_SIDECAR_CLIENT_HEALTH_CHECK_RETRIES = 5;
     public static final MillisecondBoundConfiguration DEFAULT_SIDECAR_CLIENT_HEALTH_CHECK_RETRY_DELAY
@@ -63,7 +63,7 @@ public class PeerHealthConfigurationImpl extends PeriodicTaskConfigurationImpl i
     }
 
     /**
-     * @return the number of maximum retries to be performed during a Sidecar peer health check
+     *  {@inheritDoc}
      */
     @Override
     @JsonProperty(value = "sidecar_client_health_check_retries")
@@ -73,7 +73,7 @@ public class PeerHealthConfigurationImpl extends PeriodicTaskConfigurationImpl i
     }
 
     /**
-     * @return the delay between Sidecar peer health checks retries in milliseconds
+     *  {@inheritDoc}
      */
     @Override
     @JsonProperty(value = "sidecar_client_health_check_retry_delay")

@@ -466,17 +466,6 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         }
 
         /**
-         * Sets the {@code downDetectorConfiguration} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param peerHealthConfiguration the {@code downDetectorConfiguration} to set
-         * @return a reference to this Builder
-         */
-        public Builder downDetectorConfiguration(PeerHealthConfiguration peerHealthConfiguration)
-        {
-            return update(b -> b.peerHealthConfiguration = peerHealthConfiguration);
-        }
-
-        /**
          * Sets the {@code accessControlConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param accessControlConfiguration the {@code accessControlConfiguration} to set

@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.utils;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,7 @@ import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
+import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 
@@ -59,6 +61,8 @@ public class SidecarClientProvider implements Provider<SidecarClient>
     private final SidecarClientConfiguration clientConfig;
     private final SidecarVersionProvider sidecarVersionProvider;
     private final SidecarClient client;
+
+    private final AtomicBoolean isClosing = new AtomicBoolean(false);
 
     @Inject
     public SidecarClientProvider(Vertx vertx,
@@ -89,6 +93,15 @@ public class SidecarClientProvider implements Provider<SidecarClient>
         catch (Throwable throwable)
         {
             completion.fail(throwable);
+        }
+    }
+
+    public void close()
+    {
+        if (isClosing.compareAndSet(false, true))
+        {
+            LOGGER.info("Closing Sidecar Client...");
+            ThrowableUtils.propagate(client::close);
         }
     }
 

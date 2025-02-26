@@ -71,6 +71,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         this.config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         this.sidecarPeerProvider = sidecarPeerProvider;
         this.healthProvider = healthProvider;
+        // TODO: Find a better place to register this codec
         vertx.eventBus().registerDefaultCodec(SidecarInstance.class, sidecarInstanceCodec);
     }
 

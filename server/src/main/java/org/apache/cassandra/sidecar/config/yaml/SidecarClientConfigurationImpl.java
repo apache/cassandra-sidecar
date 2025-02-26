@@ -212,5 +212,4 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     {
         return maxRetryDelay;
     }
-
 }

@@ -250,42 +250,25 @@ sidecar_peer_health:
 
 # Sidecar client settings used to interact with other sidecars
 sidecar_client:
-  # Determines if the sidecar client should use and SSL connection
-  use_ssl: true
-  # Time in which a request made by the sidecar client will time out
-  request_timeout: 1s
-  # How long the request can be idle
-  request_idle_timeout: 1s
-  # Max size of the client connection pool
-  connection_pool_max_size: 10
-  # Period of time for the connection pool to clear
-  connection_pool_clearing_period: 10s
-  # Defines the size of the event loop pool
-  connection_pool_event_loop_size: 10
-  # Connection pool max time to wait on the queue size
-  connection_pool_max_wait_queue_size: 10
-  # The amount of retries the client will attempt a request
-  max_retries: 3
-  # The initial delay between the retries the client will attempt a request
-  retry_delay: 1s
-  # The max delay between the retries the client will attempt a request
-  max_retry_delay: 2s
-  # if ssl is enabled, this is the ssl configuration used for the sidecar client
-  ssl:
+  use_ssl: false                            # Determines if the sidecar client should use and SSL connection
+  request_timeout: 1s                       # Time in which a request made by the sidecar client will time out
+  request_idle_timeout: 1s                  # How long the request can be idle
+  connection_pool_max_size: 10              # Max size of the client connection pool
+  connection_pool_clearing_period: 10s      # Period of time for the connection pool to clear
+  connection_pool_event_loop_size: 10       # Defines the size of the event loop pool
+  connection_pool_max_wait_queue_size: 10   # Connection pool max time to wait on the queue size
+  max_retries: 3                            # The amount of retries the client will attempt a request
+  retry_delay: 1s                           # The initial delay between the retries the client will attempt a request
+  max_retry_delay: 2s                       # The max delay between the retries the client will attempt a request
+  ssl:                                      # if ssl is enabled, this is the ssl configuration used for the sidecar client
     keystore:
-      # Format of the keystore
-      type: PKCS12
-      # Path to the keystore file
-      path: path/to/keystore.p12
-      # Keystore password
-      password: password
+      type: PKCS12                          # Format of the keystore
+      path: path/to/keystore.p12            # Path to the keystore file
+      password: password                    # Keystore password
     truststore:
-      # Format of the truststore
-      type: PKCS12
-      # Path to the truststore file
-      path: path/to/keystore.p12
-      # Truststore password
-      password: password
+      type: PKCS12                          # Format of the truststore
+      path: path/to/keystore.p12            # Path to the truststore file
+      password: password                    # Truststore password
 
 metrics:
   registry_name: cassandra_sidecar
