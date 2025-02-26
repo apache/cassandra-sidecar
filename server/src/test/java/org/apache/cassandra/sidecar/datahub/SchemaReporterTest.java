@@ -41,7 +41,7 @@ import static org.mockito.Mockito.when;
 /**
  * Unit tests for {@link SchemaReporter}
  */
-@SuppressWarnings("try")
+@SuppressWarnings("resource")
 final class SchemaReporterTest
 {
     private static final IdentifiersProvider IDENTIFIERS = new TestIdentifiers();

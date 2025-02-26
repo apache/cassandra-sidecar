@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.routes;
 import java.util.Collections;
 import java.util.Set;
 
+import com.datastax.driver.core.Metadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServerRequest;
@@ -50,7 +51,7 @@ public class ReportSchemaHandler extends AbstractHandler<Void> implements Access
      *
      * @param metadata the metadata fetcher
      * @param executor executor pools for blocking executions
-     * @param reporter executor pools for blocking executions
+     * @param reporter schema reporter to use for the conversion
      */
     @Inject
     public ReportSchemaHandler(@NotNull InstanceMetadataFetcher metadata,
@@ -92,10 +93,11 @@ public class ReportSchemaHandler extends AbstractHandler<Void> implements Access
                                   @NotNull SocketAddress address,
                                   @Nullable Void request)
     {
+        Metadata metadata = metadataFetcher.callOnFirstAvailableInstance(instance -> instance.delegate().metadata());
+
         executorPools.service()
-                     .runBlocking(() -> metadataFetcher.runOnFirstAvailableInstance(instance ->
-                            schemaReporter.process(instance.delegate().metadata())))
-                     .onSuccess(context::json)
+                     .runBlocking(() -> schemaReporter.process(metadata))
+                     .onSuccess(ignored -> context.end())
                      .onFailure(throwable -> processFailure(throwable, context, host, address, request));
     }
 }

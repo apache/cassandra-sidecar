@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integration test for {@link SchemaReporter}
  */
-@SuppressWarnings({"try", "unused"})
+@SuppressWarnings("resource")
 final class SchemaReporterIntegrationTest extends IntegrationTestBase
 {
     private static final IdentifiersProvider IDENTIFIERS = new TestIdentifiers();

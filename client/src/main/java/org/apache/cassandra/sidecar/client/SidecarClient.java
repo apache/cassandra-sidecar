@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -565,6 +564,28 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                 .singleInstanceSelectionPolicy(sidecarInstance)
                 .request(new StreamCdcSegmentRequest(segment, range))
                 .build(), streamConsumer);
+    }
+
+    /**
+     * Sends a request to trigger an immediate, synchronous schema
+     * conversion and report on the specified instance of the Sidecar
+     * regardless of the periodic task schedule or status
+     *
+     * @param instance the {@link SidecarInstance} to receive the request
+     * @return a {@link CompletableFuture} for the request
+     */
+    public CompletableFuture<Void> reportSchema(SidecarInstance instance)
+    {
+        // Create an instance of {@link RequestContext.Builder} using its
+        // constructor instead of the {@link this.requestBuilder()} method,
+        // since {@link NoRetryPolicy} is the preferred behavior here
+
+        RequestContext context = new RequestContext.Builder()
+                .singleInstanceSelectionPolicy(instance)
+                .reportSchemaRequest()
+                .build();
+
+        return executor.executeRequestAsync(context);
     }
 
     /**

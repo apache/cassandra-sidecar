@@ -34,13 +34,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -99,6 +99,10 @@ import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
@@ -1671,6 +1675,42 @@ abstract class SidecarClientTest
             baos.write(bytes, 0, bytes.length);
         }
         assertThat(new String(baos.toByteArray(), StandardCharsets.UTF_8)).isEqualTo("Test Content");
+    }
+
+    @Test
+    public void testReportSchemaSuccess()
+    {
+        MockResponse response = new MockResponse()
+                .setResponseCode(OK.code())
+                .setBody("");
+
+        enqueue(response);
+
+        SidecarInstance instance = instances.get(0);
+
+        CompletableFuture<Void> future = client.reportSchema(instance);
+
+        assertDoesNotThrow(() ->
+                future.whenComplete((ignored, throwable) -> assertNull(throwable))
+                      .join());
+    }
+
+    @Test
+    public void testReportSchemaFailure()
+    {
+        MockResponse response = new MockResponse()
+                .setResponseCode(INTERNAL_SERVER_ERROR.code())
+                .setBody("Message");
+
+        enqueue(response);
+
+        SidecarInstance instance = instances.get(0);
+
+        CompletableFuture<Void> future = client.reportSchema(instance);
+
+        assertThrows(CompletionException.class, () ->
+                future.whenComplete((ignored, throwable) -> assertNotNull(throwable))
+                      .join());
     }
 
     @Test

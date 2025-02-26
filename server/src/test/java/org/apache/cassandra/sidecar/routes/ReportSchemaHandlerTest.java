@@ -138,35 +138,39 @@ final class ReportSchemaHandlerTest
     @BeforeEach
     void before() throws InterruptedException
     {
-        client = WebClient.create(injector.getInstance(Vertx.class));
-        server = injector.getInstance(Server.class);
-
         VertxTestContext context = new VertxTestContext();
+        server = injector.getInstance(Server.class);
         server.start()
               .onSuccess(result -> context.completeNow())
               .onFailure(context::failNow);
+
+        client = WebClient.create(injector.getInstance(Vertx.class));
+
         context.awaitCompletion(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     @AfterEach
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED")
     void after() throws InterruptedException
     {
         CountDownLatch latch = new CountDownLatch(1);
         server.close()
               .onSuccess(future -> latch.countDown());
+
+        client.close();
+
         latch.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     @Test
-    @SuppressWarnings("deprecation")
     void testSuccess(@NotNull VertxTestContext context) throws IOException
     {
         String expected = IOUtils.readFully("/datahub/empty_cluster.json");
         emitter = new JsonEmitter();
+        assertThat(emitter.content().length())
+                .isLessThanOrEqualTo(1);
 
-        client.get(server.actualPort(), LOCALHOST, ENDPOINT)
+        client.put(server.actualPort(), LOCALHOST, ENDPOINT)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response ->
               {
@@ -179,13 +183,14 @@ final class ReportSchemaHandlerTest
     }
 
     @Test
-    @SuppressWarnings("deprecation")
     void testFailure(@NotNull VertxTestContext context)
     {
         String expected = "[\n]";
         emitter = new ThrowingEmitter();
+        assertThat(emitter.content().length())
+                .isLessThanOrEqualTo(1);
 
-        client.get(server.actualPort(), LOCALHOST, ENDPOINT)
+        client.put(server.actualPort(), LOCALHOST, ENDPOINT)
               .expect(ResponsePredicate.SC_INTERNAL_SERVER_ERROR)
               .send(context.succeeding(response ->
               {

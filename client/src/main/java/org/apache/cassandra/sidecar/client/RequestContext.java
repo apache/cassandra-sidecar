@@ -43,6 +43,7 @@ import org.apache.cassandra.sidecar.common.request.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.request.NodeDecommissionRequest;
 import org.apache.cassandra.sidecar.common.request.NodeSettingsRequest;
 import org.apache.cassandra.sidecar.common.request.OperationalJobRequest;
+import org.apache.cassandra.sidecar.common.request.ReportSchemaRequest;
 import org.apache.cassandra.sidecar.common.request.Request;
 import org.apache.cassandra.sidecar.common.request.RingRequest;
 import org.apache.cassandra.sidecar.common.request.SSTableComponentRequest;
@@ -496,6 +497,16 @@ public class RequestContext
                                             Digest digest, String filename)
         {
             return request(new UploadSSTableRequest(keyspace, tableName, uploadId, component, digest, filename));
+        }
+
+        /**
+         * Sets the {@code request} to be a new instance of a {@link ReportSchemaRequest}
+         *
+         * @return this {@link Builder} for method chaining
+         */
+        public Builder reportSchemaRequest()
+        {
+            return request(new ReportSchemaRequest());
         }
 
         /**
