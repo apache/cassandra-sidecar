@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -32,7 +33,7 @@ import org.jetbrains.annotations.NotNull;
  * related to storing and updating CDC and Kafka configs.
  */
 @Singleton
-public class ConfigsSchema extends TableSchema
+public class ConfigsSchema extends TableSchema implements ExecuteOnClusterLeaseholderOnly
 {
     private static final String CONFIGS_TABLE_NAME = "configs";
     private final SchemaKeyspaceConfiguration keyspaceConfig;

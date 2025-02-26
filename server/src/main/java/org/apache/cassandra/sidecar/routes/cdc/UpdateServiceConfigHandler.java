@@ -39,11 +39,13 @@ import org.apache.cassandra.sidecar.routes.AccessProtected;
 public class UpdateServiceConfigHandler implements Handler<RoutingContext>, AccessProtected
 {
     private final ConfigAccessorFactory configAccessorFactory;
+    private final ServiceConfigValidator serviceConfigValidator;
 
     @Inject
-    public UpdateServiceConfigHandler(ConfigAccessorFactory configAccessorFactory)
+    public UpdateServiceConfigHandler(ConfigAccessorFactory configAccessorFactory, ServiceConfigValidator serviceConfigValidator)
     {
         this.configAccessorFactory = configAccessorFactory;
+        this.serviceConfigValidator = serviceConfigValidator;
     }
 
     @Override
@@ -55,12 +57,20 @@ public class UpdateServiceConfigHandler implements Handler<RoutingContext>, Acce
     @Override
     public void handle(RoutingContext context)
     {
-        JsonObject body = context.getBodyAsJson();
-        final String service = context.pathParam(ConfigPayloadParams.SERVICE);
+        String service = context.pathParam(ConfigPayloadParams.SERVICE);
+        serviceConfigValidator.validateService(service);
+
+        JsonObject payload = context.body().asJsonObject();
+        serviceConfigValidator.validatePayload(payload);
+        serviceConfigValidator.validateConfig(payload);
+
         ConfigAccessor accessor = configAccessorFactory.getConfigAccessor(service);
-        Map<String, String> config = context.getBodyAsJson().getJsonObject(ConfigPayloadParams.CONFIG).getMap().entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> (String) e.getValue()));
+        Map<String, String> config = payload.getJsonObject(ConfigPayloadParams.CONFIG)
+                                            .getMap()
+                                            .entrySet()
+                                            .stream()
+                                            .collect(Collectors.toMap(Map.Entry::getKey, e -> (String) e.getValue()));
         accessor.storeConfig(config);
-        context.json(body);
+        context.json(payload);
     }
 }

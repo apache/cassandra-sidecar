@@ -41,17 +41,21 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class DeleteServiceConfigHandler implements Handler<RoutingContext>, AccessProtected
 {
     private final ConfigAccessorFactory configAccessorFactory;
+    private final ServiceConfigValidator serviceConfigValidator;
 
     @Inject
-    public DeleteServiceConfigHandler(final ConfigAccessorFactory configAccessorFactory)
+    public DeleteServiceConfigHandler(final ConfigAccessorFactory configAccessorFactory,
+                                      final ServiceConfigValidator serviceConfigValidator)
     {
         this.configAccessorFactory = configAccessorFactory;
+        this.serviceConfigValidator = serviceConfigValidator;
     }
 
     @Override
     public void handle(RoutingContext context)
     {
         String service = context.pathParam(ConfigPayloadParams.SERVICE);
+        serviceConfigValidator.validateService(service);
         ConfigAccessor accessor = configAccessorFactory.getConfigAccessor(service);
         try
         {

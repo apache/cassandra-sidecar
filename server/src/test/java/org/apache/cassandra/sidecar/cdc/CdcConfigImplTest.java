@@ -19,19 +19,22 @@
 package org.apache.cassandra.sidecar.cdc;
 
 import java.util.Map;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.util.Modules;
-import org.apache.cassandra.sidecar.TestModule;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.server.ThrowingRunnable;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.db.CdcConfigAccessor;
 import org.apache.cassandra.sidecar.db.KafkaConfigAccessor;
-import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 
@@ -44,13 +47,28 @@ import static org.mockito.Mockito.when;
 
 class CdcConfigImplTest
 {
-    private PeriodicTaskExecutor executor;
+    private static final Vertx vertx = Vertx.vertx();
+    private static final ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
+    private static final ClusterLease clusterLease = new ClusterLease();
+    private PeriodicTaskExecutor executor = new PeriodicTaskExecutor(executorPools, clusterLease);
 
     @BeforeEach
-    void setup()
+    void beforeEach()
     {
-        Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(new TestModule()));
-        executor = injector.getInstance(PeriodicTaskExecutor.class);
+        executor = new PeriodicTaskExecutor(executorPools, clusterLease);
+    }
+
+    @AfterEach
+    void afterEach()
+    {
+        clusterLease.setOwnershipTesting(ClusterLease.Ownership.INDETERMINATE);
+        executor.close(Promise.promise());
+    }
+
+    @AfterAll
+    static void teardown()
+    {
+        TestResourceReaper.create().with(vertx).with(executorPools).close();
     }
 
     @Test

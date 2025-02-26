@@ -21,9 +21,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.RoutingContext;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -32,21 +32,21 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * configs for services in "configs" table. {@link ServiceConfigValidator} has static
  * utility methods for some of those validations.
  */
+@Singleton
 public class ServiceConfigValidator
 {
-    public static void validateService(RoutingContext context, JsonObject payload)
+    public void validateService(String requestService)
     {
-        final String requestService = context.pathParam(ConfigPayloadParams.SERVICE);
-        if (!Stream.of(Service.values()).anyMatch(v -> v.serviceName.equals(requestService)))
+        if (Stream.of(Service.values()).noneMatch(v -> v.serviceName.equals(requestService)))
         {
-            final Set<String> services = Stream.of(Service.values()).map(v -> v.serviceName).collect(Collectors.toSet());
-            final String supportedServices = String.join(", ", services);
+            Set<String> services = Stream.of(Service.values()).map(v -> v.serviceName).collect(Collectors.toSet());
+            String supportedServices = String.join(", ", services);
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid service passed. Supported services: "
                     + supportedServices);
         }
     }
 
-    public static void validateConfig(RoutingContext context, JsonObject payload)
+    public void validateConfig(JsonObject payload)
     {
         try
         {
@@ -58,7 +58,7 @@ public class ServiceConfigValidator
         }
     }
 
-    public static void validatePayload(RoutingContext context, JsonObject payload)
+    public void validatePayload(JsonObject payload)
     {
         if (!payload.containsKey(ConfigPayloadParams.CONFIG))
         {
