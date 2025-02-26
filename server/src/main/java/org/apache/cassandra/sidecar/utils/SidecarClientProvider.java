@@ -149,7 +149,7 @@ public class SidecarClientProvider implements Provider<SidecarClient>
                .setHttp1MaxSize(clientConfig.connectionPoolMaxSize())
                .setMaxWaitQueueSize(clientConfig.connectionPoolMaxWaitQueueSize());
 
-        boolean useSsl = clientConfig.useSsl();
+        boolean useSsl = clientConfig.sslConfiguration() != null && clientConfig.sslConfiguration().enabled();
         if (clientConfig.sslConfiguration() != null && clientConfig.sslConfiguration().isKeystoreConfigured())
         {
             options.setKeyStoreOptions(new JksOptions().setPath(clientConfig.sslConfiguration().keystore().path())

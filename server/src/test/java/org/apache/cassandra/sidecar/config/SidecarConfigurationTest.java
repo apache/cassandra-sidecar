@@ -316,7 +316,6 @@ class SidecarConfigurationTest
     void testSidecarClientConfiguration() throws IOException
     {
         String yaml = "sidecar_client:\n" +
-                      "  use_ssl: true\n" +
                       "  request_timeout: 1s\n" +
                       "  request_idle_timeout: 1s\n" +
                       "  connection_pool_max_size: 10\n" +
@@ -327,6 +326,7 @@ class SidecarConfigurationTest
                       "  retry_delay: 1s\n" +
                       "  max_retry_delay: 2s\n" +
                       "  ssl:\n" +
+                      "    enabled: false\n" +
                       "    keystore:\n" +
                       "      type: PKCS12\n" +
                       "      path: path/to/keystore.p12\n" +
@@ -339,8 +339,8 @@ class SidecarConfigurationTest
         assertThat(sidecarConfiguration).isNotNull();
         SidecarClientConfiguration config = sidecarConfiguration.sidecarClientConfiguration();
         assertThat(config).isNotNull();
-        assertThat(config.useSsl()).isTrue();
         assertThat(config.sslConfiguration()).isNotNull();
+        assertThat(config.sslConfiguration().enabled()).isFalse();
         assertThat(config.sslConfiguration().isKeystoreConfigured()).isTrue();
         assertThat(config.sslConfiguration().isTrustStoreConfigured()).isTrue();
         assertThat(config.requestTimeout().toMillis()).isEqualTo(1_000);

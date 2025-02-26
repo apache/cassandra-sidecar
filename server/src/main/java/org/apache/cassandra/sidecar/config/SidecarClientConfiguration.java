@@ -25,10 +25,6 @@ import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfigur
  */
 public interface SidecarClientConfiguration
 {
-    /**
-     * @return {@code true} if SSL should be used for Sidecar client connections
-     */
-    boolean useSsl();
 
     /**
      * @return The configuration for SSL connections on the client.

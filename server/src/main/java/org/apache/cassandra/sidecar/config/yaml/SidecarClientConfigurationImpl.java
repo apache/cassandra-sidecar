@@ -30,7 +30,6 @@ import org.apache.cassandra.sidecar.config.SslConfiguration;
  */
 public class SidecarClientConfigurationImpl implements SidecarClientConfiguration
 {
-    public static final String USE_SSL = "use_ssl";
     public static final String SSL_CONFIGURATION = "ssl";
     public static final String REQUEST_TIMEOUT = "request_timeout";
     public static final String REQUEST_IDLE_TIMEOUT = "request_idle_timeout";
@@ -42,7 +41,6 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     public static final String RETRY_DELAY = "retry_delay";
     public static final String MAX_RETRY_DELAY = "max_retry_delay";
 
-    public static final boolean DEFAULT_USE_SSL = false;
     public static final SslConfiguration DEFAULT_SSL_CONFIGURATION = null;
     public static final MillisecondBoundConfiguration DEFAULT_REQUEST_TIMEOUT = MillisecondBoundConfiguration.parse("60s");
     public static final MillisecondBoundConfiguration DEFAULT_REQUEST_IDLE_TIMEOUT = MillisecondBoundConfiguration.parse("60s");
@@ -54,9 +52,6 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     public static final MillisecondBoundConfiguration DEFAULT_RETRY_DELAY = MillisecondBoundConfiguration.parse("1s");
     public static final MillisecondBoundConfiguration DEFAULT_MAX_RETRY_DELAY = MillisecondBoundConfiguration.parse("10s");
 
-
-    @JsonProperty(value = USE_SSL)
-    protected final boolean useSsl;
 
     @JsonProperty(value = SSL_CONFIGURATION)
     protected final SslConfiguration sslConfiguration;
@@ -91,8 +86,7 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     public SidecarClientConfigurationImpl()
     {
 
-        this(DEFAULT_USE_SSL,
-             DEFAULT_SSL_CONFIGURATION,
+        this(DEFAULT_SSL_CONFIGURATION,
              DEFAULT_REQUEST_TIMEOUT,
              DEFAULT_REQUEST_IDLE_TIMEOUT,
              DEFAULT_CONNECTION_POOL_MAX_SIZE,
@@ -108,8 +102,7 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     public SidecarClientConfigurationImpl(SslConfiguration sslConfiguration)
     {
 
-        this(DEFAULT_USE_SSL,
-             sslConfiguration,
+        this(sslConfiguration,
              DEFAULT_REQUEST_TIMEOUT,
              DEFAULT_REQUEST_IDLE_TIMEOUT,
              DEFAULT_CONNECTION_POOL_MAX_SIZE,
@@ -122,8 +115,7 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
         );
     }
 
-    public SidecarClientConfigurationImpl(boolean useSsl,
-                                          SslConfiguration sslConfiguration,
+    public SidecarClientConfigurationImpl(SslConfiguration sslConfiguration,
                                           MillisecondBoundConfiguration requestTimeout,
                                           MillisecondBoundConfiguration requestIdleTimeout,
                                           int connectionPoolMaxSize,
@@ -134,7 +126,6 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
                                           MillisecondBoundConfiguration retryDelay,
                                           MillisecondBoundConfiguration maxRetryDelay)
     {
-        this.useSsl = useSsl;
         this.sslConfiguration = sslConfiguration;
         this.requestTimeout = requestTimeout;
         this.requestIdleTimeout = requestIdleTimeout;
@@ -145,12 +136,6 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
         this.maxRetries = maxRetries;
         this.retryDelay = retryDelay;
         this.maxRetryDelay = maxRetryDelay;
-    }
-
-    @Override
-    public boolean useSsl()
-    {
-        return useSsl;
     }
 
     @Override

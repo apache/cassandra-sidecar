@@ -250,7 +250,6 @@ sidecar_peer_health:
 
 # Sidecar client settings used to interact with other sidecars
 sidecar_client:
-  use_ssl: false                            # Determines if the sidecar client should use and SSL connection
   request_timeout: 1s                       # Time in which a request made by the sidecar client will time out
   request_idle_timeout: 1s                  # How long the request can be idle
   connection_pool_max_size: 10              # Max size of the client connection pool
@@ -261,6 +260,7 @@ sidecar_client:
   retry_delay: 1s                           # The initial delay between the retries the client will attempt a request
   max_retry_delay: 2s                       # The max delay between the retries the client will attempt a request
   ssl:                                      # if ssl is enabled, this is the ssl configuration used for the sidecar client
+    enabled: false
     keystore:
       type: PKCS12                          # Format of the keystore
       path: path/to/keystore.p12            # Path to the keystore file
