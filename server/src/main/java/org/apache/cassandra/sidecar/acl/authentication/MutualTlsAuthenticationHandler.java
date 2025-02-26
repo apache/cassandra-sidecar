@@ -40,8 +40,7 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 
 /**
  * Handler for verifying user certificates for Mutual TLS authentication. {@link MutualTlsAuthenticationHandler} can be
- * chained with other {@link io.vertx.ext.web.handler.AuthenticationHandler} implementations. Validation of certificate
- * passes if a cassandra role is associated with the user.
+ * chained with other {@link io.vertx.ext.web.handler.AuthenticationHandler} implementations.
  */
 public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<MutualTlsAuthentication>
 {
