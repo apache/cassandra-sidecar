@@ -33,4 +33,5 @@ public interface PeriodicTaskMapKeys
     interface SchemaReportingTaskKey extends ClassKey {}
     interface SidecarPeerHealthMonitorTaskKey extends ClassKey {}
     interface SidecarSchemaInitializerTaskKey extends ClassKey {}
+    interface CdcRawDirectorySpaceCleanerTaskKey extends ClassKey {}
 }

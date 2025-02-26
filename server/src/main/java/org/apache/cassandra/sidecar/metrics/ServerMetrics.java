@@ -64,4 +64,9 @@ public interface ServerMetrics
      * @return metrics related to coordination functionality that are tracked
      */
     CoordinationMetrics coordination();
+
+    /**
+     * @return metrics tracked by server for cdc functionality.
+     */
+    CdcMetrics cdc();
 }

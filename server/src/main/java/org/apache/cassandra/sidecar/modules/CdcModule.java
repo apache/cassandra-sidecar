@@ -25,7 +25,9 @@ import com.google.inject.multibindings.ProvidesIntoMap;
 import org.apache.cassandra.sidecar.cdc.CdcLogCache;
 import org.apache.cassandra.sidecar.client.SidecarInstancesProvider;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.DynamicSidecarInstancesProvider;
@@ -34,6 +36,7 @@ import org.apache.cassandra.sidecar.coordination.SidecarHttpHealthProvider;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitorTask;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthProvider;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerProvider;
+import org.apache.cassandra.sidecar.db.SystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.handlers.cdc.AllServiceConfigHandler;
@@ -41,14 +44,17 @@ import org.apache.cassandra.sidecar.handlers.cdc.DeleteServiceConfigHandler;
 import org.apache.cassandra.sidecar.handlers.cdc.ListCdcDirHandler;
 import org.apache.cassandra.sidecar.handlers.cdc.StreamCdcSegmentHandler;
 import org.apache.cassandra.sidecar.handlers.cdc.UpdateServiceConfigHandler;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
 import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
+import org.apache.cassandra.sidecar.tasks.CdcRawDirectorySpaceCleaner;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
+import org.apache.cassandra.sidecar.utils.TimeProvider;
 
 /**
  * Provides Cassandra change-data capture (CDC) publishing capability
@@ -61,6 +67,17 @@ public class CdcModule extends AbstractModule
     {
         // Wire SidecarPeerHealthMonitorTask singleton into mapBinder
         return task;
+    }
+
+    @ProvidesIntoMap
+    @KeyClassMapKey(PeriodicTaskMapKeys.CdcRawDirectorySpaceCleanerTaskKey.class)
+    PeriodicTask cdcRawDirectorySpaceCleanercPeriodicTask(TimeProvider timeProvider,
+                                                          SystemViewsDatabaseAccessor systemViewsDatabaseAccessor,
+                                                          CdcConfiguration cdcConfiguration,
+                                                          InstanceMetadata instanceMetadata,
+                                                          SidecarMetrics metrics)
+    {
+        return new CdcRawDirectorySpaceCleaner(timeProvider, systemViewsDatabaseAccessor, cdcConfiguration, instanceMetadata, metrics);
     }
 
     @ProvidesIntoMap

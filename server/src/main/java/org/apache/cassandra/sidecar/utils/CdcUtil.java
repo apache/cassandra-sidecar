@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -37,7 +38,8 @@ public final class CdcUtil
     private static final int IDX_FILE_EXTENSION_LENGTH = IDX_FILE_EXTENSION.length();
     private static final String LOG_FILE_COMPLETE_INDICATOR = "COMPLETED";
     private static final String FILENAME_EXTENSION = "(" + IDX_FILE_EXTENSION + "|" + LOG_FILE_EXTENSION + ")";
-    private static final Pattern SEGMENT_PATTERN = Pattern.compile(FILENAME_PREFIX + "((\\d+)(" + SEPARATOR + "\\d+)?)" + FILENAME_EXTENSION);
+    static final Pattern SEGMENT_PATTERN = Pattern.compile(FILENAME_PREFIX + "(?:\\d+" + SEPARATOR + ")?" + "(\\d+)" + FILENAME_EXTENSION);
+    public static final Pattern IDX_FILE_PATTERN = Pattern.compile(FILENAME_PREFIX + "(?:\\d+" + SEPARATOR + ")?" + "(\\d+)" + IDX_FILE_EXTENSION);
 
     private static final int READ_INDEX_FILE_MAX_RETRY = 5;
 
@@ -103,6 +105,28 @@ public final class CdcUtil
     }
 
     /**
+     * @param idxFileName Commit log segment idx filename
+     * @return log segment filename for associated idx file
+     */
+    public static String idxToLogFileName(String idxFileName)
+    {
+        return idxFileName.substring(0, idxFileName.length() - IDX_FILE_EXTENSION.length()) + LOG_FILE_EXTENSION;
+    }
+
+    public static long parseSegmentId(String name)
+    {
+        final Matcher matcher = SEGMENT_PATTERN.matcher(name);
+        if (matcher.matches())
+        {
+            return Long.parseLong(matcher.group(1));
+        }
+        else
+        {
+            throw new IllegalStateException("Invalid CommitLog name: " + name);
+        }
+    }
+
+    /**
      * Class representing Cdc index
      */
     public static class CdcIndex
@@ -119,6 +143,7 @@ public final class CdcUtil
 
     /**
      * Validate for the cdc (log or index) file name.see {@link SEGMENT_PATTERN} for the format
+     *
      * @param fileName name of the file
      * @return true if the name is valid; otherwise, false
      */
@@ -130,6 +155,15 @@ public final class CdcUtil
     public static boolean isLogFile(String fileName)
     {
         return isValid(fileName) && fileName.endsWith(LOG_FILE_EXTENSION);
+    }
+
+    /**
+     * @param idxFileName name of the file.
+     * @return true if the filename is a valid cdc_raw log segment idx file
+     */
+    public static boolean isValidIdxFile(String idxFileName)
+    {
+        return IDX_FILE_PATTERN.matcher(idxFileName).matches();
     }
 
     public static boolean isIndexFile(String fileName)

@@ -18,6 +18,9 @@
 package org.apache.cassandra.sidecar.config;
 
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+
+import java.time.Duration;
+
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
 /**
@@ -31,14 +34,49 @@ public interface CdcConfiguration
     SecondBoundConfiguration segmentHardLinkCacheExpiry();
 
     /**
-     *
      * @return true if cdc feature is enabled
      */
     boolean isEnabled();
 
     /**
-     *
      * @return how frequently CDC configs are to be refreshed
      */
     MillisecondBoundConfiguration cdcConfigRefreshTime();
+
+    /* CdcRawDirectorySpaceCleaner Configuration */
+
+    /**
+     * @return the cadence at which the CdcRawDirectorySpaceCleaner period task should run to check and clean-up old `cdc_raw` log segments.
+     */
+    SecondBoundConfiguration cdcRawDirectorySpaceCleanerFrequency();
+
+    /**
+     * @return `true` if CdcRawDirectorySpaceCleaner should monitor the `cdc_raw` directory and clean up the oldest commit log segments.
+     */
+    boolean enableCdcRawDirectoryRoutineCleanUp();
+
+    /**
+     * @return fallback value for maximum directory size in bytes for the `cdc_raw` directory when can't be read from `system_views.settings` table
+     */
+    long fallbackCdcRawDirectoryMaxSizeBytes();
+
+    /**
+     * @return max percent usage of the cdc_raw directory before CdcRawDirectorySpaceCleaner starts removing the oldest segments.
+     */
+    float cdcRawDirectoryMaxPercentUsage();
+
+    /**
+     * @return the critical time period in seconds that indicates the `cdc_raw` directory is not large enough to buffer this time-window of mutations.
+     */
+    Duration cdcRawDirectoryCriticalBufferWindow();
+
+    /**
+     * @return the low time period in seconds that indicates the `cdc_raw` directory is not large enough to buffer this time-window of mutations.
+     */
+    Duration cdcRawDirectoryLowBufferWindow();
+
+    /**
+     * @return the time period which the CdcRawDirectorySpaceCleaner should cache the cdc_total_space before refreshing.
+     */
+    Duration cacheMaxUsage();
 }

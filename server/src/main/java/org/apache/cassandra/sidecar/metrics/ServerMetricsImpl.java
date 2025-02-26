@@ -36,6 +36,7 @@ public class ServerMetricsImpl implements ServerMetrics
     protected final SchemaReportingMetrics schemaReportingMetrics;
     protected final CacheMetrics cacheMetrics;
     protected final CoordinationMetrics coordinationMetrics;
+    protected final CdcMetrics cdcMetrics;
 
     public ServerMetricsImpl(MetricRegistry metricRegistry)
     {
@@ -48,6 +49,7 @@ public class ServerMetricsImpl implements ServerMetrics
         this.schemaReportingMetrics = new SchemaReportingMetrics(metricRegistry);
         this.cacheMetrics = new CacheMetrics(metricRegistry);
         this.coordinationMetrics = new CoordinationMetrics(metricRegistry);
+        this.cdcMetrics = new CdcMetrics(metricRegistry);
     }
 
     @Override
@@ -90,5 +92,11 @@ public class ServerMetricsImpl implements ServerMetrics
     public CoordinationMetrics coordination()
     {
         return coordinationMetrics;
+    }
+
+    @Override
+    public CdcMetrics cdc()
+    {
+        return cdcMetrics;
     }
 }

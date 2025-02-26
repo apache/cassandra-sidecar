@@ -18,8 +18,11 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.util.Objects;
+
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -36,5 +39,26 @@ class FileUtilsTest
         assertThat(FileUtils.maybeResolveHomeDirectory("~/")).isEqualTo(System.getProperty("user.home") + "/");
         assertThat(FileUtils.maybeResolveHomeDirectory("~/.ccm")).isEqualTo(System.getProperty("user.home") + "/.ccm");
         assertThat(FileUtils.maybeResolveHomeDirectory("/dev/null")).isEqualTo("/dev/null");
+    }
+
+    @Test
+    public void testStorageStringPatterns()
+    {
+        assertEquals(1, FileUtils.storageUnitToBytes("B"));
+        assertEquals(1024, FileUtils.storageUnitToBytes("KiB"));
+        assertEquals(1048576, FileUtils.storageUnitToBytes("MiB"));
+        assertEquals(1073741824, FileUtils.storageUnitToBytes("GiB"));
+
+        assertEquals(1048576L, FileUtils.mbStringToBytes("1"));
+        assertEquals(524288000L, FileUtils.mbStringToBytes("500"));
+
+        assertEquals(1L, Objects.requireNonNull(FileUtils.storageStringToBytes("1")).longValue());
+        assertEquals(1L, Objects.requireNonNull(FileUtils.storageStringToBytes("1B")).longValue());
+        assertEquals(500L, Objects.requireNonNull(FileUtils.storageStringToBytes("500B")).longValue());
+        assertEquals(1024, Objects.requireNonNull(FileUtils.storageStringToBytes("1KiB")).longValue());
+        assertEquals(1048576, Objects.requireNonNull(FileUtils.storageStringToBytes("1024KiB")).longValue());
+        assertEquals(1048576, Objects.requireNonNull(FileUtils.storageStringToBytes("1MiB")).longValue());
+        assertEquals(4294967296L, Objects.requireNonNull(FileUtils.storageStringToBytes("4096MiB")).longValue());
+        assertEquals(536870912000L, Objects.requireNonNull(FileUtils.storageStringToBytes("500GiB")).longValue());
     }
 }
