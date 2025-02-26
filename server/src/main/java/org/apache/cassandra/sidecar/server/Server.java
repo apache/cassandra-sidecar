@@ -167,7 +167,10 @@ public class Server
         periodicTaskExecutor.close(periodicTaskExecutorPromise);
         closingFutures.add(periodicTaskExecutorPromise.future());
 
-        sidecarClientProvider.close();
+        closingFutures.add(Future.future(p -> {
+            sidecarClientProvider.close();
+            p.complete();
+        }));
 
         instancesMetadata.instances().forEach(instance -> {
             Promise<Void> closingFutureForInstance = Promise.promise();
