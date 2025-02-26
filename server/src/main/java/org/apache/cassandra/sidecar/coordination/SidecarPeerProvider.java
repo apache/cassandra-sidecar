@@ -23,12 +23,12 @@ import java.util.Set;
 import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 
 /**
- * Provides a set of Sidecar peers to monitor and failover when they go DOWN
+ * Provides a set of Sidecar peers
  */
 public interface SidecarPeerProvider
 {
     /**
-     * @return a set of Sidecar peers to monitor
+     * @return a set of Sidecar peers
      */
     Set<SidecarInstance> get();
 }
