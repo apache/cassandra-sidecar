@@ -18,8 +18,6 @@
 package org.apache.cassandra.sidecar.cdc;
 
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -30,102 +28,79 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface CdcConfig
 {
-    Logger LOGGER = LoggerFactory.getLogger(CdcConfig.class);
-    String DEFAULT_JOB_ID = "test-job";
-    int DEFAULT_MAX_WATERMARKER_SIZE = 400000;
+    /**
+     * @return returns environment of the cassandra cluster. This config could be optional
+     */
+    String env();
 
     /**
-     * Topic format
+     * @return returns kafka topic for the mutations to be published
      */
-    enum TopicFormatType
-    {
-        STATIC, KEYSPACE, KEYSPACETABLE, TABLE, MAP
-    }
-
-    default String env()
-    {
-        return "";
-    }
-
     @Nullable
-    default String kafkaTopic()
-    {
-        return null;
-    }
+    String kafkaTopic();
 
+    /**
+     * @return returns topic formats
+     */
     @NotNull
-    default TopicFormatType topicFormat()
-    {
-        return TopicFormatType.STATIC;
-    }
+    TopicFormatType topicFormat();
 
-    default boolean cdcEnabled()
-    {
-        return true;
-    }
+    /**
+     * @return returns if CDC is enabled or not
+     */
+    boolean cdcEnabled();
 
-    default String jobId()
-    {
-        return DEFAULT_JOB_ID;
-    }
+    /**
+     * @return returns unique global identifier for CDC job, CDC state is associated with job-id
+     */
+    String jobId();
 
-    default Map<String, Object> kafkaConfigs()
-    {
-        return Map.of();
-    }
+    /**
+     * @return returns configurations of the kafka for the mutations to be published.
+     */
+    Map<String, Object> kafkaConfigs();
 
-    default Map<String, Object> cdcConfigs()
-    {
-        return Map.of();
-    }
+    /**
+     * @return returns CDC configurations as a map
+     */
+    Map<String, Object> cdcConfigs();
 
-    default boolean logOnly()
-    {
-        return false;
-    }
+    /**
+     * @return if logOnly config is set, mutations will not be published to kafka, instead they
+     * would be logged, this would be useful for debugging and running sidecar application locally
+     */
+    boolean logOnly();
 
-    default String dc()
-    {
-        return "DATACENTER1";
-    }
+    /**
+     * @return returns the data center, this config could be optional
+     */
+    String dc();
 
-    default MinuteBoundConfiguration watermarkWindow()
-    {
-        return MinuteBoundConfiguration.parse("60m");
-    }
+    /**
+     * @return watermark window
+     */
+    MinuteBoundConfiguration watermarkWindow();
 
     /**
      * @return max Kafka record size in bytes. If value is non-negative then the KafkaPublisher will chunk larger records into multiple messages.
      */
-    default int maxRecordSizeBytes()
-    {
-        return -1;
-    }
+    int maxRecordSizeBytes();
 
     /**
      * @return "zstd" to enable compression on large blobs, or null or empty string if disabled.
      */
     @Nullable
-    default String compression()
-    {
-        return null;
-    }
+    String compression();
 
     /**
      * @return true if Kafka publisher should fail if Kafka client returns "record too large" error
      */
-    default boolean failOnRecordTooLargeError()
-    {
-        return false;
-    }
+    boolean failOnRecordTooLargeError();
 
     /**
      * @return true if Kafka publisher should fail if Kafka client returns any other error.
      */
-    default boolean failOnKafkaError()
-    {
-        return true;
-    }
+    boolean failOnKafkaError();
 
     /**
      * Initialization of tables and loading config takes some time, returns if the config
@@ -133,45 +108,39 @@ public interface CdcConfig
      *
      * @return true if config is ready to be read.
      */
-    default boolean isConfigReady()
-    {
-        return true;
-    }
+    boolean isConfigReady();
 
-    default MillisecondBoundConfiguration minDelayBetweenMicroBatches()
-    {
-        return MillisecondBoundConfiguration.parse("1s");
-    }
+    MillisecondBoundConfiguration minDelayBetweenMicroBatches();
 
-    default int maxCommitLogsPerInstance()
-    {
-        return 4;
-    }
+    int maxCommitLogsPerInstance();
 
     /**
      * @return the maximum number of entries to hold in the watermarker state for mutations that
      * are have not achieved the consistency level. Each entry is an MD5 with a byte integer,
      * approximately 30-60 bytes per entry before compression.
      */
-    default int maxWatermarkerSize()
-    {
-        return DEFAULT_MAX_WATERMARKER_SIZE;
-    }
+    int maxWatermarkerSize();
 
     /**
      * @return true if CDC state should be persisted to Cassandra
      */
-    default boolean persistEnabled()
-    {
-        return true;
-    }
+    boolean persistEnabled();
 
     /**
      * @return the delay in millis between persist calls.
      */
-    default MillisecondBoundConfiguration persistDelay()
+    MillisecondBoundConfiguration persistDelay();
+
+    /**
+     * Topic format
+     */
+    enum TopicFormatType
     {
-        return MillisecondBoundConfiguration.parse("1s");
+        STATIC,
+        KEYSPACE,
+        KEYSPACETABLE,
+        TABLE,
+        MAP
     }
 }
 

@@ -54,8 +54,8 @@ public class DeleteServiceConfigHandler implements Handler<RoutingContext>, Acce
     @Override
     public void handle(RoutingContext context)
     {
-        String service = context.pathParam(ConfigPayloadParams.SERVICE);
-        serviceConfigValidator.validateService(service);
+        String serviceName = context.pathParam(ConfigPayloadParams.SERVICE);
+        Service service = serviceConfigValidator.validateAndGet(serviceName);
         ConfigAccessor accessor = configAccessorFactory.getConfigAccessor(service);
         try
         {

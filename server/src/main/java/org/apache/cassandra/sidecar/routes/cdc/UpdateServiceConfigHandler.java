@@ -57,8 +57,8 @@ public class UpdateServiceConfigHandler implements Handler<RoutingContext>, Acce
     @Override
     public void handle(RoutingContext context)
     {
-        String service = context.pathParam(ConfigPayloadParams.SERVICE);
-        serviceConfigValidator.validateService(service);
+        String serviceName = context.pathParam(ConfigPayloadParams.SERVICE);
+        Service service = serviceConfigValidator.validateAndGet(serviceName);
 
         JsonObject payload = context.body().asJsonObject();
         serviceConfigValidator.validatePayload(payload);

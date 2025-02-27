@@ -35,9 +35,13 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class ServiceConfigValidator
 {
-    public void validateService(String requestService)
+    public Service validateAndGet(String requestService)
     {
-        if (Stream.of(Service.values()).noneMatch(v -> v.serviceName.equals(requestService)))
+        try
+        {
+            return Service.withName(requestService);
+        }
+        catch (Exception e)
         {
             Set<String> services = Stream.of(Service.values()).map(v -> v.serviceName).collect(Collectors.toSet());
             String supportedServices = String.join(", ", services);

@@ -17,6 +17,9 @@
  */
 package org.apache.cassandra.sidecar.routes.cdc;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Enum representing various services inside config table in sidecar internal keyspace.
  */
@@ -26,9 +29,27 @@ public enum Service
     CDC("cdc");
 
     public final String serviceName;
+    private static final Map<String, Service> LOOKUP = new HashMap<>();
+
+    static
+    {
+        for (Service service : Service.values())
+        {
+            LOOKUP.put(service.serviceName, service);
+        }
+    }
 
     Service(final String serviceName)
     {
         this.serviceName = serviceName;
+    }
+
+    public static Service withName(String serviceName)
+    {
+        if (LOOKUP.containsKey(serviceName))
+        {
+            return LOOKUP.get(serviceName);
+        }
+        throw new RuntimeException("Invalid service name " + serviceName);
     }
 }

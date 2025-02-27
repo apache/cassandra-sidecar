@@ -102,7 +102,7 @@ public class ConfigsSchema extends TableSchema implements ExecuteOnClusterLeaseh
 
     public PreparedStatement insertConfigIfNotExists()
     {
-        return insertConfig;
+        return insertConfigIfNotExist;
     }
 
     public PreparedStatement deleteConfig()
