@@ -59,7 +59,7 @@ public class GetServiceConfigHandler implements Handler<RoutingContext>, AccessP
         List<GetServicesConfigPayload.Service> services = new ArrayList<>();
         for (Service service : Service.values())
         {
-            ConfigAccessor accessor = configAccessorFactory.getConfigAccessor(service);
+            ConfigAccessor accessor = configAccessorFactory.configAccessor(service);
             Map<String, String> config = accessor.getConfig().getConfigs();
 
             GetServicesConfigPayload.Service serviceConfig = new GetServicesConfigPayload.Service(service.serviceName, config);

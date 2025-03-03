@@ -117,60 +117,60 @@ public class CdcConfigImpl implements CdcConfig
     @Override
     public String kafkaTopic()
     {
-        return cdcConfigMappings.getOrDefault(ConfigKeys.KAFKA_TOPIC.name, null);
+        return cdcConfigMappings.getOrDefault(ConfigKeys.TOPIC.lowcaseName, null);
     }
 
     @NotNull
     public TopicFormatType topicFormat()
     {
-        return TopicFormatType.valueOf(cdcConfigMappings.getOrDefault(ConfigKeys.KAFKA_TOPIC_FORMAT_TYPE.name, TopicFormatType.STATIC.name()));
+        return TopicFormatType.valueOf(cdcConfigMappings.getOrDefault(ConfigKeys.TOPIC_FORMAT_TYPE.lowcaseName, TopicFormatType.STATIC.name()));
     }
 
     public boolean cdcEnabled()
     {
-        return Boolean.parseBoolean(cdcConfigMappings.getOrDefault(ConfigKeys.CDC_ENABLED.name, "true"));
+        return Boolean.parseBoolean(cdcConfigMappings.getOrDefault(ConfigKeys.CDC_ENABLED.lowcaseName, "true"));
     }
 
     @Override
     public String jobId()
     {
-        return cdcConfigMappings.getOrDefault(ConfigKeys.JOB_ID.name, DEFAULT_JOB_ID);
+        return cdcConfigMappings.getOrDefault(ConfigKeys.JOBID.lowcaseName, DEFAULT_JOB_ID);
     }
 
     @Override
     public boolean logOnly()
     {
-        return getBool(ConfigKeys.LOG_ONLY.name, false);
+        return getBool(ConfigKeys.LOG_ONLY.lowcaseName, false);
     }
 
     @Override
     public boolean persistEnabled()
     {
-        return getBool(ConfigKeys.PERSIST_STATE.name, true);
+        return getBool(ConfigKeys.PERSIST_STATE.lowcaseName, true);
     }
 
     @Override
     public boolean failOnRecordTooLargeError()
     {
-        return getBool(ConfigKeys.FAIL_KAFKA_TOO_LARGE_ERRORS.name, false);
+        return getBool(ConfigKeys.FAIL_KAFKA_TOO_LARGE_ERRORS.lowcaseName, false);
     }
 
     @Override
     public boolean failOnKafkaError()
     {
-        return getBool(ConfigKeys.FAIL_KAFKA_ERRORS.name, true);
+        return getBool(ConfigKeys.FAIL_KAFKA_ERRORS.lowcaseName, true);
     }
 
     @Override
     public MillisecondBoundConfiguration persistDelay()
     {
-        return new MillisecondBoundConfiguration(getInt(ConfigKeys.PERSIST_DELAY_MILLIS.name, 1000), TimeUnit.SECONDS);
+        return new MillisecondBoundConfiguration(getInt(ConfigKeys.PERSIST_DELAY_MILLIS.lowcaseName, 1000), TimeUnit.SECONDS);
     }
 
     @Override
     public String dc()
     {
-        return cdcConfigMappings.get(ConfigKeys.DC.name);
+        return cdcConfigMappings.get(ConfigKeys.DC.lowcaseName);
     }
 
     @Override
@@ -178,7 +178,7 @@ public class CdcConfigImpl implements CdcConfig
     {
         // this prop sets the maximum duration age accepted by CDC, any mutations with write timestamps older than
         // the watermark window will be dropped with log message "Exclude the update due to out of the allowed time window."
-        return new MinuteBoundConfiguration(getInt(ConfigKeys.WATERMARK_SECONDS.name, 259200), TimeUnit.SECONDS);
+        return new MinuteBoundConfiguration(getInt(ConfigKeys.WATERMARK_SECONDS.lowcaseName, 259200), TimeUnit.SECONDS);
     }
 
     @Override
@@ -200,26 +200,26 @@ public class CdcConfigImpl implements CdcConfig
         // usually if we need to slow down CDC
         // e.g. if CDC is started with a large backlog of commit log segments and is working hard to process.
         // e.g. or if there is a large data dump or burst of writes that causes high CDC activity.
-        final long millis = Long.parseLong(cdcConfigMappings.getOrDefault(ConfigKeys.MICRO_BATCH_DELAY_IN_MILLIS.name, "1000"));
+        final long millis = Long.parseLong(cdcConfigMappings.getOrDefault(ConfigKeys.MICRO_BATCH_DELAY_MILLIS.lowcaseName, "1000"));
         return new MillisecondBoundConfiguration(millis, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public String env()
     {
-        return cdcConfigMappings.getOrDefault(ConfigKeys.ENV.name, "");
+        return cdcConfigMappings.getOrDefault(ConfigKeys.ENV.lowcaseName, "");
     }
 
     @Override
     public int maxCommitLogsPerInstance()
     {
-        return getInt(ConfigKeys.MAX_COMMIT_LOGS.name, DEFAULT_MAX_COMMITLOGS_PER_INSTANCE);
+        return getInt(ConfigKeys.MAX_COMMIT_LOGS.lowcaseName, DEFAULT_MAX_COMMITLOGS_PER_INSTANCE);
     }
 
     @Override
     public int maxWatermarkerSize()
     {
-        return getInt(ConfigKeys.MAX_WATERMARKER_SIZE.name, DEFAULT_MAX_WATERMARKER_SIZE);
+        return getInt(ConfigKeys.MAX_WATERMARKER_SIZE.lowcaseName, DEFAULT_MAX_WATERMARKER_SIZE);
     }
 
     protected boolean getBool(String key, boolean orDefault)
@@ -337,26 +337,26 @@ public class CdcConfigImpl implements CdcConfig
 
     enum ConfigKeys
     {
-        DC("dc"),
-        LOG_ONLY("log_only"),
-        PERSIST_STATE("persist_state"),
-        ENV("env"),
-        KAFKA_TOPIC("topic"),
-        KAFKA_TOPIC_FORMAT_TYPE("topic_format_type"),
-        CDC_ENABLED("cdc_enabled"),
-        JOB_ID("jobId"),
-        WATERMARK_SECONDS("watermark_seconds"),
-        MICRO_BATCH_DELAY_IN_MILLIS("microbatch_delay_millis"),
-        MAX_COMMIT_LOGS("max_commit_logs"),
-        MAX_WATERMARKER_SIZE("max_watermarker_size"),
-        FAIL_KAFKA_ERRORS("fail_kafka_errors"),
-        FAIL_KAFKA_TOO_LARGE_ERRORS("fail_kafka_too_large_errors"),
-        PERSIST_DELAY_MILLIS("persist_delay_millis");
-        private final String name;
+        DC,
+        LOG_ONLY,
+        PERSIST_STATE,
+        ENV,
+        TOPIC,
+        TOPIC_FORMAT_TYPE,
+        CDC_ENABLED,
+        JOBID,
+        WATERMARK_SECONDS,
+        MICRO_BATCH_DELAY_MILLIS,
+        MAX_COMMIT_LOGS,
+        MAX_WATERMARKER_SIZE,
+        FAIL_KAFKA_ERRORS,
+        FAIL_KAFKA_TOO_LARGE_ERRORS,
+        PERSIST_DELAY_MILLIS;
+        private final String lowcaseName;
 
-        ConfigKeys(String name)
+        ConfigKeys()
         {
-            this.name = name;
+            this.lowcaseName = this.name().toLowerCase();
         }
     }
 }

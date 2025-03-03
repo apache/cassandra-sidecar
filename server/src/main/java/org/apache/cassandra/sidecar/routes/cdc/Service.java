@@ -17,39 +17,24 @@
  */
 package org.apache.cassandra.sidecar.routes.cdc;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Locale;
 
 /**
  * Enum representing various services inside config table in sidecar internal keyspace.
  */
 public enum Service
 {
-    KAFKA("kafka"),
-    CDC("cdc");
-
+    KAFKA,
+    CDC;
     public final String serviceName;
-    private static final Map<String, Service> LOOKUP = new HashMap<>();
 
-    static
+    Service()
     {
-        for (Service service : Service.values())
-        {
-            LOOKUP.put(service.serviceName, service);
-        }
-    }
-
-    Service(final String serviceName)
-    {
-        this.serviceName = serviceName;
+        this.serviceName = this.toString().toLowerCase(Locale.ENGLISH);
     }
 
     public static Service withName(String serviceName)
     {
-        if (LOOKUP.containsKey(serviceName))
-        {
-            return LOOKUP.get(serviceName);
-        }
-        throw new RuntimeException("Invalid service name " + serviceName);
+        return valueOf(serviceName.toUpperCase(Locale.ENGLISH));
     }
 }

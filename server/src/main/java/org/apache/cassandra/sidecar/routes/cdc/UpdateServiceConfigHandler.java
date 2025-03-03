@@ -64,7 +64,7 @@ public class UpdateServiceConfigHandler implements Handler<RoutingContext>, Acce
         serviceConfigValidator.validatePayload(payload);
         serviceConfigValidator.validateConfig(payload);
 
-        ConfigAccessor accessor = configAccessorFactory.getConfigAccessor(service);
+        ConfigAccessor accessor = configAccessorFactory.configAccessor(service);
         Map<String, String> config = payload.getJsonObject(ConfigPayloadParams.CONFIG)
                                             .getMap()
                                             .entrySet()

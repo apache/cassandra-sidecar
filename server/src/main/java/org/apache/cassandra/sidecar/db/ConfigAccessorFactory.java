@@ -17,7 +17,6 @@
  */
 package org.apache.cassandra.sidecar.db;
 
-import java.util.HashMap;
 import java.util.Map;
 import com.google.inject.Inject;
 import org.apache.cassandra.sidecar.routes.cdc.Service;
@@ -27,22 +26,22 @@ import org.apache.cassandra.sidecar.routes.cdc.Service;
  */
 public class ConfigAccessorFactory
 {
-    private final Map<Service, ConfigAccessor> configAccessors = new HashMap<>();
+    private final Map<Service, ConfigAccessor> configAccessors;
 
     @Inject
     public ConfigAccessorFactory(KafkaConfigAccessor kafkaConfigAccessor,
                                  CdcConfigAccessor cdcConfigAccessor)
     {
-        configAccessors.put(Service.KAFKA, kafkaConfigAccessor);
-        configAccessors.put(Service.CDC, cdcConfigAccessor);
+        configAccessors = Map.of(Service.KAFKA, kafkaConfigAccessor, Service.CDC, cdcConfigAccessor);
     }
 
-    public ConfigAccessor getConfigAccessor(final Service service)
+    public ConfigAccessor configAccessor(final Service service)
     {
-        if (configAccessors.containsKey(service))
+        ConfigAccessor configAccessor = configAccessors.get(service);
+        if (configAccessor == null)
         {
-            return configAccessors.get(service);
+            throw new RuntimeException("Couldn't find a db accessor for service " + service);
         }
-        throw new RuntimeException("Couldn't find a db accessor for service " + service);
+        return configAccessor;
     }
 }
