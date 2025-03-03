@@ -69,12 +69,12 @@ public class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
         this.childPolicy = createChildPolicy(localDc);
         this.localHostAddresses = new HashSet<>(localHostAddresses);
         this.driverUtils = driverUtils;
-        if (numAdditionalConnections < MIN_NON_LOCAL_CONNECTIONS)
-        {
-            LOGGER.warn("Additional instances requested was {}, which is less than the minimum of {}. Using {}.",
-                        numAdditionalConnections, MIN_NON_LOCAL_CONNECTIONS, MIN_NON_LOCAL_CONNECTIONS);
-            numAdditionalConnections = MIN_NON_LOCAL_CONNECTIONS;
-        }
+//        if (numAdditionalConnections < MIN_NON_LOCAL_CONNECTIONS)
+//        {
+//            LOGGER.warn("Additional instances requested was {}, which is less than the minimum of {}. Using {}.",
+//                        numAdditionalConnections, MIN_NON_LOCAL_CONNECTIONS, MIN_NON_LOCAL_CONNECTIONS);
+//            numAdditionalConnections = MIN_NON_LOCAL_CONNECTIONS;
+//        }
         this.totalRequestedConnections = this.localHostAddresses.size() + numAdditionalConnections;
     }
 

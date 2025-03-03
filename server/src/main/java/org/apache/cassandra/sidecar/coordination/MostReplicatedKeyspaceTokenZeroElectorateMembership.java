@@ -86,6 +86,7 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership implements Elec
             // pre-checks failed
             return false;
         }
+        LOGGER.info("Highest replication factor keyspace found keyspace={}", userKeyspace);
 
         TokenRangeReplicasResponse tokenRangeReplicas = instanceMetadataFetcher.callOnFirstAvailableInstance(instance -> {
             CassandraAdapterDelegate delegate = instance.delegate();

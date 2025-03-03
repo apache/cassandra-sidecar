@@ -207,7 +207,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
             LOGGER.debug("Attempting to {} lease for sidecarHostId={}", actionName, sidecarHostId);
             return actionFn.apply(sidecarHostId).currentOwner;
         }
-        catch (QueryConsistencyException | NoHostAvailableException e)
+        catch (QueryConsistencyException | NoHostAvailableException | IllegalArgumentException e)
         {
             LOGGER.debug("Unable to {} lease for sidecarHostId={}", actionName, sidecarHostId, e);
         }

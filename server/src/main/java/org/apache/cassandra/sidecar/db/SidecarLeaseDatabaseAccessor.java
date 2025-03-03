@@ -50,6 +50,7 @@ public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseS
      *
      * @param leaseClaimer the identifier of the instances attempting to claim the lease
      * @return the results of performing the lease claim
+     * @throws IllegalArgumentException when the owner information is not available from the lease claim operation
      */
     public LeaseClaimResult claimLease(String leaseClaimer)
     {
@@ -63,6 +64,7 @@ public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseS
      *
      * @param currentOwner the current owner extending the lease
      * @return the results of performing the lease extension
+     * @throws IllegalArgumentException when the owner information is not available from the lease extension operation
      */
     public LeaseClaimResult extendLease(String currentOwner)
     {
@@ -76,20 +78,22 @@ public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseS
      */
     public static class LeaseClaimResult
     {
-        public final boolean leaseAcquired;
         public final String currentOwner;
 
-        LeaseClaimResult(boolean leaseAcquired, String currentOwner)
+        LeaseClaimResult(String currentOwner)
         {
-            this.leaseAcquired = leaseAcquired;
             this.currentOwner = currentOwner;
         }
 
         static LeaseClaimResult from(ResultSet resultSet, String newOwner)
         {
             return resultSet.wasApplied()
-                   ? new LeaseClaimResult(true, newOwner)
-                   : new LeaseClaimResult(false, resultSet.one().getString("owner"));
+                   ? new LeaseClaimResult(newOwner)
+                   // In some rare cases, the resultSet will not contain the owner information
+                   // even though the resultSet was not applied. This will translate into an
+                   // IllegalArgumentException being thrown when trying to retrieve the non-existing
+                   // owner string. This exception is left to be handled by the caller method
+                   : new LeaseClaimResult(resultSet.one().getString("owner"));
         }
     }
 }
