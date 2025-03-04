@@ -19,7 +19,7 @@ package org.apache.cassandra.sidecar.db;
 
 import java.util.Map;
 import com.google.inject.Inject;
-import org.apache.cassandra.sidecar.routes.cdc.Service;
+import org.apache.cassandra.sidecar.common.request.Service;
 
 /**
  * Factory for creating config objects based on the service name.

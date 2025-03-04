@@ -18,31 +18,26 @@
 package org.apache.cassandra.sidecar.common.request;
 
 import io.netty.handler.codec.http.HttpMethod;
-import org.apache.cassandra.sidecar.common.request.data.PutCdcServiceConfigPayload;
+import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload;
 
 /**
- * Request class for updating the config of a given service.
- * Ex: updating kafka configs or updating cdc configs
+ * Represents a request for getting configurations for services from "configs" table inside
+ * sidecar internal keyspace.
  */
-public class PutServiceConfigRequest extends JsonRequest<PutCdcServiceConfigPayload>
+public class AllServicesConfigRequest extends JsonRequest<AllServicesConfigPayload>
 {
-    final PutCdcServiceConfigPayload payload;
-
-    public PutServiceConfigRequest(ServiceConfig serviceConfig, PutCdcServiceConfigPayload payload)
+    /**
+     * Constructs a Sidecar request with the given {@code requestURI}. Defaults to {@code ssl} enabled.
+     */
+    public AllServicesConfigRequest()
     {
-        super(String.format("/api/v1/services/%s/config", serviceConfig.getServiceConfig()));
-        this.payload = payload;
-    }
-
-    @Override
-    public Object requestBody()
-    {
-        return this.payload;
+        super(ApiEndpointsV1.SERVICES_CONFIG_ROUTE);
     }
 
     @Override
     public HttpMethod method()
     {
-        return HttpMethod.PUT;
+        return HttpMethod.GET;
     }
 }

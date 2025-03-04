@@ -59,6 +59,7 @@ public class CdcConfigImpl implements CdcConfig
     private static final String DEFAULT_JOB_ID = "test-job-id";
     private static final int DEFAULT_MAX_COMMITLOGS_PER_INSTANCE = 4;
     private static final int DEFAULT_MAX_RECORD_BYTE_SIZE = -1;
+    public static final int DEFAULT_WATERMARK_WINDOW = 259200;
     private final SchemaKeyspaceConfiguration schemaKeyspaceConfiguration;
     private final CdcConfiguration cdcConfiguration;
     private final CdcConfigAccessor cdcConfigAccessor;
@@ -109,7 +110,7 @@ public class CdcConfigImpl implements CdcConfig
     @Override
     public boolean isConfigReady()
     {
-        return cdcConfigAccessor.isSchemaInitialized()
+        return cdcConfigAccessor.isAvailable()
                 && !kafkaConfigMappings.isEmpty()
                 && !cdcConfigMappings.isEmpty();
     }
@@ -117,7 +118,7 @@ public class CdcConfigImpl implements CdcConfig
     @Override
     public String kafkaTopic()
     {
-        return cdcConfigMappings.getOrDefault(ConfigKeys.TOPIC.lowcaseName, null);
+        return cdcConfigMappings.get(ConfigKeys.TOPIC.lowcaseName);
     }
 
     @NotNull
@@ -168,9 +169,9 @@ public class CdcConfigImpl implements CdcConfig
     }
 
     @Override
-    public String dc()
+    public String datacenter()
     {
-        return cdcConfigMappings.get(ConfigKeys.DC.lowcaseName);
+        return cdcConfigMappings.get(ConfigKeys.DATA_CENTER.lowcaseName);
     }
 
     @Override
@@ -178,7 +179,7 @@ public class CdcConfigImpl implements CdcConfig
     {
         // this prop sets the maximum duration age accepted by CDC, any mutations with write timestamps older than
         // the watermark window will be dropped with log message "Exclude the update due to out of the allowed time window."
-        return new MinuteBoundConfiguration(getInt(ConfigKeys.WATERMARK_SECONDS.lowcaseName, 259200), TimeUnit.SECONDS);
+        return new MinuteBoundConfiguration(getInt(ConfigKeys.WATERMARK_SECONDS.lowcaseName, DEFAULT_WATERMARK_WINDOW), TimeUnit.SECONDS);
     }
 
     @Override
@@ -337,7 +338,7 @@ public class CdcConfigImpl implements CdcConfig
 
     enum ConfigKeys
     {
-        DC,
+        DATA_CENTER,
         LOG_ONLY,
         PERSIST_STATE,
         ENV,

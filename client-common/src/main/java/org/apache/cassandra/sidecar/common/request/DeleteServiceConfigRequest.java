@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.common.request;
 
 import io.netty.handler.codec.http.HttpMethod;
+import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 
 /**
  * Represents a request for deleting configurations for a service from "configs" table inside
@@ -29,9 +30,9 @@ public class DeleteServiceConfigRequest extends Request
     /**
      * Constructs a Sidecar request with the given {@code requestURI}. Defaults to {@code ssl} enabled.
      */
-    public DeleteServiceConfigRequest(ServiceConfig serviceConfig)
+    public DeleteServiceConfigRequest(Service service)
     {
-        super(String.format("/api/v1/services/%s/config", serviceConfig.getServiceConfig()));
+        super(ApiEndpointsV1.SERVICE_CONFIG_ROUTE.replaceAll(ApiEndpointsV1.SERVICE_PARAM, service.serviceName));
     }
 
     @Override

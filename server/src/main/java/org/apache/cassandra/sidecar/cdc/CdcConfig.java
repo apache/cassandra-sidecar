@@ -74,7 +74,7 @@ public interface CdcConfig
     /**
      * @return returns the data center, this config could be optional
      */
-    String dc();
+    String datacenter();
 
     /**
      * @return watermark window
@@ -110,8 +110,15 @@ public interface CdcConfig
      */
     boolean isConfigReady();
 
+    /**
+     * @return Delay between the micro batches in milli seconds
+     */
     MillisecondBoundConfiguration minDelayBetweenMicroBatches();
 
+    /**
+     *
+     * @return maxmum commit logs per instance
+     */
     int maxCommitLogsPerInstance();
 
     /**

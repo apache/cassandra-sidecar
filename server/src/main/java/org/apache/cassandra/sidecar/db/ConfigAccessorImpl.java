@@ -26,10 +26,10 @@ import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 
+import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
-import org.apache.cassandra.sidecar.routes.cdc.Service;
 
 /**
  * Configurations for CDC feature are stored inside a table "config" in an internal sidecar keyspace.
@@ -61,7 +61,7 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
         Row row = execute(statement).one();
         if (row == null || row.isNull(0))
         {
-            LOGGER.debug(String.format("No %s configs are present in the table C* table", service.serviceName));
+            LOGGER.debug(String.format("No %s configs are present in the table Cassandra table", service.serviceName));
             return new ServiceConfig(Map.of());
         }
         return ServiceConfig.from(row);
@@ -101,8 +101,8 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
     }
 
     @Override
-    public boolean isSchemaInitialized()
+    public boolean isAvailable()
     {
-        return sidecarSchema.isInitialized();
+        return super.isAvailable() && sidecarSchema.isInitialized();
     }
 }

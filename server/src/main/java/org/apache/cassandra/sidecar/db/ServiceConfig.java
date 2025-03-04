@@ -17,14 +17,12 @@
  */
 package org.apache.cassandra.sidecar.db;
 
-import java.util.HashMap;
 import java.util.Map;
-import com.google.common.collect.ImmutableMap;
 import com.datastax.driver.core.Row;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * In-memory representation of service configs stored in "configs" table in C*
+ * In-memory representation of service configs stored in "configs" table in Cassandra
  */
 public class ServiceConfig
 {
@@ -32,12 +30,12 @@ public class ServiceConfig
 
     public ServiceConfig()
     {
-        this.serviceConfig = new HashMap<>();
+        this.serviceConfig = Map.of();
     }
 
     public ServiceConfig(Map<String, String> serviceConfig)
     {
-        this.serviceConfig = serviceConfig;
+        this.serviceConfig = Map.copyOf(serviceConfig);
     }
 
     public static ServiceConfig from(@Nullable Row row)
@@ -52,6 +50,6 @@ public class ServiceConfig
 
     public Map<String, String> getConfigs()
     {
-        return ImmutableMap.copyOf(serviceConfig);
+        return Map.copyOf(serviceConfig);
     }
 }

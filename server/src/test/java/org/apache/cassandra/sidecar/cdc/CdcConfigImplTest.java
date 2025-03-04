@@ -38,6 +38,7 @@ import org.apache.cassandra.sidecar.db.KafkaConfigAccessor;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
@@ -76,7 +77,7 @@ class CdcConfigImplTest
     {
         CdcConfigAccessor cdcConfigAccessor = mockCdcConfigAccessor();
         KafkaConfigAccessor kafkaConfigAccessor = mockKafkaConfigAccessor();
-        when(cdcConfigAccessor.isSchemaInitialized()).thenReturn(false);
+        when(cdcConfigAccessor.isAvailable()).thenReturn(false);
 
         CdcConfigImpl cdcConfig =
                 new CdcConfigImpl(mockCdcConfiguration(), mockSchemaKeyspaceConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
@@ -112,7 +113,7 @@ class CdcConfigImplTest
         KafkaConfigAccessor kafkaConfigAccessor = mockKafkaConfigAccessor();
         CdcConfigImpl cdcConfig =
                 new CdcConfigImpl(mockCdcConfiguration(), mockSchemaKeyspaceConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
-        assertThat(cdcConfig.dc()).isEqualTo(null);
+        assertThat(cdcConfig.datacenter()).isEqualTo(null);
         assertThat(cdcConfig.env()).isEqualTo("");
         assertThat(cdcConfig.kafkaTopic()).isNull();
         assertThat(cdcConfig.logOnly()).isFalse();
@@ -130,11 +131,8 @@ class CdcConfigImplTest
 
         CdcConfigImpl cdcConfig =
                 new CdcConfigImpl(mockCdcConfiguration(), mockSchemaKeyspaceConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
-        while (!cdcConfig.isConfigReady())
-        {
-            Thread.sleep(1000);
-        }
-        assertThat(cdcConfig.dc()).isEqualTo("DC1");
+        loopAssert(5, ()-> assertThat(cdcConfig.isConfigReady()).isTrue());
+        assertThat(cdcConfig.datacenter()).isEqualTo("DC1");
         assertThat(cdcConfig.env()).isEqualTo("if");
         assertThat(cdcConfig.kafkaTopic()).isEqualTo("topic1");
         assertThat(cdcConfig.logOnly()).isFalse();
@@ -183,7 +181,7 @@ class CdcConfigImplTest
     void testNotifierIsSkippedWhenCdcIsDisabled()
     {
         CdcConfigAccessor cdcConfigAccessor = mockCdcConfigAccessor();
-        when(cdcConfigAccessor.isSchemaInitialized()).thenReturn(true);
+        when(cdcConfigAccessor.isAvailable()).thenReturn(true);
 
         KafkaConfigAccessor kafkaConfigAccessor = mockKafkaConfigAccessor();
         CdcConfiguration cdcConfiguration = mockCdcConfiguration();
@@ -200,7 +198,7 @@ class CdcConfigImplTest
     {
         CdcConfigAccessor cdcConfigAccessor = mock(CdcConfigAccessor.class, RETURNS_DEEP_STUBS);
         when(cdcConfigAccessor.getConfig().getConfigs()).thenReturn(Map.of());
-        when(cdcConfigAccessor.isSchemaInitialized()).thenReturn(true);
+        when(cdcConfigAccessor.isAvailable()).thenReturn(true);
         return cdcConfigAccessor;
     }
 
@@ -208,7 +206,7 @@ class CdcConfigImplTest
     {
         KafkaConfigAccessor kafkaConfigAccessor = mock(KafkaConfigAccessor.class, RETURNS_DEEP_STUBS);
         when(kafkaConfigAccessor.getConfig().getConfigs()).thenReturn(Map.of());
-        when(kafkaConfigAccessor.isSchemaInitialized()).thenReturn(true);
+        when(kafkaConfigAccessor.isAvailable()).thenReturn(true);
         return kafkaConfigAccessor;
     }
 

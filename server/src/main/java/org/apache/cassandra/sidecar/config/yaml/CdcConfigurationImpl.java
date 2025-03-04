@@ -33,7 +33,7 @@ import org.apache.cassandra.sidecar.config.CdcConfiguration;
 public class CdcConfigurationImpl implements CdcConfiguration
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CdcConfigurationImpl.class);
-    public static final String IS_ENABLED_PROPERTY = "is_enabled";
+    public static final String IS_ENABLED_PROPERTY = "enabled";
     public static final String CONFIGURATION_REFRESH_TIME_PROPERTY = "config_refresh_time";
     public static final String SEGMENT_HARD_LINK_CACHE_EXPIRY_PROPERTY = "segment_hardlink_cache_expiry";
     public static final boolean DEFAULT_IS_ENABLED = false;

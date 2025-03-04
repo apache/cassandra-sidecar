@@ -32,13 +32,13 @@ public interface CdcConfiguration
 
     /**
      *
-     * @return returns if cdc feature is enabled
+     * @return true if cdc feature is enabled
      */
     boolean isEnabled();
 
     /**
      *
-     * @return returns how frequently CDC configs are to be refreshed
+     * @return how frequently CDC configs are to be refreshed
      */
     MillisecondBoundConfiguration cdcConfigRefreshTime();
 }

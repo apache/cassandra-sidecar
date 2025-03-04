@@ -23,14 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * A class representing a response for the {@link PutCdcServiceConfigPayload}.
+ * A class representing a response for the {@link UpdateCdcServiceConfigPayload}.
  */
-public class PutCdcServiceConfigPayload
+public class UpdateCdcServiceConfigPayload
 {
     public final Map<String, String> config;
 
     @JsonCreator
-    public PutCdcServiceConfigPayload(@JsonProperty("config") Map<String, String> config)
+    public UpdateCdcServiceConfigPayload(@JsonProperty("config") Map<String, String> config)
     {
         this.config = config;
     }
@@ -46,7 +46,7 @@ public class PutCdcServiceConfigPayload
     {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        PutCdcServiceConfigPayload that = (PutCdcServiceConfigPayload) o;
+        UpdateCdcServiceConfigPayload that = (UpdateCdcServiceConfigPayload) o;
         return Objects.equals(config, that.config);
     }
 

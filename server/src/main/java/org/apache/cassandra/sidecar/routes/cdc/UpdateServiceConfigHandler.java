@@ -28,6 +28,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.db.ConfigAccessor;
 import org.apache.cassandra.sidecar.db.ConfigAccessorFactory;
 import org.apache.cassandra.sidecar.routes.AccessProtected;

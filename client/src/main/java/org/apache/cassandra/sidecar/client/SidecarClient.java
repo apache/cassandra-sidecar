@@ -37,25 +37,25 @@ import org.apache.cassandra.sidecar.client.retry.RunnableOnStatusCodeRetryPolicy
 import org.apache.cassandra.sidecar.client.selection.InstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.client.selection.RandomInstanceSelectionPolicy;
 import org.apache.cassandra.sidecar.common.request.AbortRestoreJobRequest;
+import org.apache.cassandra.sidecar.common.request.AllServicesConfigRequest;
 import org.apache.cassandra.sidecar.common.request.CreateRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.CreateRestoreJobSliceRequest;
 import org.apache.cassandra.sidecar.common.request.DeleteServiceConfigRequest;
-import org.apache.cassandra.sidecar.common.request.GetServicesConfigRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.ListCdcSegmentsRequest;
-import org.apache.cassandra.sidecar.common.request.PutServiceConfigRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobProgressRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobSummaryRequest;
-import org.apache.cassandra.sidecar.common.request.ServiceConfig;
+import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.common.request.StreamCdcSegmentRequest;
 import org.apache.cassandra.sidecar.common.request.UpdateRestoreJobRequest;
+import org.apache.cassandra.sidecar.common.request.UpdateServiceConfigRequest;
 import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
+import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.Digest;
-import org.apache.cassandra.sidecar.common.request.data.GetServicesConfigPayload;
-import org.apache.cassandra.sidecar.common.request.data.PutCdcServiceConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.RestoreJobProgressRequestParams;
+import org.apache.cassandra.sidecar.common.request.data.UpdateCdcServiceConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
@@ -558,36 +558,36 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      *
      * @return List of services and their corresponding configs
      */
-    public CompletableFuture<GetServicesConfigPayload> getServicesConfig()
+    public CompletableFuture<AllServicesConfigPayload> allServicesConfig()
     {
         return executor.executeRequestAsync(requestBuilder()
-                       .request(new GetServicesConfigRequest())
+                       .request(new AllServicesConfigRequest())
                        .build());
     }
 
     /**
      * Update config for a given service in "configs" table in internal sidecar keyspace
      *
-     * @param serviceConfig service for which the configs are being updated
+     * @param service service for which the configs are being updated
      * @param config the updated config
      * @return updated config
      */
-    public CompletableFuture<PutCdcServiceConfigPayload> putCdcServiceConfig(ServiceConfig serviceConfig, Map<String, String> config)
+    public CompletableFuture<UpdateCdcServiceConfigPayload> updateCdcServiceConfig(Service service, Map<String, String> config)
     {
         return executor.executeRequestAsync(requestBuilder()
-                       .request(new PutServiceConfigRequest(serviceConfig, new PutCdcServiceConfigPayload(config)))
+                       .request(new UpdateServiceConfigRequest(service, new UpdateCdcServiceConfigPayload(config)))
                        .build());
     }
 
     /**
      * Deletes configs for a given service in "configs" table in internal sidecar keyspace
      *
-     * @param serviceConfig service for which the configs are being deleted
+     * @param service service for which the configs are being deleted
      */
-    public CompletableFuture<Void> deleteCdcServiceConfig(ServiceConfig serviceConfig)
+    public CompletableFuture<Void> deleteCdcServiceConfig(Service service)
     {
         return executor.executeRequestAsync(requestBuilder()
-                       .request(new DeleteServiceConfigRequest(serviceConfig))
+                       .request(new DeleteServiceConfigRequest(service))
                        .build());
     }
 

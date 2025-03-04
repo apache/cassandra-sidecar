@@ -38,7 +38,7 @@ public interface ConfigAccessor
      * @param config configs to be persisted
      * @return returns updated configs
      */
-    ServiceConfig storeConfig(final Map<String, String> config);
+    ServiceConfig storeConfig(Map<String, String> config);
 
     /**
      * Stores configs of the current service if they are not already present
@@ -46,16 +46,10 @@ public interface ConfigAccessor
      * @param config new configs
      * @return updated configs
      */
-    Optional<ServiceConfig> storeConfigIfNotExists(final Map<String, String> config);
+    Optional<ServiceConfig> storeConfigIfNotExists(Map<String, String> config);
 
     /**
-     * Deletes configs for the given service
+     * Deletes all configurations for the given service
      */
     void deleteConfig();
-
-    /**
-     * Checks if the schema for configs table is initialized
-     * @return
-     */
-    boolean isSchemaInitialized();
 }

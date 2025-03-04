@@ -29,8 +29,8 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
-import org.apache.cassandra.sidecar.common.request.data.GetServicesConfigPayload;
-import org.apache.cassandra.sidecar.common.request.data.PutCdcServiceConfigPayload;
+import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload;
+import org.apache.cassandra.sidecar.common.request.data.UpdateCdcServiceConfigPayload;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 
@@ -50,9 +50,9 @@ public class CdcConfigApisTest extends IntegrationTestBase
         String configRoute = "/api/v1/services/cdc/config";
 
         // Create new configs
-        PutCdcServiceConfigPayload payload = new PutCdcServiceConfigPayload(Map.of("k1", "v1"));
-        PutCdcServiceConfigPayload newConfigResponse = client.put(server.actualPort(), "127.0.0.1", configRoute)
-                .as(BodyCodec.json(PutCdcServiceConfigPayload.class))
+        UpdateCdcServiceConfigPayload payload = new UpdateCdcServiceConfigPayload(Map.of("k1", "v1"));
+        UpdateCdcServiceConfigPayload newConfigResponse = client.put(server.actualPort(), "127.0.0.1", configRoute)
+                .as(BodyCodec.json(UpdateCdcServiceConfigPayload.class))
                 .sendJson(JsonObject.mapFrom(payload))
                 .toCompletionStage()
                 .toCompletableFuture()
@@ -61,9 +61,9 @@ public class CdcConfigApisTest extends IntegrationTestBase
         assertEquals(payload, newConfigResponse);
 
         // update configs
-        PutCdcServiceConfigPayload updatedPayload = new PutCdcServiceConfigPayload(Map.of("k3", "v3"));
-        PutCdcServiceConfigPayload updatedConfigResponse = client.put(server.actualPort(), "127.0.0.1", configRoute)
-                .as(BodyCodec.json(PutCdcServiceConfigPayload.class))
+        UpdateCdcServiceConfigPayload updatedPayload = new UpdateCdcServiceConfigPayload(Map.of("k3", "v3"));
+        UpdateCdcServiceConfigPayload updatedConfigResponse = client.put(server.actualPort(), "127.0.0.1", configRoute)
+                .as(BodyCodec.json(UpdateCdcServiceConfigPayload.class))
                 .sendJson(JsonObject.mapFrom(updatedPayload))
                 .toCompletionStage()
                 .toCompletableFuture()
@@ -71,18 +71,18 @@ public class CdcConfigApisTest extends IntegrationTestBase
         assertEquals(updatedPayload, updatedConfigResponse);
 
         // GetConfigs should give updated configs
-        String getConfigsRoute = ApiEndpointsV1.GET_SERVICES_CONFIG_ROUTE;
-        GetServicesConfigPayload getServicesResponse = client.get(server.actualPort(), "127.0.0.1", getConfigsRoute)
-                .as(BodyCodec.json(GetServicesConfigPayload.class))
+        String getConfigsRoute = ApiEndpointsV1.SERVICES_CONFIG_ROUTE;
+        AllServicesConfigPayload getServicesResponse = client.get(server.actualPort(), "127.0.0.1", getConfigsRoute)
+                .as(BodyCodec.json(AllServicesConfigPayload.class))
                 .sendJson(JsonObject.mapFrom(updatedPayload))
                 .toCompletionStage()
                 .toCompletableFuture()
                 .get()
                 .body();
-        List<GetServicesConfigPayload.Service> services = List.of(
-                new GetServicesConfigPayload.Service("kafka", Map.of()),
-                new GetServicesConfigPayload.Service("cdc", updatedPayload.config()));
-        GetServicesConfigPayload expectedConfigPayload = new GetServicesConfigPayload(services);
+        List<AllServicesConfigPayload.Service> services = List.of(
+                new AllServicesConfigPayload.Service("kafka", Map.of()),
+                new AllServicesConfigPayload.Service("cdc", updatedPayload.config()));
+        AllServicesConfigPayload expectedConfigPayload = new AllServicesConfigPayload(services);
         assertEquals(expectedConfigPayload, getServicesResponse);
 
         // delete all CDC configs
@@ -95,10 +95,10 @@ public class CdcConfigApisTest extends IntegrationTestBase
 
         // Get configs should have no configs
         client.get(server.actualPort(), "127.0.0.1", getConfigsRoute)
-                .as(BodyCodec.json(GetServicesConfigPayload.class))
+                .as(BodyCodec.json(AllServicesConfigPayload.class))
                 .sendJson(JsonObject.mapFrom(updatedPayload))
                 .onSuccess(resp -> {
-                    GetServicesConfigPayload response = resp.body();
+                    AllServicesConfigPayload response = resp.body();
                     response.services()
                             .forEach(service -> {
                                 if (!service.config.isEmpty())
@@ -119,7 +119,7 @@ public class CdcConfigApisTest extends IntegrationTestBase
 
         // Update with Invalid service
         Map<String, String> configs = Map.of("k1", "v1");
-        PutCdcServiceConfigPayload payload = new PutCdcServiceConfigPayload(configs);
+        UpdateCdcServiceConfigPayload payload = new UpdateCdcServiceConfigPayload(configs);
         testWithClient(context, client -> {
             client.put(server.actualPort(), "127.0.0.1", configRoute)
                     .sendJson(JsonObject.mapFrom(payload), context.succeeding(response -> {

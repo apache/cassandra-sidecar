@@ -29,10 +29,10 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
+import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
-import org.apache.cassandra.sidecar.routes.cdc.Service;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;

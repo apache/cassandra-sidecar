@@ -25,14 +25,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * A class representing a response for the GetServicesConfig api "/api/v1/services" which contains
- * configs for all the services in the "configs" table.
+ * configurations for all the services in the "configs" table.
  */
-public class GetServicesConfigPayload
+public class AllServicesConfigPayload
 {
     public final List<Service> services;
 
     @JsonCreator
-    public GetServicesConfigPayload(@JsonProperty("services") List<Service> services)
+    public AllServicesConfigPayload(@JsonProperty("services") List<Service> services)
     {
         this.services = services;
     }
@@ -48,7 +48,7 @@ public class GetServicesConfigPayload
     {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        GetServicesConfigPayload that = (GetServicesConfigPayload) o;
+        AllServicesConfigPayload that = (AllServicesConfigPayload) o;
         return Objects.equals(services, that.services);
     }
 

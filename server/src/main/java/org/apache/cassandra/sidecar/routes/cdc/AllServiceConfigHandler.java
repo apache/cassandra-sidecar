@@ -28,7 +28,8 @@ import io.vertx.core.Handler;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.common.request.data.GetServicesConfigPayload;
+import org.apache.cassandra.sidecar.common.request.Service;
+import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload;
 import org.apache.cassandra.sidecar.db.ConfigAccessor;
 import org.apache.cassandra.sidecar.db.ConfigAccessorFactory;
 import org.apache.cassandra.sidecar.routes.AccessProtected;
@@ -37,12 +38,12 @@ import org.apache.cassandra.sidecar.routes.AccessProtected;
  * Provides REST endpoint for getting all the configs in "configs" table in sidecar internal keyspace.
  */
 @Singleton
-public class GetServiceConfigHandler implements Handler<RoutingContext>, AccessProtected
+public class AllServiceConfigHandler implements Handler<RoutingContext>, AccessProtected
 {
     private final ConfigAccessorFactory configAccessorFactory;
 
     @Inject
-    public GetServiceConfigHandler(final ConfigAccessorFactory configAccessorFactory)
+    public AllServiceConfigHandler(final ConfigAccessorFactory configAccessorFactory)
     {
         this.configAccessorFactory = configAccessorFactory;
     }
@@ -56,17 +57,17 @@ public class GetServiceConfigHandler implements Handler<RoutingContext>, AccessP
     @Override
     public void handle(RoutingContext context)
     {
-        List<GetServicesConfigPayload.Service> services = new ArrayList<>();
+        List<AllServicesConfigPayload.Service> services = new ArrayList<>();
         for (Service service : Service.values())
         {
             ConfigAccessor accessor = configAccessorFactory.configAccessor(service);
             Map<String, String> config = accessor.getConfig().getConfigs();
 
-            GetServicesConfigPayload.Service serviceConfig = new GetServicesConfigPayload.Service(service.serviceName, config);
+            AllServicesConfigPayload.Service serviceConfig = new AllServicesConfigPayload.Service(service.serviceName, config);
 
             services.add(serviceConfig);
         }
-        GetServicesConfigPayload payload = new GetServicesConfigPayload(services);
+        AllServicesConfigPayload payload = new AllServicesConfigPayload(services);
         context.json(payload);
     }
 }

@@ -17,24 +17,25 @@
  */
 package org.apache.cassandra.sidecar.common.request;
 
+import java.util.Locale;
+
 /**
  * "configs" table inside internal sidecar keyspace stores configs for Kafka and CDC. ServiceConfig identifies
  * the service of the configs.
  */
-public enum ServiceConfig
+public enum Service
 {
-    CDC("cdc"),
-    KAFKA("kafka");
+    KAFKA,
+    CDC;
+    public final String serviceName;
 
-    private final String serviceConfig;
-
-    ServiceConfig(String serviceConfig)
+    Service()
     {
-        this.serviceConfig = serviceConfig;
+        this.serviceName = this.toString().toLowerCase(Locale.ENGLISH);
     }
 
-    public String getServiceConfig()
+    public static Service withName(String serviceName)
     {
-        return serviceConfig;
+        return valueOf(serviceName.toUpperCase(Locale.ENGLISH));
     }
 }

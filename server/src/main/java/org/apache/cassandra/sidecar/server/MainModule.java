@@ -141,8 +141,8 @@ import org.apache.cassandra.sidecar.routes.TableStatsHandler;
 import org.apache.cassandra.sidecar.routes.TimeSkewHandler;
 import org.apache.cassandra.sidecar.routes.TokenRangeReplicaMapHandler;
 import org.apache.cassandra.sidecar.routes.cassandra.NodeSettingsHandler;
+import org.apache.cassandra.sidecar.routes.cdc.AllServiceConfigHandler;
 import org.apache.cassandra.sidecar.routes.cdc.DeleteServiceConfigHandler;
-import org.apache.cassandra.sidecar.routes.cdc.GetServiceConfigHandler;
 import org.apache.cassandra.sidecar.routes.cdc.ListCdcDirHandler;
 import org.apache.cassandra.sidecar.routes.cdc.StreamCdcSegmentHandler;
 import org.apache.cassandra.sidecar.routes.cdc.UpdateServiceConfigHandler;
@@ -357,7 +357,7 @@ public class MainModule extends AbstractModule
                               RestoreJobProgressHandler restoreJobProgressHandler,
                               UpdateServiceConfigHandler updateServiceConfigHandler,
                               DeleteServiceConfigHandler deleteServiceConfigHandler,
-                              GetServiceConfigHandler getServiceConfigHandler,
+                              AllServiceConfigHandler getServiceConfigHandler,
                               ConnectedClientStatsHandler connectedClientStatsHandler,
                               OperationalJobHandler operationalJobHandler,
                               ListOperationalJobsHandler listOperationalJobsHandler,
@@ -626,7 +626,7 @@ public class MainModule extends AbstractModule
                                     .build();
 
         protectedRouteBuilderFactory.get().router(router).method(HttpMethod.GET)
-                                    .endpoint(ApiEndpointsV1.GET_SERVICES_CONFIG_ROUTE)
+                                    .endpoint(ApiEndpointsV1.SERVICES_CONFIG_ROUTE)
                                     .handler(getServiceConfigHandler)
                                     .build();
 

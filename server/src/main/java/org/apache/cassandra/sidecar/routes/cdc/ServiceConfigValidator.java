@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonObject;
+import org.apache.cassandra.sidecar.common.request.Service;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -45,7 +46,7 @@ public class ServiceConfigValidator
         {
             Set<String> services = Stream.of(Service.values()).map(v -> v.serviceName).collect(Collectors.toSet());
             String supportedServices = String.join(", ", services);
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid service passed. Supported services: "
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid service provided. Supported services: "
                     + supportedServices);
         }
     }
@@ -56,9 +57,9 @@ public class ServiceConfigValidator
         {
             payload.getJsonObject(ConfigPayloadParams.CONFIG).getMap();
         }
-        catch (final ClassCastException ex)
+        catch (ClassCastException ex)
         {
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid config passed");
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid configuration provided");
         }
     }
 
