@@ -158,6 +158,7 @@ access_control:
       parameters:
         site: https://authorization.com
         client_id: recognized_client_id
+        config_discover_interval: 1m
   authorizer:
     - class_name: org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider
   admin_identities:

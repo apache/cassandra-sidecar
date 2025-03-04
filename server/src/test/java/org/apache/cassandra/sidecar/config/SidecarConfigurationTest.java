@@ -402,7 +402,8 @@ class SidecarConfigurationTest
         assertThat(authenticators.get(1).className()).isEqualTo("org.apache.cassandra.sidecar.acl.authentication.JwtAuthenticationHandlerFactory");
         assertThat(authenticators.get(1).namedParameters())
         .contains(entry("site", "https://authorization.com"),
-                  entry("client_id", "recognized_client_id"));
+                  entry("client_id", "recognized_client_id"),
+                  entry("config_discover_interval", "1m"));
 
         ParameterizedClassConfiguration authorizer = accessControlConfiguration.authorizerConfiguration();
         assertThat(authorizer.className()).isEqualTo("org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider");

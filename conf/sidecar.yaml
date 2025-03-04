@@ -207,7 +207,7 @@ access_control:
         # Client Id is a unique identifier assigned by OpenID provider. It is used to identity applications/users
         # trying to connect.
         client_id: recognized_client_id
-        config_discover_interval:
+        config_discover_interval: 1m
   authorizer:
     # Authorization backend, implementing io.vertx.ext.auth.authorization.AuthorizationProvider; used to
     # provide permissions a user holds.
