@@ -15,28 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.cassandra.sidecar.common.request;
 
 import io.netty.handler.codec.http.HttpMethod;
-import org.apache.cassandra.sidecar.common.request.data.GetServicesConfigPayload;
 
 /**
- * Represents a request for getting configurations for services from "configs" table inside
+ * Represents a request for deleting configurations for a service from "configs" table inside
  * sidecar internal keyspace.
  */
-public class GetServiceConfigRequest extends JsonRequest<GetServicesConfigPayload>
+public class DeleteServiceConfigRequest extends Request
 {
     /**
      * Constructs a Sidecar request with the given {@code requestURI}. Defaults to {@code ssl} enabled.
      */
-    public GetServiceConfigRequest()
+    public DeleteServiceConfigRequest(ServiceConfig serviceConfig)
     {
-        super("/api/v1/services");
+        super(String.format("/api/v1/services/%s/config", serviceConfig.getServiceConfig()));
     }
 
     @Override
     public HttpMethod method()
     {
-        return HttpMethod.GET;
+        return HttpMethod.DELETE;
     }
 }

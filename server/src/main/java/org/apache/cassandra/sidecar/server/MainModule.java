@@ -103,6 +103,7 @@ import org.apache.cassandra.sidecar.datahub.EmitterFactory;
 import org.apache.cassandra.sidecar.datahub.IdentifiersProvider;
 import org.apache.cassandra.sidecar.datahub.SchemaReportingTask;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
@@ -826,6 +827,7 @@ public class MainModule extends AbstractModule
                                        SidecarRolePermissionsSchema sidecarRolePermissionsSchema,
                                        SystemAuthSchema systemAuthSchema,
                                        SidecarLeaseSchema sidecarLeaseSchema,
+                                       ConfigsSchema configsSchema,
                                        SidecarMetrics metrics,
                                        ClusterLease clusterLease)
     {
@@ -836,6 +838,7 @@ public class MainModule extends AbstractModule
         sidecarInternalKeyspace.registerTableSchema(sidecarRolePermissionsSchema);
         sidecarInternalKeyspace.registerTableSchema(systemAuthSchema);
         sidecarInternalKeyspace.registerTableSchema(sidecarLeaseSchema);
+        sidecarInternalKeyspace.registerTableSchema(configsSchema);
         SchemaMetrics schemaMetrics = metrics.server().schema();
         return new SidecarSchema(vertx, periodicTaskExecutor, configuration,
                                  sidecarInternalKeyspace, cqlSessionProvider, schemaMetrics, clusterLease);

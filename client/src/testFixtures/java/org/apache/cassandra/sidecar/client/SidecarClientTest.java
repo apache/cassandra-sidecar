@@ -660,6 +660,7 @@ abstract class SidecarClientTest
               .get(30, TimeUnit.SECONDS);
 
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
+        assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
         assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE
                                                 .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
@@ -1685,7 +1686,7 @@ abstract class SidecarClientTest
         ObjectMapper mapper = new ObjectMapper();
         response.setBody(mapper.writeValueAsString(expectedResponse));
         enqueue(response);
-        assertThat(client.getServiceConfig().get()).isEqualTo(expectedResponse);
+        assertThat(client.getServicesConfig().get()).isEqualTo(expectedResponse);
     }
 
     @Test
@@ -1701,6 +1702,15 @@ abstract class SidecarClientTest
         response.setBody(mapper.writeValueAsString(putResponse));
         enqueue(response);
         assertThat(client.putCdcServiceConfig(ServiceConfig.CDC, payload).get()).isEqualTo(putResponse);
+    }
+
+    @Test
+    public void testDeleteCdcServiceConfigTests() throws ExecutionException, InterruptedException
+    {
+        MockResponse response = new MockResponse();
+        response.setResponseCode(200);
+        enqueue(response);
+        client.deleteCdcServiceConfig(ServiceConfig.CDC).get();
     }
 
     @Test

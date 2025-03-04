@@ -39,7 +39,8 @@ import org.apache.cassandra.sidecar.client.selection.RandomInstanceSelectionPoli
 import org.apache.cassandra.sidecar.common.request.AbortRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.CreateRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.CreateRestoreJobSliceRequest;
-import org.apache.cassandra.sidecar.common.request.GetServiceConfigRequest;
+import org.apache.cassandra.sidecar.common.request.DeleteServiceConfigRequest;
+import org.apache.cassandra.sidecar.common.request.GetServicesConfigRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.ListCdcSegmentsRequest;
 import org.apache.cassandra.sidecar.common.request.PutServiceConfigRequest;
@@ -557,10 +558,10 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      *
      * @return List of services and their corresponding configs
      */
-    public CompletableFuture<GetServicesConfigPayload> getServiceConfig()
+    public CompletableFuture<GetServicesConfigPayload> getServicesConfig()
     {
         return executor.executeRequestAsync(requestBuilder()
-                       .request(new GetServiceConfigRequest())
+                       .request(new GetServicesConfigRequest())
                        .build());
     }
 
@@ -575,6 +576,18 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     {
         return executor.executeRequestAsync(requestBuilder()
                        .request(new PutServiceConfigRequest(serviceConfig, new PutCdcServiceConfigPayload(config)))
+                       .build());
+    }
+
+    /**
+     * Deletes configs for a given service in "configs" table in internal sidecar keyspace
+     *
+     * @param serviceConfig service for which the configs are being deleted
+     */
+    public CompletableFuture<Void> deleteCdcServiceConfig(ServiceConfig serviceConfig)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                       .request(new DeleteServiceConfigRequest(serviceConfig))
                        .build());
     }
 

@@ -124,7 +124,7 @@ public final class ApiEndpointsV1
     public static final String SERVICES_PATH = "/services";
     public static final String SERVICE_PARAM = ":service";
     public static final String CONFIG = "/config";
-    public static final String SERVICE_CONFIG_ROUTE = API_V1 + SERVICES_PATH + SERVICE_PARAM + CONFIG;
+    public static final String SERVICE_CONFIG_ROUTE = API_V1 + SERVICES_PATH + "/" + SERVICE_PARAM + CONFIG;
     public static final String GET_SERVICES_CONFIG_ROUTE = API_V1 + SERVICES_PATH;
 
 
