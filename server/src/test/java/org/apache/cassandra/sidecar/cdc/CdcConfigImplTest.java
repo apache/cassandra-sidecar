@@ -120,12 +120,12 @@ class CdcConfigImplTest
     }
 
     @Test
-    void testConfigsWhenConfigsAreNotEmpty() throws InterruptedException
+    void testConfigsWhenConfigsAreNotEmpty()
     {
         CdcConfigAccessor cdcConfigAccessor = mockCdcConfigAccessor();
         KafkaConfigAccessor kafkaConfigAccessor = mockKafkaConfigAccessor();
         when(cdcConfigAccessor.getConfig().getConfigs())
-                .thenReturn(Map.of("dc", "DC1", "env", "if", "log_only", "false", "topic", "topic1"));
+                .thenReturn(Map.of("datacenter", "DC1", "env", "if", "log_only", "false", "topic", "topic1"));
         when(kafkaConfigAccessor.getConfig().getConfigs())
                 .thenReturn(Map.of("k1", "v1"));
 

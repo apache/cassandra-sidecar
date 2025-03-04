@@ -129,7 +129,7 @@ public class SidecarSchemaTest
                 Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
             }
 
-            assertThat(interceptedExecStmts.size()).isEqualTo(6);
+            assertThat(interceptedExecStmts.size()).isEqualTo(7);
             assertThat(interceptedExecStmts.get(0)).as("Create keyspace should be executed the first")
                                                    .contains("CREATE KEYSPACE IF NOT EXISTS sidecar_internal");
             assertThat(interceptedExecStmts).as("Create table should be executed for job table")
@@ -191,7 +191,15 @@ public class SidecarSchemaTest
 
             "SELECT * FROM system_auth.roles",
 
-            "SELECT * FROM system_auth.role_permissions"
+            "SELECT * FROM system_auth.role_permissions",
+
+            "SELECT config from sidecar_internal.configs WHERE service=?",
+
+            "INSERT INTO sidecar_internal.configs (service, config) VALUES (?, ?)",
+
+            "INSERT INTO sidecar_internal.configs (service, config) VALUES (?, ?) IF NOT EXISTS",
+
+            "DELETE FROM sidecar_internal.configs WHERE service=?"
             );
 
             assertThat(interceptedPrepStmts).as("Intercepted statements match expected statements")

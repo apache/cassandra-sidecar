@@ -171,7 +171,7 @@ public class CdcConfigImpl implements CdcConfig
     @Override
     public String datacenter()
     {
-        return cdcConfigMappings.get(ConfigKeys.DATA_CENTER.lowcaseName);
+        return cdcConfigMappings.get(ConfigKeys.DATACENTER.lowcaseName);
     }
 
     @Override
@@ -338,7 +338,7 @@ public class CdcConfigImpl implements CdcConfig
 
     enum ConfigKeys
     {
-        DATA_CENTER,
+        DATACENTER,
         LOG_ONLY,
         PERSIST_STATE,
         ENV,
