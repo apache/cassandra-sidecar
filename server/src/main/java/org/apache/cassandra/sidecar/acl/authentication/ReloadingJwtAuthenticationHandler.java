@@ -152,7 +152,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     private class OAuth2AuthHandlerGenerateTask implements PeriodicTask
     {
         private final String taskName
-        = "OAuth2AuthHandlerGenerateTask_" + jwtParameterExtractor.site() + "_" + jwtParameterExtractor.clientId();
+        = String.format("OAuth2AuthHandlerGenerateTask_%s_%s", jwtParameterExtractor.site(), jwtParameterExtractor.clientId());
 
         @Override
         public DurationSpec delay()
