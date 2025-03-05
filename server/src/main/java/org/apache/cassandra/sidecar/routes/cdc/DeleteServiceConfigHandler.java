@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.db.ConfigAccessor;
 import org.apache.cassandra.sidecar.db.ConfigAccessorFactory;
 import org.apache.cassandra.sidecar.routes.AccessProtected;
+import static org.apache.cassandra.sidecar.server.MainModule.OK_STATUS;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -67,7 +68,7 @@ public class DeleteServiceConfigHandler implements Handler<RoutingContext>, Acce
             throw wrapHttpException(HttpResponseStatus.NOT_FOUND, "There is no configuration present for this service.");
         }
 
-        context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
+        context.json(OK_STATUS);
     }
 
     @Override

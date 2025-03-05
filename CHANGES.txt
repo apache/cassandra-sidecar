@@ -1,5 +1,6 @@
 0.1.0
 -----
+ * Config APIs for storing CDC/Kafka configs for CDC feature (CASSSIDECAR-211)
  * Add sidecar endpoint to retrieve table stats (CASSSIDECAR-215)
  * Adapt to cluster topology change for restore jobs (CASSSIDECAR-185)
  * Fix PeriodicTaskExecutor double execution due to race from reschedule (CASSSIDECAR-210)

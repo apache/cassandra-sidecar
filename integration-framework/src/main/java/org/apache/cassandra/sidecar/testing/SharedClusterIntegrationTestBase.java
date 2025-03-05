@@ -90,6 +90,7 @@ import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
+import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.server.Server;
@@ -636,6 +637,13 @@ public abstract class SharedClusterIntegrationTestBase
         public DnsResolver dnsResolver()
         {
             return dnsResolver;
+        }
+
+        @Provides
+        @Singleton
+        public ClusterLease clusterLease()
+        {
+            return new ClusterLease(ClusterLease.Ownership.CLAIMED);
         }
 
         private List<InetSocketAddress> buildContactPoints()
