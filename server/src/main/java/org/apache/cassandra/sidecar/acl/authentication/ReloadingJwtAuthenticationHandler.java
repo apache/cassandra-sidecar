@@ -46,6 +46,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLES_ATTRIBUTE_NAME;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLE_SPLITTER;
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
  * {@link ReloadingJwtAuthenticationHandler} validates JWT token of a user. It handles periodically calling
@@ -82,7 +83,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         OAuth2AuthHandlerImpl oAuth2AuthHandler = delegateHandler.get();
         if (oAuth2AuthHandler == null)
         {
-            handler.handle(Future.failedFuture(new HttpException(SERVICE_UNAVAILABLE.code(),
+            handler.handle(Future.failedFuture(wrapHttpException(SERVICE_UNAVAILABLE,
                                                                  "JWT authentication handler unavailable")));
             return;
         }
@@ -90,7 +91,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         oAuth2AuthHandler.authenticate(context, authN -> {
             if (authN.failed())
             {
-                handler.handle(Future.failedFuture(new HttpException(UNAUTHORIZED.code(), authN.cause())));
+                handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, authN.cause())));
                 return;
             }
 
@@ -101,7 +102,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
 
             if (decodedToken == null)
             {
-                handler.handle(Future.failedFuture(new HttpException(UNAUTHORIZED.code(),
+                handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED,
                                                                      "Could not process decoded JWT token")));
                 return;
             }
@@ -150,11 +151,22 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
      */
     private class OAuth2AuthHandlerGenerateTask implements PeriodicTask
     {
+        private final String taskName
+        = "OAuth2AuthHandlerGenerateTask_" + jwtParameterExtractor.site() + "_" + jwtParameterExtractor.clientId();
+
+        @Override
         public DurationSpec delay()
         {
             return jwtParameterExtractor.configDiscoverInterval();
         }
 
+        @Override
+        public String name()
+        {
+            return taskName;
+        }
+
+        @Override
         public void execute(Promise<Void> promise)
         {
             OAuth2Options options = new OAuth2Options().setSite(jwtParameterExtractor.site())

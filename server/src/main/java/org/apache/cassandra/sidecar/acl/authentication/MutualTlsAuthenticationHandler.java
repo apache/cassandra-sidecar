@@ -29,7 +29,6 @@ import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerImpl;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
@@ -37,6 +36,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLES_ATTRIBUTE_NAME;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLE_SPLITTER;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
  * Handler for verifying user certificates for Mutual TLS authentication. {@link MutualTlsAuthenticationHandler} can be
@@ -66,23 +66,16 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
 
         authProvider.authenticate(certificateCredentials)
                     .recover(cause -> { // converts any exception to unauthorized http exception
-                        throw new HttpException(HttpResponseStatus.UNAUTHORIZED.code(), cause);
+                        throw wrapHttpException(UNAUTHORIZED, cause);
                     })
                     .andThen(authN-> {
                         if (authN.failed())
                         {
-                            handler.handle(Future.failedFuture(new HttpException(UNAUTHORIZED.code(), authN.cause())));
+                            handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, authN.cause())));
                             return;
                         }
 
                         List<String> identities = extractIdentities(authN.result());
-
-                        if (identities.isEmpty())
-                        {
-                            handler.handle(Future.failedFuture("Missing client identities"));
-                            return;
-                        }
-
                         List<String> roles = new ArrayList<>();
                         for (String identity : identities)
                         {

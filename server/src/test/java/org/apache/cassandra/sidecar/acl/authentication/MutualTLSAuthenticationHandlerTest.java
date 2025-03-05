@@ -203,6 +203,21 @@ class MutualTLSAuthenticationHandlerTest
               }));
     }
 
+    @Test
+    void testCertificateWithoutIdentity(VertxTestContext testContext) throws Exception
+    {
+        Path clientKeystorePath = generateClientCertificate(null, ca);
+        WebClient client = client(clientKeystorePath, truststorePath);
+
+        client.get(server.actualPort(), "localhost", "/api/v1/__health")
+              .send(testContext.succeeding(response -> {
+                  testContext.verify(() -> {
+                      assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.UNAUTHORIZED.code());
+                      testContext.completeNow();
+                  });
+              }));
+    }
+
     TestMTLSModule testModule() throws Exception
     {
         ca = new CertificateBuilder()
@@ -254,8 +269,13 @@ class MutualTLSAuthenticationHandlerTest
         = new CertificateBuilder().subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
                                   .alias("spiffecert")
                                   .addSanDnsName("localhost")
-                                  .addSanIpAddress("127.0.0.1")
-                                  .addSanUriName(identity);
+                                  .addSanIpAddress("127.0.0.1");
+
+        if (identity != null)
+        {
+            builder.addSanUriName(identity);
+        }
+
         if (expired)
         {
             builder.notAfter(Instant.now().minus(1, ChronoUnit.DAYS));

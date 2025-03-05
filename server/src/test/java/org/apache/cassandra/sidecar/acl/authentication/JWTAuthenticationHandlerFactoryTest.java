@@ -34,7 +34,7 @@ import static org.mockito.Mockito.mock;
  */
 class JWTAuthenticationHandlerFactoryTest
 {
-    Vertx vertx = Vertx.vertx();
+    Vertx mockVertx = mock(Vertx.class);
     AccessControlConfiguration mockConfig = mock(AccessControlConfiguration.class);
     JwtRoleProcessor mockRoleProcessor = mock(JwtRoleProcessor.class);
 
@@ -43,15 +43,15 @@ class JWTAuthenticationHandlerFactoryTest
     {
         PeriodicTaskExecutor mockTaskExecutor = mock(PeriodicTaskExecutor.class);
         JwtAuthenticationHandlerFactory factory = new JwtAuthenticationHandlerFactory(mockRoleProcessor, mockTaskExecutor);
-        assertThatThrownBy(() -> factory.create(vertx, mockConfig, null))
+        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("JWT parameters can not be null");
 
-        assertThatThrownBy(() -> factory.create(vertx, mockConfig, Map.of()))
+        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, Map.of()))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Missing site JWT parameter");
 
-        assertThatThrownBy(() -> factory.create(vertx, mockConfig, Map.of("site", "x.com")))
+        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, Map.of("site", "www.apache.org")))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Missing client_id JWT parameter");
     }

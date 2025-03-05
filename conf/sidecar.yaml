@@ -173,8 +173,8 @@ schema_reporting:                            # Schema Reporting configuration
 access_control:
   # When enabled requests need to be authenticated and authorized before servicing.
   enabled: false
-  # Supports setting multiple authenticators, request is authenticated if it is authenticated by any of the
-  # configured authenticators
+  # Supports setting multiple authenticators, request is authenticated when the first authenticator allows the request
+  # to go through.
   # Out of the box, Cassandra Sidecar provides following authenticator provider factories
   # org.apache.cassandra.sidecar.acl.authentication.{MutualTlsAuthenticationHandlerFactory, JwtAuthenticationHandlerFactory}.
   # - MutualTlsAuthenticationHandlerFactory  allows authenticating based on user certificates
@@ -222,7 +222,7 @@ access_control:
   admin_identities:
 #    - spiffe://authorized/admin/identities
   permission_cache:
-    enabled: true
+    enabled: false
     expire_after_access: 5m
     maximum_size: 1000
     warmup_retries: 5

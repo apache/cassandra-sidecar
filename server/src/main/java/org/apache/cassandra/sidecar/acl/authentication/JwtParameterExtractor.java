@@ -46,7 +46,7 @@ public class JwtParameterExtractor
     private static final String SCOPES_SUPPORTED_PARAM_KEY = "scopes_supported";
     private static final String CONFIG_DISCOVER_INTERVAL_PARAM_KEY = "config_discover_interval";
     private static final SecondBoundConfiguration DEFAULT_CONFIG_DISCOVER_INTERVAL
-    = SecondBoundConfiguration.parse("1m");
+    = SecondBoundConfiguration.parse("1h");
 
     private final String site;
     private final String clientId;
@@ -62,6 +62,17 @@ public class JwtParameterExtractor
         this.configDiscoverInterval = parameters.containsKey(CONFIG_DISCOVER_INTERVAL_PARAM_KEY)
                                       ? SecondBoundConfiguration.parse(parameters.get(CONFIG_DISCOVER_INTERVAL_PARAM_KEY))
                                       : DEFAULT_CONFIG_DISCOVER_INTERVAL;
+    }
+
+    /**
+     * Constructor to allow providing JWT parameters from other parameter providers
+     */
+    protected JwtParameterExtractor()
+    {
+        this.site = null;
+        this.clientId = null;
+        this.configDiscoverInterval = DEFAULT_CONFIG_DISCOVER_INTERVAL;
+        this.scopes = List.of();
     }
 
     /**
@@ -110,12 +121,15 @@ public class JwtParameterExtractor
 
     private void validateParameterPresence(Map<String, String> parameters, String paramKey)
     {
-        if (!parameters.containsKey(paramKey) || isNullOrEmpty(parameters.get(paramKey)))
+        if (isNullOrEmpty(parameters.get(paramKey)))
         {
             throw new IllegalArgumentException(String.format("Missing %s JWT parameter", paramKey));
         }
     }
 
+    /**
+     * We remove site suffix prior hand. This is to address a bug in Vert.x.
+     */
     private String removeSiteSuffix(Map<String, String> parameters)
     {
         String site = parameters.get(SITE_PARAM_KEY);

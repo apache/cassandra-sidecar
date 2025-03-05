@@ -35,11 +35,11 @@ class JwtParameterExtractorTest
     @Test
     void testExtractingValidParameters()
     {
-        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("site", "x.com",
+        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("site", "www.apache.org",
                                                                                     "client_id", "id",
                                                                                     "scopes_supported", "phone,email",
                                                                                     "config_discover_interval", "2m"));
-        assertThat(parameterExtractor.site()).isEqualTo("x.com");
+        assertThat(parameterExtractor.site()).isEqualTo("www.apache.org");
         assertThat(parameterExtractor.clientId()).isEqualTo("id");
         assertThat(parameterExtractor.scopes()).containsAll(Arrays.asList("email", "phone"));
         assertThat(parameterExtractor.configDiscoverInterval().toSeconds()).isEqualTo(120);
@@ -48,7 +48,7 @@ class JwtParameterExtractorTest
     @Test
     void testSiteSuffixRemoved()
     {
-        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("site", "x" + SITE_SUFFIX,
+        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("site", "www.apache.org" + SITE_SUFFIX,
                                                                                     "client_id", "id"));
         assertThat(parameterExtractor.site()).as("Site suffix should be removed").isEqualTo("x");
     }
@@ -56,11 +56,11 @@ class JwtParameterExtractorTest
     @Test
     void testCustomScopeSeparator()
     {
-        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("site", "x.com",
+        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("site", "www.apache.org",
                                                                                     "client_id", "id",
                                                                                     "scope_separator", " ",
                                                                                     "scopes_supported", "phone email"));
-        assertThat(parameterExtractor.site()).isEqualTo("x.com");
+        assertThat(parameterExtractor.site()).isEqualTo("www.apache.org");
         assertThat(parameterExtractor.clientId()).isEqualTo("id");
         assertThat(parameterExtractor.scopes()).containsAll(Arrays.asList("email", "phone"));
     }
@@ -76,7 +76,7 @@ class JwtParameterExtractorTest
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Missing site JWT parameter");
 
-        assertThatThrownBy(() -> new JwtParameterExtractor(Map.of("site", "x.com")))
+        assertThatThrownBy(() -> new JwtParameterExtractor(Map.of("site", "www.apache.org")))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Missing client_id JWT parameter");
     }

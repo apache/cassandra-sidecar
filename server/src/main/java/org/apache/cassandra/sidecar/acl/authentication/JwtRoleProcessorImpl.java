@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.acl.authentication;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
@@ -39,41 +40,30 @@ public class JwtRoleProcessorImpl implements JwtRoleProcessor
         this.identityToRoleCache = identityToRoleCache;
     }
 
+    @Override
     public List<String> processRoles(JsonObject decodedToken)
     {
-        if (!decodedToken.containsKey(SUB_KEY)
-            && !decodedToken.containsKey(IDENTITY_KEY)
-            && !decodedToken.containsKey(IDENTITIES_KEY))
+        String identity;
+        if ((identity = decodedToken.getString(IDENTITY_KEY)) != null || (identity = decodedToken.getString(SUB_KEY)) != null)
         {
-            return List.of();
+            String role = identityToRoleCache.get(identity);
+            return role != null ? List.of(role) : List.of();
         }
 
-        String role = null;
-        if (decodedToken.containsKey(SUB_KEY))
-        {
-            role = identityToRoleCache.get(decodedToken.getString(SUB_KEY));
-        }
-
-        if (decodedToken.containsKey(IDENTITY_KEY))
-        {
-            role = identityToRoleCache.get(decodedToken.getString(IDENTITY_KEY));
-        }
-
-        if (role != null)
-        {
-            return List.of(role);
-        }
-
-        List<String> identities = decodedToken.getJsonArray(IDENTITIES_KEY).getList();
+        JsonArray identityKeyArray = decodedToken.getJsonArray(IDENTITIES_KEY);
         List<String> roles = new ArrayList<>();
-        for (String identity : identities)
+        if (identityKeyArray != null)
         {
-            String roleFromIdentity = identityToRoleCache.get(identity);
-            if (roleFromIdentity != null)
+            // noinspection unchecked
+            for (String i : (List<String>) identityKeyArray.getList())
             {
-                roles.add(roleFromIdentity);
+                String roleFromIdentity = identityToRoleCache.get(i);
+                if (roleFromIdentity != null)
+                {
+                    roles.add(roleFromIdentity);
+                }
             }
         }
-        return roles;
+        return List.copyOf(roles);
     }
 }
