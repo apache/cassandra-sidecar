@@ -60,6 +60,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     AtomicReference<OAuth2AuthHandlerImpl> delegateHandler = new AtomicReference<>();
 
     private final Vertx vertx;
+    private final boolean accessControlEnabled;
     private final JwtParameters jwtParameters;
     private final JwtRoleProcessor roleProcessor;
 
@@ -71,10 +72,11 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     {
         super(NoOpAuthenticationProvider.INSTANCE);
         this.vertx = vertx;
+        this.accessControlEnabled = accessControlEnabled;
         this.jwtParameters = jwtParameters;
         this.roleProcessor = roleProcessor;
 
-        if (accessControlEnabled)
+        if (this.accessControlEnabled)
         {
             periodicTaskExecutor.schedule(new OAuth2AuthHandlerGenerateTask());
         }
@@ -172,6 +174,11 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         @Override
         public void execute(Promise<Void> promise)
         {
+            if (!accessControlEnabled)
+            {
+                return;
+            }
+
             OAuth2Options options = new OAuth2Options().setSite(jwtParameters.site())
                                                        .setClientId(jwtParameters.clientId());
 
