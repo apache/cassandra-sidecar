@@ -33,8 +33,10 @@ import io.vertx.ext.web.codec.BodyCodec;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateCdcServiceConfigPayload;
+import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
 
+import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -44,6 +46,15 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class CdcConfigIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
+    @Override
+    protected void initializeSchemaForTest()
+    {
+        QualifiedName name = new QualifiedName("sidecar_internal", "configs");
+        createTestKeyspace(name, DC1_RF1);
+        String createTableStatement = "CREATE TABLE IF NOT EXISTS %s ( service text, config map<text, text>, PRIMARY KEY (service))";
+        createTestTable(name, createTableStatement);
+    }
+
     @Override
     protected void beforeTestStart()
     {
@@ -113,9 +124,4 @@ class CdcConfigIntegrationTest extends SharedClusterSidecarIntegrationTestBase
         assertThat(response.bodyAsJsonObject().getString("message")).isEqualTo("Invalid service provided. Supported services: cdc, kafka");
     }
 
-    @Override
-    protected void initializeSchemaForTest()
-    {
-        // DO NOTHING
-    }
 }

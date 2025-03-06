@@ -354,7 +354,9 @@ public abstract class SharedClusterIntegrationTestBase
         sidecarServerInjector = Guice.createInjector(Modules.override(new MainModule()).with(testModule));
         Vertx vertx = sidecarServerInjector.getInstance(Vertx.class);
         vertx.eventBus()
-             .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> sidecarSchemaReadyLatch.countDown());
+             .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> {
+                 sidecarSchemaReadyLatch.countDown();
+             });
         Server sidecarServer = sidecarServerInjector.getInstance(Server.class);
         sidecarServer.start()
                      .onSuccess(s -> context.completeNow())
