@@ -35,7 +35,6 @@ import io.vertx.ext.auth.authentication.AuthenticationProvider;
 import io.vertx.ext.auth.oauth2.OAuth2Options;
 import io.vertx.ext.auth.oauth2.providers.OpenIDConnectAuth;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerImpl;
 import io.vertx.ext.web.handler.impl.OAuth2AuthHandlerImpl;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -112,21 +111,12 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
                 return;
             }
 
-            try
+            List<String> roles = extractCassandraRoles(decodedToken);
+            if (!roles.isEmpty())
             {
-                List<String> roles = roleProcessor.processRoles(decodedToken);
-                if (!roles.isEmpty())
-                {
-                    user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, roles);
-                }
-                handler.handle(Future.succeededFuture(user));
+                user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, roles);
             }
-            catch (Exception e)
-            {
-                LOGGER.debug("Error processing cassandra role from JWT token", e);
-                handler.handle(Future.failedFuture(new HttpException(UNAUTHORIZED.code(),
-                                                                     "Error processing cassandra role from token")));
-            }
+            handler.handle(Future.succeededFuture(user));
         });
     }
 
@@ -148,6 +138,19 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         {
             resultHandler.handle(Future.succeededFuture());
         }
+    }
+
+    private List<String> extractCassandraRoles(JsonObject decodedToken)
+    {
+        try
+        {
+            return roleProcessor.processRoles(decodedToken);
+        }
+        catch (Exception e)
+        {
+            LOGGER.debug("Error processing cassandra role from JWT token", e);
+        }
+        return List.of();
     }
 
     /**

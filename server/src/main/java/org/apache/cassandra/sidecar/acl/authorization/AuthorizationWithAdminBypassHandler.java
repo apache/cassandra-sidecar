@@ -24,10 +24,7 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.impl.AuthorizationHandlerImpl;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
-import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLES_ATTRIBUTE_NAME;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
  * Verifies user has required authorizations. Allows admin identities to bypass authorization checks.
@@ -62,11 +59,6 @@ public class AuthorizationWithAdminBypassHandler extends AuthorizationHandlerImp
         {
             ctx.next();
             return;
-        }
-
-        if (!ctx.user().attributes().containsKey(CASSANDRA_ROLES_ATTRIBUTE_NAME))
-        {
-            throw wrapHttpException(FORBIDDEN, "Missing cassandra roles, required for authorization");
         }
 
         super.handle(ctx);
