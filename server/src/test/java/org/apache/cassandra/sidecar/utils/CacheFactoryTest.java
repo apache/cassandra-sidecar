@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;

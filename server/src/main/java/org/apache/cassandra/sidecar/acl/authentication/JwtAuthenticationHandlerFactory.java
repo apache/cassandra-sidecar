@@ -53,11 +53,16 @@ public class JwtAuthenticationHandlerFactory implements AuthenticationHandlerFac
                                                 AccessControlConfiguration accessControlConfiguration,
                                                 Map<String, String> parameters) throws ConfigurationException
     {
-        JwtParameterExtractor parameterParser = new JwtParameterExtractor(parameters);
+        JwtParameters jwtParameters = parameterParser(parameters);
 
         return new ReloadingJwtAuthenticationHandler(vertx,
-                                                     parameterParser,
+                                                     jwtParameters,
                                                      roleProcessor,
                                                      periodicTaskExecutor);
+    }
+
+    protected JwtParameters parameterParser(Map<String, String> parameters)
+    {
+        return new JwtParameterExtractor(parameters);
     }
 }

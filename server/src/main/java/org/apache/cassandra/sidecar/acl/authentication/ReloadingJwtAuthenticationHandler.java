@@ -61,17 +61,17 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     AtomicReference<OAuth2AuthHandlerImpl> delegateHandler = new AtomicReference<>();
 
     private final Vertx vertx;
-    private final JwtParameterExtractor jwtParameterExtractor;
+    private final JwtParameters jwtParameters;
     private final JwtRoleProcessor roleProcessor;
 
     public ReloadingJwtAuthenticationHandler(Vertx vertx,
-                                             JwtParameterExtractor jwtParameterExtractor,
+                                             JwtParameters jwtParameters,
                                              JwtRoleProcessor roleProcessor,
                                              PeriodicTaskExecutor periodicTaskExecutor)
     {
         super(NoOpAuthenticationProvider.INSTANCE);
         this.vertx = vertx;
-        this.jwtParameterExtractor = jwtParameterExtractor;
+        this.jwtParameters = jwtParameters;
         this.roleProcessor = roleProcessor;
 
         periodicTaskExecutor.schedule(new OAuth2AuthHandlerGenerateTask());
@@ -152,12 +152,12 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     private class OAuth2AuthHandlerGenerateTask implements PeriodicTask
     {
         private final String taskName
-        = String.format("OAuth2AuthHandlerGenerateTask_%s_%s", jwtParameterExtractor.site(), jwtParameterExtractor.clientId());
+        = String.format("OAuth2AuthHandlerGenerateTask_%s_%s", jwtParameters.site(), jwtParameters.clientId());
 
         @Override
         public DurationSpec delay()
         {
-            return jwtParameterExtractor.configDiscoverInterval();
+            return jwtParameters.configDiscoverInterval();
         }
 
         @Override
@@ -169,15 +169,15 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         @Override
         public void execute(Promise<Void> promise)
         {
-            OAuth2Options options = new OAuth2Options().setSite(jwtParameterExtractor.site())
-                                                       .setClientId(jwtParameterExtractor.clientId());
+            OAuth2Options options = new OAuth2Options().setSite(jwtParameters.site())
+                                                       .setClientId(jwtParameters.clientId());
 
             OpenIDConnectAuth.discover(vertx, options)
                              .onSuccess(oAuthProvider -> {
                                  OAuth2AuthHandlerImpl handler = new OAuth2AuthHandlerImpl(vertx, oAuthProvider, null);
-                                 if (!jwtParameterExtractor.scopes().isEmpty())
+                                 if (!jwtParameters.scopes().isEmpty())
                                  {
-                                     handler.withScopes(jwtParameterExtractor.scopes());
+                                     handler.withScopes(jwtParameters.scopes());
                                  }
                                  delegateHandler.set(handler);
                                  promise.complete();

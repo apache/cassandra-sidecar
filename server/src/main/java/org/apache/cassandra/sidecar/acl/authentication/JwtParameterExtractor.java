@@ -32,9 +32,9 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
 
 /**
- * {@link JwtParameterExtractor} parses necessary JWT configuration from parameters passed during authenticator setup.
+ * {@link JwtParameters} implementation which parses parameters passed during authenticator setup in configuration.
  */
-public class JwtParameterExtractor
+public class JwtParameterExtractor implements JwtParameters
 {
     protected static final String SITE_SUFFIX = "/.well-known/openid-configuration";
 
@@ -64,45 +64,25 @@ public class JwtParameterExtractor
                                       : DEFAULT_CONFIG_DISCOVER_INTERVAL;
     }
 
-    /**
-     * Constructor to allow providing JWT parameters from other parameter providers
-     */
-    protected JwtParameterExtractor()
-    {
-        this.site = null;
-        this.clientId = null;
-        this.configDiscoverInterval = DEFAULT_CONFIG_DISCOVER_INTERVAL;
-        this.scopes = List.of();
-    }
-
-    /**
-     * @return site to dynamically retrieve the configuration information of an OpenID provider
-     */
+    @Override
     public String site()
     {
         return site;
     }
 
-    /**
-     * @return clientId is a unique identifier used to identity applications/users
-     */
+    @Override
     public String clientId()
     {
         return clientId;
     }
 
-    /**
-     * @return scopes granted to a user
-     */
+    @Override
     public List<String> scopes()
     {
         return scopes;
     }
 
-    /**
-     * @return interval at which {@link io.vertx.ext.auth.oauth2.providers.OpenIDConnectAuth} discover is called to
-     * dynamically retrieve configuration information of an OpenID provider.
-     */
+    @Override
     public SecondBoundConfiguration configDiscoverInterval()
     {
         return configDiscoverInterval;
@@ -128,7 +108,9 @@ public class JwtParameterExtractor
     }
 
     /**
-     * We remove site suffix prior hand. This is to address a bug in Vert.x.
+     * We remove site suffix prior hand. This is to address a bug in Vert.x in
+     * {@link io.vertx.ext.auth.oauth2.providers.OpenIDConnectAuth} where the issuer is verified once the request
+     * is successful, it is matched against a computed issuer with suffix removed.
      */
     private String removeSiteSuffix(Map<String, String> parameters)
     {

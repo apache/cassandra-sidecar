@@ -222,7 +222,7 @@ access_control:
   admin_identities:
 #    - spiffe://authorized/admin/identities
   permission_cache:
-    enabled: false
+    enabled: true
     expire_after_access: 5m
     maximum_size: 1000
     warmup_retries: 5

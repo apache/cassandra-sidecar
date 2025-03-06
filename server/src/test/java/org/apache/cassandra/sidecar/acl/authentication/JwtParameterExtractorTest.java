@@ -50,7 +50,7 @@ class JwtParameterExtractorTest
     {
         JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("site", "www.apache.org" + SITE_SUFFIX,
                                                                                     "client_id", "id"));
-        assertThat(parameterExtractor.site()).as("Site suffix should be removed").isEqualTo("x");
+        assertThat(parameterExtractor.site()).as("Site suffix should be removed").isEqualTo("www.apache.org");
     }
 
     @Test

@@ -23,10 +23,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
-
-import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
 
 /**
  * Class with utility methods for Authentication and Authorization.
@@ -35,6 +34,7 @@ public class AuthUtils
 {
     public static final String CASSANDRA_ROLES_ATTRIBUTE_NAME = "cassandra_roles";
     public static final String CASSANDRA_ROLE_SPLITTER = ",";
+    private static final JsonArray EMPTY_JSON_ARRAY = new JsonArray();
 
     /**
      * Extracts a list of identities a user holds from their principal.
@@ -76,14 +76,12 @@ public class AuthUtils
      */
     public static List<String> extractCassandraRoles(User user)
     {
-        String cassandraRoles = user.attributes().getString(CASSANDRA_ROLES_ATTRIBUTE_NAME);
-
-        if (isNullOrEmpty(cassandraRoles))
+        // noinspection unchecked
+        JsonArray roles =  user.attributes().getJsonArray(CASSANDRA_ROLES_ATTRIBUTE_NAME, EMPTY_JSON_ARRAY);
+        if (roles == null)
         {
             return List.of();
         }
-
-        String[] roles = cassandraRoles.split(CASSANDRA_ROLE_SPLITTER);
-        return Arrays.asList(roles);
+        return roles.getList();
     }
 }
