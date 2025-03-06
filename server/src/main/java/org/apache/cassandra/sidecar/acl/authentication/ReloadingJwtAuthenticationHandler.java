@@ -61,7 +61,6 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     AtomicReference<OAuth2AuthHandlerImpl> delegateHandler = new AtomicReference<>();
 
     private final Vertx vertx;
-    private final boolean accessControlEnabled;
     private final JwtParameters jwtParameters;
     private final JwtRoleProcessor roleProcessor;
 
@@ -73,7 +72,6 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     {
         super(NoOpAuthenticationProvider.INSTANCE);
         this.vertx = vertx;
-        this.accessControlEnabled = accessControlEnabled;
         this.jwtParameters = jwtParameters;
         this.roleProcessor = roleProcessor;
 
