@@ -25,7 +25,6 @@ import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfigur
  */
 public interface SidecarClientConfiguration
 {
-
     /**
      * @return The configuration for SSL connections on the client.
      */

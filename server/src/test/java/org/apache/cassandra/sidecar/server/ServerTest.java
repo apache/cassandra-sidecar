@@ -234,6 +234,7 @@ class ServerTest
               // simulate a bind exception due to address already in use
               .compose(deploymentId -> Future.failedFuture(new java.net.BindException("Address already in use")))
               .onComplete(context.failing(result -> {
+
                   try
                   {
                       serverAlreadyClosedInTest.set(true);

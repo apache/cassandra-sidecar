@@ -36,7 +36,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.codecs.SidecarInstanceCodec;
 import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
-import org.apache.cassandra.sidecar.config.PeerHealthConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
@@ -54,7 +54,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarPeerHealthMonitorTask.class);
 
     private final Vertx vertx;
-    private final PeerHealthConfiguration config;
+    private final SidecarPeerHealthConfiguration config;
     private final SidecarPeerProvider sidecarPeerProvider;
     private final SidecarPeerHealthProvider healthProvider;
 

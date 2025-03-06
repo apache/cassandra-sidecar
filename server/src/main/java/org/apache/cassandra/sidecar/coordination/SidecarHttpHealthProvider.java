@@ -50,7 +50,7 @@ public class SidecarHttpHealthProvider implements SidecarPeerHealthProvider
         try
         {
             SidecarClient client = clientProvider.get();
-            CompletableFuture<HealthResponse> healthRequest = client.peerHealth(instance);
+            CompletableFuture<HealthResponse> healthRequest = client.sidecarPeerHealth(instance);
             return Future.fromCompletionStage(healthRequest)
                          .map(healthResponse -> healthResponse.isOk()
                                                 ? Health.UP

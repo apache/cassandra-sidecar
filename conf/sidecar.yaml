@@ -244,31 +244,34 @@ sidecar_peer_health:
   # Time between peer health checks
   execute_interval: 30s
   # The amount of retries the client will attempt a request
-  sidecar_client_health_check_retries: 5
+  max_retries: 5
   # The initial delay between the retries the client will attempt a request
-  sidecar_client_health_check_retry_delay: 10s
+  retry_delay: 10s
 
 # Sidecar client settings used to interact with other sidecars
 sidecar_client:
-  request_timeout: 1s                       # Time in which a request made by the sidecar client will time out
-  request_idle_timeout: 1s                  # How long the request can be idle
-  connection_pool_max_size: 10              # Max size of the client connection pool
-  connection_pool_clearing_period: 10s      # Period of time for the connection pool to clear
-  connection_pool_event_loop_size: 10       # Defines the size of the event loop pool
-  connection_pool_max_wait_queue_size: 10   # Connection pool max time to wait on the queue size
-  max_retries: 3                            # The amount of retries the client will attempt a request
-  retry_delay: 1s                           # The initial delay between the retries the client will attempt a request
-  max_retry_delay: 2s                       # The max delay between the retries the client will attempt a request
-  ssl:                                      # if ssl is enabled, this is the ssl configuration used for the sidecar client
-    enabled: false
-    keystore:
-      type: PKCS12                          # Format of the keystore
-      path: path/to/keystore.p12            # Path to the keystore file
-      password: password                    # Keystore password
-    truststore:
-      type: PKCS12                          # Format of the truststore
-      path: path/to/keystore.p12            # Path to the truststore file
-      password: password                    # Truststore password
+  request_timeout: 30s                      # Time in which a request made by the sidecar client will time out
+  request_idle_timeout: 30s                 # How long the request can be idle
+
+  # More advanced options to configure the sidecar client
+
+  #connection_pool_max_size: 10              # Max size of the client connection pool
+  #connection_pool_clearing_period: 5s       # Period of time for the connection pool to clear
+  #connection_pool_event_loop_size: 0        # Defines the size of the event loop pool, set to 0 to reuse current event-loop
+  #connection_pool_max_wait_queue_size: -1   # Connection pool max time to wait on the queue size, set to -1 for an unbounded queue
+  #max_retries: 5                            # The amount of retries the client will attempt a request
+  #retry_delay: 500ms                        # The initial delay between the retries the client will attempt a request
+  #max_retry_delay: 10s                      # The max delay between the retries the client will attempt a request
+  #ssl:                                      # if ssl is enabled, this is the ssl configuration used for the sidecar client
+  #  enabled: false
+  #  keystore:
+  #    type: PKCS12                          # Keystore type
+  #    path: path/to/client/keystore.p12     # Path to the client keystore file
+  #    password: password                    # Keystore password
+  #  truststore:
+  #    type: PKCS12                          # Truststore type
+  #    path: path/to/truststore.p12          # Path to the truststore file
+  #    password: password                    # Truststore password
 
 metrics:
   registry_name: cassandra_sidecar

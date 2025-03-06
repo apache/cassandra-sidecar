@@ -299,17 +299,17 @@ class SidecarConfigurationTest
     {
         String yaml = "sidecar_peer_health:\n" +
                       "  enabled: true\n" +
-                      "  execute_interval: 30s\n" +
-                      "  sidecar_client_health_check_retries: 5\n" +
-                      "  sidecar_client_health_check_retry_delay: 10s";
+                      "  execute_interval: 63s\n" +
+                      "  max_retries: 15\n" +
+                      "  retry_delay: 5s";
         SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.fromYamlString(yaml);
         assertThat(sidecarConfiguration).isNotNull();
-        PeerHealthConfiguration config = sidecarConfiguration.sidecarPeerHealthConfiguration();
+        SidecarPeerHealthConfiguration config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         assertThat(config).isNotNull();
         assertThat(config.enabled()).isTrue();
-        assertThat(config.executeInterval().toMillis()).isEqualTo(30_000);
-        assertThat(config.sidecarClientHealthCheckRetries()).isEqualTo(5);
-        assertThat(config.sidecarClientHealthCheckRetryDelay().toMillis()).isEqualTo(10_000);
+        assertThat(config.executeInterval().toMillis()).isEqualTo(63_000);
+        assertThat(config.maxRetries()).isEqualTo(15);
+        assertThat(config.retryDelay().toMillis()).isEqualTo(5_000);
     }
 
     @Test
@@ -550,13 +550,13 @@ class SidecarConfigurationTest
         validateCassandraInputValidationConfigurationFromYaml(config.cassandraInputValidationConfiguration());
     }
 
-    private void validateSidecarPeerHealthConfigurationDefaults(PeerHealthConfiguration config)
+    private void validateSidecarPeerHealthConfigurationDefaults(SidecarPeerHealthConfiguration config)
     {
         assertThat(config).isNotNull();
         assertThat(config.enabled()).isFalse();
         assertThat(config.executeInterval().toMillis()).isEqualTo(30_000);
-        assertThat(config.sidecarClientHealthCheckRetries()).isEqualTo(5);
-        assertThat(config.sidecarClientHealthCheckRetryDelay().toMillis()).isEqualTo(10_000);
+        assertThat(config.maxRetries()).isEqualTo(5);
+        assertThat(config.retryDelay().toMillis()).isEqualTo(10_000);
     }
 
     void validateServiceConfigurationFromYaml(ServiceConfiguration serviceConfiguration)

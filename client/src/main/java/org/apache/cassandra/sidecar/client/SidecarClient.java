@@ -127,7 +127,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      *
      * @return a completable future of the Sidecar health response
      */
-    public CompletableFuture<HealthResponse> peerHealth(SidecarInstance instance)
+    public CompletableFuture<HealthResponse> sidecarPeerHealth(SidecarInstance instance)
     {
         return executor.executeRequestAsync(requestBuilder()
                                             .singleInstanceSelectionPolicy(instance)
@@ -247,7 +247,6 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
 
     /**
      * Executes the GET gossip health request using the default retry policy and configured selection policy
-     *
      * @param instance the instance where the request will be executed
      * @return a completable future with gossip health response
      */
@@ -535,28 +534,27 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
 
     /**
      * Lists CDC commit logs in CDC directory for an instance
-     *
      * @param sidecarInstance instance on which the CDC commit logs are to be listed
      * @return a completable future with List of cdc commitLogs on the requested instance
      */
     public CompletableFuture<ListCdcSegmentsResponse> listCdcSegments(SidecarInstance sidecarInstance)
     {
         return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(sidecarInstance)
-                                            .request(new ListCdcSegmentsRequest())
-                                            .build());
+                       .singleInstanceSelectionPolicy(sidecarInstance)
+                       .request(new ListCdcSegmentsRequest())
+                       .build());
     }
 
     /**
      * Streams CDC commit log segments from the requested instance.
-     * <p>
+     *
      * Streams the specified {@code range} of a CDC CommitLog from the given instance and the
      * stream is consumed by the {@link StreamConsumer consumer}.
      *
      * @param sidecarInstance instance on which the CDC commit logs are to be streamed
-     * @param segment         segment file name
-     * @param range           range of the file to be streamed
-     * @param streamConsumer  object that consumes the stream
+     * @param segment segment file name
+     * @param range range of the file to be streamed
+     * @param streamConsumer object that consumes the stream
      */
     public void streamCdcSegments(SidecarInstance sidecarInstance,
                                   String segment,
@@ -564,9 +562,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                   StreamConsumer streamConsumer)
     {
         executor.streamRequest(requestBuilder()
-                               .singleInstanceSelectionPolicy(sidecarInstance)
-                               .request(new StreamCdcSegmentRequest(segment, range))
-                               .build(), streamConsumer);
+                .singleInstanceSelectionPolicy(sidecarInstance)
+                .request(new StreamCdcSegmentRequest(segment, range))
+                .build(), streamConsumer);
     }
 
     /**
@@ -763,7 +761,6 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
 
     /**
      * Executes the streams stats request using the default retry policy and configured selection policy
-     *
      * @param instance the instance where the request will be executed
      * @return a completable future of the connected client stats
      */
@@ -777,7 +774,6 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
 
     /**
      * Executes the node decommission request using the default retry policy and configured selection policy
-     *
      * @param instance the instance where the request will be executed
      * @return a completable future of the jobs list
      */

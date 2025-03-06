@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.health;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -37,9 +36,9 @@ import com.google.inject.name.Named;
 import org.apache.cassandra.distributed.api.ICluster;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.config.PeerHealthConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.PeerHealthConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SidecarPeerHealthConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitorTask;
@@ -50,6 +49,8 @@ import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 
+import static org.apache.cassandra.testing.TestUtils.DC1_RF3;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -86,16 +87,16 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
 
 
         // assign the server to the first instance
-        server = sidecarServerList.get(0).getServer();
+        server = sidecarServerList.get(0).server();
     }
 
     @Override
-    protected void stopSidecar() throws InterruptedException
+    protected void stopSidecar()
     {
-        sidecarServerList.stream().forEach(s -> {
+        sidecarServerList.forEach(s -> {
             try
             {
-                closeServer(s.getServer());
+                closeServer(s.server());
             }
             catch (Exception e)
             {
@@ -107,6 +108,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
     class PeersModule extends AbstractModule
     {
         Supplier<List<TestSidecarHostInfo>> supplier;
+
         public PeersModule(Supplier<List<TestSidecarHostInfo>> supplier)
         {
             this.supplier = supplier;
@@ -122,19 +124,19 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
 
         @Provides
         @Singleton
-        public PeerHealthConfiguration sidecarPeerHealthConfiguration()
+        public SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration()
         {
-            return new PeerHealthConfigurationImpl(true,
-                                                   new MillisecondBoundConfiguration(1, TimeUnit.SECONDS),
-                                                   1,
-                                                   new MillisecondBoundConfiguration(500, TimeUnit.MILLISECONDS));
+            return new SidecarPeerHealthConfigurationImpl(true,
+                                                          new MillisecondBoundConfiguration(1, TimeUnit.SECONDS),
+                                                          1,
+                                                          new MillisecondBoundConfiguration(500, TimeUnit.MILLISECONDS));
         }
     }
 
-    void stopSidecarInstanceForTest(int instanceId) throws Exception
+    void stopSidecarInstanceForTest(int instanceId)
     {
         assertThat(sidecarServerList).isNotEmpty();
-        Server server = sidecarServerList.get(instanceId).getServer();
+        Server server = sidecarServerList.get(instanceId).server();
         String deploymentId = serverDeploymentIds.get(server);
         getBlocking(server.stop(deploymentId), 30, TimeUnit.SECONDS, "Stopping server " + deploymentId);
     }
@@ -143,7 +145,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
     {
         assertThat(sidecarServerList).isNotEmpty();
         TestSidecarHostInfo server = sidecarServerList.get(instanceId);
-        getBlocking(server.getServer().start(), 30, TimeUnit.SECONDS, "Starting server...");
+        getBlocking(server.server().start(), 30, TimeUnit.SECONDS, "Starting server...");
     }
 
     @Override
@@ -165,7 +167,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
                 // bound for the first instance, but we bind it to a different interface (localhost2, localhost3)
                 conf = ServiceConfigurationImpl.builder()
                                                .host("localhost" + (sidecarServerList.size() + 1))
-                                               .port(sidecarServerList.get(0).getServer().actualPort())
+                                               .port(sidecarServerList.get(0).server().actualPort())
                                                .build();
             }
             builder.serviceConfiguration(conf);
@@ -177,12 +179,13 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
     @Test
     void onePeerDownTest() throws Exception
     {
-        SidecarPeerHealthMonitorTask monitor = peerHealthMonitors.get(sidecarServerList.get(0).getServer());
+        SidecarPeerHealthMonitorTask monitor = peerHealthMonitors.get(sidecarServerList.get(0).server());
         // Monitor hasn't had time to perform checks
         assertTrue(monitor.getStatus().isEmpty());
-        Thread.sleep(5000);
-        // After some time, peer is up
-        checkHostUp(monitor, "localhost2");
+        loopAssert(5, () -> {
+            // After some time, peer is up
+            checkHostUp(monitor, "localhost2");
+        });
         stopSidecarInstanceForTest(1);
         Thread.sleep(5000);
         // After killing peer sidecar instance, monitor caches up and the host is down
@@ -211,8 +214,8 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
     @Override
     protected void initializeSchemaForTest()
     {
-        createTestKeyspace("cdc", Map.of("datacenter1", 3));
-        createTestTable(new QualifiedName("cdc", "test"), "CREATE TABLE %s (id text PRIMARY KEY, name text) WITH cdc=true;");
+        createTestKeyspace("cdc", DC1_RF3);
+        createTestTable(new QualifiedName("cdc", "test"), "CREATE TABLE %s (id text PRIMARY KEY, name text) WITH cdc=true");
     }
 }
 

@@ -84,7 +84,7 @@ import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
-import org.apache.cassandra.sidecar.config.PeerHealthConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.S3ProxyConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -92,7 +92,7 @@ import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.PeerHealthConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SidecarPeerHealthConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.S3ClientConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
@@ -606,12 +606,12 @@ public abstract class SharedClusterIntegrationTestBase
 
         @Provides
         @Singleton
-        public InstancesMetadata instancesConfig(Vertx vertx,
-                                                 SidecarConfiguration configuration,
-                                                 CassandraVersionProvider cassandraVersionProvider,
-                                                 SidecarVersionProvider sidecarVersionProvider,
-                                                 CQLSessionProvider cqlSessionProvider,
-                                                 DnsResolver dnsResolver)
+        public InstancesMetadata instancesMetadata(Vertx vertx,
+                                                   SidecarConfiguration configuration,
+                                                   CassandraVersionProvider cassandraVersionProvider,
+                                                   SidecarVersionProvider sidecarVersionProvider,
+                                                   CQLSessionProvider cqlSessionProvider,
+                                                   DnsResolver dnsResolver)
         {
             JmxConfiguration jmxConfiguration = configuration.serviceConfiguration().jmxConfiguration();
             List<InstanceMetadata> instanceMetadataList =
@@ -638,12 +638,12 @@ public abstract class SharedClusterIntegrationTestBase
 
         @Provides
         @Singleton
-        public PeerHealthConfiguration sidecarPeerHealthConfiguration()
+        public SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration()
         {
-            return new PeerHealthConfigurationImpl(false,
-                                                   new MillisecondBoundConfiguration(1, TimeUnit.SECONDS),
-                                                   1,
-                                                   new MillisecondBoundConfiguration(500, TimeUnit.MILLISECONDS));
+            return new SidecarPeerHealthConfigurationImpl(false,
+                                                          new MillisecondBoundConfiguration(1, TimeUnit.SECONDS),
+                                                          1,
+                                                          new MillisecondBoundConfiguration(500, TimeUnit.MILLISECONDS));
         }
 
         @Provides
@@ -665,7 +665,7 @@ public abstract class SharedClusterIntegrationTestBase
 
         @Provides
         @Singleton
-        public SidecarConfiguration sidecarConfiguration(PeerHealthConfiguration peerHealthConfiguration)
+        public SidecarConfiguration sidecarConfiguration(SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration)
         {
             ServiceConfiguration conf = ServiceConfigurationImpl.builder()
                                                                 .host("0.0.0.0") // binds to all interfaces, potential security issue if left running for long
@@ -717,7 +717,7 @@ public abstract class SharedClusterIntegrationTestBase
                                                                                .s3ClientConfiguration(s3ClientConfig)
                                                                                .sslConfiguration(sslConfiguration)
                                                                                .sidecarClientConfiguration(sidecarClientConfiguration)
-                                                                               .sidecarPeerHealthConfiguration(peerHealthConfiguration);
+                                                                               .sidecarPeerHealthConfiguration(sidecarPeerHealthConfiguration);
             if (configurationOverrides != null)
             {
                 builder = configurationOverrides.apply(builder);

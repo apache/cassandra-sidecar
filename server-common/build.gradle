@@ -17,8 +17,6 @@
  * under the License.
  */
 
-import org.apache.tools.ant.taskdefs.condition.Os
-
 import java.nio.file.Paths
 
 plugins {
@@ -33,11 +31,6 @@ sourceCompatibility = JavaVersion.VERSION_11
 
 test {
     useJUnitPlatform()
-
-    if (Os.isFamily(Os.FAMILY_MAC)) {
-        jvmArgs "-XX:-MaxFDLimit"
-    }
-
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
     reports {
         junitXml.setRequired(true)

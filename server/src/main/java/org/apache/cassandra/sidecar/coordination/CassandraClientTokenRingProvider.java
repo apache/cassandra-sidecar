@@ -74,7 +74,6 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
     @GuardedBy("this")
     private volatile Set<Host> allInstancesCache = null;
 
-
     @Inject
     public CassandraClientTokenRingProvider(InstancesMetadata instancesMetadata, InstanceMetadataFetcher instanceMetadataFetcher, DnsResolver dnsResolver)
     {
@@ -267,9 +266,9 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
         return perKeyspaceTokenRanges;
     }
 
-    public static Multimap<CassandraInstance, Range<BigInteger>> calculateTokenRanges(List<CassandraInstance> instances,
-                                                                                      int replicationFactor,
-                                                                                      Partitioner partitioner)
+    static Multimap<CassandraInstance, Range<BigInteger>> calculateTokenRanges(List<CassandraInstance> instances,
+                                                                               int replicationFactor,
+                                                                               Partitioner partitioner)
     {
         Preconditions.checkArgument(replicationFactor != 0, "Calculation token ranges wouldn't work with RF 0");
         Preconditions.checkArgument(instances.isEmpty() || replicationFactor <= instances.size(),

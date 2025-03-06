@@ -42,14 +42,14 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     public static final String MAX_RETRY_DELAY = "max_retry_delay";
 
     public static final SslConfiguration DEFAULT_SSL_CONFIGURATION = null;
-    public static final MillisecondBoundConfiguration DEFAULT_REQUEST_TIMEOUT = MillisecondBoundConfiguration.parse("60s");
-    public static final MillisecondBoundConfiguration DEFAULT_REQUEST_IDLE_TIMEOUT = MillisecondBoundConfiguration.parse("60s");
+    public static final MillisecondBoundConfiguration DEFAULT_REQUEST_TIMEOUT = MillisecondBoundConfiguration.parse("30s");
+    public static final MillisecondBoundConfiguration DEFAULT_REQUEST_IDLE_TIMEOUT = MillisecondBoundConfiguration.parse("30s");
     public static final int DEFAULT_CONNECTION_POOL_MAX_SIZE = 10;
-    public static final MillisecondBoundConfiguration DEFAULT_CONNECTION_POOL_CLEANER_PERIOD = MillisecondBoundConfiguration.parse("60s");
-    public static final int DEFAULT_CONNECTION_POOL_EVENT_LOOP_SIZE = 10;
-    public static final int DEFAULT_CONNECTION_POOL_MAX_WAIT_QUEUE_SIZE = 10;
-    public static final int DEFAULT_MAX_RETRIES = 3;
-    public static final MillisecondBoundConfiguration DEFAULT_RETRY_DELAY = MillisecondBoundConfiguration.parse("1s");
+    public static final MillisecondBoundConfiguration DEFAULT_CONNECTION_POOL_CLEANER_PERIOD = MillisecondBoundConfiguration.parse("5s");
+    public static final int DEFAULT_CONNECTION_POOL_EVENT_LOOP_SIZE = 0;
+    public static final int DEFAULT_CONNECTION_POOL_MAX_WAIT_QUEUE_SIZE = -1;
+    public static final int DEFAULT_MAX_RETRIES = 5;
+    public static final MillisecondBoundConfiguration DEFAULT_RETRY_DELAY = MillisecondBoundConfiguration.parse("500ms");
     public static final MillisecondBoundConfiguration DEFAULT_MAX_RETRY_DELAY = MillisecondBoundConfiguration.parse("10s");
 
 
@@ -85,7 +85,6 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
 
     public SidecarClientConfigurationImpl()
     {
-
         this(DEFAULT_SSL_CONFIGURATION,
              DEFAULT_REQUEST_TIMEOUT,
              DEFAULT_REQUEST_IDLE_TIMEOUT,
@@ -101,7 +100,6 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
 
     public SidecarClientConfigurationImpl(SslConfiguration sslConfiguration)
     {
-
         this(sslConfiguration,
              DEFAULT_REQUEST_TIMEOUT,
              DEFAULT_REQUEST_IDLE_TIMEOUT,

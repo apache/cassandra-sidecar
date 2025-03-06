@@ -44,7 +44,7 @@ import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration
 import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.MetricsConfiguration;
-import org.apache.cassandra.sidecar.config.PeerHealthConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
@@ -84,7 +84,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     protected final AccessControlConfiguration accessControlConfiguration;
 
     @JsonProperty("sidecar_peer_health")
-    protected final PeerHealthConfiguration peerHealthConfiguration;
+    protected final SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration;
 
     @JsonProperty("sidecar_client")
     protected final SidecarClientConfiguration sidecarClientConfiguration;
@@ -125,7 +125,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         sslConfiguration = builder.sslConfiguration;
         accessControlConfiguration = builder.accessControlConfiguration;
         healthCheckConfiguration = builder.healthCheckConfiguration;
-        peerHealthConfiguration = builder.peerHealthConfiguration;
+        sidecarPeerHealthConfiguration = builder.sidecarPeerHealthConfiguration;
         sidecarClientConfiguration = builder.sidecarClientConfiguration;
         metricsConfiguration = builder.metricsConfiguration;
         cassandraInputValidationConfiguration = builder.cassandraInputValidationConfiguration;
@@ -217,9 +217,9 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
      */
     @Override
     @JsonProperty("sidecar_peer_health")
-    public PeerHealthConfiguration sidecarPeerHealthConfiguration()
+    public SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration()
     {
-        return peerHealthConfiguration;
+        return sidecarPeerHealthConfiguration;
     }
 
     /**
@@ -401,7 +401,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         = new PeriodicTaskConfigurationImpl(true,
                                             MillisecondBoundConfiguration.ZERO,
                                             MillisecondBoundConfiguration.parse("30s"));
-        private PeerHealthConfiguration peerHealthConfiguration = new PeerHealthConfigurationImpl();
+        private SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration = new SidecarPeerHealthConfigurationImpl();
         private SidecarClientConfiguration sidecarClientConfiguration = new SidecarClientConfigurationImpl();
         private MetricsConfiguration metricsConfiguration = new MetricsConfigurationImpl();
         private CassandraInputValidationConfiguration cassandraInputValidationConfiguration = new CassandraInputValidationConfigurationImpl();
@@ -490,12 +490,12 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         /**
          * Sets the {@code healthCheckConfiguration} and returns a reference to this Builder enabling method chaining.
          *
-         * @param peerHealthConfiguration the {@code healthCheckConfiguration} to set
+         * @param sidecarPeerHealthConfiguration the {@code healthCheckConfiguration} to set
          * @return a reference to this Builder
          */
-        public Builder sidecarPeerHealthConfiguration(PeerHealthConfiguration peerHealthConfiguration)
+        public Builder sidecarPeerHealthConfiguration(SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration)
         {
-            return update(b -> b.peerHealthConfiguration = peerHealthConfiguration);
+            return update(b -> b.sidecarPeerHealthConfiguration = sidecarPeerHealthConfiguration);
         }
 
         /**

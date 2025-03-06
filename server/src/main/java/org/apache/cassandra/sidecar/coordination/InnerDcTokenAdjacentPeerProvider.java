@@ -32,7 +32,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,9 +47,9 @@ import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-
 
 import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_FORBIDDEN_KEYSPACES;
 
@@ -93,10 +92,11 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
             return Set.of();
         }
 
-        final List<KeyspaceMetadata> keyspaces = metadata.getKeyspaces()
-                                                         .stream()
-                                                         .filter(ks -> !DEFAULT_FORBIDDEN_KEYSPACES.contains(ks.getName()))
-                                                         .collect(Collectors.toList());
+        List<KeyspaceMetadata> keyspaces = metadata.getKeyspaces()
+                                                   .stream()
+                                                   // TODO: this should be from configured
+                                                   .filter(ks -> !DEFAULT_FORBIDDEN_KEYSPACES.contains(ks.getName()))
+                                                   .collect(Collectors.toList());
         if (keyspaces.isEmpty())
         {
             LOGGER.warn("No user keyspaces found");
@@ -104,16 +104,16 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         }
 
         Set<Host> localHosts = cassandraClientTokenRingProvider.localInstances();
-        final String localDc = Objects.requireNonNull(localHosts, "CachedLocalTokenRanges not initialized")
-                                      .stream()
-                                      .map(Host::getDatacenter)
-                                      .filter(Objects::nonNull)
-                                      .findAny()
-                                      .orElseThrow(() -> new RuntimeException("No local instances found."));
-        final Optional<KeyspaceMetadata> maxRfKeyspace = keyspaces.stream()
-                                                                  .filter(ks -> ks.getReplication().containsKey(localDc))
-                                                                  .max(Comparator.comparingInt(a -> Integer.parseInt(a.getReplication().get(localDc))));
-        if (!maxRfKeyspace.isPresent())
+        String localDc = Objects.requireNonNull(localHosts, "CachedLocalTokenRanges not initialized")
+                                .stream()
+                                .map(Host::getDatacenter)
+                                .filter(Objects::nonNull)
+                                .findAny()
+                                .orElseThrow(() -> new RuntimeException("No local instances found."));
+        Optional<KeyspaceMetadata> maxRfKeyspace = keyspaces.stream()
+                                                            .filter(ks -> ks.getReplication().containsKey(localDc))
+                                                            .max(Comparator.comparingInt(a -> Integer.parseInt(a.getReplication().get(localDc))));
+        if (maxRfKeyspace.isEmpty())
         {
             LOGGER.info("No keyspace found replicated in DC dc={}", localDc);
             return Set.of();

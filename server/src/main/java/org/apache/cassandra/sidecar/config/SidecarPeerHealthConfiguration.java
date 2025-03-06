@@ -23,15 +23,15 @@ import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfigur
 /**
  * Configuration for Sidecar peers health checks
  */
-public interface PeerHealthConfiguration extends PeriodicTaskConfiguration
+public interface SidecarPeerHealthConfiguration extends PeriodicTaskConfiguration
 {
     /**
      * @return the number of maximum retries to be performed during a Sidecar peer health check
      */
-    int sidecarClientHealthCheckRetries();
+    int maxRetries();
 
     /**
      * @return the delay between Sidecar peer health checks retries
      */
-    MillisecondBoundConfiguration sidecarClientHealthCheckRetryDelay();
+    MillisecondBoundConfiguration retryDelay();
 }

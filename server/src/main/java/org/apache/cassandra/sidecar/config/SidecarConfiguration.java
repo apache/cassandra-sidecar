@@ -62,7 +62,7 @@ public interface SidecarConfiguration
     /**
      * @return the configuration for the Sidecar peer health service
      */
-    PeerHealthConfiguration sidecarPeerHealthConfiguration();
+    SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration();
 
     /**
      * @return the configuration for the health check service

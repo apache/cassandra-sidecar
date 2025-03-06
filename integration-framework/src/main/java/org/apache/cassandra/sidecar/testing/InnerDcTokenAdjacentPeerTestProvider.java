@@ -36,7 +36,7 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
  */
 public class InnerDcTokenAdjacentPeerTestProvider extends InnerDcTokenAdjacentPeerProvider
 {
-    private Supplier<List<TestSidecarHostInfo>> sidecarServerSupplier;
+    private final Supplier<List<TestSidecarHostInfo>> sidecarServerSupplier;
 
     public InnerDcTokenAdjacentPeerTestProvider(InstanceMetadataFetcher metadataFetcher,
                                                 CassandraClientTokenRingProvider cassandraClientTokenRingProvider,
@@ -56,7 +56,7 @@ public class InnerDcTokenAdjacentPeerTestProvider extends InnerDcTokenAdjacentPe
                                                            .equals(host.getBroadcastAddress().getHostName()))
                                     .findAny()
                                     .orElseThrow()
-                                    .getPort();
+                                    .port;
     }
 
     /**
@@ -64,25 +64,15 @@ public class InnerDcTokenAdjacentPeerTestProvider extends InnerDcTokenAdjacentPe
      */
     public static class TestSidecarHostInfo
     {
-        IInstance instance;
-        Server sidecarServer;
-        int port;
+        public final IInstance instance;
+        public final Server sidecarServer;
+        public final int port;
 
         public TestSidecarHostInfo(IInstance instance, Server sidecarServer, int port)
         {
             this.instance = instance;
             this.sidecarServer = sidecarServer;
             this.port = port;
-        }
-
-        public Server getServer()
-        {
-            return sidecarServer;
-        }
-
-        public int getPort()
-        {
-            return port;
         }
     }
 }
