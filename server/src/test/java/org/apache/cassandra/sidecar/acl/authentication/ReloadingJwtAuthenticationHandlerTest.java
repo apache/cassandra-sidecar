@@ -49,7 +49,7 @@ class ReloadingJwtAuthenticationHandlerTest
         PeriodicTaskExecutor mockTaskExecutor = mock(PeriodicTaskExecutor.class);
         doNothing().when(mockTaskExecutor).schedule(any());
         ReloadingJwtAuthenticationHandler reloadingJwtAuthenticationHandler
-        = new ReloadingJwtAuthenticationHandler(mockVertx, parameterExtractor, mockRoleProcessor, mockTaskExecutor);
+        = new ReloadingJwtAuthenticationHandler(mockVertx, true, parameterExtractor, mockRoleProcessor, mockTaskExecutor);
         RoutingContext mockCtx = mock(RoutingContext.class);
         reloadingJwtAuthenticationHandler.authenticate(mockCtx, result -> {
             assertThat(result.failed()).isTrue();
