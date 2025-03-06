@@ -202,7 +202,7 @@ access_control:
     - class_name: org.apache.cassandra.sidecar.acl.authentication.JwtAuthenticationHandlerFactory
       parameters:
         # To selectively enable or disable JWT authentication
-        enable: false
+        enabled: false
         # Site for sidecar to dynamically retrieve the configuration information of an OpenID provider, without
         # having to manually configure settings like issuer etc.
         site: https://authorization.com
