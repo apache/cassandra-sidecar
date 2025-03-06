@@ -34,7 +34,6 @@ import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLES_ATTRIBUTE_NAME;
-import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLE_SPLITTER;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -88,9 +87,7 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
 
                         if (!roles.isEmpty())
                         {
-                            authN.result()
-                                 .attributes()
-                                 .put(CASSANDRA_ROLES_ATTRIBUTE_NAME, String.join(CASSANDRA_ROLE_SPLITTER, roles));
+                            authN.result().attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, roles);
                         }
 
                         handler.handle(authN);

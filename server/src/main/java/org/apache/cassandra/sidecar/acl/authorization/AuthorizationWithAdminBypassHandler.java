@@ -55,7 +55,7 @@ public class AuthorizationWithAdminBypassHandler extends AuthorizationHandlerImp
         List<String> identities = extractIdentities(ctx.user());
 
         // Admin identities bypass route specific authorization checks
-        if (identities.stream().anyMatch(adminIdentityResolver::isAdmin))
+        if (!identities.isEmpty() && identities.stream().anyMatch(adminIdentityResolver::isAdmin))
         {
             ctx.next();
             return;

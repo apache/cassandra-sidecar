@@ -33,7 +33,6 @@ import io.vertx.ext.auth.User;
 public class AuthUtils
 {
     public static final String CASSANDRA_ROLES_ATTRIBUTE_NAME = "cassandra_roles";
-    public static final String CASSANDRA_ROLE_SPLITTER = ",";
     private static final JsonArray EMPTY_JSON_ARRAY = new JsonArray();
 
     /**

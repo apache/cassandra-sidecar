@@ -28,6 +28,7 @@ import io.vertx.ext.auth.User;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLES_ATTRIBUTE_NAME;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractCassandraRoles;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Test for {@link AuthUtils}
@@ -46,5 +47,8 @@ class AuthUtilsTest
 
         user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, null);
         assertThat(extractCassandraRoles(user)).isEmpty();
+
+        user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, "role1,role2");
+        assertThatThrownBy(() -> extractCassandraRoles(user)).isInstanceOf(ClassCastException.class);
     }
 }

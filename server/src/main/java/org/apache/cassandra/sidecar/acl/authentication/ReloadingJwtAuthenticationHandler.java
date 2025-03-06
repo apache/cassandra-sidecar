@@ -45,7 +45,6 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLES_ATTRIBUTE_NAME;
-import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLE_SPLITTER;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -116,7 +115,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
                 List<String> roles = roleProcessor.processRoles(decodedToken);
                 if (!roles.isEmpty())
                 {
-                    user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, String.join(CASSANDRA_ROLE_SPLITTER, roles));
+                    user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, roles);
                 }
                 handler.handle(Future.succeededFuture(user));
             }
