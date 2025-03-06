@@ -1573,7 +1573,12 @@ abstract class SidecarClientTest
         long expectedTotalSize = 2048;
         long expectedSnapshotSize = 100;
 
-        TableStatsResponse tableStatsResponse = new TableStatsResponse(testKeyspace, testTable, expectedSstables, expectedSize, expectedTotalSize, expectedSnapshotSize);
+        TableStatsResponse tableStatsResponse = new TableStatsResponse(testKeyspace,
+                                                                       testTable,
+                                                                       expectedSstables,
+                                                                       expectedSize,
+                                                                       expectedTotalSize,
+                                                                       expectedSnapshotSize);
         ObjectMapper mapper = new ObjectMapper();
         MockResponse response = new MockResponse().setResponseCode(OK.code())
                                                   .setBody(mapper.writeValueAsString(tableStatsResponse));

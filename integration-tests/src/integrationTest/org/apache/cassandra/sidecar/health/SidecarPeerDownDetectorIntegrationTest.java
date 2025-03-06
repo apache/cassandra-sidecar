@@ -36,11 +36,11 @@ import com.google.inject.name.Named;
 import org.apache.cassandra.distributed.api.ICluster;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.SidecarPeerHealthConfigurationImpl;
+import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SidecarPeerHealthConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitorTask;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthProvider;
 import org.apache.cassandra.sidecar.server.Server;
@@ -49,10 +49,10 @@ import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 
-import static org.apache.cassandra.testing.TestUtils.DC1_RF3;
-import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.apache.cassandra.testing.TestUtils.DC1_RF3;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegrationTestBase
@@ -87,7 +87,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
 
 
         // assign the server to the first instance
-        server = sidecarServerList.get(0).server();
+        server = sidecarServerList.get(0).sidecarServer;
     }
 
     @Override
@@ -96,7 +96,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
         sidecarServerList.forEach(s -> {
             try
             {
-                closeServer(s.server());
+                closeServer(s.sidecarServer);
             }
             catch (Exception e)
             {
@@ -136,7 +136,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
     void stopSidecarInstanceForTest(int instanceId)
     {
         assertThat(sidecarServerList).isNotEmpty();
-        Server server = sidecarServerList.get(instanceId).server();
+        Server server = sidecarServerList.get(instanceId).sidecarServer;
         String deploymentId = serverDeploymentIds.get(server);
         getBlocking(server.stop(deploymentId), 30, TimeUnit.SECONDS, "Stopping server " + deploymentId);
     }
@@ -145,7 +145,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
     {
         assertThat(sidecarServerList).isNotEmpty();
         TestSidecarHostInfo server = sidecarServerList.get(instanceId);
-        getBlocking(server.server().start(), 30, TimeUnit.SECONDS, "Starting server...");
+        getBlocking(server.sidecarServer.start(), 30, TimeUnit.SECONDS, "Starting server...");
     }
 
     @Override
@@ -167,7 +167,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
                 // bound for the first instance, but we bind it to a different interface (localhost2, localhost3)
                 conf = ServiceConfigurationImpl.builder()
                                                .host("localhost" + (sidecarServerList.size() + 1))
-                                               .port(sidecarServerList.get(0).server().actualPort())
+                                               .port(sidecarServerList.get(0).sidecarServer.actualPort())
                                                .build();
             }
             builder.serviceConfiguration(conf);
@@ -179,7 +179,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
     @Test
     void onePeerDownTest() throws Exception
     {
-        SidecarPeerHealthMonitorTask monitor = peerHealthMonitors.get(sidecarServerList.get(0).server());
+        SidecarPeerHealthMonitorTask monitor = peerHealthMonitors.get(sidecarServerList.get(0).sidecarServer);
         // Monitor hasn't had time to perform checks
         assertTrue(monitor.getStatus().isEmpty());
         loopAssert(5, () -> {
