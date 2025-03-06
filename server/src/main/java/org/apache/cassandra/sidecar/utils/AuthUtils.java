@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -76,11 +77,6 @@ public class AuthUtils
     public static List<String> extractCassandraRoles(User user)
     {
         // noinspection unchecked
-        JsonArray roles =  user.attributes().getJsonArray(CASSANDRA_ROLES_ATTRIBUTE_NAME, EMPTY_JSON_ARRAY);
-        if (roles == null)
-        {
-            return List.of();
-        }
-        return roles.getList();
+        return Objects.requireNonNullElse(user.attributes().getJsonArray(CASSANDRA_ROLES_ATTRIBUTE_NAME), EMPTY_JSON_ARRAY).getList();
     }
 }

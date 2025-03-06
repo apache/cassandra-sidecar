@@ -59,23 +59,20 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     AtomicReference<OAuth2AuthHandlerImpl> delegateHandler = new AtomicReference<>();
 
     private final Vertx vertx;
-    private final boolean accessControlEnabled;
     private final JwtParameters jwtParameters;
     private final JwtRoleProcessor roleProcessor;
 
     public ReloadingJwtAuthenticationHandler(Vertx vertx,
-                                             boolean accessControlEnabled,
                                              JwtParameters jwtParameters,
                                              JwtRoleProcessor roleProcessor,
                                              PeriodicTaskExecutor periodicTaskExecutor)
     {
         super(NoOpAuthenticationProvider.INSTANCE);
         this.vertx = vertx;
-        this.accessControlEnabled = accessControlEnabled;
         this.jwtParameters = jwtParameters;
         this.roleProcessor = roleProcessor;
 
-        if (this.accessControlEnabled)
+        if (this.jwtParameters.enabled())
         {
             periodicTaskExecutor.schedule(new OAuth2AuthHandlerGenerateTask());
         }
@@ -177,8 +174,9 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         @Override
         public void execute(Promise<Void> promise)
         {
-            if (!accessControlEnabled)
+            if (!jwtParameters.enabled())
             {
+                delegateHandler.set(null);
                 return;
             }
 

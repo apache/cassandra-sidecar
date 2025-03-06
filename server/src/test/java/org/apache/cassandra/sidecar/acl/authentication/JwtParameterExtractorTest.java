@@ -35,10 +35,12 @@ class JwtParameterExtractorTest
     @Test
     void testExtractingValidParameters()
     {
-        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("site", "www.apache.org",
+        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("enabled", "true",
+                                                                                    "site", "www.apache.org",
                                                                                     "client_id", "id",
                                                                                     "scopes_supported", "phone,email",
                                                                                     "config_discover_interval", "2m"));
+        assertThat(parameterExtractor.enabled()).isTrue();
         assertThat(parameterExtractor.site()).isEqualTo("www.apache.org");
         assertThat(parameterExtractor.clientId()).isEqualTo("id");
         assertThat(parameterExtractor.scopes()).containsAll(Arrays.asList("email", "phone"));
@@ -79,5 +81,16 @@ class JwtParameterExtractorTest
         assertThatThrownBy(() -> new JwtParameterExtractor(Map.of("site", "www.apache.org")))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Missing client_id JWT parameter");
+    }
+
+    @Test
+    void testInvalidEnabled()
+    {
+        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("enabled", "random",
+                                                                                    "site", "www.apache.org",
+                                                                                    "client_id", "id"));
+        assertThat(parameterExtractor.enabled()).isFalse();
+        assertThat(parameterExtractor.site()).isEqualTo("www.apache.org");
+        assertThat(parameterExtractor.clientId()).isEqualTo("id");
     }
 }

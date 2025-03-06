@@ -28,6 +28,11 @@ import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration
 public interface JwtParameters
 {
     /**
+     * @return boolean flag indicating if JWT authentication is enabled
+     */
+    boolean enabled();
+
+    /**
      * @return site to dynamically retrieve the configuration information of an OpenID provider
      */
     String site();

@@ -56,7 +56,6 @@ public class JwtAuthenticationHandlerFactory implements AuthenticationHandlerFac
         JwtParameters jwtParameters = parameterParser(parameters);
 
         return new ReloadingJwtAuthenticationHandler(vertx,
-                                                     accessControlConfiguration.enabled(),
                                                      jwtParameters,
                                                      roleProcessor,
                                                      periodicTaskExecutor);

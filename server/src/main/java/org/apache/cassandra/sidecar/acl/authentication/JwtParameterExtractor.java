@@ -39,6 +39,8 @@ public class JwtParameterExtractor implements JwtParameters
     protected static final String SITE_SUFFIX = "/.well-known/openid-configuration";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JwtParameterExtractor.class);
+    private static final String ENABLED_PARAM_KEY = "enabled";
+    private static final String DEFAULT_ENABLED = "false";
     private static final String SITE_PARAM_KEY = "site";
     private static final String CLIENT_ID_PARAM_KEY = "client_id";
     private static final String SCOPE_SEPARATOR_PARAM_KEY = "scope_separator";
@@ -48,6 +50,7 @@ public class JwtParameterExtractor implements JwtParameters
     private static final SecondBoundConfiguration DEFAULT_CONFIG_DISCOVER_INTERVAL
     = SecondBoundConfiguration.parse("1h");
 
+    private final boolean enabled;
     private final String site;
     private final String clientId;
     private final SecondBoundConfiguration configDiscoverInterval;
@@ -56,12 +59,19 @@ public class JwtParameterExtractor implements JwtParameters
     public JwtParameterExtractor(Map<String, String> parameters)
     {
         validate(parameters);
+        this.enabled = Boolean.parseBoolean(parameters.getOrDefault(ENABLED_PARAM_KEY, DEFAULT_ENABLED));
         this.site = removeSiteSuffix(parameters);
         this.clientId = parameters.get(CLIENT_ID_PARAM_KEY);
         this.scopes = buildScopes(parameters);
         this.configDiscoverInterval = parameters.containsKey(CONFIG_DISCOVER_INTERVAL_PARAM_KEY)
                                       ? SecondBoundConfiguration.parse(parameters.get(CONFIG_DISCOVER_INTERVAL_PARAM_KEY))
                                       : DEFAULT_CONFIG_DISCOVER_INTERVAL;
+    }
+
+    @Override
+    public boolean enabled()
+    {
+        return enabled;
     }
 
     @Override

@@ -45,10 +45,15 @@ class AuthUtilsTest
         user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, List.of("role1", "role2"));
         assertThat(extractCassandraRoles(user)).containsAll(Arrays.asList("role1", "role2"));
 
-        user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, null);
-        assertThat(extractCassandraRoles(user)).isEmpty();
-
         user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, "role1,role2");
         assertThatThrownBy(() -> extractCassandraRoles(user)).isInstanceOf(ClassCastException.class);
+    }
+
+    @Test
+    void testRolesSetToNull()
+    {
+        User user = User.fromName("test_user");
+        user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, null);
+        assertThat(extractCassandraRoles(user)).isEmpty();
     }
 }
