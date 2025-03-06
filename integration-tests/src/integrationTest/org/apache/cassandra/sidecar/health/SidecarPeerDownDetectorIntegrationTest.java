@@ -52,7 +52,6 @@ import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.apache.cassandra.testing.TestUtils.DC1_RF3;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
-import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegrationTestBase
