@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,7 +67,7 @@ class RoleBasedAuthorizationProviderTest
         .thenReturn(new HashSet<>(Arrays.asList(CassandraPermissions.CREATE.toAuthorization(), BasicPermissions.CREATE_SNAPSHOT.toAuthorization())));
         RoleBasedAuthorizationProvider authorizationProvider = new RoleBasedAuthorizationProvider(mockRolePermissionsCache);
         User user = User.fromName("test_user");
-        user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, "test_role");
+        user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, List.of("test_role"));
         authorizationProvider.getAuthorizations(user)
                              .onComplete(testContext.succeeding(v -> {
                                  assertThat(user.authorizations().get(authorizationProvider.getId())).hasSize(2);
