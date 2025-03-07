@@ -72,10 +72,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         this.jwtParameters = jwtParameters;
         this.roleProcessor = roleProcessor;
 
-        if (this.jwtParameters.enabled())
-        {
-            periodicTaskExecutor.schedule(new OAuth2AuthHandlerGenerateTask());
-        }
+        periodicTaskExecutor.schedule(new OAuth2AuthHandlerGenerateTask());
     }
 
     @Override
