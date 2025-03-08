@@ -21,7 +21,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
-import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
 /**
