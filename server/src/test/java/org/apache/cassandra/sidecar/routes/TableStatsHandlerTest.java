@@ -50,6 +50,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
+import org.apache.cassandra.sidecar.handlers.TableStatsHandler;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 

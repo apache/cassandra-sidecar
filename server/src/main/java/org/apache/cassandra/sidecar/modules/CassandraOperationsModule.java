@@ -33,8 +33,10 @@ import org.apache.cassandra.sidecar.handlers.SchemaHandler;
 import org.apache.cassandra.sidecar.handlers.StreamStatsHandler;
 import org.apache.cassandra.sidecar.handlers.TokenRangeReplicaMapHandler;
 import org.apache.cassandra.sidecar.handlers.cassandra.NodeSettingsHandler;
+import org.apache.cassandra.sidecar.handlers.validations.ValidateTableExistenceHandler;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
+import org.apache.cassandra.sidecar.handlers.TableStatsHandler;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
 
 /**
@@ -159,5 +161,16 @@ public class CassandraOperationsModule extends AbstractModule
                                         GossipInfoHandler gossipInfoHandler)
     {
         return factory.buildRouteWithHandler(gossipInfoHandler);
+    }
+
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.TableStatsRouteKey.class)
+    VertxRoute tableStatsRoute(RouteBuilder.Factory factory,
+                               ValidateTableExistenceHandler validateTableExistenceHandler,
+                               TableStatsHandler tableStatsHandler)
+    {
+        return factory.builderForRoute()
+                      .handler(validateTableExistenceHandler)
+                      .handler(tableStatsHandler).build();
     }
 }

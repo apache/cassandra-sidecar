@@ -42,11 +42,10 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
     private final Service service = service();
     private final SidecarSchema sidecarSchema;
 
-    protected ConfigAccessorImpl(ConfigsSchema configsSchema,
-                                 CQLSessionProvider sessionProvider,
+    protected ConfigAccessorImpl(CQLSessionProvider sessionProvider,
                                  SidecarSchema sidecarSchema)
     {
-        super(configsSchema, sessionProvider);
+        super(sidecarSchema.tableSchema(ConfigsSchema.class), sessionProvider);
         this.sidecarSchema = sidecarSchema;
     }
 

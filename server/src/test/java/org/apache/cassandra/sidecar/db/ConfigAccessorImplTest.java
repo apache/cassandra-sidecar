@@ -92,14 +92,15 @@ class ConfigAccessorImplTest
 
     private ConfigAccessorImpl getConfigAccessor(Service service, Map<String, String> configs, boolean noRowsExist)
     {
-        SidecarSchema mockSidecarSchema = mock(SidecarSchema.class);
         ConfigsSchema mockConfigsSchema = getMockConfigsSchema();
+        SidecarSchema mockSidecarSchema = mock(SidecarSchema.class);
+        when(mockSidecarSchema.tableSchema(ConfigsSchema.class)).thenReturn(mockConfigsSchema);
         CQLSessionProvider mockCQLSessionProvider = getMockCQLSessionProvider(configs, noRowsExist);
-        if (service.equals(Service.CDC))
+        if (service == Service.CDC)
         {
-            return new CdcConfigAccessor(mockConfigsSchema, mockCQLSessionProvider, mockSidecarSchema);
+            return new CdcConfigAccessor(mockCQLSessionProvider, mockSidecarSchema);
         }
-        return new KafkaConfigAccessor(mockConfigsSchema, mockCQLSessionProvider, mockSidecarSchema);
+        return new KafkaConfigAccessor(mockCQLSessionProvider, mockSidecarSchema);
     }
 
     private ConfigsSchema getMockConfigsSchema()

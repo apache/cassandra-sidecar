@@ -33,11 +33,10 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 public class CdcConfigAccessor extends ConfigAccessorImpl
 {
     @Inject
-    protected CdcConfigAccessor(ConfigsSchema configsSchema,
-                                CQLSessionProvider sessionProvider,
+    protected CdcConfigAccessor(CQLSessionProvider sessionProvider,
                                 SidecarSchema sidecarSchema)
     {
-        super(configsSchema, sessionProvider, sidecarSchema);
+        super(sessionProvider, sidecarSchema);
     }
 
     @Override

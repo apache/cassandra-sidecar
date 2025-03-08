@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.routes;
+package org.apache.cassandra.sidecar.handlers;
 
 import java.util.Collections;
 import java.util.Set;
@@ -30,8 +30,6 @@ import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.handlers.AbstractHandler;
-import org.apache.cassandra.sidecar.handlers.AccessProtected;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 

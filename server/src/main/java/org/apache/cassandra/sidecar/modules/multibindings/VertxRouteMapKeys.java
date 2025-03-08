@@ -223,6 +223,11 @@ public interface VertxRouteMapKeys
         HttpMethod HTTP_METHOD = HttpMethod.GET;
         String ROUTE_URI = ApiEndpointsV1.COMPONENTS_WITH_SECONDARY_INDEX_ROUTE_SUPPORT;
     }
+    interface TableStatsRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.TABLE_STATS_ROUTE;
+    }
     interface TimeSkewRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.GET;
