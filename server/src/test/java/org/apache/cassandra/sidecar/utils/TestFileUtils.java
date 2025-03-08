@@ -20,8 +20,10 @@ package org.apache.cassandra.sidecar.utils;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -57,5 +59,40 @@ public class TestFileUtils
             }
         }
         return filePath;
+    }
+
+    /**
+     * Creates a file with given {@code content}. File path can be specified as sequence of Strings just like
+     * {@link Paths#get(String, String...)}.
+     *
+     * @param content contents of file
+     * @param first   the path string or initial part of the path string
+     * @param more    additional strings to be joined to form the path string
+     * @throws IOException when cannot create file
+     */
+    public static void createFile(String content, String first, String... more) throws IOException
+    {
+        Path file = Paths.get(first, more);
+        Path parent = file.getParent();
+        if (null == parent)
+        {
+            throw new IOException("Parent doesn't exists for file " + file);
+        }
+        Files.createDirectories(parent);
+        Files.write(file, content.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Creates directory. Directory path can be specified as sequence of Strings
+     * just like {@link Paths#get(String, String...)}.
+     *
+     * @param first the path string or initial part of the path string
+     * @param more  additional strings to be joined to form the path string
+     * @throws IOException when cannot create directory
+     */
+    public static void createDirectory(String first, String... more) throws IOException
+    {
+        Path dir = Paths.get(first, more);
+        Files.createDirectories(dir);
     }
 }

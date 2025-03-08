@@ -43,6 +43,7 @@ import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
+import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.MetricsConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
@@ -112,6 +113,9 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     @NotNull
     protected final SchemaReportingConfiguration schemaReportingConfiguration;
 
+    @JsonProperty("live_migration")
+    private LiveMigrationConfiguration liveMigrationConfiguration;
+
     public SidecarConfigurationImpl()
     {
         this(builder());
@@ -134,6 +138,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         s3ClientConfiguration = builder.s3ClientConfiguration;
         vertxConfiguration = builder.vertxConfiguration;
         schemaReportingConfiguration = builder.schemaReportingConfiguration;
+        liveMigrationConfiguration = builder.liveMigrationConfiguration;
     }
 
     /**
@@ -291,6 +296,11 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         return schemaReportingConfiguration;
     }
 
+    public LiveMigrationConfiguration liveMigrationConfiguration()
+    {
+        return liveMigrationConfiguration;
+    }
+
     public static SidecarConfigurationImpl readYamlConfiguration(String yamlConfigurationPath) throws IOException
     {
         try
@@ -410,6 +420,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         private S3ClientConfiguration s3ClientConfiguration = new S3ClientConfigurationImpl();
         private VertxConfiguration vertxConfiguration = new VertxConfigurationImpl();
         private SchemaReportingConfiguration schemaReportingConfiguration = new SchemaReportingConfigurationImpl();
+        private LiveMigrationConfiguration liveMigrationConfiguration = new LiveMigrationConfigurationImpl();
 
         protected Builder()
         {
@@ -589,6 +600,18 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         public Builder schemaReportingConfiguration(SchemaReportingConfiguration configuration)
         {
             return update(builder -> builder.schemaReportingConfiguration = configuration);
+        }
+
+        /**
+         * Sets the {@code liveMigrationConfiguration} and returns a reference to this Builder enabling method
+         * chaining
+         *
+         * @param liveMigrationConfiguration the {@code liveMigrationConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder liveMigrationConfiguration(LiveMigrationConfiguration liveMigrationConfiguration)
+        {
+            return update(b -> b.liveMigrationConfiguration = liveMigrationConfiguration);
         }
 
         /**

@@ -59,7 +59,8 @@ public class SidecarModules
                        new SSTablesAccessModule(),
                        new TelemetryModule(),
                        new UtilitiesModule(),
-                       new MultiBindingTypeResolverModule());
+                       new MultiBindingTypeResolverModule(),
+                       new LiveMigrationModule());
     }
 
     /**

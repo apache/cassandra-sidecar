@@ -366,3 +366,10 @@ s3_client:
 #    uri:
 #    username:
 #    password:
+
+live_migration:
+  special_files_to_exclude: []
+  special_dirs_to_exclude:
+    - ${DATA_FILE_DIR}/*/*/snapshots # Excludes snapshot directories to copy to destination
+  migration_map:
+    localhost1: localhost4
