@@ -48,14 +48,14 @@ public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSch
     @Nullable
     public Long getCdcTotalSpaceSetting() throws SchemaUnavailableException
     {
-        // attempt to parse old 'cdc_total_space_in_mb' prop
+        // attempt to parse Cassandra v4.0 'cdc_total_space_in_mb' yaml prop
         String cdcTotalSpaceInMb = getSetting(YAML_PROP_PREVIOUS);
         if (cdcTotalSpaceInMb != null)
         {
             return FileUtils.mbStringToBytes(cdcTotalSpaceInMb);
         }
 
-        // otherwise parse current 'cdc_total_space' prop
+        // otherwise parse current (v5.0+) 'cdc_total_space' yaml prop
         String storageStringToBytes = getSetting(YAML_PROP_CURRENT);
         if (storageStringToBytes != null)
         {

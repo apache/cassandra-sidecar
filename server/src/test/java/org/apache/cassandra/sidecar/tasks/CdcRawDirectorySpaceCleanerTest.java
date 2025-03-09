@@ -77,7 +77,13 @@ public class CdcRawDirectorySpaceCleanerTest
         CdcMetrics cdcMetrics = new CdcMetrics(METRIC_REGISTRY);
         when(sidecarMetrics.server()).thenReturn(serverMetrics);
         when(serverMetrics.cdc()).thenReturn(cdcMetrics);
-        CdcRawDirectorySpaceCleaner cleaner = new CdcRawDirectorySpaceCleaner(timeProvider, systemViewsDatabaseAccessor, cdcConfiguration, instanceMetadata, sidecarMetrics);
+        CdcRawDirectorySpaceCleaner cleaner = new CdcRawDirectorySpaceCleaner(
+        timeProvider,
+        systemViewsDatabaseAccessor,
+        cdcConfiguration,
+        instanceMetadata,
+        sidecarMetrics
+        );
 
         checkExists(tempDir, TEST_ORPHANED_SEGMENT_FILE_NAME, true, false);
         checkExists(tempDir, TEST_SEGMENT_FILE_NAME_1);

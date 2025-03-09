@@ -19,8 +19,6 @@ package org.apache.cassandra.sidecar.config;
 
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 
-import java.time.Duration;
-
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
 /**
@@ -56,7 +54,7 @@ public interface CdcConfiguration
     boolean enableCdcRawDirectoryRoutineCleanUp();
 
     /**
-     * @return fallback value for maximum directory size in bytes for the `cdc_raw` directory when can't be read from `system_views.settings` table
+     * @return fallback value for maximum directory size in bytes for the `cdc_raw` directory when can't be read from `system_views.settings` table.
      */
     long fallbackCdcRawDirectoryMaxSizeBytes();
 
@@ -68,15 +66,15 @@ public interface CdcConfiguration
     /**
      * @return the critical time period in seconds that indicates the `cdc_raw` directory is not large enough to buffer this time-window of mutations.
      */
-    Duration cdcRawDirectoryCriticalBufferWindow();
+    SecondBoundConfiguration cdcRawDirectoryCriticalBufferWindow();
 
     /**
      * @return the low time period in seconds that indicates the `cdc_raw` directory is not large enough to buffer this time-window of mutations.
      */
-    Duration cdcRawDirectoryLowBufferWindow();
+    SecondBoundConfiguration cdcRawDirectoryLowBufferWindow();
 
     /**
      * @return the time period which the CdcRawDirectorySpaceCleaner should cache the cdc_total_space before refreshing.
      */
-    Duration cacheMaxUsage();
+    SecondBoundConfiguration cacheMaxUsage();
 }

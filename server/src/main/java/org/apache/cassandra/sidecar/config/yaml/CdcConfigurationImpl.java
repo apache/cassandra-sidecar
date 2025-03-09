@@ -17,8 +17,6 @@
  */
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -57,13 +55,13 @@ public class CdcConfigurationImpl implements CdcConfiguration
     public static final float DEFAULT_CDC_RAW_MAX_DIRECTORY_MAX_PERCENT = 1.0f;
 
     public static final String CDC_RAW_MAX_CRITICAL_BUFFER_WINDOW = "cdc_raw_critical_buffer_window";
-    public static final Duration DEFAULT_CDC_RAW_MAX_CRITICAL_BUFFER_WINDOW = Duration.of(15, ChronoUnit.MINUTES);
+    public static final SecondBoundConfiguration DEFAULT_CDC_RAW_MAX_CRITICAL_BUFFER_WINDOW = SecondBoundConfiguration.parse("15m");
 
     public static final String CDC_RAW_MAX_LOW_BUFFER_WINDOW = "cdc_raw_low_buffer_window";
-    public static final Duration DEFAULT_CDC_RAW_MAX_LOW_BUFFER_WINDOW = Duration.of(60, ChronoUnit.MINUTES);
+    public static final SecondBoundConfiguration DEFAULT_CDC_RAW_MAX_LOW_BUFFER_WINDOW = SecondBoundConfiguration.parse("60m");
 
     public static final String CDC_CACHE_MAX_USAGE_DURATION = "cdc_raw_cache_max_usage_duration";
-    public static final Duration DEFAULT_CDC_CACHE_MAX_USAGE_DURATION = Duration.of(15, ChronoUnit.MINUTES);
+    public static final SecondBoundConfiguration DEFAULT_CDC_CACHE_MAX_USAGE_DURATION = SecondBoundConfiguration.parse("15m");
 
     @JsonProperty(value = IS_ENABLED_PROPERTY)
     private final boolean isEnabled;
@@ -80,11 +78,11 @@ public class CdcConfigurationImpl implements CdcConfiguration
     @JsonProperty(value = CDC_RAW_MAX_DIRECTORY_MAX_PERCENT)
     protected float cdcRawMaxPercent;
     @JsonProperty(value = CDC_RAW_MAX_CRITICAL_BUFFER_WINDOW)
-    protected Duration cdcRawCriticalBufferWindow;
+    protected SecondBoundConfiguration cdcRawCriticalBufferWindow;
     @JsonProperty(value = CDC_RAW_MAX_LOW_BUFFER_WINDOW)
-    protected Duration cdcRawLowBufferWindow;
+    protected SecondBoundConfiguration cdcRawLowBufferWindow;
     @JsonProperty(value = CDC_CACHE_MAX_USAGE_DURATION)
-    protected Duration cacheMaxUsage;
+    protected SecondBoundConfiguration cacheMaxUsage;
 
     public CdcConfigurationImpl()
     {
@@ -125,9 +123,9 @@ public class CdcConfigurationImpl implements CdcConfiguration
                                 boolean enableCdcRawCleaner,
                                 long cdcRawMaxDirectorySize,
                                 float cdcRawMaxPercent,
-                                Duration cdcRawCriticalBufferWindow,
-                                Duration cdcRawLowBufferWindow,
-                                Duration cacheMaxUsage)
+                                SecondBoundConfiguration cdcRawCriticalBufferWindow,
+                                SecondBoundConfiguration cdcRawLowBufferWindow,
+                                SecondBoundConfiguration cacheMaxUsage)
     {
         this.isEnabled = isEnabled;
         this.cdcConfigRefreshTime = cdcConfigRefreshTime;
@@ -246,13 +244,13 @@ public class CdcConfigurationImpl implements CdcConfiguration
      */
     @Override
     @JsonProperty(value = CDC_RAW_MAX_CRITICAL_BUFFER_WINDOW)
-    public Duration cdcRawDirectoryCriticalBufferWindow()
+    public SecondBoundConfiguration cdcRawDirectoryCriticalBufferWindow()
     {
         return cdcRawCriticalBufferWindow;
     }
 
     @JsonProperty(value = CDC_RAW_MAX_CRITICAL_BUFFER_WINDOW)
-    public void setCdcRawDirectoryCriticalBufferWindow(Duration cdcRawCriticalBufferWindow)
+    public void setCdcRawDirectoryCriticalBufferWindow(SecondBoundConfiguration cdcRawCriticalBufferWindow)
     {
         this.cdcRawCriticalBufferWindow = cdcRawCriticalBufferWindow;
     }
@@ -262,13 +260,13 @@ public class CdcConfigurationImpl implements CdcConfiguration
      */
     @Override
     @JsonProperty(value = CDC_RAW_MAX_LOW_BUFFER_WINDOW)
-    public Duration cdcRawDirectoryLowBufferWindow()
+    public SecondBoundConfiguration cdcRawDirectoryLowBufferWindow()
     {
         return cdcRawLowBufferWindow;
     }
 
     @JsonProperty(value = CDC_RAW_MAX_LOW_BUFFER_WINDOW)
-    public void setCdcRawDirectoryLowBufferWindow(Duration cdcRawLowBufferWindow)
+    public void setCdcRawDirectoryLowBufferWindow(SecondBoundConfiguration cdcRawLowBufferWindow)
     {
         this.cdcRawLowBufferWindow = cdcRawLowBufferWindow;
     }
@@ -278,13 +276,13 @@ public class CdcConfigurationImpl implements CdcConfiguration
      */
     @JsonProperty(value = CDC_CACHE_MAX_USAGE_DURATION)
     @Override
-    public Duration cacheMaxUsage()
+    public SecondBoundConfiguration cacheMaxUsage()
     {
         return cacheMaxUsage;
     }
 
     @JsonProperty(value = CDC_CACHE_MAX_USAGE_DURATION)
-    public void setCacheMaxUsage(Duration cacheMaxUsage)
+    public void setCacheMaxUsage(SecondBoundConfiguration cacheMaxUsage)
     {
         this.cacheMaxUsage = cacheMaxUsage;
     }
