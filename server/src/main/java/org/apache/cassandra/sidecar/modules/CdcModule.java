@@ -24,7 +24,6 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import org.apache.cassandra.sidecar.cdc.CdcLogCache;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
-import org.apache.cassandra.sidecar.codecs.SidecarInstanceCodec;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -59,14 +58,12 @@ public class CdcModule extends AbstractModule
 {
     @ProvidesIntoMap
     @KeyClassMapKey(PeriodicTaskMapKeys.SidecarPeerHealthMonitorTaskKey.class)
-    PeriodicTask sidecarPeerHealthMonitorTask(SidecarConfiguration sidecarConfiguration,
-                                              SidecarPeerProvider sidecarPeerProvider,
-                                              SidecarPeerHealthProvider healthProvider,
-                                              SidecarInstanceCodec sidecarInstanceCodec)
+    PeriodicTask sidecarPeerHealthMonitorTask(SidecarPeerHealthMonitorTask task)
     {
-        return new SidecarPeerHealthMonitorTask(sidecarConfiguration, sidecarPeerProvider, healthProvider, sidecarInstanceCodec);
+        // Wire SidecarPeerHealthMonitorTask singleton into mapBinder
+        return task;
     }
-    
+
     @ProvidesIntoMap
     @KeyClassMapKey(TableSchemaMapKeys.ConfigsSchemaKey.class)
     TableSchema configsSchema(ServiceConfiguration serviceConfiguration)

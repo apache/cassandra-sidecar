@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.modules;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
@@ -45,6 +44,7 @@ import org.apache.cassandra.sidecar.handlers.restore.UpdateRestoreJobHandler;
 import org.apache.cassandra.sidecar.handlers.validations.ValidateTableExistenceHandler;
 import org.apache.cassandra.sidecar.modules.multibindings.ClassKey;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
+import org.apache.cassandra.sidecar.modules.multibindings.MultiBindingUtils;
 import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
@@ -62,10 +62,9 @@ public class RestoreJobModule extends AbstractModule
     @Override
     protected void configure()
     {
-        // Leverage TypeLiteral to preserve the lower bound type Key at the runtime
-        TypeLiteral<Class<? extends ClassKey>> keyType = new TypeLiteral<>() {};
-        TypeLiteral<PeriodicTask> valueType = new TypeLiteral<>() {};
-        MapBinder<Class<? extends ClassKey>, PeriodicTask> periodicTaskMapBinder = MapBinder.newMapBinder(binder(), keyType, valueType);
+        MapBinder<Class<? extends ClassKey>, PeriodicTask> periodicTaskMapBinder =
+        MultiBindingUtils.newClassKeyClassMapBinder(binder(), PeriodicTask.class);
+        // The bindings using DSL if the bound type, e.g. RestoreJobDiscoverer, is referenced _directly_ by other components.
         periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RestoreJobDiscovererKey.class).to(RestoreJobDiscoverer.class);
         periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RestoreProcessorKey.class).to(RestoreProcessor.class);
         periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RingTopologyRefresherKey.class).to(RingTopologyRefresher.class);

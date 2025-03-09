@@ -18,7 +18,47 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+
+import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.TestResourceReaper;
+
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
+import static org.assertj.core.api.Assertions.assertThat;
+
 class EventBusUtilsTest
 {
-  //todo yifan
+    static Vertx vertx = Vertx.vertx();
+
+    @AfterAll
+    static void cleanup()
+    {
+        TestResourceReaper.create().with(vertx).close();
+    }
+
+    @Test
+    void testOnceLocalConsumerReceiveMessageOnlyOnce()
+    {
+        AtomicInteger exactOnceReceiver = new AtomicInteger(0);
+        AtomicInteger longLivedReceiver = new AtomicInteger(0);
+        EventBusUtils.onceLocalConsumer(vertx.eventBus(), "foo", ignored -> exactOnceReceiver.incrementAndGet());
+        vertx.eventBus().localConsumer("foo", ignored -> longLivedReceiver.incrementAndGet());
+        for (int i = 0; i < 10; i++)
+        {
+            vertx.eventBus().publish("foo", "bar");
+        }
+
+        loopAssert(1, () -> assertThat(exactOnceReceiver.get())
+                            .describedAs("Should only receive the message once")
+                            .isEqualTo(1));
+        loopAssert(1, () -> assertThat(longLivedReceiver.get())
+                            .describedAs("Should receive the message 10 times")
+                            .isEqualTo(10));
+        assertThat(exactOnceReceiver.get())
+        .describedAs("Run the check again to prove that it receives value exactly once")
+        .isEqualTo(1);
+    }
 }

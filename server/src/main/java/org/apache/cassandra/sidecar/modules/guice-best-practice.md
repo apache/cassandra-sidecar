@@ -57,6 +57,34 @@ mounting process can be found at [ApiModule](ApiModule.java).
 The same applies to periodic tasks and sidecar internal schemas. You may check out
 [SchedulingModule](SchedulingModule.java) and [SchedulingModule](SchedulingModule.java).
 
+### Using binding DSL
+
+Beside the binding annotation (preferred), e.g. `@ProvidesIntoMap`, the binding DSL is another way to define the bindings. The following snippet
+illustrates the usage. The bindings are configured in the `configure()` method of a module. 
+
+```java
+    @Override
+    protected void configure()
+    {
+        // Leverage TypeLiteral to preserve the lower bound type Key at the runtime
+        TypeLiteral<Class<? extends ClassKey>> keyType = new TypeLiteral<>() {};
+        TypeLiteral<PeriodicTask> valueType = new TypeLiteral<>() {};
+        MapBinder<Class<? extends ClassKey>, PeriodicTask> periodicTaskMapBinder = MapBinder.newMapBinder(binder(), keyType, valueType);
+        periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RestoreJobDiscovererKey.class).to(RestoreJobDiscoverer.class);
+        periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RestoreProcessorKey.class).to(RestoreProcessor.class);
+        periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RingTopologyRefresherKey.class).to(RingTopologyRefresher.class);
+    }
+```
+
+Using the DSL permits more succinct code. In the example above, each binding is a single line of code, whereas the annotation approach requires 
+a provider method and generally more verbose. However, having succinct code should not be the only reason of using DSL. In most of the cases,
+prefer the annotation approach, as it is often more flexible and provide better readability. 
+
+The DSL approach should be used if the mapBinder target is also _directly_ referenced in other components. For example, `RestoreJobDiscoverer`
+is annotated as `@Singleton`, and it is provided into the mapBinder and `RestoreJobConsistencyChecker`. Using the DSL, Guice ensures that the instance 
+in the mapBinder is the same instance for `RestoreJobConsistencyChecker`. In other words, `RestoreJobDiscoverer` is a true singleton. However, if
+using `@ProvidesIntoMap`, a new instance is created, violating the singleton scope. 
+
 ### Multi-bindings type resolution
 
 Type resolution is needed when there is a requirement to substitute the bound types when integrating Apache Sidecar with your existing 
