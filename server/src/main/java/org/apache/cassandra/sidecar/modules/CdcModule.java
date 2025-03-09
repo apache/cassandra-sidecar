@@ -108,7 +108,7 @@ public class CdcModule extends AbstractModule
     VertxRoute deleteServiceConfigurationRoute(RouteBuilder.Factory factory,
                                                DeleteServiceConfigHandler deleteServiceConfigHandler)
     {
-        return factory.builderForRoute().setBodyHandler(true).handler(deleteServiceConfigHandler).build();
+        return factory.buildRouteWithHandler(deleteServiceConfigHandler);
     }
 
     @Provides
