@@ -308,9 +308,10 @@ class ClusterLeaseClaimTaskIntegrationTest
                     // Every instance will try to run determineSingleInstanceExecutor at roughly the same time
                     simulatedInstances.get(finalI).clusterLeaseClaimTask.runClaimProcess();
                 }
-                catch (InterruptedException e)
+                catch (Throwable cause)
                 {
-                    throw new RuntimeException(e);
+                    LOGGER.error("Claim process failed.", cause);
+                    throw new RuntimeException(cause);
                 }
                 finally
                 {
