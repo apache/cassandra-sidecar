@@ -100,7 +100,7 @@ public class CdcModule extends AbstractModule
     VertxRoute updateServiceConfigurationRoute(RouteBuilder.Factory factory,
                                                UpdateServiceConfigHandler updateServiceConfigHandler)
     {
-        return factory.buildRouteWithHandler(updateServiceConfigHandler);
+        return factory.builderForRoute().setBodyHandler(true).handler(updateServiceConfigHandler).build();
     }
 
     @ProvidesIntoMap
@@ -108,7 +108,7 @@ public class CdcModule extends AbstractModule
     VertxRoute deleteServiceConfigurationRoute(RouteBuilder.Factory factory,
                                                DeleteServiceConfigHandler deleteServiceConfigHandler)
     {
-        return factory.buildRouteWithHandler(deleteServiceConfigHandler);
+        return factory.builderForRoute().setBodyHandler(true).handler(deleteServiceConfigHandler).build();
     }
 
     @Provides
