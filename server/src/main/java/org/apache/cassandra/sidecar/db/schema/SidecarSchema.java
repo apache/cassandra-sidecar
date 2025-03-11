@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.utils.EventBusUtils;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 
@@ -48,7 +49,9 @@ public class SidecarSchema
         this.sidecarInternalKeyspace = sidecarInternalKeyspace;
         if (this.schemaKeyspaceConfiguration.isEnabled())
         {
-            vertx.eventBus().localConsumer(ON_SIDECAR_SCHEMA_INITIALIZED.address(), ignored -> isInitialized.set(true));
+            EventBusUtils.onceLocalConsumer(vertx.eventBus(),
+                                            ON_SIDECAR_SCHEMA_INITIALIZED.address(),
+                                            ignored -> isInitialized.set(true));
         }
         else
         {

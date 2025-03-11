@@ -24,7 +24,7 @@ import io.vertx.core.Handler;
 import io.vertx.ext.auth.authorization.Authorization;
 
 /**
- * Interface for authorized routes that defines the set of {@link Authorization}s required by the implementing
+ * Interface for authorized handler that defines the set of {@link Authorization}s required by the implementing
  * {@link Handler}.
  */
 public interface AccessProtected

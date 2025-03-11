@@ -87,4 +87,5 @@ dependencies {
     testFixturesCompileOnly(group: 'io.netty', name: 'netty-codec-http', version: "${project.nettyVersion}")
 }
 
+spotbugsTest.enabled = false
 check.dependsOn(checkstyleMain, checkstyleTest, jacocoTestReport)

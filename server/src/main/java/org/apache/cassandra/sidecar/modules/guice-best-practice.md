@@ -22,17 +22,18 @@
 
 First of all, refer to [Guice Wiki](https://github.com/google/guice/wiki/BestPractices) for the best practices in general.
 
-There are certain project-specific best practices we advocate for Apache Sidecar. This article capture those items in the below. 
+There are certain project-specific best practices we advocate for Apache Cassandra Sidecar. 
+This article captures those items in the below. 
 
 ## Multi-bindings for Plugin Extension
 
 [Multi-bindings](https://github.com/google/guice/wiki/Multibindings) is a Guice feature to support the plugin-type architecture,
 where multiple modules contribute components to plug into the system.
 
-The applications of multi-bindings in Sidecar are, for example,
+The applications of multi-bindings in Sidecar include,
 1. Routes definition
 2. Periodic tasks deployment
-3. Sidecar internal schemas creation
+3. Sidecar schemas registration
 
 Taking the "Routes definition" for instance, multiple modules under the package `org.apache.cassandra.sidecar.modules` define
 the `VertxRoute`s. Each of them are provided into the `MapBinder`, keyed by the unique class key. Once Guice is fully initialized,

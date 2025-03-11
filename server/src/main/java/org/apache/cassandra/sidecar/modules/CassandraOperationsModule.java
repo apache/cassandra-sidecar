@@ -28,7 +28,6 @@ import org.apache.cassandra.sidecar.handlers.ListOperationalJobsHandler;
 import org.apache.cassandra.sidecar.handlers.NodeDecommissionHandler;
 import org.apache.cassandra.sidecar.handlers.OperationalJobHandler;
 import org.apache.cassandra.sidecar.handlers.RingHandler;
-import org.apache.cassandra.sidecar.handlers.RouteBuilder;
 import org.apache.cassandra.sidecar.handlers.SchemaHandler;
 import org.apache.cassandra.sidecar.handlers.StreamStatsHandler;
 import org.apache.cassandra.sidecar.handlers.TableStatsHandler;
@@ -37,6 +36,7 @@ import org.apache.cassandra.sidecar.handlers.cassandra.NodeSettingsHandler;
 import org.apache.cassandra.sidecar.handlers.validations.ValidateTableExistenceHandler;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
+import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
 
 /**

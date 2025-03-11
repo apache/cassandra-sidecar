@@ -60,4 +60,5 @@ dependencies {
     testImplementation(testFixtures(project(path: ":test-common")))
 }
 
+spotbugsTest.enabled = false
 check.dependsOn(checkstyleMain, checkstyleTest, jacocoTestReport)

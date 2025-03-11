@@ -33,7 +33,6 @@ import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.handlers.DiskSpaceProtectionHandler;
-import org.apache.cassandra.sidecar.handlers.RouteBuilder;
 import org.apache.cassandra.sidecar.handlers.restore.AbortRestoreJobHandler;
 import org.apache.cassandra.sidecar.handlers.restore.CreateRestoreJobHandler;
 import org.apache.cassandra.sidecar.handlers.restore.CreateRestoreSliceHandler;
@@ -51,6 +50,7 @@ import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
 import org.apache.cassandra.sidecar.restore.RestoreJobDiscoverer;
 import org.apache.cassandra.sidecar.restore.RestoreProcessor;
 import org.apache.cassandra.sidecar.restore.RingTopologyRefresher;
+import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 

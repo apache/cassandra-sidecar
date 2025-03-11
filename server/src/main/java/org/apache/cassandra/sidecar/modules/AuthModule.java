@@ -51,11 +51,11 @@ import org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
-import org.apache.cassandra.sidecar.handlers.RouteBuilder;
-import org.apache.cassandra.sidecar.handlers.RoutingOrder;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
+import org.apache.cassandra.sidecar.routes.RouteBuilder;
+import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
 
 /**

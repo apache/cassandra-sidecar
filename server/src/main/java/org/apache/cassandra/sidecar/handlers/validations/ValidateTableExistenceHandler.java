@@ -30,7 +30,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
-import org.apache.cassandra.sidecar.handlers.RoutingContextUtils;
+import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;

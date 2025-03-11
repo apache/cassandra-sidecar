@@ -39,8 +39,6 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.VertxConfiguration;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 import org.apache.cassandra.sidecar.handlers.JsonErrorHandler;
-import org.apache.cassandra.sidecar.handlers.RouteBuilder;
-import org.apache.cassandra.sidecar.handlers.RoutingOrder;
 import org.apache.cassandra.sidecar.handlers.TimeSkewHandler;
 import org.apache.cassandra.sidecar.logging.SidecarLoggerHandler;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
@@ -48,6 +46,8 @@ import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.MultiBindingTypeResolver;
 import org.apache.cassandra.sidecar.modules.multibindings.RouteClassKey;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
+import org.apache.cassandra.sidecar.routes.RouteBuilder;
+import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.SettableVertxRoute;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
 

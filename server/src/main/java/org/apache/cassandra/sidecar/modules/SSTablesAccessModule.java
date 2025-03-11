@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.modules;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import org.apache.cassandra.sidecar.handlers.FileStreamHandler;
-import org.apache.cassandra.sidecar.handlers.RouteBuilder;
 import org.apache.cassandra.sidecar.handlers.StreamSSTableComponentHandler;
 import org.apache.cassandra.sidecar.handlers.snapshots.ClearSnapshotHandler;
 import org.apache.cassandra.sidecar.handlers.snapshots.CreateSnapshotHandler;
@@ -32,6 +31,7 @@ import org.apache.cassandra.sidecar.handlers.sstableuploads.SSTableUploadHandler
 import org.apache.cassandra.sidecar.handlers.validations.ValidateTableExistenceHandler;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
+import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
 
 /**

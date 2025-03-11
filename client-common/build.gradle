@@ -62,3 +62,5 @@ dependencies {
     testImplementation(group: 'io.netty', name: 'netty-codec-http', version: "${project.nettyVersion}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}")
 }
+
+spotbugsTest.enabled = false

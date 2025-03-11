@@ -35,12 +35,12 @@ import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
-import org.apache.cassandra.sidecar.handlers.RoutingContextUtils;
+import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.RESTORE_JOBS;
-import static org.apache.cassandra.sidecar.handlers.RoutingContextUtils.SC_QUALIFIED_TABLE_NAME;
-import static org.apache.cassandra.sidecar.handlers.RoutingContextUtils.SC_RESTORE_JOB;
+import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_QUALIFIED_TABLE_NAME;
+import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**

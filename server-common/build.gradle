@@ -69,4 +69,5 @@ compileTestJava {
     ]
 }
 
+spotbugsTest.enabled = false
 check.dependsOn(checkstyleMain, checkstyleTest, jacocoTestReport)

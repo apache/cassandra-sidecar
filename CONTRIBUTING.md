@@ -169,7 +169,7 @@ threads that are managed internal by vertx. For example, the below code snippet 
 executorPools.service().setTimer(delayMillis, timerId -> action());
 ```
 
-Similarly, a simple periodic task can be schedule with the following code. The `action()` is scheduled to run after 
+Similarly, a simple periodic task can be scheduled with the following code. The `action()` is scheduled to run after 
 the `initialDelayMillis` and repeat every `delayMillis`.
 
 ```java
@@ -180,7 +180,7 @@ Note that such periodic task is triggered whenever the scheduled time has arrive
 It might not be the desired scheduling behavior for the use case. If serial execution sequence is wanted, check out the 
 scheduling mechanism described in [Advanced periodic task scheduling](#advanced-periodic-scheduling)
 
-#### <a name="advanced-periodic-scheduling">Advanced periodic task scheduling
+#### <a name="advanced-periodic-scheduling">Advanced Periodic Task Scheduling
 
 `PeriodicTaskExecutor` provides the scheduling behavior that is similar to the hybrid of `ScheduledExecutorService#scheduleAtFixedRate`
 and `ScheduledExecutorService#scheduleAtFixedDelay`. The unit of execution is `PeriodicTask`.

@@ -116,7 +116,7 @@ class InstanceMetadataImplTest
     @Test
     void failsWhenDataDirsAreNotConfigured()
     {
-        assertThatIllegalArgumentException()
+        assertThatNullPointerException()
         .isThrownBy(() -> InstanceMetadataImpl.builder()
                                               .id(ID)
                                               .host(HOST)

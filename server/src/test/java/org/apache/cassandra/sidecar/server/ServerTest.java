@@ -237,7 +237,7 @@ class ServerTest
               // simulate a bind exception due to address already in use
               .compose(deploymentId -> Future.failedFuture(new java.net.BindException("Address already in use")))
               .onComplete(context.failing(result -> serverStartFailed.countDown()));
-        Uninterruptibles.awaitUninterruptibly(serverStartFailed);
+        Uninterruptibles.awaitUninterruptibly(serverStartFailed, 5, TimeUnit.SECONDS);
         serverAlreadyClosedInTest.set(true);
         getBlocking(server.close(), 10, TimeUnit.SECONDS, "Stop server");
         context.completeNow();

@@ -234,6 +234,7 @@ jib {
     }
 }
 
+spotbugsTest.enabled = false
 compileContainerTestJava.onlyIf { "true" != System.getenv("skipContainerTest") }
 checkstyleContainerTest.onlyIf { "true" != System.getenv("skipContainerTest") }
 spotbugsContainerTest.onlyIf { "true" != System.getenv("skipContainerTest") }

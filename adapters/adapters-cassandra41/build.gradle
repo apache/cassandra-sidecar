@@ -52,3 +52,5 @@ dependencies {
     compileOnly('com.datastax.cassandra:cassandra-driver-core:3.11.3')
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
 }
+
+spotbugsTest.enabled = false

@@ -36,14 +36,14 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 import org.apache.cassandra.sidecar.handlers.AccessProtected;
-import org.apache.cassandra.sidecar.handlers.RoutingContextUtils;
 import org.apache.cassandra.sidecar.restore.RestoreJobConsistencyChecker;
 import org.apache.cassandra.sidecar.restore.RestoreJobProgress;
+import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
-import static org.apache.cassandra.sidecar.handlers.RoutingContextUtils.SC_RESTORE_JOB;
+import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
