@@ -42,7 +42,7 @@ public interface RouteClassKey extends ClassKey
      */
     static HttpMethod httpMethod(Class<? extends RouteClassKey> classKey)
     {
-        return readStaticFieldValue(classKey, HTTP_METHOD_FIELD_NAME);
+        return readStaticFieldValue(classKey, HTTP_METHOD_FIELD_NAME, HttpMethod.class);
     }
 
     /**
@@ -52,15 +52,14 @@ public interface RouteClassKey extends ClassKey
      */
     static String routeURI(Class<? extends RouteClassKey> classKey)
     {
-        return readStaticFieldValue(classKey, ROUTE_URI_FIELD_NAME);
+        return readStaticFieldValue(classKey, ROUTE_URI_FIELD_NAME, String.class);
     }
 
-    private static <T> T readStaticFieldValue(Class<? extends RouteClassKey> classKey, String declaredFieldName)
+    private static <T> T readStaticFieldValue(Class<? extends RouteClassKey> classKey, String declaredFieldName, Class<T> expectedType)
     {
         try
         {
-            //noinspection unchecked
-            return (T) classKey.getDeclaredField(declaredFieldName).get(null);
+            return expectedType.cast(classKey.getDeclaredField(declaredFieldName).get(null));
         }
         catch (IllegalAccessException | NoSuchFieldException | ClassCastException e)
         {

@@ -56,7 +56,7 @@ class RouteClassKeyTest
         assertThatThrownBy(() -> RouteClassKey.httpMethod(MalformedKey.class))
         .isExactlyInstanceOf(RuntimeException.class)
         .hasCauseInstanceOf(ClassCastException.class)
-        .hasMessageContaining("class java.lang.String cannot be cast to class io.vertx.core.http.HttpMethod");
+        .hasMessageContaining("Cannot cast java.lang.String to io.vertx.core.http.HttpMethod");
     }
 
     interface EmptyKey extends RouteClassKey {}
