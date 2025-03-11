@@ -99,10 +99,6 @@ import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
@@ -1682,17 +1678,19 @@ abstract class SidecarClientTest
     {
         MockResponse response = new MockResponse()
                 .setResponseCode(OK.code())
-                .setBody("");
+                .setBody("{\"status\":\"OK\"}");
 
         enqueue(response);
 
         SidecarInstance instance = instances.get(0);
 
-        CompletableFuture<Void> future = client.reportSchema(instance);
+        CompletableFuture<HealthResponse> future = client.reportSchema(instance);
 
-        assertDoesNotThrow(() ->
-                future.whenComplete((ignored, throwable) -> assertNull(throwable))
-                      .join());
+        future.whenComplete((ignored, throwable) ->
+        {
+            assertThat(ignored.isOk()).isTrue();
+            assertThat(throwable).isNull();
+        }).join();
     }
 
     @Test
@@ -1700,17 +1698,22 @@ abstract class SidecarClientTest
     {
         MockResponse response = new MockResponse()
                 .setResponseCode(INTERNAL_SERVER_ERROR.code())
-                .setBody("Message");
+                .setBody(INTERNAL_SERVER_ERROR.reasonPhrase());
 
         enqueue(response);
 
         SidecarInstance instance = instances.get(0);
 
-        CompletableFuture<Void> future = client.reportSchema(instance);
+        CompletableFuture<String> future = client.reportSchema(instance);
 
-        assertThrows(CompletionException.class, () ->
-                future.whenComplete((ignored, throwable) -> assertNotNull(throwable))
-                      .join());
+        assertThatThrownBy(() -> future.whenComplete((ignored, throwable) ->
+        {
+            assertThat(ignored).isEqualTo(INTERNAL_SERVER_ERROR.reasonPhrase());
+            assertThat(throwable).isNotNull();
+        }).join()).isInstanceOf(CompletionException.class)
+                  .hasCauseInstanceOf(RetriesExhaustedException.class)
+                  .hasMessageContaining(Integer.toString(INTERNAL_SERVER_ERROR.code()))
+                  .hasMessageContaining(INTERNAL_SERVER_ERROR.reasonPhrase());
     }
 
     @Test

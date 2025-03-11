@@ -31,6 +31,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.datahub.SchemaReporter;
+import org.apache.cassandra.sidecar.server.MainModule;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -97,7 +98,7 @@ public class ReportSchemaHandler extends AbstractHandler<Void> implements Access
 
         executorPools.service()
                      .runBlocking(() -> schemaReporter.process(metadata))
-                     .onSuccess(ignored -> context.end())
+                     .onSuccess(ignored ->  context.json(MainModule.OK_STATUS))
                      .onFailure(throwable -> processFailure(throwable, context, host, address, request));
     }
 }

@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.routes;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -39,14 +38,14 @@ import com.google.inject.util.Modules;
 import com.linkedin.mxe.MetadataChangeProposal;
 import datahub.client.Callback;
 import datahub.client.MetadataWriteResponse;
-import datahub.shaded.findbugs.annotations.SuppressFBWarnings;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.Vertx;>>
+import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -150,16 +149,12 @@ final class ReportSchemaHandlerTest
     }
 
     @AfterEach
-    @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED")
     void after() throws InterruptedException
     {
-        CountDownLatch latch = new CountDownLatch(1);
-        server.close()
-              .onSuccess(future -> latch.countDown());
-
-        client.close();
-
-        latch.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+        TestResourceReaper.create()
+                          .with(server)
+                          .with(client)
+                          .close();
     }
 
     @Test

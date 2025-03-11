@@ -20,12 +20,13 @@ package org.apache.cassandra.sidecar.common.request;
 
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.response.HealthResponse;
 
 /**
  * A request to trigger an immediate, synchronous schema conversion
  * and report regardless of the periodic task schedule or status
  */
-public class ReportSchemaRequest extends Request
+public class ReportSchemaRequest extends JsonRequest<HealthResponse>
 {
     public ReportSchemaRequest()
     {

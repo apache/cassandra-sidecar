@@ -85,7 +85,7 @@ public class RequestContext
     protected static final NodeDecommissionRequest NODE_DECOMMISSION_REQUEST = new NodeDecommissionRequest();
 
     protected static final StreamStatsRequest STREAM_STATS_REQUEST = new StreamStatsRequest();
-    protected static final RetryPolicy DEFAULT_RETRY_POLICY = new NoRetryPolicy();
+    protected static final RetryPolicy DEFAULT_NO_RETRY_POLICY = new NoRetryPolicy();
     protected static final RetryPolicy DEFAULT_EXPONENTIAL_BACKOFF_RETRY_POLICY =
     new ExponentialBackoffRetryPolicy(10, 500L, 60_000L);
 
@@ -141,7 +141,7 @@ public class RequestContext
     {
         private InstanceSelectionPolicy instanceSelectionPolicy;
         private Request request;
-        private RetryPolicy retryPolicy = DEFAULT_RETRY_POLICY;
+        private RetryPolicy retryPolicy = DEFAULT_NO_RETRY_POLICY;
         private final Map<String, String> customHeaders;
 
         public Builder()
@@ -573,6 +573,16 @@ public class RequestContext
         public Builder streamsStatsRequest()
         {
             return request(STREAM_STATS_REQUEST);
+        }
+
+        /**
+         * Sets the {@code retryPolicy} to be an instance of {@link NoRetryPolicy}
+         *
+         * @return this {@link Builder} for method chaining
+         */
+        public Builder noRetryPolicy()
+        {
+            return retryPolicy(DEFAULT_NO_RETRY_POLICY);
         }
 
         /**

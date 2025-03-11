@@ -182,7 +182,6 @@ import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.API_V1_ALL_ROUTES;
 import static org.apache.cassandra.sidecar.common.server.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
@@ -969,9 +968,8 @@ public class MainModule extends AbstractModule
                                        ignored -> {
                                            periodicTaskExecutor.schedule(clusterLeaseClaimTask);
                                            periodicTaskExecutor.schedule(sidecarPeerHealthMonitorTask);
+                                           periodicTaskExecutor.schedule(schemaReportingTask);
                                        });
-        vertx.eventBus().localConsumer(ON_ALL_CASSANDRA_CQL_READY.address(),
-                                       message -> periodicTaskExecutor.schedule(schemaReportingTask));
         return periodicTaskExecutor;
     }
 

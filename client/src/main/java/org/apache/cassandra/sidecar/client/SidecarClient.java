@@ -574,15 +574,12 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      * @param instance the {@link SidecarInstance} to receive the request
      * @return a {@link CompletableFuture} for the request
      */
-    public CompletableFuture<Void> reportSchema(SidecarInstance instance)
+    public <T> CompletableFuture<T> reportSchema(SidecarInstance instance)
     {
-        // Create an instance of {@link RequestContext.Builder} using its
-        // constructor instead of the {@link this.requestBuilder()} method,
-        // since {@link NoRetryPolicy} is the preferred behavior here
-
-        RequestContext context = new RequestContext.Builder()
+        RequestContext context = requestBuilder()
                 .singleInstanceSelectionPolicy(instance)
                 .reportSchemaRequest()
+                .noRetryPolicy()  // {@link NoRetryPolicy} is the preferred behavior here
                 .build();
 
         return executor.executeRequestAsync(context);
