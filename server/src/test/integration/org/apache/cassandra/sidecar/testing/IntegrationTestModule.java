@@ -180,7 +180,7 @@ public class IntegrationTestModule extends AbstractModule
     }
 
     /**
-     * This is the example of replacing a bound objet. In the resolver below, the ClusterLeaseClaimTask from production code is removed and replaced by
+     * This is the example of replacing a bound object. In the resolver below, the ClusterLeaseClaimTask from production code is removed and replaced by
      * the ClusterLeaseClaimTask provided in this module.
      * See {@link #clusterLeaseClaimTask(ServiceConfiguration, ElectorateMembership, SidecarLeaseDatabaseAccessor, ClusterLease, SidecarMetrics)}
      */
