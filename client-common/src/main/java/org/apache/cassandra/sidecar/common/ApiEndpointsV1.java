@@ -122,7 +122,7 @@ public final class ApiEndpointsV1
     public static final String STREAM_CDC_SEGMENTS_ROUTE = LIST_CDC_SEGMENTS_ROUTE + "/" + SEGMENT_PATH_PARAM;
 
     // Schema Reporting
-    private static final String REPORT_SCHEMA = "/report-schema";
+    private static final String REPORT_SCHEMA = "/datahub/schemas";
     public static final String REPORT_SCHEMA_ROUTE = API_V1 + REPORT_SCHEMA;
 
     public static final String SERVICES_PATH = "/services";

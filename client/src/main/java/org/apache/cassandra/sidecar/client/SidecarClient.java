@@ -539,9 +539,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     public CompletableFuture<ListCdcSegmentsResponse> listCdcSegments(SidecarInstance sidecarInstance)
     {
         return executor.executeRequestAsync(requestBuilder()
-                       .singleInstanceSelectionPolicy(sidecarInstance)
-                       .request(new ListCdcSegmentsRequest())
-                       .build());
+                                            .singleInstanceSelectionPolicy(sidecarInstance)
+                                            .request(new ListCdcSegmentsRequest())
+                                            .build());
     }
 
     /**
@@ -561,9 +561,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                   StreamConsumer streamConsumer)
     {
         executor.streamRequest(requestBuilder()
-                .singleInstanceSelectionPolicy(sidecarInstance)
-                .request(new StreamCdcSegmentRequest(segment, range))
-                .build(), streamConsumer);
+                               .singleInstanceSelectionPolicy(sidecarInstance)
+                               .request(new StreamCdcSegmentRequest(segment, range))
+                               .build(), streamConsumer);
     }
 
     /**
@@ -576,13 +576,11 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public <T> CompletableFuture<T> reportSchema(SidecarInstance instance)
     {
-        RequestContext context = requestBuilder()
-                .singleInstanceSelectionPolicy(instance)
-                .reportSchemaRequest()
-                .noRetryPolicy()  // {@link NoRetryPolicy} is the preferred behavior here
-                .build();
-
-        return executor.executeRequestAsync(context);
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .reportSchemaRequest()
+                                            .noRetryPolicy()  // {@link NoRetryPolicy} is the preferred behavior here
+                                            .build());
     }
 
     /**
@@ -594,8 +592,8 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     public CompletableFuture<AllServicesConfigPayload> allServicesConfig()
     {
         return executor.executeRequestAsync(requestBuilder()
-                       .request(new AllServicesConfigRequest())
-                       .build());
+                                            .request(new AllServicesConfigRequest())
+                                            .build());
     }
 
     /**
@@ -608,8 +606,8 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     public CompletableFuture<UpdateCdcServiceConfigPayload> updateCdcServiceConfig(Service service, Map<String, String> config)
     {
         return executor.executeRequestAsync(requestBuilder()
-                       .request(new UpdateServiceConfigRequest(service, new UpdateCdcServiceConfigPayload(config)))
-                       .build());
+                                            .request(new UpdateServiceConfigRequest(service, new UpdateCdcServiceConfigPayload(config)))
+                                            .build());
     }
 
     /**
@@ -620,8 +618,8 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     public CompletableFuture<Void> deleteCdcServiceConfig(Service service)
     {
         return executor.executeRequestAsync(requestBuilder()
-                       .request(new DeleteServiceConfigRequest(service))
-                       .build());
+                                            .request(new DeleteServiceConfigRequest(service))
+                                            .build());
     }
 
     /**

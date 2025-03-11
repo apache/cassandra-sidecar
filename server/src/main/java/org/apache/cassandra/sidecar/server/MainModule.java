@@ -984,7 +984,7 @@ public class MainModule extends AbstractModule
             protected String initialize()
             {
                 return fetcher.callOnFirstAvailableInstance(instance ->
-                        instance.delegate().storageOperations().clusterName());
+                                                            instance.delegate().storageOperations().clusterName());
             }
         };
 

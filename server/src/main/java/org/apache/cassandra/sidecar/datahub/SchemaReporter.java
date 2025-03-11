@@ -129,8 +129,7 @@ public class SchemaReporter
     {
         try (Emitter emitter = emitterFactory.emitter())
         {
-            stream(metadata)
-                    .forEach(ThrowableUtils.consumer(emitter::emit));
+            stream(metadata).forEach(ThrowableUtils.consumer(emitter::emit));
         }
         catch (Exception exception)
         {
@@ -150,11 +149,12 @@ public class SchemaReporter
     protected Stream<MetadataChangeProposalWrapper<? extends RecordTemplate>> stream(@NotNull Metadata metadata)
     {
         return Streams.concat(
-                clusterConverters.stream()
-                        .map(ThrowableUtils.function(converter -> converter.convert(metadata))),
-                metadata.getKeyspaces().stream()
-                        .filter(this::neitherVirtualNorSystem)
-                        .flatMap(this::stream));
+        clusterConverters.stream()
+                         .map(ThrowableUtils.function(converter -> converter.convert(metadata))),
+        metadata.getKeyspaces()
+                .stream()
+                .filter(this::neitherVirtualNorSystem)
+                .flatMap(this::stream));
     }
 
     /**
@@ -169,10 +169,11 @@ public class SchemaReporter
     protected Stream<MetadataChangeProposalWrapper<? extends RecordTemplate>> stream(@NotNull KeyspaceMetadata keyspace)
     {
         return Streams.concat(
-                keyspaceConverters.stream()
-                        .map(ThrowableUtils.function(converter -> converter.convert(keyspace))),
-                keyspace.getTables().stream()
-                        .flatMap(this::stream));
+        keyspaceConverters.stream()
+                          .map(ThrowableUtils.function(converter -> converter.convert(keyspace))),
+        keyspace.getTables()
+                .stream()
+                .flatMap(this::stream));
     }
 
     /**
@@ -186,7 +187,7 @@ public class SchemaReporter
     protected Stream<MetadataChangeProposalWrapper<? extends RecordTemplate>> stream(@NotNull TableMetadata table)
     {
         return tableConverters.stream()
-                .map(ThrowableUtils.function(converter -> converter.convert(table)));
+                              .map(ThrowableUtils.function(converter -> converter.convert(table)));
     }
 
     /**
@@ -205,8 +206,8 @@ public class SchemaReporter
         }
 
         String name = keyspace.getName();
-        return !name.equals("system")
-            && !name.startsWith("system_")
-            && !name.equals("sidecar_internal");
+        return !name.equals("system") &&
+               !name.startsWith("system_") &&
+               !name.equals("sidecar_internal");
     }
 }

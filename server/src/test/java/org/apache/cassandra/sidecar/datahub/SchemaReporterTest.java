@@ -56,8 +56,7 @@ final class SchemaReporterTest
         when(metadata.getKeyspaces()).thenReturn(Collections.emptyList());
 
         JsonEmitter emitter = new JsonEmitter();
-        new SchemaReporter(IDENTIFIERS, () -> emitter)
-                .process(cluster);
+        new SchemaReporter(IDENTIFIERS, () -> emitter).process(cluster);
 
         String actual = emitter.content();
         String expected = IOUtils.readFully("/datahub/empty_cluster.json");
@@ -78,8 +77,7 @@ final class SchemaReporterTest
         when(keyspace.getTables()).thenReturn(Collections.emptyList());
 
         JsonEmitter emitter = new JsonEmitter();
-        new SchemaReporter(IDENTIFIERS, () -> emitter)
-                .process(cluster);
+        new SchemaReporter(IDENTIFIERS, () -> emitter).process(cluster);
 
         String actual = emitter.content();
         String expected = IOUtils.readFully("/datahub/empty_keyspace.json");
@@ -107,8 +105,7 @@ final class SchemaReporterTest
         when(options.getComment()).thenReturn("table comment");
 
         JsonEmitter emitter = new JsonEmitter();
-        new SchemaReporter(IDENTIFIERS, () -> emitter)
-                .process(cluster);
+        new SchemaReporter(IDENTIFIERS, () -> emitter).process(cluster);
 
         String actual = emitter.content();
         String expected = IOUtils.readFully("/datahub/empty_table.json");
@@ -187,8 +184,7 @@ final class SchemaReporterTest
         when(c8.getType()).thenReturn(DataType.map(DataType.timestamp(), DataType.inet(), false));
 
         JsonEmitter emitter = new JsonEmitter();
-        new SchemaReporter(IDENTIFIERS, () -> emitter)
-                .process(cluster);
+        new SchemaReporter(IDENTIFIERS, () -> emitter).process(cluster);
 
         String actual = emitter.content();
         String expected = IOUtils.readFully("/datahub/primitive_types.json");
@@ -261,8 +257,7 @@ final class SchemaReporterTest
         when(udt2c2.getType()).thenReturn(DataType.cboolean());
 
         JsonEmitter emitter = new JsonEmitter();
-        new SchemaReporter(IDENTIFIERS, () -> emitter)
-                .process(cluster);
+        new SchemaReporter(IDENTIFIERS, () -> emitter).process(cluster);
 
         String actual = emitter.content();
         String expected = IOUtils.readFully("/datahub/user_types.json");

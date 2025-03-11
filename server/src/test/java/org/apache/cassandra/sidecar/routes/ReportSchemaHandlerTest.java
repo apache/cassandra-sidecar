@@ -73,7 +73,7 @@ final class ReportSchemaHandlerTest
     private static final int IDENTIFIER = 42;
     private static final String LOCALHOST = "127.0.0.1";
     private static final int PORT = 9042;
-    private static final String ENDPOINT = "/api/v1/report-schema";
+    private static final String ENDPOINT = "/api/v1/datahub/schemas";
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
     private static final class ThrowingEmitter extends JsonEmitter
@@ -127,9 +127,9 @@ final class ReportSchemaHandlerTest
         }
     }
 
-    private final Injector injector = Guice.createInjector(Modules.override(new MainModule()).with(
-                                                           Modules.override(new TestModule()).with(
-                                                                            new ReportSchemaHandlerTestModule())));
+    private final Injector injector = Guice.createInjector(Modules.override(new MainModule())
+                                                                  .with(Modules.override(new TestModule())
+                                                                               .with(new ReportSchemaHandlerTestModule())));
     private WebClient client;
     private Server server;
     private JsonEmitter emitter;
@@ -162,17 +162,13 @@ final class ReportSchemaHandlerTest
     {
         String expected = IOUtils.readFully("/datahub/empty_cluster.json");
         emitter = new JsonEmitter();
-        assertThat(emitter.content().length())
-                .isLessThanOrEqualTo(1);
+        assertThat(emitter.content().length()).isLessThanOrEqualTo(1);
 
         client.put(server.actualPort(), LOCALHOST, ENDPOINT)
               .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response ->
-              {
-                  assertThat(response.statusCode())
-                          .isEqualTo(HttpResponseStatus.OK.code());
-                  assertThat(emitter.content())
-                          .isEqualTo(expected);
+              .send(context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                  assertThat(emitter.content()).isEqualTo(expected);
                   context.completeNow();
               }));
     }
@@ -182,17 +178,13 @@ final class ReportSchemaHandlerTest
     {
         String expected = "[\n]";
         emitter = new ThrowingEmitter();
-        assertThat(emitter.content().length())
-                .isLessThanOrEqualTo(1);
+        assertThat(emitter.content().length()).isLessThanOrEqualTo(1);
 
         client.put(server.actualPort(), LOCALHOST, ENDPOINT)
               .expect(ResponsePredicate.SC_INTERNAL_SERVER_ERROR)
-              .send(context.succeeding(response ->
-              {
-                  assertThat(response.statusCode())
-                          .isEqualTo(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
-                  assertThat(emitter.content())
-                          .isEqualTo(expected);
+              .send(context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
+                  assertThat(emitter.content()).isEqualTo(expected);
                   context.completeNow();
               }));
     }

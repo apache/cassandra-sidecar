@@ -50,9 +50,9 @@ final class SchemaReporterIntegrationTest extends IntegrationTestBase
     private static String normalizeNames(@NotNull String schema)
     {
         return schema.replaceAll("(?is)(?<=\\b(" + DATA_CENTER_PREFIX + "|"
-                                                 + TEST_CLUSTER_PREFIX + "|"
-                                                 + TEST_KEYSPACE + "|"
-                                                 + TEST_TABLE_PREFIX + "))\\d+\\b", "");
+                                 + TEST_CLUSTER_PREFIX + "|"
+                                 + TEST_KEYSPACE + "|"
+                                 + TEST_TABLE_PREFIX + "))\\d+\\b", "");
     }
 
     @CassandraIntegrationTest
@@ -62,56 +62,53 @@ final class SchemaReporterIntegrationTest extends IntegrationTestBase
         // the goal is to cover all supported data types and their combinations
         waitForSchemaReady(1L, TimeUnit.MINUTES);
         createTestKeyspace();
-        createTestUdt("numbers",     "ti tinyint, "
-                                   + "si smallint, "
-                                   + "bi bigint, "
-                                   + "vi varint, "
-                                   + "sf float, "
-                                   + "df double, "
-                                   + "de decimal");
-        createTestUdt("datetime",    "dd date, "
-                                   + "ts timestamp, "
-                                   + "tt time");
-        createTestUdt("strings",     "tu timeuuid, "
-                                   + "ru uuid, "
-                                   + "ip inet, "
-                                   + "as ascii, "
-                                   + "us text, "
-                                   + "vc varchar");
-        createTestUdt("collections", "t tuple<int, ascii>, "
-                                   + "s set<ascii>, "
-                                   + "l frozen<list<ascii>>, "
-                                   + "m map<ascii, frozen<map<ascii, int>>>");
+        createTestUdt("numbers",     "ti tinyint, " +
+                                     "si smallint, " +
+                                     "bi bigint, " +
+                                     "vi varint, " +
+                                     "sf float, " +
+                                     "df double, " +
+                                     "de decimal");
+        createTestUdt("datetime",    "dd date, " +
+                                     "ts timestamp, " +
+                                     "tt time");
+        createTestUdt("strings",     "tu timeuuid, " +
+                                     "ru uuid, " +
+                                     "ip inet, " +
+                                     "as ascii, " +
+                                     "us text, " +
+                                     "vc varchar");
+        createTestUdt("collections", "t tuple<int, ascii>, " +
+                                     "s set<ascii>, " +
+                                     "l frozen<list<ascii>>, " +
+                                     "m map<ascii, frozen<map<ascii, int>>>");
         createTestUdt("types",       "b blob");
         createTestUdt("other",       "t frozen<types>");
-        createTestTable("CREATE TABLE " + TEST_KEYSPACE + "." + TEST_TABLE_PREFIX + " ("
-                      + "b boolean PRIMARY KEY, "
-                      + "n numbers, "
-                      + "t frozen<datetime>, "
-                      + "s strings, "
-                      + "c frozen<collections>, "
-                      + "o other)" + WITH_COMPACTION_DISABLED + ";");
+        createTestTable("CREATE TABLE " + TEST_KEYSPACE + "." + TEST_TABLE_PREFIX + " (" +
+                        "b boolean PRIMARY KEY, " +
+                        "n numbers, " +
+                        "t frozen<datetime>, " +
+                        "s strings, " +
+                        "c frozen<collections>, " +
+                        "o other)" + WITH_COMPACTION_DISABLED + ";");
 
         // First, ensure the returned schema matches the reference one
         // (while ignoring name suffixes and whitespace characters)
         JsonEmitter emitter = new JsonEmitter();
         try (Session session = maybeGetSession())
         {
-            new SchemaReporter(IDENTIFIERS, () -> emitter)
-                    .process(session.getCluster());
+            new SchemaReporter(IDENTIFIERS, () -> emitter).process(session.getCluster());
         }
         String   actualJson = normalizeNames(emitter.content());
         String expectedJson = IOUtils.readFully("/datahub/integration_test.json");
 
-        assertThat(actualJson)
-                .isEqualToNormalizingWhitespace(expectedJson);
+        assertThat(actualJson).isEqualToNormalizingWhitespace(expectedJson);
 
         // Finally, make sure the returned schema produces the same tree of
         // DataHub objects after having been normalized and deserialized
         DataList   actualData = CODEC.readList(new StringReader(actualJson));
         DataList expectedData = CODEC.readList(new StringReader(expectedJson));
 
-        assertThat(actualData)
-                .isEqualTo(expectedData);
+        assertThat(actualData).isEqualTo(expectedData);
     }
 }
