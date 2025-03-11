@@ -34,8 +34,12 @@ import org.apache.cassandra.sidecar.datahub.EmitterFactory;
 import org.apache.cassandra.sidecar.datahub.IdentifiersProvider;
 import org.apache.cassandra.sidecar.datahub.SchemaReporter;
 import org.apache.cassandra.sidecar.datahub.SchemaReportingTask;
+import org.apache.cassandra.sidecar.handlers.ReportSchemaHandler;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys;
+import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
+import org.apache.cassandra.sidecar.routes.RouteBuilder;
+import org.apache.cassandra.sidecar.routes.VertxRoute;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
@@ -45,6 +49,13 @@ import org.jetbrains.annotations.NotNull;
  */
 public class DataRegistryModule extends AbstractModule
 {
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.DataHubSchemaReportingRouteKey.class)
+    VertxRoute schemaReportingRoute(RouteBuilder.Factory factory, ReportSchemaHandler reportSchemaHandler)
+    {
+        return factory.buildRouteWithHandler(reportSchemaHandler);
+    }
+
     @ProvidesIntoMap
     @KeyClassMapKey(PeriodicTaskMapKeys.SchemaReportingTaskKey.class)
     PeriodicTask schemaReportingTask(SidecarConfiguration configuration,

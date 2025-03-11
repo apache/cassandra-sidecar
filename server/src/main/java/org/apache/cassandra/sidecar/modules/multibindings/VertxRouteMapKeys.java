@@ -128,6 +128,11 @@ public interface VertxRouteMapKeys
         HttpMethod HTTP_METHOD = HttpMethod.PUT;
         String ROUTE_URI = ApiEndpointsV1.SNAPSHOTS_ROUTE;
     }
+    interface DataHubSchemaReportingRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PUT;
+        String ROUTE_URI = ApiEndpointsV1.REPORT_SCHEMA_ROUTE;
+    }
     interface DeleteServiceConfigurationRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.DELETE;
