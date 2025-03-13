@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.metrics;
 import java.util.Objects;
 
 import com.codahale.metrics.MetricRegistry;
+import org.apache.cassandra.sidecar.metrics.server.SchemaReportingMetrics;
 
 /**
  * {@link ServerMetrics} tracks metrics related to Sidecar server.
@@ -32,6 +33,7 @@ public class ServerMetricsImpl implements ServerMetrics
     protected final ResourceMetrics resourceMetrics;
     protected final RestoreMetrics restoreMetrics;
     protected final SchemaMetrics schemaMetrics;
+    protected final SchemaReportingMetrics schemaReportingMetrics;
     protected final CacheMetrics cacheMetrics;
     protected final CoordinationMetrics coordinationMetrics;
 
@@ -43,6 +45,7 @@ public class ServerMetricsImpl implements ServerMetrics
         this.resourceMetrics = new ResourceMetrics(metricRegistry);
         this.restoreMetrics = new RestoreMetrics(metricRegistry);
         this.schemaMetrics = new SchemaMetrics(metricRegistry);
+        this.schemaReportingMetrics = new SchemaReportingMetrics(metricRegistry);
         this.cacheMetrics = new CacheMetrics(metricRegistry);
         this.coordinationMetrics = new CoordinationMetrics(metricRegistry);
     }
@@ -69,6 +72,12 @@ public class ServerMetricsImpl implements ServerMetrics
     public SchemaMetrics schema()
     {
         return schemaMetrics;
+    }
+
+    @Override
+    public SchemaReportingMetrics schemaReporting()
+    {
+        return schemaReportingMetrics;
     }
 
     @Override

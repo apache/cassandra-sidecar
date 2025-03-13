@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.metrics;
 
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.metrics.server.SchemaReportingMetrics;
 
 import static org.apache.cassandra.sidecar.metrics.SidecarMetrics.APP_PREFIX;
 
@@ -48,6 +49,11 @@ public interface ServerMetrics
      * @return metrics related to {@link SidecarSchema} that are tracked.
      */
     SchemaMetrics schema();
+
+    /**
+     * @return metrics for the schema reporting
+     */
+    SchemaReportingMetrics schemaReporting();
 
     /**
      * @return metrics related to internal caches that are tracked.

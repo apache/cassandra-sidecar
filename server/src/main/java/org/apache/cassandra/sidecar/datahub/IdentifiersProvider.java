@@ -24,6 +24,7 @@ import java.util.UUID;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.TableMetadata;
@@ -32,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * An abstract class that has to be extended and instantiated for every Cassandra
- * cluster that needs its schema converted into a DataHub-compliant format.
+ * cluster that needs its schema converted into a DataHub-compliant format
  */
 public abstract class IdentifiersProvider
 {
@@ -42,7 +43,26 @@ public abstract class IdentifiersProvider
     protected static final String DATA_PLATFORM_INSTANCE = "dataPlatformInstance";
     protected static final String CONTAINER = "container";
     protected static final String DATASET = "dataset";
-    protected static final String PROD = "PROD";  // DataHub requires this to be {@code PROD} regardless
+    protected static final String PROD = "PROD";  // DataHub requires this to be {@code PROD}
+
+    protected static final ToStringStyle STYLE = new ToStringStyle()
+    {{
+        setUseShortClassName(false);
+        setUseClassName(true);
+        setUseIdentityHashCode(false);
+        setUseFieldNames(false);
+        setContentStart("(");
+        setFieldSeparatorAtStart(false);
+        setFieldSeparator(",");
+        setFieldSeparatorAtEnd(false);
+        setContentEnd(")");
+        setDefaultFullDetail(true);
+        setArrayContentDetail(true);
+        setArrayStart("(");
+        setArraySeparator(",");
+        setArrayEnd(")");
+        setNullText("null");
+    }};
 
     /**
      * A public getter method that returns the name of Cassandra Organization
@@ -231,13 +251,19 @@ public abstract class IdentifiersProvider
     @NotNull
     public String toString()
     {
-        return new ToStringBuilder(this)
+        return new ToStringBuilder(this, STYLE)
                 .append(this.organization())
                 .append(this.platform())
                 .append(this.environment())
                 .append(this.application())
                 .append(this.cluster())
                 .append(this.identifier())
-                .toString();
+                .toString()
+                .replaceAll("\\s", "");
+
+        // Use of a custom {@link ToStringStyle} implementation prevents the hash code from being
+        // included into the {@link String} representation; which, in conjunction with the removal
+        // of all whitespace characters, simplifies extraction of {@link IdentifierProvider}
+        // objects from the execution logs; without negatively affecting the readability much
     }
 }

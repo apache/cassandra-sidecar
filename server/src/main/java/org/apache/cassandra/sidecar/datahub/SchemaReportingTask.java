@@ -108,7 +108,7 @@ public class SchemaReportingTask implements PeriodicTask, ExecuteOnClusterLeaseh
     {
         try
         {
-            reporter.process(session.get().getCluster());
+            reporter.processScheduled(session.get().getCluster());
             LOGGER.info("Schema report has been completed successfully on attempt {}", attempt);
             promise.complete();
         }

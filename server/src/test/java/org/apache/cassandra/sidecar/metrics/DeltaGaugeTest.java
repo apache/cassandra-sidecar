@@ -28,6 +28,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DeltaGaugeTest
 {
     @Test
+    void testCumulativeCountIncremented()
+    {
+        DeltaGauge deltaGauge = new DeltaGauge();
+
+        assertThat(deltaGauge.getValue()).isEqualTo(0L);
+        deltaGauge.increment();
+        assertThat(deltaGauge.getValue()).isEqualTo(1L);
+        assertThat(deltaGauge.getValue()).isEqualTo(0L);
+        deltaGauge.increment();
+        deltaGauge.increment();
+        deltaGauge.increment();
+        assertThat(deltaGauge.getValue()).isEqualTo(3L);
+        assertThat(deltaGauge.getValue()).isEqualTo(0L);
+        assertThat(deltaGauge.getValue()).isEqualTo(0L);
+    }
+
+    @Test
     void testCumulativeCountUpdated()
     {
         DeltaGauge deltaGauge = new DeltaGauge();

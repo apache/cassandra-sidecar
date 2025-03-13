@@ -20,9 +20,13 @@
 package org.apache.cassandra.sidecar.datahub;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.KeyspaceMetadata;
@@ -34,6 +38,9 @@ import com.linkedin.data.template.RecordTemplate;
 import datahub.client.Emitter;
 import datahub.event.MetadataChangeProposalWrapper;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
+import org.apache.cassandra.sidecar.metrics.DeltaGauge;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.server.SchemaReportingMetrics;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -47,6 +54,8 @@ import org.jetbrains.annotations.NotNull;
 @Singleton
 public class SchemaReporter
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SchemaReporter.class);
+
     @NotNull
     protected final IdentifiersProvider identifiersProvider;
     @NotNull
@@ -57,6 +66,8 @@ public class SchemaReporter
     protected final List<TableToAspectConverter<? extends RecordTemplate>> tableConverters;
     @NotNull
     protected final EmitterFactory emitterFactory;
+    @NotNull
+    protected final SchemaReportingMetrics reportingMetrics;
 
     /**
      * The public constructor that instantiates {@link SchemaReporter} with default configuration.
@@ -66,10 +77,12 @@ public class SchemaReporter
      *
      * @param identifiersProvider an instance of {@link IdentifiersProvider} to use
      * @param emitterFactory an instance of {@link EmitterFactory} to use
+     * @param sidecarMetrics an instance of {@link SidecarMetrics} to obtain {@link SchemaReportingMetrics} from
      */
     @Inject
     public SchemaReporter(@NotNull IdentifiersProvider identifiersProvider,
-                          @NotNull EmitterFactory emitterFactory)
+                          @NotNull EmitterFactory emitterFactory,
+                          @NotNull SidecarMetrics sidecarMetrics)
     {
         this(identifiersProvider,
              ImmutableList.of(new ClusterToDataPlatformInfoConverter(identifiersProvider),
@@ -85,7 +98,8 @@ public class SchemaReporter
                               new TableToDataPlatformInstanceConverter(identifiersProvider),
                               new TableToBrowsePathsV2Converter(identifiersProvider),
                               new TableToBrowsePathsConverter(identifiersProvider)),
-             emitterFactory);
+             emitterFactory,
+             sidecarMetrics.server().schemaReporting());
     }
 
     /**
@@ -96,44 +110,72 @@ public class SchemaReporter
      * @param keyspaceConverters a {@link List} of {@link KeyspaceToAspectConverter} instances to use
      * @param tableConverters a {@link List} of {@link TableToAspectConverter} instances to use
      * @param emitterFactory an instance of {@link EmitterFactory} to use
+     * @param reportingMetrics an instance of {@link SchemaReportingMetrics} to use
      */
     protected SchemaReporter(@NotNull IdentifiersProvider identifiersProvider,
                              @NotNull List<ClusterToAspectConverter<? extends RecordTemplate>> clusterConverters,
                              @NotNull List<KeyspaceToAspectConverter<? extends RecordTemplate>> keyspaceConverters,
                              @NotNull List<TableToAspectConverter<? extends RecordTemplate>> tableConverters,
-                             @NotNull EmitterFactory emitterFactory)
+                             @NotNull EmitterFactory emitterFactory,
+                             @NotNull SchemaReportingMetrics reportingMetrics)
     {
         this.identifiersProvider = identifiersProvider;
         this.clusterConverters = clusterConverters;
         this.keyspaceConverters = keyspaceConverters;
         this.tableConverters = tableConverters;
         this.emitterFactory = emitterFactory;
+        this.reportingMetrics = reportingMetrics;
     }
 
     /**
-     * Public method for converting and reporting the Cassandra schema
+     * Public method for converting and reporting the Cassandra schema when triggered by a scheduled periodic task
      *
      * @param cluster the {@link Cluster} to extract Cassandra schema from
      */
-    public void process(@NotNull Cluster cluster)
+    public void processScheduled(@NotNull Cluster cluster)
     {
-        process(cluster.getMetadata());
+        process(cluster.getMetadata(), reportingMetrics.startedSchedule.metric);
     }
 
     /**
-     * Public method for converting and reporting the Cassandra schema
+     * Public method for converting and reporting the Cassandra schema when triggered by a received API request
      *
      * @param metadata the {@link Metadata} to extract Cassandra schema from
      */
-    public void process(@NotNull Metadata metadata)
+    public void processRequested(@NotNull Metadata metadata)
     {
+        process(metadata, reportingMetrics.startedRequest.metric);
+    }
+
+    /**
+     * Private method for converting and reporting the Cassandra schema
+     *
+     * @param metadata the {@link Metadata} to extract Cassandra schema from
+     * @param started the {@link DeltaGauge} for the metric counting invocations
+     */
+    private void process(@NotNull Metadata metadata,
+                         @NotNull DeltaGauge started)
+    {
+        LOGGER.info("Starting to report schema for cluster, identifiers={}", identifiersProvider);
+        started.increment();
+
         try (Emitter emitter = emitterFactory.emitter())
         {
-            stream(metadata).forEach(ThrowableUtils.consumer(emitter::emit));
+            Stopwatch stopwatch = Stopwatch.createStarted();
+            long counter = stream(metadata).map(ThrowableUtils.function(emitter::emit))
+                                           .count();
+
+            reportingMetrics.durationMilliseconds.metric.update(stopwatch.elapsed(TimeUnit.MILLISECONDS));
+            reportingMetrics.sizeAspects.metric.update(counter);
+            reportingMetrics.finishedSuccess.metric.increment();
+            LOGGER.info("Successfully reported schema for cluster, identifiers={}", identifiersProvider);
         }
         catch (Exception exception)
         {
-            throw new RuntimeException("Cannot extract schema for cluster " + identifiersProvider.cluster(), exception);
+            reportingMetrics.finishedFailure.metric.increment();
+            LOGGER.error("Failed to report schema for cluster, identifiers={}", identifiersProvider);
+
+            throw new RuntimeException("Failed to report schema for cluster with identifiers " + identifiersProvider, exception);
         }
     }
 

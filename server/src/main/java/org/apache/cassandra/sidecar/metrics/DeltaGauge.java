@@ -33,7 +33,15 @@ public class DeltaGauge implements Gauge<Long>, Metric
 
     public DeltaGauge()
     {
-        this.count = new AtomicLong();
+        this.count = new AtomicLong(0L);
+    }
+
+    /**
+     * Increments the cumulative value tracked by this {@link DeltaGauge}
+     */
+    public void increment()
+    {
+        count.incrementAndGet();
     }
 
     /**
@@ -55,6 +63,6 @@ public class DeltaGauge implements Gauge<Long>, Metric
     @Override
     public Long getValue()
     {
-        return count.getAndSet(0);
+        return count.getAndSet(0L);
     }
 }
