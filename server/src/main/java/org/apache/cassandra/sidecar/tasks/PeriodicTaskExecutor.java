@@ -18,11 +18,11 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +34,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -245,6 +246,32 @@ public class PeriodicTaskExecutor implements Closeable
         Promise<Void> promise = Promise.promise();
         close(promise);
         return promise.future();
+    }
+
+    /**
+     * Enables failing {@link PeriodicTask} implementations to schedule a retry attempt
+     * to be executed by the internal {@link TaskExecutorPool} after the specified delay
+     *
+     * @param delay amount of time to wait before attempting retry
+     * @param runnable a {@link Runnable} that executes the retry attempt
+     */
+    public void retry(@NotNull Duration delay,
+                      @NotNull Runnable runnable)
+    {
+        internalPool.setTimer(delay.toMillis(), identifier -> runnable.run());
+    }
+
+    /**
+     * Enables failing {@link PeriodicTask} implementations to schedule a retry attempt
+     * to be executed by the internal {@link TaskExecutorPool} after the specified delay
+     *
+     * @param delay amount of time to wait before attempting retry
+     * @param runnable a {@link Runnable} that executes the retry attempt
+     */
+    public void retry(@NotNull Duration delay,
+                      @NotNull Runnable runnable)
+    {
+        internalPool.setTimer(delay.toMillis(), identifier -> runnable.run());
     }
 
     private void executeInternal(Promise<ScheduleDecision> promise, PeriodicTaskKey key, long execCount)
