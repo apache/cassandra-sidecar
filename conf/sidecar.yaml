@@ -148,6 +148,7 @@ schema_reporting:                            # Schema Reporting configuration
   endpoint:         http://localhost/schema  # Endpoint address for schema reporting
   method:           PUT                      # HTTP verb to use for schema reporting
   retries:          3                        # Number of times a failing schema report is retried
+  delay:            1m                       # Delay before a failing schema report is retried
 
 #
 # Enable SSL configuration (Disabled by default)

@@ -51,7 +51,7 @@ public class SidecarModules
                        new CdcModule(),
                        new ConfigurationModule(confPath),
                        new CoordinationModule(),
-                       new DataRegistryModule(),
+                       new SchemaReportingModule(),
                        new HealthCheckModule(),
                        new RestoreJobModule(),
                        new SchedulingModule(),

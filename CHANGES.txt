@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Retry Failed Schema Reports (CASSSIDECAR-217)
  * Guice modularization (CASSSIDECAR-208)
  * Create Endpoint that Triggers an Immediate Schema Report (CASSSIDECAR-203)
  * Add JWT Authentication support in Sidecar (CASSSIDECAR-160)

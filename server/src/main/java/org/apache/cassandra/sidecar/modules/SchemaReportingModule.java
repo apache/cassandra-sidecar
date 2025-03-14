@@ -28,6 +28,7 @@ import datahub.client.rest.RestEmitter;
 import datahub.client.rest.RestEmitterConfig;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SchemaReportingConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.datahub.EmitterFactory;
@@ -45,24 +46,30 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Provides the capability of schema registry on DataHub
+ * Instantiates the objects necessary for converting and reporting the cluster's
+ * current schema in a DataHub-compatible format either on schedule or as requested
  */
-public class DataRegistryModule extends AbstractModule
+public class SchemaReportingModule extends AbstractModule
 {
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.DataHubSchemaReportingRouteKey.class)
-    VertxRoute schemaReportingRoute(RouteBuilder.Factory factory, ReportSchemaHandler reportSchemaHandler)
+    VertxRoute schemaReportingRoute(@NotNull RouteBuilder.Factory factory,
+                                    @NotNull ReportSchemaHandler handler)
     {
-        return factory.buildRouteWithHandler(reportSchemaHandler);
+        return factory.buildRouteWithHandler(handler);
     }
 
     @ProvidesIntoMap
     @KeyClassMapKey(PeriodicTaskMapKeys.SchemaReportingTaskKey.class)
-    PeriodicTask schemaReportingTask(SidecarConfiguration configuration,
-                                     CQLSessionProvider session,
-                                     SchemaReporter reporter)
+    PeriodicTask schemaReportingTask(@NotNull SidecarConfiguration configuration,
+                                     @NotNull CQLSessionProvider session,
+                                     @NotNull SchemaReporter reporter,
+                                     @NotNull ExecutorPools executors)
     {
-        return new SchemaReportingTask(configuration, session, reporter);
+        return new SchemaReportingTask(configuration,
+                                       session,
+                                       reporter,
+                                       executors.internal());
     }
 
     @Provides
@@ -75,7 +82,9 @@ public class DataRegistryModule extends AbstractModule
             @NotNull
             protected String initialize()
             {
-                return fetcher.callOnFirstAvailableInstance(i -> i.delegate().storageOperations().clusterName());
+                return fetcher.callOnFirstAvailableInstance(instance -> instance.delegate()
+                                                                                .storageOperations()
+                                                                                .clusterName());
             }
         };
 

@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.config;
 
 import io.vertx.core.http.HttpMethod;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 
 /**
  * Encapsulates Schema Reporting configuration
@@ -39,4 +40,9 @@ public interface SchemaReportingConfiguration extends PeriodicTaskConfiguration
      * A number of times a schema report is retried in case of failure; {@code 3} by default
      */
     int retries();
+
+    /**
+     * A delay before a schema report is retried in case of failure; one minute by default
+     */
+    MillisecondBoundConfiguration delay();
 }
