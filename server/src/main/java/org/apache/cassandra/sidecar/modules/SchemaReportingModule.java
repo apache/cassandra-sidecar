@@ -106,7 +106,7 @@ public class SchemaReportingModule extends AbstractModule
         SchemaReportingConfiguration reporterConfiguration = sidecarConfiguration.schemaReportingConfiguration();
         RestEmitterConfig emitterConfiguration = RestEmitterConfig.builder()
                                                                   .server(reporterConfiguration.endpoint())
-                                                                  .maxRetries(reporterConfiguration.retries())
+                                                                  .maxRetries(reporterConfiguration.maxRetries())
                                                                   .build();
 
         return () -> new RestEmitter(emitterConfiguration);

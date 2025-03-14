@@ -39,10 +39,10 @@ public interface SchemaReportingConfiguration extends PeriodicTaskConfiguration
     /**
      * A number of times a schema report is retried in case of failure; {@code 3} by default
      */
-    int retries();
+    int maxRetries();
 
     /**
      * A delay before a schema report is retried in case of failure; one minute by default
      */
-    MillisecondBoundConfiguration delay();
+    MillisecondBoundConfiguration retryDelay();
 }

@@ -37,8 +37,8 @@ public class SchemaReportingConfigurationImpl extends PeriodicTaskConfigurationI
     protected static final MillisecondBoundConfiguration DEFAULT_EXECUTE_INTERVAL = new MillisecondBoundConfiguration(12L, TimeUnit.HOURS);
     protected static final String DEFAULT_ENDPOINT = null;
     protected static final String DEFAULT_METHOD = HttpMethod.PUT.name();
-    protected static final int DEFAULT_RETRIES = 3;
-    protected static final MillisecondBoundConfiguration DEFAULT_DELAY = new MillisecondBoundConfiguration(1L, TimeUnit.MINUTES);
+    protected static final int DEFAULT_MAX_RETRIES = 3;
+    protected static final MillisecondBoundConfiguration DEFAULT_RETRY_DELAY = new MillisecondBoundConfiguration(1L, TimeUnit.MINUTES);
 
     @JsonProperty(value = "endpoint")
     @Nullable
@@ -46,11 +46,11 @@ public class SchemaReportingConfigurationImpl extends PeriodicTaskConfigurationI
     @JsonProperty(value = "method")
     @NotNull
     protected final String method;
-    @JsonProperty(value = "retries")
-    protected final int retries;
-    @JsonProperty(value = "delay")
+    @JsonProperty(value = "max_retries")
+    protected final int maxRetries;
+    @JsonProperty(value = "retry_delay")
     @NotNull
-    protected final MillisecondBoundConfiguration delay;
+    protected final MillisecondBoundConfiguration retryDelay;
 
     /**
      * Constructs an instance of {@link SchemaReportingConfigurationImpl} with default settings
@@ -62,8 +62,8 @@ public class SchemaReportingConfigurationImpl extends PeriodicTaskConfigurationI
              DEFAULT_EXECUTE_INTERVAL,
              DEFAULT_ENDPOINT,
              DEFAULT_METHOD,
-             DEFAULT_RETRIES,
-             DEFAULT_DELAY);
+             DEFAULT_MAX_RETRIES,
+             DEFAULT_RETRY_DELAY);
     }
 
     /**
@@ -76,16 +76,16 @@ public class SchemaReportingConfigurationImpl extends PeriodicTaskConfigurationI
      * @param executeInterval exact interval between two consecutive reports of the same schema; 12 hours by default
      * @param endpoint endpoint address for schema reporting; empty by default
      * @param method HTTP verb to use when reporting schemata; {@code PUT} by default
-     * @param retries number of times a schema report is retried in case of failure; {@code 3} by default
-     * @param delay delay before a schema report is retried in case of failure; one minute by default
+     * @param maxRetries number of times a schema report is retried in case of failure; {@code 3} by default
+     * @param retryDelay delay before a schema report is retried in case of failure; one minute by default
      */
     public SchemaReportingConfigurationImpl(boolean enabled,
                                             @NotNull MillisecondBoundConfiguration initialDelay,
                                             @NotNull MillisecondBoundConfiguration executeInterval,
                                             @Nullable String endpoint,
                                             @NotNull String method,
-                                            int retries,
-                                            @NotNull MillisecondBoundConfiguration delay)
+                                            int maxRetries,
+                                            @NotNull MillisecondBoundConfiguration retryDelay)
     {
         super(enabled,
               initialDelay,
@@ -93,8 +93,8 @@ public class SchemaReportingConfigurationImpl extends PeriodicTaskConfigurationI
 
         this.endpoint = endpoint;
         this.method = method;
-        this.retries = retries;
-        this.delay = delay;
+        this.maxRetries = maxRetries;
+        this.retryDelay = retryDelay;
     }
 
     /**
@@ -121,9 +121,9 @@ public class SchemaReportingConfigurationImpl extends PeriodicTaskConfigurationI
      * A number of times a schema report is retried in case of failure; {@code 3} by default
      */
     @Override
-    public int retries()
+    public int maxRetries()
     {
-        return retries;
+        return maxRetries;
     }
 
     /**
@@ -131,8 +131,8 @@ public class SchemaReportingConfigurationImpl extends PeriodicTaskConfigurationI
      */
     @Override
     @NotNull
-    public MillisecondBoundConfiguration delay()
+    public MillisecondBoundConfiguration retryDelay()
     {
-        return delay;
+        return retryDelay;
     }
 }

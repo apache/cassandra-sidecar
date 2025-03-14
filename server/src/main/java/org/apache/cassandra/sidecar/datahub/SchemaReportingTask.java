@@ -99,6 +99,7 @@ public class SchemaReportingTask implements PeriodicTask, ExecuteOnClusterLeaseh
     @Override
     public void execute(@NotNull Promise<Void> promise)
     {
+        LOGGER.info("Schema report is being triggered by the schedule");
         execute(promise, 1);
     }
 
@@ -107,22 +108,22 @@ public class SchemaReportingTask implements PeriodicTask, ExecuteOnClusterLeaseh
     {
         try
         {
-            LOGGER.info("Schema report has been triggered by the schedule");
             reporter.process(session.get().getCluster());
+            LOGGER.info("Schema report has been completed successfully on attempt {}", attempt);
             promise.complete();
         }
         catch (Throwable throwable)
         {
-            if (attempt < configuration.retries())
+            if (attempt < configuration.maxRetries())
             {
-                LOGGER.warn("Schema report has failed and will be retried soon", throwable);
-                executor.setTimer(configuration.delay().toMillis(),
+                LOGGER.warn("Schema report has failed, retrying in {}", configuration.retryDelay(), throwable);
+                executor.setTimer(configuration.retryDelay().toMillis(),
                                   identifier -> execute(promise, attempt + 1));
                 // Retry will take care of either completing or failing the promise
             }
             else
             {
-                LOGGER.error("Schema report is failing repeatedly and will not be retried", throwable);
+                LOGGER.error("Schema report has failed {} times, giving up", attempt, throwable);
                 promise.fail(throwable);
             }
         }
