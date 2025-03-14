@@ -28,6 +28,7 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
@@ -70,9 +71,9 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     {
         Map<String, Boolean> expectedParams = Map.of("summary", true);
         String testRoute = "/api/v1/cassandra/stats/connected-clients";
-        HttpResponse<Buffer> response = getBlocking(trustedClient().get(server.actualPort(), "localhost", testRoute)
-                                                                   .expect(ResponsePredicate.SC_OK)
-                                                                   .send());
+        HttpResponse<Buffer> response = getBlocking(trustedClient().get(serverWrapper.server.actualPort(), "localhost", testRoute)
+                                                                   .send()
+                                                                   .expecting(HttpResponseExpectation.SC_OK));
         assertClientStatsResponse(response, expectedParams);
     }
 
@@ -81,9 +82,9 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     {
         Map<String, Boolean> expectedParams = Map.of("summary", false);
         String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
-        HttpResponse<Buffer> response = getBlocking(trustedClient().get(server.actualPort(), "localhost", testRoute)
-                                                                   .expect(ResponsePredicate.SC_OK)
-                                                                   .send());
+        HttpResponse<Buffer> response = getBlocking(trustedClient().get(serverWrapper.server.actualPort(), "localhost", testRoute)
+                                                                   .send()
+                                                                   .expecting(HttpResponseExpectation.SC_OK));
         assertClientStatsResponse(response, expectedParams);
     }
 
@@ -96,9 +97,9 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
             Map<String, Boolean> expectedParams = Map.of("summary", false);
             String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
-            HttpResponse<Buffer> response = getBlocking(trustedClient().get(server.actualPort(), "localhost", testRoute)
-                                                                       .expect(ResponsePredicate.SC_OK)
-                                                                       .send());
+            HttpResponse<Buffer> response = getBlocking(trustedClient().get(serverWrapper.server.actualPort(), "localhost", testRoute)
+                                                                       .send()
+                                                                       .expecting(HttpResponseExpectation.SC_OK));
             assertClientStatsResponse(response, expectedParams, 4, true);
         }
     }
@@ -111,9 +112,9 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
         {
             Map<String, Boolean> expectedParams = Map.of("summary", false);
             String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
-            HttpResponse<Buffer> response = getBlocking(trustedClient().get(server.actualPort(), "localhost", testRoute)
-                                                                       .expect(ResponsePredicate.SC_OK)
-                                                                       .send());
+            HttpResponse<Buffer> response = getBlocking(trustedClient().get(serverWrapper.server.actualPort(), "localhost", testRoute)
+                                                                       .send()
+                                                                       .expecting(HttpResponseExpectation.SC_OK));
             assertClientStatsResponse(response, expectedParams, 4);
         }
     }
@@ -127,9 +128,9 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     {
         Map<String, Boolean> expectedParams = Map.of("summary", true);
         String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=123&bad-arg=xyz";
-        HttpResponse<Buffer> response = getBlocking(trustedClient().get(server.actualPort(), "localhost", testRoute)
-                                                                   .expect(ResponsePredicate.SC_OK)
-                                                                   .send());
+        HttpResponse<Buffer> response = getBlocking(trustedClient().get(serverWrapper.server.actualPort(), "localhost", testRoute)
+                                                                   .send()
+                                                                   .expecting(HttpResponseExpectation.SC_OK));
         assertClientStatsResponse(response, expectedParams);
     }
 
@@ -167,7 +168,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
         String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/" + tableName.table() + "-snapshot",
                                          tableName.keyspace(), tableName.table());
         HttpResponse<Buffer> resp;
-        resp = getBlocking(trustedClient().put(server.actualPort(), "localhost", testRoute)
+        resp = getBlocking(trustedClient().put(serverWrapper.server.actualPort(), "localhost", testRoute)
                                  .send());
         assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
     }
@@ -176,7 +177,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     {
         String testRoute = "/api/v1/cassandra/keyspaces/" + tableName.keyspace() + "/tables/" + tableName.table() + "/stats";
         HttpResponse<Buffer> resp;
-        resp = getBlocking(trustedClient().get(server.actualPort(), "localhost", testRoute)
+        resp = getBlocking(trustedClient().get(serverWrapper.server.actualPort(), "localhost", testRoute)
                                  .send());
         assertTableStatsResponse(tableName, resp);
     }

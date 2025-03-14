@@ -26,8 +26,6 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -35,7 +33,6 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -59,7 +56,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.name.Named;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
@@ -79,7 +75,6 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
-import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
@@ -88,28 +83,19 @@ import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.S3ProxyConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.S3ClientConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.SidecarClientConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.SidecarPeerHealthConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
-import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
-import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitorTask;
-import org.apache.cassandra.sidecar.coordination.SidecarPeerProvider;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
-import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
-import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import org.apache.cassandra.testing.IClusterExtension;
 import org.apache.cassandra.testing.IsolatedDTestClassLoaderWrapper;
@@ -168,14 +154,12 @@ public abstract class SharedClusterIntegrationTestBase
 
     protected DnsResolver dnsResolver = new LocalhostResolver();
     protected IClusterExtension<? extends IInstance> cluster;
-    protected Server server;
+    protected ServerWrapper serverWrapper;
     protected TestVersion testVersion;
     protected MtlsTestHelper mtlsTestHelper;
     private final CountDownLatch sidecarSchemaReadyLatch = new CountDownLatch(1);
     private IsolatedDTestClassLoaderWrapper classLoaderWrapper;
     private Injector sidecarServerInjector;
-    protected HashMap<Server, String> serverDeploymentIds;
-    protected HashMap<Server, SidecarPeerHealthMonitorTask> peerHealthMonitors;
 
     static
     {
@@ -193,9 +177,6 @@ public abstract class SharedClusterIntegrationTestBase
 
         classLoaderWrapper = new IsolatedDTestClassLoaderWrapper();
         classLoaderWrapper.initializeDTestJarClassLoader(testVersion, TestVersion.class);
-
-        serverDeploymentIds = new HashMap<>();
-        peerHealthMonitors = new HashMap<>();
 
         beforeClusterProvisioning();
         cluster = provisionClusterWithRetries(this.testVersion);
@@ -341,6 +322,7 @@ public abstract class SharedClusterIntegrationTestBase
 
     /**
      * Override to provide additional options to configure sidecar
+     *
      * @return function to update {@link SidecarConfigurationImpl.Builder}
      */
     protected Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configurationOverrides()
@@ -356,17 +338,17 @@ public abstract class SharedClusterIntegrationTestBase
      */
     protected void startSidecar(ICluster<? extends IInstance> cluster) throws InterruptedException
     {
-        server = startSidecarWithInstances(cluster);
+        serverWrapper = startSidecarWithInstances(cluster);
     }
 
     /**
      * Starts Sidecar configured to run with the provided {@link IInstance}s from the cluster.
      *
      * @param instances the Cassandra instances Sidecar will manage
-     * @return the started server
+     * @return a wrapper with the started server
      * @throws InterruptedException when the server start operation is interrupted
      */
-    protected Server startSidecarWithInstances(Iterable<? extends IInstance> instances) throws InterruptedException
+    protected ServerWrapper startSidecarWithInstances(Iterable<? extends IInstance> instances) throws InterruptedException
     {
         return startSidecarWithInstances(instances, null);
     }
@@ -374,12 +356,12 @@ public abstract class SharedClusterIntegrationTestBase
     /**
      * Starts Sidecar configured to run with the provided {@link IInstance}s from the cluster.
      *
-     * @param instances the Cassandra instances Sidecar will manage
+     * @param instances    the Cassandra instances Sidecar will manage
      * @param customModule an optional custom module that overrides during injection
      * @return the started server
      * @throws InterruptedException when the server start operation is interrupted
      */
-    protected Server startSidecarWithInstances(Iterable<? extends IInstance> instances, AbstractModule customModule) throws InterruptedException
+    protected ServerWrapper startSidecarWithInstances(Iterable<? extends IInstance> instances, AbstractModule customModule) throws InterruptedException
     {
         VertxTestContext context = new VertxTestContext();
         AbstractModule testModule = new IntegrationTestModule(instances, classLoaderWrapper, mtlsTestHelper,
@@ -390,23 +372,13 @@ public abstract class SharedClusterIntegrationTestBase
             module = Modules.override(testModule).with(customModule);
         }
         sidecarServerInjector = Guice.createInjector(Modules.override(SidecarModules.all()).with(module));
-        Vertx vertx = sidecarServerInjector.getInstance(Vertx.class);
-        vertx.eventBus()
-             .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> {
-                 sidecarSchemaReadyLatch.countDown();
-             });
         Server sidecarServer = sidecarServerInjector.getInstance(Server.class);
-        SidecarPeerHealthMonitorTask peerHealthMonitorTask = sidecarServerInjector.getInstance(SidecarPeerHealthMonitorTask.class);
         sidecarServer.start()
-                     .onSuccess(deploymentId -> {
-                         serverDeploymentIds.put(sidecarServer, deploymentId);
-                         peerHealthMonitors.put(sidecarServer, peerHealthMonitorTask);
-                         context.completeNow();
-                     })
+                     .onSuccess(s -> context.completeNow())
                      .onFailure(context::failNow);
 
         assertThat(context.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        return sidecarServer;
+        return new ServerWrapper(sidecarServerInjector, sidecarServer);
     }
 
     protected void waitForSchemaReady(long timeout, TimeUnit timeUnit)
@@ -427,7 +399,7 @@ public abstract class SharedClusterIntegrationTestBase
      */
     protected void stopSidecar() throws InterruptedException
     {
-        closeServer(server);
+        closeServer(serverWrapper.server);
     }
 
     protected void closeServer(Server s) throws InterruptedException
@@ -437,7 +409,7 @@ public abstract class SharedClusterIntegrationTestBase
             return;
         }
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        s.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
         {
             logger.info("Close event received before timeout.");
@@ -563,6 +535,25 @@ public abstract class SharedClusterIntegrationTestBase
     }
 
     /**
+     * Wraps the Sidecar server and keeps a reference to the injector to be able to dynamically retrieve
+     * objects for testing purposes
+     */
+    public static class ServerWrapper
+    {
+        public final Injector injector;
+        public final Server server;
+        public volatile int serverPort;
+
+        public ServerWrapper(Injector sidecarServerInjector, Server server)
+        {
+            this.injector = sidecarServerInjector;
+            this.server = server;
+            // Server must have started to retrieve the port
+            this.serverPort = server.actualPort();
+        }
+    }
+
+    /**
      * Test module that configures the instances based on the cluster instances
      */
     public static class IntegrationTestModule extends AbstractModule
@@ -630,42 +621,35 @@ public abstract class SharedClusterIntegrationTestBase
 
         @Provides
         @Singleton
-        @Named("sidecarInstanceSupplier")
-        public Supplier<List<InnerDcTokenAdjacentPeerTestProvider.TestSidecarHostInfo>> supplier()
+        public SidecarConfiguration sidecarConfiguration()
         {
-            return ArrayList::new;
+            return defaultConfigurationBuilder(mtlsTestHelper, configurationOverrides).build();
         }
 
         @Provides
         @Singleton
-        public SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration()
+        public DnsResolver dnsResolver()
         {
-            return new SidecarPeerHealthConfigurationImpl(false,
-                                                          new MillisecondBoundConfiguration(1, TimeUnit.SECONDS),
-                                                          1,
-                                                          new MillisecondBoundConfiguration(500, TimeUnit.MILLISECONDS));
+            return dnsResolver;
         }
 
         @Provides
         @Singleton
-        public SidecarPeerProvider sidecarPeerProvider(InstanceMetadataFetcher metadataFetcher,
-                                                       CassandraClientTokenRingProvider cassandraClientTokenRingProvider,
-                                                       SidecarConfiguration configuration,
-                                                       DnsResolver dnsResolver,
-                                                       @Named("sidecarInstanceSupplier")
-                                                               Supplier<List
-                                                                        <InnerDcTokenAdjacentPeerTestProvider.TestSidecarHostInfo>> supplier)
+        public ClusterLease clusterLease()
         {
-            return new InnerDcTokenAdjacentPeerTestProvider(metadataFetcher,
-                                                            cassandraClientTokenRingProvider,
-                                                            configuration.serviceConfiguration(),
-                                                            dnsResolver,
-                                                            supplier);
+            return new ClusterLease(ClusterLease.Ownership.CLAIMED);
         }
 
-        @Provides
-        @Singleton
-        public SidecarConfiguration sidecarConfiguration(SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration)
+        private List<InetSocketAddress> buildContactPoints()
+        {
+            return StreamSupport.stream(instances.spliterator(), false)
+                                .map(instance -> new InetSocketAddress(instance.config().broadcastAddress().getAddress(),
+                                                                       tryGetIntConfig(instance.config(), "native_transport_port", 9042)))
+                                .collect(Collectors.toList());
+        }
+
+        public static SidecarConfigurationImpl.Builder defaultConfigurationBuilder(MtlsTestHelper mtlsTestHelper,
+                                                                                   Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configurationOverrides)
         {
             ServiceConfiguration conf = ServiceConfigurationImpl.builder()
                                                                 .host("0.0.0.0") // binds to all interfaces, potential security issue if left running for long
@@ -708,46 +692,18 @@ public abstract class SharedClusterIntegrationTestBase
                                                                                  5242880, DEFAULT_API_CALL_TIMEOUT,
                                                                                  buildTestS3ProxyConfig());
 
-            SidecarClientConfiguration sidecarClientConfiguration = new SidecarClientConfigurationImpl(sslConfiguration);
-
-
-
             SidecarConfigurationImpl.Builder builder = SidecarConfigurationImpl.builder()
                                                                                .serviceConfiguration(conf)
                                                                                .s3ClientConfiguration(s3ClientConfig)
-                                                                               .sslConfiguration(sslConfiguration)
-                                                                               .sidecarClientConfiguration(sidecarClientConfiguration)
-                                                                               .sidecarPeerHealthConfiguration(sidecarPeerHealthConfiguration);
+                                                                               .sslConfiguration(sslConfiguration);
             if (configurationOverrides != null)
             {
                 builder = configurationOverrides.apply(builder);
             }
-            return builder.build();
+            return builder;
         }
 
-        @Provides
-        @Singleton
-        public DnsResolver dnsResolver()
-        {
-            return dnsResolver;
-        }
-
-        @Provides
-        @Singleton
-        public ClusterLease clusterLease()
-        {
-            return new ClusterLease(ClusterLease.Ownership.CLAIMED);
-        }
-
-        private List<InetSocketAddress> buildContactPoints()
-        {
-            return StreamSupport.stream(instances.spliterator(), false)
-                                .map(instance -> new InetSocketAddress(instance.config().broadcastAddress().getAddress(),
-                                                                       tryGetIntConfig(instance.config(), "native_transport_port", 9042)))
-                                .collect(Collectors.toList());
-        }
-
-        private S3ProxyConfiguration buildTestS3ProxyConfig()
+        private static S3ProxyConfiguration buildTestS3ProxyConfig()
         {
             return new S3ProxyConfiguration()
             {
@@ -786,6 +742,20 @@ public abstract class SharedClusterIntegrationTestBase
             catch (NullPointerException npe)
             {
                 return defaultValue;
+            }
+        }
+
+        public static String cassandraInstanceHostname(IInstance cassandraInstance, DnsResolver dnsResolver)
+        {
+            IInstanceConfig config = cassandraInstance.config();
+            String ipAddress = JMXUtil.getJmxHost(config);
+            try
+            {
+                return dnsResolver.reverseResolve(ipAddress);
+            }
+            catch (UnknownHostException e)
+            {
+                return ipAddress;
             }
         }
 

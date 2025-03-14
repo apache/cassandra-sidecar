@@ -36,6 +36,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.codecs.SidecarInstanceCodec;
 import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
@@ -77,12 +78,17 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         this.sidecarInstanceCodec = sidecarInstanceCodec;
     }
 
+    public Map<SidecarInstance, SidecarPeerHealthProvider.Health> status()
+    {
+        return status;
+    }
+
     @Override
     public void deploy(Vertx vertx, PeriodicTaskExecutor executor)
     {
         this.eventBus = vertx.eventBus();
         // TODO: Find a better place to register this codec
-        eventBus.registerDefaultCodec(SidecarInstance.class, sidecarInstanceCodec);
+        eventBus.registerDefaultCodec(SidecarInstanceImpl.class, sidecarInstanceCodec);
         EventBusUtils.onceLocalConsumer(eventBus, ON_CASSANDRA_CQL_READY.address(), ignored -> executor.schedule(this));
     }
 
@@ -127,17 +133,11 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         sidecarPeers.stream()
                     .map(instance ->
                          healthProvider.health(instance)
-                                       .andThen(ar -> {
-                                           if (ar.succeeded())
-                                           {
-                                               updateHealth(instance, ar.result());
-                                           }
-                                           else
-                                           {
-                                               LOGGER.error("Failed to run health check, marking instance as DOWN host={} port={}",
-                                                            instance.hostname(), instance.port(), ar.cause());
-                                               markDown(instance);
-                                           }
+                                       .onSuccess(healthCheckResult -> updateHealth(instance, healthCheckResult))
+                                       .onFailure(throwable -> {
+                                           LOGGER.error("Failed to run health check, marking instance as DOWN host={} port={}",
+                                                        instance.hostname(), instance.port(), throwable);
+                                           markDown(instance);
                                        }))
                     .collect(Collectors.toList());
 
@@ -189,10 +189,5 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     protected boolean compareAndUpdate(SidecarInstance instance, SidecarPeerHealthProvider.Health newStatus)
     {
         return status.put(instance, newStatus) != newStatus;
-    }
-
-    public Map<SidecarInstance, SidecarPeerHealthProvider.Health> getStatus()
-    {
-        return status;
     }
 }

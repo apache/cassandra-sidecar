@@ -22,8 +22,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
@@ -47,7 +47,7 @@ class RoutesIntegrationTest extends SharedClusterSidecarIntegrationTestBase
     @Test
     void healthHappyPathTest()
     {
-        HttpResponse<Buffer> response = getBlocking(trustedClient().get(server.actualPort(), "localhost", "/api/v1/__health")
+        HttpResponse<Buffer> response = getBlocking(trustedClient().get(serverWrapper.server.actualPort(), "localhost", "/api/v1/__health")
                                                                    .send());
         assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
     }
@@ -56,9 +56,9 @@ class RoutesIntegrationTest extends SharedClusterSidecarIntegrationTestBase
     void retrieveGossipInfo()
     {
         String testRoute = "/api/v1/cassandra/gossip";
-        HttpResponse<Buffer> response = getBlocking(trustedClient().get(server.actualPort(), "localhost", testRoute)
-                                                                   .expect(ResponsePredicate.SC_OK)
-                                                                   .send());
+        HttpResponse<Buffer> response = getBlocking(trustedClient().get(serverWrapper.server.actualPort(), "localhost", testRoute)
+                                                                   .send()
+                                                                   .expecting(HttpResponseExpectation.SC_OK));
         GossipInfoResponse gossipResponse = response.bodyAsJson(GossipInfoResponse.class);
         assertThat(gossipResponse).isNotNull()
                                   .hasSize(1);
@@ -87,9 +87,9 @@ class RoutesIntegrationTest extends SharedClusterSidecarIntegrationTestBase
     private HealthResponse getGossipHealth()
     {
         String testRoute = "/api/v1/cassandra/gossip/__health";
-        HttpResponse<Buffer> response = getBlocking(trustedClient().get(server.actualPort(), "localhost", testRoute)
-                                                                   .expect(ResponsePredicate.SC_OK)
-                                                                   .send());
+        HttpResponse<Buffer> response = getBlocking(trustedClient().get(serverWrapper.server.actualPort(), "localhost", testRoute)
+                                                                   .send()
+                                                                   .expecting(HttpResponseExpectation.SC_OK));
         assertThat(response.statusCode()).isEqualTo(OK.code());
         return response.bodyAsJson(HealthResponse.class);
     }

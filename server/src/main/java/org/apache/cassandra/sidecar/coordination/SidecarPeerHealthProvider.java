@@ -28,14 +28,19 @@ import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 public interface SidecarPeerHealthProvider
 {
     /**
-     * Possible Health states:
-     *
-     * - UP: Peer sidecar is alive
-     * - DOWN: Peer sidecar is not reachable
+     * Possible Health States
      */
     enum Health
     {
-        UP, DOWN
+        /**
+         * Peer Sidecar is alive
+         */
+        UP,
+
+        /**
+         * Peer Sidecar is not unreachable
+         */
+        DOWN
     }
 
     /**

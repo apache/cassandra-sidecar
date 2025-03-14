@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.coordination;
 
 import java.math.BigInteger;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -32,10 +33,10 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.tuple.Pair;
-
 import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.DataType;
+import com.datastax.driver.core.EndPoint;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
@@ -45,6 +46,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -61,6 +63,7 @@ import static org.mockito.Mockito.when;
  */
 public class InnerDcTokenAdjacentPeerProviderTests
 {
+    private static final DriverUtils DRIVER_UTILS = new DriverUtils();
     private static final List<BigInteger> TOKENS = Stream.of(
                                                          "-9223372036854775808",
                                                          "-8070450532247928832",
@@ -111,7 +114,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
         for (int i = 0; i < numHosts - 1; i++)
         {
             int hostId = i + 1;
-            final List<InstanceMetadata> localInstances = List.of(
+            List<InstanceMetadata> localInstances = List.of(
             mockInstanceMetadata(1, "dc1-host" + hostId + "-i1", metadata),
             mockInstanceMetadata(2, "dc1-host" + hostId + "-i2", metadata),
             mockInstanceMetadata(3, "dc1-host" + hostId + "-i3", metadata),
@@ -120,9 +123,10 @@ public class InnerDcTokenAdjacentPeerProviderTests
             when(metadataFetcher.allLocalInstances()).thenReturn(localInstances);
 
             CassandraClientTokenRingProvider cachedLocalTokenRanges = mock(CassandraClientTokenRingProvider.class);
-            Set<Host> localHosts = allHosts.stream().filter(host -> host.getAddress()
-                                                                        .getHostName()
-                                                                        .startsWith("dc1-host" + hostId + "-"))
+            Set<Host> localHosts = allHosts.stream().filter(host -> DRIVER_UTILS.getSocketAddress(host)
+                                                                                .getAddress()
+                                                                                .getHostName()
+                                                                                .startsWith("dc1-host" + hostId + "-"))
                                            .collect(Collectors.toSet());
             when(cachedLocalTokenRanges.localInstances()).thenReturn(localHosts);
             Map<Integer, Set<TokenRange>> localRanges = Map.of(
@@ -134,24 +138,25 @@ public class InnerDcTokenAdjacentPeerProviderTests
             when(cachedLocalTokenRanges.localTokenRanges(anyString())).thenReturn(localRanges);
             when(cachedLocalTokenRanges.allInstances()).thenReturn(allHosts);
 
-            final InnerDcTokenAdjacentPeerProvider provider = new InnerDcTokenAdjacentPeerProvider(metadataFetcher,
-                                                                                                   cachedLocalTokenRanges,
-                                                                                                   serviceConfiguration,
-                                                                                                   new DnsResolver()
-                                                                                                   {
-                                                                                                       @Override
-                                                                                                       public String resolve(String hostname)
-                                                                                                       {
-                                                                                                           return hostname;
-                                                                                                       }
+            InnerDcTokenAdjacentPeerProvider provider = new InnerDcTokenAdjacentPeerProvider(metadataFetcher,
+                                                                                             cachedLocalTokenRanges,
+                                                                                             serviceConfiguration,
+                                                                                             new DnsResolver()
+                                                                                             {
+                                                                                                 @Override
+                                                                                                 public String resolve(String hostname)
+                                                                                                 {
+                                                                                                     return hostname;
+                                                                                                 }
 
-                                                                                                       @Override
-                                                                                                       public String reverseResolve(String address)
-                                                                                                       {
-                                                                                                           return address;
-                                                                                                       }
-                                                                                                   });
-            final Set<SidecarInstance> buddies = provider.get();
+                                                                                                 @Override
+                                                                                                 public String reverseResolve(String address)
+                                                                                                 {
+                                                                                                     return address;
+                                                                                                 }
+                                                                                             },
+                                                                                             DRIVER_UTILS);
+            Set<SidecarInstance> buddies = provider.get();
             assertEquals(1, buddies.size());
             assertTrue(buddies.stream().findFirst().orElseThrow().hostname().startsWith("dc1-host" + (hostId + 1)));
         }
@@ -160,23 +165,26 @@ public class InnerDcTokenAdjacentPeerProviderTests
     @Test
     public void testAdjacentHosts()
     {
-        final List<Pair<Host, BigInteger>> allHosts = IntStream.range(0, TOKENS.size())
-                                                               .mapToObj(idx -> {
-                                                                   BigInteger token = tokenAt(idx);
-                                                                   return Pair.of(mockHost(INSTANCES.get(idx), token), token);
-                                                               })
-                                                               .collect(Collectors.toList());
+        List<Pair<Host, BigInteger>> allHosts = IntStream.range(0, TOKENS.size())
+                                                         .mapToObj(idx -> {
+                                                             BigInteger token = tokenAt(idx);
+                                                             return Pair.of(mockHost(INSTANCES.get(idx), token), token);
+                                                         })
+                                                         .collect(Collectors.toList());
 
-        final Set<String> adjacentHosts = new HashSet<>(TOKENS.size());
+        Set<String> adjacentHosts = new HashSet<>(TOKENS.size());
         for (int i = 0; i < TOKENS.size(); i++)
         {
-            final String localhost = INSTANCES.get(i);
-            final BigInteger token = tokenAt(i);
+            String localhost = INSTANCES.get(i);
+            BigInteger token = tokenAt(i);
             test(localhost, token, allHosts, 1, tokenAt(i + 1));
-            final Set<Host> adjacent = InnerDcTokenAdjacentPeerProvider.adjacentHosts((host) -> isLocal(localhost,
-                                                                                                        host), token, allHosts, 1);
+            Set<Host> adjacent = InnerDcTokenAdjacentPeerProvider.adjacentHosts(DRIVER_UTILS,
+                                                                                (host) -> isLocal(localhost, host),
+                                                                                token,
+                                                                                allHosts,
+                                                                                1);
             assertEquals(1, adjacent.size());
-            final String adjacentStr = adjacent.stream().findFirst().map(Host::toString).orElseThrow();
+            String adjacentStr = adjacent.stream().findFirst().map(Host::toString).orElseThrow();
             assertFalse(adjacentHosts.contains(adjacentStr));
             adjacentHosts.add(adjacentStr);
         }
@@ -191,7 +199,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
     @Test
     public void testMinToken()
     {
-        final List<TokenRange> tokens = TOKENS.stream().map(start -> new TokenRange(start, start.add(BigInteger.ONE))).collect(Collectors.toList());
+        List<TokenRange> tokens = TOKENS.stream().map(start -> new TokenRange(start, start.add(BigInteger.ONE))).collect(Collectors.toList());
         Collections.shuffle(tokens);
         assertEquals(tokenAt(0), InnerDcTokenAdjacentPeerProvider.minToken(tokens.stream()));
     }
@@ -206,15 +214,16 @@ public class InnerDcTokenAdjacentPeerProviderTests
                                      "local1-i2", "local2-i2", "local3-i2",
                                      "local1-i3", "local2-i3", "local3-i3",
                                      "local1-i4", "local2-i4", "local3-i4");
-        final BigInteger token = new BigInteger(tokens.stream().findFirst().orElseThrow());
+        BigInteger token = new BigInteger(tokens.stream().findFirst().orElseThrow());
         List<Pair<Host, BigInteger>> sortedLocalDcHosts = IntStream.range(0, tokens.size())
                                                                    .mapToObj(i -> {
                                                                        BigInteger t = new BigInteger(tokens.get(i));
                                                                        return Pair.of(mockHost(hosts.get(i), t), t);
                                                                    })
                                                                    .collect(Collectors.toList());
-        final int quorum = 5;
-        InnerDcTokenAdjacentPeerProvider.adjacentHosts((host) -> host.getAddress().getHostName().startsWith("local1-"),
+        int quorum = 5;
+        InnerDcTokenAdjacentPeerProvider.adjacentHosts(DRIVER_UTILS,
+                                                       (host) -> DRIVER_UTILS.getSocketAddress(host).getAddress().getHostName().startsWith("local1-"),
                                                        token,
                                                        sortedLocalDcHosts,
                                                        quorum)
@@ -229,12 +238,13 @@ public class InnerDcTokenAdjacentPeerProviderTests
 
     private static void test(String localhost, BigInteger token, List<Pair<Host, BigInteger>> allHosts, int quorum, BigInteger... expected)
     {
-        final Set<String> result = InnerDcTokenAdjacentPeerProvider.adjacentHosts((host) -> isLocal(localhost, host),
-                                                                                  token,
-                                                                                  allHosts,
-                                                                                  quorum)
-                                                                    .stream().map(Host::toString)
-                                                                    .collect(Collectors.toSet());
+        Set<String> result = InnerDcTokenAdjacentPeerProvider.adjacentHosts(DRIVER_UTILS,
+                                                                            (host) -> isLocal(localhost, host),
+                                                                            token,
+                                                                            allHosts,
+                                                                            quorum)
+                                                             .stream().map(Host::toString)
+                                                             .collect(Collectors.toSet());
         assertFalse(result.contains(token.toString()));
         for (BigInteger bi : expected)
         {
@@ -245,7 +255,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
 
     private static boolean isLocal(String localhost, Host host)
     {
-        return isLocal(localhost, host.getAddress().getHostName());
+        return isLocal(localhost, DRIVER_UTILS.getSocketAddress(host).getAddress().getHostName());
     }
 
     private static boolean isLocal(String localhost, String addr)
@@ -283,12 +293,16 @@ public class InnerDcTokenAdjacentPeerProviderTests
     {
         Host host = mock(Host.class);
         InetAddress addr = mock(InetAddress.class);
+        EndPoint mockEndpoint = mock(EndPoint.class);
+        InetSocketAddress mockInetSocketAddress = mock(InetSocketAddress.class);
         when(addr.getHostName()).thenReturn(hostname);
         when(addr.getHostAddress()).thenReturn(hostname);
-        when(host.getAddress()).thenReturn(addr);
+        when(host.getEndPoint()).thenReturn(mockEndpoint);
+        when(mockEndpoint.resolve()).thenReturn(mockInetSocketAddress);
+        when(mockInetSocketAddress.getAddress()).thenReturn(addr);
         when(host.toString()).thenReturn(token.toString());
         when(host.getDatacenter()).thenReturn(dc);
-        final Token t = mock(Token.class);
+        Token t = mock(Token.class);
         when(t.getType()).thenReturn(DataType.bigint());
         when(t.getValue()).thenReturn(token.longValue());
         when(host.getTokens()).thenReturn(Set.of(t));

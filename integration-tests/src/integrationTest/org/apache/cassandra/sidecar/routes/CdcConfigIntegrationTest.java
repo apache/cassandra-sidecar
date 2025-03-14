@@ -69,7 +69,7 @@ class CdcConfigIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 
         // Create new configs
         UpdateCdcServiceConfigPayload payload = new UpdateCdcServiceConfigPayload(Map.of("k1", "v1"));
-        UpdateCdcServiceConfigPayload newConfigResponse = getBlocking(trustedClient().put(server.actualPort(), "localhost", configRoute)
+        UpdateCdcServiceConfigPayload newConfigResponse = getBlocking(trustedClient().put(serverWrapper.server.actualPort(), "localhost", configRoute)
                                                                                      .as(BodyCodec.json(UpdateCdcServiceConfigPayload.class))
                                                                                      .sendJson(JsonObject.mapFrom(payload))
                                                                                      .expecting(HttpResponseExpectation.SC_OK))
@@ -78,7 +78,7 @@ class CdcConfigIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 
         // update configs
         UpdateCdcServiceConfigPayload updatedPayload = new UpdateCdcServiceConfigPayload(Map.of("k3", "v3"));
-        UpdateCdcServiceConfigPayload updatedConfigResponse = getBlocking(trustedClient().put(server.actualPort(), "localhost", configRoute)
+        UpdateCdcServiceConfigPayload updatedConfigResponse = getBlocking(trustedClient().put(serverWrapper.server.actualPort(), "localhost", configRoute)
                                                                                          .as(BodyCodec.json(UpdateCdcServiceConfigPayload.class))
                                                                                          .sendJson(JsonObject.mapFrom(updatedPayload)))
                                                               .body();
@@ -86,7 +86,7 @@ class CdcConfigIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 
         // GetConfigs should give updated configs
         String getConfigsRoute = ApiEndpointsV1.SERVICES_CONFIG_ROUTE;
-        AllServicesConfigPayload getServicesResponse = getBlocking(trustedClient().get(server.actualPort(), "localhost", getConfigsRoute)
+        AllServicesConfigPayload getServicesResponse = getBlocking(trustedClient().get(serverWrapper.server.actualPort(), "localhost", getConfigsRoute)
                                                                                   .as(BodyCodec.json(AllServicesConfigPayload.class))
                                                                                   .sendJson(JsonObject.mapFrom(updatedPayload)))
                                                        .body();
@@ -97,11 +97,11 @@ class CdcConfigIntegrationTest extends SharedClusterSidecarIntegrationTestBase
         assertThat(getServicesResponse).isEqualTo(expectedConfigPayload);
 
         // delete all CDC configs
-        assertThat(getBlocking(trustedClient().delete(server.actualPort(), "localhost", configRoute)
+        assertThat(getBlocking(trustedClient().delete(serverWrapper.server.actualPort(), "localhost", configRoute)
                                               .send()).bodyAsJsonObject().getString("status")).isEqualTo("OK");
 
         // Get configs should have no configs
-        AllServicesConfigPayload response = getBlocking(trustedClient().get(server.actualPort(), "localhost", getConfigsRoute)
+        AllServicesConfigPayload response = getBlocking(trustedClient().get(serverWrapper.server.actualPort(), "localhost", getConfigsRoute)
                                                                        .as(BodyCodec.json(AllServicesConfigPayload.class))
                                                                        .sendJson(JsonObject.mapFrom(updatedPayload)))
                                             .body();
@@ -117,7 +117,7 @@ class CdcConfigIntegrationTest extends SharedClusterSidecarIntegrationTestBase
         // Update with Invalid service
         Map<String, String> configs = Map.of("k1", "v1");
         UpdateCdcServiceConfigPayload payload = new UpdateCdcServiceConfigPayload(configs);
-        HttpResponse<Buffer> response = getBlocking(trustedClient().put(server.actualPort(), "localhost", configRoute)
+        HttpResponse<Buffer> response = getBlocking(trustedClient().put(serverWrapper.server.actualPort(), "localhost", configRoute)
                                                                    .sendJson(JsonObject.mapFrom(payload)));
 
         assertThat(HttpResponseStatus.BAD_REQUEST.code()).isEqualTo(response.statusCode());

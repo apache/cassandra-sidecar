@@ -24,11 +24,9 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import org.apache.cassandra.sidecar.cdc.CdcLogCache;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
 import org.apache.cassandra.sidecar.coordination.InnerDcTokenAdjacentPeerProvider;
 import org.apache.cassandra.sidecar.coordination.SidecarHttpHealthProvider;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitorTask;
@@ -48,7 +46,6 @@ import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
 import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
-import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
 
 /**
@@ -129,11 +126,8 @@ public class CdcModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SidecarPeerProvider sidecarPeerProvider(InstanceMetadataFetcher metadataFetcher,
-                                                   CassandraClientTokenRingProvider cassandraClientTokenRingProvider,
-                                                   SidecarConfiguration configuration,
-                                                   DnsResolver dnsResolver)
+    public SidecarPeerProvider sidecarPeerProvider(InnerDcTokenAdjacentPeerProvider innerDcTokenAdjacentPeerProvider)
     {
-        return new InnerDcTokenAdjacentPeerProvider(metadataFetcher, cassandraClientTokenRingProvider, configuration.serviceConfiguration(), dnsResolver);
+        return innerDcTokenAdjacentPeerProvider;
     }
 }

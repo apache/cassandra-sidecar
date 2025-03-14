@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * SidecarInstanceCodec is failing to find codec for type (CASSSIDECAR-229)
  * Retry Failed Schema Reports (CASSSIDECAR-217)
  * Guice modularization (CASSSIDECAR-208)
  * Create Endpoint that Triggers an Immediate Schema Report (CASSSIDECAR-203)

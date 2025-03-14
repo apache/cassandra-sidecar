@@ -250,6 +250,18 @@ public class Server
         throw new IllegalStateException("No deployed server verticles. Maybe server failed to deploy due to port conflict");
     }
 
+    /**
+     * @return the deployment ID for this server
+     * @throws IllegalStateException if the server has not been deployed
+     */
+    @VisibleForTesting
+    public String deploymentId()
+    {
+        if (!deployedServerVerticles.isEmpty())
+            return deployedServerVerticles.get(0).deploymentID();
+        throw new IllegalStateException("No deployed server verticles");
+    }
+
     protected Future<String> notifyServerStart(String deploymentId)
     {
         LOGGER.info("Successfully started Cassandra Sidecar");
