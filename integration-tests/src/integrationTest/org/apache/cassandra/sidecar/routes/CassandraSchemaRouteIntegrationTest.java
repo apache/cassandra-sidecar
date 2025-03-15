@@ -44,7 +44,7 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
     {
         String testRoute = "/api/v1/schema/keyspaces";
         SchemaResponse response = getBlocking(trustedClient()
-                                              .get(serverWrapper.server.actualPort(), "localhost", testRoute)
+                                              .get(serverWrapper.serverPort, "localhost", testRoute)
                                               .send()
                                               .expecting(HttpResponseExpectation.SC_OK))
                                   .bodyAsJson(SchemaResponse.class);
@@ -58,7 +58,7 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
     {
         String testRoute = "/api/v1/schema/keyspaces/non_existent";
         getBlocking(trustedClient()
-                    .get(serverWrapper.server.actualPort(), "localhost", testRoute)
+                    .get(serverWrapper.serverPort, "localhost", testRoute)
                     .send()
                     .expecting(HttpResponseExpectation.SC_NOT_FOUND));
     }
@@ -68,7 +68,7 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
     {
         String testRoute = "/api/v1/schema/keyspaces/testkeyspace";
         SchemaResponse response = getBlocking(trustedClient()
-                                              .get(serverWrapper.server.actualPort(), "localhost", testRoute)
+                                              .get(serverWrapper.serverPort, "localhost", testRoute)
                                               .send()
                                               .expecting(HttpResponseExpectation.SC_OK))
                                   .bodyAsJson(SchemaResponse.class);
@@ -82,7 +82,7 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
     {
         String testRoute = "/api/v1/schema/keyspaces/\"Cycling\"";
         SchemaResponse response = getBlocking(trustedClient()
-                                              .get(serverWrapper.server.actualPort(), "localhost", testRoute)
+                                              .get(serverWrapper.serverPort, "localhost", testRoute)
                                               .send()
                                               .expecting(HttpResponseExpectation.SC_OK))
                                   .bodyAsJson(SchemaResponse.class);
@@ -96,7 +96,7 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
     {
         String testRoute = "/api/v1/schema/keyspaces/\"keyspace\"";
         SchemaResponse response = getBlocking(trustedClient()
-                                              .get(serverWrapper.server.actualPort(), "localhost", testRoute)
+                                              .get(serverWrapper.serverPort, "localhost", testRoute)
                                               .send()
                                               .expecting(HttpResponseExpectation.SC_OK))
                                   .bodyAsJson(SchemaResponse.class);
