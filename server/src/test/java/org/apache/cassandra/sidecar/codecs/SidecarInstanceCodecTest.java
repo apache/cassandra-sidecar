@@ -29,6 +29,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.TestResourceReaper;
+import org.apache.cassandra.sidecar.common.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
@@ -41,14 +42,14 @@ class SidecarInstanceCodecTest
 {
     static Vertx vertx;
     private static EventBus eventBus;
-    private static SidecarInstanceCodec codec;
+    private static SidecarInstanceCodec<SidecarInstanceImpl> codec;
 
     @BeforeAll
     static void setup()
     {
         vertx = Vertx.vertx();
         eventBus = vertx.eventBus();
-        codec = new SidecarInstanceCodec();
+        codec = new SidecarInstanceCodec<>();
         eventBus.registerDefaultCodec(SidecarInstanceImpl.class, codec);
     }
 
@@ -77,7 +78,7 @@ class SidecarInstanceCodecTest
         Buffer buffer = Buffer.buffer(1024);
         SidecarInstanceImpl sidecarInstance = new SidecarInstanceImpl("127.0.0.1", 9876);
         codec.encodeToWire(buffer, sidecarInstance);
-        SidecarInstanceImpl decoded = codec.decodeFromWire(0, buffer);
+        SidecarInstance decoded = codec.decodeFromWire(0, buffer);
         assertThat(decoded).isEqualTo(sidecarInstance);
     }
 }

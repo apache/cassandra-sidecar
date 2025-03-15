@@ -62,7 +62,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     private final SidecarPeerHealthConfiguration config;
     private final SidecarPeerProvider sidecarPeerProvider;
     private final SidecarPeerHealthProvider healthProvider;
-    private final SidecarInstanceCodec sidecarInstanceCodec;
+    private final SidecarInstanceCodec<SidecarInstanceImpl> sidecarInstanceCodec;
 
     private final Map<SidecarInstance, SidecarPeerHealthProvider.Health> status = new ConcurrentHashMap<>();
 
@@ -70,7 +70,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     public SidecarPeerHealthMonitorTask(SidecarConfiguration sidecarConfiguration,
                                         SidecarPeerProvider sidecarPeerProvider,
                                         SidecarPeerHealthProvider healthProvider,
-                                        SidecarInstanceCodec sidecarInstanceCodec)
+                                        SidecarInstanceCodec<SidecarInstanceImpl> sidecarInstanceCodec)
     {
         this.config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         this.sidecarPeerProvider = sidecarPeerProvider;
