@@ -27,6 +27,7 @@ import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 
 /**
  * Codecs for Sidecar instances
+ * @param <T> a type implementing {@link SidecarInstance}
  */
 @Singleton
 public class SidecarInstanceCodec<T extends SidecarInstance> implements MessageCodec<T, SidecarInstance>
