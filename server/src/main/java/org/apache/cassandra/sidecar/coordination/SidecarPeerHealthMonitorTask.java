@@ -62,20 +62,17 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     private final SidecarPeerHealthConfiguration config;
     private final SidecarPeerProvider sidecarPeerProvider;
     private final SidecarPeerHealthProvider healthProvider;
-    private final SidecarInstanceCodec<SidecarInstanceImpl> sidecarInstanceCodec;
 
     private final Map<SidecarInstance, SidecarPeerHealthProvider.Health> status = new ConcurrentHashMap<>();
 
     @Inject
     public SidecarPeerHealthMonitorTask(SidecarConfiguration sidecarConfiguration,
                                         SidecarPeerProvider sidecarPeerProvider,
-                                        SidecarPeerHealthProvider healthProvider,
-                                        SidecarInstanceCodec<SidecarInstanceImpl> sidecarInstanceCodec)
+                                        SidecarPeerHealthProvider healthProvider)
     {
         this.config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         this.sidecarPeerProvider = sidecarPeerProvider;
         this.healthProvider = healthProvider;
-        this.sidecarInstanceCodec = sidecarInstanceCodec;
     }
 
     public Map<SidecarInstance, SidecarPeerHealthProvider.Health> status()
@@ -88,7 +85,7 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     {
         this.eventBus = vertx.eventBus();
         // TODO: Find a better place to register this codec
-        eventBus.registerDefaultCodec(SidecarInstanceImpl.class, sidecarInstanceCodec);
+        eventBus.registerDefaultCodec(SidecarInstanceImpl.class, new SidecarInstanceCodec<>());
         EventBusUtils.onceLocalConsumer(eventBus, ON_CASSANDRA_CQL_READY.address(), ignored -> executor.schedule(this));
     }
 
