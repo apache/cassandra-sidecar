@@ -159,7 +159,6 @@ public abstract class SharedClusterIntegrationTestBase
     protected TestVersion testVersion;
     protected MtlsTestHelper mtlsTestHelper;
     private IsolatedDTestClassLoaderWrapper classLoaderWrapper;
-    private Injector sidecarServerInjector;
 
     static
     {
@@ -371,19 +370,24 @@ public abstract class SharedClusterIntegrationTestBase
         {
             module = Modules.override(testModule).with(customModule);
         }
-        sidecarServerInjector = Guice.createInjector(Modules.override(SidecarModules.all()).with(module));
-        Server sidecarServer = sidecarServerInjector.getInstance(Server.class);
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(module));
+        Server sidecarServer = injector.getInstance(Server.class);
         sidecarServer.start()
                      .onSuccess(s -> context.completeNow())
                      .onFailure(context::failNow);
 
         assertThat(context.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        return new ServerWrapper(sidecarServerInjector, sidecarServer);
+        return new ServerWrapper(injector, sidecarServer);
     }
 
     protected void waitForSchemaReady(long timeout, TimeUnit timeUnit)
     {
-        assertThat(sidecarServerInjector)
+        waitForSchemaReady(serverWrapper, timeout, timeUnit);
+    }
+
+    protected void waitForSchemaReady(ServerWrapper serverWrapper, long timeout, TimeUnit timeUnit)
+    {
+        assertThat(serverWrapper)
         .describedAs("Sidecar should be started")
         .isNotNull();
 
