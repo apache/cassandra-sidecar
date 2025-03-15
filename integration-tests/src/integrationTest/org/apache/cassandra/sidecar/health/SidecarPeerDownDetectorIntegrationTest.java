@@ -138,12 +138,18 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
         SidecarPeerHealthMonitorTask monitor = serverWrapper.injector.getInstance(SidecarPeerHealthMonitorTask.class);
         assertThat(monitor.status()).as("Monitor hasn't had time to perform checks").isEmpty();
 
-        loopAssert(30, () -> assertThat(checkHostUp(monitor, "localhost2")).as("After some time, peer is up").isTrue());
+        loopAssert(30, () -> assertThat(checkHostUp(monitor, "localhost2"))
+                             .as("After some time, peer is up")
+                             .isTrue());
 
         stopSidecarInstanceForTest("localhost2");
-        loopAssert(30, () -> assertThat(checkHostDown(monitor, "localhost2")).as("After killing peer sidecar instance, monitor caches up and the host is down").isTrue());
+        loopAssert(30, () -> assertThat(checkHostDown(monitor, "localhost2"))
+                             .as("After killing peer sidecar instance, monitor caches up and the host is down")
+                             .isTrue());
         startSidecarInstanceForTest("localhost2");
-        loopAssert(30, () -> assertThat(checkHostUp(monitor, "localhost2")).as("After restarting peer sidecar instance, monitor caches up and the host is down").isTrue());
+        loopAssert(30, () -> assertThat(checkHostUp(monitor, "localhost2"))
+                             .as("After restarting peer sidecar instance, monitor caches up and the host is down")
+                             .isTrue());
     }
 
     @Override
