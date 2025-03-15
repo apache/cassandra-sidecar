@@ -95,6 +95,7 @@ import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
+import org.apache.cassandra.sidecar.server.SidecarServerEvents;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import org.apache.cassandra.testing.IClusterExtension;
@@ -157,7 +158,6 @@ public abstract class SharedClusterIntegrationTestBase
     protected ServerWrapper serverWrapper;
     protected TestVersion testVersion;
     protected MtlsTestHelper mtlsTestHelper;
-    private final CountDownLatch sidecarSchemaReadyLatch = new CountDownLatch(1);
     private IsolatedDTestClassLoaderWrapper classLoaderWrapper;
     private Injector sidecarServerInjector;
 
@@ -387,7 +387,7 @@ public abstract class SharedClusterIntegrationTestBase
         .describedAs("Sidecar should be started")
         .isNotNull();
 
-        assertThat(Uninterruptibles.awaitUninterruptibly(sidecarSchemaReadyLatch, timeout, timeUnit))
+        assertThat(Uninterruptibles.awaitUninterruptibly(serverWrapper.sidecarSchemaReadyLatch, timeout, timeUnit))
         .describedAs("Sidecar schema is not initialized after " + timeout + ' ' + timeUnit)
         .isTrue();
     }
@@ -543,6 +543,7 @@ public abstract class SharedClusterIntegrationTestBase
         public final Injector injector;
         public final Server server;
         public volatile int serverPort;
+        private final CountDownLatch sidecarSchemaReadyLatch = new CountDownLatch(1);
 
         public ServerWrapper(Injector sidecarServerInjector, Server server)
         {
@@ -550,6 +551,10 @@ public abstract class SharedClusterIntegrationTestBase
             this.server = server;
             // Server must have started to retrieve the port
             this.serverPort = server.actualPort();
+
+            Vertx vertx = sidecarServerInjector.getInstance(Vertx.class);
+            vertx.eventBus().localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(),
+                                           msg -> sidecarSchemaReadyLatch.countDown());
         }
     }
 
