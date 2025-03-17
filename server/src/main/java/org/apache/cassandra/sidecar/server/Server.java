@@ -46,7 +46,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SSLOptions;
 import io.vertx.core.net.TrafficShapingOptions;
 import io.vertx.ext.web.Router;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
@@ -168,11 +167,7 @@ public class Server
                          .runBlocking(() -> {
                              try
                              {
-                                 CassandraAdapterDelegate delegate = instance.delegate();
-                                 if (delegate != null)
-                                 {
-                                     delegate.close();
-                                 }
+                                 instance.delegate().close();
                              }
                              catch (Exception e)
                              {

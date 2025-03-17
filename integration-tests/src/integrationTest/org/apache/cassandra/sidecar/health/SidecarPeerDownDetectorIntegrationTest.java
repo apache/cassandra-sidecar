@@ -133,7 +133,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
     }
 
     @Test
-    void onePeerDownTest()
+    void testOnePeerDown()
     {
         SidecarPeerHealthMonitorTask monitor = serverWrapper.injector.getInstance(SidecarPeerHealthMonitorTask.class);
         assertThat(monitor.status()).as("Monitor hasn't had time to perform checks").isEmpty();
