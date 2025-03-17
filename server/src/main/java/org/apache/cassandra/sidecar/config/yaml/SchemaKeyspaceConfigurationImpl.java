@@ -39,7 +39,7 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
     public static final String DEFAULT_KEYSPACE = "sidecar_internal";
     public static final String DEFAULT_REPLICATION_STRATEGY = "SimpleStrategy";
     public static final int DEFAULT_REPLICATION_FACTOR = 1;
-    public static final SecondBoundConfiguration DEFAULT_LEASE_SCHEMA_TTL = SecondBoundConfiguration.parse("2m");
+    public static final SecondBoundConfiguration DEFAULT_LEASE_SCHEMA_TTL = SecondBoundConfiguration.parse("5m");
     public static final SecondBoundConfiguration MINIMUM_LEASE_SCHEMA_TTL = SecondBoundConfiguration.parse("1m");
 
     @JsonProperty(value = "is_enabled")

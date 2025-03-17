@@ -121,7 +121,7 @@ sidecar:
     replication_strategy: SimpleStrategy
     replication_factor: 1
     # The TTL in seconds used to insert entries into the sidecar_lease schema
-    lease_schema_ttl: 1m
+    lease_schema_ttl: 5m
   coordination:
     # Captures configuration parameters for the task that performs the cluster lease claim process
     cluster_lease_claim:
@@ -130,11 +130,11 @@ sidecar:
       # The initial delay for the first execution of the cluster lease claim process task after being
       # scheduled or rescheduled.
       # The minimum value for the initial delay is 0ms.
-      initial_delay: 1s
+      initial_delay: 30s
       # How often the cluster lease claim process task will execute after the previous task has completed
       # the execution.
       # The minimum value allowed for the cluster lease claim process task implementation is 30 seconds
-      execute_interval: 30s
+      execute_interval: 100s
 
 vertx:
   filesystem_options:

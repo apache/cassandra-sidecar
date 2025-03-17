@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration.ONE;
 
@@ -75,6 +76,7 @@ public class PeriodicTaskConfigurationImpl implements PeriodicTaskConfiguration
      */
     @Override
     @JsonProperty("initial_delay")
+    @NotNull
     public MillisecondBoundConfiguration initialDelay()
     {
         if (initialDelay == null)
@@ -117,6 +119,7 @@ public class PeriodicTaskConfigurationImpl implements PeriodicTaskConfiguration
      */
     @Override
     @JsonProperty("execute_interval")
+    @NotNull
     public MillisecondBoundConfiguration executeInterval()
     {
         return executeInterval;

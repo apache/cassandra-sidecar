@@ -34,8 +34,8 @@ public class CoordinationConfigurationImpl implements CoordinationConfiguration
     public CoordinationConfigurationImpl()
     {
         this(new PeriodicTaskConfigurationImpl(true,
-                                               MillisecondBoundConfiguration.parse("1s"),
-                                               MillisecondBoundConfiguration.parse("1m")));
+                                               MillisecondBoundConfiguration.parse("30s"),
+                                               MillisecondBoundConfiguration.parse("100s")));
     }
 
     public CoordinationConfigurationImpl(PeriodicTaskConfiguration clusterLeaseClaimConfiguration)
