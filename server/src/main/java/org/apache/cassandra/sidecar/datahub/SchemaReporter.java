@@ -155,15 +155,16 @@ public class SchemaReporter
     private void process(@NotNull Metadata metadata,
                          @NotNull DeltaGauge started)
     {
-        try (Timer.Context ignored = reportingMetrics.totalDuration.metric.time();
-             Emitter emitter = emitterFactory.emitter())
-        {
-            LOGGER.info("Starting to report schema for cluster, identifiers={}", identifiersProvider);
-            started.increment();
+        LOGGER.info("Starting to report schema for cluster, identifiers={}", identifiersProvider);
+        started.increment();
 
+        try (Emitter emitter = emitterFactory.emitter())
+        {
+            Timer.Context timer = reportingMetrics.totalDuration.metric.time();
             long aspects = stream(metadata).map(ThrowableUtils.function(emitter::emit))
                                            .count();
 
+            timer.close();
             reportingMetrics.sizeAspects.metric.update(aspects);
             reportingMetrics.finishedSuccess.metric.increment();
             LOGGER.info("Successfully reported schema for cluster, identifiers={}", identifiersProvider);
