@@ -85,6 +85,7 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         this.driverUtils = driverUtils;
     }
 
+    @Override
     public Set<SidecarInstance> get()
     {
         Metadata metadata;
