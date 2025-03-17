@@ -124,13 +124,13 @@ final class SchemaReporterIntegrationTest extends IntegrationTestBase
         {
             new SchemaReporter(IDENTIFIERS, () -> emitter, metrics).processScheduled(session.getCluster());
         }
-        String   actualJson = normalizeNames(emitter.content());
+        String actualJson = normalizeNames(emitter.content());
         String expectedJson = IOUtils.readFully("/datahub/integration_test.json");
         assertThat(actualJson).isEqualToNormalizingWhitespace(expectedJson);
 
         // Second, make sure the returned schema produces the same tree of
         // DataHub objects after having been normalized and deserialized
-        DataList   actualData = CODEC.readList(new StringReader(actualJson));
+        DataList actualData = CODEC.readList(new StringReader(actualJson));
         DataList expectedData = CODEC.readList(new StringReader(expectedJson));
         assertThat(actualData).isEqualTo(expectedData);
         
