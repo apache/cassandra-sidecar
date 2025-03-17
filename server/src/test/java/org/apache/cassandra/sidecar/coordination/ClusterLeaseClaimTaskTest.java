@@ -112,20 +112,22 @@ class ClusterLeaseClaimTaskTest
 
     @ParameterizedTest(name = "{index} => configuredInitialDelay {0} millis")
     @ValueSource(longs = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 })
-    void testInitialDelayFromConfiguration(long configuredDelayMillis)
+    void testRandomizedInitialDelayFromConfiguration(long configuredDelayMillis)
     {
         ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
         when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().quantity())
         .thenReturn(configuredDelayMillis);
         when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().unit())
         .thenReturn(TimeUnit.MILLISECONDS);
+        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().toMillis())
+        .thenCallRealMethod();
         when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().to(TimeUnit.MILLISECONDS))
         .thenCallRealMethod();
         ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mockServiceConfiguration, mock(ElectorateMembership.class),
                                                                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
-        assertThat(task.initialDelay().to(TimeUnit.MILLISECONDS)).isEqualTo(configuredDelayMillis);
+        assertThat(task.initialDelay().to(TimeUnit.MILLISECONDS)).isBetween(0L, configuredDelayMillis);
     }
 
     @ParameterizedTest(name = "{index} => configuredDelayMillis {0} millis")

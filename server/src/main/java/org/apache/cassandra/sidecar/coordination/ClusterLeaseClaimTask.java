@@ -21,6 +21,8 @@ package org.apache.cassandra.sidecar.coordination;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -32,6 +34,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -144,7 +147,13 @@ public class ClusterLeaseClaimTask implements PeriodicTask
     @Override
     public DurationSpec initialDelay()
     {
-        return periodicTaskConfiguration.initialDelay();
+        // Return a randomized delay to introduce jitter among all the instances participating
+        // in the lease claim process
+        MillisecondBoundConfiguration initialDelay = periodicTaskConfiguration.initialDelay();
+        long millis = initialDelay.toMillis();
+        return millis <= 0
+               ? initialDelay
+               : new MillisecondBoundConfiguration(ThreadLocalRandom.current().nextLong(millis), TimeUnit.MILLISECONDS);
     }
 
     /**
