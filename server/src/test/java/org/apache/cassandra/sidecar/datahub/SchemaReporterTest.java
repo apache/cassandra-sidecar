@@ -90,8 +90,8 @@ final class SchemaReporterTest
         assertThat(metrics.finishedFailure.metric.getValue()).isZero();                                //  * zero executions resulted in failure
         assertThat(metrics.sizeAspects.metric.getCount()).isOne();                                     //  * single number of aspects,
         assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(2L);          //    equal to two
-        assertThat(metrics.durationMilliseconds.metric.getCount()).isOne();                            //  * single duration of execution,
-        assertThat(metrics.durationMilliseconds.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
+        assertThat(metrics.totalDuration.metric.getCount()).isOne();                            //  * single duration of execution,
+        assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
     }
 
     @Test
@@ -117,8 +117,8 @@ final class SchemaReporterTest
         assertThat(metrics.finishedFailure.metric.getValue()).isZero();                                //  * zero executions resulted in failure
         assertThat(metrics.sizeAspects.metric.getCount()).isOne();                                     //  * single number of aspects,
         assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(6L);          //    equal to six
-        assertThat(metrics.durationMilliseconds.metric.getCount()).isOne();                            //  * single duration of execution,
-        assertThat(metrics.durationMilliseconds.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
+        assertThat(metrics.totalDuration.metric.getCount()).isOne();                            //  * single duration of execution,
+        assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
     }
 
     @Test
@@ -151,8 +151,8 @@ final class SchemaReporterTest
         assertThat(metrics.finishedFailure.metric.getValue()).isZero();                                //  * zero executions resulted in failure
         assertThat(metrics.sizeAspects.metric.getCount()).isOne();                                     //  * single number of aspects,
         assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(13L);         //    equal to thirteen
-        assertThat(metrics.durationMilliseconds.metric.getCount()).isOne();                            //  * single duration of execution,
-        assertThat(metrics.durationMilliseconds.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
+        assertThat(metrics.totalDuration.metric.getCount()).isOne();                            //  * single duration of execution,
+        assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
     }
 
     @Test
@@ -238,8 +238,8 @@ final class SchemaReporterTest
         assertThat(metrics.finishedFailure.metric.getValue()).isZero();                                //  * zero executions resulted in failure
         assertThat(metrics.sizeAspects.metric.getCount()).isOne();                                     //  * single number of aspects,
         assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(13L);         //    equal to thirteen
-        assertThat(metrics.durationMilliseconds.metric.getCount()).isOne();                            //  * single duration of execution,
-        assertThat(metrics.durationMilliseconds.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
+        assertThat(metrics.totalDuration.metric.getCount()).isOne();                            //  * single duration of execution,
+        assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
     }
 
     @Test
@@ -319,7 +319,7 @@ final class SchemaReporterTest
         assertThat(metrics.finishedFailure.metric.getValue()).isZero();                                //  * zero executions resulted in failure
         assertThat(metrics.sizeAspects.metric.getCount()).isOne();                                     //  * single number of aspects,
         assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(13L);         //    equal to thirteen
-        assertThat(metrics.durationMilliseconds.metric.getCount()).isOne();                            //  * single duration of execution,
-        assertThat(metrics.durationMilliseconds.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
+        assertThat(metrics.totalDuration.metric.getCount()).isOne();                            //  * single duration of execution,
+        assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
     }
 }

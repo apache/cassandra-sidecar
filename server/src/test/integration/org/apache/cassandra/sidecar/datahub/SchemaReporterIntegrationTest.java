@@ -143,7 +143,7 @@ final class SchemaReporterIntegrationTest extends IntegrationTestBase
         assertThat(metrics.finishedFailure.metric.getValue()).isZero();
         assertThat(metrics.sizeAspects.metric.getCount()).isOne();
         assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(13L);
-        assertThat(metrics.durationMilliseconds.metric.getCount()).isOne();
-        assertThat(metrics.durationMilliseconds.metric.getSnapshot().getValues()[0]).isNotNegative();
+        assertThat(metrics.totalDuration.metric.getCount()).isOne();
+        assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();
     }
 }

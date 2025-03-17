@@ -20,14 +20,13 @@
 package org.apache.cassandra.sidecar.datahub;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.Timer;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
@@ -156,17 +155,16 @@ public class SchemaReporter
     private void process(@NotNull Metadata metadata,
                          @NotNull DeltaGauge started)
     {
-        LOGGER.info("Starting to report schema for cluster, identifiers={}", identifiersProvider);
-        started.increment();
-
-        try (Emitter emitter = emitterFactory.emitter())
+        try (Timer.Context ignored = reportingMetrics.totalDuration.metric.time();
+             Emitter emitter = emitterFactory.emitter())
         {
-            Stopwatch stopwatch = Stopwatch.createStarted();
-            long counter = stream(metadata).map(ThrowableUtils.function(emitter::emit))
+            LOGGER.info("Starting to report schema for cluster, identifiers={}", identifiersProvider);
+            started.increment();
+
+            long aspects = stream(metadata).map(ThrowableUtils.function(emitter::emit))
                                            .count();
 
-            reportingMetrics.durationMilliseconds.metric.update(stopwatch.elapsed(TimeUnit.MILLISECONDS));
-            reportingMetrics.sizeAspects.metric.update(counter);
+            reportingMetrics.sizeAspects.metric.update(aspects);
             reportingMetrics.finishedSuccess.metric.increment();
             LOGGER.info("Successfully reported schema for cluster, identifiers={}", identifiersProvider);
         }
@@ -175,7 +173,8 @@ public class SchemaReporter
             reportingMetrics.finishedFailure.metric.increment();
             LOGGER.error("Failed to report schema for cluster, identifiers={}", identifiersProvider);
 
-            throw new RuntimeException("Failed to report schema for cluster with identifiers " + identifiersProvider, exception);
+            throw new RuntimeException("Failed to report schema for cluster with identifiers " + identifiersProvider,
+                                       exception);
         }
     }
 
@@ -187,7 +186,6 @@ public class SchemaReporter
      * @return non-empty {@link Stream} of DataHub aspects
      */
     @NotNull
-    @SuppressWarnings("UnstableApiUsage")
     protected Stream<MetadataChangeProposalWrapper<? extends RecordTemplate>> stream(@NotNull Metadata metadata)
     {
         return Streams.concat(
@@ -207,7 +205,6 @@ public class SchemaReporter
      * @return non-empty {@link Stream} of DataHub aspects
      */
     @NotNull
-    @SuppressWarnings("UnstableApiUsage")
     protected Stream<MetadataChangeProposalWrapper<? extends RecordTemplate>> stream(@NotNull KeyspaceMetadata keyspace)
     {
         return Streams.concat(

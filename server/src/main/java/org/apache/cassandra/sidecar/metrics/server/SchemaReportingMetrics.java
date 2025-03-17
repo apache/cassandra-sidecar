@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.metrics.server;
 
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import org.apache.cassandra.sidecar.metrics.DeltaGauge;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
 import org.apache.cassandra.sidecar.metrics.ServerMetrics;
@@ -36,37 +37,37 @@ public class SchemaReportingMetrics
     public final NamedMetric<DeltaGauge> startedSchedule;
     public final NamedMetric<DeltaGauge> finishedSuccess;
     public final NamedMetric<DeltaGauge> finishedFailure;
-    public final NamedMetric<Histogram> durationMilliseconds;
     public final NamedMetric<Histogram> sizeAspects;
+    public final NamedMetric<Timer> totalDuration;
 
     public SchemaReportingMetrics(@NotNull MetricRegistry registry)
     {
         startedSchedule = NamedMetric.builder(name -> registry.gauge(name, DeltaGauge::new))
                                      .withDomain(DOMAIN)
-                                     .withName("StartedBySchedule")
+                                     .withName("Scheduled")
                                      .build();
         startedRequest = NamedMetric.builder(name -> registry.gauge(name, DeltaGauge::new))
                                     .withDomain(DOMAIN)
-                                    .withName("StartedByRequest")
+                                    .withName("Requested")
                                     .build();
 
         finishedSuccess = NamedMetric.builder(name -> registry.gauge(name, DeltaGauge::new))
                                      .withDomain(DOMAIN)
-                                     .withName("FinishedWithSuccess")
+                                     .withName("Succeeded")
                                      .build();
         finishedFailure = NamedMetric.builder(name -> registry.gauge(name, DeltaGauge::new))
                                      .withDomain(DOMAIN)
-                                     .withName("FinishedWithFailure")
+                                     .withName("Failed")
                                      .build();
 
         sizeAspects = NamedMetric.builder(registry::histogram)
                                  .withDomain(DOMAIN)
-                                 .withName("SizeInAspects")
+                                 .withName("Aspects")
                                  .build();
 
-        durationMilliseconds = NamedMetric.builder(registry::histogram)
-                                          .withDomain(DOMAIN)
-                                          .withName("DurationInMilliseconds")
-                                          .build();
+        totalDuration = NamedMetric.builder(registry::timer)
+                                   .withDomain(DOMAIN)
+                                   .withName("Duration")
+                                   .build();
     }
 }
