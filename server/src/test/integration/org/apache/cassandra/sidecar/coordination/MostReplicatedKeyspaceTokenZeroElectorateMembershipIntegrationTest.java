@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.coordination;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -79,6 +80,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
     Vertx vertx = Vertx.vertx();
     DriverUtils driverUtils = new DriverUtils();
     CassandraVersionProvider cassandraVersionProvider = cassandraVersionProvider(DnsResolver.DEFAULT);
+    MetricRegistryFactory metricRegistryProvider = new MetricRegistryFactory("cassandra_sidecar", List.of(), List.of());
 
     @ParameterizedTest(name = "{index} => version {0}")
     @MethodSource("org.apache.cassandra.testing.TestVersionSupplier#testVersions")
@@ -107,12 +109,17 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
 
     private void runTestScenario(AbstractCluster<?> cluster)
     {
-        List<MostReplicatedKeyspaceTokenZeroElectorateMembership> memberships = buildElectorateMembershipPerCassandraInstance(cluster);
+        var pair = buildElectorateMembershipPerCassandraInstance(cluster);
+        List<? extends ElectorateMembership> mostReplicatedMemberships = pair.getKey();
+        List<? extends ElectorateMembership> sidecarInternalMemberships = pair.getValue();
         // When there are no user keyspaces, we default to the sidecar_internal keyspace
         // and therefore guaranteeing that we have at least one keyspace to use for the
         // determination of the membership, and that's why we expect the membership count
         // to be one, even if we have not created user keyspaces yet.
-        assertMembership(memberships, 1);
+        assertMembership(mostReplicatedMemberships, 1);
+        // For the sidecar internal keyspace based membership, the membership count will
+        // always be the same.
+        assertMembership(sidecarInternalMemberships, 1);
 
         // Now let's create keyspaces with RF 1-3 replicated in a single DC and validate
         String dc0 = "dc0";
@@ -121,7 +128,10 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
             cluster.schemaChange(String.format("CREATE KEYSPACE ks_dc0_%d WITH REPLICATION={'class':'NetworkTopologyStrategy','%s':%d}", rf, dc0, rf));
             // introduce delay until schema change information propagates
             sleepUninterruptibly(10, TimeUnit.SECONDS);
-            assertMembership(memberships, rf);
+            assertMembership(mostReplicatedMemberships, rf);
+            // For the sidecar internal keyspace based membership, the membership count will
+            // always be the same.
+            assertMembership(sidecarInternalMemberships, 1);
         }
 
         // Now let's create keyspaces with RF 1-4 replicated in DC2 and validate
@@ -133,7 +143,10 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
             cluster.schemaChange(String.format("CREATE KEYSPACE ks_dc1_%d WITH REPLICATION={'class':'NetworkTopologyStrategy','%s':%d}", rf, dc1, rf));
             // introduce delay until schema change information propagates
             sleepUninterruptibly(10, TimeUnit.SECONDS);
-            assertMembership(memberships, Math.max(3, rf));
+            assertMembership(mostReplicatedMemberships, Math.max(3, rf));
+            // For the sidecar internal keyspace based membership, the membership count will
+            // always be the same.
+            assertMembership(sidecarInternalMemberships, 1);
         }
 
         // Now let's create a keyspace with RF=3 replicated across both DCs
@@ -142,13 +155,16 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
         sleepUninterruptibly(10, TimeUnit.SECONDS);
         // We expect the same instances in the existing keyspaces to own token 0 as the new keyspace
         // so a total of 6 instances own token 0, 3 on each DC.
-        assertMembership(memberships, 6);
+        assertMembership(mostReplicatedMemberships, 6);
+        // For the sidecar internal keyspace based membership, the membership count will
+        // always be the same.
+        assertMembership(sidecarInternalMemberships, 1);
     }
 
-    static void assertMembership(List<MostReplicatedKeyspaceTokenZeroElectorateMembership> memberships, int expectedElectorateSize)
+    static void assertMembership(List<? extends ElectorateMembership> memberships, int expectedElectorateSize)
     {
         int localElectorateCount = 0;
-        for (MostReplicatedKeyspaceTokenZeroElectorateMembership membership : memberships)
+        for (ElectorateMembership membership : memberships)
         {
             boolean shouldParticipate = membership.isMember();
             if (shouldParticipate)
@@ -160,13 +176,13 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
                                         .isEqualTo(expectedElectorateSize);
     }
 
-    List<MostReplicatedKeyspaceTokenZeroElectorateMembership> buildElectorateMembershipPerCassandraInstance(AbstractCluster<?> cluster)
+    AbstractMap.SimpleEntry<List<? extends ElectorateMembership>, List<? extends ElectorateMembership>>
+    buildElectorateMembershipPerCassandraInstance(AbstractCluster<?> cluster)
     {
-        MetricRegistryFactory metricRegistryProvider = new MetricRegistryFactory("cassandra_sidecar",
-                                                                                 Collections.emptyList(),
-                                                                                 Collections.emptyList());
-
-        List<MostReplicatedKeyspaceTokenZeroElectorateMembership> result = new ArrayList<>();
+        List<MostReplicatedKeyspaceTokenZeroElectorateMembership> r1 = new ArrayList<>();
+        List<SidecarInternalTokenZeroElectorateMembership> r2 = new ArrayList<>();
+        AbstractMap.SimpleEntry<List<? extends ElectorateMembership>, List<? extends ElectorateMembership>> result
+        = new AbstractMap.SimpleEntry<>(r1, r2);
         for (IInstance instance : cluster)
         {
             List<InetSocketAddress> address = buildContactList(instance);
@@ -174,7 +190,8 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
             new CQLSessionProviderImpl(address, address, 500, instance.config().localDatacenter(), 0, SharedExecutorNettyOptions.INSTANCE);
             InstancesMetadata instancesMetadata = buildInstancesMetadata(instance, sessionProvider, metricRegistryProvider);
             InstanceMetadataFetcher instanceMetadataFetcher = new InstanceMetadataFetcher(instancesMetadata);
-            result.add(new MostReplicatedKeyspaceTokenZeroElectorateMembership(instanceMetadataFetcher, sessionProvider, CONFIG));
+            r1.add(new MostReplicatedKeyspaceTokenZeroElectorateMembership(instanceMetadataFetcher, sessionProvider, CONFIG));
+            r2.add(new SidecarInternalTokenZeroElectorateMembership(instanceMetadataFetcher, CONFIG));
         }
         return result;
     }

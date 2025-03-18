@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.AccessControlConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.ClusterLeaseClaimConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.CoordinationConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ParameterizedClassConfigurationImpl;
@@ -204,9 +205,12 @@ public class IntegrationTestModule extends AbstractModule
     @Singleton
     public CoordinationConfiguration clusterLeaseClaimTaskConfiguration()
     {
-        return new CoordinationConfigurationImpl(new PeriodicTaskConfigurationImpl(true,
-                                                                                   MillisecondBoundConfiguration.parse("1s"),
-                                                                                   MillisecondBoundConfiguration.parse("1s")));
+        ClusterLeaseClaimConfigurationImpl configuration
+        = ClusterLeaseClaimConfigurationImpl.builder()
+                                            .overridePeriodicTaskConfiguration(b -> b.enabled(true)
+                                                                                     .executeInterval(MillisecondBoundConfiguration.parse("1s")))
+                                            .build();
+        return new CoordinationConfigurationImpl(configuration);
     }
 
     @Provides

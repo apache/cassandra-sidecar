@@ -208,30 +208,56 @@ sidecar:
     max_retries: 3
     retry_delay: 200ms
   schema:
-    is_enabled: false
+    is_enabled: true
     keyspace: sidecar_internal
     replication_strategy: SimpleStrategy
     replication_factor: 1
     # The TTL in seconds used to insert entries into the sidecar_lease schema
-    lease_schema_ttl: 2m
+    lease_schema_ttl: 5m
   coordination:
     # Captures configuration parameters for the task that performs the cluster lease claim process
     cluster_lease_claim:
+      # The name of the strategy to determine the electorate membership
+      # Out of the box Sidecar provides the MostReplicatedKeyspaceTokenZeroElectorateMembership, and
+      # SidecarInternalTokenZeroElectorateMembership implementations.
+      # - MostReplicatedKeyspaceTokenZeroElectorateMembership the current Sidecar will be determined to be part
+      #                                                       of the electorate iff one of the Cassandra instances it
+      #                                                       manages owns token 0 for the user keyspace that has the
+      #                                                       highest replication factor. If multiple keyspaces have
+      #                                                       the highest replication factor, the keyspace to be used
+      #                                                       is decided by the keyspace with the name that sorts
+      #                                                       first in the lexicographic sort order. If no user
+      #                                                       keyspaces are created, the internal sidecar keyspace will
+      #                                                       be used.
+      # - SidecarInternalTokenZeroElectorateMembership        the current Sidecar will be determined to be part of the
+      #                                                       electorate iff one of the Cassandra instances it manages
+      #                                                       owns token {@code 0} for the {@code sidecar_internal}
+      #                                                       keyspace.
+      electorate_membership_strategy: MostReplicatedKeyspaceTokenZeroElectorateMembership
       # Whether the process is enabled
       enabled: true
       # The initial delay for the first execution of the cluster lease claim process task after being
       # scheduled or rescheduled.
       # The minimum value for the initial delay is 0ms.
-      initial_delay: 1s
+      initial_delay: 30s
       # How often the cluster lease claim process task will execute after the previous task has completed
       # the execution.
       # The minimum value allowed for the cluster lease claim process task implementation is 30 seconds
-      execute_interval: 1m
+      execute_interval: 100s
 
 vertx:
   filesystem_options:
     classpath_resolving_enabled: false
     file_caching_enabled: false
+
+schema_reporting:                            # Schema Reporting configuration
+  enabled:          false                    # Disabled by default
+  initial_delay:    6h                       # Maximum delay before the first schema report (actual delay is randomized)
+  execute_interval: 12h                      # Exact interval between two sequential schema reports
+  endpoint:         http://localhost/schema  # Endpoint address for schema reporting
+  method:           PUT                      # HTTP verb to use for schema reporting
+  max_retries:      3                        # Number of times a failing schema report is retried
+  retry_delay:      1m                       # Delay before a failing schema report is retried
 
 #
 # Enable SSL configuration (Disabled by default)
@@ -257,8 +283,12 @@ vertx:
 access_control:
   # When enabled requests need to be authenticated and authorized before servicing.
   enabled: false
-  # Supports setting multiple authenticators, request is authenticated if it is authenticated by any of the
-  # configured authenticators
+  # Supports setting multiple authenticators, request is authenticated when the first authenticator allows the request
+  # to go through.
+  # Out of the box, Cassandra Sidecar provides following authenticator provider factories
+  # org.apache.cassandra.sidecar.acl.authentication.{MutualTlsAuthenticationHandlerFactory, JwtAuthenticationHandlerFactory}.
+  # - MutualTlsAuthenticationHandlerFactory  allows authenticating based on user certificates
+  # - JwtAuthenticationHandlerFactory        allows authenticating with user JWT tokens
   authenticators:
     - class_name: org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory
       parameters:
@@ -277,6 +307,19 @@ access_control:
         #
         # other options are, io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor.
         certificate_identity_extractor: org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor
+      # JwtAuthenticationHandlerFactory adds support to authenticate users with their JWT tokens. It also includes
+      # supports for OpenID discovery.
+    - class_name: org.apache.cassandra.sidecar.acl.authentication.JwtAuthenticationHandlerFactory
+      parameters:
+        # To selectively enable or disable JWT authentication
+        enabled: false
+        # Site for sidecar to dynamically retrieve the configuration information of an OpenID provider, without
+        # having to manually configure settings like issuer etc.
+        site: https://authorization.com
+        # Client Id is a unique identifier assigned by OpenID provider. It is used to identity applications/users
+        # trying to connect.
+        client_id: recognized_client_id
+        config_discover_interval: 1h
   authorizer:
     # Authorization backend, implementing io.vertx.ext.auth.authorization.AuthorizationProvider; used to
     # provide permissions a user holds.
@@ -320,6 +363,43 @@ driver_parameters:
 healthcheck:
   initial_delay: 0ms
   execute_interval: 30s
+
+# Sidecar Peer Health Monitor settings
+# Enables a periodic task checking for the health of adjacent Sidecar peers in the token ring
+sidecar_peer_health:
+  # Determines if the peer health monitor periodic task is enabled or not
+  enabled: false
+  # Time between peer health checks
+  execute_interval: 30s
+  # The amount of retries the client will attempt a request
+  max_retries: 5
+  # The initial delay between the retries the client will attempt a request
+  retry_delay: 10s
+
+# Sidecar client settings used to interact with other sidecars
+sidecar_client:
+  request_timeout: 30s                      # Time in which a request made by the sidecar client will time out
+  request_idle_timeout: 30s                 # How long the request can be idle
+
+  # More advanced options to configure the sidecar client
+
+  #connection_pool_max_size: 10              # Max size of the client connection pool
+  #connection_pool_clearing_period: 5s       # Period of time for the connection pool to clear
+  #connection_pool_event_loop_size: 0        # Defines the size of the event loop pool, set to 0 to reuse current event-loop
+  #connection_pool_max_wait_queue_size: -1   # Connection pool max time to wait on the queue size, set to -1 for an unbounded queue
+  #max_retries: 5                            # The amount of retries the client will attempt a request
+  #retry_delay: 500ms                        # The initial delay between the retries the client will attempt a request
+  #max_retry_delay: 10s                      # The max delay between the retries the client will attempt a request
+  #ssl:                                      # if ssl is enabled, this is the ssl configuration used for the sidecar client
+  #  enabled: false
+  #  keystore:
+  #    type: PKCS12                          # Keystore type
+  #    path: path/to/client/keystore.p12     # Path to the client keystore file
+  #    password: password                    # Keystore password
+  #  truststore:
+  #    type: PKCS12                          # Truststore type
+  #    path: path/to/truststore.p12          # Path to the truststore file
+  #    password: password                    # Truststore password
 
 metrics:
   registry_name: cassandra_sidecar

@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -25,14 +26,16 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
+import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration.ONE;
 
 /**
- * Configuration for the {@link org.apache.cassandra.sidecar.tasks.PeriodicTask}
+ * Configuration for the {@link PeriodicTask}
  */
 public class PeriodicTaskConfigurationImpl implements PeriodicTaskConfiguration
 {
@@ -59,6 +62,13 @@ public class PeriodicTaskConfigurationImpl implements PeriodicTaskConfiguration
         this.enabled = enabled;
         this.initialDelay = initialDelay;
         this.executeInterval = executeInterval;
+    }
+
+    protected PeriodicTaskConfigurationImpl(Builder builder)
+    {
+        enabled = builder.enabled;
+        setInitialDelay(builder.initialDelay);
+        setExecuteInterval(Objects.requireNonNull(builder.executeInterval, "executeInterval must be configured"));
     }
 
     /**
@@ -89,14 +99,17 @@ public class PeriodicTaskConfigurationImpl implements PeriodicTaskConfiguration
     @JsonProperty("initial_delay")
     public void setInitialDelay(MillisecondBoundConfiguration initialDelay)
     {
-        if (initialDelay.compareTo(MillisecondBoundConfiguration.ZERO) > 0)
+        if (initialDelay != null)
         {
-            this.initialDelay = initialDelay;
-        }
-        else
-        {
-            LOGGER.warn("Invalid initialDelay configuration {}, the minimum value is 0", initialDelay);
-            this.initialDelay = MillisecondBoundConfiguration.ZERO;
+            if (initialDelay.compareTo(MillisecondBoundConfiguration.ZERO) > 0)
+            {
+                this.initialDelay = initialDelay;
+            }
+            else
+            {
+                LOGGER.warn("Invalid initialDelay configuration {}, the minimum value is 0", initialDelay);
+                this.initialDelay = MillisecondBoundConfiguration.ZERO;
+            }
         }
     }
 
@@ -152,5 +165,74 @@ public class PeriodicTaskConfigurationImpl implements PeriodicTaskConfiguration
         LOGGER.warn("'execute_interval_millis', 'poll_freq_millis', and 'poll_interval_millis' are deprecated, " +
                     "use 'execute_interval' instead.");
         setExecuteInterval(new MillisecondBoundConfiguration(executeIntervalMillis, TimeUnit.MILLISECONDS));
+    }
+
+    /**
+     * {@code PeriodicTaskConfigurationImpl} builder static inner class.
+     */
+    public static class Builder implements DataObjectBuilder<Builder, PeriodicTaskConfigurationImpl>
+    {
+        private boolean enabled;
+        private MillisecondBoundConfiguration initialDelay;
+        private MillisecondBoundConfiguration executeInterval;
+
+        private Builder()
+        {
+        }
+
+        public static Builder builder()
+        {
+            return new Builder();
+        }
+
+        @Override
+        public Builder self()
+        {
+            return this;
+        }
+
+        /**
+         * Sets the {@code enabled} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param enabled the {@code enabled} to set
+         * @return a reference to this Builder
+         */
+        public Builder enabled(boolean enabled)
+        {
+            return update(b -> b.enabled = enabled);
+        }
+
+        /**
+         * Sets the {@code initialDelay} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param initialDelay the {@code initialDelay} to set
+         * @return a reference to this Builder
+         */
+        public Builder initialDelay(MillisecondBoundConfiguration initialDelay)
+        {
+            return update(b -> b.initialDelay = initialDelay);
+        }
+
+        /**
+         * Sets the {@code executeInterval} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param executeInterval the {@code executeInterval} to set
+         * @return a reference to this Builder
+         */
+        public Builder executeInterval(MillisecondBoundConfiguration executeInterval)
+        {
+            return update(b -> b.executeInterval = executeInterval);
+        }
+
+        /**
+         * Returns a {@code PeriodicTaskConfigurationImpl} built from the parameters previously set.
+         *
+         * @return a {@code PeriodicTaskConfigurationImpl} built with parameters of this {@code PeriodicTaskConfigurationImpl.Builder}
+         */
+        @Override
+        public PeriodicTaskConfigurationImpl build()
+        {
+            return new PeriodicTaskConfigurationImpl(this);
+        }
     }
 }

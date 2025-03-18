@@ -125,6 +125,23 @@ sidecar:
   coordination:
     # Captures configuration parameters for the task that performs the cluster lease claim process
     cluster_lease_claim:
+      # The name of the strategy used to determine the electorate membership
+      # Out of the box Sidecar provides the MostReplicatedKeyspaceTokenZeroElectorateMembership, and
+      # SidecarInternalTokenZeroElectorateMembership implementations.
+      # - MostReplicatedKeyspaceTokenZeroElectorateMembership the current Sidecar will be determined to be part
+      #                                                       of the electorate iff one of the Cassandra instances it
+      #                                                       manages owns token 0 for the user keyspace that has the
+      #                                                       highest replication factor. If multiple keyspaces have
+      #                                                       the highest replication factor, the keyspace to be used
+      #                                                       is decided by the keyspace with the name that sorts
+      #                                                       first in the lexicographic sort order. If no user
+      #                                                       keyspaces are created, the internal sidecar keyspace will
+      #                                                       be used.
+      # - SidecarInternalTokenZeroElectorateMembership        the current Sidecar will be determined to be part of the
+      #                                                       electorate iff one of the Cassandra instances it manages
+      #                                                       owns token {@code 0} for the {@code sidecar_internal}
+      #                                                       keyspace.
+      electorate_membership_strategy: MostReplicatedKeyspaceTokenZeroElectorateMembership
       # Whether the process is enabled
       enabled: true
       # The initial delay for the first execution of the cluster lease claim process task after being

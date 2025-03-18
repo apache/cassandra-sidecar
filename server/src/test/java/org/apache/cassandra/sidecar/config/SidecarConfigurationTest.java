@@ -228,7 +228,7 @@ class SidecarConfigurationTest
         assertThat(configuration.replicationFactor()).isEqualTo(3);
         assertThat(configuration.createReplicationStrategyString())
         .isEqualTo("{'class':'SimpleStrategy', 'replication_factor':'3'}");
-        assertThat(configuration.leaseSchemaTTL().toSeconds()).isEqualTo(120);
+        assertThat(configuration.leaseSchemaTTL().toSeconds()).isEqualTo(300L);
     }
 
     @Test
@@ -624,8 +624,8 @@ class SidecarConfigurationTest
         assertThat(coordinationConfiguration).isNotNull();
         PeriodicTaskConfiguration periodicTaskConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
         assertThat(periodicTaskConfig.enabled()).isTrue();
-        assertThat(periodicTaskConfig.executeInterval().toMillis()).isEqualTo(60_000L);
-        assertThat(periodicTaskConfig.initialDelay().toMillis()).isEqualTo(1_000L);
+        assertThat(periodicTaskConfig.executeInterval().toMillis()).isEqualTo(100_000L);
+        assertThat(periodicTaskConfig.initialDelay().toMillis()).isEqualTo(30_000L);
     }
 
     private void validateHealthCheckConfigurationFromYaml(PeriodicTaskConfiguration config)

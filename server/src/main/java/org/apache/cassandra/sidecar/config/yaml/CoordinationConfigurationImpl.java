@@ -19,9 +19,8 @@
 package org.apache.cassandra.sidecar.config.yaml;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.config.ClusterLeaseClaimConfiguration;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
-import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 
 /**
  * Configuration relevant to the coordination functionality of Sidecar
@@ -29,16 +28,14 @@ import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 public class CoordinationConfigurationImpl implements CoordinationConfiguration
 {
     @JsonProperty("cluster_lease_claim")
-    private final PeriodicTaskConfiguration clusterLeaseClaimConfiguration;
+    private final ClusterLeaseClaimConfiguration clusterLeaseClaimConfiguration;
 
     public CoordinationConfigurationImpl()
     {
-        this(new PeriodicTaskConfigurationImpl(true,
-                                               MillisecondBoundConfiguration.parse("30s"),
-                                               MillisecondBoundConfiguration.parse("100s")));
+        this(ClusterLeaseClaimConfigurationImpl.builder().build());
     }
 
-    public CoordinationConfigurationImpl(PeriodicTaskConfiguration clusterLeaseClaimConfiguration)
+    public CoordinationConfigurationImpl(ClusterLeaseClaimConfiguration clusterLeaseClaimConfiguration)
     {
         this.clusterLeaseClaimConfiguration = clusterLeaseClaimConfiguration;
     }
@@ -48,7 +45,7 @@ public class CoordinationConfigurationImpl implements CoordinationConfiguration
      */
     @Override
     @JsonProperty("cluster_lease_claim")
-    public PeriodicTaskConfiguration clusterLeaseClaimConfiguration()
+    public ClusterLeaseClaimConfiguration clusterLeaseClaimConfiguration()
     {
         return clusterLeaseClaimConfiguration;
     }

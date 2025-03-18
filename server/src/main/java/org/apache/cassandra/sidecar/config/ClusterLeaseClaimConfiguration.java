@@ -19,12 +19,12 @@
 package org.apache.cassandra.sidecar.config;
 
 /**
- * Configuration relevant to the coordination functionality of Sidecar
+ * Exposes configuration in Sidecar for the cluster lease claim task
  */
-public interface CoordinationConfiguration
+public interface ClusterLeaseClaimConfiguration extends PeriodicTaskConfiguration
 {
     /**
-     * @return configuration parameters for the cluster lease claim task
+     * @return the name of the strategy used to determine the electorate membership
      */
-    ClusterLeaseClaimConfiguration clusterLeaseClaimConfiguration();
+    String electorateMembershipStrategy();
 }
