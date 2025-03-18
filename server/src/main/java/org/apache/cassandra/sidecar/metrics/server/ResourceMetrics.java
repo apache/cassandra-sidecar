@@ -16,14 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.metrics;
+package org.apache.cassandra.sidecar.metrics.server;
 
 import java.util.Objects;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
+import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
-import static org.apache.cassandra.sidecar.metrics.ServerMetrics.SERVER_PREFIX;
+import static org.apache.cassandra.sidecar.metrics.server.ServerMetrics.SERVER_PREFIX;
 
 /**
  * Tracks resource metrics, for resources maintained by Sidecar.

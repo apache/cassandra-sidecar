@@ -23,7 +23,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,8 +37,8 @@ import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration
 import org.apache.cassandra.sidecar.config.ClusterLeaseClaimConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
-import org.apache.cassandra.sidecar.metrics.CoordinationMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.server.CoordinationMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;

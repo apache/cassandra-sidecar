@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.metrics;
 
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.apache.cassandra.sidecar.metrics.server.ServerMetrics;
 import org.jetbrains.annotations.NotNull;
 
 /**

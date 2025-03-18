@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.metrics;
+package org.apache.cassandra.sidecar.metrics.server;
 
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.metrics.DeltaGauge;
+import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
-import static org.apache.cassandra.sidecar.metrics.ServerMetrics.SERVER_PREFIX;
+import static org.apache.cassandra.sidecar.metrics.server.ServerMetrics.SERVER_PREFIX;
 
 /**
  * Tracks metrics for {@link SidecarSchema} and other schema related handling

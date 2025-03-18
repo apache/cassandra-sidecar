@@ -32,7 +32,7 @@ import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
-import org.apache.cassandra.sidecar.metrics.SchemaMetrics;
+import org.apache.cassandra.sidecar.metrics.server.SchemaMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;

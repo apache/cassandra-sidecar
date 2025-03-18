@@ -22,6 +22,8 @@ import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
+import org.apache.cassandra.sidecar.metrics.server.ServerMetrics;
+import org.apache.cassandra.sidecar.metrics.server.ServerMetricsImpl;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 

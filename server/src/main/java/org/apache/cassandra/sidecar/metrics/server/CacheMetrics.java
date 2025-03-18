@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.metrics;
+package org.apache.cassandra.sidecar.metrics.server;
 
 import com.codahale.metrics.MetricRegistry;
+import org.apache.cassandra.sidecar.metrics.CacheStatsCounter;
 
 import static org.apache.cassandra.sidecar.handlers.snapshots.ListSnapshotHandler.SNAPSHOT_CACHE_NAME;
 

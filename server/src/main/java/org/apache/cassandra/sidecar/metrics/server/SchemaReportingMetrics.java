@@ -23,7 +23,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import org.apache.cassandra.sidecar.metrics.DeltaGauge;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
-import org.apache.cassandra.sidecar.metrics.ServerMetrics;
 import org.jetbrains.annotations.NotNull;
 
 /**

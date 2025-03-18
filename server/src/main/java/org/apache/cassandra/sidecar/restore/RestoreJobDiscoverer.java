@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 import org.slf4j.Logger;
@@ -58,8 +57,8 @@ import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
-import org.apache.cassandra.sidecar.metrics.RestoreMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.server.RestoreMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;

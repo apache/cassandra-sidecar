@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.metrics;
+package org.apache.cassandra.sidecar.metrics.server;
 
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
-import org.apache.cassandra.sidecar.metrics.server.SchemaReportingMetrics;
 
 import static org.apache.cassandra.sidecar.metrics.SidecarMetrics.APP_PREFIX;
 

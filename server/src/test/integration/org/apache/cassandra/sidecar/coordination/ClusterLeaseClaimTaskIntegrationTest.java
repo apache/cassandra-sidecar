@@ -64,7 +64,7 @@ import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarLeaseSchema;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
-import org.apache.cassandra.sidecar.metrics.CoordinationMetrics;
+import org.apache.cassandra.sidecar.metrics.server.CoordinationMetrics;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;

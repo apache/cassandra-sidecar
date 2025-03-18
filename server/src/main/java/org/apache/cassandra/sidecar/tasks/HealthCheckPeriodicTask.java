@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.tasks;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,8 +33,8 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.metrics.HealthMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.server.HealthMetrics;
 
 /**
  * Periodically checks the health of every instance configured in the {@link InstancesMetadata}.
