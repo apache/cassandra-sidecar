@@ -109,7 +109,8 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
 
     private void runTestScenario(AbstractCluster<?> cluster)
     {
-        var pair = buildElectorateMembershipPerCassandraInstance(cluster);
+        AbstractMap.SimpleEntry<List<? extends ElectorateMembership>, List<? extends ElectorateMembership>> pair
+        = buildElectorateMembershipPerCassandraInstance(cluster);
         List<? extends ElectorateMembership> mostReplicatedMemberships = pair.getKey();
         List<? extends ElectorateMembership> sidecarInternalMemberships = pair.getValue();
         // When there are no user keyspaces, we default to the sidecar_internal keyspace
