@@ -87,7 +87,7 @@ public abstract class AbstractTokenZeroOfKeyspaceElectorateMembership implements
      */
     protected abstract String keyspaceToDetermineElectorateMembership();
 
-    Set<String> collectLocalInstancesHostsAndPorts()
+    protected Set<String> collectLocalInstancesHostsAndPorts()
     {
         Set<String> result = new HashSet<>();
         for (InstanceMetadata instance : instanceMetadataFetcher.allLocalInstances())
@@ -112,7 +112,7 @@ public abstract class AbstractTokenZeroOfKeyspaceElectorateMembership implements
      * @return {@code true} if any of the local instances is a replica of token zero for a single keyspace,
      * {@code false} otherwise
      */
-    boolean anyInstanceOwnsTokenZero(TokenRangeReplicasResponse tokenRangeReplicas, Set<String> localInstancesHostAndPorts)
+    protected boolean anyInstanceOwnsTokenZero(TokenRangeReplicasResponse tokenRangeReplicas, Set<String> localInstancesHostAndPorts)
     {
         return tokenRangeReplicas.readReplicas()
                                  .stream()
@@ -139,7 +139,7 @@ public abstract class AbstractTokenZeroOfKeyspaceElectorateMembership implements
      * @param replicaInfo the replica info
      * @return {@code true} if the replica info owns token zero, {@code false} otherwise
      */
-    boolean replicaOwnsTokenZero(TokenRangeReplicasResponse.ReplicaInfo replicaInfo)
+    protected boolean replicaOwnsTokenZero(TokenRangeReplicasResponse.ReplicaInfo replicaInfo)
     {
         BigInteger start = new BigInteger(replicaInfo.start());
         BigInteger end = new BigInteger(replicaInfo.end());
