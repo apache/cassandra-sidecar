@@ -427,17 +427,24 @@ class SidecarConfigurationTest
     @Test
     void testCoordinationConfiguration() throws Exception
     {
-        Path yamlPath = yaml("config/sidecar_coordination.yaml");
-        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+        String yaml = "sidecar:\n" +
+                      "  coordination:\n" +
+                      "    cluster_lease_claim:\n" +
+                      "      electorate_membership_strategy: SidecarInternalTokenZeroElectorateMembership\n" +
+                      "      enabled: false\n" +
+                      "      initial_delay: 5s\n" +
+                      "      execute_interval: 31s";
+        SidecarConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml);
         ServiceConfiguration serviceConfiguration = config.serviceConfiguration();
         assertThat(serviceConfiguration).isNotNull();
 
         CoordinationConfiguration coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
         assertThat(coordinationConfiguration).isNotNull();
-        PeriodicTaskConfiguration periodicTaskConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
-        assertThat(periodicTaskConfig.enabled()).isFalse();
-        assertThat(periodicTaskConfig.initialDelay().toMillis()).isEqualTo(5_000L);
-        assertThat(periodicTaskConfig.executeInterval().toMillis()).isEqualTo(31_000L);
+        ClusterLeaseClaimConfiguration clusterLeaseConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
+        assertThat(clusterLeaseConfig.enabled()).isFalse();
+        assertThat(clusterLeaseConfig.initialDelay().toMillis()).isEqualTo(5_000L);
+        assertThat(clusterLeaseConfig.executeInterval().toMillis()).isEqualTo(31_000L);
+        assertThat(clusterLeaseConfig.electorateMembershipStrategy()).isEqualTo("SidecarInternalTokenZeroElectorateMembership");
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
@@ -622,10 +629,11 @@ class SidecarConfigurationTest
         // Validate default configuration
         CoordinationConfiguration coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
         assertThat(coordinationConfiguration).isNotNull();
-        PeriodicTaskConfiguration periodicTaskConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
-        assertThat(periodicTaskConfig.enabled()).isTrue();
-        assertThat(periodicTaskConfig.executeInterval().toMillis()).isEqualTo(100_000L);
-        assertThat(periodicTaskConfig.initialDelay().toMillis()).isEqualTo(30_000L);
+        ClusterLeaseClaimConfiguration clusterLeaseConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
+        assertThat(clusterLeaseConfig.enabled()).isTrue();
+        assertThat(clusterLeaseConfig.executeInterval().toMillis()).isEqualTo(100_000L);
+        assertThat(clusterLeaseConfig.initialDelay().toMillis()).isEqualTo(30_000L);
+        assertThat(clusterLeaseConfig.electorateMembershipStrategy()).isEqualTo("MostReplicatedKeyspaceTokenZeroElectorateMembership");
     }
 
     private void validateHealthCheckConfigurationFromYaml(PeriodicTaskConfiguration config)
