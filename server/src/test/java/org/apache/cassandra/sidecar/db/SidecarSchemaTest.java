@@ -184,9 +184,9 @@ public class SidecarSchemaTest
             "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND end_token = ?",
 
             "INSERT INTO sidecar_internal.sidecar_lease_v1 (name,owner) " +
-            "VALUES ('cluster_lease_holder',?) IF NOT EXISTS USING TTL 120",
+            "VALUES ('cluster_lease_holder',?) IF NOT EXISTS USING TTL 300",
 
-            "UPDATE sidecar_internal.sidecar_lease_v1 USING TTL 120 SET owner = ? " +
+            "UPDATE sidecar_internal.sidecar_lease_v1 USING TTL 300 SET owner = ? " +
             "WHERE name = 'cluster_lease_holder' IF owner = ?",
 
             "SELECT * FROM sidecar_internal.role_permissions_v1",

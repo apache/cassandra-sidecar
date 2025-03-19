@@ -151,7 +151,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
     @Override
     public ScheduleDecision scheduleDecision()
     {
-        return  ScheduleDecision.SKIP;
+        return shouldSkip() ? ScheduleDecision.SKIP : ScheduleDecision.EXECUTE;
     }
 
     @Override
