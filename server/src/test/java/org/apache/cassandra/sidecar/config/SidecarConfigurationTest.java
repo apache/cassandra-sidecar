@@ -447,6 +447,28 @@ class SidecarConfigurationTest
         assertThat(clusterLeaseConfig.electorateMembershipStrategy()).isEqualTo("SidecarInternalTokenZeroElectorateMembership");
     }
 
+    @Test
+    void testCoordinationDefaultElectorateMembershipStrategy() throws Exception
+    {
+        String yaml = "sidecar:\n" +
+                      "  coordination:\n" +
+                      "    cluster_lease_claim:\n" +
+                      "      enabled: false\n" +
+                      "      initial_delay: 5s\n" +
+                      "      execute_interval: 31s";
+        SidecarConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml);
+        ServiceConfiguration serviceConfiguration = config.serviceConfiguration();
+        assertThat(serviceConfiguration).isNotNull();
+
+        CoordinationConfiguration coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
+        assertThat(coordinationConfiguration).isNotNull();
+        ClusterLeaseClaimConfiguration clusterLeaseConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
+        assertThat(clusterLeaseConfig.enabled()).isFalse();
+        assertThat(clusterLeaseConfig.initialDelay().toMillis()).isEqualTo(5_000L);
+        assertThat(clusterLeaseConfig.executeInterval().toMillis()).isEqualTo(31_000L);
+        assertThat(clusterLeaseConfig.electorateMembershipStrategy()).isEqualTo("MostReplicatedKeyspaceTokenZeroElectorateMembership");
+    }
+
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
     {
         assertThat(config.cassandraInstances()).isNotNull().hasSize(1);

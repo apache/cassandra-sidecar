@@ -217,7 +217,7 @@ sidecar:
   coordination:
     # Captures configuration parameters for the task that performs the cluster lease claim process
     cluster_lease_claim:
-      # The name of the strategy to determine the electorate membership
+      # The name of the strategy used to determine the electorate membership (defaults to MostReplicatedKeyspaceTokenZeroElectorateMembership)
       # Out of the box Sidecar provides the MostReplicatedKeyspaceTokenZeroElectorateMembership, and
       # SidecarInternalTokenZeroElectorateMembership implementations.
       # - MostReplicatedKeyspaceTokenZeroElectorateMembership the current Sidecar will be determined to be part
