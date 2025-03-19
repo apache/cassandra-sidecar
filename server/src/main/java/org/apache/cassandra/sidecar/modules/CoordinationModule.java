@@ -72,18 +72,6 @@ public class CoordinationModule extends AbstractModule
                                               CQLSessionProvider cqlSessionProvider,
                                               SidecarConfiguration configuration)
     {
-        String strategy = configuration.serviceConfiguration()
-                                       .coordinationConfiguration()
-                                       .clusterLeaseClaimConfiguration()
-                                       .electorateMembershipStrategy();
-        switch (strategy)
-        {
-            case "MostReplicatedKeyspaceTokenZeroElectorateMembership":
-                return new MostReplicatedKeyspaceTokenZeroElectorateMembership(instanceMetadataFetcher, cqlSessionProvider, configuration);
-            case "SidecarInternalTokenZeroElectorateMembership":
-                return new SidecarInternalTokenZeroElectorateMembership(instanceMetadataFetcher, configuration);
-            default:
-                throw new ConfigurationException("Invalid electorate membership strategy value '" + strategy + "'");
-        }
+        return new ElectorateMembershipFactory().create(instanceMetadataFetcher, cqlSessionProvider, configuration);
     }
 }
