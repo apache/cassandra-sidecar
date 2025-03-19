@@ -208,6 +208,7 @@ public class IntegrationTestModule extends AbstractModule
         ClusterLeaseClaimConfigurationImpl configuration
         = ClusterLeaseClaimConfigurationImpl.builder()
                                             .overridePeriodicTaskConfiguration(b -> b.enabled(true)
+                                                                                     .initialDelay(MillisecondBoundConfiguration.parse("1s"))
                                                                                      .executeInterval(MillisecondBoundConfiguration.parse("1s")))
                                             .build();
         return new CoordinationConfigurationImpl(configuration);
