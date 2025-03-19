@@ -35,8 +35,8 @@ import org.jetbrains.annotations.Nullable;
 @Singleton
 public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSchema>
 {
-    static final String YAML_PROP_PREVIOUS = "cdc_total_space_in_mb";
-    static final String YAML_PROP_CURRENT = "cdc_total_space";
+    private static final String YAML_PROP_40 = "cdc_total_space_in_mb";
+    private static final String YAML_PROP_50 = "cdc_total_space";
 
     @Inject
     public SystemViewsDatabaseAccessor(SystemViewsSchema systemViewsSchema,
@@ -49,14 +49,14 @@ public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSch
     public Long getCdcTotalSpaceSetting() throws SchemaUnavailableException
     {
         // attempt to parse Cassandra v4.0 'cdc_total_space_in_mb' yaml prop
-        String cdcTotalSpaceInMb = getSetting(YAML_PROP_PREVIOUS);
+        String cdcTotalSpaceInMb = getSetting(YAML_PROP_40);
         if (cdcTotalSpaceInMb != null)
         {
             return FileUtils.mbStringToBytes(cdcTotalSpaceInMb);
         }
 
         // otherwise parse current (v5.0+) 'cdc_total_space' yaml prop
-        String storageStringToBytes = getSetting(YAML_PROP_CURRENT);
+        String storageStringToBytes = getSetting(YAML_PROP_50);
         if (storageStringToBytes != null)
         {
             return FileUtils.storageStringToBytes(storageStringToBytes);

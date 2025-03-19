@@ -70,19 +70,19 @@ public class CdcConfigurationImpl implements CdcConfiguration
     @JsonProperty(value = SEGMENT_HARD_LINK_CACHE_EXPIRY_PROPERTY)
     private SecondBoundConfiguration segmentHardLinkCacheExpiry;
     @JsonProperty(value = CDC_RAW_CLEANER_FREQUENCY_PROPERTY)
-    protected SecondBoundConfiguration cdcRawCleanerFrequency;
+    private SecondBoundConfiguration cdcRawCleanerFrequency;
     @JsonProperty(value = ENABLE_CDC_RAW_CLEANER_PROPERTY)
-    protected boolean enableCdcRawCleaner;
+    private boolean enableCdcRawCleaner;
     @JsonProperty(value = FALLBACK_CDC_RAW_MAX_DIRECTORY_SIZE_BYTES)
-    protected long fallbackCdcRawMaxDirectorySize;
+    private long fallbackCdcRawMaxDirectorySize;
     @JsonProperty(value = CDC_RAW_MAX_DIRECTORY_MAX_PERCENT)
-    protected float cdcRawMaxPercent;
+    private float cdcRawMaxPercent;
     @JsonProperty(value = CDC_RAW_MAX_CRITICAL_BUFFER_WINDOW)
-    protected SecondBoundConfiguration cdcRawCriticalBufferWindow;
+    private SecondBoundConfiguration cdcRawCriticalBufferWindow;
     @JsonProperty(value = CDC_RAW_MAX_LOW_BUFFER_WINDOW)
-    protected SecondBoundConfiguration cdcRawLowBufferWindow;
+    private SecondBoundConfiguration cdcRawLowBufferWindow;
     @JsonProperty(value = CDC_CACHE_MAX_USAGE_DURATION)
-    protected SecondBoundConfiguration cacheMaxUsage;
+    private SecondBoundConfiguration cacheMaxUsage;
 
     public CdcConfigurationImpl()
     {
