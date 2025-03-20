@@ -123,11 +123,13 @@ class ClusterLeaseClaimTaskTest
         .thenCallRealMethod();
         when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().to(TimeUnit.MILLISECONDS))
         .thenCallRealMethod();
+        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().randomDeltaDelayMillis())
+        .thenReturn(30_000L);
         ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mockServiceConfiguration, mock(ElectorateMembership.class),
                                                                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
                                                                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
-        assertThat(task.initialDelay().to(TimeUnit.MILLISECONDS)).isBetween(0L, configuredDelayMillis);
+        assertThat(task.initialDelay().to(TimeUnit.MILLISECONDS)).isBetween(configuredDelayMillis, configuredDelayMillis + 30_000L);
     }
 
     @ParameterizedTest(name = "{index} => configuredDelayMillis {0} millis")
