@@ -124,6 +124,8 @@ class ClusterLeaseClaimTaskTest
         when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().to(TimeUnit.MILLISECONDS))
         .thenCallRealMethod();
         when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().randomDeltaDelayMillis())
+        .thenCallRealMethod();
+        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelayRandomDelta().toMillis())
         .thenReturn(30_000L);
         ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mockServiceConfiguration, mock(ElectorateMembership.class),
                                                                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
