@@ -33,26 +33,32 @@ import org.apache.cassandra.sidecar.config.ClusterLeaseClaimConfiguration;
 public class ClusterLeaseClaimConfigurationImpl extends PeriodicTaskConfigurationImpl implements ClusterLeaseClaimConfiguration
 {
     private static final String DEFAULT_ELECTORATE_MEMBERSHIP_STRATEGY = "MostReplicatedKeyspaceTokenZeroElectorateMembership";
+    private static final MillisecondBoundConfiguration DEFAULT_INITIAL_DELAY_RANDOM_DELTA = MillisecondBoundConfiguration.parse("30s");
     public static final PeriodicTaskConfigurationImpl.Builder DEFAULT_PERIODIC_TASK_BUILDER = PeriodicTaskConfigurationImpl.Builder
                                                                                               .builder()
                                                                                               .enabled(true)
-                                                                                              .initialDelay(MillisecondBoundConfiguration.parse("30s"))
+                                                                                              .initialDelay(MillisecondBoundConfiguration.parse("1s"))
                                                                                               .executeInterval(MillisecondBoundConfiguration.parse("100s"));
 
     @JsonProperty("electorate_membership_strategy")
     private final String electorateMembershipStrategy;
+
+    @JsonProperty("initial_delay_random_delta")
+    private final MillisecondBoundConfiguration initialDelayRandomDelta;
 
     @JsonCreator
     public ClusterLeaseClaimConfigurationImpl()
     {
         super(DEFAULT_PERIODIC_TASK_BUILDER);
         this.electorateMembershipStrategy = DEFAULT_ELECTORATE_MEMBERSHIP_STRATEGY;
+        this.initialDelayRandomDelta = DEFAULT_INITIAL_DELAY_RANDOM_DELTA;
     }
 
     private ClusterLeaseClaimConfigurationImpl(Builder builder)
     {
         super(builder.periodicTaskBuilder);
         electorateMembershipStrategy = Objects.requireNonNull(builder.electorateMembershipStrategy, "electorateMembershipStrategy is required");
+        initialDelayRandomDelta = builder.initialDelayRandomDelta;
     }
 
     @Override
@@ -60,6 +66,13 @@ public class ClusterLeaseClaimConfigurationImpl extends PeriodicTaskConfiguratio
     public String electorateMembershipStrategy()
     {
         return electorateMembershipStrategy;
+    }
+
+    @Override
+    @JsonProperty("initial_delay_random_delta")
+    public MillisecondBoundConfiguration initialDelayRandomDelta()
+    {
+        return initialDelayRandomDelta;
     }
 
     public static Builder builder()
@@ -73,6 +86,7 @@ public class ClusterLeaseClaimConfigurationImpl extends PeriodicTaskConfiguratio
     public static final class Builder implements DataObjectBuilder<Builder, ClusterLeaseClaimConfigurationImpl>
     {
         private String electorateMembershipStrategy = DEFAULT_ELECTORATE_MEMBERSHIP_STRATEGY;
+        private MillisecondBoundConfiguration initialDelayRandomDelta = DEFAULT_INITIAL_DELAY_RANDOM_DELTA;
         private final PeriodicTaskConfigurationImpl.Builder periodicTaskBuilder = DEFAULT_PERIODIC_TASK_BUILDER;
 
         private Builder()
@@ -94,6 +108,17 @@ public class ClusterLeaseClaimConfigurationImpl extends PeriodicTaskConfiguratio
         public Builder electorateMembershipStrategy(String electorateMembershipStrategy)
         {
             return update(b -> b.electorateMembershipStrategy = electorateMembershipStrategy);
+        }
+
+        /**
+         * Sets the {@code initialDelayRandomDelta} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param initialDelayRandomDelta the {@code initialDelayRandomDelta} to set
+         * @return a reference to this Builder
+         */
+        public Builder initialDelayRandomDelta(MillisecondBoundConfiguration initialDelayRandomDelta)
+        {
+            return update(b -> b.initialDelayRandomDelta = initialDelayRandomDelta);
         }
 
         public Builder overridePeriodicTaskConfiguration(Consumer<PeriodicTaskConfigurationImpl.Builder> overrides)

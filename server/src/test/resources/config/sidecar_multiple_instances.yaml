@@ -125,7 +125,8 @@ sidecar:
     cluster_lease_claim:
       electorate_membership_strategy: MostReplicatedKeyspaceTokenZeroElectorateMembership
       enabled: true
-      initial_delay: 30s
+      initial_delay: 1s
+      initial_delay_random_delta: 30s
       execute_interval: 100s
 
 vertx:

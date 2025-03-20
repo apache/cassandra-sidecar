@@ -239,7 +239,12 @@ sidecar:
       # The initial delay for the first execution of the cluster lease claim process task after being
       # scheduled or rescheduled.
       # The minimum value for the initial delay is 0ms.
-      initial_delay: 30s
+      initial_delay: 1s
+      # A random delta value to add jitter to the initial delay for the first execution of the cluster
+      # lease claim process. The actual initial delay for the task will be a millisecond value of the
+      # initial_delay + RANDOM(initial_delay_random_delta) configuration.
+      # The minimum value for the initial delay random delta is 0ms, which in practice disables the jitter.
+      initial_delay_random_delta: 30s
       # How often the cluster lease claim process task will execute after the previous task has completed
       # the execution.
       # The minimum value allowed for the cluster lease claim process task implementation is 30 seconds

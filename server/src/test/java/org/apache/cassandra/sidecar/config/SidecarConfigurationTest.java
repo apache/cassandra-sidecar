@@ -433,7 +433,8 @@ class SidecarConfigurationTest
                       "      electorate_membership_strategy: SidecarInternalTokenZeroElectorateMembership\n" +
                       "      enabled: false\n" +
                       "      initial_delay: 5s\n" +
-                      "      execute_interval: 31s";
+                      "      execute_interval: 31s\n" +
+                      "      initial_delay_random_delta: 10s";
         SidecarConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml);
         ServiceConfiguration serviceConfiguration = config.serviceConfiguration();
         assertThat(serviceConfiguration).isNotNull();
@@ -444,6 +445,8 @@ class SidecarConfigurationTest
         assertThat(clusterLeaseConfig.enabled()).isFalse();
         assertThat(clusterLeaseConfig.initialDelay().toMillis()).isEqualTo(5_000L);
         assertThat(clusterLeaseConfig.executeInterval().toMillis()).isEqualTo(31_000L);
+        assertThat(clusterLeaseConfig.initialDelayRandomDelta().toMillis()).isEqualTo(10_000L);
+        assertThat(clusterLeaseConfig.randomDeltaDelayMillis()).isBetween(0L, 10_000L);
         assertThat(clusterLeaseConfig.electorateMembershipStrategy()).isEqualTo("SidecarInternalTokenZeroElectorateMembership");
     }
 
@@ -654,7 +657,9 @@ class SidecarConfigurationTest
         ClusterLeaseClaimConfiguration clusterLeaseConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
         assertThat(clusterLeaseConfig.enabled()).isTrue();
         assertThat(clusterLeaseConfig.executeInterval().toMillis()).isEqualTo(100_000L);
-        assertThat(clusterLeaseConfig.initialDelay().toMillis()).isEqualTo(30_000L);
+        assertThat(clusterLeaseConfig.initialDelay().toMillis()).isEqualTo(1_000L);
+        assertThat(clusterLeaseConfig.initialDelayRandomDelta().toMillis()).isEqualTo(30_000L);
+        assertThat(clusterLeaseConfig.randomDeltaDelayMillis()).isBetween(0L, 30_000L);
         assertThat(clusterLeaseConfig.electorateMembershipStrategy()).isEqualTo("MostReplicatedKeyspaceTokenZeroElectorateMembership");
     }
 

@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.config;
 /**
  * Exposes configuration in Sidecar for the cluster lease claim task
  */
-public interface ClusterLeaseClaimConfiguration extends PeriodicTaskConfiguration
+public interface ClusterLeaseClaimConfiguration extends PeriodicTaskConfiguration, RandomInitialDelayDelta
 {
     /**
      * @return the name of the strategy used to determine the electorate membership
