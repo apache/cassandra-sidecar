@@ -69,10 +69,7 @@ public class SchemaReporter
     protected final SchemaReportingMetrics reportingMetrics;
 
     /**
-     * The public constructor that instantiates {@link SchemaReporter} with default configuration.
-     * <p>
-     * The specific combination of converters used by this constructor should be considered a part
-     * of the API and should not generally be changed, as any change will break existing users.
+     * The public constructor that instantiates {@link SchemaReporter} with default configuration
      *
      * @param identifiersProvider an instance of {@link IdentifiersProvider} to use
      * @param emitterFactory an instance of {@link EmitterFactory} to use
@@ -82,6 +79,25 @@ public class SchemaReporter
     public SchemaReporter(@NotNull IdentifiersProvider identifiersProvider,
                           @NotNull EmitterFactory emitterFactory,
                           @NotNull SidecarMetrics sidecarMetrics)
+    {
+        this(identifiersProvider,
+             emitterFactory,
+             sidecarMetrics.server().schemaReporting());
+    }
+
+    /**
+     * A protected constructor that can be used to instantiate {@link SchemaReporter} with custom configuration
+     * <p>
+     * NOTE: The specific combination of converters used by this constructor should be considered a part
+     *       of the API and should not generally be changed, as any change will break existing users
+     *
+     * @param identifiersProvider an instance of {@link IdentifiersProvider} to use
+     * @param emitterFactory an instance of {@link EmitterFactory} to use
+     * @param reportingMetrics an instance of {@link SchemaReportingMetrics} to use
+     */
+    protected SchemaReporter(@NotNull IdentifiersProvider identifiersProvider,
+                             @NotNull EmitterFactory emitterFactory,
+                             @NotNull SchemaReportingMetrics reportingMetrics)
     {
         this(identifiersProvider,
              ImmutableList.of(new ClusterToDataPlatformInfoConverter(identifiersProvider),
@@ -98,7 +114,7 @@ public class SchemaReporter
                               new TableToBrowsePathsV2Converter(identifiersProvider),
                               new TableToBrowsePathsConverter(identifiersProvider)),
              emitterFactory,
-             sidecarMetrics.server().schemaReporting());
+             reportingMetrics);
     }
 
     /**

@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Added a Convenience Constructor for Use with Custom Metrics (CASSSIDECAR-XXX)
  * Move Server Metrics into the Appropriate Package (CASSSIDECAR-231)
  * Fixing incorrect creation of MinuteBoundConfiguration & MillisecondBoundConfiguration in CdcConfigImpl (CASSSIDECAR-236)
  * Improvements to CDCConfig classes (CASSSIDECAR-235)
