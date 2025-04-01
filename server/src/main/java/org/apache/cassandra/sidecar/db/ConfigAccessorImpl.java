@@ -26,7 +26,6 @@ import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 
-import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
@@ -39,7 +38,7 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema> implements ConfigAccessor
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigAccessorImpl.class);
-    private final Service service = service();
+    private final String serviceName = service();
     private final SidecarSchema sidecarSchema;
 
     protected ConfigAccessorImpl(CQLSessionProvider sessionProvider,
@@ -49,18 +48,18 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
         this.sidecarSchema = sidecarSchema;
     }
 
-    public abstract Service service();
+    public abstract String service();
 
     @Override
     public ServiceConfig getConfig()
     {
         sidecarSchema.ensureInitialized();
         BoundStatement statement = tableSchema.selectConfig()
-                                              .bind(service.serviceName);
+                                              .bind(serviceName);
         Row row = execute(statement).one();
         if (row == null || row.isNull(0))
         {
-            LOGGER.debug(String.format("No %s configs are present in the table Cassandra table", service.serviceName));
+            LOGGER.debug("No {} configs are present in the table Cassandra table", serviceName);
             return new ServiceConfig(Map.of());
         }
         return ServiceConfig.from(row);
@@ -71,7 +70,7 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
     {
         sidecarSchema.ensureInitialized();
         BoundStatement statement = tableSchema.insertConfig()
-                                              .bind(service.serviceName, config);
+                                              .bind(serviceName, config);
         execute(statement);
         return new ServiceConfig(config);
     }
@@ -81,7 +80,7 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
     {
         sidecarSchema.ensureInitialized();
         BoundStatement statement = tableSchema.insertConfigIfNotExists()
-                                              .bind(service.serviceName, config);
+                                              .bind(serviceName, config);
         ResultSet resultSet = execute(statement);
         if (resultSet.wasApplied())
         {
@@ -95,7 +94,7 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
     {
         sidecarSchema.ensureInitialized();
         BoundStatement deleteStatement = tableSchema.deleteConfig()
-                                                    .bind(service.serviceName);
+                                                    .bind(serviceName);
         execute(deleteStatement);
     }
 

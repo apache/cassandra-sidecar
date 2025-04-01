@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfigur
 import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.CdcConfigAccessor;
 import org.apache.cassandra.sidecar.db.KafkaConfigAccessor;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
@@ -70,14 +71,13 @@ public class CdcConfigImpl implements CdcConfig
     private volatile Map<String, String> cdcConfigMappings = Map.of();
 
     @Inject
-    public CdcConfigImpl(CdcConfiguration cdcConfiguration,
-                         SchemaKeyspaceConfiguration schemaKeyspaceConfiguration,
+    public CdcConfigImpl(SidecarConfiguration sidecarConfiguration,
                          CdcConfigAccessor cdcConfigAccessor,
                          KafkaConfigAccessor kafkaConfigAccessor,
                          PeriodicTaskExecutor periodicTaskExecutor)
     {
-        this.schemaKeyspaceConfiguration = schemaKeyspaceConfiguration;
-        this.cdcConfiguration = cdcConfiguration;
+        this.schemaKeyspaceConfiguration = sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration();
+        this.cdcConfiguration = sidecarConfiguration.serviceConfiguration().cdcConfiguration();
         this.cdcConfigAccessor = cdcConfigAccessor;
         this.kafkaConfigAccessor = kafkaConfigAccessor;
 

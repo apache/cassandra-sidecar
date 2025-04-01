@@ -31,6 +31,7 @@ import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfigur
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.db.CdcConfigAccessor;
@@ -80,7 +81,7 @@ class CdcConfigImplTest
         when(cdcConfigAccessor.isAvailable()).thenReturn(false);
 
         CdcConfigImpl cdcConfig =
-                new CdcConfigImpl(mockCdcConfiguration(), mockSchemaKeyspaceConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
+                new CdcConfigImpl(mockSidecarConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
         assertThat(cdcConfig.isConfigReady()).isFalse();
     }
 
@@ -91,7 +92,7 @@ class CdcConfigImplTest
         KafkaConfigAccessor kafkaConfigAccessor = mockKafkaConfigAccessor();
         when(cdcConfigAccessor.getConfig().getConfigs()).thenReturn(Map.of("k1", "v1"));
         CdcConfigImpl cdcConfig =
-                new CdcConfigImpl(mockCdcConfiguration(), mockSchemaKeyspaceConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
+                new CdcConfigImpl(mockSidecarConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
         assertThat(cdcConfig.isConfigReady()).isFalse();
     }
 
@@ -102,7 +103,7 @@ class CdcConfigImplTest
         KafkaConfigAccessor kafkaConfigAccessor = mockKafkaConfigAccessor();
         when(cdcConfigAccessor.getConfig().getConfigs()).thenReturn(Map.of("k1", "v1"));
         CdcConfigImpl cdcConfig =
-                new CdcConfigImpl(mockCdcConfiguration(), mockSchemaKeyspaceConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
+                new CdcConfigImpl(mockSidecarConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
         assertThat(cdcConfig.isConfigReady()).isFalse();
     }
 
@@ -112,7 +113,7 @@ class CdcConfigImplTest
         CdcConfigAccessor cdcConfigAccessor = mockCdcConfigAccessor();
         KafkaConfigAccessor kafkaConfigAccessor = mockKafkaConfigAccessor();
         CdcConfigImpl cdcConfig =
-                new CdcConfigImpl(mockCdcConfiguration(), mockSchemaKeyspaceConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
+                new CdcConfigImpl(mockSidecarConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
         assertThat(cdcConfig.datacenter()).isEqualTo(null);
         assertThat(cdcConfig.env()).isEqualTo("");
         assertThat(cdcConfig.kafkaTopic()).isNull();
@@ -130,7 +131,7 @@ class CdcConfigImplTest
                 .thenReturn(Map.of("k1", "v1"));
 
         CdcConfigImpl cdcConfig =
-                new CdcConfigImpl(mockCdcConfiguration(), mockSchemaKeyspaceConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
+                new CdcConfigImpl(mockSidecarConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
         loopAssert(5, ()-> assertThat(cdcConfig.isConfigReady()).isTrue());
         assertThat(cdcConfig.datacenter()).isEqualTo("DC1");
         assertThat(cdcConfig.env()).isEqualTo("if");
@@ -150,7 +151,7 @@ class CdcConfigImplTest
         when(kafkaConfigAccessor.getConfig().getConfigs()).thenReturn(Map.of("topic", "topic1"));
 
         CdcConfigImpl cdcConfig =
-                new CdcConfigImpl(mockCdcConfiguration(), mockSchemaKeyspaceConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
+                new CdcConfigImpl(mockSidecarConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
         cdcConfig.registerConfigChangeListener(listener);
 
         // do not wait the periodic task execution, we force running it immediately.
@@ -188,7 +189,7 @@ class CdcConfigImplTest
         when(cdcConfiguration.isEnabled()).thenReturn(false);
 
         CdcConfigImpl cdcConfig =
-                new CdcConfigImpl(cdcConfiguration, mockSchemaKeyspaceConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
+                new CdcConfigImpl(mockSidecarConfiguration(), cdcConfigAccessor, kafkaConfigAccessor, executor);
         assertThat(cdcConfig.configRefreshNotifier().scheduleDecision())
                 .isEqualTo(ScheduleDecision.SKIP)
                 .describedAs("When sidecarSchema is enabled but cdc is disabled, the refresh notifier should skip");
@@ -223,6 +224,14 @@ class CdcConfigImplTest
         SchemaKeyspaceConfiguration schemaKeyspaceConfiguration = mock(SchemaKeyspaceConfiguration.class);
         when(schemaKeyspaceConfiguration.isEnabled()).thenReturn(true);
         return schemaKeyspaceConfiguration;
+    }
+
+    private SidecarConfiguration mockSidecarConfiguration()
+    {
+        SidecarConfiguration sidecarConfiguration = mock(SidecarConfiguration.class, RETURNS_DEEP_STUBS);
+        when(sidecarConfiguration.serviceConfiguration().cdcConfiguration()).thenAnswer(invocation -> mockCdcConfiguration());
+        when(sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration()).thenAnswer(invocation -> mockSchemaKeyspaceConfiguration());
+        return sidecarConfiguration;
     }
 
     private ThrowingRunnable mockRunnable()

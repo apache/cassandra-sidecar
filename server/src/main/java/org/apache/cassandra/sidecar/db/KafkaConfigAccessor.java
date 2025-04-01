@@ -39,8 +39,8 @@ public class KafkaConfigAccessor extends ConfigAccessorImpl
     }
 
     @Override
-    public Service service()
+    public String service()
     {
-        return Service.KAFKA;
+        return Service.KAFKA.serviceName;
     }
 }

@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Improvements to CDCConfig classes (CASSSIDECAR-235)
  * Hot Reload client and server SSL certificates (CASSSIDECAR-228)
  * Enhance the Cluster Lease Claim task feature (CASSSIDECAR-232)
  * Capture Metrics for Schema Reporting (CASSSIDECAR-216)

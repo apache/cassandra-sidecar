@@ -39,8 +39,8 @@ public class CdcConfigAccessor extends ConfigAccessorImpl
     }
 
     @Override
-    public Service service()
+    public String service()
     {
-        return Service.CDC;
+        return Service.CDC.serviceName;
     }
 }
