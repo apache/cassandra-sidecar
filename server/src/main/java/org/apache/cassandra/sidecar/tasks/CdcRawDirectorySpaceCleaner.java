@@ -41,9 +41,11 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Promise;
+import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.db.SystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.metrics.CdcMetrics;
@@ -72,7 +74,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
     private final TimeProvider timeProvider;
     private final SystemViewsDatabaseAccessor systemViewsDatabaseAccessor;
     private final CdcConfiguration cdcConfiguration;
-    private final InstanceMetadata instanceMetadata;
+    private final InstancesMetadata instancesMetadata;
     private final CdcMetrics cdcMetrics;
 
     // non-volatile variables, PeriodicTaskExecutor should ensure memory visibility
@@ -86,14 +88,14 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
     @Inject
     public CdcRawDirectorySpaceCleaner(TimeProvider timeProvider,
                                        SystemViewsDatabaseAccessor systemViewsDatabaseAccessor,
-                                       CdcConfiguration cdcConfiguration,
-                                       InstanceMetadata instanceMetadata,
+                                       ServiceConfiguration serviceConfiguration,
+                                       InstancesMetadata instancesMetadata,
                                        SidecarMetrics metrics)
     {
         this.timeProvider = timeProvider;
         this.systemViewsDatabaseAccessor = systemViewsDatabaseAccessor;
-        this.cdcConfiguration = cdcConfiguration;
-        this.instanceMetadata = instanceMetadata;
+        this.cdcConfiguration = serviceConfiguration.cdcConfiguration();
+        this.instancesMetadata = instancesMetadata;
         this.cdcMetrics = metrics.server().cdc();
     }
 
@@ -179,10 +181,13 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
 
     protected void routineCleanUp()
     {
-        List<String> dataDirectories = instanceMetadata.dataDirs();
-        dataDirectories.stream()
-                       .map(dir -> new File(dir, CDC_DIR_NAME))
-                       .forEach(this::cleanUpCdcRawDirectory);
+        for (InstanceMetadata instanceMetadata : instancesMetadata.instances())
+        {
+            List<String> dataDirectories = instanceMetadata.dataDirs();
+            dataDirectories.stream()
+                           .map(dir -> new File(dir, CDC_DIR_NAME))
+                           .forEach(this::cleanUpCdcRawDirectory);
+        }
     }
 
     protected void cleanUpCdcRawDirectory(File cdcRawDirectory)

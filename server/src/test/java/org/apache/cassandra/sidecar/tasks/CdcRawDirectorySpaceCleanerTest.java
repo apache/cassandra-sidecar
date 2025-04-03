@@ -34,8 +34,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.codahale.metrics.MetricRegistry;
+import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
+import org.apache.cassandra.sidecar.cluster.InstancesMetadataImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.CdcConfigurationImpl;
 import org.apache.cassandra.sidecar.db.SystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.CdcMetrics;
@@ -73,8 +77,10 @@ public class CdcRawDirectorySpaceCleanerTest
         .thenAnswer((Answer<Map<String, String>>) invocation -> Map.of("cdc_total_space", "1MiB"));
         when(systemViewsDatabaseAccessor.getCdcTotalSpaceSetting()).thenCallRealMethod();
         CdcConfiguration cdcConfiguration = new CdcConfigurationImpl();
+        ServiceConfiguration serviceConfiguration = mock(ServiceConfiguration.class);
+        when(serviceConfiguration.cdcConfiguration()).thenReturn(cdcConfiguration);
 
-        InstanceMetadata instanceMetadata = mockInstanceMetadata(tempDir);
+        InstancesMetadata instancesMetadata = mockInstanceMetadata(tempDir);
         SidecarMetrics sidecarMetrics = mock(SidecarMetrics.class);
         ServerMetrics serverMetrics = mock(ServerMetrics.class);
         CdcMetrics cdcMetrics = new CdcMetrics(METRIC_REGISTRY);
@@ -83,8 +89,8 @@ public class CdcRawDirectorySpaceCleanerTest
         CdcRawDirectorySpaceCleaner cleaner = new CdcRawDirectorySpaceCleaner(
         timeProvider,
         systemViewsDatabaseAccessor,
-        cdcConfiguration,
-        instanceMetadata,
+        serviceConfiguration,
+        instancesMetadata,
         sidecarMetrics
         );
 
@@ -124,7 +130,7 @@ public class CdcRawDirectorySpaceCleanerTest
 
     /* test utils */
 
-    private static InstanceMetadata mockInstanceMetadata(Path tempDir) throws IOException
+    private static InstancesMetadata mockInstanceMetadata(Path tempDir) throws IOException
     {
         InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
 
@@ -138,7 +144,7 @@ public class CdcRawDirectorySpaceCleanerTest
         writeCdcSegment(cdcDir, TEST_INTACT_SEGMENT_FILE_NAME, RandomUtils.nextInt(128, 256), false, false, true);
 
         when(instanceMetadata.dataDirs()).thenReturn(List.of(cdcDir.getParent()));
-        return instanceMetadata;
+        return new InstancesMetadataImpl(instanceMetadata, DnsResolver.DEFAULT);
     }
 
     private static void writeCdcSegment(File cdcDir, String filename, int size, boolean complete) throws IOException

@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitorTask;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthProvider;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerProvider;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
+import org.apache.cassandra.sidecar.db.schema.SystemViewsSchema;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.handlers.cdc.AllServiceConfigHandler;
 import org.apache.cassandra.sidecar.handlers.cdc.DeleteServiceConfigHandler;
@@ -76,6 +77,13 @@ public class CdcModule extends AbstractModule
     TableSchema configsSchema(ServiceConfiguration serviceConfiguration)
     {
         return new ConfigsSchema(serviceConfiguration);
+    }
+
+    @ProvidesIntoMap
+    @KeyClassMapKey(TableSchemaMapKeys.SystemViewsSchemaKey.class)
+    TableSchema systemViewssSchema(SystemViewsSchema schema)
+    {
+        return schema;
     }
 
     @ProvidesIntoMap

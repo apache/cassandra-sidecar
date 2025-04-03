@@ -30,4 +30,5 @@ public interface TableSchemaMapKeys
     interface SidecarLeaseSchemaKey extends ClassKey {}
     interface SidecarRolePermissionsSchemaKey extends ClassKey {}
     interface SystemAuthSchemaKey extends ClassKey {}
+    interface SystemViewsSchemaKey extends ClassKey {}
 }
