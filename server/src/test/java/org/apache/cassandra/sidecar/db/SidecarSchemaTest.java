@@ -203,7 +203,9 @@ public class SidecarSchemaTest
 
             "INSERT INTO sidecar_internal.configs (service, config) VALUES (?, ?) IF NOT EXISTS",
 
-            "DELETE FROM sidecar_internal.configs WHERE service=?"
+            "DELETE FROM sidecar_internal.configs WHERE service=?",
+
+            "SELECT name, value FROM system_views.settings WHERE name IN ?"
             );
 
             assertThat(interceptedPrepStmts).as("Intercepted statements match expected statements")
