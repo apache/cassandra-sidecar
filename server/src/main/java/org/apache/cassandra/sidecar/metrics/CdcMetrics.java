@@ -37,7 +37,7 @@ public class CdcMetrics
     public final NamedMetric<DeltaGauge> cdcRawCleanerFailed;
     public final NamedMetric<DeltaGauge> orphanedIdx;
     public final NamedMetric<DefaultSettableGauge<Integer>> oldestSegmentAge;
-    public final NamedMetric<DefaultSettableGauge<Long>> totalConsumedCdcBytes;
+    public final NamedMetric<DeltaGauge> totalConsumedCdcBytes;
     public final NamedMetric<DefaultSettableGauge<Long>> totalCdcSpaceUsed;
     public final NamedMetric<DeltaGauge> deletedSegment;
     public final NamedMetric<DeltaGauge> lowCdcRawSpace;
@@ -46,14 +46,14 @@ public class CdcMetrics
     public CdcMetrics(MetricRegistry metricRegistry)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
-        this.cdcRawCleanerFailed = createMetric("CdcRawCleanerFailed", name -> metricRegistry.gauge(name, DeltaGauge::new));
-        this.totalConsumedCdcBytes = createMetric("CdcRawTotalConsumedCdcBytes", name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)));
-        this.totalCdcSpaceUsed = createMetric("CdcRawTotalCdcSpaceUsed", name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)));
-        this.orphanedIdx = createMetric("CdcRawOrphanedIdxFile", name -> metricRegistry.gauge(name, DeltaGauge::new));
-        this.deletedSegment = createMetric("CdcRawDeletedSegment", name -> metricRegistry.gauge(name, DeltaGauge::new));
-        this.oldestSegmentAge = createMetric("CdcRawOldestSegmentAgeSeconds", name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)));
-        this.lowCdcRawSpace = createMetric("CdcRawLowSpace", name -> metricRegistry.gauge(name, DeltaGauge::new));
-        this.criticalCdcRawSpace = createMetric("CdcRawCriticalSpace", name -> metricRegistry.gauge(name, DeltaGauge::new));
+        this.cdcRawCleanerFailed = createMetric("CleanerFailed", name -> metricRegistry.gauge(name, DeltaGauge::new));
+        this.totalConsumedCdcBytes = createMetric("TotalConsumedBytes", name -> metricRegistry.gauge(name, DeltaGauge::new));
+        this.totalCdcSpaceUsed = createMetric("TotalSpaceUsed", name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)));
+        this.orphanedIdx = createMetric("OrphanedIdxFile", name -> metricRegistry.gauge(name, DeltaGauge::new));
+        this.deletedSegment = createMetric("DeletedSegment", name -> metricRegistry.gauge(name, DeltaGauge::new));
+        this.oldestSegmentAge = createMetric("OldestSegmentAgeSeconds", name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)));
+        this.lowCdcRawSpace = createMetric("LowSpace", name -> metricRegistry.gauge(name, DeltaGauge::new));
+        this.criticalCdcRawSpace = createMetric("CriticalSpace", name -> metricRegistry.gauge(name, DeltaGauge::new));
     }
 
     private <T extends Metric> NamedMetric<T> createMetric(String simpleName, Function<String, T> metricCreator)

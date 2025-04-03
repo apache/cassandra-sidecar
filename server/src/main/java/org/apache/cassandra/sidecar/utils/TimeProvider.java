@@ -23,10 +23,29 @@ package org.apache.cassandra.sidecar.utils;
  */
 public interface TimeProvider
 {
-    TimeProvider DEFAULT_TIME_PROVIDER = System::currentTimeMillis;
+    TimeProvider DEFAULT_TIME_PROVIDER = new TimeProvider()
+    {
+        public long currentTimeMillis()
+        {
+            return System.currentTimeMillis();
+        }
+
+        public long nanoTime()
+        {
+            return System.nanoTime();
+        }
+    };
 
     /**
      * @return the current time in milliseconds
      */
     long currentTimeMillis();
+
+    /**
+     * @return the current value of the high-resolution time source in nanosecond.
+     */
+    default long nanoTime()
+    {
+        throw new UnsupportedOperationException("Nano time is unsupported");
+    }
 }

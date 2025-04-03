@@ -75,12 +75,13 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
     private final InstanceMetadata instanceMetadata;
     private final CdcMetrics cdcMetrics;
 
+    // non-volatile variables, PeriodicTaskExecutor should ensure memory visibility
     @Nullable
-    private volatile Long maxUsageBytes = null;
+    private Long maxUsageBytes = null;
     // lazily loaded from system_views.settings if available
-    private volatile Long maxUsageLastReadNanos = null;
+    private Long maxUsageLastReadNanos = null;
     // cdc file -> file size in bytes. It memorizes the file set of the last time the checker runs.
-    private volatile Map<CdcRawSegmentFile, Long> priorCdcFiles = new HashMap<>();
+    private Map<CdcRawSegmentFile, Long> priorCdcFiles = new HashMap<>();
 
     @Inject
     public CdcRawDirectorySpaceCleaner(TimeProvider timeProvider,
@@ -124,7 +125,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
     protected boolean shouldRefreshCachedMaxUsage()
     {
         return maxUsageLastReadNanos == null ||
-               (System.nanoTime() - maxUsageLastReadNanos) >=
+               (timeProvider.nanoTime() - maxUsageLastReadNanos) >=
                TimeUnit.MILLISECONDS.toNanos(cdcConfiguration.cacheMaxUsage().toMillis());
     }
 
@@ -147,7 +148,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
                     "Change in cdc_total_space from system_views.settings prev={} latest={}",
                     maxUsageBytes, newValue);
                     this.maxUsageBytes = newValue;
-                    this.maxUsageLastReadNanos = System.nanoTime();
+                    this.maxUsageLastReadNanos = timeProvider.nanoTime();
                     return newValue;
                 }
             }
@@ -161,8 +162,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
             LOGGER.warn("Error reading cdc_total_space from system_views.settings", t);
         }
 
-        LOGGER.warn(
-        "Could not read cdc_total_space from system_views.settings, falling back to props");
+        LOGGER.warn("Could not read cdc_total_space from system_views.settings, falling back to props");
         return cdcConfiguration.fallbackCdcRawDirectoryMaxSizeBytes();
     }
 
@@ -189,8 +189,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
     {
         if (!cdcRawDirectory.exists() || !cdcRawDirectory.isDirectory())
         {
-            LOGGER.debug("Skipping CdcRawDirectorySpaceCleaner: CDC directory does not exist: " +
-                         cdcRawDirectory);
+            LOGGER.debug("Skipping CdcRawDirectorySpaceCleaner: CDC directory does not exist: {}", cdcRawDirectory);
             return;
         }
 
@@ -207,8 +206,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
         publishCdcStats(segmentFiles);
         if (segmentFiles.size() < 2)
         {
-            LOGGER.debug(
-            "Skipping cdc data cleaner routine cleanup: No cdc data or only one single cdc segment is found.");
+            LOGGER.debug("Skipping cdc data cleaner routine cleanup: No cdc data or only one single cdc segment is found.");
             return;
         }
 
@@ -222,7 +220,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
 
         // track the age of the oldest commit log segment to give indication of the time-window buffer available
         cdcMetrics.oldestSegmentAge.metric.setValue(
-        (int) MILLISECONDS.toMinutes(nowInMillis - segmentFiles.get(0).lastModified()));
+        (int) MILLISECONDS.toSeconds(nowInMillis - segmentFiles.get(0).lastModified()));
 
         if (directorySize > upperLimitBytes)
         {
@@ -235,6 +233,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
             long criticalMillis = cdcConfiguration.cdcRawDirectoryCriticalBufferWindow().toMillis();
             long lowMillis = cdcConfiguration.cdcRawDirectoryLowBufferWindow().toMillis();
 
+            // we keep the last commit log segment as it may still be actively written to
             int i = 0;
             while (i < segmentFiles.size() - 1 && directorySize > upperLimitBytes)
             {
@@ -243,18 +242,16 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
 
                 if (ageMillis < criticalMillis)
                 {
-                    LOGGER.error(
-                    "Insufficient Cdc buffer size to maintain {}-minute window segment={} maxSize={} ageMinutes={}",
-                    MILLISECONDS.toMinutes(criticalMillis), segment, upperLimitBytes,
-                    MILLISECONDS.toMinutes(ageMillis));
+                    LOGGER.error("Insufficient Cdc buffer size to maintain {}-minute window segment={} maxSize={} ageMinutes={}",
+                                 MILLISECONDS.toMinutes(criticalMillis), segment, upperLimitBytes,
+                                 MILLISECONDS.toMinutes(ageMillis));
                     cdcMetrics.criticalCdcRawSpace.metric.update(1);
                 }
                 else if (ageMillis < lowMillis)
                 {
-                    LOGGER.warn(
-                    "Insufficient Cdc buffer size to maintain {}-minute window segment={} maxSize={} ageMinutes={}",
-                    MILLISECONDS.toMinutes(lowMillis), segment, upperLimitBytes,
-                    MILLISECONDS.toMinutes(ageMillis));
+                    LOGGER.warn("Insufficient Cdc buffer size to maintain {}-minute window segment={} maxSize={} ageMinutes={}",
+                                MILLISECONDS.toMinutes(lowMillis), segment, upperLimitBytes,
+                                MILLISECONDS.toMinutes(ageMillis));
                     cdcMetrics.lowCdcRawSpace.metric.update(1);
                 }
                 long length = 0;
@@ -372,7 +369,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
         consumedFiles.stream().map(priorCdcFiles::get).reduce(0L, Long::sum);
         priorCdcFiles.clear();
         priorCdcFiles = currentFiles;
-        cdcMetrics.totalConsumedCdcBytes.metric.setValue(totalConsumedBytes);
+        cdcMetrics.totalConsumedCdcBytes.metric.update(totalConsumedBytes);
         cdcMetrics.totalCdcSpaceUsed.metric.setValue(totalCurrentBytes);
     }
 

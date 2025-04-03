@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -42,11 +43,12 @@ import org.apache.cassandra.sidecar.metrics.ServerMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
+import org.mockito.stubbing.Answer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -67,7 +69,8 @@ public class CdcRawDirectorySpaceCleanerTest
     {
         TimeProvider timeProvider = TimeProvider.DEFAULT_TIME_PROVIDER;
         SystemViewsDatabaseAccessor systemViewsDatabaseAccessor = mock(SystemViewsDatabaseAccessor.class);
-        when(systemViewsDatabaseAccessor.getSetting(eq("cdc_total_space"))).thenReturn("1MiB");
+        when(systemViewsDatabaseAccessor.getSettings(any()))
+        .thenAnswer((Answer<Map<String, String>>) invocation -> Map.of("cdc_total_space", "1MiB"));
         when(systemViewsDatabaseAccessor.getCdcTotalSpaceSetting()).thenCallRealMethod();
         CdcConfiguration cdcConfiguration = new CdcConfigurationImpl();
 

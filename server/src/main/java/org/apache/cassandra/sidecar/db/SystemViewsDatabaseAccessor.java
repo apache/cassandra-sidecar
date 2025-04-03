@@ -18,15 +18,19 @@
 
 package org.apache.cassandra.sidecar.db;
 
+import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SystemViewsSchema;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.utils.FileUtils;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -35,8 +39,8 @@ import org.jetbrains.annotations.Nullable;
 @Singleton
 public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSchema>
 {
-    private static final String YAML_PROP_40 = "cdc_total_space_in_mb";
-    private static final String YAML_PROP_50 = "cdc_total_space";
+    private static final String YAML_PROP_IN_MB = "cdc_total_space_in_mb";
+    private static final String YAML_PROP_WITH_UNIT = "cdc_total_space"; // expects value with units e.g. "5MiB"
 
     @Inject
     public SystemViewsDatabaseAccessor(SystemViewsSchema systemViewsSchema,
@@ -49,14 +53,15 @@ public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSch
     public Long getCdcTotalSpaceSetting() throws SchemaUnavailableException
     {
         // attempt to parse Cassandra v4.0 'cdc_total_space_in_mb' yaml prop
-        String cdcTotalSpaceInMb = getSetting(YAML_PROP_40);
+        Map<String, String> settings = getSettings(YAML_PROP_IN_MB, YAML_PROP_WITH_UNIT);
+        String cdcTotalSpaceInMb = settings.get(YAML_PROP_IN_MB);
         if (cdcTotalSpaceInMb != null)
         {
             return FileUtils.mbStringToBytes(cdcTotalSpaceInMb);
         }
 
         // otherwise parse current (v5.0+) 'cdc_total_space' yaml prop
-        String storageStringToBytes = getSetting(YAML_PROP_50);
+        String storageStringToBytes = settings.get(YAML_PROP_WITH_UNIT);
         if (storageStringToBytes != null)
         {
             return FileUtils.storageStringToBytes(storageStringToBytes);
@@ -66,17 +71,21 @@ public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSch
     }
 
     /**
-     * Load a setting value from the `system_views.settings` table.
+     * Load a setting values from the `system_views.settings` table.
      *
-     * @param name name of setting
-     * @return setting value for a given `name` loaded from the `system_views.settings` table.
+     * @param names names of settings
+     * @return map of setting values keyed on `name` loaded from the `system_views.settings` table.
      */
-    @Nullable
-    public String getSetting(String name) throws SchemaUnavailableException
+    @NotNull
+    public Map<String, String> getSettings(String... names) throws SchemaUnavailableException
     {
-        BoundStatement statement = tableSchema.selectSettings().bind(name);
+        BoundStatement statement = tableSchema.selectSettings().bind(Arrays.asList(names));
         ResultSet result = execute(statement);
-        Row row = result.one();
-        return row != null && !row.isNull(0) ? row.getString(0) : null;
+        return result.all()
+                     .stream()
+                     .collect(Collectors.toMap(
+                              row -> row.getString(0),
+                              row -> row.getString(1))
+                     );
     }
 }

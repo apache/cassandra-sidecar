@@ -55,7 +55,7 @@ public class SystemViewsSchema extends CassandraSystemTableSchema
     @Override
     protected void prepareStatements(@NotNull Session session)
     {
-        this.selectSettings = session.prepare("SELECT value FROM system_views.settings WHERE name = ?");
+        this.selectSettings = session.prepare("SELECT name, value FROM system_views.settings WHERE name IN ?");
     }
 
     protected void ensureSchemaAvailable() throws SchemaUnavailableException
