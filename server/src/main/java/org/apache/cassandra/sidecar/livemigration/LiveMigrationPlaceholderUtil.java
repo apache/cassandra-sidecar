@@ -18,10 +18,14 @@
 
 package org.apache.cassandra.sidecar.livemigration;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -61,10 +65,46 @@ public class LiveMigrationPlaceholderUtil
         }
         if (placeholders.contains(placeholder))
         {
-            return input.replace("${" + placeholder + "}", value);
+            return replacePlaceholder(input, placeholder, value);
         }
 
         return null;
+    }
+
+    /**
+     * Replaces placeholder present in given {@code input} with directory based on instance metadata.
+     *
+     * @param input            Input string to replace placeholder
+     * @param instanceMetadata Metadata of instance to pick the directory for placeholder in input
+     * @return input after replacing placeholder with corresponding directories. If input does not
+     * have a placeholder, then input returned as Set.
+     */
+    public static Set<String> replacePlaceholder(String input, InstanceMetadata instanceMetadata)
+    {
+        if (!hasAnyPlaceholder(input))
+        {
+            return Collections.singleton(input);
+        }
+        String placeholder = getPlaceholder(input);
+        Map<String, Set<String>> placeholderDirsMap = LiveMigrationInstanceMetadataUtil.placeholderDirsMap(instanceMetadata);
+
+        if (!placeholderDirsMap.containsKey(placeholder))
+        {
+            throw new IllegalArgumentException("Unknown placeholder specified in " + input);
+        }
+
+        Set<String> dirs = placeholderDirsMap.get(placeholder);
+        Set<String> output = new HashSet<>(dirs.size());
+        for (String dir : dirs)
+        {
+            output.add(replacePlaceholder(input, placeholder, dir));
+        }
+        return output;
+    }
+
+    private static String replacePlaceholder(String input, String placeholder, String value)
+    {
+        return input.replace("${" + placeholder + "}", value);
     }
 
     /**

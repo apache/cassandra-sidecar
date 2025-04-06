@@ -18,16 +18,43 @@
 
 package org.apache.cassandra.sidecar.livemigration;
 
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.mockito.Mockito;
+
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.CDC_RAW_DIR_PLACEHOLDER;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.COMMITLOG_DIR_PLACEHOLDER;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.DATA_FILE_DIR_PLACEHOLDER;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.HINTS_DIR_PLACEHOLDER;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.SAVED_CACHES_DIR_PLACEHOLDER;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.hasAnyPlaceholder;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.replacePlaceholder;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.mockito.Mockito.when;
 
 class LiveMigrationPlaceholderUtilTest
 {
+
+    private static final String DATA_DIR = "data";
+    private static final String HINTS_DIR = "hints";
+    private static final String COMMITLOG_DIR = "commitlog";
+    private static final String SAVED_CACHES_DIR = "saved_caches";
+    private static final String CDC_RAW_DIR = "cdc_raw";
+    private static final String LOCAL_SYSTEM_DIR = "local_system_data";
+    private static final String STAGING_DIR = "sstable-staging";
+
+    @TempDir
+    Path tempDir;
+
     @Test
     public void testReplacePlaceholder()
     {
@@ -69,5 +96,73 @@ class LiveMigrationPlaceholderUtilTest
         assertThat(hasAnyPlaceholder("regex:${DATA_FILE_DIR}/k*/t1", Collections.singleton("DATA_FILE_DIR"))).isTrue();
 
         assertThat(hasAnyPlaceholder("glob:${DATA_FILE_DIR}/ks/t1", Collections.singleton("DATA_FILE_DIR_0"))).isFalse();
+    }
+
+    @Test
+    public void testReplacePlaceholderUsingInstanceMetadata()
+    {
+        String cassandraHomeDir = tempDir.resolve("testReplacePlaceholderUsingInstanceMetadata").toString();
+        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
+        List<String> dataDirs = new ArrayList<>(2);
+        String dataDir2 = DATA_DIR + "2";
+        dataDirs.add(cassandraHomeDir + "/" + DATA_DIR);
+        dataDirs.add(cassandraHomeDir + "/" + dataDir2);
+        when(instanceMetadata.dataDirs()).thenReturn(dataDirs);
+
+        assertThat(replacePlaceholder("glob:${" + HINTS_DIR_PLACEHOLDER + "}", instanceMetadata))
+        .hasSize(1)
+        .contains("glob:" + instanceMetadata.hintsDir());
+
+        assertThat(replacePlaceholder("regex:${" + COMMITLOG_DIR_PLACEHOLDER + "}/Commitlog-7-1.log", instanceMetadata))
+        .hasSize(1)
+        .contains("regex:" + instanceMetadata.commitlogDir() + "/Commitlog-7-1.log");
+
+        assertThat(replacePlaceholder("glob:${" + SAVED_CACHES_DIR_PLACEHOLDER + "}/cache.bin", instanceMetadata))
+        .hasSize(1)
+        .contains("glob:" + instanceMetadata.savedCachesDir() + "/cache.bin");
+
+        assertThat(replacePlaceholder("glob:${" + DATA_FILE_DIR_PLACEHOLDER + "}/*/*/snapshots", instanceMetadata))
+        .hasSize(2)
+        .contains("glob:" + instanceMetadata.dataDirs().get(0) + "/*/*/snapshots")
+        .contains("glob:" + instanceMetadata.dataDirs().get(1) + "/*/*/snapshots");
+
+        assertThat(replacePlaceholder("glob:${" + DATA_FILE_DIR_PLACEHOLDER + "_0}/ks1/*", instanceMetadata))
+        .hasSize(1)
+        .contains("glob:" + instanceMetadata.dataDirs().get(0) + "/ks1/*");
+
+        assertThat(replacePlaceholder("glob:${" + DATA_FILE_DIR_PLACEHOLDER + "_1}/k*/*", instanceMetadata))
+        .hasSize(1)
+        .contains("glob:" + instanceMetadata.dataDirs().get(1) + "/k*/*");
+
+        assertThat(replacePlaceholder("glob:${" + CDC_RAW_DIR_PLACEHOLDER + "}/**", instanceMetadata))
+        .hasSize(1)
+        .contains("glob:" + instanceMetadata.cdcDir() + "/**");
+
+        assertThat(replacePlaceholder("glob:${" + LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER + "}/", instanceMetadata))
+        .hasSize(1)
+        .contains("glob:" + instanceMetadata.localSystemDataFileDir() + "/");
+
+        // Trying to replace text not having any placeholder
+        assertThat(replacePlaceholder("glob:/home/usr/data/*", instanceMetadata))
+        .hasSize(1)
+        .contains("glob:/home/usr/data/*");
+
+        //Unknown placeholder
+        assertThatIllegalArgumentException()
+        .isThrownBy(() -> replacePlaceholder("glob:${UNKNOWN_PLACE_HOLDER}/0", instanceMetadata));
+    }
+
+    InstanceMetadata getInstanceMetadata(String cassandraHomeDir)
+    {
+        InstanceMetadata instanceMetadata = Mockito.mock(InstanceMetadata.class);
+        when(instanceMetadata.dataDirs()).thenReturn(Collections.singletonList(cassandraHomeDir + "/" + DATA_DIR));
+        when(instanceMetadata.cdcDir()).thenReturn(cassandraHomeDir + "/" + CDC_RAW_DIR);
+        when(instanceMetadata.commitlogDir()).thenReturn(cassandraHomeDir + "/" + COMMITLOG_DIR);
+        when(instanceMetadata.hintsDir()).thenReturn(cassandraHomeDir + "/" + HINTS_DIR);
+        when(instanceMetadata.savedCachesDir()).thenReturn(cassandraHomeDir + "/" + SAVED_CACHES_DIR);
+        when(instanceMetadata.localSystemDataFileDir()).thenReturn(cassandraHomeDir + "/" + LOCAL_SYSTEM_DIR);
+        when(instanceMetadata.stagingDir()).thenReturn(cassandraHomeDir + "/" + STAGING_DIR);
+
+        return instanceMetadata;
     }
 }

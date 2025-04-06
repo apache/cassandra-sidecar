@@ -145,6 +145,44 @@ public class LiveMigrationInstanceMetadataUtil
     }
 
     /**
+     * Returns a map of placeholder and its directories based on given {@link InstanceMetadata}.
+     */
+    public static Map<String, Set<String>> placeholderDirsMap(InstanceMetadata instanceMetadata)
+    {
+        Map<String, Set<String>> placeholderDirsMap = new HashMap<>();
+
+        placeholderDirsMap.put(HINTS_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.hintsDir()));
+        placeholderDirsMap.put(COMMITLOG_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.commitlogDir()));
+
+        if (instanceMetadata.savedCachesDir() != null)
+        {
+            placeholderDirsMap.put(SAVED_CACHES_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.savedCachesDir()));
+        }
+
+        if (instanceMetadata.cdcDir() != null)
+        {
+            placeholderDirsMap.put(CDC_RAW_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.cdcDir()));
+        }
+
+        if (instanceMetadata.localSystemDataFileDir() != null)
+        {
+            placeholderDirsMap.put(LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER,
+                                  Collections.singleton(instanceMetadata.localSystemDataFileDir()));
+        }
+
+        placeholderDirsMap.put(DATA_FILE_DIR_PLACEHOLDER, Set.copyOf(instanceMetadata.dataDirs()));
+
+        List<String> dataDirs = instanceMetadata.dataDirs();
+        for (int i = 0; i < dataDirs.size(); i++)
+        {
+            placeholderDirsMap.put(DATA_FILE_DIR_PLACEHOLDER + "_" + i, Collections.singleton(dataDirs.get(i)));
+        }
+
+        return placeholderDirsMap;
+    }
+
+
+    /**
      * Converts given live migration file download URL to local path.
      *
      * @param fileUrl  Live migration file download URL

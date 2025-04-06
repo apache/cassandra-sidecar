@@ -20,7 +20,9 @@ package org.apache.cassandra.sidecar.modules;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.ProvidesIntoMap;
+import org.apache.cassandra.sidecar.handlers.FileStreamHandler;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationApiEnableDisableHandler;
+import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationFileStreamHandler;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationListInstanceFilesHandler;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationMap;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationMapSidecarConfigImpl;
@@ -41,6 +43,20 @@ public class LiveMigrationModule extends AbstractModule
         bind(LiveMigrationMap.class).to(LiveMigrationMapSidecarConfigImpl.class);
     }
 
+
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationFileStreamHandlerRouteKey.class)
+    VertxRoute downloadFileRoute(RouteBuilder.Factory factory,
+                                 LiveMigrationApiEnableDisableHandler liveMigrationApiEnableDisableHandler,
+                                 LiveMigrationFileStreamHandler liveMigrationFileStreamHandler,
+                                 FileStreamHandler fileStreamHandler)
+    {
+        return factory.builderForRoute()
+                      .handler(liveMigrationApiEnableDisableHandler::isSource)
+                      .handler(liveMigrationFileStreamHandler)
+                      .handler(fileStreamHandler)
+                      .build();
+    }
 
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationListInstanceFilesRouteKey.class)

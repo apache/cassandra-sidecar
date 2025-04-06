@@ -204,6 +204,58 @@ class LiveMigrationInstanceMetadataUtilTest
                                     .doesNotContainKey(cassandraHomeDir + "/" + LOCAL_SYSTEM_DIR);
     }
 
+    @Test
+    public void testPlaceholderDirsMap()
+    {
+        String cassandraHomeDir = tempDir.resolve("testPlaceholderDirsMap").toString();
+        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
+        List<String> dataDirs = new ArrayList<>(2);
+        String dataDir2 = DATA_DIR + "2";
+        dataDirs.add(cassandraHomeDir + "/" + DATA_DIR);
+        dataDirs.add(cassandraHomeDir + "/" + dataDir2);
+        when(instanceMetadata.dataDirs()).thenReturn(dataDirs);
+
+        Map<String, Set<String>> placeholderDirsMap = LiveMigrationInstanceMetadataUtil.placeholderDirsMap(instanceMetadata);
+
+        Set<String> dirsToCopy = new HashSet<>(LiveMigrationInstanceMetadataUtil.dirsToCopy(instanceMetadata));
+        Set<String> dirsInMap = new HashSet<>();
+        placeholderDirsMap.forEach((k, v) -> dirsInMap.addAll(v));
+
+        // Placeholders should have been defined for all dirs that can be copied
+        assertThat(dirsInMap).isEqualTo(dirsToCopy);
+
+        assertThat(placeholderDirsMap).contains(
+        entry(HINTS_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.hintsDir())),
+        entry(COMMITLOG_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.commitlogDir())),
+        entry(SAVED_CACHES_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.savedCachesDir())),
+        entry(CDC_RAW_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.cdcDir())),
+        entry(LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.localSystemDataFileDir())),
+        entry(DATA_FILE_DIR_PLACEHOLDER, new HashSet<>(instanceMetadata.dataDirs())),
+        entry(DATA_FILE_DIR_PLACEHOLDER + "_" + 0, Collections.singleton(instanceMetadata.dataDirs().get(0))),
+        entry(DATA_FILE_DIR_PLACEHOLDER + "_" + 1, Collections.singleton(instanceMetadata.dataDirs().get(1)))
+        );
+    }
+
+    @Test
+    public void testPlaceholderDirsMapFewDirsNotConfigured()
+    {
+        String cassandraHomeDir = tempDir.resolve("testPlaceholderDirsMapFewDirsNotConfigured").toString();
+        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
+        when(instanceMetadata.cdcDir()).thenReturn(null);
+        when(instanceMetadata.localSystemDataFileDir()).thenReturn(null);
+
+        Map<String, Set<String>> placeholderDirsMap = LiveMigrationInstanceMetadataUtil.placeholderDirsMap(instanceMetadata);
+
+        Set<String> dirsToCopy = new HashSet<>(LiveMigrationInstanceMetadataUtil.dirsToCopy(instanceMetadata));
+        Set<String> dirsInMap = new HashSet<>();
+        placeholderDirsMap.forEach((k, v) -> dirsInMap.addAll(v));
+
+        // Placeholders should have been defined for all dirs that can be copied
+        assertThat(dirsInMap).isEqualTo(dirsToCopy);
+
+        assertThat(placeholderDirsMap).doesNotContainKey(CDC_RAW_DIR_PLACEHOLDER)
+                                      .doesNotContainKey(LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER);
+    }
 
     @Test
     public void testLocalPath()

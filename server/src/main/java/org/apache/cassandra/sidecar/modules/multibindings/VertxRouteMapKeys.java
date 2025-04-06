@@ -192,6 +192,11 @@ public interface VertxRouteMapKeys
         HttpMethod HTTP_METHOD = HttpMethod.GET;
         String ROUTE_URI = ApiEndpointsV1.SNAPSHOTS_ROUTE;
     }
+    interface LiveMigrationFileStreamHandlerRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_FILE_TRANSFER_API;
+    }
     interface LiveMigrationListInstanceFilesRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.GET;

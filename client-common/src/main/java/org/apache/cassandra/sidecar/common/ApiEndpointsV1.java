@@ -18,6 +18,13 @@
 
 package org.apache.cassandra.sidecar.common;
 
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LiveMigrationDirType.CDC_RAW_DIR;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LiveMigrationDirType.COMMIT_LOG_DIR;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LiveMigrationDirType.DATA_FIlE_DIR;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LiveMigrationDirType.HINTS_DIR;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LiveMigrationDirType.LOCAL_SYSTEM_DATA_FILE_DIR;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LiveMigrationDirType.SAVED_CACHES_DIR;
+
 /**
  * A constants container class for API endpoints of version 1.
  */
@@ -148,13 +155,50 @@ public final class ApiEndpointsV1
 
     public static final String LIVE_MIGRATION_FILES_API = LIVE_MIGRATION_API_PREFIX + "/files";
 
-    public static final String LIVE_MIGRATION_CDC_RAW_DIR_PATH = LIVE_MIGRATION_FILES_API + "/cdc_raw";
-    public static final String LIVE_MIGRATION_COMMITLOG_DIR_PATH = LIVE_MIGRATION_FILES_API + "/commitlog";
-    public static final String LIVE_MIGRATION_DATA_FILE_DIR_PATH = LIVE_MIGRATION_FILES_API + "/data";
-    public static final String LIVE_MIGRATION_HINTS_DIR_PATH = LIVE_MIGRATION_FILES_API + "/hints";
+    public static final String DIR_TYPE_PARAM = "dirType";
+    public static final String DIR_INDEX_PARAM = "dirIndex";
+    public static final String LIVE_MIGRATION_FILE_TRANSFER_API = LIVE_MIGRATION_FILES_API + "/:" + DIR_TYPE_PARAM
+                                                                  + "/:" + DIR_INDEX_PARAM + "/*";
+
+    /**
+     * Enum for holding different type of directories handled by Live Migration.
+     */
+    public enum LiveMigrationDirType
+    {
+        CDC_RAW_DIR("cdc_raw"),
+        COMMIT_LOG_DIR("commitlog"),
+        DATA_FIlE_DIR("data"),
+        HINTS_DIR("hints"),
+        LOCAL_SYSTEM_DATA_FILE_DIR("local_system_data"),
+        SAVED_CACHES_DIR("saved_caches");
+
+        private final String dirType;
+
+        LiveMigrationDirType(String dirType)
+        {
+            this.dirType = dirType;
+        }
+
+        public static LiveMigrationDirType find(String dirType)
+        {
+            for (LiveMigrationDirType type : values())
+            {
+                if (type.dirType.equals(dirType))
+                {
+                    return type;
+                }
+            }
+            return null;
+        }
+    }
+
+    public static final String LIVE_MIGRATION_CDC_RAW_DIR_PATH = LIVE_MIGRATION_FILES_API + "/" + CDC_RAW_DIR.dirType;
+    public static final String LIVE_MIGRATION_COMMITLOG_DIR_PATH = LIVE_MIGRATION_FILES_API + "/" + COMMIT_LOG_DIR.dirType;
+    public static final String LIVE_MIGRATION_DATA_FILE_DIR_PATH = LIVE_MIGRATION_FILES_API + "/" + DATA_FIlE_DIR.dirType;
+    public static final String LIVE_MIGRATION_HINTS_DIR_PATH = LIVE_MIGRATION_FILES_API + "/" + HINTS_DIR.dirType;
     public static final String LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH = LIVE_MIGRATION_FILES_API
-                                                                                + "/local_system_data";
-    public static final String LIVE_MIGRATION_SAVED_CACHES_DIR_PATH = LIVE_MIGRATION_FILES_API + "/saved_caches";
+                                                                                + "/" + LOCAL_SYSTEM_DATA_FILE_DIR.dirType;
+    public static final String LIVE_MIGRATION_SAVED_CACHES_DIR_PATH = LIVE_MIGRATION_FILES_API + "/" + SAVED_CACHES_DIR.dirType;
 
 
     private ApiEndpointsV1()
