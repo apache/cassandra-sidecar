@@ -30,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class SchemaReportingMetrics
 {
-    protected static final String DOMAIN = ServerMetrics.SERVER_PREFIX + ".SchemaReporting";
+    public static final String DOMAIN = ServerMetrics.SERVER_PREFIX + ".SchemaReporting";
 
     public final NamedMetric<DeltaGauge> startedRequest;
     public final NamedMetric<DeltaGauge> startedSchedule;
