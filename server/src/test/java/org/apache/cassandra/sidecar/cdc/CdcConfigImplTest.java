@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.cdc;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.server.ThrowingRunnable;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
@@ -118,6 +120,8 @@ class CdcConfigImplTest
         assertThat(cdcConfig.env()).isEqualTo("");
         assertThat(cdcConfig.kafkaTopic()).isNull();
         assertThat(cdcConfig.logOnly()).isFalse();
+        assertThat(cdcConfig.watermarkWindow()).isEqualTo(new SecondBoundConfiguration(72, TimeUnit.HOURS));
+        assertThat(cdcConfig.persistDelay()).isEqualTo(new MillisecondBoundConfiguration(1, TimeUnit.SECONDS));
     }
 
     @Test
@@ -126,7 +130,12 @@ class CdcConfigImplTest
         CdcConfigAccessor cdcConfigAccessor = mockCdcConfigAccessor();
         KafkaConfigAccessor kafkaConfigAccessor = mockKafkaConfigAccessor();
         when(cdcConfigAccessor.getConfig().getConfigs())
-                .thenReturn(Map.of("datacenter", "DC1", "env", "if", "log_only", "false", "topic", "topic1"));
+                .thenReturn(Map.of("datacenter", "DC1",
+                                   "env", "if",
+                                   "log_only", "false",
+                                   "topic", "topic1",
+                                   "watermark_seconds", "120",
+                                   "persist_delay_millis", "5000"));
         when(kafkaConfigAccessor.getConfig().getConfigs())
                 .thenReturn(Map.of("k1", "v1"));
 
@@ -137,6 +146,8 @@ class CdcConfigImplTest
         assertThat(cdcConfig.env()).isEqualTo("if");
         assertThat(cdcConfig.kafkaTopic()).isEqualTo("topic1");
         assertThat(cdcConfig.logOnly()).isFalse();
+        assertThat(cdcConfig.watermarkWindow()).isEqualTo(new SecondBoundConfiguration(2, TimeUnit.MINUTES));
+        assertThat(cdcConfig.persistDelay()).isEqualTo(new MillisecondBoundConfiguration(5, TimeUnit.SECONDS));
     }
 
     @Test

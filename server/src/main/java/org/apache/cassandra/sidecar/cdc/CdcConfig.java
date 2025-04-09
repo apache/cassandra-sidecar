@@ -19,7 +19,7 @@ package org.apache.cassandra.sidecar.cdc;
 
 import java.util.Map;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -79,7 +79,7 @@ public interface CdcConfig
     /**
      * @return watermark window
      */
-    MinuteBoundConfiguration watermarkWindow();
+    SecondBoundConfiguration watermarkWindow();
 
     /**
      * @return max Kafka record size in bytes. If value is non-negative then the KafkaPublisher will chunk larger records into multiple messages.

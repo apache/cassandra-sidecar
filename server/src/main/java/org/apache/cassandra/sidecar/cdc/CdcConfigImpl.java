@@ -36,7 +36,7 @@ import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.common.server.ThrowingRunnable;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -165,7 +165,7 @@ public class CdcConfigImpl implements CdcConfig
     @Override
     public MillisecondBoundConfiguration persistDelay()
     {
-        return new MillisecondBoundConfiguration(getInt(ConfigKeys.PERSIST_DELAY_MILLIS.lowcaseName, 1000), TimeUnit.SECONDS);
+        return new MillisecondBoundConfiguration(getInt(ConfigKeys.PERSIST_DELAY_MILLIS.lowcaseName, 1000), TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -175,11 +175,11 @@ public class CdcConfigImpl implements CdcConfig
     }
 
     @Override
-    public MinuteBoundConfiguration watermarkWindow()
+    public SecondBoundConfiguration watermarkWindow()
     {
         // this prop sets the maximum duration age accepted by CDC, any mutations with write timestamps older than
         // the watermark window will be dropped with log message "Exclude the update due to out of the allowed time window."
-        return new MinuteBoundConfiguration(getInt(ConfigKeys.WATERMARK_SECONDS.lowcaseName, DEFAULT_WATERMARK_WINDOW), TimeUnit.SECONDS);
+        return new SecondBoundConfiguration(getInt(ConfigKeys.WATERMARK_SECONDS.lowcaseName, DEFAULT_WATERMARK_WINDOW), TimeUnit.SECONDS);
     }
 
     @Override
