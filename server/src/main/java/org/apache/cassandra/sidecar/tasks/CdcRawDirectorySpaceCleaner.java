@@ -33,7 +33,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,8 +47,8 @@ import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.db.SystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
-import org.apache.cassandra.sidecar.metrics.CdcMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.server.CdcMetrics;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.FileUtils;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
