@@ -27,6 +27,7 @@ We warmly welcome and appreciate contributions from the community.
 * [How to Contribute](#how-to-contribute)
   * [Discuss](#discuss)
   * [Create a Ticket](#ticket)
+  * [Integration with IntelliJ IDEA](#idea)
 * [Source Code Best Practices](#best-practices)
   * [Introducing new APIs](#new-apis)
   * [Asynchronous Programming](#async-programming)
@@ -38,7 +39,6 @@ We warmly welcome and appreciate contributions from the community.
   * [Future Composition](#future-composition)
   * [Failure Handling](#failure-handling)
   * [Cassandra Adapters](#cassandra-adapters)
-* [Source Code Style](#source-code-style)
 
 ## <a name="how-to-contribute"></a>How to Contribute
 
@@ -56,6 +56,25 @@ important design discussions and decisions that can often be referenced after th
 the origin of a feature, understand design decisions, and so on.
 
 When ready create a Jira ticket.
+
+### <a name="idea"></a>Integration with IntelliJ IDEA
+
+The project provides an
+[IntelliJ IDEA code formatting configuration](https://github.com/apache/cassandra-sidecar/blob/trunk/ide/idea/codeStyleSettings.xml)
+that defines the source file coding standards.
+
+To import the formatting configuration run the following gradle task:
+
+```shell
+./gradlew idea
+```
+
+This will install the style settings into the `.idea` directory located at the root of the project directory.
+
+You can then use the provided configuration that adheres to the project source file coding standards.
+
+> **NOTE**: Opening a newly cloned repository in IDEA before running the command above will result in the default code
+>           format settings being used instead; if that is the case, delete the `.idea` directory and start over.
 
 ## <a name="best-practices"></a>Source Code Best Practices
 
@@ -406,18 +425,3 @@ The `CassandraAdapterFactory` has a version tag which represents the minimum ver
 When adding shims, implement the minimum necessary changes in the new package and name all classes with a version number after the word `Cassandra`.
 For example, if `base`'s minimum version is moved to 5.0, a Cassandra40 adapter package/subproject should be added, with a minimum version of 4.0.0.
 Within that project, the classes should all be named `Cassandra40*`, so `Cassandra40Adapter`, `Cassandra40Factory`, etc.
-
-## <a name="source-code-style"></a>Source Code Style
-
-The project provides an
-[IntelliJ IDEA code formatting configuration](https://github.com/apache/cassandra-sidecar/blob/trunk/ide/idea/codeStyleSettings.xml)
-that defines the source file coding standards.
-
-To import the formatting configuration run the following gradle task:
-
-```shell
-./gradlew idea
-```
-
-This will install the style settings into the `.idea` directory located at the root of the project directory.
-You can then use the provided configuration that adheres to the project source file coding standards.

@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Improved Documentation on IDE Integration (CASSSIDECAR-227)
  * Schema Reporting Metrics Improvements (CASSSIDECAR-231)
  * Fixing incorrect creation of MinuteBoundConfiguration & MillisecondBoundConfiguration in CdcConfigImpl (CASSSIDECAR-236)
  * Improvements to CDCConfig classes (CASSSIDECAR-235)
