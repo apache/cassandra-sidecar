@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.cassandra.sidecar.client.retry.CreateRestoreJobRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.IgnoreConflictRetryPolicy;
+import org.apache.cassandra.sidecar.client.retry.LiveMigrationDownloadRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.OncePerInstanceRetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.client.retry.RunnableOnStatusCodeRetryPolicy;
@@ -43,10 +44,12 @@ import org.apache.cassandra.sidecar.common.request.CreateRestoreJobSliceRequest;
 import org.apache.cassandra.sidecar.common.request.DeleteServiceConfigRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.ListCdcSegmentsRequest;
+import org.apache.cassandra.sidecar.common.request.LiveMigrationListInstanceFilesRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobProgressRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobSummaryRequest;
 import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.common.request.StreamCdcSegmentRequest;
+import org.apache.cassandra.sidecar.common.request.StreamFileRequest;
 import org.apache.cassandra.sidecar.common.request.UpdateRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.UpdateServiceConfigRequest;
 import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
@@ -61,6 +64,7 @@ import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestP
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
+import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
@@ -888,6 +892,38 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     public <T> CompletableFuture<T> executeRequestAsync(RequestContext context)
     {
         return executor.executeRequestAsync(context);
+    }
+
+    /**
+     * Gets list of files available at a Cassandra Instance using Sidecar during Live Migration.
+     *
+     * @param instance Sidecar instance where the request will be executed
+     * @return a CompletableFuture representing the completion of the operation
+     */
+    public CompletableFuture<InstanceFilesListResponse> liveMigrationListInstanceFilesAsync(SidecarInstance instance)
+    {
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .request(new LiveMigrationListInstanceFilesRequest())
+                                                            .build());
+    }
+
+
+    /**
+     * Downloads requested file {@code reqPath} to the destination file provided with param {@code targetFile}
+     * during Live Migration.
+     *
+     * @param instance       the instance where the request will be executed
+     * @param reqPath        instance file path to copy
+     * @param targetFilePath destination file path to save file coming from remote
+     * @return a CompletableFuture representing the completion of the operation
+     */
+    public CompletableFuture<Boolean> liveMigrationStreamFileAsync(SidecarInstance instance, String reqPath, String targetFilePath)
+    {
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .request(new StreamFileRequest(reqPath, targetFilePath))
+                                                            .retryPolicy(new LiveMigrationDownloadRetryPolicy(defaultRetryPolicy, targetFilePath))
+                                                            .build())
+                       .thenApply(v -> true);
     }
 
     /**

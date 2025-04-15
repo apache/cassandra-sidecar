@@ -78,6 +78,8 @@ import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
+import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
+import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
@@ -105,10 +107,13 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.JOB_ID_PATH_PARAM;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE_PATH_PARAM;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_FILES_API;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.OPERATIONAL_JOB_ID_PATH_PARAM;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE_PATH_PARAM;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32_SEED;
+import static org.apache.cassandra.sidecar.common.response.InstanceFileInfo.FileType.DIRECTORY;
+import static org.apache.cassandra.sidecar.common.response.InstanceFileInfo.FileType.FILE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -1809,6 +1814,90 @@ abstract class SidecarClientTest
             String requestBody = request.getBody().readUtf8();
             assertThat(requestBody).isEqualTo("{\"state\":\"stop\"}");
         });
+    }
+
+    @Test
+    public void testLiveMigrationListInstanceFiles() throws ExecutionException, InterruptedException, JsonProcessingException
+    {
+        List<InstanceFileInfo> fileInfoList = Arrays.asList(new InstanceFileInfo("commit-log1", 100, FILE, System.currentTimeMillis()),
+                                                            new InstanceFileInfo("commit-log2", 100, DIRECTORY, System.currentTimeMillis()));
+        InstanceFilesListResponse filesListResponse = new InstanceFilesListResponse(fileInfoList);
+        ObjectMapper mapper = new ObjectMapper();
+
+        MockResponse response = new MockResponse();
+        response.setResponseCode(200);
+        response.setHeader("content-type", "application/json");
+        response.setBody(mapper.writeValueAsString(filesListResponse));
+        enqueue(response);
+
+        SidecarInstance instance = instances.get(0);
+        InstanceFilesListResponse result = client.liveMigrationListInstanceFilesAsync(instance).get();
+        assertThat(result).isNotNull();
+        assertThat(result).isEqualTo(filesListResponse);
+        validateResponseServed(ApiEndpointsV1.LIVE_MIGRATION_FILES_API);
+    }
+
+    @Test
+    public void testLiveMigrationStreamFileAsync(@TempDir Path tempDirectory) throws ExecutionException, InterruptedException, IOException
+    {
+        String dummyFileContent = "Some dummy file content";
+        MockResponse response = new MockResponse();
+        response.setResponseCode(200);
+        response.setHeader("content-type", "application/text");
+        response.setBody(dummyFileContent);
+        enqueue(response);
+
+        Path filePath = tempDirectory.resolve("test_file.txt");
+        SidecarInstance instance = instances.get(0);
+        String fileUrl = LIVE_MIGRATION_FILES_API + "/data/0/test_file.text";
+
+        Boolean result = client.liveMigrationStreamFileAsync(instance, fileUrl, filePath.toString()).get();
+
+        assertThat(result).isNotNull();
+        assertThat(result).isTrue();
+        assertThat(Files.exists(filePath)).isTrue();
+        assertThat(new String(Files.readAllBytes(filePath), StandardCharsets.UTF_8)).isEqualTo(dummyFileContent);
+        validateResponseServed(fileUrl);
+    }
+
+    @Test
+    public void testLiveMigrationStreamFileAsyncFileNotFound(@TempDir Path tempDirectory) throws ExecutionException, InterruptedException
+    {
+        MockResponse response = new MockResponse();
+        response.setResponseCode(404);
+        enqueue(response);
+
+        Path filePath = tempDirectory.resolve("test_file.txt");
+        SidecarInstance instance = instances.get(0);
+        String fileUrl = LIVE_MIGRATION_FILES_API + "/data/0/test_file.text";
+
+        Boolean result = client.liveMigrationStreamFileAsync(instance, fileUrl, filePath.toString()).get();
+
+        assertThat(result).isNotNull();
+        assertThat(result).isTrue(); // File not found is treated as success for LiveMigration
+        assertThat(Files.exists(filePath)).isFalse();
+        validateResponseServed(fileUrl);
+    }
+
+    @Test
+    public void testLiveMigrationStreamFileAsyncBadRequest(@TempDir Path tempDirectory) throws InterruptedException
+    {
+        MockResponse response = new MockResponse();
+        response.setResponseCode(400);
+        enqueue(response);
+
+        Path filePath = tempDirectory.resolve("test_file.txt");
+        SidecarInstance instance = instances.get(0);
+        String fileUrl = LIVE_MIGRATION_FILES_API + "/data/0/test_file.text";
+
+        CompletableFuture<Boolean> result = client.liveMigrationStreamFileAsync(instance, fileUrl, filePath.toString());
+
+        assertThatExceptionOfType(ExecutionException.class).isThrownBy(result::get);
+        assertThat(result).isNotNull();
+        assertThat(result.isDone()).isTrue();
+        assertThat(result.isCompletedExceptionally()).isTrue();
+        assertThat(Files.exists(filePath)).isFalse();
+        validateResponseServed(fileUrl);
     }
 
     private void enqueue(MockResponse response)

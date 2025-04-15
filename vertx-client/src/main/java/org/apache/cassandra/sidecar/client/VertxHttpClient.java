@@ -22,6 +22,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.List;
@@ -54,6 +56,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.client.predicate.ResponsePredicateResult;
 import io.vertx.ext.web.codec.BodyCodec;
+import org.apache.cassandra.sidecar.common.request.DownloadableRequest;
 import org.apache.cassandra.sidecar.common.request.Request;
 import org.apache.cassandra.sidecar.common.request.UploadableRequest;
 
@@ -133,11 +136,7 @@ public class VertxHttpClient implements HttpClient
 
     protected CompletableFuture<HttpResponse> executeInternal(SidecarInstance sidecarInstance, RequestContext context)
     {
-        Future<HttpRequest<Buffer>> future = Future.future(promise -> promise.complete(vertxRequest(sidecarInstance, context)
-                                                                                       .ssl(config.ssl())
-                                                                                       .timeout(config.timeoutMillis())));
-
-        return future
+        return vertxRequestFuture(sidecarInstance, context)
                .compose(vertxRequest -> {
                    Request request = context.request();
                    if (request.requestBody() != null)
@@ -146,16 +145,70 @@ public class VertxHttpClient implements HttpClient
                    }
                    return vertxRequest.send();
                })
-               .map(response -> {
-                   byte[] raw = response.body() != null ? response.body().getBytes() : null;
-                   return (HttpResponse) new HttpResponseImpl(response.statusCode(),
-                                                              response.statusMessage(),
-                                                              raw,
-                                                              mapHeaders(response.headers()),
-                                                              sidecarInstance
-                   );
+               .map(rawResponse -> {
+                   io.vertx.ext.web.client.HttpResponse response = (io.vertx.ext.web.client.HttpResponse) rawResponse;
+                   byte[] raw = null;
+                   if (response.body() instanceof Buffer)
+                   {
+                       raw = ((Buffer) response.body()).getBytes();
+                   }
+
+                   if (response.statusCode() != HttpResponseStatus.OK.code()
+                       && context.request() instanceof DownloadableRequest)
+                   {
+                       DownloadableRequest downloadableRequest = (DownloadableRequest) context.request();
+                       // cleanup the destinationPath
+                       vertx.fileSystem().deleteBlocking(downloadableRequest.destinationPath());
+                   }
+
+                   return new HttpResponseImpl(response.statusCode(),
+                                               response.statusMessage(),
+                                               raw,
+                                               mapHeaders(response.headers()),
+                                               sidecarInstance);
                })
                .toCompletionStage().toCompletableFuture();
+    }
+
+    protected Future<HttpRequest> vertxRequestFuture(SidecarInstance sidecarInstance, RequestContext context)
+    {
+        if (context.request() instanceof DownloadableRequest)
+        {
+            Promise<HttpRequest> promise = Promise.promise();
+            DownloadableRequest downloadableRequest = (DownloadableRequest) context.request();
+            String destinationPath = downloadableRequest.destinationPath();
+            createTargetDirectory(destinationPath)
+            .compose(Void -> openTargetFile(destinationPath))
+            .onSuccess(targetFile -> promise.complete(vertxRequest(sidecarInstance, context)
+                                                      .as(BodyCodec.pipe(targetFile))))
+            .onFailure(promise::fail);
+            return promise.future();
+        }
+        else
+        {
+            return Future.succeededFuture(vertxRequest(sidecarInstance, context)
+                                          .ssl(config.ssl())
+                                          .timeout(config.timeoutMillis()));
+        }
+    }
+
+    protected Future<Void> createTargetDirectory(String targetPath)
+    {
+        Path parent = Paths.get(targetPath).getParent();
+        if (null == parent)
+        {
+            return Future.failedFuture(targetPath + " does not have a parent directory");
+        }
+
+        String targetDirectory = parent.toString();
+        return vertx.fileSystem().mkdirs(targetDirectory)
+                    .onFailure(ex -> LOGGER.error("Unable to create folder {}", targetDirectory, ex));
+    }
+
+    protected Future<AsyncFile> openTargetFile(String targetPath)
+    {
+        return vertx.fileSystem().open(targetPath, new OpenOptions().setTruncateExisting(true)
+                                                                    .setCreate(true));
     }
 
     protected CompletableFuture<HttpResponse> executeUploadFileInternal(SidecarInstance sidecarInstance,
