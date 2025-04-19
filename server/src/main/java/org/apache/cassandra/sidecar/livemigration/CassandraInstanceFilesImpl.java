@@ -27,6 +27,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -38,18 +40,6 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_COMMITLOG_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_HINTS_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_SAVED_CACHES_DIR_PATH;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.CDC_RAW_DIR_PLACEHOLDER;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.COMMITLOG_DIR_PLACEHOLDER;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.DATA_FILE_DIR_PLACEHOLDER;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.HINTS_DIR_PLACEHOLDER;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.SAVED_CACHES_DIR_PLACEHOLDER;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.hasAnyPlaceholder;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.hasPlaceholder;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.replacePlaceholder;
@@ -97,69 +87,25 @@ public class CassandraInstanceFilesImpl implements CassandraInstanceFiles
     public List<DirVisitor> getDirVisitorList(Set<String> filesToExclude,
                                               Set<String> dirsToExclude)
     {
-
         List<DirVisitor> dataFilesToVisit = new ArrayList<>();
+        List<String> dirsToCopy = LiveMigrationInstanceMetadataUtil.dirsToCopy(instanceMetadata);
+        Map<String, String> dirPathPrefix = LiveMigrationInstanceMetadataUtil.dirPathPrefixMap(instanceMetadata);
+        Map<String, Set<String>> dirPlaceholderMap = LiveMigrationInstanceMetadataUtil.dirPlaceHoldersMap(instanceMetadata);
 
-        getDirToVisit(instanceMetadata.hintsDir(),
-                      0,
-                      Collections.singleton(HINTS_DIR_PLACEHOLDER),
-                      LIVE_MIGRATION_HINTS_DIR_PATH,
-                      filesToExclude,
-                      dirsToExclude)
-        .ifPresent(dataFilesToVisit::add);
-
-
-        getDirToVisit(instanceMetadata.commitlogDir(),
-                      0,
-                      Collections.singleton(COMMITLOG_DIR_PLACEHOLDER),
-                      LIVE_MIGRATION_COMMITLOG_DIR_PATH,
-                      filesToExclude,
-                      dirsToExclude).ifPresent(dataFilesToVisit::add);
-
-
-        getDirToVisit(instanceMetadata.savedCachesDir(),
-                      0,
-                      Collections.singleton(SAVED_CACHES_DIR_PLACEHOLDER),
-                      LIVE_MIGRATION_SAVED_CACHES_DIR_PATH,
-                      filesToExclude,
-                      dirsToExclude).ifPresent(dataFilesToVisit::add);
-
-
-        getDirToVisit(instanceMetadata.cdcDir(),
-                      0,
-                      Collections.singleton(CDC_RAW_DIR_PLACEHOLDER),
-                      LIVE_MIGRATION_CDC_RAW_DIR_PATH,
-                      filesToExclude,
-                      dirsToExclude).ifPresent(dataFilesToVisit::add);
-
-
-        getDirToVisit(instanceMetadata.localSystemDataFileDir(),
-                      0,
-                      Collections.singleton(LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER),
-                      LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH,
-                      filesToExclude,
-                      dirsToExclude).ifPresent(dataFilesToVisit::add);
-
-        List<String> dataDirs = instanceMetadata.dataDirs();
-        for (int i = 0; i < dataDirs.size(); i++)
+        for (String dir : dirsToCopy)
         {
-            String dataDir = dataDirs.get(i);
-            Set<String> dataDirPlaceHolders = new java.util.HashSet<>();
-            dataDirPlaceHolders.add(DATA_FILE_DIR_PLACEHOLDER);
-            dataDirPlaceHolders.add(DATA_FILE_DIR_PLACEHOLDER + "_" + i);
-
-            getDirToVisit(dataDir,
-                          i,
-                          dataDirPlaceHolders,
-                          LIVE_MIGRATION_DATA_FILE_DIR_PATH,
+            getDirToVisit(dir,
+                          dirPlaceholderMap.get(dir),
+                          dirPathPrefix.get(dir),
                           filesToExclude,
-                          dirsToExclude).ifPresent(dataFilesToVisit::add);
+                          dirsToExclude)
+            .ifPresent(dataFilesToVisit::add);
         }
 
         return dataFilesToVisit;
     }
 
-    Optional<DirVisitor> getDirToVisit(String homeDir, int index, Set<String> placeholders, String pathPrefix,
+    Optional<DirVisitor> getDirToVisit(String homeDir, Set<String> placeholders, String pathPrefix,
                                        Set<String> filesToExclude, Set<String> dirsToExclude)
     {
         if (null == homeDir)
@@ -172,10 +118,13 @@ public class CassandraInstanceFilesImpl implements CassandraInstanceFiles
             return Optional.empty();
         }
 
+        Objects.requireNonNull(placeholders);
+        Objects.requireNonNull(pathPrefix);
+
         Set<PathMatcher> fileExclusionMatchers = toPathMatchers(filesToExclude, placeholders, homeDir);
         Set<PathMatcher> dirExclusionMatchers = toPathMatchers(dirsToExclude, placeholders, homeDir);
 
-        return Optional.of(new DirVisitor(homeDir, index, pathPrefix, fileExclusionMatchers, dirExclusionMatchers));
+        return Optional.of(new DirVisitor(homeDir, pathPrefix, fileExclusionMatchers, dirExclusionMatchers));
     }
 
     Set<PathMatcher> toPathMatchers(Set<String> exclusions, Set<String> homeDirPlaceholders, String homeDir)
@@ -189,7 +138,7 @@ public class CassandraInstanceFilesImpl implements CassandraInstanceFiles
                          .filter(exclusion -> !hasAnyPlaceholder(exclusion)
                                               || hasPlaceholder(exclusion, homeDirPlaceholders))
                          .map(file -> replacePlaceholder(file, homeDirPlaceholders, homeDir))
-                         .filter(exclusion -> exclusion != null)
+                         .filter(Objects::nonNull)
                          .map(file -> FileSystems.getDefault().getPathMatcher(file))
                          .collect(Collectors.toSet());
     }

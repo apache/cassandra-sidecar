@@ -54,27 +54,26 @@ class DirVisitorTest
         // creating a test file with length 5
         createFile("efghi", homeDir, "ks1", "t1", "data2.db");
         int homeDirIndex = 3;
-        String pathPrefix = "/DUMMY_PREFIX";
+        String pathPrefix = "/DUMMY_PREFIX/" + homeDirIndex;
 
-        DirVisitor dirVisitor = new DirVisitor(homeDir, homeDirIndex, pathPrefix,
-                                               Collections.emptySet(), Collections.emptySet());
+        DirVisitor dirVisitor = new DirVisitor(homeDir, pathPrefix, Collections.emptySet(), Collections.emptySet());
         List<InstanceFileInfo> files = dirVisitor.getFiles();
         assertThat(files.size()).isEqualTo(4); // Two directories and two files
 
-        assertThat(findInstanceFileInfo(files, pathPrefix + "/" + homeDirIndex + "/ks1")).isNotNull();
-        assertThat(findInstanceFileInfo(files, pathPrefix + "/" + homeDirIndex + "/ks1").size)
+        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1")).isNotNull();
+        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1").size)
         .isEqualTo(-1);
 
-        assertThat(findInstanceFileInfo(files, pathPrefix + "/" + homeDirIndex + "/ks1/t1")).isNotNull();
-        assertThat(findInstanceFileInfo(files, pathPrefix + "/" + homeDirIndex + "/ks1/t1").size)
+        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1")).isNotNull();
+        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1").size)
         .isEqualTo(-1);
 
-        assertThat(findInstanceFileInfo(files, pathPrefix + "/" + homeDirIndex + "/ks1/t1/data1.db")).isNotNull();
-        assertThat(findInstanceFileInfo(files, pathPrefix + "/" + homeDirIndex + "/ks1/t1/data1.db").size)
+        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1/data1.db")).isNotNull();
+        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1/data1.db").size)
         .isEqualTo(4);
 
-        assertThat(findInstanceFileInfo(files, pathPrefix + "/" + homeDirIndex + "/ks1/t1/data2.db")).isNotNull();
-        assertThat(findInstanceFileInfo(files, pathPrefix + "/" + homeDirIndex + "/ks1/t1/data2.db").size)
+        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1/data2.db")).isNotNull();
+        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1/data2.db").size)
         .isEqualTo(5);
     }
 }

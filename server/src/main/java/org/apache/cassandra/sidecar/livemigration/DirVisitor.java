@@ -41,19 +41,16 @@ public class DirVisitor
     private static final Logger LOGGER = LoggerFactory.getLogger(DirVisitor.class);
     private final String homeDir;
     private final Path homeDirPath;
-    private final int homeDirIndex;
     private final String pathPrefix;
     private final MigrationFileVisitor fileVisitor;
 
     public DirVisitor(String homeDir,
-                      int homeDirIndex,
                       String pathPrefix,
                       Set<PathMatcher> fileExclusionMatchers,
                       Set<PathMatcher> dirExclusionMatchers)
     {
         this.homeDir = homeDir;
         this.homeDirPath = Paths.get(homeDir);
-        this.homeDirIndex = homeDirIndex;
         this.pathPrefix = pathPrefix;
         this.fileVisitor = new MigrationFileVisitor(homeDir, fileExclusionMatchers, dirExclusionMatchers);
     }
@@ -100,6 +97,6 @@ public class DirVisitor
     private String getInstanceFileUrl(@NotNull Path path)
     {
         String relativePath = homeDirPath.relativize(path).toString();
-        return pathPrefix + "/" + homeDirIndex + "/" + relativePath;
+        return pathPrefix + "/" + relativePath;
     }
 }
