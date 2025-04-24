@@ -22,4 +22,7 @@ apply plugin: 'org.asciidoctor.jvm.convert'
 asciidoctor {
     sourceDir = file("src")
     outputDir = file("build")
+    attributes(
+            'project-version': project.version
+    )
 }

@@ -1,0 +1,292 @@
+# Configuring Cassandra Sidecar
+
+The location of the Cassandra Sidecar configuration files varies depending on installation. Generally, you can find them in:
+
+* `/opt/cassandra-sidecar/conf` for Debian and RPM installations
+* `<location of extracted tarball>/apache-cassandra-sidecar-{project-version}/conf` for tarball installations.
+
+Cassandra Sidecar ships with 2 configuration files, a `logback.xml` file necessary to configure logging and a `sidecar.yaml` file which manages the configuration for the Cassandra Sidecar process. For information on how to configure Logback, see the official https://logback.qos.ch/manual/configuration.html[Logback documentation].
+
+## The `sidecar.yaml` Configuration
+
+The `sidecar.yaml` configuration has a number of sections which are used to manage the configuration of Cassandra Sidecar. These sections are:
+
+* <<cassandra-instances, `cassandra_instances`>>: This defines the configuration for the Cassandra instances managed by this Cassandra Sidecar installation
+* <<sidecar, `sidecar`>>: This defines the configuration for the Cassandra Sidecar server itself.
+* <<vert.x, `vert.x`>>: This defines the configuration for https://vertx.io/[Vert.x].
+* <<schema-reporting, `schema_reporting`>>: This defines the configuration for reporting schemas to DataHub.
+* <<ssl, `ssl`>>: This defines the configuration for managing TLS for Cassandra Sidecar.
+* <<access-control, `access_control`>>: This defines the authentication and authorization configurations for Cassandra Sidecar.
+* <<driver-parameters, `driver_parameters`>>: This defines the configuration for how Cassandra Sidecar can connect to the Cassandra cluster over CQL.
+* <<healthcheck, `healthcheck`>>: This defines the configuration for the periodic health check task for Cassandra Sidecar.
+* <<sidecar-peer-health, `sidecar_peer_health`>>: This defines the configuration for the periodic health check task for adjacent Cassandra Sidecar peers in the token ring.
+* <<sidecar-client, `sidecar_client`>>: This defines how Cassandra Sidecar can interact with other Cassandra Sidecar instances.
+* <<metrics, `metrics`>>: This defines how Cassandra Sidecar exposes metrics.
+* <<cassandra-input-validation, `cassandra_input_validation`>>: This defines the input validation for Cassandra names used for SSTable imports.
+* <<blob-restore, `blob_restore`>>: This defines the configuration for restoring data onto Cassandra nodes managed by Cassandra Sidecar.
+* <<s3-client, `s3_client`>>: This defines the configuration for connecting to S3 from Cassandra Sidecar.
+* <<live-migration, `live_migration`>>: This defines the configuration for the live migration feature, which enables fast movement of data between hosts using zero-copy streaming.
+
+[[cassandra-instances]]
+### cassandra_instances
+
+The `cassandra_instances` section of the `sidecar.yaml` file is used to define the Cassandra instances that this Cassandra Sidecar will manage. This list should contain the Cassandra instances which are running locally to the Cassandra Sidecar process.
+
+* `id`: A unique identifier for the Cassandra instance.
+* `host`: The hostname or IP address of the Cassandra instance's CQL interface (e.g., `listen_address`).
+* `port`: The port on which the Cassandra instance is listening for CQL connections. By default, 9042.
+* `storage_dir`: (Optional) The instance's storage directory as defined per the cassandra.storagedir property which defaults to the $CASSANDRA_HOME/data directory, but can be configured to any directory. By default, storage directory is the parent directory of `data_dirs`, `commitlog_dir`, `cdc_dir`, `hints_dir` and `saved_caches_dir`. If `data_dirs`, `commitlog_dir`, `cdc_dir`, `hints_dir` or `saved_caches_dir` are configured explicitly, then they will be used. Otherwise, default paths based on storage directory will be used.
+* `staging_dir`: This defines the directory in which Cassandra Sidecar will write SSTables before importing them into this Cassandra instance. By default, `var/lib/cassandra/sstable-staging`.
+* `data_dirs`: (Optional) This defines the data directories for the Cassandra instance. Set this to the value stored in the `cassandra.yaml` under `data_file_directories`. If not set, this is set to `<storage_dir>/data`
+* `cdc_dir`: (Optional) This is the directory where Cassandra Sidecar will look to read change data capture (CDC) files. This should be set to the value stored in the `cassandra.yaml` under `cdc_raw_directory`. If not set, this defaults to `<storage_dir>/cdc_raw`.
+* `commitlog_dir`: (Optional) This is the directory where Cassandra Sidecar will look to read commit log files. This should be set to the value stored in the `cassandra.yaml` under `commitlog_directory`. If not set, this defaults to `<storage_dir>/commitlog`.
+* `hints_dir`: (Optional) This is the directory where Cassandra Sidecar will look to read hints files. This should be set to the value stored in the `cassandra.yaml` under `hints_directory`. If not set, this defaults to `<storage_dir>/hints`.
+* `saved_caches_dir`: (Optional) This is the directory where Cassandra Sidecar will look to read saved cache files. This should be set to the value stored in the `cassandra.yaml` under `saved_caches_directory`. If not set, this defaults to `<storage_dir>/saved_caches`.
+* `jmx_host`: The hostname or IP address of the Cassandra instance's JMX interface. Defaults to 127.0.0.1.
+* `jmx_port`: The port on which the Cassandra instance is listening for JMX connections. Defaults to 7199.
+* `jmx_ssl_enabled`: Set to `true` if JMX is secured via SSL, otherwise `false`.
+* `jmx_role`: The role name for JMX authentication (if applicable).
+* `jmx_password`: The password associated with the JMX role (if applicable).
+
+[[sidecar]]
+### sidecar
+
+The `sidecar` section of the `sidecar.yaml` file is used to configure the Cassandra Sidecar server itself. This includes settings for the web server, port, and other server-related configurations.
+
+* `host`: The hostname or IP address on which the Cassandra Sidecar server will listen. By default, `0.0.0.0`.
+* `port`: The port on which the Cassandra Sidecar server will listen. By default, 9043.
+* `request_idle_timeout`: This configures how long a request can be idle. By default, 5 minutes (`5m`).
+* `request_timeout`: This configures the maximum time a request can take before timing out. By default, 5 minutes (`5m`).
+* `tcp_keep_alive`: This enables TCP keep-alive for the server socket. By default, this is set to `false`.
+* `accept_backlog`: This sets the maximum number of pending connections that can be queued up before the server starts rejecting new connections. By default, 1024.
+* `server_verticle_instances`: This sets the number of vert.x Verticle instances to spawn. By default, 1.
+* `dns_resolver`: This configures the DNS resolver for Cassandra Sidecar. Currently supported values are `default` and `resolve_to_ip`. `default` will resolve hostnames to addresses and addresses to hostnames whereas `resolve_to_ip` will only resolve hostnames to addresses.
+* `throttle`: This subsection configures streaming throttling for the Cassandra Sidecar server. The configurations in this subsection include:
+    ** `stream_requests_per_sec`: This sets the rate which the maximum number of stream requests per second that can be handled by the server. By default, 5000.
+    ** `timeout`: This defines the timeout used to determine when to stop retrying stream requests when stream requests are throttled. By default, 10 seconds (`10s`).
+* `traffic_shaping`: This subsection holds the configuration for the global traffic shaping options. These TCP server options enable configuration of bandwidth limiting.
+    ** `inbound_global_bandwidth_bps`: Defines the inbound network bytes per second bandwidth limit for each connection to the server. By default, 0, which means no limit.
+    ** `outbound_global_bandwidth_bps`: Defines the outbound network bytes per second bandwidth limit for each connection to the server. By default, 0, which means no limit.
+    ** `peak_outbound_global_bandwidth_bps`: Defines the maximum global outbound write size in bytes per second allowed in by the server across all connections. By default, 400 mebibytes per second.
+    ** `max_delay_to_wait`: This defines the maximum delay to wait in the event of traffic excess beyond `peak_outbound_global_bandwidth_bps`. By default, is 15 seconds (`15s`).
+    ** `check_interval_for_stats`: This defines the period at which the server will compute channel performance statistics. Set to 0 if no statistics are to be computed. By default, value is 1 second (`1s`)
+    ** `inbound_global_file_bandwidth_bps`: This defines the limit in bytes per second for incoming files (e.g. SSTable components). This is upper-bounded by `inbound_global_bandwidth_bps`. By default, 0, which mean no additional throttling beyond `inbound_global_bandwidth_bps`.
+* `sstable_upload`: This subsection manages the configuration for SSTable component uploads by Cassandra Sidecar.
+    ** `concurrent_upload_limit`: This defines the maximum number of SSTable components that can be uploaded concurrently. By default, `80`.
+    ** `min_free_space_percent`: This defines the minimum percentage of available disk required for SSTable component uploads to proceed. By default, `10`.
+* `allowable_time_skew`: This defines the maximum allowable time skew between Cassandra Sidecar and clients of Cassandra Sidecar. The minimum resolution is defined in minutes. By default, this is set to 1 hour.
+* `sstable_import`: This subsection manages the configuration for Cassandra Sidecar's SSTable import functionality. The following properties are defined:
+    ** `execute_interval`: The interval at which Cassandra Sidecar will execute SSTable import tasks.
+    ** `cache`: This subsection defines the properties for the cache used for SSTable Import requests.
+    *** `expire_after_access`: The length of time that SSTable import requests will live in the cache. Defaults to 2 hours (`2h`).
+    *** `maximum_size`: The maximum number of SSTable import requests that can be cached. Defaults to `10000`.
+* `sstable_snapshot`: This subsection manages the configuration for Cassandra Sidecar's SSTable snapshot functionality. The following properties are defined:
+    ** `snapshot_list_cache`: This subsection defines the properties for the cache used to store SSTable snapshot file lists.
+    *** `expire_after_access`: The length of time that SSTable snapshot file lists will live in the cache. Defaults to 2 hours (`2h`).
+    *** `maximum_size`: The maximum number of SSTable snapshot file lists that can be cached. Defaults to `10000`.
+* `cdc`: This subsection manages the Change Data Capture (CDC) consumption configuration for Cassandra Sidecar. It defines the following values:
+    ** `enabled`: This boolean value determines whether CDC consumption is enabled. Defaults to `false`.
+    ** `config_refresh_time`: This value defines how often CDC configurations will be refreshed. Default to 30 seconds (`30s`).
+    ** `segment_hardlink_cache_expiry`: This value defines the length of time that cdc segment hard links will be cached. Defaults to 5 minutes (`5m`).
+* `worker_pools`: This subsection defines the worker thread pools used by Cassandra Sidecar. It defines the following values:
+  ** `service`: This is the thread pool used to manage service requests in Cassandra Sidecar. We define the following properties:
+    *** `name`: The name of the worker pool.
+    *** `size`: The maximum number of threads in the worker pool.
+    *** `max_execution_time`: The maximum time that a task can take to execute in the worker pool.
+* `jmx`: This defines the non-instance specific configuration for how Cassandra Sidecar handles JMX requests.
+    ** `max_retries`: The number of times to retry failed JMX requests. Defaults to 3.
+    ** `retry_delay`: The delay to wait between retries. Defaults to 200 milliseconds (`200ms`).
+* `schema`: This subsection defines the configuration for Cassandra Sidecar's schema creation.
+    ** `is_enabled`: This indicates whether schema creation is enabled. Defaults to `false`.
+    ** `keyspace`: This is the name of the keyspace that Cassandra Sidecar will use to manage internal tables. Defaults to `sidecar_internal`.
+    ** `replication_strategy`: The replication strategy used for the internal keyspace. Defaults to `SimpleStrategy`. For multi-datacenter Cassandra clusters, this should be set to `NetworkTopologyStrategy`.
+    ** `replication_factor`: The number of replicas for the internal keyspace. Defaults to 1. For multi-node Cassandra clusters, this should be increased. Commonly used values are 3, 5 or the number of unique racks in the cluster.
+    ** `lease_schema_ttl`: This defines the time-to-live (TTL) for the `sidecar_lease` table. By default, 5 minutes (`5m`).
+* `coordination`: This subsection defines the configuration for Cassandra Sidecar's lease claiming process. It defines the following values:
+    ** `cluster_lease_claim`: This object defines how Cassandra Sidecar will claim leases for the cluster.
+        *** `electorate_membership_strategy`: The name of the strategy used to determine the electorate membership (defaults to `MostReplicatedKeyspaceTokenZeroElectorateMembership`). Out of the box Sidecar provides the `MostReplicatedKeyspaceTokenZeroElectorateMembership`, and `SidecarInternalTokenZeroElectorateMembership` implementations.
+        *** `enabled`: This defines whether the cluster lease claiming is enabled. Defaults to `true`.
+        *** `initial_delay`: This defines how long to wait before the cluster lease claim process to execute after being scheduled or rescheduled. Defaults to 1 second (`1s`). Minimum value is 0 milliseconds (`0ms`), indicating no delay.
+        *** `initial_delay_random_delta`: A random delta value to add jitter to the initial delay for the first execution of the cluster lease claim process. The actual initial delay for the task will be a millisecond value of the initial_delay + RANDOM(initial_delay_random_delta) configuration. The minimum value for the initial delay random delta is 0 milliseconds, (`0ms`), which in practice disables the jitter. By default, 30 seconds (`30s`).
+        *** `execute_interval`: This defines how often the cluster lease claim process will execute after the previous task has completed execution. The minimum allowed value is 30 seconds (`30s`). By default, 100 seconds (`100s`).
+
+[[vert.x]]
+### vert.x
+
+This section of the `sidecar.yaml` file is used configure Vert.x, which powers Cassandra Sidecar. The following properties are defined:
+
+* `filesystem_options`: This object defines the configuration used by Vert.x it defines the following fields:
+    ** `classpath_resolving_enabled`: When vert.x cannot find the file on the filesystem it tries to resolve the file from the classpath when this is set to `true`. Otherwise, vert.x will not attempt to resolve the file on the classpath. Default value is `false`.
+    ** `file_caching_enabled`: Defines whether or not to enable caching files on the real file system when the filesystem performs class path resolving. Set to `false` to disable caching. Default value is `false`.
+
+[[schema-reporting]]
+### schema_reporting
+
+This section of the `sidecar.yaml` file configures schema reporting to DataHub. The following properties are defined:
+
+* `enabled`: This boolean value determines whether schema reporting to DataHub is enabled. Defaults to `false`.
+* `initial_delay`: Maximum possible delay before the first schema report. The actual delay is randomized. Default value is 6 hours (`6h`).
+* `execute_interval`: This defines the exact delay between executions of schema reports.
+* `endpoint`: The endpoint address for schema reporting. Default value is `http://localhost/schema`.
+* `method`: HTTP verb used for schema reporting. Default value is `PUT`.
+* `max_retries`: The number of times a failed schema report will be retried. Default value is 3
+* `retry_delay`: The delay between retries for failed schema reports. Default value is 1 minute (`1m`).
+
+
+[[ssl]]
+### ssl
+
+This section of the `sidecar.yaml` file is used to configure TLS/SSL for Cassandra Sidecar. The following properties are defined:
+
+* `enabled`: This boolean value determines whether TLS/SSL is enabled for Cassandra Sidecar. Defaults to `false`.
+* `use_openssl`: This boolean value determines whether to use OpenSSL for TLS/SSL. Defaults to `true`.
+* `handshake_timeout`: How long to wait for a TLS/SSL handshake to complete. Defaults to 10 seconds (`10s`).
+* `client_auth`: This value defines how to enable mutual TLS. Valid options are `NONE`, `REQUEST`, `REQUIRED`. Default value is `NONE`.
+* `accepted_protocols`: This defines a list of all the accepted TLS protocols to use. By default, we use `TLSv1.2`, and `TLSv1.3`.
+* `cipher_suites`: Defines the cipher suites to use for TLS/SSL connections.
+* `keystore`: Defines the keystore parameters for TLS/SSL.
+    ** `type`: This defines the type of keystore to use. Any Java keystore format is a valid value, such as `JKS`, `PKCS12`, etc.
+    ** `path`: This is the path on disk where the keystore file is located.
+    ** `password`: This is the password used to access the keystore.
+    ** `check_interval`: This defines how often the keystore will be checked for changes in the filesystem.
+* `truststore`: Defines the truststore parameters for TLS/SSL.
+    ** `path`: The path on disk where the truststore file is located.
+    ** `password`: The password used to access the truststore.
+
+[[access-control]]
+### access_control
+
+This section of the `sidecar.yaml` file configures how requests are authenticated and authorized in Cassandra Sidecar. The following properties are defined:
+
+* `enabled`: This boolean value determines whether authentication and authorization is enabled in Cassandra Sidecar. Defaults to `false`.
+* `authenticators`: This is a YAML list defining authenticators used by Cassandra Sidecar. Each authenticator is defined as a YAML object with the following properties:
+    ** `class_name`: The fully qualified class name of the authenticator. For example, `org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory` and `org.apache.cassandra.sidecar.acl.authentication.JwtAuthenticationHandlerFactory` are the supported authenticator classes..
+    ** `parameters`: This defines the parameters for the authenticator. The supported parameters for each authenticator are:
+        *** `MutualTlsAuthenticationHandlerFactory`:
+            ***** `certificate_validator`: Defines which class to use to validate the client certificate. By default, `io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator`
+            ***** `certificate_identity_extractor`: This defines how to extract the identity from the supplied certificate. Valid values are `org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor` and `io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor`.
+        *** `JwtAuthenticationHandlerFactory`:
+            ***** `enabled`: This defines  whether JWT authentication is enabled. Defaults to `false`.
+            ***** `site`: Site used by Cassandra Sidecar to get configuration information regarding the OpenID provider.
+            ***** `client_id`: Client Id is a unique identifier assigned by OpenID provider It is used to identity applications/users trying to connect.
+            ***** `config_discover_interval`: How often to check for changes in the OpenID provider configuration. Defaults to 1 hour (`1h`).
+* `authorizer`: This defines the authorization backend used by Cassandra Sidecar. Out of the box, Cassandra sidecar supports: `org.apache.cassandra.sidecar.acl.authorization.{AllowAllAuthorizationProvider, RoleBasedAuthorizationProvider}`. `AllowAllAuthorizationProvider` allows any action to any user. It can be used to disable authorization. `RoleBasedAuthorizationProvider` validates roles associated with a given user and validates that the user has permission to access the resource.
+* `admin_identities`: A list of identities that have administrative privileges.
+* `permission_cache`: This subsection defines how Cassandra Sidecar manages caching authorization policies. The following properties are defined:
+    ** `enabled`: This boolean value determines whether permission caching is enabled. Defaults to `true`.
+    ** `expire_after_access`: This defines how long a cached permission will live in the cache. Defaults to 1 hour (`1h`).
+    ** `maximum_size`: This defines the maximum number of permissions that can be cached. Defaults to 10000.
+    ** `warmup_retries`: This defines how many times to retry when warming up the cache. Defaults to 5.
+    ** `warmup_retry_interval`: This defines the interval between retries when warming up the cache. Defaults to 2 seconds (`2s`).
+
+[[driver-parameters]]
+### driver_parameters
+
+The `driver_parameters` section of the `sidecar.yaml` file is used to configure the Cassandra driver used by Cassandra Sidecar to connect to Cassandra over CQL. The following properties are defined:
+
+* `contact_points`: This is a list of IP Addresses or hostnames and ports of the Cassandra instances that Cassandra Sidecar can use to bootstrap its connection to the Cassandra cluster.
+* `username`: This is the username used to authenticate with the Cassandra cluster.
+* `password`: This is the password used to authenticate with the Cassandra cluster.
+* `ssl`: This defines how the Cassandra driver can connect to Cassandra over SSL. See the above <<ssl, SSL/TLS Configuration>> section for more information.
+* `num_connections`: This defines the number of connections that the Cassandra driver will open to each Cassandra instance. By default, 2.
+* `local_dc`: This configures the local data center of the Cassandra driver. Ensure that this is the same value as the data center of the Cassandra nodes which this Cassandra Sidecar manages.
+
+[[healthcheck]]
+### healthcheck
+
+The `healthcheck` section of the `sidecar.yaml` file is used to configure the periodic health check task for Cassandra Sidecar. The following properties are defined:
+
+* `initial_delay`: How long to wait before performing an initial health check. By default, 0 milliseconds (`0ms`), which means that the health check will be performed immediately after Cassandra Sidecar starts.
+* `execute_interval`: How often should Cassandra Sidecar perform a health check. By default, 30 seconds (`30s`).
+
+[[sidecar-peer-health]]
+### sidecar_peer_health
+
+The `sidecar_peer_health` section of the `sidecar.yaml` file is used to configure a periodic health check task for adjacent Cassandra Sidecar peers in the token ring. The following properties are defined:
+
+* `enabled`: This boolean value determines whether the sidecar peer health check is enabled. Defaults to `false`.
+* `execute_interval`: How often should Cassandra Sidecar perform a health check on adjacent Cassandra Sidecar peers. By default, 30 seconds (`30s`).
+* `max_retries`: The number of times to retry a failed health check. Defaults to 5.
+* `retry_delay`: The delay between the retries the client will attempt a request. Defaults to 10 seconds (`10s`).
+
+
+[[sidecar-client]]
+### sidecar_client
+#### Sidecar Client Configuration
+
+The `sidecar_client` section of the `sidecar.yaml` file is used to configure how Cassandra Sidecar interacts with other Cassandra Sidecar instances. The following properties are defined:
+
+* `request_timeout`: This defines the timeout for requests made by Cassandra Sidecar to other Cassandra Sidecar instances. By default, 30 seconds (`30s`).
+* `request_idle_timeout`: This defines how long a given request to another Cassandra Sidecar instance can be idle. Defaults to 30 seconds (`30s`).
+* `connection_pool_max_size`: Max size of the client connection pool. Defaults to 10.
+* `connection_pool_clearing_period`: Period of time for the connection pool to clear. Defaults to 5 seconds (`5s`).
+* `connection_pool_event_loop_size`: Defines the size of the event loop pool, set to 0 to reuse current event-loop. Defaults to 0.
+* `connection_pool_max_wait_queue_size`: The maximum size of the connection pool queue, set to -1 for an unbounded queue. Defaults to -1.
+* `max_retries`: The amount of retries the client will attempt a request. Defaults to 5.
+* `retry_delay`: The initial delay between the retries the client will attempt a request. Defaults to 500ms.
+* `max_retry_delay`: The max delay between the retries the client will attempt a request. Defaults to 10s.
+* `ssl`: If ssl is enabled, this is the ssl configuration used for the sidecar client. See <<ssl, SSL/TLS Configuration>> for more information.
+
+
+[[metrics]]
+### metrics
+
+The `metrics` configuration defines how Cassandra Sidecar exposes metrics over JMX. The following properties are defined:
+
+* `registry_name`: This defines the name of the registry where metrics will be accessible.  Defaults to `cassandra_sidecar`
+* `vertx`: This subsection defines how to expose metrics for Vert.x.
+** `enabled`: This defines whether to enable Vert.x metrics. Defaults to `true`
+** `expose_via_jmx`: This defines whether to expose metrics via JMX. Defaults to `false`
+** `jmx_domain_name`: This defines the domain name of the Vert.x metrics. Defaults to `sidecar.vertx.jmx_domain`
+** `include`: This defines a list of metrics filters which are to be collected. If an empty list is provided, all metrics will be included. To define which metrics to include, you can create a list of YAML objects with the following properties:
+*** `type`: The type of metrics filtering configuration. Valid values are `regex` and `equals`.
+*** `value`: The value to match against the metric names. For example, `"Sidecar.*"` would match against all Sidecar metrics.
+** `exclude`:  This defines a list of metrics filters with the same format as the `include` list which are to be excluded from metrics collection. If an empty list is provided, no metrics will be excluded. By default, no metrics are excluded.
+
+
+[[cassandra-input-validation]]
+### cassandra_input_validation
+
+This section defines input validations for Cassandra keyspace and directory names which are used for SSTable imports. The following properties are defined:
+
+* `forbidden_keyspaces`: This is a list of keyspace names which are forbidden to be used for SSTable imports.
+* `allowed_chars_for_directory`: This is a regular expression which defines the characters that can be used in directory names used for SSTable imports. By default `"[a-zA-Z][a-zA-Z0-9_]{0,47}"`
+* `allowed_chars_for_quoted_name`: This is a regular expression which defines the characters that can be used in quoted names used for SSTable imports. If a quoted name does not match this regular expression, the SSTable import request will be rejected. By default, `"[a-zA-Z_0-9]{1,48}"`
+* `allowed_chars_for_component_name`: This is a regular expression which defines which characters can be used for SSTable component file names. By default, `"[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)"`.
+* `allowed_chars_for_restricted_component_name`: This is a regular expression which defines which characters can be used in the SSTable component file names for `.db` and `TOC.txt` files. By default, `"[a-zA-Z0-9_-]+(.db|TOC.txt)"`.
+
+[[blob-restore]]
+### blob_restore
+
+* `job_discovery_active_loop_delay`: This defines the amount of time to wait between executions of restore job discovery when there are known active jobs. By default, 5 minutes (`5m`).
+* `job_discovery_idle_loop_delay`: This defines the amount of time to wait between executions of restore job discovery when there are not any known active jobs. By default, 10 minutes (`10m`).
+* `job_discovery_recency_days`: The minimum number of days in the past to look up a given restore job. By default, `5`.
+* `slice_process_max_concurrency`: The maximum number of slices which will be restored concurrently. By default, `20`.
+* `restore_job_tables_ttl`: The time-to-live for restore job tables, `restore_job` and `restore_slice`. By default, `90d`.
+* `slow_task_threshold`: The threshold to consider a restore task as slow. By default, `10m`.
+* `slow_task_report_delay`: The delay between each report of the same slow task. By default, `1m`.
+* `ring_topology_refresh_delay`: This defines how often to periodically refresh the Cassandra ring. By default, `1m`.
+
+[[s3-client]]
+### s3_client
+
+This section defines the configuration for the S3 client used by Cassandra Sidecar for importing SSTables from S3. The following properties are defined:
+
+* `concurrency`: The maximum number of threads in the thread pool used by the S3 client. By default, `4`.
+* `thread_name_prefix`: Prefix for S3 client thread names. By default, `s3-client`.
+* `thread_keep_alive`: The timeout of idle threads in the S3 client thread pool. By default, `1m`.
+* `api_call_timeout`: Timeout for S3 API calls. By default, `1m`.
+* `range_get_object_bytes_size`: Returns range bytes size to produce https://www.rfc-editor.org/rfc/rfc9110.html#name-range[Range header] for range-get object. It is recommended to keep this between 5 and 10 MiB to find the balance between too many requests and too long of a request. By default, `5242880` (5 MiB).
+* `proxy_config`: (Optional) HTTP Proxy configuration for S3 client.
+** `uri`: The proxy URI.
+** `username`: The proxy username.
+** `password`: The proxy password.
+
+[[live-migration]]
+### live_migration
+
+The `live_migration` section of the `sidecar.yaml` file is used to configure the live migration feature in Cassandra Sidecar. The following properties are defined:
+
+* `files_to_exclude`: This is a list of files to not include when migrating between machines. Both glob and regex patterns can be used.
+* `dirs_to_exclude`: This is a list of directories to not include when migrating between machines. By default, `glob:${DATA_FILE_DIR}/*/*/snapshots`, to exclude snapshot directories from being migrated to the destination host.
+* `migration_map`: This is a map source to destination hostnames. For example `localhost1: localhost4` means that we will be migrating data from `localhost1` to `localhost4`.

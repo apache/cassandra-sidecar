@@ -1,15 +1,152 @@
 # Overview
 
-This is the documentation for the official Sidecar project for Apache Cassandra.
+This document serves as a quickstart guide to get Cassandra Sidecar running and connected to your Cassandra cluster.
 
-NOTE: This documentation is only a placeholder at the moment and requires some love.
+NOTE: This documentation requires some love.
 
 ## Installation
 
-You will probably find it easiest to install the sidecar by using one of the system packages we have available.
+### Prerequisites
+Like Cassandra itself, you will need to install the latest version of Java 11, from one of the following locations:
 
+* https://www.oracle.com/java/technologies/javase/jdk11-archive-downloads.html[Oracle Java Standard Edition 11 Archived Version]
+* https://jdk.java.net/archive/[OpenJDK 11]
+
+[[installation-methods]]
+== Installation Methods
+
+There are two supported methods for installing pre-built versions of Cassandra Sidecar:
+
+    * Tarball binary file
+    * Package installation (RPM, YUM)
+
+Additionally, you can build a Docker image from source by running `./gradlew :server:jibDockerBuild` from the Cassandra Sidecar repository.
+
+### Tarball binary file
+First, verify that you have installed the correct Java version by running:
+
+`java -version`
+
+Next, download the binary tarball for the version you would like to install from https://downloads.apache.org/cassandra/cassandra-sidecar/{project-version}/apache-cassandra-sidecar-{project-version}.tar.gz
+
+Next, unpack the tarball like so:
+
+`tar xzvf apache-cassandra-sidecar-{project-version}.tar.gz`
+
+Once you have extracted the tarball, you can proceed to <<setup, Setup>> below.
+
+### Install a Debian Package
+First, verify that you have installed the correct Java version by running:
+
+`java -version`
+
+Next, download the cassandra-sidecar Debian package (i.e. `.deb` file) from https://downloads.apache.org/cassandra/cassandra-sidecar/{project-version}/debian/. For example, you can run `curl -sLO https://downloads.apache.org/cassandra/cassandra-sidecar/{project-version}/debian/apache-cassandra-sidecar_{project-version}_all.deb` to download the Debian package to your local machine.
+
+Next, install the downloaded Debian package by running
+
+`sudo apt install ~/apache-cassandra-sidecar_{project-version}_all.deb`.
+
+This will install the Cassandra Sidecar package under the directory `/opt/apache-cassandra-sidecar`. Once you have finished installing the Debian package, you can proceed to <<setup, Setup>> below.
+
+### Install as RPM Package
+First, verify that you have installed the correct Java version by running
+
+`java -version`
+
+Next, download the cassandra-sidecar RPM package (i.e. `.rpm` file) from https://downloads.apache.org/cassandra/cassandra-sidecar/{project-version}/redhat/. For example, you can run `curl -sLO https://downloads.apache.org/cassandra/cassandra-sidecar/{project-version}/redhat/apache-cassandra-sidecar-{project-version}.noarch.rpm` to download the RPM package to your local machine.
+
+Next, install the RPM package by running:
+
+`sudo yum install apache-cassandra-sidecar-{project-version}.noarch.rpm`.
+
+This will install Cassandra Sidecar under the directory `/opt/apache-cassandra-sidecar`. Once you have finished installing the RPM package, you can proceed to <<setup, Setup>> below.
+
+[[setup]]
 ## Setup
+In this section, we will cover the basic configurations required to connect Cassandra Sidecar to your Cassandra cluster. For a more in-depth guide on Cassandra Sidecar configuration, please see the <<configuring.adoc#,Configuring document>>.
 
-If you've installed the sidecar via a DEB or RPM package you will be able to use systemd to start, stop etc.
+Cassandra Sidecar's root directory will contain the following directories:
+
+* bin: This contains the script to start Cassandra Sidecar
+* conf: This is the location of the Cassandra Sidecar configuration
+* lib: This directory contains the JAR files which comprise the Cassandra Sidecar application
+* agents: This directory contains JAR files for JVM agents which attach to Cassandra Sidecar (such as Jolokia)
+
+After installing Cassandra Sidecar, you can view these directories by running `ls /opt/apache-cassandra-sidecar` (for Debian and RPM installs) or `ls apache-cassandra-sidecar-{project-version}` (for tarball installs). In this document, we will refer to Cassandra Sidecar's root directory as `CASSANDRA_SIDECAR_HOME`.
+
+Cassandra Sidecar ships with a configuration file named `sidecar.yaml`, which can be found under the path `$CASSANDRA_SIDECAR_HOME/conf/sidecar.yaml`. The first configuration you will need to update is the `cassandra_instances` section of `sidecar.yaml`. To connect to a Cassandra instance, you will need to update the `cassandra_instances` list as follows:
+
+```
+cassandra_instances:
+- id: 1
+  host: <Hostname or IP address of the network device on which Cassandra is listening for CQL>
+  port: <The native_transport_port from your cassandra.yaml (default 9042)>
+  jmx_host: <Hostname or IP address of the network device on which Cassandra is listening for JMX connections>
+  jmx_port: <The port on which Cassandra is listening for JMX connections (default 7199)>
+  jmx_ssl_enabled: <`true` if JMX is secured via SSL, `false` otherwise>
+```
+
+Additionally, if you are using JMX authentication your configuration should contain:
+
+```
+jmx_role: <Name of a role in the jmxremote.password file>
+jmx_password: <Password associated with the requested role>
+```
+
+Once you have configured `cassandra_instances`, you will also need to configure the `driver_parameters` section like so:
+
+```
+driver_parameters:
+  contact_points:
+    - "<host from cassandra_instances>:<port from cassandra_instances>"
+    - "<host of additional cassandra instances in your cluster>:<port of instance>"
+  username: <A user which has been configured on the local Cassandra cluster>
+  password: <Password associated with the above user>
+  ssl:
+    enabled: <true if you have enabled encryption for CQL, false if otherwise>
+    keystore:
+      type: <Type of keystore used to store SSL certificates used for Client Authentication>
+      path: <Fully qualified path of keystore used to store SSL certificates used for Client Authentication>
+      password: <Password used to lock the keystore used to store SSL certificates used for Client Authentication>
+    truststore:
+      type: <Type of truststore used to store Cassandra server public certificates>
+      path: <Fully qualified path of truststore used to store Cassandra server public certificates>
+      password: <Password used to lock the truststore used to store Cassandra server public certificates>
+  local_dc: <The name of the local data center of your node. This can be discovered by running `nodetool status`>
+```
+
+Now that you have finished setting up these configurations, your Cassandra Sidecar instance should be able to communicate with your locally running Cassandra instance. In the next section, we will discuss how to start Cassandra Sidecar.
+
+[[start-cassandra-sidecar]]
+### Start Cassandra Sidecar
+You can start Cassandra Sidecar by running:
+
+`/opt/apache-cassandra-sidecar/bin/cassandra-sidecar` (for Debian and RPM installs)
+
+or `cd apache-cassandra-sidecar-{project-version} && bin/cassandra-sidecar` (for the tarball install).
+
+This will run Cassandra Sidecar with its default configuration in the foreground. You should see logs similar to the following:
+
+```
+ _____                               _              _____ _     _
+/  __ \                             | |            /  ___(_)   | |
+| /  \/ __ _ ___ ___  __ _ _ __   __| |_ __ __ _   \ `--. _  __| | ___  ___ __ _ _ __
+| |    / _` / __/ __|/ _` | '_ \ / _` | '__/ _` |   `--. \ |/ _` |/ _ \/ __/ _` | '__|
+| \__/\ (_| \__ \__ \ (_| | | | | (_| | | | (_| |  /\__/ / | (_| |  __/ (_| (_| | |
+ \____/\__,_|___/___/\__,_|_| |_|\__,_|_|  \__,_|  \____/|_|\__,_|\___|\___\__,_|_|
 
 
+INFO  [main] 2025-03-31 16:38:24,445 Server.java:116 - Starting Cassandra Sidecar
+INFO  [main] 2025-03-31 16:38:24,456 HttpServerOptionsProvider.java:154 - Configured traffic shaping options. InboundGlobalBandwidth=0 B/s rawInboundGlobalBandwidth=0 B/s OutboundGlobalBandwidth=0 B/s rawOutboundGlobalBandwidth=0 B/s PeakOutboundGlobalBandwidth=400.00 MiB/s rawPeakOutboundGlobalBandwidth=419430400 B/s IntervalForStats=1000ms MaxDelayToWait=15000ms
+INFO  [vert.x-eventloop-thread-1] 2025-03-31 16:38:24,460 ServerVerticle.java:79 - Deploying Cassandra Sidecar server verticle on socket addresses=[0.0.0.0:9043]
+INFO  [vert.x-eventloop-thread-1] 2025-03-31 16:38:24,548 ServerVerticle.java:88 - Successfully deployed Cassandra Sidecar server verticle on socket addresses=[0.0.0.0:9043]
+INFO  [vert.x-eventloop-thread-0] 2025-03-31 16:38:24,552 Server.java:251 - Successfully started Cassandra Sidecar
+```
+
+Now that your sidecar is up and running, you can query it by running:
+
+`curl \http://localhost:9043/api/v1/__health`
+
+which will return `{"status": "OK"}` if Cassandra Sidecar has started up and is healthy.
+
+You can verify the health of your instance by running `curl \http://localhost:9043/api/v1/cassandra/native/\__health` which will return the current status of Native Transport or `curl \http://localhost:9043/api/v1/cassandra/jmx/__health` which will return the status of JMX.
