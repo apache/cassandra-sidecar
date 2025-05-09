@@ -21,8 +21,8 @@ package org.apache.cassandra.sidecar.codecs;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.core.eventbus.impl.CodecManager;
-import org.apache.cassandra.sidecar.common.client.SidecarInstance;
-import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
+import org.apache.cassandra.sidecar.client.SidecarInstance;
+import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
 
 /**
  * Codecs for Sidecar instances

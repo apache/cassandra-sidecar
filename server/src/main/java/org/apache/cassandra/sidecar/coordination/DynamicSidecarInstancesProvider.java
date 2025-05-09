@@ -21,10 +21,10 @@ package org.apache.cassandra.sidecar.coordination;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.cassandra.sidecar.client.SidecarInstance;
+import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.client.SidecarInstancesProvider;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
-import org.apache.cassandra.sidecar.common.client.SidecarInstance;
-import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 
 /**

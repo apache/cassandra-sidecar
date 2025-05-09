@@ -29,8 +29,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.TestResourceReaper;
-import org.apache.cassandra.sidecar.common.client.SidecarInstance;
-import org.apache.cassandra.sidecar.common.client.SidecarInstanceImpl;
+import org.apache.cassandra.sidecar.client.SidecarInstance;
+import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
 
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;

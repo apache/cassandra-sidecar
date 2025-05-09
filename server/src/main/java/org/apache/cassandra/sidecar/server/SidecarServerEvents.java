@@ -90,14 +90,14 @@ public enum SidecarServerEvents
 
     /**
      * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the health of a Sidecar
-     * peer instance is marked as DOWN, including in the payload the {@link org.apache.cassandra.sidecar.common.client.SidecarInstance}
+     * peer instance is marked as DOWN, including in the payload the {@link org.apache.cassandra.sidecar.client.SidecarInstance}
      * whose status changed.
      */
     ON_SIDECAR_PEER_DOWN,
 
     /**
      * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the health of a Sidecar
-     * peer instance is marked as UP, including in the payload the {@link org.apache.cassandra.sidecar.common.client.SidecarInstance}
+     * peer instance is marked as UP, including in the payload the {@link org.apache.cassandra.sidecar.client.SidecarInstance}
      * whose status changed.
      */
     ON_SIDECAR_PEER_UP,

@@ -20,8 +20,6 @@ package org.apache.cassandra.sidecar.client;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.cassandra.sidecar.common.client.SidecarInstance;
-
 /**
  * An interface to represent an HTTP client
  */

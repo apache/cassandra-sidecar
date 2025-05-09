@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.coordination;
 
 
 import io.vertx.core.Future;
-import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+import org.apache.cassandra.sidecar.client.SidecarInstance;
 
 /**
  * Interface to provide health information for other Sidecar instances

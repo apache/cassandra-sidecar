@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.coordination;
 
 import java.util.Set;
 
-import org.apache.cassandra.sidecar.common.client.SidecarInstance;
+import org.apache.cassandra.sidecar.client.SidecarInstance;
 
 /**
  * Provides a set of Sidecar peers
