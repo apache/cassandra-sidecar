@@ -101,7 +101,7 @@ public class PeriodicTaskConfigurationImpl implements PeriodicTaskConfiguration
     {
         if (initialDelay != null)
         {
-            if (initialDelay.compareTo(MillisecondBoundConfiguration.ZERO) > 0)
+            if (initialDelay.compareTo(MillisecondBoundConfiguration.ZERO) >= 0)
             {
                 this.initialDelay = initialDelay;
             }
