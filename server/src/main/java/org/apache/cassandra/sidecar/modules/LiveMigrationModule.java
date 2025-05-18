@@ -35,10 +35,10 @@ import org.apache.cassandra.sidecar.routes.VertxRoute;
 public class LiveMigrationModule extends AbstractModule
 {
 
+    @Override
     protected void configure()
     {
         bind(LiveMigrationMap.class).to(LiveMigrationMapSidecarConfigImpl.class);
-        super.configure();
     }
 
 

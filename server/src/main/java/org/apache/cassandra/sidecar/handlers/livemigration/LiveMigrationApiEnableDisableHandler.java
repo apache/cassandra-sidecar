@@ -38,8 +38,8 @@ public class LiveMigrationApiEnableDisableHandler
     final InstancesMetadata instancesMetadata;
 
     @Inject
-    public LiveMigrationApiEnableDisableHandler(final LiveMigrationMap liveMigrationMap,
-                                                final InstancesMetadata instancesMetadata)
+    public LiveMigrationApiEnableDisableHandler(LiveMigrationMap liveMigrationMap,
+                                                InstancesMetadata instancesMetadata)
     {
         this.liveMigrationMap = liveMigrationMap;
         this.instancesMetadata = instancesMetadata;
@@ -50,9 +50,9 @@ public class LiveMigrationApiEnableDisableHandler
      *
      * @param rc - routing context
      */
-    public void isSource(final RoutingContext rc)
+    public void isSource(RoutingContext rc)
     {
-        final InstanceMetadata instanceMeta = getLocalInstanceMeta(rc);
+        InstanceMetadata instanceMeta = getLocalInstanceMeta(rc);
         if (liveMigrationMap.isSource(instanceMeta))
         {
             rc.next();
@@ -68,9 +68,9 @@ public class LiveMigrationApiEnableDisableHandler
      *
      * @param rc - routing context
      */
-    public void isDestination(final RoutingContext rc)
+    public void isDestination(RoutingContext rc)
     {
-        final InstanceMetadata instanceMeta = getLocalInstanceMeta(rc);
+        InstanceMetadata instanceMeta = getLocalInstanceMeta(rc);
         if (liveMigrationMap.isDestination(instanceMeta))
         {
             rc.next();
@@ -86,9 +86,9 @@ public class LiveMigrationApiEnableDisableHandler
      *
      * @param rc - routing context
      */
-    public void isSourceOrDestination(final RoutingContext rc)
+    public void isSourceOrDestination(RoutingContext rc)
     {
-        final InstanceMetadata instanceMeta = getLocalInstanceMeta(rc);
+        InstanceMetadata instanceMeta = getLocalInstanceMeta(rc);
         if (liveMigrationMap.isAny(instanceMeta))
         {
             rc.next();
@@ -99,9 +99,9 @@ public class LiveMigrationApiEnableDisableHandler
         }
     }
 
-    private InstanceMetadata getLocalInstanceMeta(final RoutingContext rc)
+    private InstanceMetadata getLocalInstanceMeta(RoutingContext rc)
     {
-        final String host = extractHostAddressWithoutPort(rc.request());
+        String host = extractHostAddressWithoutPort(rc.request());
         return instancesMetadata.instanceFromHost(host);
     }
 }

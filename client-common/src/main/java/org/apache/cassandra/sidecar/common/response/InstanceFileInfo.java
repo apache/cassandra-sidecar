@@ -20,11 +20,15 @@ package org.apache.cassandra.sidecar.common.response;
 
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Class for holding information of a downloadable file during Live Migration.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class InstanceFileInfo
 {
     public final String fileUrl;
@@ -55,6 +59,7 @@ public class InstanceFileInfo
         DIRECTORY
     }
 
+    @Override
     public boolean equals(Object o)
     {
         if (o == null || getClass() != o.getClass()) return false;
@@ -65,6 +70,7 @@ public class InstanceFileInfo
                && fileType == that.fileType;
     }
 
+    @Override
     public int hashCode()
     {
         return Objects.hash(fileUrl, size, fileType, lastModifiedTime);

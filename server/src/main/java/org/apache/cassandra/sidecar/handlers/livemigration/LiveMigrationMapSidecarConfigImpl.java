@@ -41,16 +41,19 @@ public class LiveMigrationMapSidecarConfigImpl implements LiveMigrationMap
         this.liveMigrationConfiguration = sidecarConfiguration.liveMigrationConfiguration();
     }
 
+    @Override
     public boolean isSource(@NotNull InstanceMetadata instanceMeta)
     {
         return liveMigrationConfiguration.migrationMap().containsKey(instanceMeta.host());
     }
 
+    @Override
     public boolean isDestination(@NotNull InstanceMetadata instanceMeta)
     {
         return liveMigrationConfiguration.migrationMap().containsValue(instanceMeta.host());
     }
 
+    @Override
     public Map<String, String> getMigrationMap()
     {
         return liveMigrationConfiguration.migrationMap();

@@ -54,44 +54,46 @@ public class LiveMigrationListInstanceFilesHandler extends AbstractHandler<Void>
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationListInstanceFilesHandler.class);
     private final SidecarConfiguration sidecarConfiguration;
-    private final InstancesMetadata instancesMetadata;
 
     @Inject
     public LiveMigrationListInstanceFilesHandler(InstanceMetadataFetcher metadataFetcher,
                                                  ExecutorPools executorPools,
                                                  CassandraInputValidator validator,
-                                                 SidecarConfiguration sidecarConfiguration,
-                                                 InstancesMetadata instancesMetadata)
+                                                 SidecarConfiguration sidecarConfiguration)
     {
         super(metadataFetcher, executorPools, validator);
         this.sidecarConfiguration = sidecarConfiguration;
-        this.instancesMetadata = instancesMetadata;
     }
 
+    @Override
     protected Void extractParamsOrThrow(RoutingContext context)
     {
         return null;
     }
 
+    @Override
     protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, @NotNull String host,
                                   SocketAddress remoteAddress, Void request)
     {
-        InstanceMetadata instanceMetadata = instancesMetadata.instanceFromHost(host);
+        InstanceMetadata instanceMetadata = metadataFetcher.instance(host);
 
         CassandraInstanceFiles filesList = new CassandraInstanceFilesImpl(instanceMetadata,
                                                                           sidecarConfiguration.liveMigrationConfiguration());
-        try
-        {
+        executorPools.service().runBlocking(() -> {
+            try
+            {
 
-            context.json(new InstanceFilesListResponse(filesList.getFiles()));
-        }
-        catch (IOException e)
-        {
-            LOGGER.error("Could not fetch instance files information.", e);
-            context.fail(wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e));
-        }
+                context.json(new InstanceFilesListResponse(filesList.getFiles()));
+            }
+            catch (IOException e)
+            {
+                LOGGER.error("Could not fetch instance files information.", e);
+                context.fail(wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e));
+            }
+        });
     }
 
+    @Override
     public Set<Authorization> requiredAuthorizations()
     {
         return Set.of(BasicPermissions.LIST_FILES.toAuthorization());

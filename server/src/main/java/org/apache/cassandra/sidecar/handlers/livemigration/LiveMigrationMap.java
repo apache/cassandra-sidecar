@@ -36,7 +36,7 @@ public interface LiveMigrationMap
      */
     default boolean isSource(@NotNull final InstanceMetadata instanceMeta)
     {
-        final Map<String, String> map = getMigrationMap();
+        Map<String, String> map = getMigrationMap();
         return map != null && map.containsKey(String.valueOf(instanceMeta.host()));
     }
 
@@ -48,7 +48,7 @@ public interface LiveMigrationMap
      */
     default boolean isDestination(@NotNull final InstanceMetadata instanceMeta)
     {
-        final Map<String, String> map = getMigrationMap();
+        Map<String, String> map = getMigrationMap();
         return map != null && map.containsValue(String.valueOf(instanceMeta.host()));
     }
 
