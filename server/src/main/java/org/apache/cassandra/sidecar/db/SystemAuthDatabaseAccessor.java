@@ -20,8 +20,10 @@ package org.apache.cassandra.sidecar.db;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
@@ -154,14 +156,26 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
     {
         BoundStatement statement = tableSchema.allRoles().bind();
         ResultSet result = execute(statement);
-        Map<String, Boolean> roles = new HashMap<>();
-        for (Row row : result)
+        List<Row> rows = result.all();
+        Map<String, Boolean> roleToSuperUser = rows.stream()
+                                                   .collect(Collectors.toMap(row -> row.getString("role"),
+                                                                             row -> row.getBool("is_superuser")));
+        Map<String, Boolean> superUserRoles = new HashMap<>();
+        for (Row row : rows)
         {
-            if (row.getBool("is_superuser") || isSuperUser(row.getString("role")))
+            if (row.getBool("is_superuser"))
             {
-                roles.put(row.getString("role"), true);
+                superUserRoles.put(row.getString("role"), true);
+            }
+            else
+            {
+                List<String> memberOf = row.getList("member_of", String.class);
+                if (memberOf.stream().anyMatch(roleToSuperUser::get))
+                {
+                    superUserRoles.put(row.getString("role"), true);
+                }
             }
         }
-        return roles;
+        return superUserRoles;
     }
 }

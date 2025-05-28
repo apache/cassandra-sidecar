@@ -46,7 +46,7 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
     @Override
     protected void prepareStatements(@NotNull Session session)
     {
-        allRoles = prepare(allRoles, session, "SELECT role, is_superuser FROM system_auth.roles");
+        allRoles = prepare(allRoles, session, "SELECT role, is_superuser, member_of FROM system_auth.roles");
         unpreparedListRoles = "LIST ROLES OF %s";
         allRolesAndPermissions = prepare(allRolesAndPermissions, session, "SELECT * FROM system_auth.role_permissions");
 

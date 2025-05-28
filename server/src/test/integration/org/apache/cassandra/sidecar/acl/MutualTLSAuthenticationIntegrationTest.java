@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.acl;
 
 import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -158,21 +159,54 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         // wait for cache refreshes
         Thread.sleep(3000);
 
-        String testRoute = "/api/v1/schema/keyspaces";
+
         // identity is associated with a role with transitive superuser status, hence no permissions needed,
         // it has admin privileges
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test");
         WebClient client = createClient(clientKeystorePath, truststorePath);
 
+        CountDownLatch authorized = new CountDownLatch(1);
+        verifyAccess(client, false, context, authorized);
+        authorized.await(30, TimeUnit.SECONDS);
+
+        // drop superuser role, during cache refresh nonsuperuser role will lose superuser status
+        Session session = maybeGetSession();
+        session.execute("DROP role superuser");
+
+        // wait for cache refreshes
+        Thread.sleep(3000);
+
+        CountDownLatch unAuthorized = new CountDownLatch(1);
+        verifyAccess(client, true, context, unAuthorized);
+        unAuthorized.await(30, TimeUnit.SECONDS);
+        context.completeNow();
+    }
+
+    private void verifyAccess(WebClient client, boolean expectForbidden, VertxTestContext context, CountDownLatch latch)
+    {
+        String testRoute = "/api/v1/schema/keyspaces";
         client.get(server.actualPort(), "127.0.0.1", testRoute)
-              .send(context.succeeding(response -> {
-                  assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                  SchemaResponse schemaResponse = response.bodyAsJson(SchemaResponse.class);
-                  assertThat(schemaResponse).isNotNull();
-                  assertThat(schemaResponse.keyspace()).isNull();
-                  assertThat(schemaResponse.schema()).isNotNull();
-                  context.completeNow();
-              }));
+              .send(response -> {
+                  if (response.cause() != null)
+                  {
+                      context.failNow(response.cause());
+                      return;
+                  }
+
+                  if (expectForbidden)
+                  {
+                      assertThat(response.result().statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
+                  }
+                  else
+                  {
+                      assertThat(response.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                      SchemaResponse schemaResponse = response.result().bodyAsJson(SchemaResponse.class);
+                      assertThat(schemaResponse).isNotNull();
+                      assertThat(schemaResponse.keyspace()).isNull();
+                      assertThat(schemaResponse.schema()).isNotNull();
+                  }
+                  latch.countDown();
+              });
     }
 
     private void insertIdentityRole(CassandraTestContext cassandraContext, String identity, String role)
