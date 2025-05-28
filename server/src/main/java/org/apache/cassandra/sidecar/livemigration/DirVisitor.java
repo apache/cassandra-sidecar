@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -77,13 +78,15 @@ public class DirVisitor
 
     private InstanceFileInfo toInstanceFileInfo(@NotNull Path path) throws IOException
     {
-        long lastModifiedTime = Files.getLastModifiedTime(path).toMillis();
-        String fileUrl = getInstanceFileUrl(path);
-        InstanceFileInfo.FileType fileType = Files.isDirectory(path) ?
-                                             InstanceFileInfo.FileType.DIRECTORY
-                                                                     : InstanceFileInfo.FileType.FILE;
+        BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
+        long lastModifiedTime = attrs.lastModifiedTime().toMillis();
+        String fileUrl = buildInstanceFileUrl(path);
+        boolean isDirectory = attrs.isDirectory();
+        InstanceFileInfo.FileType fileType = isDirectory
+                                             ? InstanceFileInfo.FileType.DIRECTORY
+                                             : InstanceFileInfo.FileType.FILE;
         // 'size' doesn't have any significance for directories. Hence, setting it to -1 explicitly.
-        long size = Files.isDirectory(path) ? -1 : Files.size(path);
+        long size = isDirectory ? -1 : attrs.size();
 
         return new InstanceFileInfo(fileUrl, size, fileType, lastModifiedTime);
     }
@@ -94,7 +97,7 @@ public class DirVisitor
      * @param path file for which URL needs to be constructed.
      * @return URL path for given file
      */
-    private String getInstanceFileUrl(@NotNull Path path)
+    private String buildInstanceFileUrl(@NotNull Path path)
     {
         String relativePath = homeDirPath.relativize(path).toString();
         return pathPrefix + "/" + relativePath;

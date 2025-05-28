@@ -41,7 +41,6 @@ import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.hasAnyPlaceholder;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.hasPlaceholder;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.replacePlaceholder;
 
 /**
@@ -115,11 +114,12 @@ public class CassandraInstanceFilesImpl implements CassandraInstanceFiles
         Path homeDirPath = Paths.get(homeDir);
         if (!Files.exists(homeDirPath))
         {
+            LOGGER.info("Directory {} does not exist.", homeDir);
             return Optional.empty();
         }
 
-        Objects.requireNonNull(placeholders);
-        Objects.requireNonNull(pathPrefix);
+        Objects.requireNonNull(placeholders, "placeholders are required");
+        Objects.requireNonNull(pathPrefix, "pathPrefix is required");
 
         Set<PathMatcher> fileExclusionMatchers = toPathMatchers(filesToExclude, placeholders, homeDir);
         Set<PathMatcher> dirExclusionMatchers = toPathMatchers(dirsToExclude, placeholders, homeDir);
@@ -136,7 +136,7 @@ public class CassandraInstanceFilesImpl implements CassandraInstanceFiles
 
         return exclusions.stream()
                          .filter(exclusion -> !hasAnyPlaceholder(exclusion)
-                                              || hasPlaceholder(exclusion, homeDirPlaceholders))
+                                              || hasAnyPlaceholder(exclusion, homeDirPlaceholders))
                          .map(file -> replacePlaceholder(file, homeDirPlaceholders, homeDir))
                          .filter(Objects::nonNull)
                          .map(file -> FileSystems.getDefault().getPathMatcher(file))

@@ -48,21 +48,24 @@ public class LiveMigrationConfigurationImpl implements LiveMigrationConfiguratio
     {
         this.filesToExclude = filesToExclude;
         this.directoriesToExclude = directoriesToExclude;
-        this.migrationMap = migrationMap;
+        this.migrationMap = Collections.unmodifiableMap(migrationMap);
     }
 
+    @Override
     @JsonProperty("files_to_exclude")
     public Set<String> filesToExclude()
     {
         return filesToExclude;
     }
 
+    @Override
     @JsonProperty("dirs_to_exclude")
     public Set<String> directoriesToExclude()
     {
         return directoriesToExclude;
     }
 
+    @Override
     @JsonProperty("migration_map")
     public Map<String, String> migrationMap()
     {

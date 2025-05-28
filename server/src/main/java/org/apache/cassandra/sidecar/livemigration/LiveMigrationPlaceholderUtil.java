@@ -67,13 +67,28 @@ public class LiveMigrationPlaceholderUtil
         return null;
     }
 
+    /**
+     * Checks whether given input has any placeholder init.
+     * Placeholders can be specified using {@link #PLACEHOLDER_PATTERN} pattern.
+     *
+     * @param input input string to test
+     * @return true if the given input contains a placeholder, otherwise false
+     */
     public static boolean hasAnyPlaceholder(String input)
     {
         String placeholder = getPlaceholder(input);
         return placeholder != null;
     }
 
-    public static boolean hasPlaceholder(String input, Set<String> knownPlaceHolders)
+    /**
+     * Checks whether given input has any of the placeholders specified in {@code knownPlaceHolders}.
+     * Placeholders can be specified using {@link #PLACEHOLDER_PATTERN} pattern.
+     *
+     * @param input             input string to test
+     * @param knownPlaceHolders set of placeholders {@code input} is expected to have.
+     * @return true if given input contains any one of the knownPlaceHolders, otherwise false
+     */
+    public static boolean hasAnyPlaceholder(String input, Set<String> knownPlaceHolders)
     {
         String placeholder = getPlaceholder(input);
         return placeholder != null && knownPlaceHolders.contains(placeholder);

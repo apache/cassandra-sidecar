@@ -68,6 +68,7 @@ public class MigrationFileVisitor extends SimpleFileVisitor<Path>
         return filesToExclude.stream().anyMatch(matcher -> matcher.matches(file));
     }
 
+    @Override
     public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
     {
         if (shouldExcludeDir(dir))
@@ -82,6 +83,7 @@ public class MigrationFileVisitor extends SimpleFileVisitor<Path>
         return FileVisitResult.CONTINUE;
     }
 
+    @Override
     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
     {
         Objects.requireNonNull(file);
@@ -94,6 +96,7 @@ public class MigrationFileVisitor extends SimpleFileVisitor<Path>
         return FileVisitResult.CONTINUE;
     }
 
+    @Override
     public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException
     {
         // SimpleFileVisitor is checking if the file is null. Hence, checking the same condition here.

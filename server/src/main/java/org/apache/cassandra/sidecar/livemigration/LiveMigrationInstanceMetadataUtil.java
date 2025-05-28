@@ -20,14 +20,16 @@ package org.apache.cassandra.sidecar.livemigration;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.jetbrains.annotations.NotNull;
@@ -52,6 +54,8 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholde
 @SuppressWarnings("ConstantValue")
 public class LiveMigrationInstanceMetadataUtil
 {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationInstanceMetadataUtil.class);
 
     /**
      * List of directories Live Migration considers to transfer between source and destination.
@@ -134,8 +138,7 @@ public class LiveMigrationInstanceMetadataUtil
         for (int i = 0; i < dataDirs.size(); i++)
         {
             String dir = dataDirs.get(i);
-            Set<String> placeholders = Collections.unmodifiableSet(
-            new HashSet<>(Arrays.asList(DATA_FILE_DIR_PLACEHOLDER, DATA_FILE_DIR_PLACEHOLDER + "_" + i)));
+            Set<String> placeholders = Set.of(DATA_FILE_DIR_PLACEHOLDER, DATA_FILE_DIR_PLACEHOLDER + "_" + i);
             placeholderMap.put(dir, placeholders);
         }
 
@@ -153,12 +156,19 @@ public class LiveMigrationInstanceMetadataUtil
                                    @NotNull InstanceMetadata metadata)
     {
 
+        if (fileUrl.contains("/../") || fileUrl.endsWith("/.."))
+        {
+            String errorMessage = "Tried to access file using relative path " + fileUrl + ".";
+            LOGGER.error(errorMessage);
+            throw new IllegalArgumentException(errorMessage);
+        }
+
         Map<String, String> urlToLocalDirMap = migrationUrlLocalDirMap(metadata);
         for (Map.Entry<String, String> entry : urlToLocalDirMap.entrySet())
         {
             if (fileUrl.startsWith(entry.getKey()))
             {
-                assert entry.getValue() != null : "No local path found for url " + fileUrl;
+                Objects.requireNonNull(entry.getValue(), () -> "No local path found for url " + fileUrl);
                 String relativePath = fileUrl.substring(entry.getKey().length());
                 return Paths.get(entry.getValue(), relativePath).toAbsolutePath().toString();
             }

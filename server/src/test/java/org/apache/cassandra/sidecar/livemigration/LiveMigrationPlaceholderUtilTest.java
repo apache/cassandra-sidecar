@@ -23,7 +23,6 @@ import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.hasAnyPlaceholder;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.hasPlaceholder;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.replacePlaceholder;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -58,17 +57,17 @@ class LiveMigrationPlaceholderUtilTest
     @Test
     void testHasKnownPlaceHolder()
     {
-        assertThat(hasPlaceholder("${DATA_FILE_DIR}/ks/t1", Collections.singleton("HINTS_DIR"))).isFalse();
-        assertThat(hasPlaceholder("glob:${DATA_FILE_DIR}/ks/t1", Collections.singleton("HINTS_DIR"))).isFalse();
+        assertThat(hasAnyPlaceholder("${DATA_FILE_DIR}/ks/t1", Collections.singleton("HINTS_DIR"))).isFalse();
+        assertThat(hasAnyPlaceholder("glob:${DATA_FILE_DIR}/ks/t1", Collections.singleton("HINTS_DIR"))).isFalse();
 
 
-        assertThat(hasPlaceholder("${HINTS_DIR}/ks/t1", Collections.singleton("HINTS_DIR"))).isTrue();
-        assertThat(hasPlaceholder("glob:${HINTS_DIR}/ks/t1", Collections.singleton("HINTS_DIR"))).isTrue();
+        assertThat(hasAnyPlaceholder("${HINTS_DIR}/ks/t1", Collections.singleton("HINTS_DIR"))).isTrue();
+        assertThat(hasAnyPlaceholder("glob:${HINTS_DIR}/ks/t1", Collections.singleton("HINTS_DIR"))).isTrue();
 
-        assertThat(hasPlaceholder("${DATA_FILE_DIR}/ks/t1", Collections.singleton("DATA_FILE_DIR"))).isTrue();
-        assertThat(hasPlaceholder("glob:${DATA_FILE_DIR}/ks/t1", Collections.singleton("DATA_FILE_DIR"))).isTrue();
-        assertThat(hasPlaceholder("regex:${DATA_FILE_DIR}/k*/t1", Collections.singleton("DATA_FILE_DIR"))).isTrue();
+        assertThat(hasAnyPlaceholder("${DATA_FILE_DIR}/ks/t1", Collections.singleton("DATA_FILE_DIR"))).isTrue();
+        assertThat(hasAnyPlaceholder("glob:${DATA_FILE_DIR}/ks/t1", Collections.singleton("DATA_FILE_DIR"))).isTrue();
+        assertThat(hasAnyPlaceholder("regex:${DATA_FILE_DIR}/k*/t1", Collections.singleton("DATA_FILE_DIR"))).isTrue();
 
-        assertThat(hasPlaceholder("glob:${DATA_FILE_DIR}/ks/t1", Collections.singleton("DATA_FILE_DIR_0"))).isFalse();
+        assertThat(hasAnyPlaceholder("glob:${DATA_FILE_DIR}/ks/t1", Collections.singleton("DATA_FILE_DIR_0"))).isFalse();
     }
 }

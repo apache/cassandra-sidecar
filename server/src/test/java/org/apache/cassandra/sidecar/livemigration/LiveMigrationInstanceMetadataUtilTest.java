@@ -232,6 +232,26 @@ class LiveMigrationInstanceMetadataUtilTest
     }
 
     @Test
+    public void testRelativeLocalPaths()
+    {
+        String cassandraHomeDir = tempDir.resolve("testLocalPath").toString();
+        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
+
+        validateIllegalLocalPath(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/../" + FILE_NAME,
+                                 instanceMetadata);
+        validateIllegalLocalPath(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/../../" + FILE_NAME,
+                                 instanceMetadata);
+        validateIllegalLocalPath(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/" + FILE_NAME + "/..",
+                                 instanceMetadata);
+        validateIllegalLocalPath(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/../../../../etc/passwd",
+                                 instanceMetadata);
+        validateIllegalLocalPath(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/../../../../etc/passwd",
+                                 instanceMetadata);
+        validateIllegalLocalPath(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/" + FILE_NAME + "/../../../../etc/passwd",
+                                 instanceMetadata);
+    }
+
+    @Test
     public void testLocalPathNonExistingDirs()
     {
         String cassandraHomeDir = tempDir.resolve("testGetLocalPathNonExistingDirs").toString();
@@ -278,6 +298,12 @@ class LiveMigrationInstanceMetadataUtilTest
     void validateLocalPath(String expectedPath, String fileDownloadUrl, InstanceMetadata instanceMetadata)
     {
         assertThat(localPath(fileDownloadUrl, instanceMetadata)).isEqualTo(expectedPath);
+    }
+
+    void validateIllegalLocalPath(String fileDownloadUrl, InstanceMetadata instanceMetadata)
+    {
+        assertThatIllegalArgumentException()
+        .isThrownBy(() -> localPath(fileDownloadUrl, instanceMetadata));
     }
 
     InstanceMetadata getInstanceMetadata(String cassandraHomeDir)
