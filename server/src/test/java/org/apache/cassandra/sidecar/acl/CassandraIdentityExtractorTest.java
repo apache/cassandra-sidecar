@@ -71,7 +71,8 @@ class CassandraIdentityExtractorTest
         IdentityToRoleCache cache = identityRoleCache();
         cache.warmUp(5);
 
-        CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(cache, Collections.emptySet());
+        AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
+        CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(mockAdminIdentityResolver, cache);
 
         X509Certificate certificate = certificate("spiffe://cassandra/sidecar/test");
         assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate)).size()).isOne();
@@ -84,7 +85,8 @@ class CassandraIdentityExtractorTest
         IdentityToRoleCache cache = identityRoleCache();
         cache.warmUp(5);
 
-        CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(cache, Collections.emptySet());
+        AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
+        CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(mockAdminIdentityResolver, cache);
 
         X509Certificate certificate = certificate("spiffe://identity/without/role");
         assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate)))
@@ -96,8 +98,11 @@ class CassandraIdentityExtractorTest
     {
         IdentityToRoleCache cache = identityRoleCache();
 
+        AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
+        when(mockAdminIdentityResolver.isAdmin("spiffe://sidecar/admin/identity")).thenReturn(true);
+
         // passing empty cache
-        CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(cache, Collections.singleton("spiffe://sidecar/admin/identity"));
+        CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(mockAdminIdentityResolver, cache);
 
         X509Certificate certificate = certificate("spiffe://sidecar/admin/identity");
         assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate)).size()).isOne();
@@ -109,8 +114,10 @@ class CassandraIdentityExtractorTest
     {
         IdentityToRoleCache cache = identityRoleCache();
 
+        AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
+
         // passing empty cache
-        CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(cache, Collections.emptySet());
+        CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(mockAdminIdentityResolver, cache);
         X509Certificate certificate = certificate("spiffe://sidecar/admin/identity");
         assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate))).isInstanceOf(CredentialValidationException.class);
     }

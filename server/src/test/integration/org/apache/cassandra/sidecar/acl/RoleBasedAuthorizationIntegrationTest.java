@@ -56,7 +56,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 @ExtendWith(VertxExtension.class)
 class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 {
-    private static final int MIN_VERSION_WITH_MTLS = 5;
+    protected static final int MIN_VERSION_WITH_MTLS = 5;
 
     private Path nonAdminClientKeystorePath;
     private CountDownLatch testCompleteLatch;
@@ -514,12 +514,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     private void createRequiredKeystores() throws Exception
     {
         nonAdminClientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/non_admin_test_user");
-    }
-
-    private void createRole(String role, boolean superUser)
-    {
-        Session session = maybeGetSession();
-        session.execute("CREATE ROLE " + role + " WITH PASSWORD = 'password' AND SUPERUSER = " + superUser + " AND LOGIN = true;");
     }
 
     private void createKeyspace(String keyspace)

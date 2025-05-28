@@ -28,7 +28,9 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
+import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
+import org.apache.cassandra.sidecar.acl.authorization.SuperUserCache;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
@@ -107,10 +109,21 @@ class MutualTlsAuthenticationHandlerFactoryTest
         when(mockAccessControlConfig.permissionCacheConfiguration()).thenReturn(mockCacheConfig);
         when(mockSidecarConfig.accessControlConfiguration()).thenReturn(mockAccessControlConfig);
         SystemAuthDatabaseAccessor mockAccessor = mock(SystemAuthDatabaseAccessor.class);
-        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(vertx, executorPools, mockSidecarConfig, mockAccessor);
-        MutualTlsAuthenticationHandlerFactory factory = new MutualTlsAuthenticationHandlerFactory(identityToRoleCache);
+        MutualTlsAuthenticationHandlerFactory factory = factory(mockSidecarConfig, mockAccessor);
         assertThatThrownBy(() -> factory.create(vertx, mockAccessControlConfig, parameters))
         .isInstanceOf(ConfigurationException.class)
         .hasMessage(expectedErrMsg);
+    }
+
+    private MutualTlsAuthenticationHandlerFactory factory(SidecarConfiguration mockSidecarConfig,
+                                                          SystemAuthDatabaseAccessor mockAccessor)
+    {
+        IdentityToRoleCache identityToRoleCache
+        = new IdentityToRoleCache(vertx, executorPools, mockSidecarConfig, mockAccessor);
+        SuperUserCache superUserCache
+        = new SuperUserCache(vertx, executorPools, mockSidecarConfig, mockAccessor);
+        AdminIdentityResolver adminIdentityResolver
+        = new AdminIdentityResolver(identityToRoleCache, superUserCache, mockSidecarConfig);
+        return new MutualTlsAuthenticationHandlerFactory(identityToRoleCache, adminIdentityResolver);
     }
 }

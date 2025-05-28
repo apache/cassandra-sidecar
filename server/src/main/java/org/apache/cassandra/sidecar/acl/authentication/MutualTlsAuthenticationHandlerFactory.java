@@ -29,6 +29,7 @@ import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
 import io.vertx.ext.auth.mtls.impl.MutualTlsAuthenticationImpl;
 import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerInternal;
+import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
@@ -42,11 +43,14 @@ public class MutualTlsAuthenticationHandlerFactory implements AuthenticationHand
     protected static final String CERTIFICATE_VALIDATOR_PARAM_KEY = "certificate_validator";
     protected static final String CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY = "certificate_identity_extractor";
     private final IdentityToRoleCache identityToRoleCache;
+    private final AdminIdentityResolver adminIdentityResolver;
 
     @Inject
-    public MutualTlsAuthenticationHandlerFactory(IdentityToRoleCache identityToRoleCache)
+    public MutualTlsAuthenticationHandlerFactory(IdentityToRoleCache identityToRoleCache,
+                                                 AdminIdentityResolver adminIdentityResolver)
     {
         this.identityToRoleCache = identityToRoleCache;
+        this.adminIdentityResolver = adminIdentityResolver;
     }
 
     @Override
@@ -93,8 +97,7 @@ public class MutualTlsAuthenticationHandlerFactory implements AuthenticationHand
         CertificateIdentityExtractor certificateIdentityExtractor;
         if (parameters.get(CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY).equalsIgnoreCase(CassandraIdentityExtractor.class.getName()))
         {
-            certificateIdentityExtractor = new CassandraIdentityExtractor(identityToRoleCache,
-                                                                          accessControlConfiguration.adminIdentities());
+            certificateIdentityExtractor = new CassandraIdentityExtractor(adminIdentityResolver, identityToRoleCache);
         }
         else
         {

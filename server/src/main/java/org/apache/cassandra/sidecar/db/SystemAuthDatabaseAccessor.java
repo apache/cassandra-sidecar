@@ -26,6 +26,8 @@ import java.util.Set;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.Statement;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.ext.auth.authorization.Authorization;
@@ -133,10 +135,16 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public boolean isSuperUser(String role)
     {
-        BoundStatement statement = tableSchema.roleSuperuserStatus().bind(role);
+        Statement statement = new SimpleStatement(String.format(tableSchema.unPreparedListRoles(), role));
         ResultSet result = execute(statement);
-        Row row = result.one();
-        return row != null && row.getBool("is_superuser");
+        for (Row row : result)
+        {
+            if (row.getBool("super"))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -149,7 +157,10 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
         Map<String, Boolean> roles = new HashMap<>();
         for (Row row : result)
         {
-            roles.put(row.getString("role"), row.getBool("is_superuser"));
+            if (row.getBool("is_superuser") || isSuperUser(row.getString("role")))
+            {
+                roles.put(row.getString("role"), true);
+            }
         }
         return roles;
     }

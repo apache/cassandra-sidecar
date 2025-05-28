@@ -37,7 +37,7 @@ import org.apache.cassandra.sidecar.acl.authentication.JwtAuthenticationHandlerF
 import org.apache.cassandra.sidecar.acl.authentication.JwtRoleProcessor;
 import org.apache.cassandra.sidecar.acl.authentication.JwtRoleProcessorImpl;
 import org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory;
-import org.apache.cassandra.sidecar.acl.authorization.AdminIdentityResolver;
+import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationParameterValidateHandler;
 import org.apache.cassandra.sidecar.acl.authorization.PermissionFactory;

@@ -19,13 +19,12 @@
 package org.apache.cassandra.sidecar.acl.authentication;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
+import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
 /**
@@ -35,15 +34,13 @@ import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 public class CassandraIdentityExtractor extends SpiffeIdentityExtractor
 {
     private final IdentityToRoleCache identityToRoleCache;
-    private final Set<String> adminIdentities;
+    private final AdminIdentityResolver adminIdentityResolver;
 
-    public CassandraIdentityExtractor(IdentityToRoleCache identityToRoleCache,
-                                      Set<String> adminIdentities)
+    public CassandraIdentityExtractor(AdminIdentityResolver adminIdentityResolver,
+                                      IdentityToRoleCache identityToRoleCache)
     {
         this.identityToRoleCache = identityToRoleCache;
-        this.adminIdentities = adminIdentities != null
-                               ? Collections.unmodifiableSet(adminIdentities)
-                               : Collections.emptySet();
+        this.adminIdentityResolver = adminIdentityResolver;
     }
 
     @Override
@@ -54,7 +51,7 @@ public class CassandraIdentityExtractor extends SpiffeIdentityExtractor
         for (String identity : identities)
         {
             // Sidecar recognizes identities in identity_to_role table as authenticated
-            if (adminIdentities.contains(identity) || identityToRoleCache.containsKey(identity))
+            if (adminIdentityResolver.isAdmin(identity) || identityToRoleCache.containsKey(identity))
             {
                 allowedIdentities.add(identity);
             }

@@ -23,6 +23,7 @@ import java.util.List;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.impl.AuthorizationHandlerImpl;
+import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 

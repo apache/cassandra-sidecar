@@ -33,8 +33,8 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
 
     private PreparedStatement roleFromIdentity;
     private PreparedStatement allRolesAndIdentities;
-    private PreparedStatement roleSuperuserStatus;
     private PreparedStatement allRoles;
+    private String unpreparedListRoles;
     private PreparedStatement allRolesAndPermissions;
 
     @Override
@@ -46,8 +46,8 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
     @Override
     protected void prepareStatements(@NotNull Session session)
     {
-        roleSuperuserStatus = prepare(roleSuperuserStatus, session, "SELECT is_superuser FROM system_auth.roles WHERE role = ?");
-        allRoles = prepare(allRoles, session, "SELECT * FROM system_auth.roles");
+        allRoles = prepare(allRoles, session, "SELECT role, is_superuser FROM system_auth.roles");
+        unpreparedListRoles = "LIST ROLES OF %s";
         allRolesAndPermissions = prepare(allRolesAndPermissions, session, "SELECT * FROM system_auth.role_permissions");
 
         KeyspaceMetadata keyspaceMetadata = session.getCluster().getMetadata().getKeyspace(keyspaceName());
@@ -87,14 +87,14 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
         return allRolesAndPermissions;
     }
 
-    public PreparedStatement roleSuperuserStatus()
-    {
-        return roleSuperuserStatus;
-    }
-
     public PreparedStatement allRoles()
     {
         return allRoles;
+    }
+
+    public String unPreparedListRoles()
+    {
+        return unpreparedListRoles;
     }
 
     protected void ensureSchemaAvailable() throws SchemaUnavailableException

@@ -22,6 +22,7 @@ import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;

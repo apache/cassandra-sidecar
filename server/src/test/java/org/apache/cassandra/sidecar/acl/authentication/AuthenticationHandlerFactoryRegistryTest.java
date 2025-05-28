@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.acl.authentication;
 
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +44,8 @@ class AuthenticationHandlerFactoryRegistryTest
     {
         AuthenticationHandlerFactoryRegistry registry = new AuthenticationHandlerFactoryRegistry();
         IdentityToRoleCache identityToRoleCache = mock(IdentityToRoleCache.class);
-        MutualTlsAuthenticationHandlerFactory mutualTlsAuthenticationHandlerFactory = new MutualTlsAuthenticationHandlerFactory(identityToRoleCache);
+        AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
+        MutualTlsAuthenticationHandlerFactory mutualTlsAuthenticationHandlerFactory = new MutualTlsAuthenticationHandlerFactory(identityToRoleCache, mockAdminIdentityResolver);
         registry.register(mutualTlsAuthenticationHandlerFactory);
         assertThat(registry.getFactory(MutualTlsAuthenticationHandlerFactory.class.getName())).isNotNull();
     }

@@ -16,13 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.acl.authorization;
-
-import java.util.Set;
+package org.apache.cassandra.sidecar.acl;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
+import org.apache.cassandra.sidecar.acl.authorization.SuperUserCache;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 
 /**
@@ -33,7 +31,7 @@ public class AdminIdentityResolver
 {
     private final IdentityToRoleCache identityToRoleCache;
     private final SuperUserCache superUserCache;
-    private final Set<String> adminIdentities;
+    private final SidecarConfiguration config;
 
     @Inject
     public AdminIdentityResolver(IdentityToRoleCache identityToRoleCache,
@@ -42,12 +40,12 @@ public class AdminIdentityResolver
     {
         this.identityToRoleCache = identityToRoleCache;
         this.superUserCache = superUserCache;
-        this.adminIdentities = sidecarConfiguration.accessControlConfiguration().adminIdentities();
+        this.config = sidecarConfiguration;
     }
 
     public boolean isAdmin(String identity)
     {
-        if (adminIdentities.contains(identity))
+        if (config.accessControlConfiguration().adminIdentities().contains(identity))
         {
             return true;
         }

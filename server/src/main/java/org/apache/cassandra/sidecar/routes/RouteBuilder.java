@@ -36,7 +36,7 @@ import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import org.apache.cassandra.sidecar.acl.authorization.AdminIdentityResolver;
+import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationParameterValidateHandler;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationWithAdminBypassHandler;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;

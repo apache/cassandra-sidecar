@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Use List roles statement to check for super user status (CASSSIDECAR-252)
  * remove file:// from sidecar.logdir property (CASSSIDECAR-251)
  * Add APP_HOME prefix for log config and log dir in cassandra-sidecar startup script (CASSSIDECAR-247)
  * Do not emit warning on startup when initialDelay is configured to 0 (CASSSIDECAR-248)
