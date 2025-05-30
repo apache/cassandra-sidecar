@@ -133,7 +133,8 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      * Queries Cassandra for superuser status of a given role.
      *
      * @param role role in Cassandra
-     * @return {@code true} if given role is a superuser, {@code false} otherwise
+     * @return {@code true} if the supplied role or any other role granted to it (directly or indirectly) has superuser
+     * status., {@code false} otherwise
      * Note: {@code false} response does not indicate whether the role exists or not
      */
     public boolean isSuperUser(String role)
