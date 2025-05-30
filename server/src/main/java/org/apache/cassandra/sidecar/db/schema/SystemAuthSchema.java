@@ -92,7 +92,7 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
         return allRoles;
     }
 
-    public String unPreparedListRoles()
+    public String unpreparedListRoles()
     {
         return unpreparedListRoles;
     }

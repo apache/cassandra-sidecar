@@ -137,7 +137,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public boolean isSuperUser(String role)
     {
-        Statement statement = new SimpleStatement(String.format(tableSchema.unPreparedListRoles(), role));
+        Statement statement = new SimpleStatement(String.format(tableSchema.unpreparedListRoles(), role));
         ResultSet result = execute(statement);
         for (Row row : result)
         {
