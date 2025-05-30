@@ -396,7 +396,7 @@ public abstract class IntegrationTestBase
     protected void createRole(String role, String password, boolean superUser)
     {
         Session session = maybeGetSession();
-        session.execute("CREATE ROLE " + role + " WITH PASSWORD ='" + password + "' AND SUPERUSER = " + superUser + " AND LOGIN = true;");
+        session.execute("CREATE ROLE \"" + role + "\" WITH PASSWORD ='" + password + "' AND SUPERUSER = " + superUser + " AND LOGIN = true;");
     }
 
     // similar to awaitLatchOrTimeout, it throws either test exceptions (due to startAsync failures) or timeout exception

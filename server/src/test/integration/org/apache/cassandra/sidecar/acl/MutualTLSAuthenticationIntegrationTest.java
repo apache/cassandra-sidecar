@@ -61,15 +61,21 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
               }));
     }
 
-    @CassandraIntegrationTest()
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
     void testAssociatingRoleWithNonAdminIdentity(VertxTestContext context, CassandraTestContext cassandraTestContext) throws Exception
     {
+        assumeThat(cassandraTestContext.version.major)
+        .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
+        .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
+
+        // required for authentication of sidecar requests to Cassandra. Only superusers can grant permissions
+        insertIdentityRole(cassandraTestContext, ADMIN_IDENTITY, "cassandra");
+
         waitForSchemaReady(1, TimeUnit.MINUTES);
-        if (cassandraTestContext.version.major == 5)
-        {
-            insertIdentityRole(cassandraTestContext, "spiffe://cassandra/sidecar/test", "cassandra-role");
-            grantSidecarPermission("cassandra-role", "cluster", "SCHEMA:READ");
-        }
+
+        createRole("cassandra-role", false);
+        insertIdentityRole(cassandraTestContext, "spiffe://cassandra/sidecar/test", "cassandra-role");
+        grantSidecarPermission("cassandra-role", "cluster", "SCHEMA:READ");
 
         // wait for cache refresh to pick by granted SCHEMA:READ permission
         Thread.sleep(2000L);
@@ -80,18 +86,11 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
 
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .send(context.succeeding(response -> {
-                  if (cassandraTestContext.version.major == 5)
-                  {
-                      assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                      SchemaResponse schemaResponse = response.bodyAsJson(SchemaResponse.class);
-                      assertThat(schemaResponse).isNotNull();
-                      assertThat(schemaResponse.keyspace()).isNull();
-                      assertThat(schemaResponse.schema()).isNotNull();
-                  }
-                  else
-                  {
-                      assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.UNAUTHORIZED.code());
-                  }
+                  assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                  SchemaResponse schemaResponse = response.bodyAsJson(SchemaResponse.class);
+                  assertThat(schemaResponse).isNotNull();
+                  assertThat(schemaResponse.keyspace()).isNull();
+                  assertThat(schemaResponse.schema()).isNotNull();
                   context.completeNow();
               }));
     }
