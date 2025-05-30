@@ -160,22 +160,21 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
         Map<String, Boolean> roleToSuperUser = rows.stream()
                                                    .collect(Collectors.toMap(row -> row.getString("role"),
                                                                              row -> row.getBool("is_superuser")));
-        Map<String, Boolean> superUserRoles = new HashMap<>();
         for (Row row : rows)
         {
-            if (row.getBool("is_superuser"))
+            if (roleToSuperUser.get(row.getString("role")))
             {
-                superUserRoles.put(row.getString("role"), true);
+                // already has superuser status, skip
+                continue;
             }
-            else
+
+            // check if superuser status has been granted indirectly to this user
+            List<String> memberOf = row.getList("member_of", String.class);
+            if (memberOf.stream().anyMatch(roleToSuperUser::get))
             {
-                List<String> memberOf = row.getList("member_of", String.class);
-                if (memberOf.stream().anyMatch(roleToSuperUser::get))
-                {
-                    superUserRoles.put(row.getString("role"), true);
-                }
+                roleToSuperUser.put(row.getString("role"), true);
             }
         }
-        return superUserRoles;
+        return roleToSuperUser;
     }
 }

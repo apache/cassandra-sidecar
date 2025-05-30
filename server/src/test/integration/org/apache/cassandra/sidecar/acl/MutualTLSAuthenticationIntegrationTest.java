@@ -159,7 +159,6 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         // wait for cache refreshes
         Thread.sleep(3000);
 
-
         // identity is associated with a role with transitive superuser status, hence no permissions needed,
         // it has admin privileges
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test");
@@ -223,9 +222,9 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
                                       "VALUES ('%s', '%s', {'%s'})", role, resource, permission));
     }
 
-    private void grantRole(String parentRole, String childRole)
+    private void grantRole(String role, String roleToAssign)
     {
         Session session = maybeGetSession();
-        session.execute(String.format("GRANT %s TO %s", childRole, parentRole));
+        session.execute(String.format("GRANT %s TO %s", roleToAssign, role));
     }
 }

@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.acl;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.acl.authorization.SuperUserCache;
+import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 
 /**
@@ -31,7 +32,7 @@ public class AdminIdentityResolver
 {
     private final IdentityToRoleCache identityToRoleCache;
     private final SuperUserCache superUserCache;
-    private final SidecarConfiguration config;
+    private final AccessControlConfiguration config;
 
     @Inject
     public AdminIdentityResolver(IdentityToRoleCache identityToRoleCache,
@@ -40,12 +41,12 @@ public class AdminIdentityResolver
     {
         this.identityToRoleCache = identityToRoleCache;
         this.superUserCache = superUserCache;
-        this.config = sidecarConfiguration;
+        this.config = sidecarConfiguration.accessControlConfiguration();
     }
 
     public boolean isAdmin(String identity)
     {
-        if (config.accessControlConfiguration().adminIdentities().contains(identity))
+        if (config.adminIdentities().contains(identity))
         {
             return true;
         }

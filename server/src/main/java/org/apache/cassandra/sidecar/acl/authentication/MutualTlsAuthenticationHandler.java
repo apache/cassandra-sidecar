@@ -66,6 +66,14 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
         }
 
         CertificateCredentials certificateCredentials = CertificateCredentials.fromHttpRequest(ctx.request());
+        if (certificateCredentials == null)
+        {
+            ctx.response()
+               .setStatusCode(UNAUTHORIZED.code())
+               .setStatusMessage("Could not extract certificates from request")
+               .end();
+            return;
+        }
 
         authProvider.authenticate(certificateCredentials)
                     .recover(cause -> { // converts any exception to unauthorized http exception

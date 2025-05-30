@@ -193,6 +193,10 @@ schema_reporting:                            # Schema Reporting configuration
 #      path: "path/to/truststore.p12"
 #      password: password
 
+# To enable access control, the role used by sidecar to talk to Cassandra must be granted following permissions
+# - GRANT DESCRIBE ON ALL ROLES to <insert_sidecar_role>          - Allows sidecar to list roles that belong to a user
+# - GRANT SELECT ON KEYSPACE system_auth to <insert_sidecar_role> - Allows sidecar to read from roles and
+#                                                                   role_permissions table
 access_control:
   # When enabled requests need to be authenticated and authorized before servicing.
   enabled: false

@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.List;
 
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.impl.logging.Logger;
+import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -32,6 +34,7 @@ import io.vertx.core.json.JsonObject;
  */
 public class CertificateCredentials implements Credentials
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CertificateCredentials.class);
     private final List<Certificate> certificateChain;
     private final X509Certificate peerCertificate;
 
@@ -59,7 +62,8 @@ public class CertificateCredentials implements Credentials
         }
         catch (Exception e)
         {
-            throw new IllegalArgumentException("Could not extract certificates from request", e);
+            LOGGER.debug("Could not extract certificates from request", e);
+            return null;
         }
     }
 

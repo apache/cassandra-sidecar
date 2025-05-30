@@ -23,14 +23,19 @@ import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 
+import javax.net.ssl.SSLPeerUnverifiedException;
+
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.http.HttpConnection;
 import io.vertx.core.http.HttpServerRequest;
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests {@link CertificateCredentials}
@@ -52,13 +57,13 @@ public class CertificateCredentialsTest
     }
 
     @Test
-    void testNonCertificateBasedConnection()
+    void testNonCertificateBasedConnection() throws SSLPeerUnverifiedException
     {
-        HttpServerRequest request = mock(HttpServerRequest.class);
-
-        assertThatThrownBy(() -> CertificateCredentials.fromHttpRequest(request))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Could not extract certificates from request");
+        HttpServerRequest mockRequest = mock(HttpServerRequest.class);
+        HttpConnection mockConnection = mock(HttpConnection.class);
+        when(mockRequest.connection()).thenReturn(mockConnection);
+        when(mockConnection.peerCertificates()).thenThrow(new RuntimeException("Unexpected error"));
+        assertThat(CertificateCredentials.fromHttpRequest(mockRequest)).isNull();
     }
 
     @Test
