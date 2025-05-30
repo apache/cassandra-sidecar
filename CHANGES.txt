@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Added endpoint for listing files for Live Migration (CASSSIDECAR-222)
  * Use List roles statement to check for super user status (CASSSIDECAR-252)
  * remove file:// from sidecar.logdir property (CASSSIDECAR-251)
  * Add APP_HOME prefix for log config and log dir in cassandra-sidecar startup script (CASSSIDECAR-247)
