@@ -34,7 +34,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.ext.auth.authorization.Authorization;
 import org.apache.cassandra.sidecar.acl.authorization.PermissionFactory;
-import org.apache.cassandra.sidecar.acl.authorization.SuperUserCache;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;

@@ -166,7 +166,7 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
 
         CountDownLatch authorized = new CountDownLatch(1);
         verifyAccess(client, false, context, authorized);
-        authorized.await(30, TimeUnit.SECONDS);
+        assertThat(authorized.await(30, TimeUnit.SECONDS)).isTrue();
 
         // drop superuser role, during cache refresh nonsuperuser role will lose superuser status
         Session session = maybeGetSession();
@@ -177,7 +177,7 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
 
         CountDownLatch unAuthorized = new CountDownLatch(1);
         verifyAccess(client, true, context, unAuthorized);
-        unAuthorized.await(30, TimeUnit.SECONDS);
+        assertThat(unAuthorized.await(30, TimeUnit.SECONDS)).isTrue();
         context.completeNow();
     }
 
