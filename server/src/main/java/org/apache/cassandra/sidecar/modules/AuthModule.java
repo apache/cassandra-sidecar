@@ -30,6 +30,7 @@ import com.google.inject.multibindings.ProvidesIntoMap;
 import io.vertx.core.Vertx;
 import io.vertx.ext.auth.authorization.AuthorizationProvider;
 import io.vertx.ext.web.handler.ChainAuthHandler;
+import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.acl.authentication.AuthenticationHandlerFactory;
 import org.apache.cassandra.sidecar.acl.authentication.AuthenticationHandlerFactoryRegistry;
@@ -37,7 +38,6 @@ import org.apache.cassandra.sidecar.acl.authentication.JwtAuthenticationHandlerF
 import org.apache.cassandra.sidecar.acl.authentication.JwtRoleProcessor;
 import org.apache.cassandra.sidecar.acl.authentication.JwtRoleProcessorImpl;
 import org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory;
-import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationParameterValidateHandler;
 import org.apache.cassandra.sidecar.acl.authorization.PermissionFactory;
