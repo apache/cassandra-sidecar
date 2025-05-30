@@ -154,14 +154,14 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         createRole("superuser", true);
         createRole("nonsuperuser", false);
         grantRole("nonsuperuser", "superuser");
-        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/test", "nonsuperuser");
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/nonsuperuser", "nonsuperuser");
 
         // wait for cache refreshes
         Thread.sleep(3000);
 
         // identity is associated with a role with transitive superuser status, hence no permissions needed,
         // it has admin privileges
-        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/test");
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/nonsuperuser");
         WebClient client = createClient(clientKeystorePath, truststorePath);
 
         CountDownLatch authorized = new CountDownLatch(1);
