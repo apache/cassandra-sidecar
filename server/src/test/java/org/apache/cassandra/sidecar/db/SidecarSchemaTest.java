@@ -191,9 +191,7 @@ public class SidecarSchemaTest
 
             "SELECT * FROM sidecar_internal.role_permissions_v1",
 
-            "SELECT is_superuser FROM system_auth.roles WHERE role = ?",
-
-            "SELECT * FROM system_auth.roles",
+            "SELECT role, is_superuser, member_of FROM system_auth.roles",
 
             "SELECT * FROM system_auth.role_permissions",
 
