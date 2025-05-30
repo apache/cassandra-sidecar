@@ -34,6 +34,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.ext.auth.authorization.Authorization;
 import org.apache.cassandra.sidecar.acl.authorization.PermissionFactory;
+import org.apache.cassandra.sidecar.acl.authorization.SuperUserCache;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
@@ -134,6 +135,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      *
      * @param role role in Cassandra
      * @return {@code true} if given role is a superuser, {@code false} otherwise
+     * Note: {@code false} response does not indicate whether the role exists or not
      */
     public boolean isSuperUser(String role)
     {

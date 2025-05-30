@@ -27,6 +27,7 @@ import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 
 /**
  * Caches superuser status of cassandra roles.
+ * Note: {@link SuperUserCache} maintains only the superuser status. It can not guarantee whether a role exists
  */
 public class SuperUserCache extends AuthCache<String, Boolean>
 {
