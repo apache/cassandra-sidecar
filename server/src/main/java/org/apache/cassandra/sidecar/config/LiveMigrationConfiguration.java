@@ -42,7 +42,7 @@ public interface LiveMigrationConfiguration
     /**
      * Map of source and destination Cassandra instances to migrate.
      *
-     * @return Map of strings where key is the source instance name and value is the destination instance name.
+     * @return Map of strings where key is the source instance hostname and value is the destination instance hostname.
      */
     Map<String, String> migrationMap();
 }

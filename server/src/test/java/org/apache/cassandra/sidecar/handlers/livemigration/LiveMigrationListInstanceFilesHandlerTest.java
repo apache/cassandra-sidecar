@@ -69,8 +69,8 @@ import org.apache.cassandra.sidecar.server.Server;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_COMMITLOG_DIR_PATH;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_FILES_API;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_HINTS_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_LIST_FILES_API;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_SAVED_CACHES_DIR_PATH;
 import static org.apache.cassandra.sidecar.livemigration.InstanceFileInfoTestUtil.findInstanceFileInfo;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.createFile;
@@ -217,7 +217,7 @@ class LiveMigrationListInstanceFilesHandlerTest
         unexpectedDirUrls.add(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/1" + "/ks1/table1/snapshots");
 
         WebClient client = WebClient.create(vertx);
-        client.get(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_LIST_FILES_API)
+        client.get(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_FILES_API)
               .as(BodyCodec.buffer())
               .send(resp -> context.verify(() -> {
 
@@ -294,7 +294,7 @@ class LiveMigrationListInstanceFilesHandlerTest
 
 
         WebClient client = WebClient.create(vertx);
-        client.get(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_LIST_FILES_API)
+        client.get(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_FILES_API)
               .as(BodyCodec.buffer())
               .send(resp -> context.verify(() -> {
                   assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
@@ -349,7 +349,7 @@ class LiveMigrationListInstanceFilesHandlerTest
 
         WebClient client = WebClient.create(vertx);
 
-        client.get(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_LIST_FILES_API)
+        client.get(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_FILES_API)
               .as(BodyCodec.buffer())
               .send(resp -> {
                   assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code());

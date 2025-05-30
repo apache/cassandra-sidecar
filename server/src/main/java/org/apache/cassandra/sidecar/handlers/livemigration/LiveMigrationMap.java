@@ -34,7 +34,7 @@ public interface LiveMigrationMap
      * @param instanceMeta Cassandra instance metadata
      * @return true if given instance is configured as source for live migration.
      */
-    default boolean isSource(@NotNull final InstanceMetadata instanceMeta)
+    default boolean isSource(@NotNull InstanceMetadata instanceMeta)
     {
         Map<String, String> map = getMigrationMap();
         return map != null && map.containsKey(String.valueOf(instanceMeta.host()));
@@ -46,7 +46,7 @@ public interface LiveMigrationMap
      * @param instanceMeta Cassandra instance metadata
      * @return true if given instance is configured as destination for live migration.
      */
-    default boolean isDestination(@NotNull final InstanceMetadata instanceMeta)
+    default boolean isDestination(@NotNull InstanceMetadata instanceMeta)
     {
         Map<String, String> map = getMigrationMap();
         return map != null && map.containsValue(String.valueOf(instanceMeta.host()));
@@ -58,7 +58,7 @@ public interface LiveMigrationMap
      * @param instanceMeta Cassandra instance metadata
      * @return true if given instance is either source or destination
      */
-    default boolean isAny(@NotNull final InstanceMetadata instanceMeta)
+    default boolean isAny(@NotNull InstanceMetadata instanceMeta)
     {
         return isSource(instanceMeta) || isDestination(instanceMeta);
     }

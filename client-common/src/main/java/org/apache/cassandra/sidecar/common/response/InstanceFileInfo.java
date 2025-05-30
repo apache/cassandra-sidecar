@@ -32,17 +32,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class InstanceFileInfo
 {
     public final String fileUrl;
-    // size is only relevant when the fileType is 'FILE'
+    // size is only relevant when the fileType is 'FILE'.
+    // It is set to -1 for directories.
     public final long size;
     public final FileType fileType;
 
     // The latest timestamp at which the file/dir was modified represented in milliseconds.
     public final long lastModifiedTime;
 
-    public InstanceFileInfo(@JsonProperty("fileUrl") final String fileUrl,
-                            @JsonProperty("size") final long size,
-                            @JsonProperty("fileType") final FileType fileType,
-                            @JsonProperty("lastModifiedTime") final long lastModifiedTime)
+    public InstanceFileInfo(@JsonProperty("fileUrl") String fileUrl,
+                            @JsonProperty("size") long size,
+                            @JsonProperty("fileType") FileType fileType,
+                            @JsonProperty("lastModifiedTime") long lastModifiedTime)
     {
         this.fileUrl = fileUrl;
         this.size = size;

@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.common.response;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,7 +28,7 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Class representing response for {@link ApiEndpointsV1#LIVE_MIGRATION_LIST_FILES_API}.
+ * Class representing response for {@link ApiEndpointsV1#LIVE_MIGRATION_FILES_API}.
  * Holds list of file urls (with their individual sizes) + total size of files
  * <p>
  * Sample format:
@@ -57,9 +58,9 @@ public class InstanceFilesListResponse
     private final List<InstanceFileInfo> files;
     private final long totalSize;
 
-    public InstanceFilesListResponse(@NotNull final List<InstanceFileInfo> files)
+    public InstanceFilesListResponse(@NotNull List<InstanceFileInfo> files)
     {
-        this.files = files;
+        this.files = Collections.unmodifiableList(files);
         long sum = 0L;
         for (InstanceFileInfo file : files)
         {
@@ -73,10 +74,10 @@ public class InstanceFilesListResponse
     }
 
     @JsonCreator
-    public InstanceFilesListResponse(@JsonProperty("files") final List<InstanceFileInfo> files,
-                                     @JsonProperty("totalSize") final long totalSize)
+    public InstanceFilesListResponse(@JsonProperty("files") List<InstanceFileInfo> files,
+                                     @JsonProperty("totalSize") long totalSize)
     {
-        this.files = files;
+        this.files = Collections.unmodifiableList(files);
         this.totalSize = totalSize;
     }
 

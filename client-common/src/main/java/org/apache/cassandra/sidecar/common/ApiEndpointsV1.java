@@ -145,21 +145,15 @@ public final class ApiEndpointsV1
     // Live Migration APIs
     public static final String LIVE_MIGRATION_API_PREFIX = API_V1 + "/live-migration";
 
-    public static final String LIVE_MIGRATION_LIST_FILES_PATH = "/files-list";
-    public static final String LIVE_MIGRATION_LIST_FILES_API = LIVE_MIGRATION_API_PREFIX
-                                                               + LIVE_MIGRATION_LIST_FILES_PATH;
+    public static final String LIVE_MIGRATION_FILES_API = LIVE_MIGRATION_API_PREFIX + "/files";
 
-    public static final String LIVE_MIGRATION_FILE_TRANSFER_PATH = "/files";
-    public static final String LIVE_MIGRATION_FILE_TRANSFER_API_PREFIX = LIVE_MIGRATION_API_PREFIX
-                                                                         + LIVE_MIGRATION_FILE_TRANSFER_PATH;
-
-    public static final String LIVE_MIGRATION_HINTS_DIR_PATH = LIVE_MIGRATION_FILE_TRANSFER_API_PREFIX + "/hints";
-    public static final String LIVE_MIGRATION_COMMITLOG_DIR_PATH = LIVE_MIGRATION_FILE_TRANSFER_API_PREFIX + "/commitlog";
-    public static final String LIVE_MIGRATION_CDC_RAW_DIR_PATH = LIVE_MIGRATION_FILE_TRANSFER_API_PREFIX + "/cdc_raw";
-    public static final String LIVE_MIGRATION_SAVED_CACHES_DIR_PATH = LIVE_MIGRATION_FILE_TRANSFER_API_PREFIX + "/saved_caches";
-    public static final String LIVE_MIGRATION_DATA_FILE_DIR_PATH = LIVE_MIGRATION_FILE_TRANSFER_API_PREFIX + "/data";
-    public static final String LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH = LIVE_MIGRATION_FILE_TRANSFER_API_PREFIX
+    public static final String LIVE_MIGRATION_CDC_RAW_DIR_PATH = LIVE_MIGRATION_FILES_API + "/cdc_raw";
+    public static final String LIVE_MIGRATION_COMMITLOG_DIR_PATH = LIVE_MIGRATION_FILES_API + "/commitlog";
+    public static final String LIVE_MIGRATION_DATA_FILE_DIR_PATH = LIVE_MIGRATION_FILES_API + "/data";
+    public static final String LIVE_MIGRATION_HINTS_DIR_PATH = LIVE_MIGRATION_FILES_API + "/hints";
+    public static final String LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH = LIVE_MIGRATION_FILES_API
                                                                                 + "/local_system_data";
+    public static final String LIVE_MIGRATION_SAVED_CACHES_DIR_PATH = LIVE_MIGRATION_FILES_API + "/saved_caches";
 
 
     private ApiEndpointsV1()

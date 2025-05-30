@@ -368,8 +368,8 @@ s3_client:
 #    password:
 
 live_migration:
-  special_files_to_exclude: []
-  special_dirs_to_exclude:
+  files_to_exclude: []
+  dirs_to_exclude:
     - ${DATA_FILE_DIR}/*/*/snapshots # Excludes snapshot directories to copy to destination
-  migration_map:
-    localhost1: localhost4
+  migration_map:                     # Map of source and destination Cassandra instances
+#    localhost1: localhost4           # This entry says that localhost1 will be migrated to localhost4

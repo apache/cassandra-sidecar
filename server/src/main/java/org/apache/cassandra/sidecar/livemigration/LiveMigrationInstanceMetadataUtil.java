@@ -22,7 +22,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -78,7 +77,7 @@ public class LiveMigrationInstanceMetadataUtil
             dirsToCopy.add(instanceMetadata.localSystemDataFileDir());
         }
         dirsToCopy.addAll(instanceMetadata.dataDirs());
-        return dirsToCopy;
+        return Collections.unmodifiableList(dirsToCopy);
     }
 
     /**
@@ -87,7 +86,7 @@ public class LiveMigrationInstanceMetadataUtil
      */
     public static Map<String, String> dirPathPrefixMap(InstanceMetadata instanceMetadata)
     {
-        Map<String, String> dirIndexMap = new Hashtable<>();
+        Map<String, String> dirIndexMap = new HashMap<>();
         dirIndexMap.put(instanceMetadata.hintsDir(), LIVE_MIGRATION_HINTS_DIR_PATH + "/0");
         dirIndexMap.put(instanceMetadata.commitlogDir(), LIVE_MIGRATION_COMMITLOG_DIR_PATH + "/0");
         if (instanceMetadata.savedCachesDir() != null)
@@ -106,7 +105,7 @@ public class LiveMigrationInstanceMetadataUtil
         {
             dirIndexMap.put(instanceMetadata.dataDirs().get(i), LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/" + i);
         }
-        return dirIndexMap;
+        return Collections.unmodifiableMap(dirIndexMap);
     }
 
     /**
@@ -114,7 +113,7 @@ public class LiveMigrationInstanceMetadataUtil
      */
     public static Map<String, Set<String>> dirPlaceHoldersMap(InstanceMetadata instanceMetadata)
     {
-        Map<String, Set<String>> placeholderMap = new Hashtable<>();
+        Map<String, Set<String>> placeholderMap = new HashMap<>();
 
         placeholderMap.put(instanceMetadata.hintsDir(), Collections.singleton(HINTS_DIR_PLACEHOLDER));
         placeholderMap.put(instanceMetadata.commitlogDir(), Collections.singleton(COMMITLOG_DIR_PLACEHOLDER));
@@ -142,7 +141,7 @@ public class LiveMigrationInstanceMetadataUtil
             placeholderMap.put(dir, placeholders);
         }
 
-        return placeholderMap;
+        return Collections.unmodifiableMap(placeholderMap);
     }
 
     /**
