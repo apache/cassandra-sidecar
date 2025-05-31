@@ -50,8 +50,8 @@ class MigrationFileVisitorTest
 
         PathMatcher pathMatcher = FileSystems.getDefault().getPathMatcher("glob:" + excludedDirPath);
         MigrationFileVisitor fileVisitor = new MigrationFileVisitor(homeDir,
-                                                                    Collections.emptySet(),
-                                                                    Collections.singleton(pathMatcher));
+                                                                    Collections.emptyList(),
+                                                                    Collections.singletonList(pathMatcher));
 
         // It should continue if failed to visit an excluded directory
         assertThat(fileVisitor.visitFileFailed(excludedDirPath, new IOException())).isEqualTo(FileVisitResult.CONTINUE);
@@ -71,8 +71,8 @@ class MigrationFileVisitorTest
 
         PathMatcher pathMatcher = FileSystems.getDefault().getPathMatcher("glob:" + excludedFilePath);
         MigrationFileVisitor fileVisitor = new MigrationFileVisitor(homeDir,
-                                                                    Collections.singleton(pathMatcher),
-                                                                    Collections.emptySet());
+                                                                    Collections.singletonList(pathMatcher),
+                                                                    Collections.emptyList());
 
         // It should continue if failed to visit an excluded file
         assertThat(fileVisitor.visitFileFailed(excludedFilePath, new IOException()))

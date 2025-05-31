@@ -37,5 +37,5 @@ public interface CassandraInstanceFiles
      * @return list of files a Cassandra instance has after excluding default files and folders.
      * @throws IOException when failed to read any file or folder.
      */
-    List<InstanceFileInfo> getFiles() throws IOException;
+    List<InstanceFileInfo> files() throws IOException;
 }

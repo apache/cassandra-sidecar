@@ -28,7 +28,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,12 +42,12 @@ public class MigrationFileVisitor extends SimpleFileVisitor<Path>
     private static final Logger LOGGER = LoggerFactory.getLogger(MigrationFileVisitor.class);
     private final String homeDir;
     private final List<Path> validFiles;
-    private final Set<PathMatcher> filesToExclude;
-    private final Set<PathMatcher> directoriesToExclude;
+    private final List<PathMatcher> filesToExclude;
+    private final List<PathMatcher> directoriesToExclude;
 
-    public MigrationFileVisitor(@NotNull final String homeDir,
-                                @NotNull final Set<PathMatcher> filesToExcludeMatchers,
-                                @NotNull final Set<PathMatcher> directoriesToExcludeMatchers)
+    public MigrationFileVisitor(@NotNull String homeDir,
+                                @NotNull List<PathMatcher> filesToExcludeMatchers,
+                                @NotNull List<PathMatcher> directoriesToExcludeMatchers)
     {
         this.homeDir = homeDir;
         this.validFiles = new ArrayList<>();
@@ -116,7 +115,7 @@ public class MigrationFileVisitor extends SimpleFileVisitor<Path>
         }
     }
 
-    public List<Path> getValidFilePaths()
+    public List<Path> validFilePaths()
     {
         return validFiles;
     }

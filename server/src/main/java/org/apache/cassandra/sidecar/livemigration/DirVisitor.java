@@ -26,7 +26,6 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,8 +46,8 @@ public class DirVisitor
 
     public DirVisitor(String homeDir,
                       String pathPrefix,
-                      Set<PathMatcher> fileExclusionMatchers,
-                      Set<PathMatcher> dirExclusionMatchers)
+                      List<PathMatcher> fileExclusionMatchers,
+                      List<PathMatcher> dirExclusionMatchers)
     {
         this.homeDir = homeDir;
         this.homeDirPath = Paths.get(homeDir);
@@ -63,10 +62,10 @@ public class DirVisitor
      * @return List of {@link InstanceFileInfo} for each file and directory considered for Live Migration.
      * @throws IOException - when cannot access files of a data home directory
      */
-    public List<InstanceFileInfo> getFiles() throws IOException
+    public List<InstanceFileInfo> files() throws IOException
     {
         Files.walkFileTree(homeDirPath, fileVisitor);
-        List<Path> validFiles = fileVisitor.getValidFilePaths();
+        List<Path> validFiles = fileVisitor.validFilePaths();
         final List<InstanceFileInfo> infos = new ArrayList<>();
         for (final Path path : validFiles)
         {

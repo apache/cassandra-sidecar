@@ -60,7 +60,7 @@ class CassandraInstanceFilesImplTest
     Path tempDir;
 
     @Test
-    public void testGetFiles() throws IOException
+    public void testFiles() throws IOException
     {
         String cassandraHomeDir = tempDir.resolve("testGetFiles").toString();
         InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
@@ -78,7 +78,7 @@ class CassandraInstanceFilesImplTest
         createFile(content, instanceMetadata.stagingDir(), "stage-data.db");
 
         CassandraInstanceFilesImpl instanceFiles = new CassandraInstanceFilesImpl(instanceMetadata, liveMigrationConfig);
-        List<InstanceFileInfo> instanceFileInfoList = instanceFiles.getFiles();
+        List<InstanceFileInfo> instanceFileInfoList = instanceFiles.files();
 
         assertThat(instanceFileInfoList).isNotEmpty();
         InstanceFileInfo ks1FileInfo = findInstanceFileInfo(instanceFileInfoList,
@@ -101,7 +101,7 @@ class CassandraInstanceFilesImplTest
     }
 
     @Test
-    public void testGetFilesNoExclusionsSpecified() throws IOException
+    public void testFilesNoExclusionsSpecified() throws IOException
     {
         String cassandraHomeDir = tempDir.resolve("testGetFilesNoExclusionsSpecified").toString();
         InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
@@ -113,7 +113,7 @@ class CassandraInstanceFilesImplTest
         createFile(content, instanceMetadata.dataDirs().get(0), "ks1", "t1", "file1.db");
 
         CassandraInstanceFilesImpl instanceFiles = new CassandraInstanceFilesImpl(instanceMetadata, liveMigrationConfig);
-        List<InstanceFileInfo> instanceFileInfoList = instanceFiles.getFiles();
+        List<InstanceFileInfo> instanceFileInfoList = instanceFiles.files();
 
         assertThat(instanceFileInfoList).isNotEmpty();
         InstanceFileInfo ks1FileInfo = findInstanceFileInfo(instanceFileInfoList,
@@ -130,7 +130,7 @@ class CassandraInstanceFilesImplTest
     }
 
     @Test
-    public void testGetFilesWithFilesAndDirsExcluded() throws IOException
+    public void testFilesAndDirsExcluded() throws IOException
     {
         String cassandraHomeDir = tempDir.resolve("testGetFilesWithFilesAndDirsExcluded").toString();
         InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
@@ -159,7 +159,7 @@ class CassandraInstanceFilesImplTest
 
 
         CassandraInstanceFilesImpl instanceFiles = new CassandraInstanceFilesImpl(instanceMetadata, liveMigrationConfig);
-        List<InstanceFileInfo> instanceFileInfoList = instanceFiles.getFiles();
+        List<InstanceFileInfo> instanceFileInfoList = instanceFiles.files();
 
         assertThat(instanceFileInfoList).isNotEmpty();
         InstanceFileInfo ks1FileInfo = findInstanceFileInfo(instanceFileInfoList,
@@ -184,7 +184,7 @@ class CassandraInstanceFilesImplTest
     }
 
     @Test
-    public void testGetFilesWhenFewDirectoriesDoesNotExist() throws IOException
+    public void testFilesWhenFewDirectoriesDoesNotExist() throws IOException
     {
         //cdc_dir, saved_caches_dir & local_system_data_files_dir not present
         String cassandraHomeDir = tempDir.resolve("testGetFiles").toString();
@@ -200,7 +200,7 @@ class CassandraInstanceFilesImplTest
         createFile(content, instanceMetadata.dataDirs().get(0), "ks1", "t1", "file1.db");
 
         CassandraInstanceFilesImpl instanceFiles = new CassandraInstanceFilesImpl(instanceMetadata, liveMigrationConfig);
-        List<InstanceFileInfo> instanceFileInfoList = instanceFiles.getFiles();
+        List<InstanceFileInfo> instanceFileInfoList = instanceFiles.files();
         assertThat(instanceFileInfoList).isNotEmpty();
 
         InstanceFileInfo ks1FileInfo = findInstanceFileInfo(instanceFileInfoList,

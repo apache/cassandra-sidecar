@@ -42,7 +42,7 @@ class DirVisitorTest
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testGetFiles() throws IOException
+    void testFiles() throws IOException
     {
         Path dataDir = Paths.get(tempDir.toString(), "data");
         Files.createDirectories(dataDir);
@@ -56,8 +56,8 @@ class DirVisitorTest
         int homeDirIndex = 3;
         String pathPrefix = "/DUMMY_PREFIX/" + homeDirIndex;
 
-        DirVisitor dirVisitor = new DirVisitor(homeDir, pathPrefix, Collections.emptySet(), Collections.emptySet());
-        List<InstanceFileInfo> files = dirVisitor.getFiles();
+        DirVisitor dirVisitor = new DirVisitor(homeDir, pathPrefix, Collections.emptyList(), Collections.emptyList());
+        List<InstanceFileInfo> files = dirVisitor.files();
         assertThat(files.size()).isEqualTo(4); // Two directories and two files
 
         assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1")).isNotNull();

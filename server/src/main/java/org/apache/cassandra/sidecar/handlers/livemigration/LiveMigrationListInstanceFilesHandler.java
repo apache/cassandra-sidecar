@@ -82,7 +82,7 @@ public class LiveMigrationListInstanceFilesHandler extends AbstractHandler<Void>
             try
             {
 
-                context.json(new InstanceFilesListResponse(filesList.getFiles()));
+                context.json(new InstanceFilesListResponse(filesList.files()));
             }
             catch (IOException e)
             {
