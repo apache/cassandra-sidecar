@@ -45,7 +45,8 @@ class AuthenticationHandlerFactoryRegistryTest
         AuthenticationHandlerFactoryRegistry registry = new AuthenticationHandlerFactoryRegistry();
         IdentityToRoleCache identityToRoleCache = mock(IdentityToRoleCache.class);
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
-        MutualTlsAuthenticationHandlerFactory mutualTlsAuthenticationHandlerFactory = new MutualTlsAuthenticationHandlerFactory(identityToRoleCache, mockAdminIdentityResolver);
+        MutualTlsAuthenticationHandlerFactory mutualTlsAuthenticationHandlerFactory = new MutualTlsAuthenticationHandlerFactory(identityToRoleCache,
+                                                                                                                                mockAdminIdentityResolver);
         registry.register(mutualTlsAuthenticationHandlerFactory);
         assertThat(registry.getFactory(MutualTlsAuthenticationHandlerFactory.class.getName())).isNotNull();
     }

@@ -33,6 +33,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * Tests RestoreSlice; and expose helpers to create RestoreSlice for testing
+ */
 public class RestoreSliceTest
 {
     @Test
