@@ -36,15 +36,21 @@ import com.datastax.driver.core.LocalDate;
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.RestoreSliceTest;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
@@ -54,14 +60,21 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.mockito.ArgumentCaptor;
 
 import static org.apache.cassandra.sidecar.db.RestoreJobTest.createNewTestingJob;
+import static org.apache.cassandra.sidecar.db.RestoreJobTest.createTestingJob;
 import static org.apache.cassandra.sidecar.db.RestoreJobTest.createUpdatedJob;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyShort;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RestoreJobDiscovererTest
@@ -75,6 +88,8 @@ class RestoreJobDiscovererTest
     private final RestoreJobManagerGroup mockManagers = mock(RestoreJobManagerGroup.class);
     private final PeriodicTaskExecutor executor = mock(PeriodicTaskExecutor.class);
     private final SidecarSchema sidecarSchema = mock(SidecarSchema.class);
+    private final RingTopologyRefresher ringTopologyRefresher = mock(RingTopologyRefresher.class);
+    private final InstanceMetadataFetcher instanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
     private SidecarMetrics metrics;
     private RestoreJobDiscoverer loop;
 
@@ -91,8 +106,8 @@ class RestoreJobDiscovererTest
                                         mockSliceAccessor,
                                         mockRangeAccessor,
                                         () -> mockManagers,
-                                        null,
-                                        null,
+                                        instanceMetadataFetcher,
+                                        ringTopologyRefresher,
                                         executor,
                                         metrics);
     }
@@ -250,6 +265,55 @@ class RestoreJobDiscovererTest
 
         List<UUID> expectedAbortedJobs = mockResult.stream().map(s -> s.jobId).collect(Collectors.toList());
         assertThat(abortedJobs.getAllValues()).isEqualTo(expectedAbortedJobs);
+    }
+
+    @Test
+    void testDiscoverSidecarManagedJob() throws Exception
+    {
+        UUID jobId = discoverSidecarManagedJob(false);
+
+        ArgumentCaptor<RestoreRange> restoreRangeCaptor = ArgumentCaptor.forClass(RestoreRange.class);
+        verify(mockRangeAccessor).create(restoreRangeCaptor.capture());
+        assertThat(restoreRangeCaptor.getAllValues()).hasSize(1);
+        RestoreRange captured = restoreRangeCaptor.getValue();
+        assertThat(captured.jobId()).isEqualTo(jobId);
+    }
+
+    @Test
+    void testDisciverAlreadyFailedSidecarManagedJob() throws Exception
+    {
+        discoverSidecarManagedJob(true);
+        verify(mockRangeAccessor, never()).create(any());
+    }
+
+    private UUID discoverSidecarManagedJob(boolean isJobFailed) throws Exception
+    {
+        when(sidecarSchema.isInitialized()).thenReturn(true);
+        UUID jobId = UUIDs.timeBased();
+        RestoreJob sidecarManagedJob = createTestingJob(jobId, RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM);
+        assertThat(sidecarManagedJob.isManagedBySidecar()).isTrue();
+
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
+        .thenReturn(Collections.singletonList(sidecarManagedJob));
+        when(ringTopologyRefresher.localTokenRanges(any(), anyBoolean()))
+        .thenReturn(Collections.singletonMap(1, Collections.singleton(new TokenRange(0, 100))));
+        InstanceMetadata instance = mock(InstanceMetadata.class);
+        when(instance.stagingDir()).thenReturn("stagingDir");
+        when(instanceMetadataFetcher.instance(anyInt())).thenReturn(instance);
+        when(mockSliceAccessor.selectByJobByBucketByTokenRange(any(), anyShort(), any()))
+        .thenReturn(Collections.singletonList(RestoreSliceTest.createTestingSlice(sidecarManagedJob, "sliceId", 0, 10)));
+        if (isJobFailed)
+        {
+            doThrow(RestoreJobExceptions.ofFatal("Job failed", mock(RestoreRange.class), null))
+            .when(mockManagers).trySubmit(any(), any(), any());
+        }
+        else
+        {
+            when(mockManagers.trySubmit(any(), any(), any())).thenReturn(RestoreJobProgressTracker.Status.CREATED);
+        }
+
+        executeBlocking();
+        return jobId;
     }
 
     @Test

@@ -312,6 +312,13 @@ public class RestoreRange
                                                                         this, null), this);
         }
 
+        RestoreJobFatalException failure = tracker.failureCause();
+        if (failure != null)
+        {
+            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore job has already failed due to prior failure",
+                                                                        this, failure), this);
+        }
+
         if (tracker.restoreJob().hasExpired(System.currentTimeMillis()))
         {
             return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore job expired on " + tracker.restoreJob().expireAt.toInstant(),

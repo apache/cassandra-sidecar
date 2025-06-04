@@ -474,10 +474,8 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         }
         catch (RestoreJobFatalException e)
         {
-            LOGGER.error("Restore range failed. startToken={} endToken={} instance={}",
-                         range.startToken(), range.endToken(), range.owner().host(), e);
-            range.fail(e);
-            restoreRangeDatabaseAccessor.updateStatus(range);
+            LOGGER.error("The restore job has already failed. jobId={} startToken={} endToken={} instance={}",
+                         job.jobId, range.startToken(), range.endToken(), range.owner().host(), e);
             return RestoreJobProgressTracker.Status.FAILED;
         }
     }
