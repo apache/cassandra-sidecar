@@ -175,23 +175,23 @@ schema_reporting:                            # Schema Reporting configuration
 #
 # Enable SSL configuration (Disabled by default)
 #
-#  ssl:
-#    enabled: true
-#    use_openssl: true
-#    handshake_timeout: 10s
-#    client_auth: NONE # valid options are NONE, REQUEST, REQUIRED
-#    accepted_protocols:
-#     - TLSv1.2
-#     - TLSv1.3
-#    cipher_suites: []
-#    keystore:
-#      type: PKCS12
-#      path: "path/to/keystore.p12"
-#      password: password
-#      check_interval: 5m
-#    truststore:
-#      path: "path/to/truststore.p12"
-#      password: password
+#ssl:
+#  enabled: true
+#  use_openssl: true
+#  handshake_timeout: 10s
+#  client_auth: NONE # valid options are NONE, REQUEST, REQUIRED
+#  accepted_protocols:
+#   - TLSv1.2
+#   - TLSv1.3
+#  cipher_suites: []
+#  keystore:
+#    type: PKCS12
+#    path: "path/to/keystore.p12"
+#    password: password
+#    check_interval: 5m
+#  truststore:
+#    path: "path/to/truststore.p12"
+#    password: password
 
 # To enable access control, the role used by sidecar to talk to Cassandra must be granted following permissions
 # - GRANT DESCRIBE ON ALL ROLES to <insert_sidecar_role>          - Allows sidecar to list roles that belong to a user
