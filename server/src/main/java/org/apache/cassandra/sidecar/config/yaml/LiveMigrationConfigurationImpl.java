@@ -48,7 +48,7 @@ public class LiveMigrationConfigurationImpl implements LiveMigrationConfiguratio
     {
         this.filesToExclude = filesToExclude;
         this.directoriesToExclude = directoriesToExclude;
-        this.migrationMap = Collections.unmodifiableMap(migrationMap);
+        this.migrationMap = migrationMap == null ? Collections.emptyMap() : Collections.unmodifiableMap(migrationMap);
     }
 
     @Override
