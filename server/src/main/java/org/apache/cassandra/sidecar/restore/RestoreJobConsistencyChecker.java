@@ -100,6 +100,7 @@ public class RestoreJobConsistencyChecker
         RestoreJobProgressCollector collector = RestoreJobProgressCollectors.create(restoreJob, fetchPolicy);
         RestoreRangeStatus successCriteria = restoreJob.expectedNextRangeStatus();
         ConsistencyVerifier verifier = ConsistencyVerifiers.forConsistencyLevel(restoreJob.consistencyLevel, restoreJob.localDatacenter);
+        LOGGER.info("Checking restore job progress. jobId={} fetchPolicy={} successCriteria={}", restoreJob.jobId, fetchPolicy, successCriteria);
         Future<RestoreJobProgress> future = ringTopologyRefresher
                                             .replicaByTokenRangeAsync(restoreJob)
                                             .compose(topology -> findRangesAndConclude(restoreJob, successCriteria, topology, verifier, collector));

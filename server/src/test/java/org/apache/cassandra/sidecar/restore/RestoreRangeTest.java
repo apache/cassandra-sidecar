@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
+import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 import static org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus.DISCARDED;
@@ -110,6 +111,17 @@ public class RestoreRangeTest
         assertFailedHandler(range, handler,
                             "Restore job expired on 2024-10-31T00:30:46.231Z. " +
                             "RestoreRange{sliceId='sliceId-123', sliceKey='myKey', sliceBucket='myBucket'}");
+    }
+
+    @Test
+    void testCreateTaskFailsWhenJobFailsAlready() throws Exception
+    {
+        RestoreRange range = createTestRange();
+        // simulate that the belong job has already failed
+        range.trackerUnsafe().fail(RestoreJobExceptions.ofFatal("Job fails", range, null));
+        RestoreRangeHandler handler = createRestoreRangeHandler(range);
+        assertFailedHandler(range, handler,
+                            "Restore job has already failed due to prior failure");
     }
 
     @Test

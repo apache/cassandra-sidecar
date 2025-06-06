@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -70,9 +71,12 @@ public class RestoreJobProgressTracker
      */
     Status trySubmit(RestoreRange range) throws RestoreJobFatalException
     {
-        // The job fails early, prevents further submissions
-        if (failureRef.get() != null)
-            throw failureRef.get();
+        // The job fails, prevents further range submissions for non-sidecar-managed jobs
+        // For sidecar-managed jobs, we want to submit the restore range, then fail.
+        // Such sumitted ranges will fail and handled in RestoreProcessor
+        RestoreJobFatalException failure = failureRef.get();
+        if (failure != null && !restoreJob.isManagedBySidecar())
+            throw failure;
 
         RestoreRange rangeWithTracker = range.unbuild()
                                              .restoreJobProgressTracker(this)
@@ -82,6 +86,10 @@ public class RestoreJobProgressTracker
         if (status == null)
         {
             processor.submit(rangeWithTracker);
+            // The failure exists. The range belongs to a sidecar-managed job;
+            // Still re-throw the exception to be compliant with the mehtod signature
+            if (failure != null)
+                throw failure;
             return Status.CREATED;
         }
 
@@ -142,7 +150,13 @@ public class RestoreJobProgressTracker
 
     public boolean isFailed()
     {
-        return failureRef.get() != null;
+        return failureCause() != null;
+    }
+
+    @Nullable
+    public RestoreJobFatalException failureCause()
+    {
+        return failureRef.get();
     }
 
     public void requestOutOfRangeDataCleanup()

@@ -84,29 +84,32 @@ class SidecarClientProviderTest
     @BeforeAll
     static void configureCertificates() throws Exception
     {
-        CertificateBundle certificateAuthority = new CertificateBuilder().subject("CN=Apache Cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
-                                                                         .alias("fakerootca")
-                                                                         .isCertificateAuthority(true)
-                                                                         .buildSelfSigned();
+        CertificateBundle certificateAuthority = new CertificateBuilder()
+                                                 .subject("CN=Apache Cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
+                                                 .alias("fakerootca")
+                                                 .isCertificateAuthority(true)
+                                                 .buildSelfSigned();
         truststorePath = certificateAuthority.toTempKeyStorePath(secretsPath, EMPTY_PASSWORD, EMPTY_PASSWORD);
 
-        CertificateBuilder serverKeyStoreBuilder =
-        new CertificateBuilder().subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                .addSanDnsName("localhost");
+        CertificateBuilder serverKeyStoreBuilder = new CertificateBuilder()
+                                                   .subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                   .addSanDnsName("localhost");
         CertificateBundle serverKeyStore = serverKeyStoreBuilder.buildIssuedBy(certificateAuthority);
         serverKeyStorePath = serverKeyStore.toTempKeyStorePath(secretsPath, EMPTY_PASSWORD, EMPTY_PASSWORD);
 
-        CertificateBundle expiredClientKeyStore = new CertificateBuilder().subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                                                          .addSanDnsName("localhost")
-                                                                          .notBefore(Instant.now().minus(7, ChronoUnit.DAYS))
-                                                                          .notAfter(Instant.now().minus(1, ChronoUnit.DAYS))
-                                                                          .buildIssuedBy(certificateAuthority);
+        CertificateBundle expiredClientKeyStore = new CertificateBuilder()
+                                                  .subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                  .addSanDnsName("localhost")
+                                                  .notBefore(Instant.now().minus(7, ChronoUnit.DAYS))
+                                                  .notAfter(Instant.now().minus(1, ChronoUnit.DAYS))
+                                                  .buildIssuedBy(certificateAuthority);
         // Assign the expired client cert to the cert path
         clientCertPath = expiredClientKeyStore.toTempKeyStorePath(secretsPath, EMPTY_PASSWORD, EMPTY_PASSWORD);
 
-        CertificateBundle validClientKeyStore = new CertificateBuilder().subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                                                        .addSanDnsName("localhost")
-                                                                        .buildIssuedBy(certificateAuthority);
+        CertificateBundle validClientKeyStore = new CertificateBuilder()
+                                                .subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                .addSanDnsName("localhost")
+                                                .buildIssuedBy(certificateAuthority);
         validClientCertPath = validClientKeyStore.toTempKeyStorePath(secretsPath, EMPTY_PASSWORD, EMPTY_PASSWORD);
     }
 
