@@ -76,4 +76,7 @@ public class BasicPermissions
 
     // cassandra stats permissions
     public static final Permission STATS = new StandardPermission("STATS", CLUSTER_SCOPE);
+
+    // Live Migration permissions
+    public static final Permission LIST_FILES = new DomainAwarePermission("LIVE_MIGRATION:LIST_FILES", CLUSTER_SCOPE);
 }

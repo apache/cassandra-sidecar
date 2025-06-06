@@ -104,4 +104,9 @@ public interface SidecarConfiguration
      */
     @NotNull
     SchemaReportingConfiguration schemaReportingConfiguration();
+
+    /**
+     * @return the configuration for live migration
+     */
+    LiveMigrationConfiguration liveMigrationConfiguration();
 }

@@ -472,6 +472,27 @@ class SidecarConfigurationTest
         assertThat(clusterLeaseConfig.electorateMembershipStrategy()).isEqualTo("MostReplicatedKeyspaceTokenZeroElectorateMembership");
     }
 
+    @Test
+    void testSidecarLiveMigrationConfiguration() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_live_migration.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+        LiveMigrationConfiguration liveMigrationConfiguration = config.liveMigrationConfiguration();
+        assertThat(liveMigrationConfiguration).isNotNull();
+
+        assertThat(liveMigrationConfiguration.filesToExclude()).isNotNull()
+                                                               .hasSize(1)
+                                                               .contains("${DATA_FILE_DIR}/test.log");
+
+        assertThat(liveMigrationConfiguration.directoriesToExclude()).isNotNull()
+                                                                     .hasSize(1)
+                                                                     .contains("${DATA_FILE_DIR}/*/*/snapshots");
+
+        assertThat(liveMigrationConfiguration.migrationMap()).isNotNull()
+                                                             .hasSize(1)
+                                                             .containsEntry("localhost1", "localhost4");
+    }
+
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
     {
         assertThat(config.cassandraInstances()).isNotNull().hasSize(1);

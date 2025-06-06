@@ -141,6 +141,21 @@ public final class ApiEndpointsV1
     public static final String STREAM_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/streams";
     public static final String TABLE_STATS_ROUTE = API_V1 + CASSANDRA + PER_KEYSPACE + PER_TABLE + "/stats";
 
+
+    // Live Migration APIs
+    public static final String LIVE_MIGRATION_API_PREFIX = API_V1 + "/live-migration";
+
+    public static final String LIVE_MIGRATION_FILES_API = LIVE_MIGRATION_API_PREFIX + "/files";
+
+    public static final String LIVE_MIGRATION_CDC_RAW_DIR_PATH = LIVE_MIGRATION_FILES_API + "/cdc_raw";
+    public static final String LIVE_MIGRATION_COMMITLOG_DIR_PATH = LIVE_MIGRATION_FILES_API + "/commitlog";
+    public static final String LIVE_MIGRATION_DATA_FILE_DIR_PATH = LIVE_MIGRATION_FILES_API + "/data";
+    public static final String LIVE_MIGRATION_HINTS_DIR_PATH = LIVE_MIGRATION_FILES_API + "/hints";
+    public static final String LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH = LIVE_MIGRATION_FILES_API
+                                                                                + "/local_system_data";
+    public static final String LIVE_MIGRATION_SAVED_CACHES_DIR_PATH = LIVE_MIGRATION_FILES_API + "/saved_caches";
+
+
     private ApiEndpointsV1()
     {
         throw new IllegalStateException(getClass() + " is a constants container and shall not be instantiated");

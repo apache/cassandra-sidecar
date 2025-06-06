@@ -59,7 +59,7 @@ cassandra_instances:
     # Directory where Cassandra stores the data of the local system keyspaces.
     # By default, Cassandra stores the data of the local system keyspaces in the
     # first of the data directories specified by data_file_directories.
-    # local_system_data_file_directory:
+    # local_system_data_file_dir:
 
     jmx_host: 127.0.0.1
     jmx_port: 7199
@@ -366,3 +366,31 @@ s3_client:
 #    uri:
 #    username:
 #    password:
+
+live_migration:
+  # By default, the directories handled by Cassandra like data_dir, commitlog_dir, hints_dir, saved_caches_dir,
+  # cdc_dir, and local_system_data_file_dir are included as part of migration. Admin/operator can exclude files
+  # and directories from migration by specifying them in the `files_to_exclude` list and the `dirs_to_exclude`
+  # list configurations mentioned below.
+  #
+  # 'glob' and 'regex' patterns can be used to specify exclusions. Internally, Java's java.nio.file.PathMatcher
+  # is used to evaluate these exclusions. Exclusions should be specified in the format "syntax:pattern" expected
+  # by PathMatcher. There is no need to specify the absolute path of directories handled by Cassandra.
+  # They can be specified using the supported placeholders listed below.
+  #
+  #    COMMITLOG_DIR              - commit log directory
+  #    HINTS_DIR                  - hints directory
+  #    SAVED_CACHES_DIR           - saved caches directory
+  #    CDC_RAW_DIR                - cdc raw directory
+  #    LOCAL_SYSTEM_DATA_FILE_DIR - local system data file data directory
+  #    DATA_FILE_DIR              - all data directories
+  #    DATA_FILE_DIR_0            - first data directory
+  #    DATA_FILE_DIR_1            - second data directory
+  #
+  # A sample glob pattern to exclude all snapshot folders from Live Migration looks like this:
+  #    glob:${DATA_FILE_DIR}/*/*/snapshots
+  files_to_exclude: [ ]                   # List of files to exclude from Live Migration.
+  dirs_to_exclude:
+    - glob:${DATA_FILE_DIR}/*/*/snapshots # Excludes snapshot directories in data folder to copy to destination
+  migration_map:                          # Map of source and destination Cassandra instances
+#    localhost1: localhost4               # This entry says that localhost1 will be migrated to localhost4
