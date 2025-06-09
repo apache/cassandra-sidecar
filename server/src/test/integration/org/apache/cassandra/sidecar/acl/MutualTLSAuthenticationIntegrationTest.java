@@ -28,6 +28,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.datastax.driver.core.Session;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -38,6 +40,7 @@ import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
 
 import static org.apache.cassandra.sidecar.acl.RoleBasedAuthorizationIntegrationTest.MIN_VERSION_WITH_MTLS;
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.AUTH_ROLE;
 import static org.apache.cassandra.sidecar.testing.IntegrationTestModule.ADMIN_IDENTITY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
@@ -68,10 +71,7 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
         .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
 
-        // required for authentication of sidecar requests to Cassandra. Only superusers can grant permissions
-        insertIdentityRole(cassandraTestContext, ADMIN_IDENTITY, "cassandra");
-
-        waitForSchemaReady(1, TimeUnit.MINUTES);
+        prepareForTest(cassandraTestContext);
 
         createRole("cassandra-role", false);
         insertIdentityRole(cassandraTestContext, "spiffe://cassandra/sidecar/test", "cassandra-role");
@@ -145,10 +145,7 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
         .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
 
-        // required for authentication of sidecar requests to Cassandra. Only superusers can grant permissions
-        insertIdentityRole(cassandraContext, ADMIN_IDENTITY, "cassandra");
-
-        waitForSchemaReady(30, TimeUnit.SECONDS);
+        prepareForTest(cassandraContext);
 
         createRole("superuser", true);
         createRole("nonsuperuser", false);
@@ -180,31 +177,81 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         context.completeNow();
     }
 
+    @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
+    void testRoleIntended(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
+    {
+        assumeThat(cassandraContext.version.major)
+        .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
+        .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
+
+        prepareForTest(cassandraContext);
+
+        createRole("test-role", true);
+        createRole("admin", true);
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/testuser", "test-role");
+
+        // wait for cache refreshes
+        Thread.sleep(3000);
+
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/testuser");
+        WebClient client = createClient(clientKeystorePath, truststorePath);
+
+        CountDownLatch authorized = new CountDownLatch(1);
+        // access with correct role goes through
+        verifyAccess(client, "test-role", false, context, authorized);
+        assertThat(authorized.await(30, TimeUnit.SECONDS)).isTrue();
+
+        // test-role can not assume role admin
+        client.get(server.actualPort(), "127.0.0.1", "/api/v1/schema/keyspaces")
+              .putHeader(AUTH_ROLE, "admin")
+              .send(context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.UNAUTHORIZED.code());
+                  context.completeNow();
+              }));
+    }
+
+    private void prepareForTest(CassandraTestContext cassandraContext)
+    {
+        // required for authentication of sidecar requests to Cassandra. Only superusers can grant permissions
+        insertIdentityRole(cassandraContext, ADMIN_IDENTITY, "cassandra");
+
+        waitForSchemaReady(30, TimeUnit.SECONDS);
+    }
+
     private void verifyAccess(WebClient client, boolean expectForbidden, VertxTestContext context, CountDownLatch latch)
     {
-        String testRoute = "/api/v1/schema/keyspaces";
-        client.get(server.actualPort(), "127.0.0.1", testRoute)
-              .send(response -> {
-                  if (response.cause() != null)
-                  {
-                      context.failNow(response.cause());
-                      return;
-                  }
+        verifyAccess(client, null, expectForbidden, context, latch);
+    }
 
-                  if (expectForbidden)
-                  {
-                      assertThat(response.result().statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
-                  }
-                  else
-                  {
-                      assertThat(response.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                      SchemaResponse schemaResponse = response.result().bodyAsJson(SchemaResponse.class);
-                      assertThat(schemaResponse).isNotNull();
-                      assertThat(schemaResponse.keyspace()).isNull();
-                      assertThat(schemaResponse.schema()).isNotNull();
-                  }
-                  latch.countDown();
-              });
+    private void verifyAccess(WebClient client, String role, boolean expectForbidden, VertxTestContext context, CountDownLatch latch)
+    {
+        String testRoute = "/api/v1/schema/keyspaces";
+        HttpRequest<Buffer> request = client.get(server.actualPort(), "127.0.0.1", testRoute);
+        if (role != null)
+        {
+            request = request.putHeader(AUTH_ROLE, role);
+        }
+        request.send(response -> {
+            if (response.cause() != null)
+            {
+                context.failNow(response.cause());
+                return;
+            }
+
+            if (expectForbidden)
+            {
+                assertThat(response.result().statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
+            }
+            else
+            {
+                assertThat(response.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                SchemaResponse schemaResponse = response.result().bodyAsJson(SchemaResponse.class);
+                assertThat(schemaResponse).isNotNull();
+                assertThat(schemaResponse.keyspace()).isNull();
+                assertThat(schemaResponse.schema()).isNotNull();
+            }
+            latch.countDown();
+        });
     }
 
     private void insertIdentityRole(CassandraTestContext cassandraContext, String identity, String role)

@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.acl.authentication;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -36,6 +37,7 @@ import io.vertx.ext.web.handler.impl.AuthenticationHandlerImpl;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
+import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.AUTH_ROLE;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLES_ATTRIBUTE_NAME;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
@@ -88,10 +90,18 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
 
                         List<String> identities = extractIdentities(authN.result());
                         List<String> roles = extractCassandraRoles(identities);
-                        if (!roles.isEmpty())
+                        String roleIntended = ctx.request().getHeader(AUTH_ROLE);
+
+                        if (roleIntended != null && !roleIntended.isEmpty() && !roles.contains(roleIntended))
                         {
-                            authN.result().attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, roles);
+                            String errMsg = String.format("User not authorized for role %s", roleIntended);
+                            handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, errMsg)));
+                            return;
                         }
+
+                        List<String> rolesToAdd = roleIntended != null && !roleIntended.isEmpty()
+                                                  ? Collections.singletonList(roleIntended) : roles;
+                        authN.result().attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
                         handler.handle(authN);
                     });
     }

@@ -31,4 +31,8 @@ public final class SidecarHttpHeaderNames
      * {@code "cassandra-content-xxhash32-seed"}
      */
     public static final String CONTENT_XXHASH32_SEED = "cassandra-content-xxhash32-seed";
+    /**
+     * {@code "cassandra-auth-role"}
+     */
+    public static final String AUTH_ROLE = "cassandra-auth-role";
 }
