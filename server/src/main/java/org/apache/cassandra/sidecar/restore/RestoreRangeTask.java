@@ -171,9 +171,25 @@ public class RestoreRangeTask implements RestoreRangeHandler
                 }
                 else if (job.status == RestoreJobStatus.IMPORT_READY)
                 {
-                    return unzipAndImport(range.stagedObjectPath().toFile(),
-                                          // persist status
-                                          () -> rangeDatabaseAccessor.updateStatus(range));
+                    if (range.hasStaged())
+                    {
+                        return unzipAndImport(range.stagedObjectPath().toFile(),
+                                              // persist status
+                                              () -> rangeDatabaseAccessor.updateStatus(range));
+                    }
+                    else
+                    {
+                        LOGGER.info("The restore job is in {} status, but the range has not been staged yet. " +
+                                    "Perhaps the staged slices in the cluster already satisfy the consistency level of the job. " +
+                                    "This sidecar instance would attempt to stage the slice and import for improved consistency. " +
+                                    "jobId={} consistencyLevel={} startToken={} endToken={} sliceKey={}",
+                                    job.status, job.jobId, job.consistencyLevel, range.startToken(), range.endToken(), range.sliceKey());
+                        return downloadSliceAndImport()
+                               .compose(ignored -> { // persist status
+                                   rangeDatabaseAccessor.updateStatus(range);
+                                   return Future.succeededFuture();
+                               });
+                    }
                 }
                 else
                 {

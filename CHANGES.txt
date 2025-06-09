@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Stage restore slices when in import phase already (CASSSIDECAR-258)
  * Allow getting intended role in Sidecar requests (CASSSIDECAR-257)
  * Fix configuration for ssl section to be at root level in sidecar.yaml (CASSSIDECAR-256)
  * Fix restore ranges of failed sidecar-managed restore jobs do not persist (CASSSIDECAR-255)
