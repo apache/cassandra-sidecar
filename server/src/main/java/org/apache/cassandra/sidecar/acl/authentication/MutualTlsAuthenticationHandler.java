@@ -101,8 +101,7 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
                             return;
                         }
 
-                        List<String> rolesToAdd = roleIntended != null && !roleIntended.isEmpty()
-                                                  ? List.of(roleIntended) : roles;
+                        List<String> rolesToAdd = isNotEmpty(roleIntended)? List.of(roleIntended) : roles;
                         authN.result().attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
                         handler.handle(authN);
                     });

@@ -201,7 +201,7 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         verifyAccess(client, "test-role", false, context, authorized);
         assertThat(authorized.await(30, TimeUnit.SECONDS)).isTrue();
 
-        // test-role can not assume role admin and act maliciously :
+        // test-role can not assume role admin and act maliciously
         client.get(server.actualPort(), "127.0.0.1", "/api/v1/schema/keyspaces")
               .putHeader(AUTH_ROLE, "admin")
               .send(context.succeeding(response -> {
