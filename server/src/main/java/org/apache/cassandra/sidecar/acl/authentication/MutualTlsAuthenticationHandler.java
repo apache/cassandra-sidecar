@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.acl.authentication;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -101,7 +100,7 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
                             return;
                         }
 
-                        List<String> rolesToAdd = isNotEmpty(roleIntended)? List.of(roleIntended) : roles;
+                        List<String> rolesToAdd = isNotEmpty(roleIntended) ? List.of(roleIntended) : roles;
                         authN.result().attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
                         handler.handle(authN);
                     });

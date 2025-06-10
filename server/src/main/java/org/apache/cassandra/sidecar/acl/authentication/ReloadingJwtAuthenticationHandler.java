@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.acl.authentication;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -117,7 +116,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
                 return;
             }
 
-            List<String> rolesToAdd = isNotEmpty(roleIntended)? List.of(roleIntended) : roles;
+            List<String> rolesToAdd = isNotEmpty(roleIntended) ? List.of(roleIntended) : roles;
             user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
             handler.handle(Future.succeededFuture(user));
         });
