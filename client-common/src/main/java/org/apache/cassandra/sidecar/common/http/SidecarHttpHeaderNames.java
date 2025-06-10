@@ -32,7 +32,13 @@ public final class SidecarHttpHeaderNames
      */
     public static final String CONTENT_XXHASH32_SEED = "cassandra-content-xxhash32-seed";
     /**
-     * {@code "cassandra-auth-role"}
+     * {@code "cassandra-auth-role"} header allows clients to explicitly set intended role for permission evaluation on
+     * server side.
+     * <p>
+     * When {@code "cassandra-auth-role"} header is added, server verifies that the role specified is present among the
+     * roles assigned to user in identity_to_role table in Cassandra. Once verified, server uses only the permissions
+     * associated with this intended role for authorization checks. If the header is not added, sidecar uses all
+     * assigned roles for user in database for permission evaluation.
      */
     public static final String AUTH_ROLE = "cassandra-auth-role";
 }

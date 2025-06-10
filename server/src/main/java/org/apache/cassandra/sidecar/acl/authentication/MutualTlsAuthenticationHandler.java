@@ -38,6 +38,7 @@ import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.AUTH_ROLE;
+import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLES_ATTRIBUTE_NAME;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
@@ -92,15 +93,16 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
                         List<String> roles = extractCassandraRoles(identities);
                         String roleIntended = ctx.request().getHeader(AUTH_ROLE);
 
-                        if (roleIntended != null && !roleIntended.isEmpty() && !roles.contains(roleIntended))
+                        if (isNotEmpty(roleIntended) && !roles.contains(roleIntended))
                         {
-                            String errMsg = String.format("User not authorized for role %s", roleIntended);
+                            String errMsg = String.format("None of the identities %s are authorized for role %s",
+                                                          identities, roleIntended);
                             handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, errMsg)));
                             return;
                         }
 
                         List<String> rolesToAdd = roleIntended != null && !roleIntended.isEmpty()
-                                                  ? Collections.singletonList(roleIntended) : roles;
+                                                  ? List.of(roleIntended) : roles;
                         authN.result().attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
                         handler.handle(authN);
                     });

@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.client;
 
 import java.io.InputStream;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
  * Encapsulates {@code HttpClient} configuration parameters.
  */
@@ -184,6 +186,7 @@ public class HttpClientConfig
     /**
      * @return cassandra role
      */
+    @Nullable
     public String cassandraRole()
     {
         return cassandraRole;
