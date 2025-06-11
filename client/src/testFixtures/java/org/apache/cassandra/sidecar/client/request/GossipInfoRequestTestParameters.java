@@ -61,7 +61,7 @@ public class GossipInfoRequestTestParameters implements RequestTestParameters<Go
     @Override
     public String expectedEndpointPath()
     {
-        return ApiEndpointsV1.GOSSIP_INFO_ROUTE;
+        return ApiEndpointsV1.GOSSIP_ROUTE;
     }
 
     @Override

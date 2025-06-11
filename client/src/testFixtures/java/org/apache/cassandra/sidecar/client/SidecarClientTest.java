@@ -397,7 +397,7 @@ abstract class SidecarClientTest
         assertThat(gossipInfo.releaseVersion()).isEqualTo("4.0.7");
         assertThat(gossipInfo.sstableVersions()).isEqualTo(Collections.singletonList("big-nb"));
 
-        validateResponseServed(ApiEndpointsV1.GOSSIP_INFO_ROUTE);
+        validateResponseServed(ApiEndpointsV1.GOSSIP_ROUTE);
     }
 
     @Test

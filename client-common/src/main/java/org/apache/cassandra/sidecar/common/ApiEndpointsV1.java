@@ -59,7 +59,8 @@ public final class ApiEndpointsV1
      */
     @Deprecated
     public static final String CASSANDRA_HEALTH_ROUTE = API_V1 + CASSANDRA + HEALTH;
-    public static final String CASSANDRA_NATIVE_HEALTH_ROUTE = API_V1 + CASSANDRA + NATIVE + HEALTH;
+    public static final String CASSANDRA_NATIVE_ROUTE = API_V1 + CASSANDRA + NATIVE;
+    public static final String CASSANDRA_NATIVE_HEALTH_ROUTE = CASSANDRA_NATIVE_ROUTE + HEALTH;
     public static final String CASSANDRA_JMX_HEALTH_ROUTE = API_V1 + CASSANDRA + JMX + HEALTH;
 
     @Deprecated  // NOTE: Uses singular forms of "keyspace" and "table"
@@ -96,8 +97,8 @@ public final class ApiEndpointsV1
     public static final String SSTABLE_IMPORT_ROUTE = API_V1 + PER_UPLOAD + PER_KEYSPACE + PER_TABLE + "/import";
     public static final String SSTABLE_CLEANUP_ROUTE = API_V1 + PER_UPLOAD;
 
-    public static final String GOSSIP_INFO_ROUTE = API_V1 + CASSANDRA + "/gossip";
-    public static final String GOSSIP_HEALTH_ROUTE = GOSSIP_INFO_ROUTE + HEALTH;
+    public static final String GOSSIP_ROUTE = API_V1 + CASSANDRA + "/gossip";
+    public static final String GOSSIP_HEALTH_ROUTE = GOSSIP_ROUTE + HEALTH;
     public static final String TIME_SKEW_ROUTE = API_V1 + "/time-skew";
 
     public static final String KEYSPACE_TOKEN_MAPPING_ROUTE = API_V1 + PER_KEYSPACE + "/token-range-replicas";

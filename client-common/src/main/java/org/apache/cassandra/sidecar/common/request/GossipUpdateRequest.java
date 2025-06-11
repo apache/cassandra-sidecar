@@ -20,27 +20,46 @@ package org.apache.cassandra.sidecar.common.request;
 
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
-import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
+import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
 
 /**
- * Represents a request to retrieve the Cassandra gossip information
+ * Gossip update request
  */
-public class GossipInfoRequest extends JsonRequest<GossipInfoResponse>
+public class GossipUpdateRequest extends Request
 {
+    private final NodeCommandRequestPayload requestPayload;
+
     /**
-     * Constructs a request to retrieve the Cassandra gossip information
+     * Constructs a gossip update request with the provided parameters
+     *
+     * @param requestPayload { "state": "start" } or { "state": "stop"  }
      */
-    public GossipInfoRequest()
+    public GossipUpdateRequest(NodeCommandRequestPayload requestPayload)
     {
         super(ApiEndpointsV1.GOSSIP_ROUTE);
+        this.requestPayload = requestPayload;
     }
 
     /**
-     * {@inheritDoc}
+     * Constructs a gossip update request with the provided parameters
+     *
+     * @param state START or STOP
      */
+    public GossipUpdateRequest(NodeCommandRequestPayload.State state)
+    {
+        super(ApiEndpointsV1.GOSSIP_ROUTE);
+        this.requestPayload = new NodeCommandRequestPayload(state.toValue());
+    }
+
     @Override
     public HttpMethod method()
     {
-        return HttpMethod.GET;
+        return HttpMethod.PUT;
+    }
+
+    @Override
+    public Object requestBody()
+    {
+        return requestPayload;
     }
 }

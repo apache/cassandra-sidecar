@@ -70,9 +70,12 @@ public class BasicPermissions
     public static final Permission READ_SCHEMA = new DomainAwarePermission("SCHEMA:READ", CLUSTER_SCOPE);
     public static final Permission READ_SCHEMA_KEYSPACE_SCOPED = new DomainAwarePermission("SCHEMA:READ", KEYSPACE_SCOPE);
     public static final Permission READ_GOSSIP = new DomainAwarePermission("GOSSIP:READ", CLUSTER_SCOPE);
+    public static final Permission WRITE_GOSSIP = new DomainAwarePermission("GOSSIP:WRITE", CLUSTER_SCOPE);
     public static final Permission READ_RING = new DomainAwarePermission("RING:READ", CLUSTER_SCOPE);
     public static final Permission READ_RING_KEYSPACE_SCOPED = new DomainAwarePermission("RING:READ", KEYSPACE_SCOPE);
     public static final Permission READ_TOPOLOGY = new DomainAwarePermission("TOPOLOGY:READ", KEYSPACE_SCOPE);
+    public static final Permission WRITE_NATIVE = new DomainAwarePermission("NATIVE:WRITE", CLUSTER_SCOPE);
+
 
     // cassandra stats permissions
     public static final Permission STATS = new StandardPermission("STATS", CLUSTER_SCOPE);

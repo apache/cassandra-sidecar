@@ -22,9 +22,11 @@ import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import org.apache.cassandra.sidecar.handlers.ConnectedClientStatsHandler;
 import org.apache.cassandra.sidecar.handlers.GossipInfoHandler;
+import org.apache.cassandra.sidecar.handlers.GossipUpdateHandler;
 import org.apache.cassandra.sidecar.handlers.KeyspaceRingHandler;
 import org.apache.cassandra.sidecar.handlers.KeyspaceSchemaHandler;
 import org.apache.cassandra.sidecar.handlers.ListOperationalJobsHandler;
+import org.apache.cassandra.sidecar.handlers.NativeUpdateHandler;
 import org.apache.cassandra.sidecar.handlers.NodeDecommissionHandler;
 import org.apache.cassandra.sidecar.handlers.OperationalJobHandler;
 import org.apache.cassandra.sidecar.handlers.RingHandler;
@@ -172,5 +174,27 @@ public class CassandraOperationsModule extends AbstractModule
         return factory.builderForRoute()
                       .handler(validateTableExistenceHandler)
                       .handler(tableStatsHandler).build();
+    }
+
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.UpdateNodeGossipRouteKey.class)
+    VertxRoute cassandraGossipRoute(RouteBuilder.Factory factory,
+                                    GossipUpdateHandler nodeGossipHandler)
+    {
+        return factory.builderForRoute()
+                      .setBodyHandler(true)
+                      .handler(nodeGossipHandler)
+                      .build();
+    }
+
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.UpdateNodeNativeRouteKey.class)
+    VertxRoute cassandraNativeRoute(RouteBuilder.Factory factory,
+                                    NativeUpdateHandler nodeNativeHandler)
+    {
+        return factory.builderForRoute()
+                      .setBodyHandler(true)
+                      .handler(nodeNativeHandler)
+                      .build();
     }
 }

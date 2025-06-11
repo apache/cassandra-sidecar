@@ -178,4 +178,24 @@ public interface StorageJmxOperations
      * @return the name of the cluster
      */
     String getClusterName();
+
+    /**
+     * Triggers stop native transport
+     */
+    void stopNativeTransport();
+
+    /**
+     * Triggers start native transport
+     */
+    void startNativeTransport();
+
+    /**
+     * Triggers start gossip
+     */
+    void stopGossiping();
+
+    /**
+     * Triggers start gossip
+     */
+    void startGossiping();
 }

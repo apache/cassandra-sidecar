@@ -56,7 +56,7 @@ public interface VertxRouteMapKeys
     interface CassandraGossipInfoRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.GET;
-        String ROUTE_URI = ApiEndpointsV1.GOSSIP_INFO_ROUTE;
+        String ROUTE_URI = ApiEndpointsV1.GOSSIP_ROUTE;
     }
     interface CassandraHealthRouteKey extends RouteClassKey
     {
@@ -252,5 +252,15 @@ public interface VertxRouteMapKeys
     {
         HttpMethod HTTP_METHOD = HttpMethod.PUT;
         String ROUTE_URI = ApiEndpointsV1.SERVICE_CONFIG_ROUTE;
+    }
+    interface UpdateNodeGossipRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PUT;
+        String    ROUTE_URI   = ApiEndpointsV1.GOSSIP_ROUTE;
+    }
+    interface UpdateNodeNativeRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PUT;
+        String    ROUTE_URI   = ApiEndpointsV1.CASSANDRA_NATIVE_ROUTE;
     }
 }

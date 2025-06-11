@@ -96,7 +96,7 @@ class RouteBuilderTest
                   Factory::builderForUnauthorizedRoute,
                   route -> {
                       route.setHttpMethod(HttpMethod.GET);
-                      route.setRouteURI(ApiEndpointsV1.GOSSIP_INFO_ROUTE);
+                      route.setRouteURI(ApiEndpointsV1.GOSSIP_ROUTE);
                       assertThatThrownBy(() -> route.mountTo(mockRouter))
                       .isInstanceOf(ConfigurationException.class)
                       .hasMessage("Unauthorized route must not have required authorizations declared");

@@ -36,9 +36,11 @@ import org.apache.cassandra.sidecar.common.request.ConnectedClientStatsRequest;
 import org.apache.cassandra.sidecar.common.request.CreateSnapshotRequest;
 import org.apache.cassandra.sidecar.common.request.GossipHealthRequest;
 import org.apache.cassandra.sidecar.common.request.GossipInfoRequest;
+import org.apache.cassandra.sidecar.common.request.GossipUpdateRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.ListOperationalJobsRequest;
 import org.apache.cassandra.sidecar.common.request.ListSnapshotFilesRequest;
+import org.apache.cassandra.sidecar.common.request.NativeUpdateRequest;
 import org.apache.cassandra.sidecar.common.request.NodeDecommissionRequest;
 import org.apache.cassandra.sidecar.common.request.NodeSettingsRequest;
 import org.apache.cassandra.sidecar.common.request.OperationalJobRequest;
@@ -54,8 +56,10 @@ import org.apache.cassandra.sidecar.common.request.TimeSkewRequest;
 import org.apache.cassandra.sidecar.common.request.TokenRangeReplicasRequest;
 import org.apache.cassandra.sidecar.common.request.UploadSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.data.Digest;
+import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -561,6 +565,30 @@ public class RequestContext
         public Builder nodeDecommissionRequest()
         {
             return request(NODE_DECOMMISSION_REQUEST);
+        }
+
+        /**
+         * Sets the {@code request}  to be a {@link GossipUpdateRequest} for the
+         * given {@link NodeCommandRequestPayload.State state}, and returns a reference to this Builder enabling method chaining.
+         *
+         * @param state  the desired state for gossip
+         * @return a reference to this Builder
+         */
+        public Builder nodeGossipUpdateRequest(@NotNull NodeCommandRequestPayload.State state)
+        {
+            return request(new GossipUpdateRequest(state));
+        }
+
+        /**
+         * Sets the {@code request}  to be a {@link NativeUpdateRequest} for the
+         * given {@link NodeCommandRequestPayload.State state}, and returns a reference to this Builder enabling method chaining.
+         *
+         * @param state  the desired state for native transport
+         * @return a reference to this Builder
+         */
+        public Builder nodeNativeUpdateRequest(@NotNull NodeCommandRequestPayload.State state)
+        {
+            return request(new NativeUpdateRequest(state));
         }
 
         /**

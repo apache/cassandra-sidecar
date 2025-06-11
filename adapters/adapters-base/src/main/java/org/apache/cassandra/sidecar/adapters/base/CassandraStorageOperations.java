@@ -254,4 +254,44 @@ public class CassandraStorageOperations implements StorageOperations
         return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
                         .getClusterName();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void stopNativeTransport()
+    {
+        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                 .stopNativeTransport();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void startNativeTransport()
+    {
+        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                 .startNativeTransport();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void stopGossiping()
+    {
+        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                 .stopGossiping();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void startGossiping()
+    {
+        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                 .startGossiping();
+    }
 }

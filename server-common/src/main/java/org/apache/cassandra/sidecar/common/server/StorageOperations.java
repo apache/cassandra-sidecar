@@ -129,4 +129,12 @@ public interface StorageOperations
      * @return the name of the cluster
      */
     String clusterName();
+
+    void stopNativeTransport();
+
+    void startNativeTransport();
+
+    void stopGossiping();
+
+    void startGossiping();
 }
