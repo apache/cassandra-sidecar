@@ -580,7 +580,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request}  to be a {@link NativeUpdateRequest} for the
+         * Sets the {@code request} to be a {@link NativeUpdateRequest} for the
          * given {@link NodeCommandRequestPayload.State state}, and returns a reference to this Builder enabling method chaining.
          *
          * @param state  the desired state for native transport
