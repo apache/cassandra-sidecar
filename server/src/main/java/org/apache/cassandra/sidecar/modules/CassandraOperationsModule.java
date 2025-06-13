@@ -189,7 +189,7 @@ public class CassandraOperationsModule extends AbstractModule
 
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.UpdateNodeNativeRouteKey.class)
-    VertxRoute cassandraNativeRoute(RouteBuilder.Factory factory,
+    VertxRoute cassandraChangeNativeStateRoute(RouteBuilder.Factory factory,
                                     NativeUpdateHandler nodeNativeHandler)
     {
         return factory.builderForRoute()
