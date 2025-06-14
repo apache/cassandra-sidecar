@@ -21,11 +21,12 @@ package org.apache.cassandra.sidecar.common.request;
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
+import org.apache.cassandra.sidecar.common.response.HealthResponse;
 
 /**
  * Gossip update request
  */
-public class GossipUpdateRequest extends Request
+public class GossipUpdateRequest  extends JsonRequest<HealthResponse>
 {
     private final NodeCommandRequestPayload requestPayload;
 

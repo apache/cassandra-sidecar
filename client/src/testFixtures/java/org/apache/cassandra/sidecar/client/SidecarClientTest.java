@@ -1782,7 +1782,10 @@ abstract class SidecarClientTest
         enqueue(response);
 
         SidecarInstanceImpl sidecarInstance = instances.get(0);
-        assertThatNoException().isThrownBy(() -> client.nodeUpdateGossip(sidecarInstance, NodeCommandRequestPayload.State.STOP).get(30, TimeUnit.SECONDS));
+        HealthResponse result = client.nodeUpdateGossip(sidecarInstance, NodeCommandRequestPayload.State.STOP).get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualToIgnoringCase("OK");
+        assertThat(result.isOk()).isTrue();
 
         validateResponseServed(ApiEndpointsV1.GOSSIP_ROUTE, request -> {
             String requestBody = request.getBody().readUtf8();
@@ -1797,7 +1800,10 @@ abstract class SidecarClientTest
         enqueue(response);
 
         SidecarInstanceImpl sidecarInstance = instances.get(0);
-        assertThatNoException().isThrownBy(() -> client.nodeUpdateNative(sidecarInstance, NodeCommandRequestPayload.State.STOP).get(30, TimeUnit.SECONDS));
+        HealthResponse result = client.nodeUpdateNative(sidecarInstance, NodeCommandRequestPayload.State.STOP).get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualToIgnoringCase("OK");
+        assertThat(result.isOk()).isTrue();
 
         validateResponseServed(ApiEndpointsV1.CASSANDRA_NATIVE_ROUTE, request -> {
             String requestBody = request.getBody().readUtf8();

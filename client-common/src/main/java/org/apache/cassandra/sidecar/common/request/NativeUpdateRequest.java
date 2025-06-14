@@ -22,11 +22,12 @@ package org.apache.cassandra.sidecar.common.request;
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
+import org.apache.cassandra.sidecar.common.response.HealthResponse;
 
 /**
  * native transport update request
  */
-public class NativeUpdateRequest extends Request
+public class NativeUpdateRequest  extends JsonRequest<HealthResponse>
 {
     private final NodeCommandRequestPayload requestPayload;
 

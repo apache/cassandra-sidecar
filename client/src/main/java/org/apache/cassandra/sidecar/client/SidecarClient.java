@@ -813,7 +813,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      * @param state the desired gossip state: {@link NodeCommandRequestPayload.State#START} or {@link NodeCommandRequestPayload.State#STOP}
      * @return a CompletableFuture representing the completion of the operation
      */
-    public CompletableFuture<Void> nodeUpdateGossip(SidecarInstance instance, NodeCommandRequestPayload.State state)
+    public CompletableFuture<HealthResponse> nodeUpdateGossip(SidecarInstance instance, NodeCommandRequestPayload.State state)
     {
         return executor.executeRequestAsync(requestBuilder()
                                             .singleInstanceSelectionPolicy(instance)
@@ -833,7 +833,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      * @param state the desired native transport state: {@link NodeCommandRequestPayload.State#START} or {@link NodeCommandRequestPayload.State#STOP}
      * @return a CompletableFuture representing the completion of the operation
      */
-    public CompletableFuture<Void> nodeUpdateNative(SidecarInstance instance, NodeCommandRequestPayload.State state)
+    public CompletableFuture<HealthResponse> nodeUpdateNative(SidecarInstance instance, NodeCommandRequestPayload.State state)
     {
         return executor.executeRequestAsync(requestBuilder()
                                             .singleInstanceSelectionPolicy(instance)
