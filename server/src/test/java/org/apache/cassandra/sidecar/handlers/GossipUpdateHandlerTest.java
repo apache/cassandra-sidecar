@@ -127,9 +127,7 @@ public class GossipUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"state\":\"foo\"}";
-        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip").expect(ResponsePredicate.SC_BAD_REQUEST).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> {
-            ctx.completeNow();
-        }));
+        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip").expect(ResponsePredicate.SC_BAD_REQUEST).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> ctx.completeNow()));
     }
 
 
