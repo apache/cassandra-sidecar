@@ -26,7 +26,7 @@ import org.apache.cassandra.sidecar.common.response.HealthResponse;
 /**
  * Gossip update request
  */
-public class GossipUpdateRequest  extends JsonRequest<HealthResponse>
+public class GossipUpdateRequest extends JsonRequest<HealthResponse>
 {
     private final NodeCommandRequestPayload requestPayload;
 

@@ -27,7 +27,7 @@ import org.apache.cassandra.sidecar.common.response.HealthResponse;
 /**
  * native transport update request
  */
-public class NativeUpdateRequest  extends JsonRequest<HealthResponse>
+public class NativeUpdateRequest extends JsonRequest<HealthResponse>
 {
     private final NodeCommandRequestPayload requestPayload;
 
