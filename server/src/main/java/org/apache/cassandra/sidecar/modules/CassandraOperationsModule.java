@@ -178,7 +178,7 @@ public class CassandraOperationsModule extends AbstractModule
 
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.UpdateNodeGossipStateRouteKey.class)
-    VertxRoute cassandraGossipRoute(RouteBuilder.Factory factory,
+    VertxRoute cassandraChangeGossipStateRoute(RouteBuilder.Factory factory,
                                     GossipUpdateHandler nodeGossipHandler)
     {
         return factory.builderForRoute()
@@ -189,7 +189,7 @@ public class CassandraOperationsModule extends AbstractModule
 
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.UpdateNodeNativeStateRouteKey.class)
-    VertxRoute cassandraNativeRoute(RouteBuilder.Factory factory,
+    VertxRoute cassandraChangeNativeStateRoute(RouteBuilder.Factory factory,
                                     NativeUpdateHandler nodeNativeHandler)
     {
         return factory.builderForRoute()
