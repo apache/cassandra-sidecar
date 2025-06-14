@@ -38,6 +38,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
@@ -50,6 +51,7 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -93,8 +95,13 @@ public class GossipUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"state\":\"start\"}";
-        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip").expect(ResponsePredicate.SC_ACCEPTED).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> {
-            verify(mockStorageOperations, times(1)).startGossiping();
+        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip").expect(ResponsePredicate.SC_OK).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> {
+            ctx.verify(() -> {
+                verify(mockStorageOperations, times(1)).startGossiping();
+
+                JsonObject json = resp.bodyAsJsonObject();
+                assertEquals("OK", json.getMap().get("status"));
+            });
             ctx.completeNow();
         }));
     }
@@ -104,8 +111,13 @@ public class GossipUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"state\":\"STOP\"}";
-        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip").expect(ResponsePredicate.SC_ACCEPTED).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> {
-            verify(mockStorageOperations, times(1)).stopGossiping();
+        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip").expect(ResponsePredicate.SC_OK).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> {
+            ctx.verify(() -> {
+                verify(mockStorageOperations, times(1)).stopGossiping();
+
+                JsonObject json = resp.bodyAsJsonObject();
+                assertEquals("OK", json.getMap().get("status"));
+            });
             ctx.completeNow();
         }));
     }
@@ -122,7 +134,7 @@ public class GossipUpdateHandlerTest
 
 
     /**
-     * Test guice module for Node Decommission handler tests
+     * Test guice module for {@link GossipUpdateHandler} tests
      */
     class GossipUpdateHandlerTestModule extends AbstractModule
     {

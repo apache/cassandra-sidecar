@@ -37,6 +37,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
@@ -49,6 +50,7 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -60,7 +62,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(VertxExtension.class)
 public class NativeUpdateHandlerTest
 {
-    static final Logger LOGGER = LoggerFactory.getLogger(GossipUpdateHandlerTest.class);
+    static final Logger LOGGER = LoggerFactory.getLogger(NativeUpdateHandlerTest.class);
     Vertx vertx;
     Server server;
     StorageOperations mockStorageOperations = mock(StorageOperations.class);
@@ -92,8 +94,13 @@ public class NativeUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"state\":\"start\"}";
-        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native").expect(ResponsePredicate.SC_ACCEPTED).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> {
-            verify(mockStorageOperations, times(1)).startNativeTransport();
+        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native").expect(ResponsePredicate.SC_OK).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> {
+            ctx.verify(() -> {
+                verify(mockStorageOperations, times(1)).startNativeTransport();
+
+                JsonObject json = resp.bodyAsJsonObject();
+                assertEquals("OK", json.getMap().get("status"));
+            });
             ctx.completeNow();
         }));
     }
@@ -103,8 +110,13 @@ public class NativeUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"state\":\"stop\"}";
-        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native").expect(ResponsePredicate.SC_ACCEPTED).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> {
-            verify(mockStorageOperations, times(1)).stopNativeTransport();
+        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native").expect(ResponsePredicate.SC_OK).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> {
+            ctx.verify(() -> {
+                verify(mockStorageOperations, times(1)).stopNativeTransport();
+
+                JsonObject json = resp.bodyAsJsonObject();
+                assertEquals("OK", json.getMap().get("status"));
+            });
             ctx.completeNow();
         }));
     }
@@ -114,14 +126,12 @@ public class NativeUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"state\":\"foo\"}";
-        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native").expect(ResponsePredicate.SC_BAD_REQUEST).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> {
-            ctx.completeNow();
-        }));
+        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native").expect(ResponsePredicate.SC_BAD_REQUEST).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> ctx.completeNow()));
     }
 
 
     /**
-     * Test guice module for Node Decommission handler tests
+     * Test guice module for {@link NativeUpdateHandler}
      */
     class NativeUpdateHandlerTestModule extends AbstractModule
     {
@@ -129,9 +139,9 @@ public class NativeUpdateHandlerTest
         @Singleton
         public InstancesMetadata instanceMetadata()
         {
-            final int instanceId = 100;
-            final String host = "127.0.0.1";
-            final InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
+            int instanceId = 100;
+            String host = "127.0.0.1";
+            InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
             when(instanceMetadata.host()).thenReturn(host);
             when(instanceMetadata.port()).thenReturn(9042);
             when(instanceMetadata.id()).thenReturn(instanceId);

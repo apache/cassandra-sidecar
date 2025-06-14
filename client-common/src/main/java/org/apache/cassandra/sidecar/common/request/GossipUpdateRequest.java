@@ -32,17 +32,6 @@ public class GossipUpdateRequest extends Request
     /**
      * Constructs a gossip update request with the provided parameters
      *
-     * @param requestPayload { "state": "start" } or { "state": "stop"  }
-     */
-    public GossipUpdateRequest(NodeCommandRequestPayload requestPayload)
-    {
-        super(ApiEndpointsV1.GOSSIP_ROUTE);
-        this.requestPayload = requestPayload;
-    }
-
-    /**
-     * Constructs a gossip update request with the provided parameters
-     *
      * @param state START or STOP
      */
     public GossipUpdateRequest(NodeCommandRequestPayload.State state)

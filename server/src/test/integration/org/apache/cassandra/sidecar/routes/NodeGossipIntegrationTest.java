@@ -18,7 +18,6 @@
 package org.apache.cassandra.sidecar.routes;
 
 import com.google.common.util.concurrent.Uninterruptibles;
-
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -44,7 +43,9 @@ public class NodeGossipIntegrationTest extends IntegrationTestBase
         // 1) STOP gossip
         testWithClient(client -> client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip")
                                        .sendBuffer(Buffer.buffer("{\"state\":\"stop\"}"), ctx.succeeding(resp -> {
-                                           assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.ACCEPTED.code());
+                                           assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                                           String status = resp.bodyAsJsonObject().getString("status");
+                                           assertThat(status).isEqualTo("OK");
                                        })));
 
         Uninterruptibles.sleepUninterruptibly(3, SECONDS);
@@ -60,7 +61,9 @@ public class NodeGossipIntegrationTest extends IntegrationTestBase
         // 3) START gossip
         testWithClient(client -> client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip")
                                        .sendBuffer(Buffer.buffer("{\"state\":\"start\"}"), ctx.succeeding(resp -> {
-                                           assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.ACCEPTED.code());
+                                           assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                                           String status = resp.bodyAsJsonObject().getString("status");
+                                           assertThat(status).isEqualTo("OK");
                                        })));
 
         Uninterruptibles.sleepUninterruptibly(3, SECONDS);

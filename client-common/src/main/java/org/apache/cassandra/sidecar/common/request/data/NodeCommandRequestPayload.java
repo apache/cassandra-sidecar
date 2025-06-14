@@ -40,12 +40,18 @@ public class NodeCommandRequestPayload
      */
     public enum State
     {
-        START, STOP;
+        @JsonProperty("start")
+        START,
+
+        @JsonProperty("stop")
+        STOP;
 
         @JsonCreator
         public static State fromString(String s)
         {
-            if (s == null) return null;
+            if (s == null)
+                throw new IllegalArgumentException("Null state");
+
             switch (s.trim().toLowerCase())
             {
                 case "start":
@@ -83,7 +89,7 @@ public class NodeCommandRequestPayload
      * @return the parsed enum (START or STOP)
      */
     @JsonProperty("state")
-    public State getState()
+    public State state()
     {
         return state;
     }

@@ -72,6 +72,7 @@ import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
+import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateCdcServiceConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
@@ -1772,6 +1773,36 @@ abstract class SidecarClientTest
             assertThat(mapper.writeValueAsString(result)).isEqualTo(expectedResponse);
             validateResponseServed(server, ApiEndpointsV1.STREAM_STATS_ROUTE, req -> {});
         }
+    }
+
+    @Test
+    void testNodeUpdateGossip() throws Exception
+    {
+        MockResponse response = new MockResponse().setResponseCode(200).setBody("{\"status\":\"OK\"}");
+        enqueue(response);
+
+        SidecarInstanceImpl sidecarInstance = instances.get(0);
+        assertThatNoException().isThrownBy(() -> client.nodeUpdateGossip(sidecarInstance, NodeCommandRequestPayload.State.STOP).get(30, TimeUnit.SECONDS));
+
+        validateResponseServed(ApiEndpointsV1.GOSSIP_ROUTE, request -> {
+            String requestBody = request.getBody().readUtf8();
+            assertThat(requestBody).isEqualTo("{\"state\":\"stop\"}");
+        });
+    }
+
+    @Test
+    void testNodeUpdateNative() throws Exception
+    {
+        MockResponse response = new MockResponse().setResponseCode(200).setBody("{\"status\":\"OK\"}");
+        enqueue(response);
+
+        SidecarInstanceImpl sidecarInstance = instances.get(0);
+        assertThatNoException().isThrownBy(() -> client.nodeUpdateNative(sidecarInstance, NodeCommandRequestPayload.State.STOP).get(30, TimeUnit.SECONDS));
+
+        validateResponseServed(ApiEndpointsV1.CASSANDRA_NATIVE_ROUTE, request -> {
+            String requestBody = request.getBody().readUtf8();
+            assertThat(requestBody).isEqualTo("{\"state\":\"stop\"}");
+        });
     }
 
     private void enqueue(MockResponse response)

@@ -253,12 +253,12 @@ public interface VertxRouteMapKeys
         HttpMethod HTTP_METHOD = HttpMethod.PUT;
         String ROUTE_URI = ApiEndpointsV1.SERVICE_CONFIG_ROUTE;
     }
-    interface UpdateNodeGossipRouteKey extends RouteClassKey
+    interface UpdateNodeGossipStateRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.PUT;
         String    ROUTE_URI   = ApiEndpointsV1.GOSSIP_ROUTE;
     }
-    interface UpdateNodeNativeRouteKey extends RouteClassKey
+    interface UpdateNodeNativeStateRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.PUT;
         String    ROUTE_URI   = ApiEndpointsV1.CASSANDRA_NATIVE_ROUTE;

@@ -21,11 +21,8 @@ package org.apache.cassandra.sidecar.handlers;
 import java.util.Collections;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.Inject;
-import io.netty.handler.codec.http.HttpResponseStatus;
+import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
@@ -37,6 +34,8 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.modules.HealthCheckModule.OK_STATUS;
+
 /**
  * Handles {@code PUT /api/v1/cassandra/gossip} requests to start or stop Cassandra gossip.
  *
@@ -44,18 +43,13 @@ import org.jetbrains.annotations.NotNull;
  * { "state": "start" } or { "state": "stop" }
  * and will asynchronously invoke the corresponding JMX operation.</p>
  */
+@Singleton
 public class GossipUpdateHandler extends NodeCommandHandler implements AccessProtected
 {
-    private final ExecutorPools executorPools;
-    private static final Logger LOGGER = LoggerFactory.getLogger(GossipUpdateHandler.class);
-
-
     @Inject
-    public GossipUpdateHandler(InstanceMetadataFetcher metadataFetcher,
-                               ExecutorPools executorPools)
+    public GossipUpdateHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools)
     {
         super(metadataFetcher, executorPools, null);
-        this.executorPools = executorPools;
     }
 
     @Override
@@ -65,34 +59,25 @@ public class GossipUpdateHandler extends NodeCommandHandler implements AccessPro
     }
 
     @Override
-    protected void handleInternal(RoutingContext context,
-                                  HttpServerRequest httpRequest,
-                                  @NotNull String host,
-                                  SocketAddress remoteAddress,
-                                  NodeCommandRequestPayload request)
+    protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, @NotNull String host, SocketAddress remoteAddress, NodeCommandRequestPayload request)
     {
         StorageOperations storageOps = metadataFetcher.delegate(host).storageOperations();
 
-        executorPools.service()
-                     .runBlocking(() -> {
-                         switch (request.getState())
-                         {
-                             case START:
-                                 storageOps.startGossiping();
-                                 break;
-                             case STOP:
-                                 storageOps.stopGossiping();
-                                 break;
-                             default:
-                                 throw new IllegalStateException("Unknown state: " + request.getState());
-                         }
-                     })
-                     .onSuccess(ignored -> {
-                         context.response().setStatusCode(HttpResponseStatus.ACCEPTED.code()).end();
-                     })
-                     .onFailure(cause -> {
-                         processFailure(cause, context, host, remoteAddress, request);
-                     });
+        executorPools.service().runBlocking(() -> {
+            switch (request.state())
+            {
+                case START:
+                    storageOps.startGossiping();
+                    break;
+                case STOP:
+                    storageOps.stopGossiping();
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown state: " + request.state());
+            }
+        })
+                     .onSuccess(ignored -> context.json(OK_STATUS))
+                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 }
 

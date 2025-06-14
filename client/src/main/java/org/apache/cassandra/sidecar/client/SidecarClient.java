@@ -7,14 +7,13 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package org.apache.cassandra.sidecar.client;
@@ -54,6 +53,7 @@ import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.Digest;
+import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.RestoreJobProgressRequestParams;
 import org.apache.cassandra.sidecar.common.request.data.UpdateCdcServiceConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
@@ -801,6 +801,46 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                             .nodeDecommissionRequest()
                                             .build());
     }
+    /**
+     * Sends a request to start or stop Cassandra gossiping on the provided instance.
+     * <p>
+     * This operation asynchronously triggers start or stop of gossip via Cassandra's JMX interface.
+     * The request body must contain a JSON payload with a "state" field, which can be either "start" or "stop".
+     * On success, the server responds with HTTP 200 OK and payload {@code {"status":"OK"}}.
+     * </p>
+     *
+     * @param instance the instance where the request will be executed
+     * @param state the desired gossip state: {@link NodeCommandRequestPayload.State#START} or {@link NodeCommandRequestPayload.State#STOP}
+     * @return a CompletableFuture representing the completion of the operation
+     */
+    public CompletableFuture<Void> nodeUpdateGossip(SidecarInstance instance, NodeCommandRequestPayload.State state)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .nodeGossipUpdateRequest(state)
+                                            .build());
+    }
+
+    /**
+     * Sends a request to start or stop Cassandra native transport on the provided instance.
+     * <p>
+     * This operation asynchronously triggers start or stop of native transport via Cassandra's JMX interface.
+     * The request body must contain a JSON payload with a "state" field, which can be either "start" or "stop".
+     * On success, the server responds with HTTP 200 OK and payload {@code {"status":"OK"}}.
+     * </p>
+     *
+     * @param instance the instance where the request will be executed
+     * @param state the desired native transport state: {@link NodeCommandRequestPayload.State#START} or {@link NodeCommandRequestPayload.State#STOP}
+     * @return a CompletableFuture representing the completion of the operation
+     */
+    public CompletableFuture<Void> nodeUpdateNative(SidecarInstance instance, NodeCommandRequestPayload.State state)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .nodeNativeUpdateRequest(state)
+                                            .build());
+    }
+
 
     /**
      * Returns a copy of the request builder with the default parameters configured for the client.
