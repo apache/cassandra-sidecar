@@ -48,7 +48,7 @@ public class NodeGossipIntegrationTest extends IntegrationTestBase
                                            assertThat(status).isEqualTo("OK");
                                        })));
 
-        Uninterruptibles.sleepUninterruptibly(3, SECONDS);
+        Uninterruptibles.sleepUninterruptibly(15, SECONDS);
 
         // 2) Health should now be NOT_OK
         testWithClient(client -> client.get(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip/__health")
@@ -66,7 +66,7 @@ public class NodeGossipIntegrationTest extends IntegrationTestBase
                                            assertThat(status).isEqualTo("OK");
                                        })));
 
-        Uninterruptibles.sleepUninterruptibly(3, SECONDS);
+        Uninterruptibles.sleepUninterruptibly(15, SECONDS);
 
         // 4) Health should now be OK
         testWithClient(client -> client.get(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip/__health")
