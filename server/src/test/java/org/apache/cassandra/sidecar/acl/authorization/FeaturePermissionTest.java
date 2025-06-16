@@ -38,6 +38,8 @@ import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.RE
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SCHEMA_KEYSPACE_SCOPED;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_TOPOLOGY;
+import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.STATS;
+import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.STATS_TABLE_SCOPED;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.STREAM_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.UPLOAD_STAGED_SSTABLE;
 import static org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions.SELECT;
@@ -78,6 +80,10 @@ class FeaturePermissionTest
                                                 .toAuthorization("data/university/student"))).isFalse();
         assertThat(bulkReadAuthorization.verify(DELETE_STAGED_SSTABLE
                                                 .toAuthorization("data/university/student"))).isFalse();
+        assertThat(bulkReadAuthorization.verify(STATS_TABLE_SCOPED
+                                                .toAuthorization("data/university/student"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(STATS
+                                                .toAuthorization("cluster"))).isFalse();
 
         Authorization bulkWriteAuthorization
         = ANALYTICS_WRITE_DIRECT.permission().toAuthorization("data/university/student");
@@ -127,6 +133,10 @@ class FeaturePermissionTest
                                                 .toAuthorization("data/university/*"))).isFalse();
         assertThat(bulkReadAuthorization.verify(DELETE_STAGED_SSTABLE
                                                 .toAuthorization("data/university/*"))).isFalse();
+        assertThat(bulkReadAuthorization.verify(STATS_TABLE_SCOPED
+                                                .toAuthorization("data/university/*"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(STATS
+                                                .toAuthorization("cluster"))).isFalse();
 
         Authorization bulkWriteAuthorization
         = ANALYTICS_WRITE_DIRECT.permission().toAuthorization("data/university/*");
@@ -189,7 +199,7 @@ class FeaturePermissionTest
         assertThat(cdcPermission.childPermissions().size()).isOne();
         CompositePermission bulkReadPermission = permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT");
         assertThat(bulkReadPermission).isNotNull();
-        assertThat(bulkReadPermission.childPermissions().size()).isEqualTo(7);
+        assertThat(bulkReadPermission.childPermissions().size()).isEqualTo(8);
         CompositePermission bulkWritePermission = permissionFactory.createFeaturePermission("ANALYTICS:WRITE_DIRECT");
         assertThat(bulkWritePermission).isNotNull();
         assertThat(bulkWritePermission.childPermissions().size()).isEqualTo(6);
@@ -206,7 +216,7 @@ class FeaturePermissionTest
         AndAuthorization bulkReadAuthorization
         = (AndAuthorization) bulkReadPermission.toAuthorization("data/university/student");
         Set<Authorization> resolvedAuthorizations = new HashSet<>(bulkReadAuthorization.getAuthorizations());
-        assertThat(resolvedAuthorizations.size()).isEqualTo(7);
+        assertThat(resolvedAuthorizations.size()).isEqualTo(8);
         assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:CREATE")
                                                    .setResource("data/university/student"))).isTrue();
         assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:DELETE")
@@ -221,6 +231,8 @@ class FeaturePermissionTest
                                                    .setResource("data/university"))).isTrue();
         assertThat(resolvedAuthorizations.contains(new PermissionBasedAuthorizationImpl("SELECT")
                                                    .setResource("data/university/student"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new PermissionBasedAuthorizationImpl("STATS")
+                                                   .setResource("data/university/student"))).isTrue();
     }
 
     @Test
@@ -229,12 +241,12 @@ class FeaturePermissionTest
         CompositePermission readPermission = permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT");
         assertThat(readPermission).isNotNull();
         // has basic permissions for bulk read feature
-        assertThat(readPermission.childPermissions().size()).isEqualTo(7);
+        assertThat(readPermission.childPermissions().size()).isEqualTo(8);
 
         CompositePermission readWritePermission = permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT,WRITE_DIRECT");
         assertThat(readWritePermission).isNotNull();
         // has basic permissions for both bulk read and bulk write feature
-        assertThat(readWritePermission.childPermissions().size()).isEqualTo(13);
+        assertThat(readWritePermission.childPermissions().size()).isEqualTo(14);
     }
 
     @Test

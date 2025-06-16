@@ -34,6 +34,7 @@ import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.RE
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SCHEMA_KEYSPACE_SCOPED;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.READ_TOPOLOGY;
+import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.STATS_TABLE_SCOPED;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.STREAM_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.UPLOAD_STAGED_SSTABLE;
 import static org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions.MODIFY;
@@ -52,6 +53,7 @@ public enum FeaturePermission
                           READ_SNAPSHOT,
                           DELETE_SNAPSHOT,
                           STREAM_SNAPSHOT,
+                          STATS_TABLE_SCOPED,
                           new StandardPermission(SELECT.name(), TABLE_SCOPE)),
 
     ANALYTICS_WRITE_DIRECT("ANALYTICS:WRITE_DIRECT",

@@ -59,7 +59,7 @@ public class TableStatsHandler extends AbstractHandler<QualifiedTableName> imple
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        return Collections.singleton(BasicPermissions.STATS.toAuthorization());
+        return Collections.singleton(BasicPermissions.STATS_TABLE_SCOPED.toAuthorization());
     }
 
     /**

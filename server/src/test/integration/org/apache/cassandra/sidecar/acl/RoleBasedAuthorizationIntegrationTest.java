@@ -69,7 +69,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // wait for cache refreshes
         Thread.sleep(3000);
 
-        testCompleteLatch = new CountDownLatch(32);
+        testCompleteLatch = new CountDownLatch(34);
 
         // permissions for test cases below are granted during prepareForTest to save cache refresh time. Please
         // refer to grantRequiredPermissions to check permissions granted for a test to understand verifications done in
@@ -270,6 +270,11 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         String topologyRoute = String.format("/api/v1/keyspaces/%s/token-range-replicas", "grant_bulk_read_test_keyspace");
         // TOPOLOGY:READ permission not granted with ANALYTICS:READ_DIRECT
         verifyAccess(context, testCompleteLatch, HttpMethod.GET, topologyRoute, clientKeystorePath, true);
+
+        String tableStatsRoute = String.format("/api/v1/cassandra/keyspaces/%s/tables/%s/stats",
+                                               "grant_bulk_read_test_keyspace", "test_table");
+        // STATS permission granted with ANALYTICS:READ_DIRECT
+        verifyAccess(context, testCompleteLatch, HttpMethod.GET, tableStatsRoute, clientKeystorePath, false);
     }
 
     void testGrantingBulkReadFeaturePermissionAcrossTables(VertxTestContext context) throws Exception
@@ -293,6 +298,11 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
         // SNAPSHOT:CREATE for different keyspace not granted with keyspace scoped ANALYTICS:READ_DIRECT permission
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRouteKeyspace2, clientKeystorePath, true);
+
+        String tableStatsRoute = String.format("/api/v1/cassandra/keyspaces/%s/tables/%s/stats",
+                                               "grant_bulk_read_across_tables_test_keyspace", "test_table");
+        // STATS permission granted with ANALYTICS:READ_DIRECT
+        verifyAccess(context, testCompleteLatch, HttpMethod.GET, tableStatsRoute, clientKeystorePath, false);
     }
 
     void testGrantingBulkReadFeaturePermissionAcrossData(VertxTestContext context) throws Exception
