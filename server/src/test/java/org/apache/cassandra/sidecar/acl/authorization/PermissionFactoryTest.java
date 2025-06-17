@@ -49,7 +49,7 @@ public class PermissionFactoryTest
     void testFeaturePermissionCreated()
     {
         assertThat(permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT")).isNotNull();
-        assertThat(permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT").childPermissions().size()).isEqualTo(7);
+        assertThat(permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT").childPermissions().size()).isEqualTo(8);
         assertThat(permissionFactory.createFeaturePermission("ANALYTICS:WRITE_DIRECT").childPermissions().size()).isEqualTo(6);
         assertThat(permissionFactory.createFeaturePermission("ANALYTICS:WRITE_S3_COMPAT").childPermissions().size()).isEqualTo(6);
         assertThat(permissionFactory.createFeaturePermission("CDC").childPermissions().size()).isEqualTo(1);
