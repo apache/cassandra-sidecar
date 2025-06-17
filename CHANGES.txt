@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Add API that allows downloading of files listed by Live Migration (CASSSIDECAR-223)
  * Fixing settings endpoint should return Service Unavailable when Cassandra instance is down (CASSSIDECAR-264)
  * Add start/stop binary transport&gossip endpoints (CASSSIDECAR-253)
  * Support a flag & implementation for only forward DNS resolution (CASSSIDECAR-263)
