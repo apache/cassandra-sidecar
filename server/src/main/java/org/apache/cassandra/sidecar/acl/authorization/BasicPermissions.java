@@ -75,7 +75,7 @@ public class BasicPermissions
     public static final Permission READ_TOPOLOGY = new DomainAwarePermission("TOPOLOGY:READ", KEYSPACE_SCOPE);
 
     // cassandra stats permissions
-    public static final Permission STATS = new StandardPermission("STATS", CLUSTER_SCOPE);
+    public static final Permission STATS_CLUSTER_SCOPED = new StandardPermission("STATS", CLUSTER_SCOPE);
     public static final Permission STATS_TABLE_SCOPED = new StandardPermission("STATS", TABLE_SCOPE);
 
     // Live Migration permissions

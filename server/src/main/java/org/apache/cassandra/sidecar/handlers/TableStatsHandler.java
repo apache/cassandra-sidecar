@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.OrAuthorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
@@ -59,7 +60,10 @@ public class TableStatsHandler extends AbstractHandler<QualifiedTableName> imple
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        return Collections.singleton(BasicPermissions.STATS_TABLE_SCOPED.toAuthorization());
+        OrAuthorization authorization = OrAuthorization.create();
+        authorization.addAuthorization(BasicPermissions.STATS_TABLE_SCOPED.toAuthorization());
+        authorization.addAuthorization(BasicPermissions.STATS_CLUSTER_SCOPED.toAuthorization());
+        return Collections.singleton(authorization);
     }
 
     /**

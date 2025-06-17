@@ -55,7 +55,7 @@ public class StreamStatsHandler extends AbstractHandler<Void> implements AccessP
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        return Collections.singleton(BasicPermissions.STATS.toAuthorization());
+        return Collections.singleton(BasicPermissions.STATS_CLUSTER_SCOPED.toAuthorization());
     }
 
     /**
