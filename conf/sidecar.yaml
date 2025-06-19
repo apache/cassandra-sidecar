@@ -161,7 +161,7 @@ sidecar:
     # DnsResolver to use (org.apache.cassandra.sidecar.common.server.dns.DnsResolver). Currently supported
     # values are 'default' and 'resolveToIp'. Default will resolve hostnames to addresses and addresses to
     # hostnames whereas resolveToIp will only resolve hostnames to addresses.
-    dnsResolver: default`
+    dnsResolver: default
 
 vertx:
   filesystem_options:
