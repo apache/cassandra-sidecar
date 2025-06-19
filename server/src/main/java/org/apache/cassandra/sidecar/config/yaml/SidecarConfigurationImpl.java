@@ -384,6 +384,10 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
                      module.addAbstractTypeMapping(configurationInterface, clazz);
                  });
 
+        // Manually add type mapping for DnsResolver
+        module.addAbstractTypeMapping(org.apache.cassandra.sidecar.common.server.dns.DnsResolver.class,
+                                      org.apache.cassandra.sidecar.common.server.dns.DnsResolverEnum.class);
+
         Set<Class> unimplemented = Sets.difference(declared, implemented);
         if (!unimplemented.isEmpty())
         {
