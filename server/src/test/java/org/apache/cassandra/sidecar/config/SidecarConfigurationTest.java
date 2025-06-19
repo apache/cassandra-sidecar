@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -470,6 +471,35 @@ class SidecarConfigurationTest
         assertThat(clusterLeaseConfig.initialDelay().toMillis()).isEqualTo(5_000L);
         assertThat(clusterLeaseConfig.executeInterval().toMillis()).isEqualTo(31_000L);
         assertThat(clusterLeaseConfig.electorateMembershipStrategy()).isEqualTo("MostReplicatedKeyspaceTokenZeroElectorateMembership");
+    }
+
+    @Test
+    void testDnsResolverDefault() throws Exception
+    {
+        Path yamlPath = yaml("config/sidecar_single_instance.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+        ServiceConfiguration serviceConfiguration = config.serviceConfiguration();
+        assertThat(serviceConfiguration).isNotNull();
+
+        DnsResolver dnsResolver = serviceConfiguration.dnsResolver();
+        assertThat(dnsResolver).isNotNull();
+        assertThat(dnsResolver.resolve("localhost")).isEqualTo("127.0.0.1");
+        assertThat(dnsResolver.reverseResolve("127.0.0.1")).isEqualTo("localhost");
+    }
+
+    @Test
+    void testDnsResolverResolveToIp() throws Exception
+    {
+        String yaml = "sidecar:\n" +
+                "  dnsResolver: resolveToIp";
+        SidecarConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml);
+        ServiceConfiguration serviceConfiguration = config.serviceConfiguration();
+        assertThat(serviceConfiguration).isNotNull();
+
+        DnsResolver dnsResolver = serviceConfiguration.dnsResolver();
+        assertThat(dnsResolver).isNotNull();
+        assertThat(dnsResolver.resolve("localhost")).isEqualTo("127.0.0.1");
+        assertThat(dnsResolver.reverseResolve("127.0.0.1")).isEqualTo("127.0.0.1");
     }
 
     @Test

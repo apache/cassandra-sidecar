@@ -158,6 +158,11 @@ sidecar:
       # The minimum value allowed for the cluster lease claim process task implementation is 30 seconds
       execute_interval: 100s
 
+    # DnsResolver to use (org.apache.cassandra.sidecar.common.server.dns.DnsResolver). Currently supported
+    # values are 'default' and 'resolveToIp'. Default will resolve hostnames to addresses and addresses to
+    # hostnames whereas resolveToIp will only resolve hostnames to addresses.
+    dnsResolver: default`
+
 vertx:
   filesystem_options:
     classpath_resolving_enabled: false

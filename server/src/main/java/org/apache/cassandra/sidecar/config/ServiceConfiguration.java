@@ -186,5 +186,5 @@ public interface ServiceConfiguration
      * provides both the hostname & address. The alternative, resolveToIp, only provides forward resolution meaning
      * the IP address will be returned for both hostname & address.
      */
-    DnsResolver.DnsResolverEnum dnsResolver();
+    DnsResolver dnsResolver();
 }

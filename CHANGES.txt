@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Support a flag & implementation for only forward DNS resolution (CASSSIDECAR-263)
  * Make table stats permission table resource scoped (CASSSIDECAR-262)
  * Stage restore slices when in import phase already (CASSSIDECAR-258)
  * Allow getting intended role in Sidecar requests (CASSSIDECAR-257)

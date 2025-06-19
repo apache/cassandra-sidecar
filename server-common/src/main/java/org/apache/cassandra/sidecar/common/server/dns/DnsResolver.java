@@ -18,17 +18,23 @@
 
 package org.apache.cassandra.sidecar.common.server.dns;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Resolves hostname to IP address and the other way around
  */
 public interface DnsResolver
 {
-    enum DnsResolverEnum implements DnsResolver {
+    /**
+     * Determines which DnsResolver to use. Currently supported implementations are
+     * default and resolveToIp. The former will resolve hostname to address and
+     * address to hostname whereas the latter will only resolve hostname to address.
+     */
+    enum DnsResolverEnum implements DnsResolver
+    {
         @JsonProperty("default")
         DEFAULT("default")
         {
@@ -55,6 +61,7 @@ public interface DnsResolver
             this.name = name;
         }
 
+        @Override
         public String toString()
         {
             return name;

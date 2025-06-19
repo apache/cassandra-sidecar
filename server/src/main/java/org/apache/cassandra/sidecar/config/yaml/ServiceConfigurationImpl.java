@@ -457,7 +457,8 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
 
     @Override
     @JsonProperty(value = DNS_RESOLVER_PROPERTY)
-    public DnsResolver.DnsResolverEnum dnsResolver() {
+    public DnsResolver dnsResolver()
+    {
         return dnsResolver;
     }
 
