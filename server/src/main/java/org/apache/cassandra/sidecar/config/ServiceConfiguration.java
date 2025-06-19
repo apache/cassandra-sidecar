@@ -183,8 +183,8 @@ public interface ServiceConfiguration
 
     /**
      * @return Sidecar's DNS Resolver to use. Default will be to provide forward and reverse DNS resolution which
-     * provides both the hostname & address. The alternative, resolveToIp, only provides forward resolution meaning
-     * the IP address will be returned for both hostname & address.
+     * provides both the hostname and address. The alternative, resolveToIp, only provides forward resolution meaning
+     * the IP address will be returned for both hostname and address.
      */
     DnsResolver dnsResolver();
 }
