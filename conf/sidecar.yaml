@@ -159,8 +159,8 @@ sidecar:
       execute_interval: 100s
 
     # DnsResolver to use (org.apache.cassandra.sidecar.common.server.dns.DnsResolver). Currently supported
-    # values are 'default' and 'resolveToIp'. Default will resolve hostnames to addresses and addresses to
-    # hostnames whereas resolveToIp will only resolve hostnames to addresses.
+    # values are 'default' and 'resolve_to_ip'. Default will resolve hostnames to addresses and addresses to
+    # hostnames whereas resolve_to_ip will only resolve hostnames to addresses.
     dns_resolver: default
 
 vertx:

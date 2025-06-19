@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Determines which DnsResolver to use. Currently supported implementations are
- * default and resolveToIp. The former will resolve hostname to address and
+ * default and resolve_to_ip. The former will resolve hostname to address and
  * address to hostname whereas the latter will only resolve hostname to address.
  */
 public enum DnsResolverEnum implements DnsResolver
@@ -51,7 +51,7 @@ public enum DnsResolverEnum implements DnsResolver
      * Implementation of the {@link DnsResolver} interface that always resolves
      * and reverse resolves to an IP address
      */
-    @JsonProperty("resolveToIp")
+    @JsonProperty("resolve_to_ip")
     RESOLVE_TO_IP("resolveToIp")
     {
         @Override
