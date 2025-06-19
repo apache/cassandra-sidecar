@@ -23,9 +23,9 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolverEnum;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.utils.DigestAlgorithmProvider;
 import org.apache.cassandra.sidecar.utils.JdkMd5DigestProvider;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
@@ -52,9 +52,9 @@ public class UtilitiesModule extends AbstractModule
 
     @Provides
     @Singleton
-    DnsResolver dnsResolver()
+    DnsResolver dnsResolver(SidecarConfiguration configuration)
     {
-        return DnsResolverEnum.DEFAULT;
+        return configuration.serviceConfiguration().dnsResolver();
     }
 
     /**

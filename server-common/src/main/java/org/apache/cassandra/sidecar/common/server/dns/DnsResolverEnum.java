@@ -30,15 +30,27 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public enum DnsResolverEnum implements DnsResolver
 {
+    /**
+     * Default implementation of the {@link DnsResolver} that uses the JDK's
+     * underlying DNS resolution mechanism
+     */
     @JsonProperty("default")
     DEFAULT("default")
     {
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public String reverseResolve(String address) throws UnknownHostException
         {
             return InetAddress.getByName(address).getHostName();
         }
     },
+
+    /**
+     * Implementation of the {@link DnsResolver} interface that always resolves
+     * and reverse resolves to an IP address
+     */
     @JsonProperty("resolveToIp")
     RESOLVE_TO_IP("resolveToIp")
     {
@@ -48,6 +60,15 @@ public enum DnsResolverEnum implements DnsResolver
             return InetAddress.getByName(address).getHostAddress();
         }
     };
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String resolve(String hostname) throws UnknownHostException
+    {
+           return InetAddress.getByName(hostname).getHostAddress();
+    }
 
     final String name;
 
