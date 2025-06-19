@@ -33,12 +33,12 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_COMMITLOG_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_HINTS_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_SAVED_CACHES_DIR_PATH;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_COMMITLOG_DIR_PATH;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_HINTS_DIR_PATH;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_SAVED_CACHES_DIR_PATH;
 import static org.apache.cassandra.sidecar.common.response.InstanceFileInfo.FileType.DIRECTORY;
 import static org.apache.cassandra.sidecar.livemigration.InstanceFileInfoTestUtil.findInstanceFileInfo;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.createFile;

@@ -59,8 +59,8 @@ import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.createFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

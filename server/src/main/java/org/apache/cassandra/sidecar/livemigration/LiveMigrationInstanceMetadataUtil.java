@@ -31,14 +31,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.jetbrains.annotations.NotNull;
 
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_COMMITLOG_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_HINTS_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH;
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_SAVED_CACHES_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.CDC_RAW_DIR;
+import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.COMMIT_LOG_DIR;
+import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.DATA_FIlE_DIR;
+import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.HINTS_DIR;
+import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.LOCAL_SYSTEM_DATA_FILE_DIR;
+import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.SAVED_CACHES_DIR;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.CDC_RAW_DIR_PLACEHOLDER;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.COMMITLOG_DIR_PLACEHOLDER;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.DATA_FILE_DIR_PLACEHOLDER;
@@ -54,6 +55,13 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholde
 public class LiveMigrationInstanceMetadataUtil
 {
 
+    public static final String LIVE_MIGRATION_CDC_RAW_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + CDC_RAW_DIR.dirType;
+    public static final String LIVE_MIGRATION_COMMITLOG_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + COMMIT_LOG_DIR.dirType;
+    public static final String LIVE_MIGRATION_DATA_FILE_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + DATA_FIlE_DIR.dirType;
+    public static final String LIVE_MIGRATION_HINTS_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + HINTS_DIR.dirType;
+    public static final String LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API
+                                                                                + "/" + LOCAL_SYSTEM_DATA_FILE_DIR.dirType;
+    public static final String LIVE_MIGRATION_SAVED_CACHES_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + SAVED_CACHES_DIR.dirType;
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationInstanceMetadataUtil.class);
 
     /**

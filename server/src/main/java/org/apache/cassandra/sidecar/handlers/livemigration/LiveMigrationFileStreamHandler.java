@@ -44,7 +44,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.ApiEndpointsV1.LiveMigrationDirType;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
