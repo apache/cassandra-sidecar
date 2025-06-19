@@ -28,7 +28,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * default and resolve_to_ip. The former will resolve hostname to address and
  * address to hostname whereas the latter will only resolve hostname to address.
  */
-public enum DnsResolverEnum implements DnsResolver
+public enum DnsResolvers implements DnsResolver
 {
     /**
      * Default implementation of the {@link DnsResolver} that uses the JDK's
@@ -72,7 +72,7 @@ public enum DnsResolverEnum implements DnsResolver
 
     final String name;
 
-    DnsResolverEnum(String name)
+    DnsResolvers(String name)
     {
         this.name = name;
     }

@@ -23,7 +23,7 @@ import java.net.UnknownHostException;
 import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolverEnum;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolvers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,7 +32,7 @@ class ResolveToIpDnsResolverTest
     @Test
     void testResolve() throws UnknownHostException
     {
-        DnsResolver resolver = DnsResolverEnum.RESOLVE_TO_IP;
+        DnsResolver resolver = DnsResolvers.RESOLVE_TO_IP;
         assertThat(resolver.resolve("localhost")).isEqualTo("127.0.0.1");
         assertThat(resolver.resolve("localhost2")).isEqualTo("127.0.0.2");
     }
@@ -40,7 +40,7 @@ class ResolveToIpDnsResolverTest
     @Test
     void testReverseResolve() throws UnknownHostException
     {
-        DnsResolver resolver = DnsResolverEnum.RESOLVE_TO_IP;
+        DnsResolver resolver = DnsResolvers.RESOLVE_TO_IP;
         assertThat(resolver.reverseResolve("127.0.0.1")).isEqualTo("127.0.0.1");
         assertThat(resolver.reverseResolve("127.0.0.2")).isEqualTo("127.0.0.2");
     }

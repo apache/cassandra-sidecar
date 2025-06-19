@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolverEnum;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolvers;
 
 
 /**
@@ -44,7 +44,7 @@ public class LocalhostResolver implements DnsResolver
 
     public LocalhostResolver()
     {
-        this(DnsResolverEnum.DEFAULT);
+        this(DnsResolvers.DEFAULT);
     }
 
     LocalhostResolver(DnsResolver delegate)

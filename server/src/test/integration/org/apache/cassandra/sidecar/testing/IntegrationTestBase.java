@@ -64,7 +64,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolverEnum;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolvers;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
@@ -157,7 +157,7 @@ public abstract class IntegrationTestBase
         {
             sslConfig = sslConfigWithTruststore();
         }
-        sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolverEnum.DEFAULT,
+        sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolvers.DEFAULT,
                                                               getInstancesToManage(clusterSize), sslConfig);
         integrationTestModule.setCassandraSidecarTestContext(sidecarTestContext);
 

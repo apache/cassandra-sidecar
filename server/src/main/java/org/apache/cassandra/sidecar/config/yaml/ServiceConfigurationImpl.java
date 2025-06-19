@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolverEnum;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolvers;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
@@ -494,7 +494,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected SchemaKeyspaceConfiguration schemaKeyspaceConfiguration = new SchemaKeyspaceConfigurationImpl();
         protected CdcConfiguration cdcConfiguration = new CdcConfigurationImpl();
         protected CoordinationConfiguration coordinationConfiguration = new CoordinationConfigurationImpl();
-        protected DnsResolver dnsResolver = DnsResolverEnum.DEFAULT;
+        protected DnsResolver dnsResolver = DnsResolvers.DEFAULT;
 
         private Builder()
         {

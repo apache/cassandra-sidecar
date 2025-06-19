@@ -51,7 +51,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolverEnum;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolvers;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
@@ -79,7 +79,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
     private static final SidecarConfigurationImpl CONFIG = new SidecarConfigurationImpl();
     Vertx vertx = Vertx.vertx();
     DriverUtils driverUtils = new DriverUtils();
-    CassandraVersionProvider cassandraVersionProvider = cassandraVersionProvider(DnsResolverEnum.DEFAULT);
+    CassandraVersionProvider cassandraVersionProvider = cassandraVersionProvider(DnsResolvers.DEFAULT);
     MetricRegistryFactory metricRegistryProvider = new MetricRegistryFactory("cassandra_sidecar", List.of(), List.of());
 
     @ParameterizedTest(name = "{index} => version {0}")
@@ -244,7 +244,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
                                                       .delegate(delegate)
                                                       .metricRegistry(instanceSpecificRegistry)
                                                       .build());
-        return new InstancesMetadataImpl(metadata, DnsResolverEnum.DEFAULT);
+        return new InstancesMetadataImpl(metadata, DnsResolvers.DEFAULT);
     }
 
     void initializeSchema(AbstractCluster<?> cluster)

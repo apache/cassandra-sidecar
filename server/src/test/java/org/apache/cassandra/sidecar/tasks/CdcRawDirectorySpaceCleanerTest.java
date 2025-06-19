@@ -36,7 +36,7 @@ import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadataImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolverEnum;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolvers;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.CdcConfigurationImpl;
@@ -143,7 +143,7 @@ public class CdcRawDirectorySpaceCleanerTest
         writeCdcSegment(cdcDir, TEST_INTACT_SEGMENT_FILE_NAME, RandomUtils.nextInt(128, 256), false, false, true);
 
         when(instanceMetadata.dataDirs()).thenReturn(List.of(cdcDir.getParent()));
-        return new InstancesMetadataImpl(instanceMetadata, DnsResolverEnum.DEFAULT);
+        return new InstancesMetadataImpl(instanceMetadata, DnsResolvers.DEFAULT);
     }
 
     private static void writeCdcSegment(File cdcDir, String filename, int size, boolean complete) throws IOException

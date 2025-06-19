@@ -30,7 +30,7 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadataImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolverEnum;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolvers;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,7 +48,7 @@ class InstanceMetadataFetcherTest
         List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1", false),
                                                          instance(2, "127.0.0.2", true),
                                                          instance(3, "127.0.0.3", true));
-        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolverEnum.DEFAULT);
+        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolvers.DEFAULT);
         InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
         CassandraAdapterDelegate delegate = fetcher.callOnFirstAvailableInstance(InstanceMetadata::delegate);
         assertThat(delegate)
@@ -62,7 +62,7 @@ class InstanceMetadataFetcherTest
     {
         List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1", false),
                                                          instance(2, "127.0.0.2", false));
-        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolverEnum.DEFAULT);
+        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolvers.DEFAULT);
         InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
         assertThatThrownBy(() -> fetcher.callOnFirstAvailableInstance(InstanceMetadata::delegate))
         .isExactlyInstanceOf(CassandraUnavailableException.class)
@@ -73,7 +73,7 @@ class InstanceMetadataFetcherTest
     {
         InstanceMetadataImpl.Builder builder = InstanceMetadataImpl.builder()
                                                                    .id(id)
-                                                                   .host(host, DnsResolverEnum.DEFAULT)
+                                                                   .host(host, DnsResolvers.DEFAULT)
                                                                    .port(9042)
                                                                    .storageDir(tempDir.toString())
                                                                    .metricRegistry(new MetricRegistry());
