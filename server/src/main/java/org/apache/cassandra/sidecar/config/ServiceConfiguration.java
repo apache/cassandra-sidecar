@@ -26,6 +26,7 @@ import java.util.UUID;
 
 import io.vertx.core.net.SocketAddress;
 import io.vertx.core.net.impl.SocketAddressImpl;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
 
@@ -181,9 +182,9 @@ public interface ServiceConfiguration
     CoordinationConfiguration coordinationConfiguration();
 
     /**
-     * @return Sidecar's DNS Resolver to use. DEFAULT will provide forward and reverse DNS resolution and provide
-     * both the hostname & address. RESOLVE_TO_IP only provides forward resolution meaning the IP
-     * address will be used for both FQDN & address.
+     * @return Sidecar's DNS Resolver to use. Default will be to provide forward and reverse DNS resolution which
+     * provides both the hostname & address. The alternative, resolveToIp, only provides forward resolution meaning
+     * the IP address will be returned for both hostname & address.
      */
-    String dnsResolver();
+    DnsResolver.DnsResolverEnum dnsResolver();
 }

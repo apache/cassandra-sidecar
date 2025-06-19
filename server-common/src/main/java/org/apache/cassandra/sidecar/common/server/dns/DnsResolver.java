@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.common.server.dns;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -27,6 +29,7 @@ import java.net.UnknownHostException;
 public interface DnsResolver
 {
     enum DnsResolverEnum implements DnsResolver {
+        @JsonProperty("default")
         DEFAULT("default")
         {
             @Override
@@ -35,6 +38,7 @@ public interface DnsResolver
                 return InetAddress.getByName(address).getHostName();
             }
         },
+        @JsonProperty("resolveToIp")
         RESOLVE_TO_IP("resolveToIp")
         {
             @Override
@@ -54,17 +58,6 @@ public interface DnsResolver
         public String toString()
         {
             return name;
-        }
-
-        public static DnsResolver getDnsResolver(String dnsResolver)
-        {
-            for (DnsResolverEnum resolver : values())
-            {
-                if (resolver.name.equals(dnsResolver))
-                    return resolver;
-            }
-
-            throw new IllegalArgumentException("Unexpected DnsResolver: " + dnsResolver);
         }
     }
 
