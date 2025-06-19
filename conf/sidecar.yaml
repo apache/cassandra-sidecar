@@ -75,6 +75,10 @@ sidecar:
   tcp_keep_alive: false
   accept_backlog: 1024
   server_verticle_instances: 1
+  # DnsResolver to use (org.apache.cassandra.sidecar.common.server.dns.DnsResolver). Currently supported
+  # values are 'default' and 'resolve_to_ip'. Default will resolve hostnames to addresses and addresses to
+  # hostnames whereas resolve_to_ip will only resolve hostnames to addresses.
+  dns_resolver: default
   throttle:
     stream_requests_per_sec: 5000
     timeout: 10s
@@ -157,11 +161,6 @@ sidecar:
       # the execution.
       # The minimum value allowed for the cluster lease claim process task implementation is 30 seconds
       execute_interval: 100s
-
-    # DnsResolver to use (org.apache.cassandra.sidecar.common.server.dns.DnsResolver). Currently supported
-    # values are 'default' and 'resolve_to_ip'. Default will resolve hostnames to addresses and addresses to
-    # hostnames whereas resolve_to_ip will only resolve hostnames to addresses.
-    dns_resolver: default
 
 vertx:
   filesystem_options:
