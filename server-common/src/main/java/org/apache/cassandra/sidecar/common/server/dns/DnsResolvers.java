@@ -35,7 +35,7 @@ public enum DnsResolvers implements DnsResolver
      * underlying DNS resolution mechanism
      */
     @JsonProperty("default")
-    DEFAULT("default")
+    DEFAULT
     {
         /**
          * {@inheritDoc}
@@ -52,7 +52,7 @@ public enum DnsResolvers implements DnsResolver
      * and reverse resolves to an IP address
      */
     @JsonProperty("resolve_to_ip")
-    RESOLVE_TO_IP("resolveToIp")
+    RESOLVE_TO_IP
     {
         @Override
         public String reverseResolve(String address) throws UnknownHostException
@@ -68,18 +68,5 @@ public enum DnsResolvers implements DnsResolver
     public String resolve(String hostname) throws UnknownHostException
     {
            return InetAddress.getByName(hostname).getHostAddress();
-    }
-
-    final String name;
-
-    DnsResolvers(String name)
-    {
-        this.name = name;
-    }
-
-    @Override
-    public String toString()
-    {
-        return name;
     }
 }
