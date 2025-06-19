@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,6 +82,8 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     private static final String SCHEMA = "schema";
     private static final String CDC = "cdc";
     private static final String COORDINATION = "coordination";
+    public static final String DNS_RESOLVER_PROPERTY = "dnsResolver";
+    public static final String DEFAULT_DNS_RESOLVER = DnsResolver.DEFAULT_DNS_RESOLVER;
     protected static final Map<String, WorkerPoolConfiguration> DEFAULT_WORKER_POOLS_CONFIGURATION
     = Collections.unmodifiableMap(new HashMap<String, WorkerPoolConfiguration>()
     {{
@@ -149,6 +152,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = COORDINATION)
     protected final CoordinationConfiguration coordinationConfiguration;
 
+    @JsonProperty(value = DNS_RESOLVER_PROPERTY, defaultValue = DEFAULT_DNS_RESOLVER)
+    protected final String dnsResolver;
+
     /**
      * Constructs a new {@link ServiceConfigurationImpl} with the default values
      */
@@ -184,6 +190,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         schemaKeyspaceConfiguration = builder.schemaKeyspaceConfiguration;
         cdcConfiguration = builder.cdcConfiguration;
         coordinationConfiguration = builder.coordinationConfiguration;
+        dnsResolver = builder.dnsResolver;
     }
 
     /**
@@ -449,6 +456,12 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         return coordinationConfiguration;
     }
 
+    @Override
+    @JsonProperty(value = DNS_RESOLVER_PROPERTY)
+    public String dnsResolver() {
+        return dnsResolver;
+    }
+
     public static Builder builder()
     {
         return new Builder();
@@ -480,6 +493,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected SchemaKeyspaceConfiguration schemaKeyspaceConfiguration = new SchemaKeyspaceConfigurationImpl();
         protected CdcConfiguration cdcConfiguration = new CdcConfigurationImpl();
         protected CoordinationConfiguration coordinationConfiguration = new CoordinationConfigurationImpl();
+        protected String dnsResolver = DEFAULT_DNS_RESOLVER;
 
         private Builder()
         {

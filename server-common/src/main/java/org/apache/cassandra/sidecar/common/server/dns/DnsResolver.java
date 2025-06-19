@@ -26,6 +26,9 @@ import java.net.UnknownHostException;
  */
 public interface DnsResolver
 {
+    String DEFAULT_DNS_RESOLVER = "default";
+    String RESOLVE_TO_IP_DNS_RESOLVER = "resolveToIp";
+
     DnsResolver DEFAULT = new DnsResolver()
     {
         @Override
@@ -40,6 +43,34 @@ public interface DnsResolver
             return InetAddress.getByName(address).getHostName();
         }
     };
+
+    DnsResolver RESOLVE_TO_IP = new DnsResolver()
+    {
+        @Override
+        public String resolve(String hostname) throws UnknownHostException
+        {
+            return InetAddress.getByName(hostname).getHostAddress();
+        }
+
+        @Override
+        public String reverseResolve(String address) throws UnknownHostException
+        {
+            return InetAddress.getByName(address).getHostAddress();
+        }
+    };
+
+    static DnsResolver getDnsResolver(String dnsResolver) throws UnsupportedOperationException
+    {
+        switch (dnsResolver)
+        {
+            case DEFAULT_DNS_RESOLVER:
+                return DEFAULT;
+            case RESOLVE_TO_IP_DNS_RESOLVER:
+                return RESOLVE_TO_IP;
+            default:
+                throw new UnsupportedOperationException("Unexpected DnsResolver: " + dnsResolver);
+        }
+    }
 
     /**
      * Resolves the IP address of the hostname

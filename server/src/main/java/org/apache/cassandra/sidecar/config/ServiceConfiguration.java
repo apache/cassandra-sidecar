@@ -179,4 +179,11 @@ public interface ServiceConfiguration
      * @return the configuration relevant to the coordination functionality of Sidecar
      */
     CoordinationConfiguration coordinationConfiguration();
+
+    /**
+     * @return Sidecar's DNS Resolver to use. DEFAULT will provide forward and reverse DNS resolution and provide
+     * both the hostname & address. RESOLVE_TO_IP only provides forward resolution meaning the IP
+     * address will be used for both FQDN & address.
+     */
+    String dnsResolver();
 }

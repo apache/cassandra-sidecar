@@ -126,8 +126,10 @@ public class ConfigurationModule extends AbstractModule
 
     @Provides
     @Singleton
-    CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver, DriverUtils driverUtils)
+    CassandraVersionProvider cassandraVersionProvider(SidecarConfiguration configuration, DriverUtils driverUtils)
     {
+        DnsResolver dnsResolver = DnsResolver.getDnsResolver(configuration.serviceConfiguration().dnsResolver());
+
         return new CassandraVersionProvider.Builder()
                .add(new CassandraFactory(dnsResolver, driverUtils))
                .add(new Cassandra41Factory(dnsResolver, driverUtils))
@@ -164,11 +166,12 @@ public class ConfigurationModule extends AbstractModule
                                         SidecarConfiguration configuration,
                                         CassandraVersionProvider cassandraVersionProvider,
                                         SidecarVersionProvider sidecarVersionProvider,
-                                        DnsResolver dnsResolver,
                                         CQLSessionProvider cqlSessionProvider,
                                         DriverUtils driverUtils,
                                         MetricRegistryFactory registryProvider)
     {
+        DnsResolver dnsResolver = DnsResolver.getDnsResolver(configuration.serviceConfiguration().dnsResolver());
+
         List<InstanceMetadata> instanceMetadataList =
         configuration.cassandraInstances()
                      .stream()
@@ -181,7 +184,8 @@ public class ConfigurationModule extends AbstractModule
                                                       jmxConfiguration,
                                                       cqlSessionProvider,
                                                       driverUtils,
-                                                      registryProvider);
+                                                      registryProvider,
+                                                      dnsResolver);
                      })
                      .collect(Collectors.toList());
 
@@ -199,6 +203,7 @@ public class ConfigurationModule extends AbstractModule
      * @param jmxConfiguration  the configuration for the JMX Client
      * @param session           the CQL Session provider
      * @param registryFactory   factory for creating cassandra instance specific registry
+     * @param dnsResolver       the dns resolver to use
      * @return the build instance metadata object
      */
     private static InstanceMetadata buildInstanceMetadata(Vertx vertx,
@@ -208,7 +213,8 @@ public class ConfigurationModule extends AbstractModule
                                                           JmxConfiguration jmxConfiguration,
                                                           CQLSessionProvider session,
                                                           DriverUtils driverUtils,
-                                                          MetricRegistryFactory registryFactory)
+                                                          MetricRegistryFactory registryFactory,
+                                                          DnsResolver dnsResolver)
     {
         // TODO: relocate the method to somewhere testable
         String host = cassandraInstance.host();
@@ -236,7 +242,7 @@ public class ConfigurationModule extends AbstractModule
                                                                          new InstanceHealthMetrics(instanceSpecificRegistry));
         return InstanceMetadataImpl.builder()
                                    .id(cassandraInstance.id())
-                                   .host(host)
+                                   .host(host, dnsResolver)
                                    .port(port)
                                    .storageDir(cassandraInstance.storageDir())
                                    .dataDirs(cassandraInstance.dataDirs())
