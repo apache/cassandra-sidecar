@@ -53,7 +53,7 @@ public class UtilitiesModule extends AbstractModule
     @Singleton
     DnsResolver dnsResolver()
     {
-        return DnsResolver.DEFAULT;
+        return DnsResolver.DnsResolverEnum.DEFAULT;
     }
 
     /**

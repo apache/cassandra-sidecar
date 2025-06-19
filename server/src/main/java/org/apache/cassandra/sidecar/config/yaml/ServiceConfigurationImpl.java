@@ -83,7 +83,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     private static final String CDC = "cdc";
     private static final String COORDINATION = "coordination";
     public static final String DNS_RESOLVER_PROPERTY = "dnsResolver";
-    public static final String DEFAULT_DNS_RESOLVER = DnsResolver.DEFAULT_DNS_RESOLVER;
+    public static final String DEFAULT_DNS_RESOLVER = "default";
     protected static final Map<String, WorkerPoolConfiguration> DEFAULT_WORKER_POOLS_CONFIGURATION
     = Collections.unmodifiableMap(new HashMap<String, WorkerPoolConfiguration>()
     {{

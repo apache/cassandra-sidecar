@@ -26,49 +26,45 @@ import java.net.UnknownHostException;
  */
 public interface DnsResolver
 {
-    String DEFAULT_DNS_RESOLVER = "default";
-    String RESOLVE_TO_IP_DNS_RESOLVER = "resolveToIp";
-
-    DnsResolver DEFAULT = new DnsResolver()
-    {
-        @Override
-        public String resolve(String hostname) throws UnknownHostException
+    enum DnsResolverEnum implements DnsResolver {
+        DEFAULT("default")
         {
-            return InetAddress.getByName(hostname).getHostAddress();
+            @Override
+            public String reverseResolve(String address) throws UnknownHostException
+            {
+                return InetAddress.getByName(address).getHostName();
+            }
+        },
+        RESOLVE_TO_IP("resolveToIp")
+        {
+            @Override
+            public String reverseResolve(String address) throws UnknownHostException
+            {
+                return InetAddress.getByName(address).getHostAddress();
+            }
+        };
+
+        final String name;
+
+        DnsResolverEnum(String name)
+        {
+            this.name = name;
         }
 
-        @Override
-        public String reverseResolve(String address) throws UnknownHostException
+        public String toString()
         {
-            return InetAddress.getByName(address).getHostName();
-        }
-    };
-
-    DnsResolver RESOLVE_TO_IP = new DnsResolver()
-    {
-        @Override
-        public String resolve(String hostname) throws UnknownHostException
-        {
-            return InetAddress.getByName(hostname).getHostAddress();
+            return name;
         }
 
-        @Override
-        public String reverseResolve(String address) throws UnknownHostException
+        public static DnsResolver getDnsResolver(String dnsResolver)
         {
-            return InetAddress.getByName(address).getHostAddress();
-        }
-    };
+            for (DnsResolverEnum resolver : values())
+            {
+                if (resolver.name.equals(dnsResolver))
+                    return resolver;
+            }
 
-    static DnsResolver getDnsResolver(String dnsResolver) throws UnsupportedOperationException
-    {
-        switch (dnsResolver)
-        {
-            case DEFAULT_DNS_RESOLVER:
-                return DEFAULT;
-            case RESOLVE_TO_IP_DNS_RESOLVER:
-                return RESOLVE_TO_IP;
-            default:
-                throw new UnsupportedOperationException("Unexpected DnsResolver: " + dnsResolver);
+            throw new IllegalArgumentException("Unexpected DnsResolver: " + dnsResolver);
         }
     }
 
@@ -79,7 +75,10 @@ public interface DnsResolver
      * @return IP address
      * @throws UnknownHostException when the host is not known
      */
-    String resolve(String hostname) throws UnknownHostException;
+    default String resolve(String hostname) throws UnknownHostException
+    {
+        return InetAddress.getByName(hostname).getHostAddress();
+    }
 
     /**
      * Resolves the hostname of the IP address

@@ -29,7 +29,7 @@ public class ResolveToIpDnsResolverTest {
     @Test
     void testResolve() throws UnknownHostException
     {
-        DnsResolver resolver = DnsResolver.RESOLVE_TO_IP;
+        DnsResolver resolver = DnsResolver.DnsResolverEnum.RESOLVE_TO_IP;
         assertThat(resolver.resolve("localhost")).isEqualTo("127.0.0.1");
         assertThat(resolver.resolve("localhost2")).isEqualTo("127.0.0.2");
     }
@@ -37,7 +37,7 @@ public class ResolveToIpDnsResolverTest {
     @Test
     void testReverseResolve() throws UnknownHostException
     {
-        DnsResolver resolver = DnsResolver.RESOLVE_TO_IP;
+        DnsResolver resolver = DnsResolver.DnsResolverEnum.RESOLVE_TO_IP;
         assertThat(resolver.reverseResolve("127.0.0.1")).isEqualTo("127.0.0.1");
         assertThat(resolver.reverseResolve("127.0.0.2")).isEqualTo("127.0.0.2");
     }

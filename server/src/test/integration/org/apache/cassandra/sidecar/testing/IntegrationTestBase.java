@@ -157,7 +157,7 @@ public abstract class IntegrationTestBase
         {
             sslConfig = sslConfigWithTruststore();
         }
-        sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DEFAULT,
+        sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolver.DnsResolverEnum.DEFAULT,
                                                               getInstancesToManage(clusterSize), sslConfig);
         integrationTestModule.setCassandraSidecarTestContext(sidecarTestContext);
 

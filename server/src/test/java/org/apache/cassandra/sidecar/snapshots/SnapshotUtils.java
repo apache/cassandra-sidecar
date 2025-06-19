@@ -146,7 +146,7 @@ public class SnapshotUtils
                                                               .metricRegistry(METRIC_REGISTRY_PROVIDER.getOrCreate(2))
                                                               .build();
         List<InstanceMetadata> instanceMetas = Arrays.asList(localhost, localhost2);
-        return new InstancesMetadataImpl(instanceMetas, DnsResolver.DEFAULT);
+        return new InstancesMetadataImpl(instanceMetas, DnsResolver.DnsResolverEnum.DEFAULT);
     }
 
     public static List<String[]> mockSnapshotDirectories()

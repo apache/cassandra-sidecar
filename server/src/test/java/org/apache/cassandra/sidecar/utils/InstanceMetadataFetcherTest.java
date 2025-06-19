@@ -48,7 +48,7 @@ class InstanceMetadataFetcherTest
         List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1", false),
                                                          instance(2, "127.0.0.2", true),
                                                          instance(3, "127.0.0.3", true));
-        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolver.DEFAULT);
+        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolver.DnsResolverEnum.DEFAULT);
         InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
         CassandraAdapterDelegate delegate = fetcher.callOnFirstAvailableInstance(InstanceMetadata::delegate);
         assertThat(delegate)
@@ -62,7 +62,7 @@ class InstanceMetadataFetcherTest
     {
         List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1", false),
                                                          instance(2, "127.0.0.2", false));
-        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolver.DEFAULT);
+        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolver.DnsResolverEnum.DEFAULT);
         InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
         assertThatThrownBy(() -> fetcher.callOnFirstAvailableInstance(InstanceMetadata::delegate))
         .isExactlyInstanceOf(CassandraUnavailableException.class)
@@ -73,7 +73,7 @@ class InstanceMetadataFetcherTest
     {
         InstanceMetadataImpl.Builder builder = InstanceMetadataImpl.builder()
                                                                    .id(id)
-                                                                   .host(host, DnsResolver.DEFAULT)
+                                                                   .host(host, DnsResolver.DnsResolverEnum.DEFAULT)
                                                                    .port(9042)
                                                                    .storageDir(tempDir.toString())
                                                                    .metricRegistry(new MetricRegistry());

@@ -271,7 +271,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          */
         public Builder host(String host)
         {
-            return host(host, DnsResolver.DEFAULT);
+            return host(host, DnsResolver.DnsResolverEnum.DEFAULT);
         }
 
         /**

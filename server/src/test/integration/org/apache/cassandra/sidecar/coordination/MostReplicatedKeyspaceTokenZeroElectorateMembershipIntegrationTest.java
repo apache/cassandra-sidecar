@@ -79,7 +79,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
     private static final SidecarConfigurationImpl CONFIG = new SidecarConfigurationImpl();
     Vertx vertx = Vertx.vertx();
     DriverUtils driverUtils = new DriverUtils();
-    CassandraVersionProvider cassandraVersionProvider = cassandraVersionProvider(DnsResolver.DEFAULT);
+    CassandraVersionProvider cassandraVersionProvider = cassandraVersionProvider(DnsResolver.DnsResolverEnum.DEFAULT);
     MetricRegistryFactory metricRegistryProvider = new MetricRegistryFactory("cassandra_sidecar", List.of(), List.of());
 
     @ParameterizedTest(name = "{index} => version {0}")
@@ -244,7 +244,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
                                                       .delegate(delegate)
                                                       .metricRegistry(instanceSpecificRegistry)
                                                       .build());
-        return new InstancesMetadataImpl(metadata, DnsResolver.DEFAULT);
+        return new InstancesMetadataImpl(metadata, DnsResolver.DnsResolverEnum.DEFAULT);
     }
 
     void initializeSchema(AbstractCluster<?> cluster)

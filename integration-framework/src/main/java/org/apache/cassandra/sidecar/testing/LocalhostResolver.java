@@ -43,7 +43,7 @@ public class LocalhostResolver implements DnsResolver
 
     public LocalhostResolver()
     {
-        this(DnsResolver.DEFAULT);
+        this(DnsResolverEnum.DEFAULT);
     }
 
     LocalhostResolver(DnsResolver delegate)

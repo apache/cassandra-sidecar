@@ -128,7 +128,7 @@ public class ConfigurationModule extends AbstractModule
     @Singleton
     CassandraVersionProvider cassandraVersionProvider(SidecarConfiguration configuration, DriverUtils driverUtils)
     {
-        DnsResolver dnsResolver = DnsResolver.getDnsResolver(configuration.serviceConfiguration().dnsResolver());
+        DnsResolver dnsResolver = DnsResolver.DnsResolverEnum.getDnsResolver(configuration.serviceConfiguration().dnsResolver());
 
         return new CassandraVersionProvider.Builder()
                .add(new CassandraFactory(dnsResolver, driverUtils))
@@ -170,7 +170,7 @@ public class ConfigurationModule extends AbstractModule
                                         DriverUtils driverUtils,
                                         MetricRegistryFactory registryProvider)
     {
-        DnsResolver dnsResolver = DnsResolver.getDnsResolver(configuration.serviceConfiguration().dnsResolver());
+        DnsResolver dnsResolver = DnsResolver.DnsResolverEnum.getDnsResolver(configuration.serviceConfiguration().dnsResolver());
 
         List<InstanceMetadata> instanceMetadataList =
         configuration.cassandraInstances()

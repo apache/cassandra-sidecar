@@ -143,7 +143,7 @@ public class CdcRawDirectorySpaceCleanerTest
         writeCdcSegment(cdcDir, TEST_INTACT_SEGMENT_FILE_NAME, RandomUtils.nextInt(128, 256), false, false, true);
 
         when(instanceMetadata.dataDirs()).thenReturn(List.of(cdcDir.getParent()));
-        return new InstancesMetadataImpl(instanceMetadata, DnsResolver.DEFAULT);
+        return new InstancesMetadataImpl(instanceMetadata, DnsResolver.DnsResolverEnum.DEFAULT);
     }
 
     private static void writeCdcSegment(File cdcDir, String filename, int size, boolean complete) throws IOException
