@@ -54,6 +54,13 @@ public enum DnsResolvers implements DnsResolver
     @JsonProperty("resolve_to_ip")
     RESOLVE_TO_IP
     {
+        /**
+         * Returns the hostAddress for the provided address
+         *
+         * @param address IP address
+         * @return address IP address
+         * @throws UnknownHostException when the host is not known
+         */
         @Override
         public String reverseResolve(String address) throws UnknownHostException
         {
