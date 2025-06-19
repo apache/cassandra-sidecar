@@ -30,6 +30,7 @@ import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolverEnum;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
@@ -263,7 +264,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         }
 
         /**
-         * Sets the {@code host} and the {@code ipAddress} resolved by {@link DnsResolver#DEFAULT}
+         * Sets the {@code host} and the {@code ipAddress} resolved by {@link DnsResolverEnum#DEFAULT}
          * and returns a reference to this Builder enabling method chaining.
          *
          * @param host the {@code host} to set
@@ -271,7 +272,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
          */
         public Builder host(String host)
         {
-            return host(host, DnsResolver.DnsResolverEnum.DEFAULT);
+            return host(host, DnsResolverEnum.DEFAULT);
         }
 
         /**

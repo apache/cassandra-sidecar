@@ -23,6 +23,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolverEnum;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.utils.DigestAlgorithmProvider;
@@ -53,7 +54,7 @@ public class UtilitiesModule extends AbstractModule
     @Singleton
     DnsResolver dnsResolver()
     {
-        return DnsResolver.DnsResolverEnum.DEFAULT;
+        return DnsResolverEnum.DEFAULT;
     }
 
     /**

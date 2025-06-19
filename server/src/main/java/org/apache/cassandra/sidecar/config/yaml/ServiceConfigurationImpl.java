@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolverEnum;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
@@ -82,7 +83,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     private static final String SCHEMA = "schema";
     private static final String CDC = "cdc";
     private static final String COORDINATION = "coordination";
-    public static final String DNS_RESOLVER_PROPERTY = "dnsResolver";
+    public static final String DNS_RESOLVER_PROPERTY = "dns_resolver";
     protected static final Map<String, WorkerPoolConfiguration> DEFAULT_WORKER_POOLS_CONFIGURATION
     = Collections.unmodifiableMap(new HashMap<String, WorkerPoolConfiguration>()
     {{
@@ -152,7 +153,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     protected final CoordinationConfiguration coordinationConfiguration;
 
     @JsonProperty(value = DNS_RESOLVER_PROPERTY)
-    protected final DnsResolver.DnsResolverEnum dnsResolver;
+    protected final DnsResolver dnsResolver;
 
     /**
      * Constructs a new {@link ServiceConfigurationImpl} with the default values
@@ -493,7 +494,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected SchemaKeyspaceConfiguration schemaKeyspaceConfiguration = new SchemaKeyspaceConfigurationImpl();
         protected CdcConfiguration cdcConfiguration = new CdcConfigurationImpl();
         protected CoordinationConfiguration coordinationConfiguration = new CoordinationConfigurationImpl();
-        protected DnsResolver.DnsResolverEnum dnsResolver = DnsResolver.DnsResolverEnum.DEFAULT;
+        protected DnsResolver dnsResolver = DnsResolverEnum.DEFAULT;
 
         private Builder()
         {
