@@ -491,7 +491,7 @@ class SidecarConfigurationTest
     void testDnsResolverResolveToIp() throws Exception
     {
         String yaml = "sidecar:\n" +
-                "  dnsResolver: resolveToIp";
+                "  dns_resolver: resolveToIp";
         SidecarConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml);
         ServiceConfiguration serviceConfiguration = config.serviceConfiguration();
         assertThat(serviceConfiguration).isNotNull();

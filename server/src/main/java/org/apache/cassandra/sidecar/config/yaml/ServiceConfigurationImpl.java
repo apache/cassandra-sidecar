@@ -153,7 +153,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     protected final CoordinationConfiguration coordinationConfiguration;
 
     @JsonProperty(value = DNS_RESOLVER_PROPERTY)
-    protected final DnsResolver dnsResolver;
+    protected final DnsResolverEnum dnsResolver;
 
     /**
      * Constructs a new {@link ServiceConfigurationImpl} with the default values
@@ -494,7 +494,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected SchemaKeyspaceConfiguration schemaKeyspaceConfiguration = new SchemaKeyspaceConfigurationImpl();
         protected CdcConfiguration cdcConfiguration = new CdcConfigurationImpl();
         protected CoordinationConfiguration coordinationConfiguration = new CoordinationConfigurationImpl();
-        protected DnsResolver dnsResolver = DnsResolverEnum.DEFAULT;
+        protected DnsResolverEnum dnsResolver = DnsResolverEnum.DEFAULT;
 
         private Builder()
         {
