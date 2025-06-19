@@ -58,7 +58,7 @@ public enum DnsResolvers implements DnsResolver
          * Returns the hostAddress for the provided address
          *
          * @param address IP address
-         * @return address IP address
+         * @return IP address
          * @throws UnknownHostException when the host is not known
          */
         @Override
