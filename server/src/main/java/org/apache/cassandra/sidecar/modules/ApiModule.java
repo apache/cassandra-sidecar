@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.modules;
 
+import java.util.Collections;
+import java.util.Map;
+
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -59,6 +62,12 @@ import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.API_V1_ALL_ROUT
  */
 public class ApiModule extends AbstractModule
 {
+    /**
+     * Basic response body
+     */
+    public static final Map<String, String> OK_STATUS = Collections.singletonMap("status", "OK");
+    public static final Map<String, String> NOT_OK_STATUS = Collections.singletonMap("status", "NOT_OK");
+
     @Provides
     @Singleton
     Router vertxRouter(Vertx vertx, MultiBindingTypeResolver<VertxRoute> resolver)

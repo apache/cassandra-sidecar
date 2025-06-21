@@ -27,8 +27,8 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
-import static org.apache.cassandra.sidecar.modules.HealthCheckModule.NOT_OK_STATUS;
-import static org.apache.cassandra.sidecar.modules.HealthCheckModule.OK_STATUS;
+import static org.apache.cassandra.sidecar.modules.ApiModule.NOT_OK_STATUS;
+import static org.apache.cassandra.sidecar.modules.ApiModule.OK_STATUS;
 
 /**
  * Handler to retrieve gossip health

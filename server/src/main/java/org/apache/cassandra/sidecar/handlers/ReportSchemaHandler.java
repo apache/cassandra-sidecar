@@ -35,7 +35,7 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.cassandra.sidecar.modules.HealthCheckModule.OK_STATUS;
+import static org.apache.cassandra.sidecar.modules.ApiModule.OK_STATUS;
 
 /**
  * An implementation of {@link AbstractHandler} used to trigger an immediate,

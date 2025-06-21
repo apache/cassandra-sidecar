@@ -18,9 +18,6 @@
 
 package org.apache.cassandra.sidecar.modules;
 
-import java.util.Collections;
-import java.util.Map;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
@@ -42,9 +39,6 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTask;
  */
 public class HealthCheckModule extends AbstractModule
 {
-    public static final Map<String, String> OK_STATUS = Collections.singletonMap("status", "OK");
-    public static final Map<String, String> NOT_OK_STATUS = Collections.singletonMap("status", "NOT_OK");
-
     @ProvidesIntoMap
     @KeyClassMapKey(PeriodicTaskMapKeys.HealthCheckPeriodicTaskKey.class)
     PeriodicTask healthCheckPeriodicTask(SidecarConfiguration configuration,
@@ -60,7 +54,7 @@ public class HealthCheckModule extends AbstractModule
     VertxRoute sidecarHealthRoute(RouteBuilder.Factory factory)
     {
         return factory.builderForUnauthorizedRoute()
-                      .handler(context -> context.json(OK_STATUS))
+                      .handler(context -> context.json(ApiModule.OK_STATUS))
                       .build();
     }
 

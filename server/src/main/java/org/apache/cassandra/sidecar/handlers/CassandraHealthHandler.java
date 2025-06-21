@@ -33,8 +33,8 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.JMX;
-import static org.apache.cassandra.sidecar.modules.HealthCheckModule.NOT_OK_STATUS;
-import static org.apache.cassandra.sidecar.modules.HealthCheckModule.OK_STATUS;
+import static org.apache.cassandra.sidecar.modules.ApiModule.NOT_OK_STATUS;
+import static org.apache.cassandra.sidecar.modules.ApiModule.OK_STATUS;
 
 /**
  * Provides a simple REST endpoint to determine if a Cassandra node is available

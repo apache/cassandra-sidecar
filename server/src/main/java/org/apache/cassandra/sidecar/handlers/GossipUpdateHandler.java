@@ -34,7 +34,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
-import static org.apache.cassandra.sidecar.modules.HealthCheckModule.OK_STATUS;
+import static org.apache.cassandra.sidecar.modules.ApiModule.OK_STATUS;
 
 /**
  * Handles {@code PUT /api/v1/cassandra/gossip} requests to start or stop Cassandra gossip.
@@ -55,11 +55,15 @@ public class GossipUpdateHandler extends NodeCommandHandler implements AccessPro
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        return Collections.singleton(BasicPermissions.WRITE_GOSSIP.toAuthorization());
+        return Collections.singleton(BasicPermissions.MODIFY_GOSSIP.toAuthorization());
     }
 
     @Override
-    protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, @NotNull String host, SocketAddress remoteAddress, NodeCommandRequestPayload request)
+    protected void handleInternal(RoutingContext context,
+                                  HttpServerRequest httpRequest,
+                                  @NotNull String host,
+                                  SocketAddress remoteAddress,
+                                  NodeCommandRequestPayload request)
     {
         StorageOperations storageOps = metadataFetcher.delegate(host).storageOperations();
 

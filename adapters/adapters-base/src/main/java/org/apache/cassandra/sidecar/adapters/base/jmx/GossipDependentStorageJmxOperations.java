@@ -190,11 +190,13 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
         delegate.startNativeTransport();
     }
 
+    @Override
     public void stopGossiping()
     {
         delegate.stopGossiping();
     }
 
+    @Override
     public void startGossiping()
     {
         delegate.startGossiping();

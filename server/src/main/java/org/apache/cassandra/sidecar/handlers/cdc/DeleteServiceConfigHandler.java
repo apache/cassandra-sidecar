@@ -33,7 +33,7 @@ import org.apache.cassandra.sidecar.db.ConfigAccessor;
 import org.apache.cassandra.sidecar.db.ConfigAccessorFactory;
 import org.apache.cassandra.sidecar.handlers.AccessProtected;
 
-import static org.apache.cassandra.sidecar.modules.HealthCheckModule.OK_STATUS;
+import static org.apache.cassandra.sidecar.modules.ApiModule.OK_STATUS;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**

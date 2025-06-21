@@ -20,15 +20,12 @@ package org.apache.cassandra.sidecar.handlers;
 
 
 import java.util.Collections;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -37,13 +34,14 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -51,6 +49,10 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.vertx.core.buffer.Buffer.buffer;
+import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -63,7 +65,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(VertxExtension.class)
 public class GossipUpdateHandlerTest
 {
-    static final Logger LOGGER = LoggerFactory.getLogger(GossipUpdateHandlerTest.class);
     Vertx vertx;
     Server server;
     StorageOperations mockStorageOperations = mock(StorageOperations.class);
@@ -92,15 +93,17 @@ public class GossipUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"state\":\"start\"}";
-        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip").expect(ResponsePredicate.SC_OK).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> {
-            ctx.verify(() -> {
-                verify(mockStorageOperations, times(1)).startGossiping();
+        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip")
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      verify(mockStorageOperations, times(1)).startGossiping();
 
-                JsonObject json = resp.bodyAsJsonObject();
-                assertEquals("OK", json.getMap().get("status"));
-            });
-            ctx.completeNow();
-        }));
+                      assertEquals(resp.statusCode(), HttpResponseStatus.OK.code());
+                      JsonObject json = resp.bodyAsJsonObject();
+                      assertEquals("OK", json.getMap().get("status"));
+                  });
+                  ctx.completeNow();
+              }));
     }
 
     @Test
@@ -108,15 +111,17 @@ public class GossipUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"state\":\"STOP\"}";
-        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip").expect(ResponsePredicate.SC_OK).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> {
-            ctx.verify(() -> {
-                verify(mockStorageOperations, times(1)).stopGossiping();
+        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip")
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      verify(mockStorageOperations, times(1)).stopGossiping();
 
-                JsonObject json = resp.bodyAsJsonObject();
-                assertEquals("OK", json.getMap().get("status"));
-            });
-            ctx.completeNow();
-        }));
+                      assertEquals(resp.statusCode(), OK.code());
+                      JsonObject json = resp.bodyAsJsonObject();
+                      assertEquals("OK", json.getMap().get("status"));
+                  });
+                  ctx.completeNow();
+              }));
     }
 
     @Test
@@ -124,7 +129,15 @@ public class GossipUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"state\":\"foo\"}";
-        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip").expect(ResponsePredicate.SC_BAD_REQUEST).sendBuffer(io.vertx.core.buffer.Buffer.buffer(payload), ctx.succeeding(resp -> ctx.completeNow()));
+        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip")
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      assertEquals(BAD_REQUEST.code(), resp.statusCode());
+                      verify(mockStorageOperations, times(0)).startGossiping();
+                      verify(mockStorageOperations, times(0)).stopGossiping();
+                  });
+                  ctx.completeNow();
+              }));
     }
 
 

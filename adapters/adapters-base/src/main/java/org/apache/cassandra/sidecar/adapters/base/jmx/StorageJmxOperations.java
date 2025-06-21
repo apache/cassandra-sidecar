@@ -190,7 +190,7 @@ public interface StorageJmxOperations
     void startNativeTransport();
 
     /**
-     * Triggers start gossip
+     * Triggers stop gossip
      */
     void stopGossiping();
 
