@@ -83,10 +83,7 @@ public class NativeUpdateHandlerTest
     @AfterEach
     void after() throws InterruptedException
     {
-        CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
-        if (closeLatch.await(60, TimeUnit.SECONDS)) LOGGER.info("Close event received before timeout.");
-        else LOGGER.error("Close event timed out.");
+        getBlocking(TestResourceReaper.create().with(server).close(), 60, TimeUnit.SECONDS, "Closing server");
     }
 
     @Test
