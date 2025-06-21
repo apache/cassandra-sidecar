@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.concurrent.TimeUnit;
+
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +29,6 @@ import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestB
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,7 +50,7 @@ public class NodeGossipAndNativeModifyIntegrationTest extends SharedClusterSidec
         assertThat(gossipStopResponse.statusCode()).isEqualTo(OK.code());
         assertThat(gossipStopResponse.bodyAsJsonObject().getString("status")).isEqualTo("OK");
 
-        Uninterruptibles.sleepUninterruptibly(1, SECONDS);
+        Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
 
         // 2) gossip should now be NOT_OK
         HttpResponse<Buffer> gossipHealthDown = getBlocking(
@@ -68,7 +69,7 @@ public class NodeGossipAndNativeModifyIntegrationTest extends SharedClusterSidec
         assertThat(startGossipResponse.bodyAsJsonObject().getString("status")).isEqualTo("OK");
 
         // wait for native-transport to actually stop
-        Uninterruptibles.sleepUninterruptibly(1, SECONDS);
+        Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
 
         // 4) gossip should now be OK
         HttpResponse<Buffer> gossipHealthUp = getBlocking(
@@ -90,7 +91,7 @@ public class NodeGossipAndNativeModifyIntegrationTest extends SharedClusterSidec
         assertThat(nativeStopResponse.statusCode()).isEqualTo(OK.code());
         assertThat(nativeStopResponse.bodyAsJsonObject().getString("status")).isEqualTo("OK");
 
-        Uninterruptibles.sleepUninterruptibly(3, SECONDS);
+        Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
 
         // 2) native should now be NOT_OK
         HttpResponse<Buffer> nativeHealthDown = getBlocking(
@@ -108,7 +109,7 @@ public class NodeGossipAndNativeModifyIntegrationTest extends SharedClusterSidec
         assertThat(startNativeResponse.statusCode()).isEqualTo(OK.code());
         assertThat(startNativeResponse.bodyAsJsonObject().getString("status")).isEqualTo("OK");
 
-        Uninterruptibles.sleepUninterruptibly(3, SECONDS);
+        Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
 
         // 4) native should now be OK
         HttpResponse<Buffer> nativeHealthUp = getBlocking(
