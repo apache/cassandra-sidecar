@@ -51,7 +51,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.vertx.core.buffer.Buffer.buffer;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -95,9 +95,9 @@ public class NativeUpdateHandlerTest
             ctx.verify(() -> {
                 verify(mockStorageOperations, times(1)).startNativeTransport();
 
-                assertEquals(resp.statusCode(), OK.code());
+                assertThat(resp.statusCode()).isEqualTo(OK.code());
                 JsonObject json = resp.bodyAsJsonObject();
-                assertEquals("OK", json.getMap().get("status"));
+                assertThat(json.getMap().get("status")).isEqualTo("OK");
             });
             ctx.completeNow();
         }));
@@ -112,9 +112,9 @@ public class NativeUpdateHandlerTest
             ctx.verify(() -> {
                 verify(mockStorageOperations, times(1)).stopNativeTransport();
 
-                assertEquals(resp.statusCode(), OK.code());
+                assertThat(resp.statusCode()).isEqualTo(OK.code());
                 JsonObject json = resp.bodyAsJsonObject();
-                assertEquals("OK", json.getMap().get("status"));
+                assertThat(json.getMap().get("status")).isEqualTo("OK");
             });
             ctx.completeNow();
         }));
@@ -127,7 +127,7 @@ public class NativeUpdateHandlerTest
         String payload = "{\"state\":\"foo\"}";
         client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native").sendBuffer(buffer(payload), ctx.succeeding(resp -> {
             ctx.verify(() -> {
-                assertEquals(BAD_REQUEST.code(), resp.statusCode());
+                assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
                 verify(mockStorageOperations, times(0)).startNativeTransport();
                 verify(mockStorageOperations, times(0)).stopNativeTransport();
             });
