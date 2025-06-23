@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Enum for holding different type of directories handled by Live Migration.
  */
@@ -30,6 +33,16 @@ public enum LiveMigrationDirType
     LOCAL_SYSTEM_DATA_FILE_DIR("local_system_data"),
     SAVED_CACHES_DIR("saved_caches");
 
+    private static final Map<String, LiveMigrationDirType> DIR_TYPE_MAP = new HashMap<>();
+
+    static
+    {
+        for (LiveMigrationDirType type : values())
+        {
+            DIR_TYPE_MAP.put(type.dirType, type);
+        }
+    }
+
     public final String dirType;
 
     LiveMigrationDirType(String dirType)
@@ -39,13 +52,6 @@ public enum LiveMigrationDirType
 
     public static LiveMigrationDirType find(String dirType)
     {
-        for (LiveMigrationDirType type : values())
-        {
-            if (type.dirType.equals(dirType))
-            {
-                return type;
-            }
-        }
-        return null;
+        return DIR_TYPE_MAP.get(dirType);
     }
 }

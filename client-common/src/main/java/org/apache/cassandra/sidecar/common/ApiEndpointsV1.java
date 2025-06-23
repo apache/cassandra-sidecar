@@ -150,6 +150,10 @@ public final class ApiEndpointsV1
 
     public static final String DIR_TYPE_PARAM = "dirType";
     public static final String DIR_INDEX_PARAM = "dirIndex";
+    // API endpoint allows files transfer of specific directories handled by Cassandra during live migration operation.
+    // dirType path parameter    : The type of directory (data, commitlog, etc.)
+    // dirIndex path parameter   : The index of the directory
+    // The remaining path ('/*') : Represents the relative path within the specified directory
     public static final String LIVE_MIGRATION_FILE_TRANSFER_API = LIVE_MIGRATION_FILES_API + "/:" + DIR_TYPE_PARAM
                                                                   + "/:" + DIR_INDEX_PARAM + "/*";
 

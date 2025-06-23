@@ -146,26 +146,39 @@ public class LiveMigrationFileStreamHandler extends AbstractHandler<Void> implem
 
         Path path = Paths.get(localFile);
 
+        executorPools.service()
+                     .executeBlocking(() -> isInvalidPath(rc, path, reqPath, instanceMeta))
+                     .onSuccess(invalid -> {
+                         if (!invalid)
+                         {
+                             rc.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, localFile);
+                             rc.next();
+                         }
+                     });
+    }
+
+    private boolean isInvalidPath(RoutingContext rc, Path path, String reqPath, InstanceMetadata instanceMeta)
+    {
         if (!Files.exists(path))
         {
-            LOGGER.info("File {} not found.", localFile);
+            LOGGER.info("Requested file is not found. file={}", path);
             rc.response().setStatusCode(HttpResponseStatus.NOT_FOUND.code()).end();
+            return true;
         }
         if (Files.isDirectory(path))
         {
-            LOGGER.info("Cannot transfer directory for request path: {}.", reqPath);
+            LOGGER.info("Cannot transfer directory. path={}.", reqPath);
             rc.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
-            return;
+            return true;
         }
         if (isExcluded(path, instanceMeta))
         {
-            LOGGER.debug("Requested file {} or one of its parent directories is excluded from Live Migration.", reqPath);
+            LOGGER.debug("Requested path or one of its parent directories is excluded from Live Migration. " +
+                         "path={}", reqPath);
             rc.response().setStatusCode(HttpResponseStatus.NOT_FOUND.code()).end();
-            return;
+            return true;
         }
-
-        rc.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, localFile);
-        rc.next();
+        return false;
     }
 
     private boolean isExcluded(Path localFile, InstanceMetadata instanceMetadata)
@@ -228,7 +241,7 @@ public class LiveMigrationFileStreamHandler extends AbstractHandler<Void> implem
         {
             if (pathMatcher.matches(localFile))
             {
-                LOGGER.debug("{} is excluded from Live Migration.", localFile);
+                LOGGER.debug("Requested file is excluded from Live Migration. file={}", localFile);
                 return true;
             }
         }
