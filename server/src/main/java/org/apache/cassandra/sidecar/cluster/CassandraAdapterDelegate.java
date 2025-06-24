@@ -64,6 +64,7 @@ import org.jetbrains.annotations.NotNull;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.JMX;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_DISCONNECTED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_JMX_DISCONNECTED;
@@ -370,6 +371,10 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     @NotNull
     public NodeSettings nodeSettings() throws CassandraUnavailableException
     {
+        if (nodeSettingsFromJmx == null)
+        {
+            throw new CassandraUnavailableException(JMX, "NodeSettings unavailable");
+        }
         return nodeSettingsFromJmx;
     }
 
