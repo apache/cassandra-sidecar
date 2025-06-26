@@ -231,4 +231,16 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
     {
         delegate.move(newToken);
     }
+
+    @Override
+    public int repairAsync(String keyspace, Map<String, String> options)
+    {
+        return delegate.repairAsync(keyspace, options);
+    }
+
+    @Override
+    public List<String> getParentRepairStatus(int cmd)
+    {
+        return delegate.getParentRepairStatus(cmd);
+    }
 }

@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
+import org.apache.cassandra.sidecar.config.RepairConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
@@ -80,6 +81,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public static final String WORKER_POOLS_PROPERTY = "worker_pools";
     private static final String JMX_PROPERTY = "jmx";
     private static final String TRAFFIC_SHAPING_PROPERTY = "traffic_shaping";
+    private static final String REPAIR_PROPERTY = "repair";
     private static final String SCHEMA = "schema";
     private static final String CDC = "cdc";
     private static final String COORDINATION = "coordination";
@@ -143,6 +145,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = TRAFFIC_SHAPING_PROPERTY)
     protected final TrafficShapingConfiguration trafficShapingConfiguration;
 
+    @JsonProperty(value = REPAIR_PROPERTY)
+    protected final RepairConfiguration repairConfiguration;
+
     @JsonProperty(value = SCHEMA)
     protected final SchemaKeyspaceConfiguration schemaKeyspaceConfiguration;
 
@@ -180,6 +185,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         serverVerticleInstances = builder.serverVerticleInstances;
         operationalJobTrackerSize = builder.operationalJobTrackerSize;
         operationalJobExecutionMaxWaitTime = builder.operationalJobExecutionMaxWaitTime;
+        repairConfiguration = builder.repairConfiguration;
         throttleConfiguration = builder.throttleConfiguration;
         sstableUploadConfiguration = builder.sstableUploadConfiguration;
         sstableImportConfiguration = builder.sstableImportConfiguration;
@@ -432,6 +438,16 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
+    @JsonProperty(value = REPAIR_PROPERTY)
+    public RepairConfiguration repairConfiguration()
+    {
+        return repairConfiguration;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     @JsonProperty(value = SCHEMA)
     public SchemaKeyspaceConfiguration schemaKeyspaceConfiguration()
     {
@@ -483,6 +499,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected int serverVerticleInstances = DEFAULT_SERVER_VERTICLE_INSTANCES;
         protected int operationalJobTrackerSize = DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE;
         protected MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime = DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME;
+        protected RepairConfiguration repairConfiguration = new RepairConfigurationImpl();
         protected ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl();
         protected SSTableUploadConfiguration sstableUploadConfiguration = new SSTableUploadConfigurationImpl();
         protected SSTableImportConfiguration sstableImportConfiguration = new SSTableImportConfigurationImpl();
@@ -706,6 +723,18 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         public Builder schemaKeyspaceConfiguration(SchemaKeyspaceConfiguration schemaKeyspaceConfiguration)
         {
             return update(b -> b.schemaKeyspaceConfiguration = schemaKeyspaceConfiguration);
+        }
+
+        /**
+         * Sets the {@code repairConfiguration} and returns a reference to this Builder enabling method
+         * chaining.
+         *
+         * @param repairConfiguration the {@code repairConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder repairConfiguration(RepairConfiguration repairConfiguration)
+        {
+            return update(b -> b.repairConfiguration = repairConfiguration);
         }
 
         /**

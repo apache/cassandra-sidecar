@@ -52,6 +52,7 @@ import org.apache.cassandra.sidecar.handlers.NodeDecommissionHandler;
 import org.apache.cassandra.sidecar.handlers.NodeDrainHandler;
 import org.apache.cassandra.sidecar.handlers.NodeMoveHandler;
 import org.apache.cassandra.sidecar.handlers.OperationalJobHandler;
+import org.apache.cassandra.sidecar.handlers.RepairHandler;
 import org.apache.cassandra.sidecar.handlers.RingHandler;
 import org.apache.cassandra.sidecar.handlers.SchemaHandler;
 import org.apache.cassandra.sidecar.handlers.StreamStatsHandler;
@@ -239,6 +240,14 @@ public class CassandraOperationsModule extends AbstractModule
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(implementation = StreamStatsResponse.class)))
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.CassandraRepairRouteKey.class)
+    VertxRoute cassandraRepairRoute(RouteBuilder.Factory factory,
+                                    RepairHandler repairhandler)
+    {
+        return factory.builderForRoute().setBodyHandler(true).handler(repairhandler).build();
+    }
+
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.CassandraStreamStatsRouteKey.class)
     VertxRoute cassandraStreamStatsRoute(RouteBuilder.Factory factory,

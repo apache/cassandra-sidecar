@@ -240,4 +240,20 @@ public interface StorageJmxOperations
      * @param newToken the new token for the node to move to
      */
     void move(String newToken) throws IOException;
+
+    /**
+     * Trigger an async repair operation for the given keyspace and options
+     * @param keyspace keyspace to be repaired
+     * @param options repair options
+     * @return repair command number, or 0 if nothing to repair
+     */
+    int repairAsync(String keyspace, Map<String, String> options);
+
+    /**
+     * Get the status of a given parent repair session.
+     * @param cmd the int reference returned when issuing the repair
+     * @return status of parent repair from ParentRepairStatus
+     * followed by final message or messages of the session
+     */
+    List<String> getParentRepairStatus(int cmd);
 }
