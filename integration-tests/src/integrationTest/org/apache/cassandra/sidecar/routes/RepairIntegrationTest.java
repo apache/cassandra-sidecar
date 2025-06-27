@@ -28,6 +28,7 @@ import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -59,6 +60,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 /**
  * Integration tests for repair operations
  */
+@Tag("heavy")
 public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
 
