@@ -59,7 +59,7 @@ public class RepairConfigurationImpl implements RepairConfiguration
         return repairPollIntervalMillis;
     }
 
-    @JsonProperty(value = "max_repair_runtime")
+    @JsonProperty(value = "repair_polling_interval")
     public void setRepairPollIntervalMillis(long repairPollIntervalMillis)
     {
         this.repairPollIntervalMillis = repairPollIntervalMillis;
