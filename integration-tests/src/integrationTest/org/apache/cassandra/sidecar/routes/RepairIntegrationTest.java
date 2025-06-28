@@ -77,13 +77,13 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
                                               "  PRIMARY KEY ((race_year, race_name), rank) \n" +
                                               ")  WITH read_repair='NONE';";
 
+    private static final int NUM_ROWS = 500;
+
     @Override
     protected ClusterBuilderConfiguration testClusterConfiguration()
     {
         return super.testClusterConfiguration().nodesPerDc(3);
     }
-
-    private static final QualifiedName TEST_TABLE = new QualifiedName(TEST_KEYSPACE, TEST_TABLE_PREFIX);
 
     @Override
     protected void initializeSchemaForTest()
@@ -120,8 +120,8 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
         QualifiedName table = createUniqueTestTable(TEST_TABLE_PREFIX, CREATE_STMT);
         cluster.stream().forEach(node -> node.nodetoolResult("disableautocompaction", table.keyspace(), table.table())
                                              .asserts().success());
-        populateDataSingleNode(table, 2, 100);
-        validateDataConsistency(table, List.of(2), 100);
+        populateDataSingleNode(table, 2, NUM_ROWS);
+        validateDataConsistency(table, List.of(2), NUM_ROWS);
         validateDataConsistency(table, List.of(3, 1), 0);
 
         RepairPayload payload = RepairPayload.builder()
@@ -141,7 +141,7 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
 
         Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
         pollStatusForState(response.jobId().toString(), SUCCEEDED, null);
-        validateDataConsistency(table, List.of(2, 3, 1), 100);
+        validateDataConsistency(table, List.of(2, 3, 1), NUM_ROWS);
         context.completeNow();
     }
 
@@ -151,8 +151,8 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
         QualifiedName table = createUniqueTestTable(TEST_TABLE_PREFIX, CREATE_STMT);
         cluster.stream().forEach(node -> node.nodetoolResult("disableautocompaction", table.keyspace(), table.table())
                                              .asserts().success());
-        populateDataSingleNode(table, 2, 100);
-        validateDataConsistency(table, List.of(2), 100);
+        populateDataSingleNode(table, 2, NUM_ROWS);
+        validateDataConsistency(table, List.of(2), NUM_ROWS);
         validateDataConsistency(table, List.of(3, 1), 0);
 
         RepairPayload payload = RepairPayload.builder()
@@ -172,7 +172,7 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
 
         Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
         pollStatusForState(response.jobId().toString(), SUCCEEDED, null);
-        validateDataConsistency(table, List.of(2, 3, 1), 100);
+        validateDataConsistency(table, List.of(2, 3, 1), NUM_ROWS);
         context.completeNow();
     }
 
@@ -182,8 +182,8 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
         QualifiedName table = createUniqueTestTable(TEST_TABLE_PREFIX, CREATE_STMT);
         cluster.stream().forEach(node -> node.nodetoolResult("disableautocompaction", table.keyspace(), table.table())
                                              .asserts().success());
-        populateDataSingleNode(table, 2, 100);
-        validateDataConsistency(table, List.of(2), 100);
+        populateDataSingleNode(table, 2, NUM_ROWS);
+        validateDataConsistency(table, List.of(2), NUM_ROWS);
         validateDataConsistency(table, List.of(3, 1), 0);
 
         RepairPayload payload = RepairPayload.builder()
@@ -203,7 +203,7 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
 
         Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
         pollStatusForState(response.jobId().toString(), SUCCEEDED, null);
-        validateDataConsistency(table, List.of(2, 3, 1), 100);
+        validateDataConsistency(table, List.of(2, 3, 1), NUM_ROWS);
         context.completeNow();
     }
 
