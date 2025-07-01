@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 import org.slf4j.Logger;
@@ -43,6 +44,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -56,6 +58,7 @@ import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreSlice;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.server.RestoreMetrics;
@@ -84,6 +87,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
     private final JobIdsByDay jobIdsByDay;
     private final RingTopologyRefresher ringTopologyRefresher;
     private final AtomicBoolean isExecuting = new AtomicBoolean(false);
+    private String localDatacenter = null;
     private int inflightJobsCount = 0;
     private int jobDiscoveryRecencyDays;
     private PeriodicTaskExecutor periodicTaskExecutor;
@@ -166,6 +170,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
     @Override
     public void execute(Promise<Void> promise)
     {
+        initLocalDatacenterMaybe();
         tryExecuteDiscovery();
         promise.tryComplete();
     }
@@ -374,6 +379,15 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
             return;
         }
 
+        // stop proceeding further if the local datacenter is excluded from the restore job
+        if (isLocalDatacenterExcluded(job))
+        {
+            LOGGER.info("Restore job is configured to skip running on the local datacenter. " +
+                        "jobId={} localDatacenter={} targetDatacenter={}",
+                        job.jobId, localDatacenter, job.localDatacenter);
+            return;
+        }
+
         // Only force refresh topology for the first time in each stage
         // RestoreJobDiscoverer is registered as a RingTopologyListener to receive future topology changed notifications, if any
         ringTopologyRefresher.register(job, this);
@@ -383,6 +397,41 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
             // Mark the flag. It prevents finding slices (which is expensive) until the flag is unset.
             jobIdsByDay.markSlicesDiscovered(job);
         }
+    }
+
+    private void initLocalDatacenterMaybe()
+    {
+        if (localDatacenter != null)
+        {
+            return;
+        }
+
+        try
+        {
+            NodeSettings nodeSettings = instanceMetadataFetcher.callOnFirstAvailableInstance(i -> i.delegate().nodeSettings());
+            localDatacenter = nodeSettings.datacenter();
+        }
+        catch (CassandraUnavailableException cue)
+        {
+            LOGGER.debug("localDatacenter is not initialized", cue);
+        }
+    }
+
+    private boolean isLocalDatacenterExcluded(RestoreJob job)
+    {
+        if (!job.shouldRestoreToLocalDatacenterOnly)
+        {
+            return false;
+        }
+
+        if (localDatacenter == null)
+        {
+            LOGGER.debug("The restore job should restore only to the local datacenter, but the local datacetner is undetermined yet; skip this run");
+            return true;
+        }
+
+        // when job should restore to local datacenter only, but the target datacenter is not the local one
+        return !localDatacenter.equalsIgnoreCase(job.localDatacenter);
     }
 
     private boolean shouldFindSlicesAndSubmit(RestoreJob job)

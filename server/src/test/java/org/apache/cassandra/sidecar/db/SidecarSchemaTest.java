@@ -137,7 +137,7 @@ public class SidecarSchemaTest
             assertThat(interceptedExecStmts.get(0)).as("Create keyspace should be executed the first")
                                                    .contains("CREATE KEYSPACE IF NOT EXISTS sidecar_internal");
             assertThat(interceptedExecStmts).as("Create table should be executed for job table")
-                                            .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.restore_job_v4"));
+                                            .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.restore_job_v5"));
             assertThat(interceptedExecStmts).as("Create table should be executed for slice table")
                                             .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.restore_slice_v3"));
             assertThat(interceptedExecStmts).as("Create table should be executed for range table")
@@ -146,25 +146,27 @@ public class SidecarSchemaTest
                                             .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.role_permissions_v1"));
 
             List<String> expectedPrepStatements = Arrays.asList(
-            "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  keyspace_name,  table_name,  " +
-            "job_agent,  status,  blob_secrets,  import_options,  consistency_level,  local_datacenter,  expire_at) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO sidecar_internal.restore_job_v5 (  created_at,  job_id,  keyspace_name,  table_name,  " +
+            "job_agent,  status,  blob_secrets,  import_options,  consistency_level,  local_datacenter,  local_datacenter_only,  expire_at) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  blob_secrets) VALUES (?, ? ,?)",
+            "INSERT INTO sidecar_internal.restore_job_v5 (  created_at,  job_id,  blob_secrets) VALUES (?, ? ,?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  status) VALUES (?, ?, ?)",
+            "INSERT INTO sidecar_internal.restore_job_v5 (  created_at,  job_id,  status) VALUES (?, ?, ?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  job_agent) VALUES (?, ?, ?)",
+            "INSERT INTO sidecar_internal.restore_job_v5 (  created_at,  job_id,  job_agent) VALUES (?, ?, ?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  expire_at) VALUES (?, ?, ?)",
+            "INSERT INTO sidecar_internal.restore_job_v5 (  created_at,  job_id,  expire_at) VALUES (?, ?, ?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  slice_count) VALUES (?, ?, ?)",
-
-            "SELECT created_at, job_id, keyspace_name, table_name, job_agent, status, blob_secrets, import_options, " +
-            "consistency_level, local_datacenter, expire_at, slice_count FROM sidecar_internal.restore_job_v4 WHERE created_at = ? AND job_id = ?",
+            "INSERT INTO sidecar_internal.restore_job_v5 (  created_at,  job_id,  slice_count) VALUES (?, ?, ?)",
 
             "SELECT created_at, job_id, keyspace_name, table_name, job_agent, status, blob_secrets, import_options, " +
-            "consistency_level, local_datacenter, expire_at, slice_count FROM sidecar_internal.restore_job_v4 WHERE created_at = ?",
+            "consistency_level, local_datacenter, local_datacenter_only, expire_at, slice_count " +
+            "FROM sidecar_internal.restore_job_v5 WHERE created_at = ? AND job_id = ?",
+
+            "SELECT created_at, job_id, keyspace_name, table_name, job_agent, status, blob_secrets, import_options, " +
+            "consistency_level, local_datacenter, local_datacenter_only, expire_at, slice_count " +
+            "FROM sidecar_internal.restore_job_v5 WHERE created_at = ?",
 
             "INSERT INTO sidecar_internal.restore_slice_v3 (  job_id,  bucket_id,  slice_id,  bucket,  key,  " +
             "checksum,  start_token,  end_token,  compressed_size,  uncompressed_size) " +
@@ -210,7 +212,7 @@ public class SidecarSchemaTest
                                             .containsExactlyInAnyOrderElementsOf(expectedPrepStatements);
 
             assertThat(sidecarSchema.isInitialized()).as("Schema is successfully initialized").isTrue();
-            assertTableSchema(sidecarSchema.tableSchema(RestoreJobsSchema.class), "sidecar_internal.restore_job_v4");
+            assertTableSchema(sidecarSchema.tableSchema(RestoreJobsSchema.class), "sidecar_internal.restore_job_v5");
             assertTableSchema(sidecarSchema.tableSchema(RestoreRangesSchema.class), "sidecar_internal.restore_range_v1");
             assertTableSchema(sidecarSchema.tableSchema(RestoreSlicesSchema.class), "sidecar_internal.restore_slice_v3");
             assertTableSchema(sidecarSchema.tableSchema(SidecarLeaseSchema.class), "sidecar_internal.sidecar_lease_v1");

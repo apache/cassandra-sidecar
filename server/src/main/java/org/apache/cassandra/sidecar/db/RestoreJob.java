@@ -63,6 +63,8 @@ public class RestoreJob
     public final short bucketCount;
     public final @Nullable ConsistencyLevel consistencyLevel;
     public final @Nullable String localDatacenter;
+    // whether a restore job should restore to the local Cassandra nodes only; default is false
+    public final boolean shouldRestoreToLocalDatacenterOnly;
     public final Manager restoreJobManager;
     public final Long sliceCount;
 
@@ -94,6 +96,7 @@ public class RestoreJob
                .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")))
                .consistencyLevel(consistencyConfig.consistencyLevel)
                .localDatacenter(consistencyConfig.localDatacenter)
+               .shouldRestoreToLocalDatacenterOnly(row.getBool("local_datacenter_only"))
                .sliceCount(row.get("slice_count", Long.class));
 
         return builder.build();
@@ -134,12 +137,24 @@ public class RestoreJob
                                     || !builder.consistencyLevel.isLocalDcOnly
                                     || StringUtils.isNotEmpty(builder.localDatacenter),
                                     "When local consistency level is used, localDatacenter must also present");
+        boolean hasEffectiveLocalDC = StringUtils.isNotEmpty(builder.localDatacenter);
         // log a warning when consistency level is absent or no local, but localDatacenter is defined
-        if ((builder.consistencyLevel == null || !builder.consistencyLevel.isLocalDcOnly)
-            && StringUtils.isNotEmpty(builder.localDatacenter))
+        if ((builder.consistencyLevel == null || !builder.consistencyLevel.isLocalDcOnly) && hasEffectiveLocalDC)
         {
             LOGGER.warn("'localDatacenter' is defined but ignored. consistencyLevel={} localDatacenter={}",
                         builder.consistencyLevel, builder.localDatacenter);
+            hasEffectiveLocalDC = false;
+        }
+
+        if (builder.shouldRestoreToLocalDatacenterOnly && !hasEffectiveLocalDC)
+        {
+            this.shouldRestoreToLocalDatacenterOnly = false;
+            LOGGER.warn("shouldRestoreToLocalDatacenterOnly is true but 'localDatacenter' is not defined or invalid. " +
+                        "Resetting shouldRestoreToLocalDatacenterOnly to false");
+        }
+        else
+        {
+            this.shouldRestoreToLocalDatacenterOnly = builder.shouldRestoreToLocalDatacenterOnly;
         }
         this.createdAt = builder.createdAt;
         this.jobId = builder.jobId;
@@ -213,12 +228,14 @@ public class RestoreJob
         return String.format("RestoreJob{" +
                              "createdAt='%s', jobId='%s', keyspaceName='%s', " +
                              "tableName='%s', status='%s', secrets='%s', importOptions='%s', " +
-                             "expireAt='%s', bucketCount='%s', consistencyLevel='%s', localDatacenter='%s'}",
+                             "expireAt='%s', bucketCount='%s', consistencyLevel='%s', localDatacenter='%s', " +
+                             "shouldRestoreToLocalDatacenterOnly='%s'}",
                              createdAt.toString(), jobId.toString(),
                              keyspaceName, tableName,
                              statusText, secrets, importOptions,
                              expireAt, bucketCount,
-                             consistencyLevel, localDatacenter);
+                             consistencyLevel, localDatacenter,
+                             shouldRestoreToLocalDatacenterOnly);
     }
 
     public static LocalDate toLocalDate(UUID jobId)
@@ -256,6 +273,7 @@ public class RestoreJob
         private short bucketCount;
         private ConsistencyLevel consistencyLevel;
         private String localDatacenter;
+        private boolean shouldRestoreToLocalDatacenterOnly = false;
         private Manager manager;
         private Long sliceCount;
 
@@ -365,6 +383,11 @@ public class RestoreJob
         public Builder localDatacenter(@Nullable String localDatacenter)
         {
             return update(b -> b.localDatacenter = localDatacenter);
+        }
+
+        public Builder shouldRestoreToLocalDatacenterOnly(boolean localDatacenterOnly)
+        {
+            return update(b -> b.shouldRestoreToLocalDatacenterOnly = localDatacenterOnly);
         }
 
         @Override

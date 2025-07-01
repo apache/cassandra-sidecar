@@ -85,6 +85,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
                                    .expireAt(payload.expireAtAsDate())
                                    .consistencyLevel(payload.consistencyConfig().consistencyLevel)
                                    .localDatacenter(payload.consistencyConfig().localDatacenter)
+                                   .shouldRestoreToLocalDatacenterOnly(payload.shouldRestoreToLocalDatacenterOnly())
                                    .build();
         ByteBuffer secrets = serializeValue(job.secrets, "secrets");
         ByteBuffer importOptions = serializeValue(job.importOptions, "sstable import options");
@@ -99,6 +100,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
                                                     importOptions,
                                                     job.consistencyLevelText(),
                                                     job.localDatacenter,
+                                                    job.shouldRestoreToLocalDatacenterOnly,
                                                     job.expireAt);
 
         execute(statement);

@@ -82,6 +82,7 @@ class CreateRestoreJobRequestPayloadTest
         assertThat(test.importOptions()).isEqualTo(SSTableImportOptions.defaults());
         assertThat(test.consistencyLevel()).isEqualTo("QUORUM");
         assertThat(test.localDatacenter()).isNull();
+        assertThat(test.shouldRestoreToLocalDatacenterOnly()).isFalse();
     }
 
     @Test
@@ -184,6 +185,7 @@ class CreateRestoreJobRequestPayloadTest
         assertThat(test.expireAtAsDate()).isEqualTo(date);
         assertThat(test.importOptions()).isEqualTo(SSTableImportOptions.defaults());
         assertThat(test.consistencyLevel()).isNull();
+        assertThat(test.shouldRestoreToLocalDatacenterOnly()).isFalse();
     }
 
     @Test
@@ -225,6 +227,32 @@ class CreateRestoreJobRequestPayloadTest
                                                                    .build())
             .hasMessage("Must specify a non-empty localDatacenter for consistency level: " + localCL.name());
         }
+    }
 
+    @Test
+    void testRestoreToLocalDatacenterOnly()
+    {
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        CreateRestoreJobRequestPayload req = CreateRestoreJobRequestPayload
+                                             .builder(secrets, System.currentTimeMillis() + 10000)
+                                             .jobAgent("agent")
+                                             .consistencyLevel(ConsistencyLevel.LOCAL_QUORUM, "dc1")
+                                             .restoreToLocalDatacenterOnly(true)
+                                             .build();
+        assertThat(req.shouldRestoreToLocalDatacenterOnly()).isTrue();
+    }
+
+    @Test
+    void testRestoreToLocalDatacenterOnlyWithSpecifyingLocalDatacenterFails()
+    {
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        assertThatThrownBy(() -> CreateRestoreJobRequestPayload
+                                 .builder(secrets, System.currentTimeMillis() + 10000)
+                                 .jobAgent("agent")
+                                 .consistencyLevel(ConsistencyLevel.QUORUM)
+                                 .restoreToLocalDatacenterOnly(true)
+                                 .build())
+        .isExactlyInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Must specify a non-empty localDatacenter when restoreToLocalDatacenterOnly is configured to true");
     }
 }

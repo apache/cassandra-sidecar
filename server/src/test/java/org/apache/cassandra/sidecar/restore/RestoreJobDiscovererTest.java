@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
@@ -50,6 +51,7 @@ import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.RestoreSliceTest;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
@@ -58,10 +60,12 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import static org.apache.cassandra.sidecar.db.RestoreJobTest.createNewTestingJob;
 import static org.apache.cassandra.sidecar.db.RestoreJobTest.createTestingJob;
 import static org.apache.cassandra.sidecar.db.RestoreJobTest.createUpdatedJob;
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.JMX;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -90,6 +94,7 @@ class RestoreJobDiscovererTest
     private final SidecarSchema sidecarSchema = mock(SidecarSchema.class);
     private final RingTopologyRefresher ringTopologyRefresher = mock(RingTopologyRefresher.class);
     private final InstanceMetadataFetcher instanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
+    private final NodeSettings mockNodeSettings = mock(NodeSettings.class);
     private SidecarMetrics metrics;
     private RestoreJobDiscoverer loop;
 
@@ -98,8 +103,9 @@ class RestoreJobDiscovererTest
     {
         MetricRegistryFactory mockRegistryFactory = mock(MetricRegistryFactory.class);
         when(mockRegistryFactory.getOrCreate()).thenReturn(registry());
-        InstanceMetadataFetcher mockMetadataFetcher = mock(InstanceMetadataFetcher.class);
-        metrics = new SidecarMetricsImpl(mockRegistryFactory, mockMetadataFetcher);
+        when(mockNodeSettings.datacenter()).thenReturn("dc1");
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any())).thenReturn(mockNodeSettings);
+        metrics = new SidecarMetricsImpl(mockRegistryFactory, instanceMetadataFetcher);
         loop = new RestoreJobDiscoverer(testConfig(),
                                         sidecarSchema,
                                         mockJobAccessor,
@@ -377,6 +383,59 @@ class RestoreJobDiscovererTest
         assertThat(loop.jobDiscoveryRecencyDays())
         .describedAs("Recency days is adjusted accordingly to the earliest job (10 days)")
         .isEqualTo(10);
+    }
+
+    @Test
+    void testSkipNotOwnedRestoreToLocalDatacenterOnlyJob()
+    {
+        // Create a restore job that restores to dc2 only. Meanwhile, discoverer runs in dc1.
+        UUID jobId = UUIDs.timeBased();
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
+        .thenReturn(Collections.singletonList(RestoreJob.builder()
+                                                        .createdAt(RestoreJob.toLocalDate(jobId))
+                                                        .jobId(jobId)
+                                                        .jobAgent("agent")
+                                                        .jobStatus(RestoreJobStatus.CREATED)
+                                                        .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                                                        .consistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
+                                                        .localDatacenter("dc2")
+                                                        .shouldRestoreToLocalDatacenterOnly(true)
+                                                        .build()));
+        executeBlocking();
+        verify(mockRangeAccessor, never()).create(any());
+    }
+
+    @Test
+    void testRestoreToLocalDatacenterOnlyJobIsOnHoldWhenLocalDatacenterInUndetermined()
+    {
+        // local datacenter is undetermined and the restore job is configured to restore to local datacenter only.
+        // the job is on hold until local datacenter is resolved in dicoverer.
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any())).thenThrow(new CassandraUnavailableException(JMX, "NodeSettings unavailable"));
+        UUID jobId = UUIDs.timeBased();
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
+        .thenReturn(Collections.singletonList(RestoreJob.builder()
+                                                        .createdAt(RestoreJob.toLocalDate(jobId))
+                                                        .jobId(jobId)
+                                                        .jobAgent("agent")
+                                                        .jobStatus(RestoreJobStatus.CREATED)
+                                                        .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                                                        .consistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
+                                                        .localDatacenter("dc1")
+                                                        .shouldRestoreToLocalDatacenterOnly(true)
+                                                        .build()));
+
+        executeBlocking();
+        verify(ringTopologyRefresher, never()).register(any(), any());
+
+        // in the new run, the local datacenter is discovered. The discoverer proceeds further and register the job
+        Mockito.reset(instanceMetadataFetcher);
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any())).thenReturn(mockNodeSettings);
+        executeBlocking();
+        ArgumentCaptor<RestoreJob> restoreJobCaptor = ArgumentCaptor.forClass(RestoreJob.class);
+        verify(ringTopologyRefresher).register(restoreJobCaptor.capture(), any());
+        assertThat(restoreJobCaptor.getAllValues()).hasSize(1);
+        RestoreJob captured = restoreJobCaptor.getValue();
+        assertThat(captured.jobId).isEqualTo(jobId);
     }
 
     private RestoreJobConfiguration testConfig()

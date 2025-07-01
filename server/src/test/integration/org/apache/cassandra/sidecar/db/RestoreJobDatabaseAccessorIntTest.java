@@ -19,10 +19,12 @@
 package org.apache.cassandra.sidecar.db;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import com.datastax.driver.core.utils.UUIDs;
+import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
@@ -80,16 +82,36 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
         assertThat(foundJobs).hasSize(3);
         accessor.abort(jobId, null);
         assertJob(accessor.find(jobId), jobId, RestoreJobStatus.ABORTED, expiresAtMillis, secrets, null);
+
+        // create job that restoreToLocalDatacenterOnly
+        UUID restoreToLocalDcOnlyJobId = createJob(accessor, true);
+        foundJobs = accessor.findAllRecent(now, 3);
+        assertThat(foundJobs).hasSize(4);
+        Optional<RestoreJob> restoreToLocalDcOnlyJob = foundJobs.stream()
+                                                                .filter(j -> j.jobId.equals(restoreToLocalDcOnlyJobId))
+                                                                .findFirst();
+        assertThat(restoreToLocalDcOnlyJob).isNotEmpty();
+        assertJob(restoreToLocalDcOnlyJob.get(), restoreToLocalDcOnlyJobId, RestoreJobStatus.CREATED, expiresAtMillis, secrets);
+        assertThat(restoreToLocalDcOnlyJob.get().shouldRestoreToLocalDatacenterOnly).isTrue();
     }
 
     private UUID createJob(RestoreJobDatabaseAccessor accessor)
     {
+        return createJob(accessor, false);
+    }
+
+    private UUID createJob(RestoreJobDatabaseAccessor accessor, boolean restoreToLocalDatacenterOnly)
+    {
         UUID jobId = UUIDs.timeBased();
-        CreateRestoreJobRequestPayload payload = CreateRestoreJobRequestPayload.builder(secrets, expiresAtMillis)
-                                                                               .jobId(jobId)
-                                                                               .jobAgent("agent")
-                                                                               .build();
-        accessor.create(payload, qualifiedTableName);
+        CreateRestoreJobRequestPayload.Builder builder = CreateRestoreJobRequestPayload.builder(secrets, expiresAtMillis)
+                                                                                       .jobId(jobId)
+                                                                                       .jobAgent("agent");
+        if (restoreToLocalDatacenterOnly)
+        {
+            builder.consistencyLevel(ConsistencyLevel.LOCAL_QUORUM, "dc1");
+            builder.restoreToLocalDatacenterOnly(true);
+        }
+        accessor.create(builder.build(), qualifiedTableName);
 
         return jobId;
     }
