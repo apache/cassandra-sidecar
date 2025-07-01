@@ -28,8 +28,8 @@ public enum RepairOptions
      */
     PRIMARY_RANGE("primaryRange"),
     /**
-      *  Whether to perform an incremental repair (true/false)
-      * If false, a full repair is performed
+     * Whether to perform an incremental repair (true/false)
+     * If false, a full repair is performed
      */
     INCREMENTAL("incremental"),
     /**
@@ -53,16 +53,11 @@ public enum RepairOptions
      */
     FORCE_REPAIR("forceRepair"),
     /**
-      * Type of preview repair to run before actual repair
-      * Options: "none", "auto", "running", "full"
-      * Mainly used to assess data consistency without actually repairing
+     * Type of preview repair to run before actual repair
+     * Options: "none", "auto", "running", "full"
+     * Mainly used to assess data consistency without actually repairing
      */
-    PREVIEW("previewKind"),
-    /**
-      * Ignore keyspaces that are not fully replicated on all nodes
-      * Used to avoid failures during repair of partially replicated keyspaces
-     */
-    IGNORE_UNREPLICATED_KS("ignoreUnreplicatedKeyspaces");
+    PREVIEW("previewKind");
 
     private final String value;
 

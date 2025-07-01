@@ -137,14 +137,16 @@ public interface StorageOperations
 
     /**
      * Triggers a repair operation for the given keyspace and options
+     *
      * @param keyspace keyspace for the repair ioeration
-     * @param options repair options
+     * @param options  repair options
      * @return
      */
     int repair(String keyspace, Map<String, String> options);
 
     /**
      * Get the status of a given parent repair session.
+     *
      * @param cmd the int reference returned when issuing the repair
      * @return status of parent repair
      */

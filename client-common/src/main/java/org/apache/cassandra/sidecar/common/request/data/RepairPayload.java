@@ -42,7 +42,6 @@ public class RepairPayload
     private static final String START_TOKEN = "startToken";
     private static final String END_TOKEN = "endToken";
     private static final String REPAIR_TYPE = "repairType";
-    private static final String IGNORE_UNREPLICATED_REPLICAS = "ignoreUnreplicatedReplicas";
     private static final String FORCE = "force";
     private static final String VALIDATE = "validate";
 
@@ -53,7 +52,6 @@ public class RepairPayload
     private final Long startToken;
     private final Long endToken;
     private RepairType repairType;
-    private final Boolean ignoreUnreplicatedReplicas;
     private final Boolean force;
     private final Boolean validate;
 
@@ -84,7 +82,6 @@ public class RepairPayload
         hosts = builder.hosts;
         startToken = builder.startToken;
         endToken = builder.endToken;
-        ignoreUnreplicatedReplicas = builder.ignoreUnreplicatedReplicas;
         force = builder.force;
         validate = builder.validate;
     }
@@ -131,17 +128,12 @@ public class RepairPayload
         return repairType;
     }
 
-    @JsonProperty(IGNORE_UNREPLICATED_REPLICAS)
-    public Boolean isIgnoreUnreplicatedReplicas()
-    {
-        return ignoreUnreplicatedReplicas;
-    }
-
     @JsonProperty(FORCE)
     public Boolean force()
     {
         return force;
     }
+
     /**
      * {@code NodeSettings} builder static inner class.
      */
@@ -206,12 +198,12 @@ public class RepairPayload
         private Long startToken;
         private Long endToken;
         private RepairType repairType;
-        private Boolean ignoreUnreplicatedReplicas;
         private Boolean force;
         private Boolean validate;
 
         private Builder()
-        {}
+        {
+        }
 
         @Override
         public RepairPayload.Builder self()
@@ -231,7 +223,7 @@ public class RepairPayload
             return update(b -> b.isPrimaryRange = isPrimaryRange);
         }
 
-       @JsonProperty(DATACENTER)
+        @JsonProperty(DATACENTER)
         public RepairPayload.Builder datacenter(String datacenter)
         {
             return update(b -> b.datacenter = datacenter);
@@ -259,12 +251,6 @@ public class RepairPayload
         public RepairPayload.Builder endToken(long endToken)
         {
             return update(b -> b.endToken = endToken);
-        }
-
-        @JsonProperty(IGNORE_UNREPLICATED_REPLICAS)
-        public RepairPayload.Builder ignoreUnreplicatedReplicas(boolean ignoreUnreplicatedReplicas)
-        {
-            return update(b -> b.ignoreUnreplicatedReplicas = ignoreUnreplicatedReplicas);
         }
 
         @JsonProperty(FORCE)

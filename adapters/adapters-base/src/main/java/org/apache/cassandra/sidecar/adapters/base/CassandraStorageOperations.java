@@ -267,6 +267,9 @@ public class CassandraStorageOperations implements StorageOperations
                .getParentRepairStatus(cmd);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public int repair(String keyspace, Map<String, String> repairOptions)
     {
         StorageJmxOperations ssProxy = jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME);

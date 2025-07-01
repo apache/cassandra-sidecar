@@ -77,6 +77,7 @@ import static org.mockito.Mockito.when;
 public class RepairHandlerTest
 {
     static final Logger LOGGER = LoggerFactory.getLogger(RepairHandlerTest.class);
+    private static final String REPAIR_ROUTE = "/api/v1/cassandra/keyspaces/testkeyspace/repair";
     Vertx vertx;
     Server server;
     StorageOperations mockStorageOperations = mock(StorageOperations.class);
@@ -113,15 +114,13 @@ public class RepairHandlerTest
     void testRepairHandler(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/keyspaces/testkeyspace/repair";
-
         RepairPayload payload = RepairPayload.builder()
                                              .isPrimaryRange(true)
                                              .repairType(RepairPayload.RepairType.INCREMENTAL)
                                              .tables(List.of("test_table"))
                                              .build();
 
-        client.put(server.actualPort(), "127.0.0.1", testRoute)
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
               .putHeader("Content-Type", "application/json")
               .sendJson(payload, context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
@@ -138,15 +137,13 @@ public class RepairHandlerTest
     void testRepairHandlerIR(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/keyspaces/testkeyspace/repair";
-
         ArgumentCaptor<Map<String, String>> jobCapture = ArgumentCaptor.forClass(Map.class);
         RepairPayload payload = RepairPayload.builder()
                                              .repairType(RepairPayload.RepairType.INCREMENTAL)
                                              .tables(List.of("test_table"))
                                              .build();
 
-        client.put(server.actualPort(), "127.0.0.1", testRoute)
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
               .putHeader("Content-Type", "application/json")
               .sendJson(payload, context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
@@ -166,8 +163,6 @@ public class RepairHandlerTest
     void testRepairHandlerWithRanges(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/keyspaces/testkeyspace/repair";
-
         String expectedRanges = 0L + ":" + Integer.MAX_VALUE;
         ArgumentCaptor<Map<String, String>> jobCapture = ArgumentCaptor.forClass(Map.class);
         RepairPayload payload = RepairPayload.builder()
@@ -176,7 +171,7 @@ public class RepairHandlerTest
                                              .tables(List.of("test_table"))
                                              .build();
 
-        client.put(server.actualPort(), "127.0.0.1", testRoute)
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
               .putHeader("Content-Type", "application/json")
               .sendJson(payload, context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
@@ -193,20 +188,44 @@ public class RepairHandlerTest
     }
 
     @Test
+    void testRepairHandlerWithHosts(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        ArgumentCaptor<Map<String, String>> jobCapture = ArgumentCaptor.forClass(Map.class);
+        RepairPayload payload = RepairPayload.builder()
+                                             .hosts(List.of("127.0.0.1"))
+                                             .tables(List.of("test_table"))
+                                             .build();
+
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
+              .putHeader("Content-Type", "application/json")
+              .sendJson(payload, context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  LOGGER.info("Repair Response: {}", response.bodyAsString());
+
+                  OperationalJobResponse repairResponse = response.bodyAsJson(OperationalJobResponse.class);
+                  assertThat(repairResponse).isNotNull();
+                  assertThat(repairResponse.status()).isEqualTo(SUCCEEDED);
+                  verify(mockStorageOperations).repair(anyString(), jobCapture.capture());
+                  assertThat(jobCapture.getValue()).containsKey("hosts");
+                  assertThat(jobCapture.getValue().get("hosts")).isEqualTo("127.0.0.1");
+                  context.completeNow();
+              }));
+    }
+
+    @Test
     void testRepairHandlerLongRunning(VertxTestContext context)
     {
         doAnswer(AdditionalAnswers.answersWithDelay(6000, invocation -> null))
         .when(mockStorageOperations).repair(anyString(), any());
 
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/keyspaces/testkeyspace/repair";
-
         RepairPayload payload = RepairPayload.builder()
                                              .isPrimaryRange(true)
                                              .tables(List.of("test_table"))
                                              .build();
 
-        client.put(server.actualPort(), "127.0.0.1", testRoute)
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
               .putHeader("Content-Type", "application/json")
               .sendJson(payload, context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(ACCEPTED.code());
@@ -223,9 +242,7 @@ public class RepairHandlerTest
     void testRepairHandlerBadRequest(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/keyspaces/testkeyspace/repair";
-
-        client.put(server.actualPort(), "127.0.0.1", testRoute)
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
               .putHeader("Content-Type", "application/json")
               .send(context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());

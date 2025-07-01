@@ -62,8 +62,12 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
      *
-     * @param metadataFetcher the metadata fetcher
-     * @param executorPools   executor pools for blocking executions
+     * @param vertx                the vertx instance
+     * @param metadataFetcher      the metadata fetcher
+     * @param executorPools        executor pools for blocking executions
+     * @param serviceConfiguration configuration object holding config details of Sidecar
+     * @param validator            a validator instance to validate Cassandra-specific input
+     * @param jobManager           manager for long-running operational jobs
      */
     @Inject
     protected RepairHandler(Vertx vertx,

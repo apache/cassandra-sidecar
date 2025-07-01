@@ -34,8 +34,8 @@ public class RepairRequest extends JsonRequest<OperationalJobResponse>
     /**
      * Constructs a Sidecar repair request with the given parameters.
      *
-     * @param keyspace name of the keyspace in the cluster
-     * @param repairRequestPayload  request payload
+     * @param keyspace             name of the keyspace in the cluster
+     * @param repairRequestPayload request payload
      */
     public RepairRequest(String keyspace, RepairPayload repairRequestPayload)
     {
