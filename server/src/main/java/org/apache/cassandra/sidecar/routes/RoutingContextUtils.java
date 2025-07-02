@@ -33,11 +33,13 @@ import org.apache.cassandra.sidecar.db.RestoreJob;
  */
 public class RoutingContextUtils
 {
-    private RoutingContextUtils() {}
+    private RoutingContextUtils()
+    {
+    }
 
     /**
-     * {@link TypedKey} is used to pass information through {@link RoutingContext}. Encapsulates both object value and
-     * its type.
+     * {@link TypedKey} is used to pass information through {@link RoutingContext}. Encapsulates both object value and its type.
+     *
      * @param <T> type of value associated with current {@link TypedKey}
      */
     public static class TypedKey<T>
@@ -45,7 +47,8 @@ public class RoutingContextUtils
         private final Class<T> type;
         private final String key;
 
-        private TypedKey(Class<T> type, String key)
+        private TypedKey(Class<T> type,
+                         String key)
         {
             this.type = type;
             this.key = key;
@@ -58,27 +61,28 @@ public class RoutingContextUtils
         }
     }
 
-    public static final TypedKey<KeyspaceMetadata> SC_KEYSPACE_METADATA = new TypedKey<>(KeyspaceMetadata.class,
-                                                                                         "SC_KEYSPACE_METADATA");
-    public static final TypedKey<TableMetadata> SC_TABLE_METADATA = new TypedKey<>(TableMetadata.class,
-                                                                                   "SC_TABLE_METADATA");
-    public static final TypedKey<RestoreJob> SC_RESTORE_JOB = new TypedKey<>(RestoreJob.class,
-                                                                             "SC_RESTORE_JOB");
-    public static final TypedKey<QualifiedTableName> SC_QUALIFIED_TABLE_NAME
-    = new TypedKey<>(QualifiedTableName.class, "SC_QUALIFIED_TABLE_NAME");
+    public static final TypedKey<KeyspaceMetadata> SC_KEYSPACE_METADATA = new TypedKey<>(KeyspaceMetadata.class, "SC_KEYSPACE_METADATA");
+    public static final TypedKey<TableMetadata> SC_TABLE_METADATA = new TypedKey<>(TableMetadata.class, "SC_TABLE_METADATA");
+    public static final TypedKey<RestoreJob> SC_RESTORE_JOB = new TypedKey<>(RestoreJob.class, "SC_RESTORE_JOB");
+    public static final TypedKey<QualifiedTableName> SC_QUALIFIED_TABLE_NAME = new TypedKey<>(QualifiedTableName.class, "SC_QUALIFIED_TABLE_NAME");
 
-    public static <T> void put(RoutingContext context, TypedKey<T> typedKey, T value)
+    public static <T> void put(RoutingContext context,
+                               TypedKey<T> typedKey,
+                               T value)
     {
         context.put(typedKey.key, value);
     }
 
     /**
      * Get the associated value from context according to the typed key
+     *
      * @return the associated value
      * @param <T> type of the value, determined by the typed key
      * @throws RoutingContextException when no value can be returned
      */
-    public static <T> T get(RoutingContext context, TypedKey<T> typedKey) throws RoutingContextException
+    public static <T> T get(RoutingContext context,
+                            TypedKey<T> typedKey)
+            throws RoutingContextException
     {
         Object obj = context.get(typedKey.key);
         if (obj == null)
@@ -96,9 +100,11 @@ public class RoutingContextUtils
 
     /**
      * Similar to {@link #get(RoutingContext, TypedKey)}, but wrap the result in {@link Optional}
+     *
      * @return an optional of the result
      */
-    public static <T> Optional<T> getAsOptional(RoutingContext context, TypedKey<T> typedKey)
+    public static <T> Optional<T> getAsOptional(RoutingContext context,
+                                                TypedKey<T> typedKey)
     {
         try
         {
@@ -112,9 +118,11 @@ public class RoutingContextUtils
 
     /**
      * Similar to {@link #get(RoutingContext, TypedKey)}, but wrap the result in {@link Future}
+     *
      * @return a future of the result
      */
-    public static <T> Future<T> getAsFuture(RoutingContext context, TypedKey<T> typedKey)
+    public static <T> Future<T> getAsFuture(RoutingContext context,
+                                            TypedKey<T> typedKey)
     {
         return Future.future(promise -> {
             try
@@ -138,7 +146,8 @@ public class RoutingContextUtils
             super(msg);
         }
 
-        public RoutingContextException(String msg, Throwable cause)
+        public RoutingContextException(String msg,
+                                       Throwable cause)
         {
             super(msg, cause);
         }

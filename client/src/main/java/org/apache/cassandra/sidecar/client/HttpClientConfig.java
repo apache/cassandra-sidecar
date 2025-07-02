@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.client;
 
 import java.io.InputStream;
-
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -225,8 +224,8 @@ public class HttpClientConfig
         }
 
         /**
-         * Sets the {@code timeoutMillis} and returns a reference to this Builder enabling method chaining.
-         * Defaults to {@code 30,000} milliseconds ({@code 30} seconds).
+         * Sets the {@code timeoutMillis} and returns a reference to this Builder enabling method chaining. Defaults to {@code 30,000} milliseconds ({@code 30}
+         * seconds).
          *
          * @param timeoutMillis the {@code timeoutMillis} to set
          * @return a reference to this Builder
@@ -238,8 +237,7 @@ public class HttpClientConfig
         }
 
         /**
-         * Sets the {@code ssl} and returns a reference to this Builder enabling method chaining. Defaults to
-         * {@code false}.
+         * Sets the {@code ssl} and returns a reference to this Builder enabling method chaining. Defaults to {@code false}.
          *
          * @param ssl the {@code ssl} to set
          * @return a reference to this Builder
@@ -251,8 +249,7 @@ public class HttpClientConfig
         }
 
         /**
-         * Sets the maximum pool size for connections and returns a reference to this Builder enabling method chaining.
-         * Defaults to {@code 20}.
+         * Sets the maximum pool size for connections and returns a reference to this Builder enabling method chaining. Defaults to {@code 20}.
          *
          * @param maxPoolSize the maximum pool size
          * @return a reference to this Builder
@@ -264,8 +261,7 @@ public class HttpClientConfig
         }
 
         /**
-         * Set the Web Client {@code userAgent} and returns a reference to this Builder enabling method chaining.
-         * Defaults to sidecar-client/0.1.0
+         * Set the Web Client {@code userAgent} and returns a reference to this Builder enabling method chaining. Defaults to sidecar-client/0.1.0
          *
          * @param userAgent the {@code userAgent} to set
          * @return a reference to this Builder
@@ -277,8 +273,8 @@ public class HttpClientConfig
         }
 
         /**
-         * Sets the {@code idleTimeoutMillis}. Zero means do not timeout. This determines if a connection will timeout
-         * and be closed if no data is received nor sent within the timeout.
+         * Sets the {@code idleTimeoutMillis}. Zero means do not timeout. This determines if a connection will timeout and be closed if no data is received nor
+         * sent within the timeout.
          *
          * @param idleTimeoutMillis to {@code idleTimeoutMillis} to set
          * @return a reference to this Builder
@@ -290,8 +286,7 @@ public class HttpClientConfig
         }
 
         /**
-         * Set the maximum HTTP chunk size {@code maxChunkSize} and returns a reference to this Builder enabling
-         * method chaining. Defaults to {@code 6 MiB}.
+         * Set the maximum HTTP chunk size {@code maxChunkSize} and returns a reference to this Builder enabling method chaining. Defaults to {@code 6 MiB}.
          *
          * @param maxChunkSize the {@code maxChunkSize} to set
          * @return a reference to this Builder
@@ -303,8 +298,8 @@ public class HttpClientConfig
         }
 
         /**
-         * Sets the {@code receiveBufferSize} and returns a reference to this Builder enabling method chaining.
-         * The default value of TCP receive buffer size is -1.
+         * Sets the {@code receiveBufferSize} and returns a reference to this Builder enabling method chaining. The default value of TCP receive buffer size is
+         * -1.
          *
          * @param receiveBufferSize the {@code receiveBufferSize} to set
          * @return a reference to this Builder
@@ -316,8 +311,8 @@ public class HttpClientConfig
         }
 
         /**
-         * Sets the {@code readBufferSize} that will be used to read the data from the files for upload.
-         * Changing this value will impact how much the data will be read at a time from the file system.
+         * Sets the {@code readBufferSize} that will be used to read the data from the files for upload. Changing this value will impact how much the data will
+         * be read at a time from the file system.
          *
          * @param readBufferSize the buffer size
          * @return a reference to this Builder

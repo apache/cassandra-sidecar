@@ -44,8 +44,7 @@ public class TableToContainerConverter extends TableToAspectConverter<Container>
 
         String container = identifiers.urnContainer(table.getKeyspace());
 
-        Container aspect = new Container()
-                .setContainer(new Urn(container));
+        Container aspect = new Container().setContainer(new Urn(container));
 
         return wrap(urn, aspect);
     }

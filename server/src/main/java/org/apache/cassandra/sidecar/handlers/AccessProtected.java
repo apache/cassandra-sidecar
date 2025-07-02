@@ -18,14 +18,12 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Set;
-
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.authorization.Authorization;
+import java.util.Set;
 
 /**
- * Interface for authorized handler that defines the set of {@link Authorization}s required by the implementing
- * {@link Handler}.
+ * Interface for authorized handler that defines the set of {@link Authorization}s required by the implementing {@link Handler}.
  */
 public interface AccessProtected
 {

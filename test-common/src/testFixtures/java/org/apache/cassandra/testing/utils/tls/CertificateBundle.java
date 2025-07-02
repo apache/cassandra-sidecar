@@ -39,8 +39,11 @@ public class CertificateBundle
     private final KeyPair keyPair;
     private final String alias;
 
-    public CertificateBundle(String signatureAlgorithm, X509Certificate[] chain,
-                             X509Certificate root, KeyPair keyPair, String alias)
+    public CertificateBundle(String signatureAlgorithm,
+                             X509Certificate[] chain,
+                             X509Certificate root,
+                             KeyPair keyPair,
+                             String alias)
     {
         this.signatureAlgorithm = Objects.requireNonNull(signatureAlgorithm);
         this.chain = chain;
@@ -69,7 +72,10 @@ public class CertificateBundle
         return keyStore;
     }
 
-    public Path toTempKeyStorePath(Path baseDir, char[] pkcs12Password, char[] keyEntryPassword) throws Exception
+    public Path toTempKeyStorePath(Path baseDir,
+                                   char[] pkcs12Password,
+                                   char[] keyEntryPassword)
+            throws Exception
     {
         KeyStore keyStore = toKeyStore(keyEntryPassword);
         Path tempFile = Files.createTempFile(baseDir, "ks", ".p12");

@@ -40,9 +40,7 @@ public class FileSystemOptionsConfigurationImpl implements FileSystemOptionsConf
 
     public FileSystemOptionsConfigurationImpl()
     {
-        this(DEFAULT_CLASSPATH_RESOLVING_ENABLED,
-             FileSystemOptions.DEFAULT_FILE_CACHING_DIR,
-             DEFAULT_FILE_CACHING_ENABLED);
+        this(DEFAULT_CLASSPATH_RESOLVING_ENABLED, FileSystemOptions.DEFAULT_FILE_CACHING_DIR, DEFAULT_FILE_CACHING_ENABLED);
     }
 
     public FileSystemOptionsConfigurationImpl(boolean classpathResolvingEnabled,

@@ -44,71 +44,68 @@ class RestoreRangeDatabaseAccessorIntTest extends IntegrationTestBase
         assertThat(accessor.findAll(jobId, (short) 0)).isEmpty();
 
         // create range
-        RestoreRange range = createTestRange(0, 10)
-                             .unbuild()
-                             .jobId(jobId)
-                             .bucketId((short) 0)
-                             .build();
+        RestoreRange range = createTestRange(0, 10).unbuild()
+                                                   .jobId(jobId)
+                                                   .bucketId((short) 0)
+                                                   .build();
         accessor.create(range);
 
         // find the only ranges
         RestoreRange fetchedRange = findAllAndReturnFirstRange(accessor, jobId, 1);
         assertThat(fetchedRange).isEqualTo(range);
         Map<String, RestoreRangeStatus> statusByReplica = new HashMap<>(fetchedRange.statusByReplica());
-        assertThat(statusByReplica)
-        .hasSize(1)
-        .containsEntry("127.0.0.1:12345", RestoreRangeStatus.CREATED);
+        assertThat(statusByReplica).hasSize(1)
+                                   .containsEntry("127.0.0.1:12345", RestoreRangeStatus.CREATED);
 
         // find no range from non-existing bucket
-        assertThat(accessor.findAll(jobId, (short) 1))
-        .describedAs("No ranges in the other bucket")
-        .isEmpty();
+        assertThat(accessor.findAll(jobId, (short) 1)).describedAs("No ranges in the other bucket")
+                                                      .isEmpty();
 
         // update status
         statusByReplica.put("127.0.0.1:12345", RestoreRangeStatus.STAGED);
-        accessor.updateStatus(range.unbuild().replicaStatus(statusByReplica).build());
+        accessor.updateStatus(range.unbuild()
+                                   .replicaStatus(statusByReplica)
+                                   .build());
 
         // read the updated range back
         fetchedRange = findAllAndReturnFirstRange(accessor, jobId, 1);
-        assertThat(fetchedRange)
-        .describedAs("The updated statusByReplica should not affect equality check")
-        .isEqualTo(range);
+        assertThat(fetchedRange).describedAs("The updated statusByReplica should not affect equality check")
+                                .isEqualTo(range);
         statusByReplica = new HashMap<>(fetchedRange.statusByReplica());
-        assertThat(statusByReplica)
-        .hasSize(1)
-        .containsEntry("127.0.0.1:12345", RestoreRangeStatus.STAGED);
+        assertThat(statusByReplica).hasSize(1)
+                                   .containsEntry("127.0.0.1:12345", RestoreRangeStatus.STAGED);
 
         // update status with new replica status
         statusByReplica.put("replica2", RestoreRangeStatus.CREATED);
-        accessor.updateStatus(range.unbuild().replicaStatus(statusByReplica).build());
+        accessor.updateStatus(range.unbuild()
+                                   .replicaStatus(statusByReplica)
+                                   .build());
 
         // create another range
-        RestoreRange newRange = createTestRange(10, 20)
-                                .unbuild()
-                                .jobId(jobId)
-                                .bucketId((short) 0)
-                                .build();
+        RestoreRange newRange = createTestRange(10, 20).unbuild()
+                                                       .jobId(jobId)
+                                                       .bucketId((short) 0)
+                                                       .build();
         accessor.create(newRange);
 
         // read the updated range back; there are 2 ranges now
         fetchedRange = findAllAndReturnFirstRange(accessor, jobId, 2);
-        assertThat(fetchedRange)
-        .describedAs("The updated statusByReplica should not affect equality check")
-        .isEqualTo(range);
-        assertThat(fetchedRange.statusByReplica())
-        .hasSize(2)
-        .containsEntry("127.0.0.1:12345", RestoreRangeStatus.STAGED)
-        .containsEntry("replica2", RestoreRangeStatus.CREATED);
+        assertThat(fetchedRange).describedAs("The updated statusByReplica should not affect equality check")
+                                .isEqualTo(range);
+        assertThat(fetchedRange.statusByReplica()).hasSize(2)
+                                                  .containsEntry("127.0.0.1:12345", RestoreRangeStatus.STAGED)
+                                                  .containsEntry("replica2", RestoreRangeStatus.CREATED);
     }
 
-    private RestoreRange findAllAndReturnFirstRange(RestoreRangeDatabaseAccessor accessor, UUID jobId, int size)
+    private RestoreRange findAllAndReturnFirstRange(RestoreRangeDatabaseAccessor accessor,
+                                                    UUID jobId,
+                                                    int size)
     {
         List<RestoreRange> allRanges = accessor.findAll(jobId, (short) 0);
         assertThat(allRanges).hasSize(size);
         RestoreRange fetchedRange = allRanges.get(0);
-        assertThat(fetchedRange.canProduceTask())
-        .describedAs("The materialized range cannot produce task")
-        .isFalse();
+        assertThat(fetchedRange.canProduceTask()).describedAs("The materialized range cannot produce task")
+                                                 .isFalse();
         return fetchedRange;
     }
 }

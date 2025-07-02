@@ -18,18 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes.snapshots;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import com.datastax.driver.core.Session;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonFactory;
@@ -41,12 +29,21 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
 import org.apache.cassandra.testing.SimpleCassandraVersion;
-
+import org.junit.jupiter.api.extension.ExtendWith;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,8 +65,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest
-    void createSnapshotEndpointFailsWhenTableDoesNotExist(VertxTestContext context)
-    throws Exception
+    void createSnapshotEndpointFailsWhenTableDoesNotExist(VertxTestContext context) throws Exception
     {
         createTestKeyspace();
 
@@ -85,7 +81,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void createSnapshotWithTtlFailsWhenUnitsAreNotSpecified(VertxTestContext context,
                                                             CassandraTestContext cassandraTestContext)
-    throws Exception
+            throws Exception
     {
         assumeThat(cassandraTestContext.version).as("TTL is only supported in Cassandra 4.1")
                                                 .isGreaterThanOrEqualTo(SimpleCassandraVersion.create(4, 1, 0));
@@ -94,16 +90,16 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
         QualifiedTableName tableName = createTestTableAndPopulate();
 
         WebClient client = mTLSClient();
-        String expectedErrorMessage = "Invalid duration: 500 Accepted units:[SECONDS, MINUTES, HOURS, DAYS] " +
-                                      "where case matters and only non-negative values.";
-        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot?ttl=500",
-                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
+        String expectedErrorMessage = "Invalid duration: 500 Accepted units:[SECONDS, MINUTES, HOURS, DAYS] "
+                + "where case matters and only non-negative values.";
+        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot?ttl=500", tableName.maybeQuotedKeyspace(),
+                tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_BAD_REQUEST)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                  assertThat(response.bodyAsJsonObject().getString("message"))
-                  .isEqualTo(expectedErrorMessage);
+                  assertThat(response.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo(expectedErrorMessage);
                   context.completeNow();
               })));
         // wait until test completes
@@ -113,7 +109,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void createSnapshotWithTtlFailsWhenTtlIsTooSmall(VertxTestContext context,
                                                      CassandraTestContext cassandraTestContext)
-    throws Exception
+            throws Exception
     {
         if (cassandraTestContext.version.compareTo(SimpleCassandraVersion.create(4, 1, 0)) < 0)
         {
@@ -127,14 +123,14 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
         WebClient client = mTLSClient();
         String expectedErrorMessage = "ttl for snapshot must be at least 60 seconds";
-        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot?ttl=1s",
-                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
+        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot?ttl=1s", tableName.maybeQuotedKeyspace(),
+                tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_BAD_REQUEST)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                  assertThat(response.bodyAsJsonObject().getString("message"))
-                  .isEqualTo(expectedErrorMessage);
+                  assertThat(response.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo(expectedErrorMessage);
                   context.completeNow();
               })));
         // wait until test completes
@@ -142,53 +138,52 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest
-    void createSnapshotFailsWhenSnapshotAlreadyExists(VertxTestContext context)
-    throws Exception
+    void createSnapshotFailsWhenSnapshotAlreadyExists(VertxTestContext context) throws Exception
     {
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
         WebClient client = mTLSClient();
-        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
+        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", tableName.maybeQuotedKeyspace(),
+                tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response ->
-                                       context.verify(() -> {
-                                           assertThat(response.statusCode()).isEqualTo(OK.code());
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
 
-                                           // creating the snapshot with the same name will return
-                                           // a 409 (Conflict) status code
-                                           client.put(server.actualPort(), "127.0.0.1", testRoute)
-                                                 .expect(ResponsePredicate.SC_CONFLICT)
-                                                 .send(context.succeedingThenComplete());
-                                       })));
+                  // creating the snapshot with the same name will return
+                  // a 409 (Conflict) status code
+                  client.put(server.actualPort(), "127.0.0.1", testRoute)
+                        .expect(ResponsePredicate.SC_CONFLICT)
+                        .send(context.succeedingThenComplete());
+              })));
         // wait until the test completes
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
     @CassandraIntegrationTest
-    void testCreateSnapshotEndpoint(VertxTestContext context)
-    throws Exception
+    void testCreateSnapshotEndpoint(VertxTestContext context) throws Exception
     {
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
         WebClient client = mTLSClient();
-        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
+        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", tableName.maybeQuotedKeyspace(),
+                tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
 
                   // validate that the snapshot is created
-                  List<Path> found = findChildFile(sidecarTestContext, "127.0.0.1",
-                                                   tableName.keyspace(), "my-snapshot");
+                  List<Path> found = findChildFile(sidecarTestContext, "127.0.0.1", tableName.keyspace(), "my-snapshot");
                   assertThat(found).isNotEmpty()
-                                   .anyMatch(p -> p.toString().endsWith("manifest.json"))
-                                   .anyMatch(p -> p.toString().endsWith("schema.cql"))
-                                   .anyMatch(p -> p.toString().endsWith("-big-Data.db"));
+                                   .anyMatch(p -> p.toString()
+                                                   .endsWith("manifest.json"))
+                                   .anyMatch(p -> p.toString()
+                                                   .endsWith("schema.cql"))
+                                   .anyMatch(p -> p.toString()
+                                                   .endsWith("-big-Data.db"));
 
                   context.completeNow();
               })));
@@ -198,36 +193,38 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
     @CassandraIntegrationTest
     void testCreateSnapshotEndpointWithTtl(VertxTestContext context,
-                                           CassandraTestContext cassandraTestContext) throws Exception
+                                           CassandraTestContext cassandraTestContext)
+            throws Exception
     {
         // TTL is only supported in Cassandra 4.1
-        boolean validateExpectedTtl = cassandraTestContext.version
-                                      .compareTo(SimpleCassandraVersion.create("4.1.0")) >= 0;
+        boolean validateExpectedTtl = cassandraTestContext.version.compareTo(SimpleCassandraVersion.create("4.1.0")) >= 0;
 
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate();
 
         long expectedTtlInSeconds = 61;
         WebClient client = mTLSClient();
-        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/ttl-snapshot?ttl=%ds",
-                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName(),
-                                         expectedTtlInSeconds);
+        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/ttl-snapshot?ttl=%ds", tableName.maybeQuotedKeyspace(),
+                tableName.maybeQuotedTableName(), expectedTtlInSeconds);
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
 
                   // validate that the snapshot is created
-                  List<Path> found = findChildFile(sidecarTestContext, "127.0.0.1",
-                                                   tableName.keyspace(), "ttl-snapshot");
+                  List<Path> found = findChildFile(sidecarTestContext, "127.0.0.1", tableName.keyspace(), "ttl-snapshot");
                   assertThat(found).isNotEmpty()
-                                   .anyMatch(p -> p.toString().endsWith("manifest.json"))
-                                   .anyMatch(p -> p.toString().endsWith("schema.cql"))
-                                   .anyMatch(p -> p.toString().endsWith("-big-Data.db"));
+                                   .anyMatch(p -> p.toString()
+                                                   .endsWith("manifest.json"))
+                                   .anyMatch(p -> p.toString()
+                                                   .endsWith("schema.cql"))
+                                   .anyMatch(p -> p.toString()
+                                                   .endsWith("-big-Data.db"));
 
                   // get manifest
                   Optional<Path> manifest = found.stream()
-                                                 .filter(p -> p.toString().endsWith("manifest.json"))
+                                                 .filter(p -> p.toString()
+                                                               .endsWith("manifest.json"))
                                                  .findFirst();
 
                   assertThat(manifest).isPresent();
@@ -240,7 +237,9 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    private void validateManifestExpirationDate(Path manifestPath, long expectedTtl, boolean validateExpectedTtl)
+    private void validateManifestExpirationDate(Path manifestPath,
+                                                long expectedTtl,
+                                                boolean validateExpectedTtl)
     {
         ObjectMapper jsonMapper = new ObjectMapper(new JsonFactory());
         jsonMapper.registerModule(new JavaTimeModule());
@@ -269,27 +268,28 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest
-    void testCreateSnapshotEndpointWithMixedCaseTableName(VertxTestContext context)
-    throws Exception
+    void testCreateSnapshotEndpointWithMixedCaseTableName(VertxTestContext context) throws Exception
     {
         createTestKeyspace();
         QualifiedTableName tableName = createTestTableAndPopulate("QuOtEdTaBlENaMe");
 
         WebClient client = mTLSClient();
-        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                         tableName.maybeQuotedKeyspace(), tableName.maybeQuotedTableName());
+        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", tableName.maybeQuotedKeyspace(),
+                tableName.maybeQuotedTableName());
         client.put(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
 
                   // validate that the snapshot is created
-                  List<Path> found = findChildFile(sidecarTestContext, "127.0.0.1",
-                                                   tableName.keyspace(), "my-snapshot");
+                  List<Path> found = findChildFile(sidecarTestContext, "127.0.0.1", tableName.keyspace(), "my-snapshot");
                   assertThat(found).isNotEmpty()
-                                   .anyMatch(p -> p.toString().endsWith("manifest.json"))
-                                   .anyMatch(p -> p.toString().endsWith("schema.cql"))
-                                   .anyMatch(p -> p.toString().endsWith("-big-Data.db"));
+                                   .anyMatch(p -> p.toString()
+                                                   .endsWith("manifest.json"))
+                                   .anyMatch(p -> p.toString()
+                                                   .endsWith("schema.cql"))
+                                   .anyMatch(p -> p.toString()
+                                                   .endsWith("-big-Data.db"));
 
                   context.completeNow();
               })));
@@ -299,8 +299,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
     private QualifiedTableName createTestTableAndPopulate(String tableNamePrefix)
     {
-        QualifiedTableName tableName = createTestTable(tableNamePrefix,
-                                                       "CREATE TABLE %s (id text PRIMARY KEY, name text)" + WITH_COMPACTION_DISABLED + ";");
+        QualifiedTableName tableName = createTestTable(tableNamePrefix, "CREATE TABLE %s (id text PRIMARY KEY, name text)" + WITH_COMPACTION_DISABLED + ";");
         Session session = maybeGetSession();
 
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('1', 'Francisco');");
@@ -311,8 +310,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
 
     private QualifiedTableName createTestTableAndPopulate()
     {
-        QualifiedTableName tableName = createTestTable(
-        "CREATE TABLE %s (id text PRIMARY KEY, name text)" + WITH_COMPACTION_DISABLED + ";");
+        QualifiedTableName tableName = createTestTable("CREATE TABLE %s (id text PRIMARY KEY, name text)" + WITH_COMPACTION_DISABLED + ";");
         Session session = maybeGetSession();
 
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('1', 'Francisco');");

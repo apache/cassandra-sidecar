@@ -63,7 +63,9 @@ public class SidecarSchemaInitializer implements PeriodicTask
                                     SchemaMetrics schemaMetrics,
                                     ClusterLease clusterLease)
     {
-        this.isSidecarSchemaEnabled = sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration().isEnabled();
+        this.isSidecarSchemaEnabled = sidecarConfiguration.serviceConfiguration()
+                                                          .schemaKeyspaceConfiguration()
+                                                          .isEnabled();
         this.cqlSessionProvider = cqlSessionProvider;
         this.sidecarInternalKeyspace = sidecarInternalKeyspace;
         this.schemaMetrics = schemaMetrics;
@@ -71,7 +73,8 @@ public class SidecarSchemaInitializer implements PeriodicTask
     }
 
     @Override
-    public void deploy(Vertx vertx, PeriodicTaskExecutor executor)
+    public void deploy(Vertx vertx,
+                       PeriodicTaskExecutor executor)
     {
         if (!isSidecarSchemaEnabled)
         {
@@ -135,14 +138,14 @@ public class SidecarSchemaInitializer implements PeriodicTask
 
     protected void reportSidecarSchemaInitialized()
     {
-        vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), "SidecarSchema initialized");
+        vertx.eventBus()
+             .publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), "SidecarSchema initialized");
     }
 
     /**
-     * Returns {@code true} when the schema should be created by this Sidecar instance. For schemas
-     * of type {@link ExecuteOnClusterLeaseholderOnly}, the schema creation is conditioned to whether
-     * the local Sidecar instance has claimed the cluster-wide lease. For all other types of schemas,
-     * the schemas will be created.
+     * Returns {@code true} when the schema should be created by this Sidecar instance. For schemas of type {@link ExecuteOnClusterLeaseholderOnly}, the schema
+     * creation is conditioned to whether the local Sidecar instance has claimed the cluster-wide lease. For all other types of schemas, the schemas will be
+     * created.
      *
      * @param schema the schema to test
      * @return {@code true} if the schema should be created by this Sidecar instance, {@code false} otherwise

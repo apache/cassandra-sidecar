@@ -19,12 +19,12 @@
 package org.apache.cassandra.sidecar.server;
 
 /**
- * Defines the {@link io.vertx.core.eventbus.EventBus} addresses where different notifications will be published
- * during Sidecar startup/shutdown, as well as CQL connection availability.
+ * Defines the {@link io.vertx.core.eventbus.EventBus} addresses where different notifications will be published during Sidecar startup/shutdown, as well as CQL
+ * connection availability.
  *
- * <p>The messages can be published multiple times depending on whether Sidecar is started or stopped
- * during the lifetime of the application. Implementing consumers will need to deal with this expectation
- * internally.
+ * <p>
+ * The messages can be published multiple times depending on whether Sidecar is started or stopped during the lifetime of the application. Implementing
+ * consumers will need to deal with this expectation internally.
  * <p>
  * The expectation is that:
  * <ul>
@@ -41,79 +41,73 @@ package org.apache.cassandra.sidecar.server;
 public enum SidecarServerEvents
 {
     /**
-     * The {@link io.vertx.core.eventbus.EventBus} address where server start events will be published. Server start
-     * will be published whenever Sidecar has successfully started and is ready listening for requests.
+     * The {@link io.vertx.core.eventbus.EventBus} address where server start events will be published. Server start will be published whenever Sidecar has
+     * successfully started and is ready listening for requests.
      */
     ON_SERVER_START,
 
     /**
-     * The {@link io.vertx.core.eventbus.EventBus} address where server stop/shutdown events will be published.
-     * Server stop events will be published whenever Sidecar is stopping or shutting down.
+     * The {@link io.vertx.core.eventbus.EventBus} address where server stop/shutdown events will be published. Server stop events will be published whenever
+     * Sidecar is stopping or shutting down.
      */
     ON_SERVER_STOP,
 
     /**
-     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when a CQL connection for
-     * a given instance has been established. The instance identifier will be passed as part of the message.
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when a CQL connection for a given instance has been established. The
+     * instance identifier will be passed as part of the message.
      */
     ON_CASSANDRA_CQL_READY,
 
     /**
-     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when a CQL connection for
-     * a given instance has been disconnected. The instance identifier will be passed as part of the message.
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when a CQL connection for a given instance has been disconnected. The
+     * instance identifier will be passed as part of the message.
      */
     ON_CASSANDRA_CQL_DISCONNECTED,
 
     /**
-     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when all CQL connections
-     * for the Sidecar-managed Cassandra instances are available.
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when all CQL connections for the Sidecar-managed Cassandra instances
+     * are available.
      */
     ON_ALL_CASSANDRA_CQL_READY,
 
     /**
-     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when a JMX connection for
-     * a given instance has been established. The instance identifier will be passed as part of the message.
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when a JMX connection for a given instance has been established. The
+     * instance identifier will be passed as part of the message.
      */
     ON_CASSANDRA_JMX_READY,
 
     /**
-     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when a JMX connection for
-     * a given instance has been disconnected. The instance identifier will be passed as part of the message.
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when a JMX connection for a given instance has been disconnected. The
+     * instance identifier will be passed as part of the message.
      */
     ON_CASSANDRA_JMX_DISCONNECTED,
 
     /**
-     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when sidecar schema has been
-     * initialized.
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when sidecar schema has been initialized.
      */
     ON_SIDECAR_SCHEMA_INITIALIZED,
 
     /**
-     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the health of a Sidecar
-     * peer instance is marked as DOWN, including in the payload the {@link org.apache.cassandra.sidecar.client.SidecarInstance}
-     * whose status changed.
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the health of a Sidecar peer instance is marked as DOWN,
+     * including in the payload the {@link org.apache.cassandra.sidecar.client.SidecarInstance} whose status changed.
      */
     ON_SIDECAR_PEER_DOWN,
 
     /**
-     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the health of a Sidecar
-     * peer instance is marked as UP, including in the payload the {@link org.apache.cassandra.sidecar.client.SidecarInstance}
-     * whose status changed.
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the health of a Sidecar peer instance is marked as UP, including
+     * in the payload the {@link org.apache.cassandra.sidecar.client.SidecarInstance} whose status changed.
      */
     ON_SIDECAR_PEER_UP,
 
     /**
-     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the Sidecar instance
-     * has claimed the cluster-wide lease.
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the Sidecar instance has claimed the cluster-wide lease.
      */
     ON_SIDECAR_GLOBAL_LEASE_CLAIMED,
 
     /**
-     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the Sidecar instance
-     * has lost the cluster-wide lease.
+     * The {@link io.vertx.core.eventbus.EventBus} address where events will be published when the Sidecar instance has lost the cluster-wide lease.
      */
-    ON_SIDECAR_GLOBAL_LEASE_LOST,
-    ;
+    ON_SIDECAR_GLOBAL_LEASE_LOST,;
 
     public String address()
     {

@@ -54,8 +54,10 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
             // keyspace name is different
             return RestoreJob.builder()
                              .createdAt(LocalDate.fromMillisSinceEpoch(UUIDs.unixTimestamp(id)))
-                             .jobId(id).jobAgent("job agent")
-                             .keyspace("ks").table("table")
+                             .jobId(id)
+                             .jobAgent("job agent")
+                             .keyspace("ks")
+                             .table("table")
                              .jobStatus(RestoreJobStatus.CREATED)
                              .jobSecrets(SECRETS)
                              .sstableImportOptions(SSTableImportOptions.defaults())
@@ -67,15 +69,14 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
     @Test
     void testInvalidJobId(VertxTestContext context) throws Throwable
     {
-        sendGetRestoreJobSummaryRequestAndVerify("ks", "table", "12951f25-d393-4158-9e90-ec0cbe05af21",
-                                                 context, HttpResponseStatus.BAD_REQUEST.code());
+        sendGetRestoreJobSummaryRequestAndVerify("ks", "table", "12951f25-d393-4158-9e90-ec0cbe05af21", context, HttpResponseStatus.BAD_REQUEST.code());
     }
 
     @Test
     void testInvalidKeyspace(VertxTestContext context) throws Throwable
     {
-        sendGetRestoreJobSummaryRequestAndVerify("sidecar_internal", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                                 context, HttpResponseStatus.FORBIDDEN.code());
+        sendGetRestoreJobSummaryRequestAndVerify("sidecar_internal", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", context,
+                HttpResponseStatus.FORBIDDEN.code());
     }
 
     @Test
@@ -87,12 +88,12 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
             return RestoreJob.builder()
                              .createdAt(null)
                              .jobId(UUID.fromString(jobId))
-                             .keyspace("ks").table("table")
+                             .keyspace("ks")
+                             .table("table")
                              .jobStatus(RestoreJobStatus.CREATED)
                              .build();
         });
-        sendGetRestoreJobSummaryRequestAndVerify("ks1", "table", "7cd82ff9-d276-11ed-93e5-7fce0df1306f",
-                                                 context,  HttpResponseStatus.NOT_FOUND.code());
+        sendGetRestoreJobSummaryRequestAndVerify("ks1", "table", "7cd82ff9-d276-11ed-93e5-7fce0df1306f", context, HttpResponseStatus.NOT_FOUND.code());
     }
 
     @Test
@@ -100,8 +101,7 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
     {
         // finds nothing == return null
         mockLookupRestoreJob(x -> null);
-        sendGetRestoreJobSummaryRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                                 context, HttpResponseStatus.NOT_FOUND.code());
+        sendGetRestoreJobSummaryRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", context, HttpResponseStatus.NOT_FOUND.code());
     }
 
     @Test
@@ -110,8 +110,8 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
         mockLookupRestoreJob(x -> {
             throw new RuntimeException("Execution failure");
         });
-        sendGetRestoreJobSummaryRequestAndVerify("ks", "table", "7cd82ff9-d276-11ed-93e5-7fce0df1306f",
-                                                 context, HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
+        sendGetRestoreJobSummaryRequestAndVerify("ks", "table", "7cd82ff9-d276-11ed-93e5-7fce0df1306f", context,
+                HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
     }
 
     @Test
@@ -121,31 +121,36 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
             UUID jobId = UUID.fromString("7cd82ff9-d276-11ed-93e5-7fce0df1306f");
             return RestoreJob.builder()
                              .createdAt(LocalDate.fromMillisSinceEpoch(UUIDs.unixTimestamp(jobId)))
-                             .jobId(jobId).jobAgent("job agent")
-                             .keyspace("ks").table("table")
+                             .jobId(jobId)
+                             .jobAgent("job agent")
+                             .keyspace("ks")
+                             .table("table")
                              .jobStatus(RestoreJobStatus.CREATED)
                              .build();
         });
-        sendGetRestoreJobSummaryRequestAndVerify("ks", "table", "7cd82ff9-d276-11ed-93e5-7fce0df1306f",
-                                                 context, HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
+        sendGetRestoreJobSummaryRequestAndVerify("ks", "table", "7cd82ff9-d276-11ed-93e5-7fce0df1306f", context,
+                HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
     }
 
     private void sendGetRestoreJobSummaryRequestAndVerify(String keyspace,
                                                           String table,
                                                           String jobId,
                                                           VertxTestContext context,
-                                                          int expectedStatusCode) throws Throwable
+                                                          int expectedStatusCode)
+            throws Throwable
     {
         WebClient client = WebClient.create(vertx, new WebClientOptions());
         client.get(server.actualPort(), "localhost", String.format(RESTORE_JOB_INFO_ENDPOINT, keyspace, table, jobId))
               .as(BodyCodec.buffer())
               .send(resp -> {
                   context.verify(() -> {
-                      assertThat(resp.result().statusCode()).isEqualTo(expectedStatusCode);
+                      assertThat(resp.result()
+                                     .statusCode()).isEqualTo(expectedStatusCode);
                       if (expectedStatusCode == HttpResponseStatus.OK.code())
                       {
-                          RestoreJobSummaryResponsePayload response
-                          = Json.decodeValue(resp.result().body(), RestoreJobSummaryResponsePayload.class);
+                          RestoreJobSummaryResponsePayload response = Json.decodeValue(resp.result()
+                                                                                           .body(),
+                                  RestoreJobSummaryResponsePayload.class);
                           assertThat(response.keyspace()).isEqualTo(keyspace);
                           assertThat(response.table()).isEqualTo(table);
                           assertThat(response.jobAgent()).isNotNull();
@@ -153,7 +158,7 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
                           assertThat(response.status()).isNotNull();
                       }
                   })
-                  .completeNow();
+                         .completeNow();
                   client.close();
               });
         context.awaitCompletion(10, TimeUnit.SECONDS);

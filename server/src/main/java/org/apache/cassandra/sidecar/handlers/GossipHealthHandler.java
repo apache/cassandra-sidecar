@@ -26,7 +26,6 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
 import static org.apache.cassandra.sidecar.modules.ApiModule.NOT_OK_STATUS;
 import static org.apache.cassandra.sidecar.modules.ApiModule.OK_STATUS;
 
@@ -37,11 +36,13 @@ public class GossipHealthHandler extends AbstractHandler<Void>
 {
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
+     *
      * @param metadataFetcher the metadata fetcher
-     * @param executorPools   executor pools for blocking executions
+     * @param executorPools executor pools for blocking executions
      */
     @Inject
-    protected GossipHealthHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools)
+    protected GossipHealthHandler(InstanceMetadataFetcher metadataFetcher,
+                                  ExecutorPools executorPools)
     {
         super(metadataFetcher, executorPools, null);
     }
@@ -56,7 +57,8 @@ public class GossipHealthHandler extends AbstractHandler<Void>
                                SocketAddress remoteAddress,
                                Void request)
     {
-        StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
+        StorageOperations operations = metadataFetcher.delegate(host)
+                                                      .storageOperations();
         executorPools.service()
                      .executeBlocking(operations::isGossipRunning)
                      .onSuccess(isGossipRunning -> context.json(isGossipRunning ? OK_STATUS : NOT_OK_STATUS))

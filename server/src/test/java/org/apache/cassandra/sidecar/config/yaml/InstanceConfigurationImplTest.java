@@ -19,12 +19,9 @@
 package org.apache.cassandra.sidecar.config.yaml;
 
 import java.io.IOException;
-
-import org.junit.jupiter.api.Test;
-
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -35,17 +32,14 @@ class InstanceConfigurationImplTest
     @Test
     void testParsing() throws IOException
     {
-        String yaml = "cassandra_instances:\n" +
-                      "  - id: 1\n" +
-                      "    host: localhost1\n" +
-                      "    port: 9042\n" +
-                      "    storage_dir: /this/path/is/the/home/directory\n" +
-                      "    staging_dir: ~/.ccm/test/node1/sstable-staging\n" +
-                      "    cdc_dir: ~/.ccm/test/node1/cdc_raw";
+        String yaml = "cassandra_instances:\n" + "  - id: 1\n" + "    host: localhost1\n" + "    port: 9042\n"
+                + "    storage_dir: /this/path/is/the/home/directory\n" + "    staging_dir: ~/.ccm/test/node1/sstable-staging\n"
+                + "    cdc_dir: ~/.ccm/test/node1/cdc_raw";
 
         SidecarConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml);
         assertThat(config.cassandraInstances()).hasSize(1);
-        InstanceConfiguration instanceConfiguration = config.cassandraInstances().get(0);
+        InstanceConfiguration instanceConfiguration = config.cassandraInstances()
+                                                            .get(0);
         assertThat(instanceConfiguration.id()).isEqualTo(1);
         assertThat(instanceConfiguration.host()).isEqualTo("localhost1");
         assertThat(instanceConfiguration.port()).isEqualTo(9042);

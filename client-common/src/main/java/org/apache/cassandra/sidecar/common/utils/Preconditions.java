@@ -26,14 +26,14 @@ import java.util.function.Supplier;
 public class Preconditions
 {
     /**
-     * Throws an {@link IllegalArgumentException} when the {@code validCondition} is {@code false}, otherwise
-     * no action is taken.
+     * Throws an {@link IllegalArgumentException} when the {@code validCondition} is {@code false}, otherwise no action is taken.
      *
      * @param validCondition the condition to evaluate
-     * @param errorMessage   the error message to use for the {@link IllegalArgumentException}
+     * @param errorMessage the error message to use for the {@link IllegalArgumentException}
      * @throws IllegalArgumentException when the condition is not valid (i.e. {@code false})
      */
-    public static void checkArgument(boolean validCondition, String errorMessage)
+    public static void checkArgument(boolean validCondition,
+                                     String errorMessage)
     {
         if (!validCondition)
         {
@@ -48,7 +48,8 @@ public class Preconditions
      * @param errorMessageSupplier supplies the error message to use for the {@link IllegalArgumentException}
      * @throws IllegalArgumentException when the condition is not valid (i.e. {@code false})
      */
-    public static void checkArgument(boolean validCondition, Supplier<String> errorMessageSupplier)
+    public static void checkArgument(boolean validCondition,
+                                     Supplier<String> errorMessageSupplier)
     {
         if (!validCondition)
         {
@@ -57,13 +58,13 @@ public class Preconditions
     }
 
     /**
-     * Throws an {@link IllegalStateException} when the {@code validCondition} is {@code false}, otherwise
-     * no action is taken.
+     * Throws an {@link IllegalStateException} when the {@code validCondition} is {@code false}, otherwise no action is taken.
      *
      * @param validCondition the condition to evaluate
-     * @param errorMessage   the error message to use for the {@link IllegalStateException}
+     * @param errorMessage the error message to use for the {@link IllegalStateException}
      */
-    public static void checkState(boolean validCondition, String errorMessage)
+    public static void checkState(boolean validCondition,
+                                  String errorMessage)
     {
         if (!validCondition)
         {
@@ -77,7 +78,8 @@ public class Preconditions
      * @param validCondition the condition to evaluate
      * @param errorMessageSupplier supplies the error message to use for the {@link IllegalStateException}
      */
-    public static void checkState(boolean validCondition, Supplier<String> errorMessageSupplier)
+    public static void checkState(boolean validCondition,
+                                  Supplier<String> errorMessageSupplier)
     {
         if (!validCondition)
         {

@@ -18,10 +18,10 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-
 import java.nio.file.NoSuchFileException;
 import java.util.List;
 import java.util.Set;
+
 import javax.management.InstanceNotFoundException;
 
 import com.google.inject.Inject;
@@ -50,8 +50,8 @@ import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABL
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * This handler validates that the component exists in the cluster and sets up the context
- * for the {@link FileStreamHandler} to stream the component back to the client
+ * This handler validates that the component exists in the cluster and sets up the context for the {@link FileStreamHandler} to stream the component back to the
+ * client
  */
 @Singleton
 public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTableComponentRequestParam> implements AccessProtected
@@ -85,44 +85,51 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
                                StreamSSTableComponentRequestParam request)
     {
         resolveComponentPathFromRequest(host, request).onSuccess(path -> {
-            logger.debug("{} resolved. path={}, request={}, remoteAddress={}, instance={}",
-                         this.getClass().getSimpleName(), path, request, remoteAddress, host);
-            context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path).next();
-        }).onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+            logger.debug("{} resolved. path={}, request={}, remoteAddress={}, instance={}", this.getClass()
+                                                                                                .getSimpleName(),
+                    path, request, remoteAddress, host);
+            context.put(FileStreamHandler.FILE_PATH_CONTEXT_KEY, path)
+                   .next();
+        })
+                                                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 
-    private Future<String> resolveComponentPathFromRequest(String host, StreamSSTableComponentRequestParam request)
+    private Future<String> resolveComponentPathFromRequest(String host,
+                                                           StreamSSTableComponentRequestParam request)
     {
-        return executorPools.internal().executeBlocking(() -> {
-            int dataDirIndex = request.dataDirectoryIndex();
-            if (request.tableId() != null)
-            {
-                StorageOperations storageOperations = metadataFetcher.delegate(host).storageOperations();
-                List<String> dataDirList = storageOperations.dataFileLocations();
-                if (dataDirIndex < 0 || dataDirIndex >= dataDirList.size())
-                {
-                    throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid data directory index: " + dataDirIndex);
-                }
-                return snapshotPathBuilder.resolveComponentPathFromDataDirectory(dataDirList.get(dataDirIndex), request);
-            }
-            else
-            {
-                logger.debug("Streaming SSTable component without a table Id. request={}, instance={}", request, host);
-                TableOperations tableOperations = metadataFetcher.delegate(host).tableOperations();
-                // asking jmx to give us the path for keyspace/table - tableId
-                // as opposed to storageOperations.dataFileLocations, the table directory can change
-                // when someone drops a table and recreates it with the same name, the table id will change
-                // we do not keep a cache of the table directory data paths, so these requests always go
-                // through JMX
-                List<String> tableDirList = tableOperations.getDataPaths(request.keyspace(), request.tableName());
-                if (dataDirIndex < 0 || dataDirIndex >= tableDirList.size())
-                {
-                    throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid data directory index: " + dataDirIndex);
-                }
+        return executorPools.internal()
+                            .executeBlocking(() -> {
+                                int dataDirIndex = request.dataDirectoryIndex();
+                                if (request.tableId() != null)
+                                {
+                                    StorageOperations storageOperations = metadataFetcher.delegate(host)
+                                                                                         .storageOperations();
+                                    List<String> dataDirList = storageOperations.dataFileLocations();
+                                    if (dataDirIndex < 0 || dataDirIndex >= dataDirList.size())
+                                    {
+                                        throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid data directory index: " + dataDirIndex);
+                                    }
+                                    return snapshotPathBuilder.resolveComponentPathFromDataDirectory(dataDirList.get(dataDirIndex), request);
+                                }
+                                else
+                                {
+                                    logger.debug("Streaming SSTable component without a table Id. request={}, instance={}", request, host);
+                                    TableOperations tableOperations = metadataFetcher.delegate(host)
+                                                                                     .tableOperations();
+                                    // asking jmx to give us the path for keyspace/table - tableId
+                                    // as opposed to storageOperations.dataFileLocations, the table directory can change
+                                    // when someone drops a table and recreates it with the same name, the table id will change
+                                    // we do not keep a cache of the table directory data paths, so these requests always go
+                                    // through JMX
+                                    List<String> tableDirList = tableOperations.getDataPaths(request.keyspace(), request.tableName());
+                                    if (dataDirIndex < 0 || dataDirIndex >= tableDirList.size())
+                                    {
+                                        throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid data directory index: " + dataDirIndex);
+                                    }
 
-                return snapshotPathBuilder.resolveComponentPathFromTableDirectory(tableDirList.get(dataDirIndex), request);
-            }
-        });
+                                    return snapshotPathBuilder.resolveComponentPathFromTableDirectory(tableDirList.get(dataDirIndex), request);
+                                }
+                            });
     }
 
     @Override

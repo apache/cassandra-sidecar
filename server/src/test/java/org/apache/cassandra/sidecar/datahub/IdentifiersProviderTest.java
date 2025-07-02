@@ -18,14 +18,12 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
-import java.util.Collections;
-import java.util.UUID;
-import org.junit.jupiter.api.Test;
-
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.TableMetadata;
+import java.util.Collections;
+import java.util.UUID;
 import org.jetbrains.annotations.NotNull;
-
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -35,7 +33,7 @@ import static org.mockito.Mockito.when;
  */
 final class IdentifiersProviderTest
 {
-    private static final IdentifiersProvider IDENTIFIERS = new TestIdentifiers();  // Single instance of immutable class
+    private static final IdentifiersProvider IDENTIFIERS = new TestIdentifiers(); // Single instance of immutable class
 
     /**
      * Tests the default values for the individual components of the composite identifier
@@ -62,7 +60,7 @@ final class IdentifiersProviderTest
     @Test
     void testIdentifier()
     {
-        UUID identifier = UUID.fromString("ace3ba6b-49b2-3dd5-955a-1de13730188b");  // Calculated deterministically
+        UUID identifier = UUID.fromString("ace3ba6b-49b2-3dd5-955a-1de13730188b"); // Calculated deterministically
 
         assertThat(IDENTIFIERS.identifier()).isEqualTo(identifier);
     }
@@ -81,11 +79,9 @@ final class IdentifiersProviderTest
         when(table.getKeyspace()).thenReturn(keyspace);
 
         String urnDataPlatform = "urn:li:dataPlatform:cassandra";
-        String urnDataPlatformInstance = "urn:li:dataPlatformInstance:" +
-                                         "(urn:li:dataPlatform:cassandra,ace3ba6b-49b2-3dd5-955a-1de13730188b)";
+        String urnDataPlatformInstance = "urn:li:dataPlatformInstance:" + "(urn:li:dataPlatform:cassandra,ace3ba6b-49b2-3dd5-955a-1de13730188b)";
         String urnContainer = "urn:li:container:ace3ba6b-49b2-3dd5-955a-1de13730188b_keyspace";
-        String urnDataset = "urn:li:dataset:" +
-                            "(urn:li:dataPlatform:cassandra,ace3ba6b-49b2-3dd5-955a-1de13730188b.keyspace.table,PROD)";
+        String urnDataset = "urn:li:dataset:" + "(urn:li:dataPlatform:cassandra,ace3ba6b-49b2-3dd5-955a-1de13730188b.keyspace.table,PROD)";
 
         assertThat(IDENTIFIERS.urnDataPlatform()).isEqualTo(urnDataPlatform);
         assertThat(IDENTIFIERS.urnDataPlatformInstance()).isEqualTo(urnDataPlatformInstance);
@@ -118,8 +114,10 @@ final class IdentifiersProviderTest
             }
         };
 
-        assertThat(IDENTIFIERS).isEqualTo(same).isNotEqualTo(different);
-        assertThat(IDENTIFIERS).hasSameHashCodeAs(same).doesNotHaveSameHashCodeAs(different);
+        assertThat(IDENTIFIERS).isEqualTo(same)
+                               .isNotEqualTo(different);
+        assertThat(IDENTIFIERS).hasSameHashCodeAs(same)
+                               .doesNotHaveSameHashCodeAs(different);
     }
 
     /**
@@ -128,8 +126,8 @@ final class IdentifiersProviderTest
     @Test
     void testToString()
     {
-        String string = "org.apache.cassandra.sidecar.datahub.TestIdentifiers" +
-                        "(Cassandra,cassandra,ENVIRONMENT,application,cluster,ace3ba6b-49b2-3dd5-955a-1de13730188b)";
+        String string = "org.apache.cassandra.sidecar.datahub.TestIdentifiers"
+                + "(Cassandra,cassandra,ENVIRONMENT,application,cluster,ace3ba6b-49b2-3dd5-955a-1de13730188b)";
 
         assertThat(IDENTIFIERS).hasToString(string);
     }

@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.cluster.instance;
 
 import java.net.UnknownHostException;
 import java.util.List;
-
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
@@ -50,6 +49,7 @@ public interface InstanceMetadata
 
     /**
      * Resolve the ipAddress and update.
+     *
      * @return the IP address resolved
      * @throws UnknownHostException when hostname cannot be resolved to IP address
      */
@@ -82,9 +82,7 @@ public interface InstanceMetadata
     CassandraAdapterDelegate delegate() throws CassandraUnavailableException;
 
     /**
-     * @return CDC directory of the cassandra instance, it can be configured as null when CDC is not enabled
-     * for the Cassandra.
-     * instance
+     * @return CDC directory of the cassandra instance, it can be configured as null when CDC is not enabled for the Cassandra. instance
      */
     @Nullable
     String cdcDir();

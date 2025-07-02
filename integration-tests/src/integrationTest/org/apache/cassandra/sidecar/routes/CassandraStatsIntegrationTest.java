@@ -18,25 +18,22 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.junit.jupiter.api.Test;
-
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.ext.web.client.HttpResponse;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
-
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
 import static org.apache.cassandra.testing.TestUtils.TEST_KEYSPACE;
 import static org.apache.cassandra.testing.TestUtils.TEST_TABLE_PREFIX;
@@ -55,14 +52,8 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     protected void initializeSchemaForTest()
     {
         createTestKeyspace(TEST_KEYSPACE, DC1_RF1);
-        createTestTable(TEST_TABLE,
-                        "CREATE TABLE %s ( \n" +
-                        "  race_year int, \n" +
-                        "  race_name text, \n" +
-                        "  cyclist_name text, \n" +
-                        "  rank int, \n" +
-                        "  PRIMARY KEY ((race_year, race_name), rank) \n" +
-                        ");");
+        createTestTable(TEST_TABLE, "CREATE TABLE %s ( \n" + "  race_year int, \n" + "  race_name text, \n" + "  cyclist_name text, \n" + "  rank int, \n"
+                + "  PRIMARY KEY ((race_year, race_name), rank) \n" + ");");
     }
 
     @Test
@@ -119,8 +110,8 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     }
 
     /**
-     * Expects unrecognized params to be ignored and invalid value for the expected parameter to be defaulted to true
-     * to prevent heavyweight query in the bad request case.
+     * Expects unrecognized params to be ignored and invalid value for the expected parameter to be defaulted to true to prevent heavyweight query in the bad
+     * request case.
      */
     @Test
     void retrieveClientStatsInvalidParameterValue()
@@ -137,18 +128,16 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     void retrieveTableStats()
     {
         /*
-         * "SnapshotSize" table stats metric reports the size of snapshot files which are not links for "live" SSTables.
-         * In order to simulate non-zero data for this metric, we do the following:
-         * 1. Insert data
-         * 2. Create snapshot
-         * 3. Truncate table to ensure snapshot references non-live sstables
-         * 4. Insert more data (and flush) to ensure other metrics, have non-zero values
+         * "SnapshotSize" table stats metric reports the size of snapshot files which are not links for "live" SSTables. In order to simulate non-zero data for
+         * this metric, we do the following: 1. Insert data 2. Create snapshot 3. Truncate table to ensure snapshot references non-live sstables 4. Insert more
+         * data (and flush) to ensure other metrics, have non-zero values
          */
         insertData(TEST_TABLE);
         createSnapshot(TEST_TABLE);
         cluster.schemaChangeIgnoringStoppedInstances("TRUNCATE TABLE " + TEST_TABLE);
         insertData(TEST_TABLE);
-        cluster.stream().forEach(instance -> instance.flush(TEST_KEYSPACE));
+        cluster.stream()
+               .forEach(instance -> instance.flush(TEST_KEYSPACE));
         tableStats(TEST_TABLE);
     }
 
@@ -156,19 +145,19 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     {
         for (int i = 1; i <= 10; i++)
         {
-            String statement = "INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
-                               "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', " + i + ", 'Benjamin PRADES');";
+            String statement = "INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) "
+                    + "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', " + i + ", 'Benjamin PRADES');";
             cluster.schemaChangeIgnoringStoppedInstances(statement);
         }
     }
 
     private void createSnapshot(QualifiedName tableName)
     {
-        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/" + tableName.table() + "-snapshot",
-                                         tableName.keyspace(), tableName.table());
+        String testRoute =
+                         String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/" + tableName.table() + "-snapshot", tableName.keyspace(), tableName.table());
         HttpResponse<Buffer> resp;
         resp = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", testRoute)
-                                 .send());
+                                          .send());
         assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
     }
 
@@ -177,11 +166,12 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
         String testRoute = "/api/v1/cassandra/keyspaces/" + tableName.keyspace() + "/tables/" + tableName.table() + "/stats";
         HttpResponse<Buffer> resp;
         resp = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", testRoute)
-                                 .send());
+                                          .send());
         assertTableStatsResponse(tableName, resp);
     }
 
-    void assertTableStatsResponse(QualifiedName tableName, HttpResponse<Buffer> response)
+    void assertTableStatsResponse(QualifiedName tableName,
+                                  HttpResponse<Buffer> response)
     {
         TableStatsResponse stats = response.bodyAsJson(TableStatsResponse.class);
         assertThat(stats).isNotNull();
@@ -193,18 +183,23 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
         assertThat(stats.totalDiskSpaceUsedBytes()).isGreaterThan(0);
     }
 
-
-    void assertClientStatsResponse(HttpResponse<Buffer> response, Map<String, Boolean> params)
+    void assertClientStatsResponse(HttpResponse<Buffer> response,
+                                   Map<String, Boolean> params)
     {
         assertClientStatsResponse(response, params, DEFAULT_CONNECTION_COUNT);
     }
 
-    void assertClientStatsResponse(HttpResponse<Buffer> response, Map<String, Boolean> params, int expectedConnections)
+    void assertClientStatsResponse(HttpResponse<Buffer> response,
+                                   Map<String, Boolean> params,
+                                   int expectedConnections)
     {
         assertClientStatsResponse(response, params, expectedConnections, false);
     }
 
-    void assertClientStatsResponse(HttpResponse<Buffer> response, Map<String, Boolean> params, int expectedConnections, boolean usingKeyspace)
+    void assertClientStatsResponse(HttpResponse<Buffer> response,
+                                   Map<String, Boolean> params,
+                                   int expectedConnections,
+                                   boolean usingKeyspace)
     {
         boolean isSummary = params.get("summary");
 
@@ -222,7 +217,8 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
         }
         else
         {
-            SimpleCassandraVersion releaseVersion = SimpleCassandraVersion.create(cluster.get(1).getReleaseVersionString());
+            SimpleCassandraVersion releaseVersion = SimpleCassandraVersion.create(cluster.get(1)
+                                                                                         .getReleaseVersionString());
             SimpleCassandraVersion majorVersion = SimpleCassandraVersion.create(releaseVersion.major, releaseVersion.minor, 0);
             SimpleCassandraVersion fourZero = SimpleCassandraVersion.create("4.0");
             assertThat(stats.size()).isEqualTo(expectedConnections);
@@ -236,15 +232,17 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
                 if (majorVersion.isGreaterThan(fourZero))
                 {
                     assertThat(stat.clientOptions()).isNotNull();
-                    assertThat(stat.clientOptions().containsKey("CQL_VERSION")).isTrue();
+                    assertThat(stat.clientOptions()
+                                   .containsKey("CQL_VERSION")).isTrue();
                 }
             }
 
             // TODO: Add validations for fields in trunk once dtest jars can advance beyond TCM commit
-            if (usingKeyspace
-                && majorVersion.compareTo(SimpleCassandraVersion.create("5.0.0")) >= 0)
+            if (usingKeyspace && majorVersion.compareTo(SimpleCassandraVersion.create("5.0.0")) >= 0)
             {
-                assertThat(stats.stream().map(ClientConnectionEntry::keyspaceName).collect(Collectors.toSet())).contains(TEST_KEYSPACE);
+                assertThat(stats.stream()
+                                .map(ClientConnectionEntry::keyspaceName)
+                                .collect(Collectors.toSet())).contains(TEST_KEYSPACE);
             }
         }
     }

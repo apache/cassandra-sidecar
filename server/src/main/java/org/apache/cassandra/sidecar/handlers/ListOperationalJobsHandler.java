@@ -18,14 +18,12 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
-import java.util.Set;
-import javax.inject.Inject;
-
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Collections;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
@@ -34,7 +32,7 @@ import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
+import javax.inject.Inject;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 
 /**
@@ -67,7 +65,11 @@ public class ListOperationalJobsHandler extends AbstractHandler<Void> implements
     }
 
     @Override
-    protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, @NotNull String host, SocketAddress remoteAddress, Void request)
+    protected void handleInternal(RoutingContext context,
+                                  HttpServerRequest httpRequest,
+                                  @NotNull String host,
+                                  SocketAddress remoteAddress,
+                                  Void request)
     {
         ListOperationalJobsResponse listResponse = new ListOperationalJobsResponse();
         jobManager.allInflightJobs()

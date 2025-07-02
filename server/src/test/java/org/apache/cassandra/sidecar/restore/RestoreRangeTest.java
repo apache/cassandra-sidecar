@@ -58,13 +58,15 @@ public class RestoreRangeTest
     void testEquals()
     {
         RestoreRange range1 = createTestRange();
-        RestoreRange range2 = range1.unbuild().build();
+        RestoreRange range2 = range1.unbuild()
+                                    .build();
         assertThat(range1).isEqualTo(range2);
 
         RestoreRange range3 = range1.unbuild()
                                     .jobId(UUIDs.timeBased())
                                     .bucketId((short) 2)
-                                    .startToken(BigInteger.valueOf(2)).endToken(BigInteger.TEN)
+                                    .startToken(BigInteger.valueOf(2))
+                                    .endToken(BigInteger.TEN)
                                     .build();
         assertThat(range3).isNotEqualTo(range1)
                           .isNotEqualTo(range2);
@@ -105,12 +107,14 @@ public class RestoreRangeTest
     void testCreateTaskFailsWhenJobExpires() throws Exception
     {
         long anchor = 1730334656231L;
-        RestoreJob expiredJob = RestoreJobTest.createNewTestingJob(UUIDs.timeBased()).unbuild().expireAt(new Date(anchor - 10000L)).build();
+        RestoreJob expiredJob = RestoreJobTest.createNewTestingJob(UUIDs.timeBased())
+                                              .unbuild()
+                                              .expireAt(new Date(anchor - 10000L))
+                                              .build();
         RestoreRange range = createTestRange(expiredJob, Paths.get("."), false);
         RestoreRangeHandler handler = createRestoreRangeHandler(range);
         assertFailedHandler(range, handler,
-                            "Restore job expired on 2024-10-31T00:30:46.231Z. " +
-                            "RestoreRange{sliceId='sliceId-123', sliceKey='myKey', sliceBucket='myBucket'}");
+                "Restore job expired on 2024-10-31T00:30:46.231Z. " + "RestoreRange{sliceId='sliceId-123', sliceKey='myKey', sliceBucket='myBucket'}");
     }
 
     @Test
@@ -118,10 +122,10 @@ public class RestoreRangeTest
     {
         RestoreRange range = createTestRange();
         // simulate that the belong job has already failed
-        range.trackerUnsafe().fail(RestoreJobExceptions.ofFatal("Job fails", range, null));
+        range.trackerUnsafe()
+             .fail(RestoreJobExceptions.ofFatal("Job fails", range, null));
         RestoreRangeHandler handler = createRestoreRangeHandler(range);
-        assertFailedHandler(range, handler,
-                            "Restore job has already failed due to prior failure");
+        assertFailedHandler(range, handler, "Restore job has already failed due to prior failure");
     }
 
     @Test
@@ -139,9 +143,8 @@ public class RestoreRangeTest
     void testCreateTaskFailsToCreate() throws Exception
     {
         /*
-         * The test create the test range that belongs to a job that is managed by Sidecar.
-         * However, the range is configured with `null` RestoreRangeDatabaseAccessor.
-         * It should fail when creating the RestoreRangeTask
+         * The test create the test range that belongs to a job that is managed by Sidecar. However, the range is configured with `null`
+         * RestoreRangeDatabaseAccessor. It should fail when creating the RestoreRangeTask
          */
         RestoreRange range = createTestRange(true);
         RestoreRangeHandler handler = createRestoreRangeHandler(range);
@@ -169,10 +172,13 @@ public class RestoreRangeTest
         range.discard();
         assertThat(range.isDiscarded()).isTrue();
         assertThat(range.isCancelled()).isTrue();
-        assertThat(range.statusByReplica()).containsEntry("127.0.0.1:12345", DISCARDED).hasSize(1);
+        assertThat(range.statusByReplica()).containsEntry("127.0.0.1:12345", DISCARDED)
+                                           .hasSize(1);
     }
 
-    private void assertFailedHandler(RestoreRange range, RestoreRangeHandler handler, String containsErrorMessage)
+    private void assertFailedHandler(RestoreRange range,
+                                     RestoreRangeHandler handler,
+                                     String containsErrorMessage)
     {
         assertThat(handler).describedAs("It should create a Failed handler")
                            .isInstanceOf(RestoreRangeTask.Failed.class);
@@ -190,9 +196,7 @@ public class RestoreRangeTest
     {
         StorageClientPool mockClientPool = mock(StorageClientPool.class);
         when(mockClientPool.storageClient(any())).thenReturn(mock(StorageClient.class));
-        return range.toAsyncTask(mockClientPool, null, null, 0.1,
-                                 null, null, null,
-                                 mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
+        return range.toAsyncTask(mockClientPool, null, null, 0.1, null, null, null, mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
     }
 
     public static RestoreRange createTestRange()
@@ -200,7 +204,8 @@ public class RestoreRangeTest
         return createTestRange(false);
     }
 
-    public static RestoreRange createTestRange(long start, long end)
+    public static RestoreRange createTestRange(long start,
+                                               long end)
     {
         RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, null);
         return createTestRange(job, Paths.get("."), false, start, end);
@@ -211,33 +216,49 @@ public class RestoreRangeTest
         return createTestRange(Paths.get("."), jobManagedBySidecar);
     }
 
-    public static RestoreRange createTestRange(Path rootDir, boolean jobManagedBySidecar)
+    public static RestoreRange createTestRange(Path rootDir,
+                                               boolean jobManagedBySidecar)
     {
         RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, null);
         return createTestRange(job, rootDir, jobManagedBySidecar);
     }
 
-    public static RestoreRange createTestRange(RestoreJob job, Path rootDir, boolean jobManagedBySidecar)
+    public static RestoreRange createTestRange(RestoreJob job,
+                                               Path rootDir,
+                                               boolean jobManagedBySidecar)
     {
         return createTestRange(job, rootDir, jobManagedBySidecar, 1L, 2L);
     }
 
-    public static RestoreRange createTestRange(RestoreJob job, Path rootDir, boolean jobManagedBySidecar, long start, long end)
+    public static RestoreRange createTestRange(RestoreJob job,
+                                               Path rootDir,
+                                               boolean jobManagedBySidecar,
+                                               long start,
+                                               long end)
     {
         if (jobManagedBySidecar)
         {
-            job = job.unbuild().consistencyLevel(ConsistencyLevel.QUORUM).build();
+            job = job.unbuild()
+                     .consistencyLevel(ConsistencyLevel.QUORUM)
+                     .build();
         }
         RestoreProcessor mockProcessor = mock(RestoreProcessor.class);
         InstanceMetadata mockInstance = mock(InstanceMetadata.class, RETURNS_DEEP_STUBS);
         when(mockInstance.id()).thenReturn(1);
-        when(mockInstance.delegate().localStorageBroadcastAddress()).thenReturn(new InetSocketAddress("127.0.0.1", 12345));
+        when(mockInstance.delegate()
+                         .localStorageBroadcastAddress()).thenReturn(new InetSocketAddress("127.0.0.1", 12345));
         RestoreJobProgressTracker tracker = new RestoreJobProgressTracker(job, mockProcessor, mockInstance);
         RestoreSlice slice = RestoreSlice.builder()
-                                         .jobId(job.jobId).keyspace("keyspace").table("table")
-                                         .sliceId("sliceId-123").bucketId((short) 0)
-                                         .storageBucket("myBucket").storageKey("myKey").checksum("checksum")
-                                         .startToken(BigInteger.valueOf(start)).endToken(BigInteger.valueOf(end))
+                                         .jobId(job.jobId)
+                                         .keyspace("keyspace")
+                                         .table("table")
+                                         .sliceId("sliceId-123")
+                                         .bucketId((short) 0)
+                                         .storageBucket("myBucket")
+                                         .storageKey("myKey")
+                                         .checksum("checksum")
+                                         .startToken(BigInteger.valueOf(start))
+                                         .endToken(BigInteger.valueOf(end))
                                          .build();
 
         return RestoreRange.builderFromSlice(slice)

@@ -31,31 +31,22 @@ class RestoreJobProgressFetchPolicyTest
     @Test
     void testFromString()
     {
-        assertThat(RestoreJobProgressFetchPolicy.fromString("FIRST_failed"))
-        .isEqualTo(FIRST_FAILED);
-        assertThat(RestoreJobProgressFetchPolicy.fromString("first_failed"))
-        .isEqualTo(FIRST_FAILED);
-        assertThat(RestoreJobProgressFetchPolicy.fromString("FIRST_FAILED"))
-        .isEqualTo(FIRST_FAILED);
+        assertThat(RestoreJobProgressFetchPolicy.fromString("FIRST_failed")).isEqualTo(FIRST_FAILED);
+        assertThat(RestoreJobProgressFetchPolicy.fromString("first_failed")).isEqualTo(FIRST_FAILED);
+        assertThat(RestoreJobProgressFetchPolicy.fromString("FIRST_FAILED")).isEqualTo(FIRST_FAILED);
 
-        assertThat(RestoreJobProgressFetchPolicy.fromString("all_failed_and_pending"))
-        .isEqualTo(ALL_FAILED_AND_PENDING);
-        assertThat(RestoreJobProgressFetchPolicy.fromString("ALL_FAILED_and_pending"))
-        .isEqualTo(ALL_FAILED_AND_PENDING);
-        assertThat(RestoreJobProgressFetchPolicy.fromString("ALL_FAILED_AND_PENDING"))
-        .isEqualTo(ALL_FAILED_AND_PENDING);
+        assertThat(RestoreJobProgressFetchPolicy.fromString("all_failed_and_pending")).isEqualTo(ALL_FAILED_AND_PENDING);
+        assertThat(RestoreJobProgressFetchPolicy.fromString("ALL_FAILED_and_pending")).isEqualTo(ALL_FAILED_AND_PENDING);
+        assertThat(RestoreJobProgressFetchPolicy.fromString("ALL_FAILED_AND_PENDING")).isEqualTo(ALL_FAILED_AND_PENDING);
 
-        assertThat(RestoreJobProgressFetchPolicy.fromString("all"))
-        .isEqualTo(ALL);
-        assertThat(RestoreJobProgressFetchPolicy.fromString("ALL"))
-        .isEqualTo(ALL);
+        assertThat(RestoreJobProgressFetchPolicy.fromString("all")).isEqualTo(ALL);
+        assertThat(RestoreJobProgressFetchPolicy.fromString("ALL")).isEqualTo(ALL);
     }
 
     @Test
     void testFromStringFails()
     {
-        assertThatThrownBy(() -> RestoreJobProgressFetchPolicy.fromString("unknown"))
-        .isExactlyInstanceOf(IllegalArgumentException.class)
-        .hasMessage("No RestoreJobProgressFetchPolicy found for unknown");
+        assertThatThrownBy(() -> RestoreJobProgressFetchPolicy.fromString("unknown")).isExactlyInstanceOf(IllegalArgumentException.class)
+                                                                                     .hasMessage("No RestoreJobProgressFetchPolicy found for unknown");
     }
 }

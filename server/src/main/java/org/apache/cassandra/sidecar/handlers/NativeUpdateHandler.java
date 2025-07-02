@@ -18,37 +18,34 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
-import java.util.Set;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Collections;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
 import static org.apache.cassandra.sidecar.modules.ApiModule.OK_STATUS;
-
 
 /**
  * Handler for starting or stopping native transport on a Cassandra node.
  * <p>
- * Expects a JSON body:
- * { "state": "start" }  or  { "state": "stop" }
+ * Expects a JSON body: { "state": "start" } or { "state": "stop" }
  * </p>
  */
 @Singleton
 public class NativeUpdateHandler extends NodeCommandHandler implements AccessProtected
 {
     @Inject
-    public NativeUpdateHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools)
+    public NativeUpdateHandler(InstanceMetadataFetcher metadataFetcher,
+                               ExecutorPools executorPools)
     {
         super(metadataFetcher, executorPools, null);
     }
@@ -66,23 +63,24 @@ public class NativeUpdateHandler extends NodeCommandHandler implements AccessPro
                                   SocketAddress remoteAddress,
                                   NodeCommandRequestPayload request)
     {
-        StorageOperations storageOps = metadataFetcher.delegate(host).storageOperations();
+        StorageOperations storageOps = metadataFetcher.delegate(host)
+                                                      .storageOperations();
 
-        executorPools.service().runBlocking(() -> {
-            switch (request.state())
-            {
-                case START:
-                    storageOps.startNativeTransport();
-                    break;
-                case STOP:
-                    storageOps.stopNativeTransport();
-                    break;
-                default:
-                    throw new IllegalStateException("Unknown state: " + request.state());
-            }
-        })
+        executorPools.service()
+                     .runBlocking(() -> {
+                         switch (request.state())
+                         {
+                             case START :
+                                 storageOps.startNativeTransport();
+                                 break;
+                             case STOP :
+                                 storageOps.stopNativeTransport();
+                                 break;
+                             default :
+                                 throw new IllegalStateException("Unknown state: " + request.state());
+                         }
+                     })
                      .onSuccess(ignored -> context.json(OK_STATUS))
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 }
-

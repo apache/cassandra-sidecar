@@ -55,7 +55,8 @@ public class StreamConsumerWriteStream implements WriteStream<Buffer>
     }
 
     @Override
-    public void write(Buffer data, Handler<AsyncResult<Void>> handler)
+    public void write(Buffer data,
+                      Handler<AsyncResult<Void>> handler)
     {
         streamConsumer.onRead(new VertxStreamBuffer(data));
         if (handler != null)

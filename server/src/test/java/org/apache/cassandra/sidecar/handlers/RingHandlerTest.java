@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -94,7 +95,8 @@ class RingHandlerTest
     void after() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -102,7 +104,7 @@ class RingHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "i_❤_u", "invalid with spaces", "... is not allowed" })
+    @ValueSource(strings = { "i_❤_u", "invalid with spaces", "... is not allowed"})
     void testInvalidKeyspace(String keyspace)
     {
         VertxTestContext context = new VertxTestContext();
@@ -121,13 +123,12 @@ class RingHandlerTest
             RingResponse response = new RingResponse(ringSize);
             for (int i = 1; i <= ringSize; i++)
             {
-                RingEntry.Builder builder = new RingEntry.Builder()
-                                            .address("127.0.0." + i)
-                                            .hostId("hostId" + i)
-                                            .datacenter("dc1")
-                                            .state("Normal")
-                                            .status("Up")
-                                            .token(String.valueOf(i));
+                RingEntry.Builder builder = new RingEntry.Builder().address("127.0.0." + i)
+                                                                   .hostId("hostId" + i)
+                                                                   .datacenter("dc1")
+                                                                   .state("Normal")
+                                                                   .status("Up")
+                                                                   .token(String.valueOf(i));
                 response.add(builder.build());
             }
             return response;
@@ -172,7 +173,8 @@ class RingHandlerTest
               .send(context.succeeding(response -> {
                   JsonObject error = response.bodyAsJsonObject();
                   assertThat(error.getInteger("code")).isEqualTo(500);
-                  assertThat(error.getString("message").contains(errorMessage));
+                  assertThat(error.getString("message")
+                                  .contains(errorMessage));
 
                   context.completeNow();
               }));
@@ -193,7 +195,8 @@ class RingHandlerTest
                   JsonObject error = response.bodyAsJsonObject();
                   assertThat(error.getInteger("code")).isEqualTo(503);
                   assertThat(error.getString("status")).isEqualTo("Service Unavailable");
-                  assertThat(error.getString("message").contains(errorMessage));
+                  assertThat(error.getString("message")
+                                  .contains(errorMessage));
 
                   context.completeNow();
               }));

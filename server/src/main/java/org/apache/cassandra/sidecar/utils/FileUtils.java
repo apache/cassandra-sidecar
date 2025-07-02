@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.utils;
 import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -67,7 +66,7 @@ public class FileUtils
 
     public static long mbStringToBytes(String str)
     {
-        return Long.parseLong(str) * (1 << 20);  // note the prop name uses 'mb' but Cassandra parses as MiB
+        return Long.parseLong(str) * (1 << 20); // note the prop name uses 'mb' but Cassandra parses as MiB
     }
 
     @Nullable
@@ -90,14 +89,14 @@ public class FileUtils
 
         switch (unit)
         {
-            case "GiB":
+            case "GiB" :
                 return 1 << 30;
-            case "MiB":
+            case "MiB" :
                 return 1 << 20;
-            case "KiB":
+            case "KiB" :
                 return 1024;
-            case "":
-            case "B":
+            case "" :
+            case "B" :
                 return 1;
         }
         throw new IllegalStateException("Unexpected data storage unit: " + unit);

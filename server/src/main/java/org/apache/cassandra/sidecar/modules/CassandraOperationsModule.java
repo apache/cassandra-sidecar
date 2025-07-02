@@ -173,13 +173,14 @@ public class CassandraOperationsModule extends AbstractModule
     {
         return factory.builderForRoute()
                       .handler(validateTableExistenceHandler)
-                      .handler(tableStatsHandler).build();
+                      .handler(tableStatsHandler)
+                      .build();
     }
 
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.UpdateNodeGossipStateRouteKey.class)
     VertxRoute cassandraChangeGossipStateRoute(RouteBuilder.Factory factory,
-                                    GossipUpdateHandler nodeGossipHandler)
+                                               GossipUpdateHandler nodeGossipHandler)
     {
         return factory.builderForRoute()
                       .setBodyHandler(true)
@@ -190,7 +191,7 @@ public class CassandraOperationsModule extends AbstractModule
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.UpdateNodeNativeStateRouteKey.class)
     VertxRoute cassandraChangeNativeStateRoute(RouteBuilder.Factory factory,
-                                    NativeUpdateHandler nodeNativeHandler)
+                                               NativeUpdateHandler nodeNativeHandler)
     {
         return factory.builderForRoute()
                       .setBodyHandler(true)

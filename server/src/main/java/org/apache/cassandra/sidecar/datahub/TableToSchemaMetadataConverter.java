@@ -20,8 +20,11 @@ package org.apache.cassandra.sidecar.datahub;
 
 import java.util.Map;
 import java.util.stream.Stream;
+
 import com.google.common.collect.ImmutableMap;
+
 import org.apache.commons.codec.digest.DigestUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,42 +61,66 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
 
     protected static final long VERSION = 1L;
 
-    protected static final SchemaFieldDataType.Type ARRAY   = SchemaFieldDataType.Type.create(new ArrayType());
+    protected static final SchemaFieldDataType.Type ARRAY = SchemaFieldDataType.Type.create(new ArrayType());
     protected static final SchemaFieldDataType.Type BOOLEAN = SchemaFieldDataType.Type.create(new BooleanType());
-    protected static final SchemaFieldDataType.Type BYTES   = SchemaFieldDataType.Type.create(new BytesType());
-    protected static final SchemaFieldDataType.Type DATE    = SchemaFieldDataType.Type.create(new DateType());
-    protected static final SchemaFieldDataType.Type MAP     = SchemaFieldDataType.Type.create(new MapType());
-    protected static final SchemaFieldDataType.Type NULL    = SchemaFieldDataType.Type.create(new NullType());
-    protected static final SchemaFieldDataType.Type NUMBER  = SchemaFieldDataType.Type.create(new NumberType());
-    protected static final SchemaFieldDataType.Type STRING  = SchemaFieldDataType.Type.create(new StringType());
-    protected static final SchemaFieldDataType.Type TIME    = SchemaFieldDataType.Type.create(new TimeType());
+    protected static final SchemaFieldDataType.Type BYTES = SchemaFieldDataType.Type.create(new BytesType());
+    protected static final SchemaFieldDataType.Type DATE = SchemaFieldDataType.Type.create(new DateType());
+    protected static final SchemaFieldDataType.Type MAP = SchemaFieldDataType.Type.create(new MapType());
+    protected static final SchemaFieldDataType.Type NULL = SchemaFieldDataType.Type.create(new NullType());
+    protected static final SchemaFieldDataType.Type NUMBER = SchemaFieldDataType.Type.create(new NumberType());
+    protected static final SchemaFieldDataType.Type STRING = SchemaFieldDataType.Type.create(new StringType());
+    protected static final SchemaFieldDataType.Type TIME = SchemaFieldDataType.Type.create(new TimeType());
 
-    protected static final Map<DataType.Name, SchemaFieldDataType.Type> TYPES = new ImmutableMap.Builder<DataType.Name, SchemaFieldDataType.Type>()
-            .put(DataType.Name.ASCII,     STRING)
-            .put(DataType.Name.BIGINT,    NUMBER)
-            .put(DataType.Name.BLOB,      BYTES)
-            .put(DataType.Name.BOOLEAN,   BOOLEAN)
-            .put(DataType.Name.COUNTER,   NUMBER)
-            .put(DataType.Name.DATE,      DATE)
-            .put(DataType.Name.DECIMAL,   NUMBER)
-            .put(DataType.Name.DOUBLE,    NUMBER)
-            .put(DataType.Name.FLOAT,     NUMBER)
-            .put(DataType.Name.INET,      STRING)
-            .put(DataType.Name.INT,       NUMBER)
-            .put(DataType.Name.LIST,      ARRAY)
-            .put(DataType.Name.MAP,       MAP)
-            .put(DataType.Name.SET,       ARRAY)
-            .put(DataType.Name.SMALLINT,  NUMBER)
-            .put(DataType.Name.TEXT,      STRING)
-            .put(DataType.Name.TIME,      TIME)
-            .put(DataType.Name.TIMESTAMP, DATE)
-            .put(DataType.Name.TIMEUUID,  STRING)
-            .put(DataType.Name.TINYINT,   NUMBER)
-            .put(DataType.Name.TUPLE,     ARRAY)
-            .put(DataType.Name.UUID,      STRING)
-            .put(DataType.Name.VARCHAR,   STRING)
-            .put(DataType.Name.VARINT,    NUMBER)
-            .build();
+    protected static final Map<DataType.Name, SchemaFieldDataType.Type> TYPES =
+                                                                              new ImmutableMap.Builder<DataType.Name, SchemaFieldDataType.Type>().put(
+                                                                                      DataType.Name.ASCII, STRING)
+                                                                                                                                                 .put(DataType.Name.BIGINT,
+                                                                                                                                                         NUMBER)
+                                                                                                                                                 .put(DataType.Name.BLOB,
+                                                                                                                                                         BYTES)
+                                                                                                                                                 .put(DataType.Name.BOOLEAN,
+                                                                                                                                                         BOOLEAN)
+                                                                                                                                                 .put(DataType.Name.COUNTER,
+                                                                                                                                                         NUMBER)
+                                                                                                                                                 .put(DataType.Name.DATE,
+                                                                                                                                                         DATE)
+                                                                                                                                                 .put(DataType.Name.DECIMAL,
+                                                                                                                                                         NUMBER)
+                                                                                                                                                 .put(DataType.Name.DOUBLE,
+                                                                                                                                                         NUMBER)
+                                                                                                                                                 .put(DataType.Name.FLOAT,
+                                                                                                                                                         NUMBER)
+                                                                                                                                                 .put(DataType.Name.INET,
+                                                                                                                                                         STRING)
+                                                                                                                                                 .put(DataType.Name.INT,
+                                                                                                                                                         NUMBER)
+                                                                                                                                                 .put(DataType.Name.LIST,
+                                                                                                                                                         ARRAY)
+                                                                                                                                                 .put(DataType.Name.MAP,
+                                                                                                                                                         MAP)
+                                                                                                                                                 .put(DataType.Name.SET,
+                                                                                                                                                         ARRAY)
+                                                                                                                                                 .put(DataType.Name.SMALLINT,
+                                                                                                                                                         NUMBER)
+                                                                                                                                                 .put(DataType.Name.TEXT,
+                                                                                                                                                         STRING)
+                                                                                                                                                 .put(DataType.Name.TIME,
+                                                                                                                                                         TIME)
+                                                                                                                                                 .put(DataType.Name.TIMESTAMP,
+                                                                                                                                                         DATE)
+                                                                                                                                                 .put(DataType.Name.TIMEUUID,
+                                                                                                                                                         STRING)
+                                                                                                                                                 .put(DataType.Name.TINYINT,
+                                                                                                                                                         NUMBER)
+                                                                                                                                                 .put(DataType.Name.TUPLE,
+                                                                                                                                                         ARRAY)
+                                                                                                                                                 .put(DataType.Name.UUID,
+                                                                                                                                                         STRING)
+                                                                                                                                                 .put(DataType.Name.VARCHAR,
+                                                                                                                                                         STRING)
+                                                                                                                                                 .put(DataType.Name.VARINT,
+                                                                                                                                                         NUMBER)
+                                                                                                                                                 .build();
 
     public TableToSchemaMetadataConverter(@NotNull IdentifiersProvider identifiers)
     {
@@ -107,9 +134,10 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
         String urn = identifiers.urnDataset(table);
 
         SchemaFieldArray fields = new SchemaFieldArray();
-        table.getColumns().stream()
-                .flatMap(this::convertColumn)
-                .forEach(fields::add);
+        table.getColumns()
+             .stream()
+             .flatMap(this::convertColumn)
+             .forEach(fields::add);
 
         // Use {@code CREATE TABLE} CQL statement with all associated indexes and views but without
         // UDTs as the native schema; using {@code asCQLQuery()} does not allow formatting produced CQL
@@ -118,20 +146,18 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
         schema.setOtherSchema(new OtherSchema().setRawSchema(cql));
         String hash = DigestUtils.sha1Hex(cql);
 
-        SchemaMetadata aspect = new SchemaMetadata()
-                .setSchemaName(table.getName())
-                .setPlatform(new DataPlatformUrn(identifiers.urnDataPlatform()))
-                .setVersion(VERSION)
-                .setFields(fields)
-                .setPlatformSchema(schema)
-                .setHash(hash);
+        SchemaMetadata aspect = new SchemaMetadata().setSchemaName(table.getName())
+                                                    .setPlatform(new DataPlatformUrn(identifiers.urnDataPlatform()))
+                                                    .setVersion(VERSION)
+                                                    .setFields(fields)
+                                                    .setPlatformSchema(schema)
+                                                    .setHash(hash);
 
         return wrap(urn, aspect);
     }
 
     /**
-     * Protected method for converting metadata of a single Cassandra column
-     * into a non-empty {@link Stream} of DataHub schema field definitions
+     * Protected method for converting metadata of a single Cassandra column into a non-empty {@link Stream} of DataHub schema field definitions
      *
      * @param column metadata of a single Cassandra column
      * @return non-empty {@link Stream} of DataHub schema field definitions
@@ -141,15 +167,16 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
     {
         DataType type = column.getType();
         AbstractTableMetadata table = column.getParent();
-        boolean partition = table.getPartitionKey().contains(column);
-        boolean key = partition || table.getClusteringColumns().contains(column);  // Only check clustering key if needed
+        boolean partition = table.getPartitionKey()
+                                 .contains(column);
+        boolean key = partition || table.getClusteringColumns()
+                                        .contains(column); // Only check clustering key if needed
 
         return convertType(column.getName(), type, partition, key);
     }
 
     /**
-     * Protected method for converting a single Cassandra data type
-     * into a non-empty {@link Stream} of DataHub schema field definitions
+     * Protected method for converting a single Cassandra data type into a non-empty {@link Stream} of DataHub schema field definitions
      *
      * @param name name of the field
      * @param type type of the field
@@ -167,31 +194,32 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
         {
             UserType udt = (UserType) type;
 
-            return udt.getFieldNames().stream()
-                    .flatMap(field -> convertType(name + DELIMITER + field, udt.getFieldType(field), partition, key));
+            return udt.getFieldNames()
+                      .stream()
+                      .flatMap(field -> convertType(name + DELIMITER + field, udt.getFieldType(field), partition, key));
         }
         else
         {
             DataType.Name cassandraType = type.getName();
             SchemaFieldDataType datahubType = convertType(cassandraType);
-            String description = datahubType.getType().isNullType()
-                    ? "Unknown Cassandra data type " + cassandraType
-                    : null;  // Column-level comments are not supported by Cassandra
+            String description = datahubType.getType()
+                                            .isNullType() ? "Unknown Cassandra data type " + cassandraType : null; // Column-level comments are not supported by
+                                                                                                                   // Cassandra
 
-            return Stream.of(new SchemaField()
-                    .setFieldPath(name)
-                    .setNullable(!partition)  // Everything is potentially nullable in Cassandra except for the partition key
-                    .setDescription(description, SetMode.REMOVE_IF_NULL)
-                    .setType(datahubType)
-                    .setNativeDataType(cassandraType.toString().toLowerCase())
-                    .setIsPartitioningKey(partition)
-                    .setIsPartOfKey(key));
+            return Stream.of(new SchemaField().setFieldPath(name)
+                                              .setNullable(!partition) // Everything is potentially nullable in Cassandra except for the partition key
+                                              .setDescription(description, SetMode.REMOVE_IF_NULL)
+                                              .setType(datahubType)
+                                              .setNativeDataType(cassandraType.toString()
+                                                                              .toLowerCase())
+                                              .setIsPartitioningKey(partition)
+                                              .setIsPartOfKey(key));
         }
     }
 
     /**
-     * Protected method for converting data types used by Cassandra into the ones recognized by DataHub,
-     * uses {@code NullType} to indicate an unknown or unsupported data type
+     * Protected method for converting data types used by Cassandra into the ones recognized by DataHub, uses {@code NullType} to indicate an unknown or
+     * unsupported data type
      *
      * @param cassandraType Cassandra data type
      * @return DataHub data type, or {@code NullType} if unknown/unsupported
@@ -202,11 +230,10 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
         SchemaFieldDataType.Type datahubType = TYPES.get(cassandraType);
         if (datahubType == null)
         {
-            datahubType = NULL;  // Use the null type as an indicator of an unknown data type
+            datahubType = NULL; // Use the null type as an indicator of an unknown data type
             LOGGER.error("Encountered an unknown data type " + cassandraType);
         }
 
-        return new SchemaFieldDataType()
-                .setType(datahubType);
+        return new SchemaFieldDataType().setType(datahubType);
     }
 }

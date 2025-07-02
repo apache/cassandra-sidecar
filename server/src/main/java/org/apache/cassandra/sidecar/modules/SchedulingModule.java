@@ -57,26 +57,34 @@ public class SchedulingModule extends AbstractModule
                                                      MultiBindingTypeResolver<PeriodicTask> resolver)
     {
         PeriodicTaskExecutor periodicTaskExecutor = new PeriodicTaskExecutor(executorPools, clusterLease);
-        resolver.resolve().values().forEach(pt -> {
-            LOGGER.debug("Deploying periodic task: {}", pt.getClass().getCanonicalName());
-            try
-            {
-                pt.deploy(vertx, periodicTaskExecutor);
-            }
-            catch (Throwable cause)
-            {
-                throw new RuntimeException("Failed to deploy periodic task: " + pt.getClass().getCanonicalName(), cause);
-            }
-        });
+        resolver.resolve()
+                .values()
+                .forEach(pt -> {
+                    LOGGER.debug("Deploying periodic task: {}", pt.getClass()
+                                                                  .getCanonicalName());
+                    try
+                    {
+                        pt.deploy(vertx, periodicTaskExecutor);
+                    }
+                    catch (Throwable cause)
+                    {
+                        throw new RuntimeException("Failed to deploy periodic task: " + pt.getClass()
+                                                                                          .getCanonicalName(),
+                                cause);
+                    }
+                });
         return periodicTaskExecutor;
     }
 
     @ProvidesIntoMap
     @KeyClassMapKey(PeriodicTaskMapKeys.KeyStoreCheckPeriodicTaskKey.class)
-    PeriodicTask keyStoreCheckPeriodicTask(Vertx vertx, Provider<Server> server, SidecarConfiguration configuration)
+    PeriodicTask keyStoreCheckPeriodicTask(Vertx vertx,
+                                           Provider<Server> server,
+                                           SidecarConfiguration configuration)
     {
-        Function<Long, Future<Boolean>> updateServerSSLOptionsFunction =
-        lastModifiedTime -> server.get().updateSSLOptions(lastModifiedTime).compose(v -> Future.succeededFuture(true));
+        Function<Long, Future<Boolean>> updateServerSSLOptionsFunction = lastModifiedTime -> server.get()
+                                                                                                   .updateSSLOptions(lastModifiedTime)
+                                                                                                   .compose(v -> Future.succeededFuture(true));
 
         return KeyStoreCheckPeriodicTask.forServer(vertx, configuration, updateServerSSLOptionsFunction);
     }

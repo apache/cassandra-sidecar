@@ -37,11 +37,8 @@ public class InsufficientStorageException extends IOException
                                         long usableInBytes,
                                         long requiredInBytes)
     {
-        super("FileStore has insufficient space. FileStore: " + fileStoreName
-              + ", path: " + path
-              + ", total: " + totalInBytes
-              + ", usable (for JVM): " + usableInBytes
-              + ", required: " + requiredInBytes);
+        super("FileStore has insufficient space. FileStore: " + fileStoreName + ", path: " + path + ", total: " + totalInBytes + ", usable (for JVM): "
+                + usableInBytes + ", required: " + requiredInBytes);
         this.totalInBytes = totalInBytes;
         this.path = path;
         this.usableInBytes = usableInBytes;

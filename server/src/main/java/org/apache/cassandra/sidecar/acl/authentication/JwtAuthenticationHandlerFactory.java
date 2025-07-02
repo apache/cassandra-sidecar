@@ -18,20 +18,18 @@
 
 package org.apache.cassandra.sidecar.acl.authentication;
 
-import java.util.Map;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerInternal;
+import java.util.Map;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 
 /**
- * {@link AuthenticationHandlerFactory} implementation for providing JWT authentication handler
- * {@link ReloadingJwtAuthenticationHandler}. {@link ReloadingJwtAuthenticationHandler} uses Vert.x's
- * {@link io.vertx.ext.web.handler.impl.OAuth2AuthHandlerImpl} which does
+ * {@link AuthenticationHandlerFactory} implementation for providing JWT authentication handler {@link ReloadingJwtAuthenticationHandler}.
+ * {@link ReloadingJwtAuthenticationHandler} uses Vert.x's {@link io.vertx.ext.web.handler.impl.OAuth2AuthHandlerImpl} which does
  * {@link io.vertx.ext.auth.authentication.TokenCredentials} validation.
  */
 @Singleton
@@ -51,14 +49,12 @@ public class JwtAuthenticationHandlerFactory implements AuthenticationHandlerFac
     @Override
     public AuthenticationHandlerInternal create(Vertx vertx,
                                                 AccessControlConfiguration accessControlConfiguration,
-                                                Map<String, String> parameters) throws ConfigurationException
+                                                Map<String, String> parameters)
+            throws ConfigurationException
     {
         JwtParameters jwtParameters = parameterParser(parameters);
 
-        return new ReloadingJwtAuthenticationHandler(vertx,
-                                                     jwtParameters,
-                                                     roleProcessor,
-                                                     periodicTaskExecutor);
+        return new ReloadingJwtAuthenticationHandler(vertx, jwtParameters, roleProcessor, periodicTaskExecutor);
     }
 
     protected JwtParameters parameterParser(Map<String, String> parameters)

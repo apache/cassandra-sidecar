@@ -18,20 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.restore;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
-
-import com.google.common.util.concurrent.Uninterruptibles;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import com.codahale.metrics.SharedMetricRegistries;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -52,6 +38,14 @@ import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -87,7 +81,10 @@ import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
+import com.google.common.util.concurrent.Uninterruptibles;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -142,8 +139,10 @@ public abstract class BaseRestoreJobTests
         sendRequestAndVerify(HttpMethod.POST, endpoint, requestPayload, responseVerifier);
     }
 
-    protected void postThenComplete(VertxTestContext context, String endpoint,
-                                    JsonObject requestPayload, Consumer<AsyncResult<HttpResponse<Buffer>>> assertions)
+    protected void postThenComplete(VertxTestContext context,
+                                    String endpoint,
+                                    JsonObject requestPayload,
+                                    Consumer<AsyncResult<HttpResponse<Buffer>>> assertions)
     {
         sendRequestAndVerify(HttpMethod.POST, endpoint, requestPayload, asyncResult -> {
             context.verify(() -> assertions.accept(asyncResult));
@@ -151,7 +150,9 @@ public abstract class BaseRestoreJobTests
         });
     }
 
-    protected void getThenComplete(VertxTestContext context, String endpoint, Consumer<AsyncResult<HttpResponse<Buffer>>> assertions)
+    protected void getThenComplete(VertxTestContext context,
+                                   String endpoint,
+                                   Consumer<AsyncResult<HttpResponse<Buffer>>> assertions)
     {
         sendRequestAndVerify(HttpMethod.GET, endpoint, null, asyncResult -> {
             context.verify(() -> assertions.accept(asyncResult));
@@ -183,7 +184,8 @@ public abstract class BaseRestoreJobTests
         SharedMetricRegistries.clear();
         CountDownLatch latch = new CountDownLatch(1);
         client.close();
-        server.close().onComplete(ignored -> latch.countDown());
+        server.close()
+              .onComplete(ignored -> latch.countDown());
         Uninterruptibles.awaitUninterruptibly(latch, 10, TimeUnit.SECONDS);
     }
 
@@ -254,7 +256,8 @@ public abstract class BaseRestoreJobTests
             }
 
             @Override
-            public RestoreJob create(CreateRestoreJobRequestPayload payload, QualifiedTableName qualifiedTableName)
+            public RestoreJob create(CreateRestoreJobRequestPayload payload,
+                                     QualifiedTableName qualifiedTableName)
             {
                 return createFunc.apply(payload);
             }
@@ -267,7 +270,8 @@ public abstract class BaseRestoreJobTests
             }
 
             @Override
-            public void abort(UUID jobId, String reason)
+            public void abort(UUID jobId,
+                              String reason)
             {
                 // do nothing
             }
@@ -295,7 +299,9 @@ public abstract class BaseRestoreJobTests
             }
 
             @Override
-            public List<RestoreSlice> selectByJobByBucketByTokenRange(RestoreJob restoreJob, short bucketId, TokenRange range)
+            public List<RestoreSlice> selectByJobByBucketByTokenRange(RestoreJob restoreJob,
+                                                                      short bucketId,
+                                                                      TokenRange range)
             {
                 throw new UnsupportedOperationException("Not being tested here");
             }
@@ -325,7 +331,8 @@ public abstract class BaseRestoreJobTests
             }
 
             @Override
-            public List<RestoreRange> findAll(UUID jobId, short bucketId)
+            public List<RestoreRange> findAll(UUID jobId,
+                                              short bucketId)
             {
                 return findAllFunc.apply(jobId);
             }
@@ -344,8 +351,10 @@ public abstract class BaseRestoreJobTests
             }
 
             @Override
-            public RestoreJobProgressTracker.Status trySubmit(InstanceMetadata instance, RestoreRange range,
-                                                              RestoreJob restoreJob) throws RestoreJobFatalException
+            public RestoreJobProgressTracker.Status trySubmit(InstanceMetadata instance,
+                                                              RestoreRange range,
+                                                              RestoreJob restoreJob)
+                    throws RestoreJobFatalException
             {
                 return submitFunc.apply(null);
             }
@@ -355,7 +364,9 @@ public abstract class BaseRestoreJobTests
         {
             Supplier<TokenRangeReplicasResponse> topologySupplier;
 
-            public TestRingTopologyRefresher(InstanceMetadataFetcher metadataFetcher, SidecarConfiguration config, ExecutorPools executorPools)
+            public TestRingTopologyRefresher(InstanceMetadataFetcher metadataFetcher,
+                                             SidecarConfiguration config,
+                                             ExecutorPools executorPools)
             {
                 super(metadataFetcher, config, executorPools);
             }
@@ -396,10 +407,7 @@ public abstract class BaseRestoreJobTests
                                                              ExecutorPools executorPools,
                                                              RestoreProcessor restoreProcessor)
         {
-            return new TestRestoreJobManagerGroup(configuration,
-                                                  instancesMetadata,
-                                                  executorPools,
-                                                  restoreProcessor);
+            return new TestRestoreJobManagerGroup(configuration, instancesMetadata, executorPools, restoreProcessor);
         }
 
         @Provides

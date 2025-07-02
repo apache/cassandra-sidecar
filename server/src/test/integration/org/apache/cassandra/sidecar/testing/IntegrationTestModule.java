@@ -18,18 +18,17 @@
 
 package org.apache.cassandra.sidecar.testing;
 
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.datastax.driver.core.Session;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import io.vertx.core.Vertx;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -68,7 +67,6 @@ import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.jetbrains.annotations.NotNull;
-
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
 /**
@@ -107,30 +105,28 @@ public class IntegrationTestModule extends AbstractModule
     @Singleton
     public SidecarConfiguration configuration(CoordinationConfiguration clusterLeaseClaimTaskConfiguration)
     {
-        ServiceConfiguration conf
-        = TestServiceConfiguration.builder()
-                                  .schemaKeyspaceConfiguration(SchemaKeyspaceConfigurationImpl.builder()
-                                                                                              .isEnabled(true)
-                                                                                              .build())
-                                  .coordinationConfiguration(clusterLeaseClaimTaskConfiguration)
-                                  .sstableUploadConfiguration(new SSTableUploadConfigurationImpl(0F))
-                                  .build();
-        PeriodicTaskConfiguration healthCheckConfiguration
-        = new PeriodicTaskConfigurationImpl(true,
-                                            MillisecondBoundConfiguration.parse("50ms"),
-                                            MillisecondBoundConfiguration.parse("500ms"));
+        ServiceConfiguration conf = TestServiceConfiguration.builder()
+                                                            .schemaKeyspaceConfiguration(SchemaKeyspaceConfigurationImpl.builder()
+                                                                                                                        .isEnabled(true)
+                                                                                                                        .build())
+                                                            .coordinationConfiguration(clusterLeaseClaimTaskConfiguration)
+                                                            .sstableUploadConfiguration(new SSTableUploadConfigurationImpl(0F))
+                                                            .build();
+        PeriodicTaskConfiguration healthCheckConfiguration = new PeriodicTaskConfigurationImpl(true, MillisecondBoundConfiguration.parse("50ms"),
+                MillisecondBoundConfiguration.parse("500ms"));
 
-        SslConfiguration sslConfiguration =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .useOpenSsl(true)
-                            .handshakeTimeout(SecondBoundConfiguration.parse("10s"))
-                            .clientAuth("REQUEST")
-                            .keystore(new KeyStoreConfigurationImpl(serverKeystorePath.toAbsolutePath().toString(),
-                                                                    "password"))
-                            .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(),
-                                                                      "password"))
-                            .build();
+        SslConfiguration sslConfiguration = SslConfigurationImpl.builder()
+                                                                .enabled(true)
+                                                                .useOpenSsl(true)
+                                                                .handshakeTimeout(SecondBoundConfiguration.parse("10s"))
+                                                                .clientAuth("REQUEST")
+                                                                .keystore(new KeyStoreConfigurationImpl(serverKeystorePath.toAbsolutePath()
+                                                                                                                          .toString(),
+                                                                        "password"))
+                                                                .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath()
+                                                                                                                        .toString(),
+                                                                        "password"))
+                                                                .build();
         AccessControlConfiguration accessControlConfiguration = accessControlConfiguration();
         return SidecarConfigurationImpl.builder()
                                        .sslConfiguration(sslConfiguration)
@@ -140,7 +136,9 @@ public class IntegrationTestModule extends AbstractModule
                                        .build();
     }
 
-    static class TestClusterLeaseClaimTaskKey implements ClassKey {}
+    static class TestClusterLeaseClaimTaskKey implements ClassKey
+    {
+    }
     @ProvidesIntoMap
     @KeyClassMapKey(TestClusterLeaseClaimTaskKey.class)
     public PeriodicTask clusterLeaseClaimTask(ServiceConfiguration serviceConfiguration,
@@ -149,22 +147,22 @@ public class IntegrationTestModule extends AbstractModule
                                               ClusterLease clusterLease,
                                               SidecarMetrics metrics)
     {
-        return new ClusterLeaseClaimTask(serviceConfiguration,
-                                         electorateMembership,
-                                         accessor,
-                                         clusterLease,
-                                         metrics)
+        return new ClusterLeaseClaimTask(serviceConfiguration, electorateMembership, accessor, clusterLease, metrics)
         {
             @Override
             public DurationSpec delay()
             {
-                return serviceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().executeInterval();
+                return serviceConfiguration.coordinationConfiguration()
+                                           .clusterLeaseClaimConfiguration()
+                                           .executeInterval();
             }
 
             @Override
             public DurationSpec initialDelay()
             {
-                return serviceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay();
+                return serviceConfiguration.coordinationConfiguration()
+                                           .clusterLeaseClaimConfiguration()
+                                           .initialDelay();
             }
 
             @Override
@@ -181,9 +179,9 @@ public class IntegrationTestModule extends AbstractModule
     }
 
     /**
-     * This is the example of replacing a bound object. In the resolver below, the ClusterLeaseClaimTask from production code is removed and replaced by
-     * the ClusterLeaseClaimTask provided in this module.
-     * See {@link #clusterLeaseClaimTask(ServiceConfiguration, ElectorateMembership, SidecarLeaseDatabaseAccessor, ClusterLease, SidecarMetrics)}
+     * This is the example of replacing a bound object. In the resolver below, the ClusterLeaseClaimTask from production code is removed and replaced by the
+     * ClusterLeaseClaimTask provided in this module. See
+     * {@link #clusterLeaseClaimTask(ServiceConfiguration, ElectorateMembership, SidecarLeaseDatabaseAccessor, ClusterLease, SidecarMetrics)}
      */
     @Provides
     @Singleton
@@ -205,12 +203,15 @@ public class IntegrationTestModule extends AbstractModule
     @Singleton
     public CoordinationConfiguration clusterLeaseClaimTaskConfiguration()
     {
-        ClusterLeaseClaimConfigurationImpl configuration
-        = ClusterLeaseClaimConfigurationImpl.builder()
-                                            .overridePeriodicTaskConfiguration(b -> b.enabled(true)
-                                                                                     .initialDelay(MillisecondBoundConfiguration.parse("1s"))
-                                                                                     .executeInterval(MillisecondBoundConfiguration.parse("1s")))
-                                            .build();
+        ClusterLeaseClaimConfigurationImpl configuration = ClusterLeaseClaimConfigurationImpl.builder()
+                                                                                             .overridePeriodicTaskConfiguration(b -> b.enabled(true)
+                                                                                                                                      .initialDelay(
+                                                                                                                                              MillisecondBoundConfiguration.parse(
+                                                                                                                                                      "1s"))
+                                                                                                                                      .executeInterval(
+                                                                                                                                              MillisecondBoundConfiguration.parse(
+                                                                                                                                                      "1s")))
+                                                                                             .build();
         return new CoordinationConfigurationImpl(configuration);
     }
 
@@ -239,7 +240,8 @@ public class IntegrationTestModule extends AbstractModule
                 return get();
             }
         };
-        vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
+        vertx.eventBus()
+             .localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
         return cqlSessionProvider;
     }
 
@@ -252,21 +254,12 @@ public class IntegrationTestModule extends AbstractModule
                 put("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
             }
         };
-        ParameterizedClassConfiguration mTLSConfig
-        = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory",
-                                                  params);
-        ParameterizedClassConfiguration rbacConfig
-        = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider",
-                                                  Collections.emptyMap());
-        return new AccessControlConfigurationImpl(true,
-                                                  Collections.singletonList(mTLSConfig),
-                                                  rbacConfig,
-                                                  Collections.singleton(ADMIN_IDENTITY),
-                                                  new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("1s"),
-                                                                             100,
-                                                                             true,
-                                                                             5,
-                                                                             MillisecondBoundConfiguration.parse("1s")));
+        ParameterizedClassConfiguration mTLSConfig = new ParameterizedClassConfigurationImpl(
+                "org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory", params);
+        ParameterizedClassConfiguration rbacConfig = new ParameterizedClassConfigurationImpl(
+                "org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider", Collections.emptyMap());
+        return new AccessControlConfigurationImpl(true, Collections.singletonList(mTLSConfig), rbacConfig, Collections.singleton(ADMIN_IDENTITY),
+                new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("1s"), 100, true, 5, MillisecondBoundConfiguration.parse("1s")));
     }
 
     class WrapperInstancesMetadata implements InstancesMetadata
@@ -279,7 +272,8 @@ public class IntegrationTestModule extends AbstractModule
         public List<InstanceMetadata> instances()
         {
             if (cassandraSidecarTestContext != null && cassandraSidecarTestContext.isClusterBuilt())
-                return cassandraSidecarTestContext.instancesMetadata().instances();
+                return cassandraSidecarTestContext.instancesMetadata()
+                                                  .instances();
             return Collections.emptyList();
         }
 
@@ -293,7 +287,8 @@ public class IntegrationTestModule extends AbstractModule
         @Override
         public InstanceMetadata instanceFromId(int id) throws NoSuchCassandraInstanceException
         {
-            return cassandraSidecarTestContext.instancesMetadata().instanceFromId(id);
+            return cassandraSidecarTestContext.instancesMetadata()
+                                              .instanceFromId(id);
         }
 
         /**
@@ -306,7 +301,8 @@ public class IntegrationTestModule extends AbstractModule
         @Override
         public InstanceMetadata instanceFromHost(String host) throws NoSuchCassandraInstanceException
         {
-            return cassandraSidecarTestContext.instancesMetadata().instanceFromHost(host);
+            return cassandraSidecarTestContext.instancesMetadata()
+                                              .instanceFromHost(host);
         }
     }
 }

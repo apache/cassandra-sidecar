@@ -41,8 +41,7 @@ public interface PeriodicTask extends Task<Void>
     }
 
     /**
-     * Specify the schedule decision of the upcoming run.
-     * The method is evaluated before calling {@link #execute(Promise)}
+     * Specify the schedule decision of the upcoming run. The method is evaluated before calling {@link #execute(Promise)}
      *
      * @return schedule decision. The default is to {@link ScheduleDecision#EXECUTE}.
      */
@@ -53,14 +52,18 @@ public interface PeriodicTask extends Task<Void>
 
     /**
      * Deploy this periodic task to be scheduled on {@link PeriodicTaskExecutor}
-     * <P>Note that this method is called exactly once, iff a periodic task is declared in the guice modules.
+     * <P>
+     * Note that this method is called exactly once, iff a periodic task is declared in the guice modules.
      * {@link org.apache.cassandra.sidecar.modules.SchedulingModule} is responsible for invoking this method in this case.
-     * <p>However, this method is <i>not</i> invoked automatically, if a periodic tasks is not declared in the guice modules,
-     * e.g. it is created dynamically after Sidecar has bootstrapped,
+     * <p>
+     * However, this method is <i>not</i> invoked automatically, if a periodic tasks is not declared in the guice modules, e.g. it is created dynamically after
+     * Sidecar has bootstrapped,
+     *
      * @param vertx vertx
      * @param executor periodic task executor
      */
-    default void deploy(Vertx vertx, PeriodicTaskExecutor executor)
+    default void deploy(Vertx vertx,
+                        PeriodicTaskExecutor executor)
     {
         executor.schedule(this);
     }

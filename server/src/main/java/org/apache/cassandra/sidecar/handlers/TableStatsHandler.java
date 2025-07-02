@@ -44,7 +44,7 @@ public class TableStatsHandler extends AbstractHandler<QualifiedTableName> imple
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the metadata fetcher
-     * @param executorPools   executor pools for blocking executions
+     * @param executorPools executor pools for blocking executions
      */
     @Inject
     protected TableStatsHandler(InstanceMetadataFetcher metadataFetcher,
@@ -70,9 +70,14 @@ public class TableStatsHandler extends AbstractHandler<QualifiedTableName> imple
      * {@inheritDoc}
      */
     @Override
-    protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, String host, SocketAddress remoteAddress, QualifiedTableName tableName)
+    protected void handleInternal(RoutingContext context,
+                                  HttpServerRequest httpRequest,
+                                  String host,
+                                  SocketAddress remoteAddress,
+                                  QualifiedTableName tableName)
     {
-        MetricsOperations operations = metadataFetcher.delegate(host).metricsOperations();
+        MetricsOperations operations = metadataFetcher.delegate(host)
+                                                      .metricsOperations();
         executorPools.service()
                      .executeBlocking(() -> operations.tableStats(tableName))
                      .onSuccess(context::json)

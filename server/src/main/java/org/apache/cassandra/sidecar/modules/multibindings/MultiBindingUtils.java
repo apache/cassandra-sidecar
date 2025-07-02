@@ -34,19 +34,22 @@ public class MultiBindingUtils
 
     /**
      * Create a {@link MapBinder} that uses {@link ClassKey} class as key with the supplied class for value.
-     * <p>Contributing mapbindings from different modules is supported. For example, it is okay to have
-     * both {@code CandyModule} and {@code ChipsModule} both create their own {@code MapBinder<String,
-     * Snack>}, and to each contribute bindings to the snacks map. When that map is injected, it will
-     * contain entries from both modules.
+     * <p>
+     * Contributing mapbindings from different modules is supported. For example, it is okay to have both {@code CandyModule} and {@code ChipsModule} both
+     * create their own {@code MapBinder<String,
+     * Snack>}, and to each contribute bindings to the snacks map. When that map is injected, it will contain entries from both modules.
      *
      * @param binder binder
      * @param valueClass class of the value in the map binder
      * @return map binder
      * @param <V> type of the value
      */
-    public static <V> MapBinder<Class<? extends ClassKey>, V> newClassKeyClassMapBinder(Binder binder, Class<V> valueClass)
+    public static <V> MapBinder<Class<? extends ClassKey>, V> newClassKeyClassMapBinder(Binder binder,
+                                                                                        Class<V> valueClass)
     {
-        TypeLiteral<Class<? extends ClassKey>> keyType = new TypeLiteral<>() {};
+        TypeLiteral<Class<? extends ClassKey>> keyType = new TypeLiteral<>()
+        {
+        };
         TypeLiteral<V> valueType = TypeLiteral.get(valueClass);
         return MapBinder.newMapBinder(binder, keyType, valueType);
     }

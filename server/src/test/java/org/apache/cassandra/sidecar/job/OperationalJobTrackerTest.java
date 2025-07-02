@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import com.datastax.driver.core.utils.UUIDs;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -26,12 +27,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.datastax.driver.core.utils.UUIDs;
-
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
 import static org.apache.cassandra.sidecar.job.OperationalJobTest.createOperationalJob;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -86,9 +83,8 @@ class OperationalJobTrackerTest
         jobTracker.put(job3);
         jobTracker.put(job4);
 
-        assertThat(jobTracker.size())
-        .describedAs("Although the tracker initial size is 3, no job is evicted since all jobs are still running")
-        .isEqualTo(4);
+        assertThat(jobTracker.size()).describedAs("Although the tracker initial size is 3, no job is evicted since all jobs are still running")
+                                     .isEqualTo(4);
         assertThat(jobTracker.get(job1.jobId())).isNotNull();
         assertThat(jobTracker.get(job2.jobId())).isNotNull();
         assertThat(jobTracker.get(job3.jobId())).isNotNull();
@@ -119,8 +115,7 @@ class OperationalJobTrackerTest
 
         Map<UUID, OperationalJob> view = jobTracker.jobsView();
         assertThat(view.size()).isEqualTo(2);
-        assertThatThrownBy(() -> view.put(job3.jobId(), job3))
-        .isExactlyInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> view.put(job3.jobId(), job3)).isExactlyInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
@@ -138,8 +133,10 @@ class OperationalJobTrackerTest
         executorService.shutdown();
         executorService.awaitTermination(5, TimeUnit.SECONDS);
         assertThat(tracker.size()).isEqualTo(one);
-        assertThat(tracker.jobsView().values().iterator().next())
-        .describedAs("Only the last job is kept")
-        .isSameAs(sortedJobs.get(sortedJobs.size() - 1));
+        assertThat(tracker.jobsView()
+                          .values()
+                          .iterator()
+                          .next()).describedAs("Only the last job is kept")
+                                  .isSameAs(sortedJobs.get(sortedJobs.size() - 1));
     }
 }

@@ -29,10 +29,12 @@ public class TableStatsRequest extends JsonRequest<TableStatsResponse>
 {
     /**
      * Constructs a request to retrieve the Cassandra node table stats information
-     * @param keyspace       name of the keyspace in the cluster
-     * @param table          name of the table in the cluster
+     *
+     * @param keyspace name of the keyspace in the cluster
+     * @param table name of the table in the cluster
      */
-    public TableStatsRequest(String keyspace, String table)
+    public TableStatsRequest(String keyspace,
+                             String table)
     {
         super(requestURI(keyspace, table));
     }
@@ -46,11 +48,11 @@ public class TableStatsRequest extends JsonRequest<TableStatsResponse>
         return HttpMethod.GET;
     }
 
-    static String requestURI(String keyspace, String table)
+    static String requestURI(String keyspace,
+                             String table)
     {
-        return ApiEndpointsV1.TABLE_STATS_ROUTE
-               .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
-               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table);
+        return ApiEndpointsV1.TABLE_STATS_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
+                                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table);
     }
 
 }

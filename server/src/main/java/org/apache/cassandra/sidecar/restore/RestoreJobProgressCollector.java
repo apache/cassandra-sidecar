@@ -35,10 +35,12 @@ public interface RestoreJobProgressCollector
      * @param range a range to be restored
      * @param checkResult result of the consistency check
      */
-    void collect(RestoreRange range, ConsistencyVerificationResult checkResult);
+    void collect(RestoreRange range,
+                 ConsistencyVerificationResult checkResult);
 
     /**
      * Produce the {@link RestoreJobProgress} from the collected per range progress
+     *
      * @return restore job progress
      */
     RestoreJobProgress toRestoreJobProgress();

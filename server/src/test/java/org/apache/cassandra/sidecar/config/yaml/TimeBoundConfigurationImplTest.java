@@ -48,10 +48,14 @@ class TimeBoundConfigurationImplTest
     @Test
     void testConversions()
     {
-        assertThat(MillisecondBoundConfiguration.parse(MAX_INT_CONFIG_VALUE + "ms").toMillis()).isEqualTo(MAX_INT_CONFIG_VALUE);
-        assertThat(MillisecondBoundConfiguration.parse(MAX_INT_CONFIG_VALUE + "s").toSeconds()).isEqualTo(MAX_INT_CONFIG_VALUE);
-        assertThat(SecondBoundConfiguration.parse(MAX_INT_CONFIG_VALUE + "s").toSeconds()).isEqualTo(MAX_INT_CONFIG_VALUE);
-        assertThat(MinuteBoundConfiguration.parse(MAX_INT_CONFIG_VALUE + "m").to(TimeUnit.MINUTES)).isEqualTo(MAX_INT_CONFIG_VALUE);
+        assertThat(MillisecondBoundConfiguration.parse(MAX_INT_CONFIG_VALUE + "ms")
+                                                .toMillis()).isEqualTo(MAX_INT_CONFIG_VALUE);
+        assertThat(MillisecondBoundConfiguration.parse(MAX_INT_CONFIG_VALUE + "s")
+                                                .toSeconds()).isEqualTo(MAX_INT_CONFIG_VALUE);
+        assertThat(SecondBoundConfiguration.parse(MAX_INT_CONFIG_VALUE + "s")
+                                           .toSeconds()).isEqualTo(MAX_INT_CONFIG_VALUE);
+        assertThat(MinuteBoundConfiguration.parse(MAX_INT_CONFIG_VALUE + "m")
+                                           .to(TimeUnit.MINUTES)).isEqualTo(MAX_INT_CONFIG_VALUE);
     }
 
     @Test
@@ -75,13 +79,12 @@ class TimeBoundConfigurationImplTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "10", "-10s", "10xd", "0.333555555ms" })
+    @ValueSource(strings = { "10", "-10s", "10xd", "0.333555555ms"})
     void testInvalidInputs(String value)
     {
-        assertThatIllegalArgumentException()
-        .isThrownBy(() -> MillisecondBoundConfiguration.parse(value))
-        .withMessageContaining("Invalid duration %s. Positive numbers with units [ms(milliseconds), s(seconds), " +
-                               "m(minutes), h(hours), d(days)] are allowed", value);
+        assertThatIllegalArgumentException().isThrownBy(() -> MillisecondBoundConfiguration.parse(value))
+                                            .withMessageContaining("Invalid duration %s. Positive numbers with units [ms(milliseconds), s(seconds), "
+                                                    + "m(minutes), h(hours), d(days)] are allowed", value);
     }
 
     @Test
@@ -96,91 +99,85 @@ class TimeBoundConfigurationImplTest
         assertThat(MillisecondBoundConfiguration.parse("10s")).isEqualTo(MillisecondBoundConfiguration.parse("10000ms"));
         assertThat(SecondBoundConfiguration.parse("4h")).isEqualTo(MillisecondBoundConfiguration.parse("14400s"));
         assertThat(SecondBoundConfiguration.parse("0m")).isNotEqualTo(MillisecondBoundConfiguration.parse("10ms"));
-        assertThat(MillisecondBoundConfiguration.parse("9223372036854775806ms").toMillis()).isEqualTo(Long.MAX_VALUE - 1);
+        assertThat(MillisecondBoundConfiguration.parse("9223372036854775806ms")
+                                                .toMillis()).isEqualTo(Long.MAX_VALUE - 1);
     }
 
     @Test
     void thereAndBack()
     {
-        Gen<TimeUnit> unitGen = SourceDSL.arbitrary().pick(TimeUnit.MILLISECONDS, TimeUnit.SECONDS, TimeUnit.MINUTES,
-                                                           TimeUnit.HOURS, TimeUnit.DAYS);
+        Gen<TimeUnit> unitGen = SourceDSL.arbitrary()
+                                         .pick(TimeUnit.MILLISECONDS, TimeUnit.SECONDS, TimeUnit.MINUTES, TimeUnit.HOURS, TimeUnit.DAYS);
         long upperbound = TimeUnit.MILLISECONDS.toDays(Long.MAX_VALUE);
-        Gen<Long> valueGen = SourceDSL.longs().between(0, upperbound);
-        qt().forAll(valueGen, unitGen).check((value, unit) -> {
-            DurationSpec there = new MillisecondBoundConfiguration(value, unit);
-            DurationSpec back = MillisecondBoundConfiguration.parse(there.toString());
-            return there.equals(back);
-        });
+        Gen<Long> valueGen = SourceDSL.longs()
+                                      .between(0, upperbound);
+        qt().forAll(valueGen, unitGen)
+            .check((value,
+                    unit) -> {
+                DurationSpec there = new MillisecondBoundConfiguration(value, unit);
+                DurationSpec back = MillisecondBoundConfiguration.parse(there.toString());
+                return there.equals(back);
+            });
     }
 
     @ParameterizedTest(name = "{index} => value={0}")
-    @ValueSource(strings = { "10ns", "10us", "10µs", "-10s", "10millis", "10seconds", "10years", "10foo" })
+    @ValueSource(strings = { "10ns", "10us", "10µs", "-10s", "10millis", "10seconds", "10years", "10foo"})
     void testInvalidMillisecondBoundValues(String value)
     {
-        assertThatIllegalArgumentException()
-        .isThrownBy(() -> new MillisecondBoundConfiguration(value))
-        .withMessageContaining("Invalid duration %s. Positive numbers with units [ms(milliseconds), s(seconds), " +
-                               "m(minutes), h(hours), d(days)] are allowed", value);
+        assertThatIllegalArgumentException().isThrownBy(() -> new MillisecondBoundConfiguration(value))
+                                            .withMessageContaining("Invalid duration %s. Positive numbers with units [ms(milliseconds), s(seconds), "
+                                                    + "m(minutes), h(hours), d(days)] are allowed", value);
     }
 
     @ParameterizedTest(name = "{index} => value={0} unit={1}")
     @MethodSource("invalidUnitsForMillisecondBoundConfiguration")
-    void testInvalidMillisecondBoundUnits(long value, TimeUnit unit)
+    void testInvalidMillisecondBoundUnits(long value,
+                                          TimeUnit unit)
     {
-        assertThatIllegalArgumentException()
-        .isThrownBy(() -> new MillisecondBoundConfiguration(value, unit))
-        .withMessageContaining("Invalid duration %s%s. Positive numbers with units [ms(milliseconds), s(seconds), " +
-                               "m(minutes), h(hours), d(days)] are allowed",
-                               value, DurationSpec.symbol(unit));
+        assertThatIllegalArgumentException().isThrownBy(() -> new MillisecondBoundConfiguration(value, unit))
+                                            .withMessageContaining("Invalid duration %s%s. Positive numbers with units [ms(milliseconds), s(seconds), "
+                                                    + "m(minutes), h(hours), d(days)] are allowed", value, DurationSpec.symbol(unit));
     }
 
     @ParameterizedTest(name = "{index} => value={0}")
-    @ValueSource(strings = { "10ms", "10ns", "10us", "10µs", "-10s", "10millis", "10seconds", "10years", "10foo" })
+    @ValueSource(strings = { "10ms", "10ns", "10us", "10µs", "-10s", "10millis", "10seconds", "10years", "10foo"})
     void testInvalidSecondBoundValues(String value)
     {
-        assertThatIllegalArgumentException()
-        .isThrownBy(() -> new SecondBoundConfiguration(value))
-        .withMessageContaining("Invalid duration %s. Positive numbers with units [s(seconds), m(minutes), h(hours), d(days)] are allowed", value);
+        assertThatIllegalArgumentException().isThrownBy(() -> new SecondBoundConfiguration(value))
+                                            .withMessageContaining(
+                                                    "Invalid duration %s. Positive numbers with units [s(seconds), m(minutes), h(hours), d(days)] are allowed",
+                                                    value);
     }
 
     @ParameterizedTest(name = "{index} => value={0}")
-    @ValueSource(strings = { "10ms", "10ns", "10us", "10µs", "-10s", "10millis", "10s", "10seconds", "10years", "10foo" })
+    @ValueSource(strings = { "10ms", "10ns", "10us", "10µs", "-10s", "10millis", "10s", "10seconds", "10years", "10foo"})
     void testInvalidMinuteBoundValues(String value)
     {
-        assertThatIllegalArgumentException()
-        .isThrownBy(() -> new MinuteBoundConfiguration(value))
-        .withMessageContaining("Invalid duration %s. Positive numbers with units [m(minutes), h(hours), d(days)] are allowed", value);
+        assertThatIllegalArgumentException().isThrownBy(() -> new MinuteBoundConfiguration(value))
+                                            .withMessageContaining(
+                                                    "Invalid duration %s. Positive numbers with units [m(minutes), h(hours), d(days)] are allowed", value);
     }
 
     @ParameterizedTest(name = "{index} => value={0} unit={1}")
     @MethodSource("invalidUnitsForSecondBoundConfiguration")
-    void testInvalidSecondBoundUnits(long value, TimeUnit unit)
+    void testInvalidSecondBoundUnits(long value,
+                                     TimeUnit unit)
     {
-        assertThatIllegalArgumentException()
-        .isThrownBy(() -> new SecondBoundConfiguration(value, unit))
-        .withMessageContaining("Invalid duration %s%s. Positive numbers with units [s(seconds), m(minutes), h(hours), d(days)] are allowed",
-                               value, DurationSpec.symbol(unit));
+        assertThatIllegalArgumentException().isThrownBy(() -> new SecondBoundConfiguration(value, unit))
+                                            .withMessageContaining(
+                                                    "Invalid duration %s%s. Positive numbers with units [s(seconds), m(minutes), h(hours), d(days)] are allowed",
+                                                    value, DurationSpec.symbol(unit));
     }
 
     static Stream<Arguments> invalidUnitsForMillisecondBoundConfiguration()
     {
-        return Stream.of(
-        Arguments.of(-10, TimeUnit.DAYS),
-        Arguments.of(-10, TimeUnit.HOURS),
-        Arguments.of(-10, TimeUnit.MINUTES),
-        Arguments.of(-10, TimeUnit.SECONDS),
-        Arguments.of(-10, TimeUnit.MILLISECONDS)
-        );
+        return Stream.of(Arguments.of(-10, TimeUnit.DAYS), Arguments.of(-10, TimeUnit.HOURS), Arguments.of(-10, TimeUnit.MINUTES),
+                Arguments.of(-10, TimeUnit.SECONDS), Arguments.of(-10, TimeUnit.MILLISECONDS));
     }
 
     static Stream<Arguments> invalidUnitsForSecondBoundConfiguration()
     {
-        return Stream.of(
-        Arguments.of(-10, TimeUnit.DAYS),
-        Arguments.of(-10, TimeUnit.HOURS),
-        Arguments.of(-10, TimeUnit.MINUTES),
-        Arguments.of(-10, TimeUnit.SECONDS),
-        Arguments.of(10, TimeUnit.MILLISECONDS)
-        );
+        return Stream.of(Arguments.of(-10, TimeUnit.DAYS), Arguments.of(-10, TimeUnit.HOURS), Arguments.of(-10, TimeUnit.MINUTES),
+                Arguments.of(-10, TimeUnit.SECONDS), Arguments.of(10, TimeUnit.MILLISECONDS));
     }
 }

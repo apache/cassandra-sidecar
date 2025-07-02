@@ -37,7 +37,8 @@ public interface ServiceConfiguration
 {
     String SERVICE_POOL = "service";
     String INTERNAL_POOL = "internal";
-    String HOST_ID = UUID.randomUUID().toString();
+    String HOST_ID = UUID.randomUUID()
+                         .toString();
 
     /**
      * @return a unique identifier for the Sidecar instance
@@ -53,15 +54,14 @@ public interface ServiceConfiguration
     String host();
 
     /**
-     * Returns a list of socket addresses where the Sidecar process will bind and listen for connections. Defaults to
-     * the configured {@link #host()} and {@link #port()}.
+     * Returns a list of socket addresses where the Sidecar process will bind and listen for connections. Defaults to the configured {@link #host()} and
+     * {@link #port()}.
      *
      * @return a list of socket addresses where Sidecar will listen
      */
     default List<SocketAddress> listenSocketAddresses()
     {
-        return Collections.singletonList(
-        new SocketAddressImpl(port(), Objects.requireNonNull(host(), "host must be provided")));
+        return Collections.singletonList(new SocketAddressImpl(port(), Objects.requireNonNull(host(), "host must be provided")));
     }
 
     /**
@@ -70,8 +70,7 @@ public interface ServiceConfiguration
     int port();
 
     /**
-     * Determines if a connection will timeout and be closed if no data is received nor sent within the timeout.
-     * Zero means don't timeout.
+     * Determines if a connection will timeout and be closed if no data is received nor sent within the timeout. Zero means don't timeout.
      *
      * @return the configured idle timeout value
      */
@@ -104,14 +103,14 @@ public interface ServiceConfiguration
 
     /**
      * TODO: move operationalJob related configuration to its own class, when the number of configurable fields grows in the future
+     *
      * @return the size of the operational job tracker LRU cache
      */
     int operationalJobTrackerSize();
 
     /**
-     * @return the max wait time for operational job to run internally before returning the http response;
-     *         if the job finishes before the max wait time, it returns immediately on completion;
-     *         otherwise, a response indicating the job is still running is returned after the max wait time.
+     * @return the max wait time for operational job to run internally before returning the http response; if the job finishes before the max wait time, it
+     *         returns immediately on completion; otherwise, a response indicating the job is still running is returned after the max wait time.
      */
     MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime();
 
@@ -182,9 +181,8 @@ public interface ServiceConfiguration
     CoordinationConfiguration coordinationConfiguration();
 
     /**
-     * @return Sidecar's DNS Resolver to use. Default will be to provide forward and reverse DNS resolution which
-     * provides both the hostname and address. The alternative, resolve_to_ip, only provides forward resolution meaning
-     * the IP address will be returned for both hostname and address.
+     * @return Sidecar's DNS Resolver to use. Default will be to provide forward and reverse DNS resolution which provides both the hostname and address. The
+     *         alternative, resolve_to_ip, only provides forward resolution meaning the IP address will be returned for both hostname and address.
      */
     DnsResolver dnsResolver();
 }

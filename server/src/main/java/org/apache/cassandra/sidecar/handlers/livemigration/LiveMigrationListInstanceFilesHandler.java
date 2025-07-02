@@ -18,18 +18,13 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
-import java.io.IOException;
-import java.util.Set;
-import javax.inject.Inject;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.io.IOException;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
@@ -42,7 +37,9 @@ import org.apache.cassandra.sidecar.livemigration.CassandraInstanceFilesImpl;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
+import javax.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -71,25 +68,28 @@ public class LiveMigrationListInstanceFilesHandler extends AbstractHandler<Void>
     }
 
     @Override
-    protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, @NotNull String host,
-                                  SocketAddress remoteAddress, Void request)
+    protected void handleInternal(RoutingContext context,
+                                  HttpServerRequest httpRequest,
+                                  @NotNull String host,
+                                  SocketAddress remoteAddress,
+                                  Void request)
     {
         InstanceMetadata instanceMetadata = metadataFetcher.instance(host);
 
-        CassandraInstanceFiles filesList = new CassandraInstanceFilesImpl(instanceMetadata,
-                                                                          sidecarConfiguration.liveMigrationConfiguration());
-        executorPools.service().runBlocking(() -> {
-            try
-            {
+        CassandraInstanceFiles filesList = new CassandraInstanceFilesImpl(instanceMetadata, sidecarConfiguration.liveMigrationConfiguration());
+        executorPools.service()
+                     .runBlocking(() -> {
+                         try
+                         {
 
-                context.json(new InstanceFilesListResponse(filesList.files()));
-            }
-            catch (IOException e)
-            {
-                LOGGER.error("Could not fetch instance files information.", e);
-                context.fail(wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e));
-            }
-        });
+                             context.json(new InstanceFilesListResponse(filesList.files()));
+                         }
+                         catch (IOException e)
+                         {
+                             LOGGER.error("Could not fetch instance files information.", e);
+                             context.fail(wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e));
+                         }
+                     });
     }
 
     @Override

@@ -22,16 +22,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
-
+import org.apache.cassandra.sidecar.client.HttpResponse;
+import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
+import org.apache.cassandra.sidecar.common.request.Request;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import org.apache.cassandra.sidecar.client.HttpResponse;
-import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
-import org.apache.cassandra.sidecar.common.request.Request;
-
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,17 +53,14 @@ class ExponentialBackoffRetryPolicyTest
     @Test
     void testOverflows()
     {
-        long delay = new ExponentialBackoffRetryPolicy(1, 1, 0)
-                     .retryDelayMillis(64); // 2 ^ (64 - 1) + 1 overflows
+        long delay = new ExponentialBackoffRetryPolicy(1, 1, 0).retryDelayMillis(64); // 2 ^ (64 - 1) + 1 overflows
         assertThat(delay).as("Should not overflow when the exponential grows larger")
                          .isEqualTo(Long.MAX_VALUE);
 
-        delay = new ExponentialBackoffRetryPolicy(1, 2, 0)
-                .retryDelayMillis(63); // 2 * 2 ^ (63 - 1) + 1 overflows
+        delay = new ExponentialBackoffRetryPolicy(1, 2, 0).retryDelayMillis(63); // 2 * 2 ^ (63 - 1) + 1 overflows
         assertThat(delay).isEqualTo(Long.MAX_VALUE);
 
-        delay = new ExponentialBackoffRetryPolicy(1, 200, 0)
-                .retryDelayMillis(56);
+        delay = new ExponentialBackoffRetryPolicy(1, 200, 0).retryDelayMillis(56);
         assertThat(delay).as("If the number of retries is greater than or equals to 56, the value will overflow")
                          .isEqualTo(Long.MAX_VALUE);
     }
@@ -77,20 +71,19 @@ class ExponentialBackoffRetryPolicyTest
         when(mockResponse.statusCode()).thenReturn(OK.code());
 
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        new ExponentialBackoffRetryPolicy().onResponse(future, mockRequest, mockResponse, null, 1, false,
-                                                       (attempts, retryDelayMillis) -> fail("Should never retry"));
+        new ExponentialBackoffRetryPolicy().onResponse(future, mockRequest, mockResponse, null, 1, false, (attempts,
+                                                                                                           retryDelayMillis) -> fail("Should never retry"));
         future.join();
         assertThat(future.isDone()).isTrue();
         assertThat(future.get()).isSameAs(mockResponse);
     }
 
     @ParameterizedTest(name = "{index} => canRetryOnADifferentHost={0}")
-    @ValueSource(booleans = { true, false })
+    @ValueSource(booleans = { true, false})
     void testRetriesWhenThrowableIsProvided(boolean canRetryOnADifferentHost)
     {
         IllegalArgumentException throwable = new IllegalArgumentException("Connection Refused");
-        testWithRetries(mockRequest, null, throwable, 10, 100,
-                        canRetryOnADifferentHost ? 0 : 100, 1_000, canRetryOnADifferentHost);
+        testWithRetries(mockRequest, null, throwable, 10, 100, canRetryOnADifferentHost ? 0 : 100, 1_000, canRetryOnADifferentHost);
     }
 
     @Test
@@ -105,40 +98,42 @@ class ExponentialBackoffRetryPolicyTest
         testWithRetries(mockRequest, mockResponse, null, 30, 200, 200, -1, false);
     }
 
-    private static void testWithRetries(Request request, HttpResponse response, Throwable throwable,
-                                        int configuredMaxRetries, int configuredRetryDelayMillis,
+    private static void testWithRetries(Request request,
+                                        HttpResponse response,
+                                        Throwable throwable,
+                                        int configuredMaxRetries,
+                                        int configuredRetryDelayMillis,
                                         int originalExpectedRetryDelayMillis,
-                                        int configuredMaxRetryDelayMillis, boolean canRetryOnADifferentHost)
+                                        int configuredMaxRetryDelayMillis,
+                                        boolean canRetryOnADifferentHost)
     {
-        RetryPolicy retryPolicy = new ExponentialBackoffRetryPolicy(configuredMaxRetries, configuredRetryDelayMillis,
-                                                                    configuredMaxRetryDelayMillis);
+        RetryPolicy retryPolicy = new ExponentialBackoffRetryPolicy(configuredMaxRetries, configuredRetryDelayMillis, configuredMaxRetryDelayMillis);
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
         AtomicLong expectedRetryDelayMillis = new AtomicLong(originalExpectedRetryDelayMillis);
         for (int currentAttempt = 1; currentAttempt <= configuredMaxRetries; currentAttempt++)
         {
             // retries on error
             int expectedNextAttempt = currentAttempt + 1;
-            retryPolicy.onResponse(future, request, response, throwable, currentAttempt, canRetryOnADifferentHost,
-                                   (attempts, retryDelayMillis) -> {
-                                       if (expectedNextAttempt > configuredMaxRetries)
-                                       {
-                                           fail("Should never retry");
-                                       }
-                                       else
-                                       {
-                                           assertThat(attempts).isEqualTo(expectedNextAttempt);
-                                           assertThat(retryDelayMillis).isEqualTo(expectedRetryDelayMillis.get());
-                                       }
-                                   });
-            expectedRetryDelayMillis.updateAndGet(current -> configuredMaxRetryDelayMillis > 0
-                                                             ? Math.min(configuredMaxRetryDelayMillis, current * 2)
-                                                             : current * 2);
+            retryPolicy.onResponse(future, request, response, throwable, currentAttempt, canRetryOnADifferentHost, (attempts,
+                                                                                                                    retryDelayMillis) -> {
+                if (expectedNextAttempt > configuredMaxRetries)
+                {
+                    fail("Should never retry");
+                }
+                else
+                {
+                    assertThat(attempts).isEqualTo(expectedNextAttempt);
+                    assertThat(retryDelayMillis).isEqualTo(expectedRetryDelayMillis.get());
+                }
+            });
+            expectedRetryDelayMillis.updateAndGet(
+                    current -> configuredMaxRetryDelayMillis > 0 ? Math.min(configuredMaxRetryDelayMillis, current * 2) : current * 2);
         }
 
-        assertThatExceptionOfType(CompletionException.class)
-        .isThrownBy(future::join)
-        .withCauseInstanceOf(RetriesExhaustedException.class)
-        .withMessageContaining("Unable to complete request '/api/uri' after " + configuredMaxRetries + " attempts");
+        assertThatExceptionOfType(CompletionException.class).isThrownBy(future::join)
+                                                            .withCauseInstanceOf(RetriesExhaustedException.class)
+                                                            .withMessageContaining(
+                                                                    "Unable to complete request '/api/uri' after " + configuredMaxRetries + " attempts");
         assertThat(future.isCompletedExceptionally()).isTrue();
     }
 }

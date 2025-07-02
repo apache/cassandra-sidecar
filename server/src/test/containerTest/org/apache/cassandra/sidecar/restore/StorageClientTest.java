@@ -33,6 +33,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -81,8 +82,7 @@ class StorageClientTest
     private static final String testData = "testData";
     private static final String checksum = BinaryUtils.toHex(Md5Utils.computeMD5Hash(testData.getBytes()));
     private static final String largeTestFileName = "largeTestFile";
-    private static final String testEncKeyRef =
-    "arn:aws:kms:us-east-1:1234567890:key/valid-test-key-ref";
+    private static final String testEncKeyRef = "arn:aws:kms:us-east-1:1234567890:key/valid-test-key-ref";
     private static S3MockContainer s3Mock;
     private static S3AsyncClient s3AsyncClient;
     private static StorageClient client;
@@ -100,16 +100,16 @@ class StorageClientTest
     @BeforeAll
     static void setup() throws Exception
     {
-        s3Mock = new S3MockContainer("3.5.1")
-                 .withValidKmsKeys(testEncKeyRef)
-                 .withInitialBuckets(testBucket);
+        s3Mock = new S3MockContainer("3.5.1").withValidKmsKeys(testEncKeyRef)
+                                             .withInitialBuckets(testBucket);
         s3Mock.start();
         // test credential defined in s3mock
         StorageCredentials credentials = StorageCredentials.builder()
                                                            .accessKeyId("foo")
                                                            .secretAccessKey("bar")
                                                            .sessionToken("session")
-                                                           .region("us-west-1").build();
+                                                           .region("us-west-1")
+                                                           .build();
         restoreJob = RestoreJob.builder()
                                .jobId(UUIDs.timeBased())
                                .jobStatus(RestoreJobStatus.CREATED)
@@ -124,9 +124,7 @@ class StorageClientTest
         putObject(testRange, testData);
 
         largeFilePath = prepareTestFile(testFolder, largeTestFileName, LARGE_FILE_IN_BYTES); // 1MB
-        largeTestRange = getMockRange(restoreJob.jobId, testBucket, "largeKey",
-                                      computeChecksum(largeFilePath), stageDirPath,
-                                      LARGE_FILE_IN_BYTES);
+        largeTestRange = getMockRange(restoreJob.jobId, testBucket, "largeKey", computeChecksum(largeFilePath), stageDirPath, LARGE_FILE_IN_BYTES);
         putObject(largeTestRange, largeFilePath);
 
         vertx = Vertx.vertx();
@@ -140,8 +138,7 @@ class StorageClientTest
         TestResourceReaper.create()
                           .with(executorPools)
                           .with(vertx)
-                          .with(() -> s3Mock.stop(),
-                                () -> client.close())
+                          .with(() -> s3Mock.stop(), () -> client.close())
                           .close();
     }
 
@@ -153,15 +150,14 @@ class StorageClientTest
                             .overrideConfiguration(b -> b.apiCallTimeout(apiCallTimeout)
                                                          .apiCallAttemptTimeout(apiCallTimeout))
                             // provide a dummy credential to prevent client from identifying credentials
-                            .credentialsProvider(StaticCredentialsProvider.create(
-                            AwsBasicCredentials.create("foo", "bar")))
+                            .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("foo", "bar")))
                             .endpointOverride(new URI(httpsEndpoint))
                             // required to prevent client from "manipulating" the object path
                             .forcePathStyle(true)
-                            .httpClient(NettyNioAsyncHttpClient.builder().buildWithDefaults(
-                            AttributeMap.builder()
-                                        .put(TRUST_ALL_CERTIFICATES, Boolean.TRUE)
-                                        .build()))
+                            .httpClient(NettyNioAsyncHttpClient.builder()
+                                                               .buildWithDefaults(AttributeMap.builder()
+                                                                                              .put(TRUST_ALL_CERTIFICATES, Boolean.TRUE)
+                                                                                              .build()))
                             .build();
     }
 
@@ -170,17 +166,19 @@ class StorageClientTest
     {
         // slice from a new job that has not been authenticated
         RestoreRange unauthed = getMockRange(UUIDs.timeBased(), "newBucket", "newKey", null, null);
-        assertThatThrownBy(() -> client.objectExists(unauthed).get())
-        .isInstanceOf(ExecutionException.class)
-        .hasCauseInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("No credential available");
+        assertThatThrownBy(() -> client.objectExists(unauthed)
+                                       .get()).isInstanceOf(ExecutionException.class)
+                                              .hasCauseInstanceOf(IllegalStateException.class)
+                                              .hasMessageContaining("No credential available");
     }
 
     @Test
     void testCheckObjectExistence() throws Exception
     {
-        HeadObjectResponse response = client.objectExists(testRange).get();
-        assertThat(response.sdkHttpResponse().statusCode()).isEqualTo(200);
+        HeadObjectResponse response = client.objectExists(testRange)
+                                            .get();
+        assertThat(response.sdkHttpResponse()
+                           .statusCode()).isEqualTo(200);
         assertThat(response.eTag()).isEqualTo('"' + checksum + '"');
     }
 
@@ -188,26 +186,28 @@ class StorageClientTest
     void testCheckObjectExistenceChecksumMismatch()
     {
         RestoreRange withWrongChecksum = getMockRange(restoreJob.jobId, testBucket, "key", "wrong checksum", null);
-        assertThatThrownBy(() -> client.objectExists(withWrongChecksum).get())
-        .isInstanceOf(ExecutionException.class)
-        .hasCauseInstanceOf(S3Exception.class)
-        .hasMessageContaining("Status Code: 412");
+        assertThatThrownBy(() -> client.objectExists(withWrongChecksum)
+                                       .get()).isInstanceOf(ExecutionException.class)
+                                              .hasCauseInstanceOf(S3Exception.class)
+                                              .hasMessageContaining("Status Code: 412");
     }
 
     @Test
     void testCheckObjectExistenceNotFound()
     {
         RestoreRange notFound = getMockRange(restoreJob.jobId, testBucket, "keyNotFound", checksum, null);
-        assertThatThrownBy(() -> client.objectExists(notFound).get())
-        .isInstanceOf(ExecutionException.class)
-        .hasCauseInstanceOf(NoSuchKeyException.class);
+        assertThatThrownBy(() -> client.objectExists(notFound)
+                                       .get()).isInstanceOf(ExecutionException.class)
+                                              .hasCauseInstanceOf(NoSuchKeyException.class);
     }
 
     @Test
     void testGetObject() throws Exception
     {
         File downloaded = client.downloadObjectIfAbsent(testRange, taskExecutorPool)
-                                .toCompletionStage().toCompletableFuture().get();
+                                .toCompletionStage()
+                                .toCompletableFuture()
+                                .get();
         assertThat(downloaded.exists()).isTrue();
         assertThat(new String(Files.readAllBytes(downloaded.toPath()))).isEqualTo(testData);
     }
@@ -215,13 +215,17 @@ class StorageClientTest
     @Test
     void testGetObjectHasExistingFileOnDisk() throws Exception
     {
-        Path existingPath = testFolder.resolve(UUID.randomUUID().toString());
+        Path existingPath = testFolder.resolve(UUID.randomUUID()
+                                                   .toString());
         Files.createDirectories(existingPath);
         Files.createFile(existingPath.resolve("key"));
         RestoreRange sliceHasFileOnDisk = getMockRange(restoreJob.jobId, testBucket, "key", checksum, existingPath);
         File downloaded = client.downloadObjectIfAbsent(sliceHasFileOnDisk, taskExecutorPool)
-                                .toCompletionStage().toCompletableFuture().get();
-        assertThat(downloaded.getAbsolutePath()).isEqualTo(existingPath.resolve("key").toString());
+                                .toCompletionStage()
+                                .toCompletableFuture()
+                                .get();
+        assertThat(downloaded.getAbsolutePath()).isEqualTo(existingPath.resolve("key")
+                                                                       .toString());
     }
 
     @Test
@@ -233,11 +237,12 @@ class StorageClientTest
         // Download should take around 4 seconds (256 KB/s for a 1MB file)
         long startNanos = System.nanoTime();
         File downloaded = client.downloadObjectIfAbsent(largeTestRange, taskExecutorPool)
-                                .toCompletionStage().toCompletableFuture().get();
+                                .toCompletionStage()
+                                .toCompletableFuture()
+                                .get();
         assertThat(downloaded.exists()).isTrue();
         long elapsedNanos = System.nanoTime() - startNanos;
-        assertThat(TimeUnit.NANOSECONDS.toMillis(elapsedNanos)).isCloseTo(TimeUnit.SECONDS.toMillis(4),
-                                                                          Percentage.withPercentage(95));
+        assertThat(TimeUnit.NANOSECONDS.toMillis(elapsedNanos)).isCloseTo(TimeUnit.SECONDS.toMillis(4), Percentage.withPercentage(95));
         byte[] downloadedBytes = Files.readAllBytes(downloaded.toPath());
         byte[] originalBytes = Files.readAllBytes(largeFilePath);
         assertThat(Arrays.equals(downloadedBytes, originalBytes)).isTrue();
@@ -250,18 +255,28 @@ class StorageClientTest
         {
             StorageClient client = new StorageClient(s3Client);
             client.authenticate(restoreJob);
-            assertThatThrownBy(() -> client.objectExists(testRange).get())
-            .hasMessageContaining(" Client execution did not complete before the specified timeout configuration: 1 millis")
-            .hasRootCauseInstanceOf(ApiCallTimeoutException.class);
+            assertThatThrownBy(() -> client.objectExists(testRange)
+                                           .get()).hasMessageContaining(
+                                                   " Client execution did not complete before the specified timeout configuration: 1 millis")
+                                                  .hasRootCauseInstanceOf(ApiCallTimeoutException.class);
         }
     }
 
-    private RestoreRange getMockRange(UUID jobId, String bucket, String key, String checksum, Path localPath)
+    private RestoreRange getMockRange(UUID jobId,
+                                      String bucket,
+                                      String key,
+                                      String checksum,
+                                      Path localPath)
     {
         return getMockRange(jobId, bucket, key, checksum, localPath, 0);
     }
 
-    private static RestoreRange getMockRange(UUID jobId, String bucket, String key, String checksum, Path localPath, long length)
+    private static RestoreRange getMockRange(UUID jobId,
+                                             String bucket,
+                                             String key,
+                                             String checksum,
+                                             Path localPath,
+                                             long length)
     {
         RestoreRange mock = mock(RestoreRange.class, RETURNS_DEEP_STUBS);
         when(mock.jobId()).thenReturn(jobId);
@@ -277,27 +292,36 @@ class StorageClientTest
         return mock;
     }
 
-    private static void putObject(RestoreRange range, String stringData) throws Exception
+    private static void putObject(RestoreRange range,
+                                  String stringData)
+            throws Exception
     {
         PutObjectRequest request = PutObjectRequest.builder()
                                                    .bucket(range.sliceBucket())
                                                    .key(range.sliceKey())
                                                    .build();
 
-        s3AsyncClient.putObject(request, AsyncRequestBody.fromString(stringData)).get();
+        s3AsyncClient.putObject(request, AsyncRequestBody.fromString(stringData))
+                     .get();
     }
 
-    private static void putObject(RestoreRange range, Path path) throws Exception
+    private static void putObject(RestoreRange range,
+                                  Path path)
+            throws Exception
     {
         PutObjectRequest request = PutObjectRequest.builder()
                                                    .bucket(range.sliceBucket())
                                                    .key(range.sliceKey())
                                                    .build();
 
-        s3AsyncClient.putObject(request, AsyncRequestBody.fromFile(path)).get();
+        s3AsyncClient.putObject(request, AsyncRequestBody.fromFile(path))
+                     .get();
     }
 
-    private static Path prepareTestFile(Path directory, String fileName, long sizeInBytes) throws IOException
+    private static Path prepareTestFile(Path directory,
+                                        String fileName,
+                                        long sizeInBytes)
+            throws IOException
     {
         Path filePath = directory.resolve(fileName);
         Files.deleteIfExists(filePath);
@@ -308,7 +332,8 @@ class StorageClientTest
             int written = 0;
             while (written < sizeInBytes)
             {
-                ThreadLocalRandom.current().nextBytes(buffer);
+                ThreadLocalRandom.current()
+                                 .nextBytes(buffer);
                 int toWrite = (int) Math.min(buffer.length, sizeInBytes - written);
                 outputStream.write(buffer, 0, toWrite);
                 written += toWrite;

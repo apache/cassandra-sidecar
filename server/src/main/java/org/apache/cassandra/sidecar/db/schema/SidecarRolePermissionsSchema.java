@@ -25,8 +25,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * sidecar_internal.role_permissions_v1 table holds custom sidecar permissions that are not stored in Cassandra.
- * Permissions are stored against resource.
+ * sidecar_internal.role_permissions_v1 table holds custom sidecar permissions that are not stored in Cassandra. Permissions are stored against resource.
  */
 public class SidecarRolePermissionsSchema extends TableSchema
 {
@@ -38,7 +37,8 @@ public class SidecarRolePermissionsSchema extends TableSchema
 
     public SidecarRolePermissionsSchema(SidecarConfiguration sidecarConfiguration)
     {
-        this.keyspaceConfig = sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration();
+        this.keyspaceConfig = sidecarConfiguration.serviceConfiguration()
+                                                  .schemaKeyspaceConfiguration();
     }
 
     @Override
@@ -62,12 +62,8 @@ public class SidecarRolePermissionsSchema extends TableSchema
     @Override
     protected String createSchemaStatement()
     {
-        return String.format("CREATE TABLE IF NOT EXISTS %s.%s ("
-                             + "role text,"
-                             + "resource text,"
-                             + "permissions set<text>,"
-                             + "PRIMARY KEY(role, resource))",
-                             keyspaceConfig.keyspace(), ROLE_PERMISSIONS_TABLE);
+        return String.format("CREATE TABLE IF NOT EXISTS %s.%s (" + "role text," + "resource text," + "permissions set<text>," + "PRIMARY KEY(role, resource))",
+                keyspaceConfig.keyspace(), ROLE_PERMISSIONS_TABLE);
     }
 
     public PreparedStatement allRolesPermissions()

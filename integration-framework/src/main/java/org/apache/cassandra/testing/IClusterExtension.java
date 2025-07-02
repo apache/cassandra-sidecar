@@ -20,7 +20,6 @@
 package org.apache.cassandra.testing;
 
 import java.util.function.Consumer;
-
 import org.apache.cassandra.distributed.api.ICluster;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
@@ -33,9 +32,8 @@ import org.apache.cassandra.distributed.api.IInstanceConfig;
 public interface IClusterExtension<I extends IInstance> extends ICluster<I>
 {
     /**
-     * Change the schema of the cluster, tolerating stopped nodes.  N.B. the schema
-     * will not automatically be updated when stopped nodes are restarted, individual tests need to
-     * re-synchronize somehow (by gossip or some other mechanism).
+     * Change the schema of the cluster, tolerating stopped nodes. N.B. the schema will not automatically be updated when stopped nodes are restarted,
+     * individual tests need to re-synchronize somehow (by gossip or some other mechanism).
      *
      * @param query Schema altering statement
      */
@@ -44,12 +42,14 @@ public interface IClusterExtension<I extends IInstance> extends ICluster<I>
     /**
      * Create a new instance and add it to the cluster, without starting it.
      *
-     * @param dc   the instance should be in
+     * @param dc the instance should be in
      * @param rack the instance should be in
-     * @param fn   function to add to the config before starting
+     * @param fn function to add to the config before starting
      * @return the instance added
      */
-    I addInstance(String dc, String rack, Consumer<IInstanceConfig> fn);
+    I addInstance(String dc,
+                  String rack,
+                  Consumer<IInstanceConfig> fn);
 
     /**
      * @return the first instance with running state
@@ -69,35 +69,41 @@ public interface IClusterExtension<I extends IInstance> extends ICluster<I>
     /**
      * Waits for the ring to have the target instance with the provided state.
      *
-     * @param instance       instance to check on
+     * @param instance instance to check on
      * @param expectedInRing to look for
-     * @param state          expected
+     * @param state expected
      */
-    void awaitRingState(IInstance instance, IInstance expectedInRing, String state);
+    void awaitRingState(IInstance instance,
+                        IInstance expectedInRing,
+                        String state);
 
     /**
      * Wait for the ring to have the target instance with the provided status.
      *
-     * @param instance       instance to check on
+     * @param instance instance to check on
      * @param expectedInRing to look for
-     * @param status         expected
+     * @param status expected
      */
-    void awaitRingStatus(IInstance instance, IInstance expectedInRing, String status);
+    void awaitRingStatus(IInstance instance,
+                         IInstance expectedInRing,
+                         String status);
 
     /**
-     * Waits for the target instance to have the desired status. Target status is checked via string contains so works
-     * with 'NORMAL' but also can check tokens or full state.
+     * Waits for the target instance to have the desired status. Target status is checked via string contains so works with 'NORMAL' but also can check tokens
+     * or full state.
      *
-     * @param instance         instance to check on
+     * @param instance instance to check on
      * @param expectedInGossip instance to wait for
-     * @param targetStatus     for the instance
+     * @param targetStatus for the instance
      */
-    void awaitGossipStatus(IInstance instance, IInstance expectedInGossip, String targetStatus);
+    void awaitGossipStatus(IInstance instance,
+                           IInstance expectedInGossip,
+                           String targetStatus);
 
     /**
      * Stop an instance in a blocking manner.
-     * <p>The main difference between this and {@link IInstance#shutdown()} is that the wait on the future will catch
-     * the exceptions and throw as runtime.
+     * <p>
+     * The main difference between this and {@link IInstance#shutdown()} is that the wait on the future will catch the exceptions and throw as runtime.
      *
      * @param instance instance to stop
      */

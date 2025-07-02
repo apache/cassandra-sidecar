@@ -32,12 +32,12 @@ public interface PermissionFactory
     Permission createPermission(String name);
 
     /**
-     * Construct a {@link CompositePermission} if a feature permission match is found for given permission name.
-     * {@link CompositePermission} consists of all basic permissions associated with given feature level permission.
+     * Construct a {@link CompositePermission} if a feature permission match is found for given permission name. {@link CompositePermission} consists of all
+     * basic permissions associated with given feature level permission.
      *
      * @param name name of permission
-     * @return a {@link CompositePermission} containing the basic permissions that correspond to given feature level
-     *         permission, or {@code null} if no match is found.
+     * @return a {@link CompositePermission} containing the basic permissions that correspond to given feature level permission, or {@code null} if no match is
+     *         found.
      */
     CompositePermission createFeaturePermission(String name);
 }

@@ -81,17 +81,23 @@ class VertxRoutingTest
          */
         CountDownLatch serverReady = new CountDownLatch(1);
         Router router = Router.router(vertx);
-        router.get("/endpoint1").order(1).handler(ctx -> {
-            ctx.response().end("Endpoint 1 OK");
-        });
-        router.get("/endpoint2").order(1).handler(ctx -> {
-            ctx.response().end("Endpoint 2 OK");
-        });
+        router.get("/endpoint1")
+              .order(1)
+              .handler(ctx -> {
+                  ctx.response()
+                     .end("Endpoint 1 OK");
+              });
+        router.get("/endpoint2")
+              .order(1)
+              .handler(ctx -> {
+                  ctx.response()
+                     .end("Endpoint 2 OK");
+              });
 
-        server.requestHandler(router).listen(0, result -> serverReady.countDown());
-        assertThat(serverReady.await(10, TimeUnit.SECONDS))
-        .isTrue()
-        .describedAs("Server should be up");
+        server.requestHandler(router)
+              .listen(0, result -> serverReady.countDown());
+        assertThat(serverReady.await(10, TimeUnit.SECONDS)).isTrue()
+                                                           .describedAs("Server should be up");
 
         asyncVerifyRequest("/endpoint1", context, response -> {
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
@@ -112,25 +118,29 @@ class VertxRoutingTest
          */
         CountDownLatch serverReady = new CountDownLatch(1);
         Router router = Router.router(vertx);
-        router.get("/endpoint").order(1).handler(ctx -> {
-            ctx.response()
-               .setChunked(true) // required to be `true` for adding data from multiple handlers
-               .write("handler 1\n");
-            ctx.next();
-        });
-        router.get("/endpoint").order(1).handler(ctx -> {
-            ctx.response().end("handler 2");
-        });
+        router.get("/endpoint")
+              .order(1)
+              .handler(ctx -> {
+                  ctx.response()
+                     .setChunked(true) // required to be `true` for adding data from multiple handlers
+                     .write("handler 1\n");
+                  ctx.next();
+              });
+        router.get("/endpoint")
+              .order(1)
+              .handler(ctx -> {
+                  ctx.response()
+                     .end("handler 2");
+              });
 
-        server.requestHandler(router).listen(0, result -> serverReady.countDown());
-        assertThat(serverReady.await(10, TimeUnit.SECONDS))
-        .isTrue()
-        .describedAs("Server should be up");
+        server.requestHandler(router)
+              .listen(0, result -> serverReady.countDown());
+        assertThat(serverReady.await(10, TimeUnit.SECONDS)).isTrue()
+                                                           .describedAs("Server should be up");
 
         asyncVerifyRequest("/endpoint", context, response -> {
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-            assertThat(response.bodyAsString()).isEqualTo("handler 1\n" +
-                                                          "handler 2");
+            assertThat(response.bodyAsString()).isEqualTo("handler 1\n" + "handler 2");
         });
     }
 
@@ -138,30 +148,33 @@ class VertxRoutingTest
     void testLeveledRoutesWithSameOrder(VertxTestContext context) throws Exception
     {
         /*
-         * For the leveled routes that is declared with the same order,
-         * the effective evaluation order is the adding order
+         * For the leveled routes that is declared with the same order, the effective evaluation order is the adding order
          */
         CountDownLatch serverReady = new CountDownLatch(1);
         Router router = Router.router(vertx);
-        router.route().order(1).handler(ctx -> {
-            ctx.response()
-               .setChunked(true) // required to be `true` for adding data from multiple handlers
-               .write("root\n");
-            ctx.next();
-        });
-        router.get("/endpoint").order(1).handler(ctx -> {
-            ctx.response().end("endpoint");
-        });
+        router.route()
+              .order(1)
+              .handler(ctx -> {
+                  ctx.response()
+                     .setChunked(true) // required to be `true` for adding data from multiple handlers
+                     .write("root\n");
+                  ctx.next();
+              });
+        router.get("/endpoint")
+              .order(1)
+              .handler(ctx -> {
+                  ctx.response()
+                     .end("endpoint");
+              });
 
-        server.requestHandler(router).listen(0, result -> serverReady.countDown());
-        assertThat(serverReady.await(10, TimeUnit.SECONDS))
-        .isTrue()
-        .describedAs("Server should be up");
+        server.requestHandler(router)
+              .listen(0, result -> serverReady.countDown());
+        assertThat(serverReady.await(10, TimeUnit.SECONDS)).isTrue()
+                                                           .describedAs("Server should be up");
 
         asyncVerifyRequest("/endpoint", context, response -> {
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-            assertThat(response.bodyAsString()).isEqualTo("root\n" +
-                                                          "endpoint");
+            assertThat(response.bodyAsString()).isEqualTo("root\n" + "endpoint");
         });
     }
 
@@ -169,34 +182,39 @@ class VertxRoutingTest
     void testLeveledRoutesWithSameOrderReversedDeclaration(VertxTestContext context) throws Exception
     {
         /*
-         * Similar to testLeveledRoutesWithSameOrder, but the root route is declared after `/endpoint`.
-         * Since `/endpoint` ends the response and does not forward the evaluation,
-         * the root route handler is not called.
+         * Similar to testLeveledRoutesWithSameOrder, but the root route is declared after `/endpoint`. Since `/endpoint` ends the response and does not forward
+         * the evaluation, the root route handler is not called.
          */
         AtomicBoolean rootEvaluated = new AtomicBoolean(false);
         CountDownLatch serverReady = new CountDownLatch(1);
         Router router = Router.router(vertx);
         // NOTE: the routes declaration is swapped
-        router.get("/endpoint").order(1).handler(ctx -> {
-            ctx.response().end("endpoint");
-        });
-        router.route().order(1).handler(ctx -> {
-            rootEvaluated.set(true);
-            ctx.response()
-               .setChunked(true) // required to be `true` for adding data from multiple handlers
-               .write("root\n");
-            ctx.next();
-        });
+        router.get("/endpoint")
+              .order(1)
+              .handler(ctx -> {
+                  ctx.response()
+                     .end("endpoint");
+              });
+        router.route()
+              .order(1)
+              .handler(ctx -> {
+                  rootEvaluated.set(true);
+                  ctx.response()
+                     .setChunked(true) // required to be `true` for adding data from multiple handlers
+                     .write("root\n");
+                  ctx.next();
+              });
 
-        server.requestHandler(router).listen(0, result -> serverReady.countDown());
-        assertThat(serverReady.await(10, TimeUnit.SECONDS))
-        .isTrue()
-        .describedAs("Server should be up");
+        server.requestHandler(router)
+              .listen(0, result -> serverReady.countDown());
+        assertThat(serverReady.await(10, TimeUnit.SECONDS)).isTrue()
+                                                           .describedAs("Server should be up");
 
         asyncVerifyRequest("/endpoint", context, response -> {
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
             assertThat(response.bodyAsString()).isEqualTo("endpoint");
-            assertThat(rootEvaluated.get()).isFalse().describedAs("Root route handler is not reached");
+            assertThat(rootEvaluated.get()).isFalse()
+                                           .describedAs("Root route handler is not reached");
         });
     }
 
@@ -211,4 +229,3 @@ class VertxRoutingTest
               }));
     }
 }
-

@@ -18,17 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -41,6 +30,9 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
@@ -50,7 +42,12 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.mockito.AdditionalAnswers;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONFLICT;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -94,7 +91,8 @@ public class NodeDecommissionHandlerTest
     void after() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -105,8 +103,8 @@ public class NodeDecommissionHandlerTest
     void testDecommissionLongRunning(VertxTestContext context)
     {
         when(mockStorageOperations.operationMode()).thenReturn("NORMAL");
-        doAnswer(AdditionalAnswers.answersWithDelay(6000, invocation -> null))
-        .when(mockStorageOperations).decommission(anyBoolean());
+        doAnswer(AdditionalAnswers.answersWithDelay(6000, invocation -> null)).when(mockStorageOperations)
+                                                                              .decommission(anyBoolean());
 
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/operations/decommission";
@@ -143,7 +141,8 @@ public class NodeDecommissionHandlerTest
     void testDecommissionFailed(VertxTestContext context)
     {
         when(mockStorageOperations.operationMode()).thenReturn("NORMAL");
-        doThrow(new RuntimeException("Simulated failure")).when(mockStorageOperations).decommission(anyBoolean());
+        doThrow(new RuntimeException("Simulated failure")).when(mockStorageOperations)
+                                                          .decommission(anyBoolean());
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/operations/decommission";
         client.put(server.actualPort(), "127.0.0.1", testRoute)

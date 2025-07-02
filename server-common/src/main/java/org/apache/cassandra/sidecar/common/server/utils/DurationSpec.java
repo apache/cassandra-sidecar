@@ -24,9 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.jetbrains.annotations.NotNull;
-
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -34,10 +32,9 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * Represents a positive time duration. Wrapper class for Cassandra Sidecar duration configuration parameters,
- * providing to the users the opportunity to be able to provide configuration values with a unit of their choice
- * in {@code sidecar.yaml} as per the available options. This class mirrors the Cassandra DurationSpec class,
- * but it differs in that it does not support nanoseconds or microseconds.
+ * Represents a positive time duration. Wrapper class for Cassandra Sidecar duration configuration parameters, providing to the users the opportunity to be able
+ * to provide configuration values with a unit of their choice in {@code sidecar.yaml} as per the available options. This class mirrors the Cassandra
+ * DurationSpec class, but it differs in that it does not support nanoseconds or microseconds.
  */
 public abstract class DurationSpec implements Comparable<DurationSpec>
 {
@@ -53,8 +50,7 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
      * Constructs the {@link DurationSpec} with the given {@code value}.
      *
      * @param value the value to parse
-     * @throws IllegalArgumentException when the {@code value} can't be parsed, the unit is invalid,
-     *                                  or the quantity is invalid
+     * @throws IllegalArgumentException when the {@code value} can't be parsed, the unit is invalid, or the quantity is invalid
      */
     protected DurationSpec(String value) throws IllegalArgumentException
     {
@@ -78,10 +74,12 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
      * Constructs the {@link DurationSpec} with the given {@code quantity} and {@code unit}.
      *
      * @param quantity the quantity for the duration
-     * @param unit     the unit for the duration
+     * @param unit the unit for the duration
      * @throws IllegalArgumentException when the unit is invalid or the quantity is invalid
      */
-    protected DurationSpec(long quantity, TimeUnit unit) throws IllegalArgumentException
+    protected DurationSpec(long quantity,
+                           TimeUnit unit)
+            throws IllegalArgumentException
     {
         this.quantity = quantity;
         this.unit = unit;
@@ -112,17 +110,15 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
     }
 
     /**
-     * Converts this duration spec to the {@code targetUnit}.
-     * Conversions from finer to coarser granularities lose precision.
+     * Converts this duration spec to the {@code targetUnit}. Conversions from finer to coarser granularities lose precision.
      *
-     * <p>Conversions from coarser to finer granularities with arguments
-     * that would numerically overflow saturate to {@link Long#MIN_VALUE}
-     * if negative or {@link Long#MAX_VALUE} if positive.
+     * <p>
+     * Conversions from coarser to finer granularities with arguments that would numerically overflow saturate to {@link Long#MIN_VALUE} if negative or
+     * {@link Long#MAX_VALUE} if positive.
      *
      * @param targetUnit the target conversion unit
-     * @return the converted duration in the {@code targetUnit},
-     * or {@code Long.MIN_VALUE} if conversion would negatively overflow,
-     * or {@code Long.MAX_VALUE} if it would positively overflow.
+     * @return the converted duration in the {@code targetUnit}, or {@code Long.MIN_VALUE} if conversion would negatively overflow, or {@code Long.MAX_VALUE} if
+     *         it would positively overflow.
      */
     public long to(TimeUnit targetUnit)
     {
@@ -146,8 +142,7 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
     }
 
     /**
-     * @return the duration in milliseconds returned as an integer, if the value overflows,
-     * returns {@link Integer#MAX_VALUE}
+     * @return the duration in milliseconds returned as an integer, if the value overflows, returns {@link Integer#MAX_VALUE}
      */
     public int toIntMillis()
     {
@@ -193,8 +188,8 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
 
         // Due to overflows we can only guarantee that the 2 durations are equal if we get the same results
         // doing the conversion in both directions.
-        return unit.convert(that.quantity(), that.unit()) == quantity
-               && that.unit().convert(quantity, unit) == that.quantity();
+        return unit.convert(that.quantity(), that.unit()) == quantity && that.unit()
+                                                                             .convert(quantity, unit) == that.quantity();
     }
 
     /**
@@ -221,7 +216,9 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
         return Long.compare(this.to(minUnit), that.to(minUnit));
     }
 
-    void validateMinUnit(Object value, TimeUnit unit, TimeUnit minUnit)
+    void validateMinUnit(Object value,
+                         TimeUnit unit,
+                         TimeUnit minUnit)
     {
         if (unit.compareTo(minUnit) < 0)
         {
@@ -229,7 +226,10 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
         }
     }
 
-    void validateQuantity(Object value, long quantity, TimeUnit sourceUnit, TimeUnit minUnit)
+    void validateQuantity(Object value,
+                          long quantity,
+                          TimeUnit sourceUnit,
+                          TimeUnit minUnit)
     {
         if (quantity < 0)
         {
@@ -240,15 +240,16 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
 
         if (minUnit.convert(quantity, sourceUnit) == Long.MAX_VALUE)
         {
-            throw new IllegalArgumentException(String.format("Invalid duration: %s. It shouldn't be more than %d in %s",
-                                                             value, Long.MAX_VALUE - 1, minUnit.name().toLowerCase()));
+            throw new IllegalArgumentException(
+                    String.format("Invalid duration: %s. It shouldn't be more than %d in %s", value, Long.MAX_VALUE - 1, minUnit.name()
+                                                                                                                                .toLowerCase()));
         }
     }
 
     IllegalArgumentException iae(Object value)
     {
-        return new IllegalArgumentException(String.format("Invalid duration %s. Positive numbers with " +
-                                                          "units %s are allowed", value, acceptedUnits(minimumUnit())));
+        return new IllegalArgumentException(
+                String.format("Invalid duration %s. Positive numbers with " + "units %s are allowed", value, acceptedUnits(minimumUnit())));
     }
 
     /**
@@ -260,15 +261,15 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
     {
         switch (unit)
         {
-            case DAYS:
+            case DAYS :
                 return "d";
-            case HOURS:
+            case HOURS :
                 return "h";
-            case MINUTES:
+            case MINUTES :
                 return "m";
-            case SECONDS:
+            case SECONDS :
                 return "s";
-            case MILLISECONDS:
+            case MILLISECONDS :
                 return "ms";
         }
         throw new IllegalArgumentException("Unsupported unit " + unit);
@@ -283,21 +284,22 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
     {
         switch (symbol.toLowerCase())
         {
-            case "d":
+            case "d" :
                 return DAYS;
-            case "h":
+            case "h" :
                 return HOURS;
-            case "m":
+            case "m" :
                 return MINUTES;
-            case "s":
+            case "s" :
                 return SECONDS;
-            case "ms":
+            case "ms" :
                 return MILLISECONDS;
-            default:
-                throw new IllegalArgumentException(String.format("Unsupported time unit: %s. Supported units are: %s",
-                                                                 symbol, Arrays.stream(TimeUnit.values())
-                                                                               .map(DurationSpec::symbol)
-                                                                               .collect(Collectors.joining(", "))));
+            default :
+                throw new IllegalArgumentException(String.format("Unsupported time unit: %s. Supported units are: %s", symbol, Arrays.stream(TimeUnit.values())
+                                                                                                                                     .map(DurationSpec::symbol)
+                                                                                                                                     .collect(
+                                                                                                                                             Collectors.joining(
+                                                                                                                                                     ", "))));
         }
     }
 
@@ -305,7 +307,9 @@ public abstract class DurationSpec implements Comparable<DurationSpec>
     {
         TimeUnit[] units = TimeUnit.values();
         return Arrays.stream(Arrays.copyOfRange(units, minimumUnit.ordinal(), units.length))
-                     .map(unit -> symbol(unit) + "(" + unit.name().toLowerCase() + ")")
+                     .map(unit -> symbol(unit) + "(" + unit.name()
+                                                           .toLowerCase()
+                             + ")")
                      .collect(Collectors.joining(", ", "[", "]"));
     }
 }

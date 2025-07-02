@@ -19,12 +19,10 @@
 package org.apache.cassandra.sidecar.config;
 
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 
 /**
- * A randomized delta value that adds jitter to the initial delay configuration of a
- * {@link org.apache.cassandra.sidecar.tasks.PeriodicTask}
+ * A randomized delta value that adds jitter to the initial delay configuration of a {@link org.apache.cassandra.sidecar.tasks.PeriodicTask}
  */
 public interface RandomInitialDelayDelta
 {
@@ -34,8 +32,7 @@ public interface RandomInitialDelayDelta
     MillisecondBoundConfiguration initialDelayRandomDelta();
 
     /**
-     * Returns a random delta delay in milliseconds. Internally it uses current's {@link ThreadLocalRandom}
-     * to calculate the next long value.
+     * Returns a random delta delay in milliseconds. Internally it uses current's {@link ThreadLocalRandom} to calculate the next long value.
      *
      * @return a random delta delay in milliseconds
      */
@@ -43,7 +40,8 @@ public interface RandomInitialDelayDelta
     {
         long delta = initialDelayRandomDelta().toMillis();
         return delta > 0
-               ? ThreadLocalRandom.current().nextLong(delta)
-               : 0;
+                ? ThreadLocalRandom.current()
+                                   .nextLong(delta)
+                : 0;
     }
 }

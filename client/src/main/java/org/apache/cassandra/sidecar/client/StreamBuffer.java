@@ -29,25 +29,28 @@ public interface StreamBuffer
     /**
      * Copies bytes from this {@link StreamBuffer} into the {@link ByteBuffer destination}
      *
-     * @param sourceOffset the offset within the {@link StreamBuffer} to be read; must be non-negative and
-     *                     larger than the buffer length
-     * @param destination  a {@link ByteBuffer} where the data will be copied
-     * @param length       the number of bytes to be copied from the {@link StreamBuffer}; must be non-negative and
-     *                     larger than the {@code buffer.length - sourceOffset}
+     * @param sourceOffset the offset within the {@link StreamBuffer} to be read; must be non-negative and larger than the buffer length
+     * @param destination a {@link ByteBuffer} where the data will be copied
+     * @param length the number of bytes to be copied from the {@link StreamBuffer}; must be non-negative and larger than the
+     *            {@code buffer.length - sourceOffset}
      */
-    void copyBytes(int sourceOffset, ByteBuffer destination, int length);
+    void copyBytes(int sourceOffset,
+                   ByteBuffer destination,
+                   int length);
 
     /**
      * Copies bytes from this {@link StreamBuffer} into the byte array {@code destination}.
      *
-     * @param sourceOffset     the offset within the {@link StreamBuffer} to be read; must be non-negative and
-     *                         larger than the buffer length
-     * @param destination      the target byte array where the source bytes will be copied
+     * @param sourceOffset the offset within the {@link StreamBuffer} to be read; must be non-negative and larger than the buffer length
+     * @param destination the target byte array where the source bytes will be copied
      * @param destinationIndex the offset in the {@code destination} where to start writing data
-     * @param length           the number of bytes to be copied from the {@link StreamBuffer}; must be non-negative and
-     *                         larger than the {@code buffer.length - sourceOffset}
+     * @param length the number of bytes to be copied from the {@link StreamBuffer}; must be non-negative and larger than the
+     *            {@code buffer.length - sourceOffset}
      */
-    void copyBytes(int sourceOffset, byte[] destination, int destinationIndex, int length);
+    void copyBytes(int sourceOffset,
+                   byte[] destination,
+                   int destinationIndex,
+                   int length);
 
     /**
      * Returns a byte from the given {@code index}.
@@ -91,14 +94,19 @@ public interface StreamBuffer
         }
 
         @Override
-        public void copyBytes(int sourceOffset, ByteBuffer destination, int length)
+        public void copyBytes(int sourceOffset,
+                              ByteBuffer destination,
+                              int length)
         {
             destination.put(bytes, sourceOffset, length);
             destination.flip();
         }
 
         @Override
-        public void copyBytes(int sourceOffset, byte[] destination, int destinationIndex, int length)
+        public void copyBytes(int sourceOffset,
+                              byte[] destination,
+                              int destinationIndex,
+                              int length)
         {
             System.arraycopy(bytes, sourceOffset, destination, destinationIndex, length);
         }

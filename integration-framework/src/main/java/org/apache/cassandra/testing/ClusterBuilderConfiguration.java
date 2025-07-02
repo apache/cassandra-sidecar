@@ -22,10 +22,8 @@ package org.apache.cassandra.testing;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.function.BiConsumer;
-
-import com.google.common.base.Preconditions;
-
 import org.apache.cassandra.distributed.api.Feature;
+import com.google.common.base.Preconditions;
 
 /**
  * Defines the configuration to build the {@link IClusterExtension} cluster
@@ -99,8 +97,7 @@ public class ClusterBuilderConfiguration
      */
     public ClusterBuilderConfiguration newNodesPerDc(int newNodesPerDc)
     {
-        Preconditions.checkArgument(newNodesPerDc >= 0,
-                                    "newNodesPerDc cannot be a negative number");
+        Preconditions.checkArgument(newNodesPerDc >= 0, "newNodesPerDc cannot be a negative number");
         this.newNodesPerDc = newNodesPerDc;
         return this;
     }

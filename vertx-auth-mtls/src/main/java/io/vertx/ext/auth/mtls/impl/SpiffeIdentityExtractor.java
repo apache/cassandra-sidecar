@@ -28,8 +28,8 @@ import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
 
 /**
- * {@link CertificateIdentityExtractor} implementation for SPIFFE certificates for extracting valid SPIFFE identity.
- * SPIFFE is a URI, present as part of SAN of client certificates, it uniquely identifies client.
+ * {@link CertificateIdentityExtractor} implementation for SPIFFE certificates for extracting valid SPIFFE identity. SPIFFE is a URI, present as part of SAN of
+ * client certificates, it uniquely identifies client.
  */
 public class SpiffeIdentityExtractor implements CertificateIdentityExtractor
 {

@@ -18,10 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.nio.file.NoSuchFileException;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -29,6 +25,9 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -36,7 +35,6 @@ import org.apache.cassandra.sidecar.models.HttpResponse;
 import org.apache.cassandra.sidecar.utils.FileStreamer;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
@@ -68,11 +66,10 @@ public class FileStreamHandler extends AbstractHandler<String>
     {
         InstanceMetadata instanceMetadata = metadataFetcher.instance(host);
         fileSize(context, localFile)
-        .compose(fileSize -> fileStreamer.stream(new HttpResponse(httpRequest, context.response()),
-                                                 instanceMetadata.id(), localFile, fileSize,
-                                                 httpRequest.getHeader(HttpHeaderNames.RANGE)))
-        .onSuccess(v -> logger.debug("Completed streaming file '{}'", localFile))
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, localFile));
+                                    .compose(fileSize -> fileStreamer.stream(new HttpResponse(httpRequest, context.response()), instanceMetadata.id(),
+                                            localFile, fileSize, httpRequest.getHeader(HttpHeaderNames.RANGE)))
+                                    .onSuccess(v -> logger.debug("Completed streaming file '{}'", localFile))
+                                    .onFailure(cause -> processFailure(cause, context, host, remoteAddress, localFile));
     }
 
     @Override
@@ -106,23 +103,24 @@ public class FileStreamHandler extends AbstractHandler<String>
         super.processFailure(cause, context, host, remoteAddress, localFile);
     }
 
-    protected Future<Long> fileSize(RoutingContext context, String path)
+    protected Future<Long> fileSize(RoutingContext context,
+                                    String path)
     {
-        return context.vertx().fileSystem().props(path)
+        return context.vertx()
+                      .fileSystem()
+                      .props(path)
                       .compose(fileProps -> {
                           if (fileProps == null || !fileProps.isRegularFile())
                           {
                               // File is not a regular file
                               logger.error("The requested file '{}' does not exist", path);
-                              return Future.failedFuture(wrapHttpException(NOT_FOUND,
-                                                                           "The requested file does not exist"));
+                              return Future.failedFuture(wrapHttpException(NOT_FOUND, "The requested file does not exist"));
                           }
 
                           if (fileProps.size() <= 0)
                           {
                               logger.error("The requested file '{}' has 0 size", path);
-                              return Future.failedFuture(wrapHttpException(REQUESTED_RANGE_NOT_SATISFIABLE,
-                                                                           "The requested file is empty"));
+                              return Future.failedFuture(wrapHttpException(REQUESTED_RANGE_NOT_SATISFIABLE, "The requested file is empty"));
                           }
 
                           return Future.succeededFuture(fileProps.size());

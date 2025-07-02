@@ -40,8 +40,10 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 /**
  * Provides the best-effort single cluster leaseholder capability.
- * <p>It is suitable for use cases that desire single execution ideally, but can tolerate concurrent executions, across the cluster.
- * <p>For more details, see {@link ClusterLeaseClaimTask}
+ * <p>
+ * It is suitable for use cases that desire single execution ideally, but can tolerate concurrent executions, across the cluster.
+ * <p>
+ * For more details, see {@link ClusterLeaseClaimTask}
  */
 public class CoordinationModule extends AbstractModule
 {

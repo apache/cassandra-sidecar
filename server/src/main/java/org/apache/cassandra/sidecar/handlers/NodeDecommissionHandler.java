@@ -18,9 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
-import java.util.Set;
-
 import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -28,6 +25,8 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Collections;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
@@ -41,7 +40,6 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.OperationalJobUtils;
 import org.jetbrains.annotations.NotNull;
-
 import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
 
 /**
@@ -56,8 +54,8 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the interface to retrieve instance metadata
-     * @param executorPools   the executor pools for blocking executions
-     * @param validator       a validator instance to validate Cassandra-specific input
+     * @param executorPools the executor pools for blocking executions
+     * @param validator a validator instance to validate Cassandra-specific input
      */
     @Inject
     protected NodeDecommissionHandler(InstanceMetadataFetcher metadataFetcher,
@@ -87,7 +85,8 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
                                SocketAddress remoteAddress,
                                Boolean isForce)
     {
-        StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
+        StorageOperations operations = metadataFetcher.delegate(host)
+                                                      .storageOperations();
         NodeDecommissionJob job = new NodeDecommissionJob(UUIDs.timeBased(), operations, isForce);
         try
         {
@@ -97,7 +96,8 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
         {
             String reason = oje.getMessage();
             logger.error("Conflicting job encountered. reason={}", reason);
-            context.response().setStatusCode(HttpResponseStatus.CONFLICT.code());
+            context.response()
+                   .setStatusCode(HttpResponseStatus.CONFLICT.code());
             context.json(new OperationalJobResponse(job.jobId(), OperationalJobStatus.FAILED, job.name(), reason));
             return;
         }

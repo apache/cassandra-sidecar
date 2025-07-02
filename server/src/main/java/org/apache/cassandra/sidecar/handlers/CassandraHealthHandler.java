@@ -31,7 +31,6 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.JMX;
 import static org.apache.cassandra.sidecar.modules.ApiModule.NOT_OK_STATUS;
 import static org.apache.cassandra.sidecar.modules.ApiModule.OK_STATUS;
@@ -46,8 +45,8 @@ public class CassandraHealthHandler extends AbstractHandler<Void>
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the interface to retrieve instance metadata
-     * @param executorPools   the executor pools for blocking executions
-     * @param validator       a validator instance to validate Cassandra-specific input
+     * @param executorPools the executor pools for blocking executions
+     * @param validator a validator instance to validate Cassandra-specific input
      */
     @Inject
     public CassandraHealthHandler(InstanceMetadataFetcher metadataFetcher,
@@ -60,11 +59,11 @@ public class CassandraHealthHandler extends AbstractHandler<Void>
     /**
      * Handles the request with the parameters for this request.
      *
-     * @param context       the request context
-     * @param httpRequest   the {@link HttpServerRequest} object
-     * @param host          the host where this request is intended for
+     * @param context the request context
+     * @param httpRequest the {@link HttpServerRequest} object
+     * @param host the host where this request is intended for
      * @param remoteAddress the address where the request originates
-     * @param request       the request object
+     * @param request the request object
      */
     @Override
     protected void handleInternal(RoutingContext context,
@@ -75,9 +74,9 @@ public class CassandraHealthHandler extends AbstractHandler<Void>
     {
         CassandraAdapterDelegate delegate = metadataFetcher.delegate(host);
 
-        boolean isServiceUp = context.request().path().contains(JMX)
-                              ? delegate.isJmxUp()
-                              : delegate.isNativeUp();
+        boolean isServiceUp = context.request()
+                                     .path()
+                                     .contains(JMX) ? delegate.isJmxUp() : delegate.isNativeUp();
         if (isServiceUp)
         {
             context.json(OK_STATUS);

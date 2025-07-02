@@ -18,21 +18,19 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import org.junit.jupiter.api.Test;
-
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.ext.web.client.HttpResponse;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
-
+import org.junit.jupiter.api.Test;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests for the {@link  org.apache.cassandra.sidecar.handlers.cassandra.NodeSettingsHandler}
+ * Integration tests for the {@link org.apache.cassandra.sidecar.handlers.cassandra.NodeSettingsHandler}
  */
 class NodeSettingsIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
@@ -55,7 +53,8 @@ class NodeSettingsIntegrationTest extends SharedClusterSidecarIntegrationTestBas
                                                                                 .expecting(HttpResponseExpectation.SC_SERVICE_UNAVAILABLE));
             assertThat(responseAfterStop).isNotNull();
             assertThat(responseAfterStop.statusCode()).isEqualTo(SERVICE_UNAVAILABLE.code());
-            assertThat(responseAfterStop.bodyAsJsonObject().getString("message")).contains("NodeSettings unavailable");
+            assertThat(responseAfterStop.bodyAsJsonObject()
+                                        .getString("message")).contains("NodeSettings unavailable");
         });
     }
 

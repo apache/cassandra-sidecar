@@ -38,33 +38,22 @@ public class SidecarModules
 
     /**
      * All sidecar modules
+     *
      * @param confPath path to the configuration file
      * @return all sidecar modules
      */
     public static List<Module> all(@Nullable Path confPath)
     {
         // To prevent unexpected circular dependency chains in your code, we recommend that you disable Guice's circular proxy feature.
-        return List.of(Modules.disableCircularProxiesModule(),
-                       new ApiModule(),
-                       new AuthModule(),
-                       new CassandraOperationsModule(),
-                       new CdcModule(),
-                       new ConfigurationModule(confPath),
-                       new CoordinationModule(),
-                       new SchemaReportingModule(),
-                       new HealthCheckModule(),
-                       new RestoreJobModule(),
-                       new SchedulingModule(),
-                       new SidecarSchemaModule(),
-                       new SSTablesAccessModule(),
-                       new TelemetryModule(),
-                       new UtilitiesModule(),
-                       new MultiBindingTypeResolverModule(),
-                       new LiveMigrationModule());
+        return List.of(Modules.disableCircularProxiesModule(), new ApiModule(), new AuthModule(), new CassandraOperationsModule(), new CdcModule(),
+                new ConfigurationModule(confPath), new CoordinationModule(), new SchemaReportingModule(), new HealthCheckModule(), new RestoreJobModule(),
+                new SchedulingModule(), new SidecarSchemaModule(), new SSTablesAccessModule(), new TelemetryModule(), new UtilitiesModule(),
+                new MultiBindingTypeResolverModule(), new LiveMigrationModule());
     }
 
     /**
      * Similar to {@link #all(Path)}, but not setting the configuration path
+     *
      * @return all sidecar modules
      */
     public static List<Module> all()

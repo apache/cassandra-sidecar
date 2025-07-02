@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.common.request;
 
-
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
@@ -54,4 +53,3 @@ public class NativeUpdateRequest extends JsonRequest<HealthResponse>
         return requestPayload;
     }
 }
-

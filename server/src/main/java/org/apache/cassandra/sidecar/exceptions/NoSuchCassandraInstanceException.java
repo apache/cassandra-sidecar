@@ -26,8 +26,7 @@ import java.util.NoSuchElementException;
 public class NoSuchCassandraInstanceException extends NoSuchElementException
 {
     /**
-     * Constructs a {@link NoSuchCassandraInstanceException}, saving a reference
-     * to the error message string {@code errorMessage} for later retrieval by the
+     * Constructs a {@link NoSuchCassandraInstanceException}, saving a reference to the error message string {@code errorMessage} for later retrieval by the
      * {@code getMessage} method.
      *
      * @param errorMessage the detail message.
@@ -38,17 +37,14 @@ public class NoSuchCassandraInstanceException extends NoSuchElementException
     }
 
     /**
-     * Constructs a {@link NoSuchCassandraInstanceException} with the specified detail
-     * message and cause.
+     * Constructs a {@link NoSuchCassandraInstanceException} with the specified detail message and cause.
      *
-     * @param message the detail message (which is saved for later retrieval
-     *                by the {@link #getMessage()} method).
-     * @param cause   the cause (which is saved for later retrieval by the
-     *                {@link #getCause()} method).  (A {@code null} value is
-     *                permitted, and indicates that the cause is nonexistent or
-     *                unknown.)
+     * @param message the detail message (which is saved for later retrieval by the {@link #getMessage()} method).
+     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method). (A {@code null} value is permitted, and indicates that the
+     *            cause is nonexistent or unknown.)
      */
-    public NoSuchCassandraInstanceException(String message, Throwable cause)
+    public NoSuchCassandraInstanceException(String message,
+                                            Throwable cause)
     {
         super(message);
         initCause(cause);

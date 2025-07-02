@@ -18,20 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -45,6 +31,11 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
@@ -52,7 +43,12 @@ import org.apache.cassandra.sidecar.job.OperationalJob;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -95,7 +91,8 @@ class ListOperationalJobsHandlerTest
     void after() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -114,9 +111,14 @@ class ListOperationalJobsHandlerTest
                   ListOperationalJobsResponse listJobs = response.bodyAsJson(ListOperationalJobsResponse.class);
                   assertThat(listJobs).isNotNull();
                   assertThat(listJobs.jobs()).isNotNull();
-                  assertThat(listJobs.jobs().size()).isEqualTo(2);
-                  assertThat(listJobs.jobs().get(0).jobId()).isIn(runningUuid, runningUuid2);
-                  assertThat(listJobs.jobs().get(1).jobId()).isIn(runningUuid, runningUuid2);
+                  assertThat(listJobs.jobs()
+                                     .size()).isEqualTo(2);
+                  assertThat(listJobs.jobs()
+                                     .get(0)
+                                     .jobId()).isIn(runningUuid, runningUuid2);
+                  assertThat(listJobs.jobs()
+                                     .get(1)
+                                     .jobId()).isIn(runningUuid, runningUuid2);
                   context.completeNow();
               }));
     }

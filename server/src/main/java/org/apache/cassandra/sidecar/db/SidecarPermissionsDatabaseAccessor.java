@@ -36,8 +36,8 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
- * {@link SidecarPermissionsDatabaseAccessor} is an accessor for role_permissions_v1 table under sidecar_internal
- * keyspace. Custom sidecar specific permissions are stored in this table.
+ * {@link SidecarPermissionsDatabaseAccessor} is an accessor for role_permissions_v1 table under sidecar_internal keyspace. Custom sidecar specific permissions
+ * are stored in this table.
  */
 @Singleton
 public class SidecarPermissionsDatabaseAccessor extends DatabaseAccessor<SidecarRolePermissionsSchema>
@@ -62,14 +62,15 @@ public class SidecarPermissionsDatabaseAccessor extends DatabaseAccessor<Sidecar
     }
 
     /**
-     * Queries Sidecar for all rows in sidecar_internal.role_permissions_v1 table. This table maps permissions of a
-     * role into {@link Authorization} and returns a {@code Map} of user role to authorizations.
+     * Queries Sidecar for all rows in sidecar_internal.role_permissions_v1 table. This table maps permissions of a role into {@link Authorization} and returns
+     * a {@code Map} of user role to authorizations.
      *
      * @return {@code Map} contains role and granted authorizations
      */
     public Map<String, Set<Authorization>> rolesToAuthorizations()
     {
-        BoundStatement statement = tableSchema.allRolesPermissions().bind();
+        BoundStatement statement = tableSchema.allRolesPermissions()
+                                              .bind();
         ResultSet result = execute(statement);
         Map<String, Set<Authorization>> roleAuthorizations = new HashMap<>();
         for (Row row : result)
@@ -82,17 +83,18 @@ public class SidecarPermissionsDatabaseAccessor extends DatabaseAccessor<Sidecar
             {
                 try
                 {
-                    authorizations.add(permissionFactory.createPermission(permission).toAuthorization(resource));
+                    authorizations.add(permissionFactory.createPermission(permission)
+                                                        .toAuthorization(resource));
                 }
                 catch (Exception e)
                 {
-                    logger.error("Error parsing Sidecar permission={} resource={} role={}",
-                                 permission, resource, role, e);
+                    logger.error("Error parsing Sidecar permission={} resource={} role={}", permission, resource, role, e);
                 }
             }
             if (!authorizations.isEmpty())
             {
-                roleAuthorizations.computeIfAbsent(role, k -> new HashSet<>()).addAll(authorizations);
+                roleAuthorizations.computeIfAbsent(role, k -> new HashSet<>())
+                                  .addAll(authorizations);
             }
         }
         return roleAuthorizations;

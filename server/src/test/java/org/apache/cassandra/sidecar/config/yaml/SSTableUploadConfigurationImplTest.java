@@ -38,16 +38,15 @@ class SSTableUploadConfigurationImplTest
     }
 
     @ParameterizedTest(name = "{index} => invalid permission string \"{0}\"")
-    @ValueSource(strings = { "", "aaaaaaaaa", "rwxaaaaaa", "rwx", "null" })
+    @ValueSource(strings = { "", "aaaaaaaaa", "rwxaaaaaa", "rwx", "null"})
     void filePermissionsFailsOnInvalidString(String value)
     {
-        assertThatIllegalArgumentException()
-        .isThrownBy(() -> new SSTableUploadConfigurationImpl(value))
-        .withMessage("Invalid file_permissions configuration=\"" + value + "\"");
+        assertThatIllegalArgumentException().isThrownBy(() -> new SSTableUploadConfigurationImpl(value))
+                                            .withMessage("Invalid file_permissions configuration=\"" + value + "\"");
     }
 
     @ParameterizedTest(name = "{index} => valid permission string \"{0}\"")
-    @ValueSource(strings = { "---------", "rwx------", "rwxr--r--", "r-xr-xr-x", "r-xr-xrwx" })
+    @ValueSource(strings = { "---------", "rwx------", "rwxr--r--", "r-xr-xr-x", "r-xr-xrwx"})
     void testValidFilePermission(String value)
     {
         SSTableUploadConfigurationImpl config = new SSTableUploadConfigurationImpl(value);

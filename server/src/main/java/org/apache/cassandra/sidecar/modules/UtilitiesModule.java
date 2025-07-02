@@ -54,7 +54,8 @@ public class UtilitiesModule extends AbstractModule
     @Singleton
     DnsResolver dnsResolver(SidecarConfiguration configuration)
     {
-        return configuration.serviceConfiguration().dnsResolver();
+        return configuration.serviceConfiguration()
+                            .dnsResolver();
     }
 
     /**

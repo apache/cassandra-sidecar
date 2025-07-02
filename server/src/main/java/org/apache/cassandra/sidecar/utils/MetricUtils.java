@@ -34,8 +34,8 @@ public class MetricUtils
     private static final String SUMMARY = "Summary.db";
 
     /**
-     * Returns extracted SSTable component. For e.g. for nb-1-big-Data.db component returns Data.db. This is used for
-     * marking metrics that are captured specific to SSTable components.
+     * Returns extracted SSTable component. For e.g. for nb-1-big-Data.db component returns Data.db. This is used for marking metrics that are captured specific
+     * to SSTable components.
      *
      * @param filename name of SSTable component
      * @return SSTable component, if none found "default" is returned

@@ -50,7 +50,9 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
         unpreparedListRoles = "LIST ROLES OF \"%s\"";
         allRolesAndPermissions = prepare(allRolesAndPermissions, session, "SELECT * FROM system_auth.role_permissions");
 
-        KeyspaceMetadata keyspaceMetadata = session.getCluster().getMetadata().getKeyspace(keyspaceName());
+        KeyspaceMetadata keyspaceMetadata = session.getCluster()
+                                                   .getMetadata()
+                                                   .getKeyspace(keyspaceName());
         // identity_to_role table exists in Cassandra versions starting 5.x
         if (keyspaceMetadata == null || keyspaceMetadata.getTable(IDENTITY_TO_ROLE_TABLE) == null)
         {
@@ -64,8 +66,7 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
     @Override
     protected String tableName()
     {
-        throw new UnsupportedOperationException("SystemAuthSchema supports reading information from multiple " +
-                                                "tables in system_auth keyspace");
+        throw new UnsupportedOperationException("SystemAuthSchema supports reading information from multiple " + "tables in system_auth keyspace");
     }
 
     @NotNull

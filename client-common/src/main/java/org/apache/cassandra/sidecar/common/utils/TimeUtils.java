@@ -47,10 +47,11 @@ public final class TimeUtils
      *
      * @throws IllegalArgumentException if minimum duration is greater than maximum duration
      */
-    public static Duration randomDuration(Duration minimum, Duration maximum)
+    public static Duration randomDuration(Duration minimum,
+                                          Duration maximum)
     {
-        Preconditions.checkArgument(minimum.compareTo(maximum) <= 0,
-                                    "Minimum duration must be less or equal to maximum duration");
-        return Duration.ofMillis(ThreadLocalRandom.current().nextLong(minimum.toMillis(), maximum.toMillis() + 1L));
+        Preconditions.checkArgument(minimum.compareTo(maximum) <= 0, "Minimum duration must be less or equal to maximum duration");
+        return Duration.ofMillis(ThreadLocalRandom.current()
+                                                  .nextLong(minimum.toMillis(), maximum.toMillis() + 1L));
     }
 }

@@ -24,14 +24,6 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.RemovalListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
@@ -39,14 +31,18 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * CDCLogCache caches the recently downloaded files to avoid being deleted by accident.
- * <br>
- * Downloads tracking is via {@linkplain #touch}.
- * <br>
- * In the event of deleting the _consumed_ files, 1 supersedes 2, meaning the _consumed_ files and their links
- * are deleted, even though within the cache duration.
+ * CDCLogCache caches the recently downloaded files to avoid being deleted by accident. <br>
+ * Downloads tracking is via {@linkplain #touch}. <br>
+ * In the event of deleting the _consumed_ files, 1 supersedes 2, meaning the _consumed_ files and their links are deleted, even though within the cache
+ * duration.
  */
 public class CdcLogCache
 {
@@ -68,7 +64,9 @@ public class CdcLogCache
                        InstancesMetadata instancesMetadata,
                        SidecarConfiguration sidecarConfig)
     {
-        this(executorPools, instancesMetadata, sidecarConfig.serviceConfiguration().cdcConfiguration().segmentHardLinkCacheExpiry());
+        this(executorPools, instancesMetadata, sidecarConfig.serviceConfiguration()
+                                                            .cdcConfiguration()
+                                                            .segmentHardLinkCacheExpiry());
     }
 
     @VisibleForTesting
@@ -97,13 +95,12 @@ public class CdcLogCache
         {
             // setup periodic and serial cleanup
             long cacheExpiryInMillis = cacheExpiryConfig.to(TimeUnit.MILLISECONDS);
-            internalExecutorPool.setPeriodic(cacheExpiryInMillis,
-                                             id -> hardlinkCache.cleanUp(),
-                                             true);
+            internalExecutorPool.setPeriodic(cacheExpiryInMillis, id -> hardlinkCache.cleanUp(), true);
         }
     }
 
-    public void touch(File segmentFile, File indexFile)
+    public void touch(File segmentFile,
+                      File indexFile)
     {
         // renew the hardlinks
         hardlinkCache.getIfPresent(segmentFile);
@@ -138,10 +135,8 @@ public class CdcLogCache
     }
 
     /**
-     * Clean up the linked file when the application is starting.
-     * There could be files left over if the application crashes during streaming the CDC segments.
-     * On a new start, the tmp directory for the linked CDC segments should be empty.
-     * It is only called in the constructor of the handler singleton.
+     * Clean up the linked file when the application is starting. There could be files left over if the application crashes during streaming the CDC segments.
+     * On a new start, the tmp directory for the linked CDC segments should be empty. It is only called in the constructor of the handler singleton.
      *
      * @param config instances config
      */
@@ -163,8 +158,7 @@ public class CdcLogCache
 
     private void cleanupLinkedFiles(InstanceMetadata instance) throws IOException
     {
-        File[] files = getTempCdcDir((instance.cdcDir()))
-                       .listFiles(f -> CdcUtil.isLogFile(f.getName()) || CdcUtil.isIndexFile(f.getName()));
+        File[] files = getTempCdcDir((instance.cdcDir())).listFiles(f -> CdcUtil.isLogFile(f.getName()) || CdcUtil.isIndexFile(f.getName()));
         if (files == null)
             return;
         for (File f : files)

@@ -28,7 +28,9 @@ import org.apache.cassandra.sidecar.common.data.StorageCredentials;
  */
 public class RestoreJobSecretsGen
 {
-    private RestoreJobSecretsGen() {}
+    private RestoreJobSecretsGen()
+    {
+    }
 
     public static StorageCredentials genReadStorageCredentials()
     {
@@ -47,12 +49,15 @@ public class RestoreJobSecretsGen
 
     private static StorageCredentials genStorageCredentials(String permission)
     {
-        return StorageCredentials
-               .builder()
-               .accessKeyId(permission + "-accessKeyId-" + ThreadLocalRandom.current().nextLong())
-               .secretAccessKey(permission + "-secretAccessKey-" + ThreadLocalRandom.current().nextLong())
-               .sessionToken(permission + "-sessionToken-" + ThreadLocalRandom.current().nextLong())
-               .region(permission + "-region-" + ThreadLocalRandom.current().nextLong())
-               .build();
+        return StorageCredentials.builder()
+                                 .accessKeyId(permission + "-accessKeyId-" + ThreadLocalRandom.current()
+                                                                                              .nextLong())
+                                 .secretAccessKey(permission + "-secretAccessKey-" + ThreadLocalRandom.current()
+                                                                                                      .nextLong())
+                                 .sessionToken(permission + "-sessionToken-" + ThreadLocalRandom.current()
+                                                                                                .nextLong())
+                                 .region(permission + "-region-" + ThreadLocalRandom.current()
+                                                                                    .nextLong())
+                                 .build();
     }
 }

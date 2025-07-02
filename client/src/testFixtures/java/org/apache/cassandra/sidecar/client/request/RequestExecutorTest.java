@@ -59,11 +59,14 @@ public abstract class RequestExecutorTest<T> extends BaseRequestTest
 
     @ParameterizedTest(name = "testHappyPath {index} => request={0}, async={1}")
     @ArgumentsSource(TestParameters.class)
-    public void testHappyPath(RequestTestParameters<T> parameters, boolean async) throws Exception
+    public void testHappyPath(RequestTestParameters<T> parameters,
+                              boolean async)
+            throws Exception
     {
         try (MockWebServer server = new MockWebServer())
         {
-            server.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(parameters.okResponseBody()));
+            server.enqueue(new MockResponse().setResponseCode(OK.code())
+                                             .setBody(parameters.okResponseBody()));
 
             // Start the server.
             server.start();
@@ -78,7 +81,9 @@ public abstract class RequestExecutorTest<T> extends BaseRequestTest
 
     @ParameterizedTest(name = "testRetriesOnTimeoutWithSlowServer {index} => request={0}, async={1}")
     @ArgumentsSource(TestParameters.class)
-    public void testRetriesOnTimeoutWithSlowServer(RequestTestParameters<T> parameters, boolean async) throws Exception
+    public void testRetriesOnTimeoutWithSlowServer(RequestTestParameters<T> parameters,
+                                                   boolean async)
+            throws Exception
     {
         String happyPathResponse = parameters.okResponseBody();
         MockWebServer slowServer = new MockWebServer();
@@ -88,7 +93,8 @@ public abstract class RequestExecutorTest<T> extends BaseRequestTest
             slowServer.enqueue(new MockResponse().setBodyDelay(5, TimeUnit.MINUTES)
                                                  .setResponseCode(OK.code())
                                                  .setBody(happyPathResponse));
-            fastServer.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(happyPathResponse));
+            fastServer.enqueue(new MockResponse().setResponseCode(OK.code())
+                                                 .setBody(happyPathResponse));
 
             // Start both servers.
             slowServer.start();
@@ -109,11 +115,11 @@ public abstract class RequestExecutorTest<T> extends BaseRequestTest
 
     @ParameterizedTest(name = "testRetriesWithServerReturningServerError {index} => request={0}, async={1}")
     @ArgumentsSource(TestParameters.class)
-    public void testRetriesWithServerReturningServerError(RequestTestParameters<T> parameters, boolean async)
-    throws Exception
+    public void testRetriesWithServerReturningServerError(RequestTestParameters<T> parameters,
+                                                          boolean async)
+            throws Exception
     {
-        try (MockWebServer serverErrorServer = new MockWebServer();
-             MockWebServer normalOperatingServer = new MockWebServer())
+        try (MockWebServer serverErrorServer = new MockWebServer(); MockWebServer normalOperatingServer = new MockWebServer())
         {
             serverErrorServer.enqueue(new MockResponse().setResponseCode(INTERNAL_SERVER_ERROR.code())
                                                         .setBody(parameters.serverErrorResponseBody()));
@@ -139,7 +145,9 @@ public abstract class RequestExecutorTest<T> extends BaseRequestTest
 
     @ParameterizedTest(name = "testWithSingleServerAndRetries {index} => request={0}, async={1}")
     @ArgumentsSource(TestParameters.class)
-    public void testWithSingleServerAndRetries(RequestTestParameters<T> parameters, boolean async) throws Exception
+    public void testWithSingleServerAndRetries(RequestTestParameters<T> parameters,
+                                               boolean async)
+            throws Exception
     {
         try (MockWebServer server = new MockWebServer())
         {
@@ -148,7 +156,8 @@ public abstract class RequestExecutorTest<T> extends BaseRequestTest
                                              .setBody(serverErrorResponseBody));
             server.enqueue(new MockResponse().setResponseCode(INTERNAL_SERVER_ERROR.code())
                                              .setBody(serverErrorResponseBody));
-            server.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(parameters.okResponseBody()));
+            server.enqueue(new MockResponse().setResponseCode(OK.code())
+                                             .setBody(parameters.okResponseBody()));
 
             // Start both servers.
             server.start();
@@ -164,8 +173,9 @@ public abstract class RequestExecutorTest<T> extends BaseRequestTest
 
     @ParameterizedTest(name = "testWithSingleServerExhaustsRetries {index} => request={0}, async={1}")
     @ArgumentsSource(TestParameters.class)
-    public void testWithSingleServerExhaustsRetries(RequestTestParameters<T> parameters, boolean async)
-    throws Exception
+    public void testWithSingleServerExhaustsRetries(RequestTestParameters<T> parameters,
+                                                    boolean async)
+            throws Exception
     {
         String serverErrorResponseBody = parameters.serverErrorResponseBody();
 
@@ -177,13 +187,13 @@ public abstract class RequestExecutorTest<T> extends BaseRequestTest
                                              .setBody(serverErrorResponseBody));
             server.enqueue(new MockResponse().setResponseCode(INTERNAL_SERVER_ERROR.code())
                                              .setBody(serverErrorResponseBody));
-            server.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(parameters.okResponseBody()));
+            server.enqueue(new MockResponse().setResponseCode(OK.code())
+                                             .setBody(parameters.okResponseBody()));
 
             // Start both servers.
             server.start();
 
-            assertThatException().isThrownBy(() ->
-                                             runTestScenario(parameters, buildFromServerList(server), async))
+            assertThatException().isThrownBy(() -> runTestScenario(parameters, buildFromServerList(server), async))
                                  .withCauseInstanceOf(RetriesExhaustedException.class)
                                  .withMessageContaining("Unable to complete request '")
                                  .withMessageContaining("' after 3 attempts");
@@ -197,18 +207,19 @@ public abstract class RequestExecutorTest<T> extends BaseRequestTest
 
     protected HttpClientConfig.Builder<?> httpClientConfigBuilder()
     {
-        return new HttpClientConfig.Builder<>()
-               .userAgent("sidecar-client-test/1.0.0")
-               .ssl(false)
-               .timeoutMillis(100)
-               .idleTimeoutMillis(100);
+        return new HttpClientConfig.Builder<>().userAgent("sidecar-client-test/1.0.0")
+                                               .ssl(false)
+                                               .timeoutMillis(100)
+                                               .idleTimeoutMillis(100);
     }
 
     private void runTestScenario(RequestTestParameters<T> parameters,
                                  InstanceSelectionPolicy policy,
-                                 boolean async) throws Exception
+                                 boolean async)
+            throws Exception
     {
-        RequestContext requestContext = parameters.specificRequest(builder(policy)).build();
+        RequestContext requestContext = parameters.specificRequest(builder(policy))
+                                                  .build();
         T responseObject;
         if (async)
         {
@@ -226,22 +237,17 @@ public abstract class RequestExecutorTest<T> extends BaseRequestTest
 
     static class TestParameters implements ArgumentsProvider
     {
-        private final List<RequestTestParameters<?>> requestTestParameters = Arrays.asList(
-        new GossipInfoRequestTestParameters(),
-        new NodeSettingsRequestTestParameters(),
-        new RingRequestForKeyspaceTestParameters(),
-        new RingRequestTestParameters(),
-        new TimeSkewRequestTestParameters(),
-        new FullSchemaRequestTestParameters(),
-        new SchemaRequestTestParameters(),
-        new ListSnapshotFilesRequestTestParameters()
-        );
+        private final List<RequestTestParameters<?>> requestTestParameters = Arrays.asList(new GossipInfoRequestTestParameters(),
+                new NodeSettingsRequestTestParameters(), new RingRequestForKeyspaceTestParameters(), new RingRequestTestParameters(),
+                new TimeSkewRequestTestParameters(), new FullSchemaRequestTestParameters(), new SchemaRequestTestParameters(),
+                new ListSnapshotFilesRequestTestParameters());
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context)
         {
             return Stream.of(true, false)
-                         .flatMap(async -> requestTestParameters.stream().map(p -> Arguments.arguments(p, async)));
+                         .flatMap(async -> requestTestParameters.stream()
+                                                                .map(p -> Arguments.arguments(p, async)));
         }
     }
 }

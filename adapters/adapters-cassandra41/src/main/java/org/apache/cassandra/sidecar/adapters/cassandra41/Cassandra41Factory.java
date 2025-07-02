@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.adapters.cassandra41;
 
 import java.net.InetSocketAddress;
-
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.ICassandraFactory;
@@ -37,7 +36,8 @@ public class Cassandra41Factory implements ICassandraFactory
     protected final DnsResolver dnsResolver;
     private final DriverUtils driverUtils;
 
-    public Cassandra41Factory(DnsResolver dnsResolver, DriverUtils driverUtils)
+    public Cassandra41Factory(DnsResolver dnsResolver,
+                              DriverUtils driverUtils)
     {
         this.dnsResolver = dnsResolver;
         this.driverUtils = driverUtils;
@@ -46,13 +46,14 @@ public class Cassandra41Factory implements ICassandraFactory
     /**
      * Returns a new adapter for Cassandra 4.0 clusters.
      *
-     * @param session                     the session to the Cassandra database
-     * @param jmxClient                   the JMX client to connect to the Cassandra database
+     * @param session the session to the Cassandra database
+     * @param jmxClient the JMX client to connect to the Cassandra database
      * @param localNativeTransportAddress the native transport address and port of the instance
      * @return a new adapter for the 4.0 clusters
      */
     @Override
-    public ICassandraAdapter create(CQLSessionProvider session, JmxClient jmxClient,
+    public ICassandraAdapter create(CQLSessionProvider session,
+                                    JmxClient jmxClient,
                                     InetSocketAddress localNativeTransportAddress)
     {
         return new Cassandra41Adapter(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils);

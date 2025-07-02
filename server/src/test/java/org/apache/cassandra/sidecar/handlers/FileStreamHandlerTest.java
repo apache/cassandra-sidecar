@@ -18,20 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import com.google.common.util.concurrent.SidecarRateLimiter;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.codahale.metrics.SharedMetricRegistries;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -43,6 +29,11 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
@@ -50,7 +41,13 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.utils.FileStreamer;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-
+import com.google.common.util.concurrent.SidecarRateLimiter;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.prepareTestFile;
@@ -79,7 +76,8 @@ class FileStreamHandlerTest
         if (server == null)
             return;
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -89,19 +87,19 @@ class FileStreamHandlerTest
     @Test
     void failsWhenFileDoesNotExist(VertxTestContext context)
     {
-        serverFuture(tempDir.resolve("non-existent-file").toString())
-        .onSuccess(server -> {
-            client.get(server.actualPort(), "127.0.0.1", "/stream")
-                  .expect(ResponsePredicate.SC_NOT_FOUND)
-                  .send(context.succeeding(response -> context.verify(() -> {
-                      JsonObject responseJson = response.bodyAsJsonObject();
-                      assertThat(responseJson.getString("message")).isEqualTo("The requested file does not exist");
-                      assertThat(responseJson.getInteger("code")).isEqualTo(404);
-                      assertThat(responseJson.getString("status")).isEqualTo("Not Found");
-                      context.completeNow();
-                  })));
-        })
-        .onFailure(context::failNow);
+        serverFuture(tempDir.resolve("non-existent-file")
+                            .toString()).onSuccess(server -> {
+                                client.get(server.actualPort(), "127.0.0.1", "/stream")
+                                      .expect(ResponsePredicate.SC_NOT_FOUND)
+                                      .send(context.succeeding(response -> context.verify(() -> {
+                                          JsonObject responseJson = response.bodyAsJsonObject();
+                                          assertThat(responseJson.getString("message")).isEqualTo("The requested file does not exist");
+                                          assertThat(responseJson.getInteger("code")).isEqualTo(404);
+                                          assertThat(responseJson.getString("status")).isEqualTo("Not Found");
+                                          context.completeNow();
+                                      })));
+                            })
+                                        .onFailure(context::failNow);
     }
 
     @Test
@@ -109,8 +107,7 @@ class FileStreamHandlerTest
     {
         Path directory = tempDir.resolve("directory");
         assertThat(Files.createDirectory(directory)).exists();
-        serverFuture(directory.toString())
-        .onSuccess(server -> {
+        serverFuture(directory.toString()).onSuccess(server -> {
             client.get(server.actualPort(), "127.0.0.1", "/stream")
                   .expect(ResponsePredicate.SC_NOT_FOUND)
                   .send(context.succeeding(response -> context.verify(() -> {
@@ -121,7 +118,7 @@ class FileStreamHandlerTest
                       context.completeNow();
                   })));
         })
-        .onFailure(context::failNow);
+                                          .onFailure(context::failNow);
     }
 
     @Test
@@ -129,8 +126,7 @@ class FileStreamHandlerTest
     {
         Path emptyFile = tempDir.resolve("empty-file");
         assertThat(Files.createFile(emptyFile)).exists();
-        serverFuture(emptyFile.toString())
-        .onSuccess(server -> {
+        serverFuture(emptyFile.toString()).onSuccess(server -> {
             client.get(server.actualPort(), "127.0.0.1", "/stream")
                   .expect(ResponsePredicate.SC_REQUESTED_RANGE_NOT_SATISFIABLE)
                   .send(context.succeeding(response -> context.verify(() -> {
@@ -141,7 +137,7 @@ class FileStreamHandlerTest
                       context.completeNow();
                   })));
         })
-        .onFailure(context::failNow);
+                                          .onFailure(context::failNow);
     }
 
     @Test
@@ -151,17 +147,17 @@ class FileStreamHandlerTest
         int sizeInBytes = 1024;
         Path oneKbFile = prepareTestFile(tempDir, "one-kb-file", sizeInBytes);
         assertThat(oneKbFile).exists();
-        serverFuture(oneKbFile.toString())
-        .onSuccess(server -> {
+        serverFuture(oneKbFile.toString()).onSuccess(server -> {
             client.get(server.actualPort(), "127.0.0.1", "/stream")
                   .as(BodyCodec.buffer())
                   .send(context.succeeding(response -> context.verify(() -> {
                       assertThat(response.statusCode()).isEqualTo(OK.code());
-                      assertThat(response.body().length()).isEqualTo(sizeInBytes);
+                      assertThat(response.body()
+                                         .length()).isEqualTo(sizeInBytes);
                       context.completeNow();
                   })));
         })
-        .onFailure(context::failNow);
+                                          .onFailure(context::failNow);
     }
 
     @Test
@@ -171,22 +167,24 @@ class FileStreamHandlerTest
         int sizeInBytes = 1024;
         Path oneKbFile = prepareTestFile(tempDir, "one-kb-file", sizeInBytes);
         assertThat(oneKbFile).exists();
-        serverFuture(oneKbFile.toString())
-        .onSuccess(server -> {
+        serverFuture(oneKbFile.toString()).onSuccess(server -> {
             client.get(server.actualPort(), "127.0.0.1", "/stream")
                   .putHeader("Range", "bytes=512-1023")
                   .as(BodyCodec.buffer())
                   .send(context.succeeding(response -> context.verify(() -> {
                       assertThat(response.statusCode()).isEqualTo(PARTIAL_CONTENT.code());
-                      assertThat(response.headers().get("Accept-Ranges")).isNotNull()
-                                                                         .isEqualTo("bytes");
-                      assertThat(response.headers().get("Content-Length")).isNotNull()
-                                                                          .isEqualTo("512");
-                      assertThat(response.body().length()).isEqualTo(512);
+                      assertThat(response.headers()
+                                         .get("Accept-Ranges")).isNotNull()
+                                                               .isEqualTo("bytes");
+                      assertThat(response.headers()
+                                         .get("Content-Length")).isNotNull()
+                                                                .isEqualTo("512");
+                      assertThat(response.body()
+                                         .length()).isEqualTo(512);
                       context.completeNow();
                   })));
         })
-        .onFailure(context::failNow);
+                                          .onFailure(context::failNow);
     }
 
     @Test
@@ -195,36 +193,36 @@ class FileStreamHandlerTest
         int sizeInBytes = 1024;
         Path oneKbFile = tempDir.resolve("one-kb-file");
         assertThat(oneKbFile).doesNotExist();
-        serverFuture(oneKbFile.toString())
-        .compose(server -> client.get(server.actualPort(), "127.0.0.1", "/stream")
-                                 .expect(ResponsePredicate.SC_NOT_FOUND)
-                                 .send())
-        .compose(response -> {
-            JsonObject responseJson = response.bodyAsJsonObject();
-            assertThat(responseJson.getString("message")).isEqualTo("The requested file does not exist");
-            assertThat(responseJson.getInteger("code")).isEqualTo(404);
-            assertThat(responseJson.getString("status")).isEqualTo("Not Found");
+        serverFuture(oneKbFile.toString()).compose(server -> client.get(server.actualPort(), "127.0.0.1", "/stream")
+                                                                   .expect(ResponsePredicate.SC_NOT_FOUND)
+                                                                   .send())
+                                          .compose(response -> {
+                                              JsonObject responseJson = response.bodyAsJsonObject();
+                                              assertThat(responseJson.getString("message")).isEqualTo("The requested file does not exist");
+                                              assertThat(responseJson.getInteger("code")).isEqualTo(404);
+                                              assertThat(responseJson.getString("status")).isEqualTo("Not Found");
 
-            try
-            {
-                prepareTestFile(tempDir, "one-kb-file", sizeInBytes);
-            }
-            catch (IOException e)
-            {
-                context.failNow(e);
-            }
+                                              try
+                                              {
+                                                  prepareTestFile(tempDir, "one-kb-file", sizeInBytes);
+                                              }
+                                              catch (IOException e)
+                                              {
+                                                  context.failNow(e);
+                                              }
 
-            assertThat(oneKbFile).exists();
-            return Future.succeededFuture(oneKbFile);
-        })
-        .onSuccess(file -> client.get(server.actualPort(), "127.0.0.1", "/stream")
-                                 .as(BodyCodec.buffer())
-                                 .send(context.succeeding(response -> context.verify(() -> {
-                                     assertThat(response.statusCode()).isEqualTo(OK.code());
-                                     assertThat(response.body().length()).isEqualTo(sizeInBytes);
-                                     context.completeNow();
-                                 }))))
-        .onFailure(context::failNow);
+                                              assertThat(oneKbFile).exists();
+                                              return Future.succeededFuture(oneKbFile);
+                                          })
+                                          .onSuccess(file -> client.get(server.actualPort(), "127.0.0.1", "/stream")
+                                                                   .as(BodyCodec.buffer())
+                                                                   .send(context.succeeding(response -> context.verify(() -> {
+                                                                       assertThat(response.statusCode()).isEqualTo(OK.code());
+                                                                       assertThat(response.body()
+                                                                                          .length()).isEqualTo(sizeInBytes);
+                                                                       context.completeNow();
+                                                                   }))))
+                                          .onFailure(context::failNow);
     }
 
     @Test
@@ -233,46 +231,47 @@ class FileStreamHandlerTest
         int sizeInBytes = 1024;
         Path oneKbFile = prepareTestFile(tempDir, "one-kb-file", sizeInBytes);
         assertThat(oneKbFile).exists();
-        serverFuture(oneKbFile.toString())
-        .compose(server -> {
+        serverFuture(oneKbFile.toString()).compose(server -> {
             // First let's stream a file that we just created
             return client.get(server.actualPort(), "127.0.0.1", "/stream")
                          .as(BodyCodec.buffer())
                          .send();
         })
-        .compose(response -> {
-            assertThat(response.statusCode()).isEqualTo(OK.code());
-            assertThat(response.body().length()).isEqualTo(sizeInBytes);
-            try
-            {
-                // Delete the file, now we should see a 404 when trying to stream the file
-                Files.delete(oneKbFile);
-            }
-            catch (IOException e)
-            {
-                return Future.failedFuture(e);
-            }
-            return Future.succeededFuture();
-        }).compose(v -> client.get(server.actualPort(), "127.0.0.1", "/stream")
-                              .expect(ResponsePredicate.SC_NOT_FOUND)
-                              .send())
-        .onSuccess(response -> {
-            // A 404 is expected here because the underlying file is gone
-            JsonObject responseJson = response.bodyAsJsonObject();
-            assertThat(responseJson.getString("message"))
-            .isEqualTo("The requested file does not exist");
-            assertThat(responseJson.getInteger("code")).isEqualTo(404);
-            assertThat(responseJson.getString("status")).isEqualTo("Not Found");
-            context.completeNow();
-        })
-        .onFailure(context::failNow);
+                                          .compose(response -> {
+                                              assertThat(response.statusCode()).isEqualTo(OK.code());
+                                              assertThat(response.body()
+                                                                 .length()).isEqualTo(sizeInBytes);
+                                              try
+                                              {
+                                                  // Delete the file, now we should see a 404 when trying to stream the file
+                                                  Files.delete(oneKbFile);
+                                              }
+                                              catch (IOException e)
+                                              {
+                                                  return Future.failedFuture(e);
+                                              }
+                                              return Future.succeededFuture();
+                                          })
+                                          .compose(v -> client.get(server.actualPort(), "127.0.0.1", "/stream")
+                                                              .expect(ResponsePredicate.SC_NOT_FOUND)
+                                                              .send())
+                                          .onSuccess(response -> {
+                                              // A 404 is expected here because the underlying file is gone
+                                              JsonObject responseJson = response.bodyAsJsonObject();
+                                              assertThat(responseJson.getString("message")).isEqualTo("The requested file does not exist");
+                                              assertThat(responseJson.getInteger("code")).isEqualTo(404);
+                                              assertThat(responseJson.getString("status")).isEqualTo("Not Found");
+                                              context.completeNow();
+                                          })
+                                          .onFailure(context::failNow);
     }
 
     Future<HttpServer> serverFuture(String path)
     {
         Router router = Router.router(vertx);
         // to capture the expected payloads from the clients
-        router.route().failureHandler(new JsonErrorHandler());
+        router.route()
+              .failureHandler(new JsonErrorHandler());
 
         fileStreamHandler = fileStreamHandler();
         router.get("/stream")
@@ -300,10 +299,7 @@ class FileStreamHandlerTest
         when(mockFetcher.instance("127.0.0.1")).thenReturn(mockInstanceMetadata);
         ServiceConfigurationImpl serviceConfiguration = new ServiceConfigurationImpl();
         ExecutorPools executorPools = new ExecutorPools(vertx, serviceConfiguration);
-        FileStreamer fileStreamer = new FileStreamer(executorPools,
-                                                     serviceConfiguration,
-                                                     SidecarRateLimiter.create(0),
-                                                     mockFetcher);
+        FileStreamer fileStreamer = new FileStreamer(executorPools, serviceConfiguration, SidecarRateLimiter.create(0), mockFetcher);
         return new FileStreamHandler(mockFetcher, fileStreamer, executorPools);
     }
 }

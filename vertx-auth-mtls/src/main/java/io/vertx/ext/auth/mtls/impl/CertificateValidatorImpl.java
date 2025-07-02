@@ -18,6 +18,9 @@
 
 package io.vertx.ext.auth.mtls.impl;
 
+import io.vertx.ext.auth.authentication.CertificateCredentials;
+import io.vertx.ext.auth.authentication.CredentialValidationException;
+import io.vertx.ext.auth.mtls.CertificateValidator;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
@@ -30,10 +33,6 @@ import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
-
-import io.vertx.ext.auth.authentication.CertificateCredentials;
-import io.vertx.ext.auth.authentication.CredentialValidationException;
-import io.vertx.ext.auth.mtls.CertificateValidator;
 
 /**
  * {@link CertificateValidator} implementation that can be used for validating certificates.
@@ -90,7 +89,8 @@ public class CertificateValidatorImpl implements CertificateValidator
         List<Attributes> issuerAttrs;
         try
         {
-            issuerAttrs = getAttributes(new LdapName(certificate.getIssuerDN().getName()));
+            issuerAttrs = getAttributes(new LdapName(certificate.getIssuerDN()
+                                                                .getName()));
             validateCN(issuerAttrs);
             validateAttribute(issuerAttrs, "O", trustedIssuerOrganization);
             validateAttribute(issuerAttrs, "OU", trustedIssuerOrganizationUnit);
@@ -115,7 +115,10 @@ public class CertificateValidatorImpl implements CertificateValidator
         }
     }
 
-    private void validateAttribute(List<Attributes> attributes, String attributeName, String trustedAttribute) throws NamingException
+    private void validateAttribute(List<Attributes> attributes,
+                                   String attributeName,
+                                   String trustedAttribute)
+            throws NamingException
     {
         if (trustedAttribute == null)
         {
@@ -134,12 +137,15 @@ public class CertificateValidatorImpl implements CertificateValidator
         List<Attributes> attributes = new ArrayList<>(rdns.size());
         for (int i = 0; i < rdns.size(); ++i)
         {
-            attributes.add(rdns.get(i).toAttributes());
+            attributes.add(rdns.get(i)
+                               .toAttributes());
         }
         return attributes;
     }
 
-    private String getAttribute(List<Attributes> attributesList, String attributeName) throws NamingException
+    private String getAttribute(List<Attributes> attributesList,
+                                String attributeName)
+            throws NamingException
     {
         for (int i = 0; i < attributesList.size(); ++i)
         {
@@ -147,7 +153,8 @@ public class CertificateValidatorImpl implements CertificateValidator
             Attribute value = attributes.get(attributeName);
             if (value != null)
             {
-                return value.get().toString();
+                return value.get()
+                            .toString();
             }
         }
         throw new CredentialValidationException(String.format("Expected attribute %s not found", attributeName));

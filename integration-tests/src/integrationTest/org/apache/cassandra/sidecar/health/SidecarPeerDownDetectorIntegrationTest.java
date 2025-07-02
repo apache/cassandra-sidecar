@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,8 +100,8 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
         for (IInstance cassandraInstance : cluster)
         {
             // Storing all the created sidecar instances into a list for further reference.
-            LOGGER.info("Starting Sidecar instance for Cassandra instance {}",
-                        cassandraInstance.config().num());
+            LOGGER.info("Starting Sidecar instance for Cassandra instance {}", cassandraInstance.config()
+                                                                                                .num());
             String cassandraInstanceHostname = cassandraInstanceHostname(cassandraInstance, dnsResolver);
             PeersTestModule peersModule = new PeersTestModule(cassandraInstanceHostname);
             ServerWrapper serverWrapper = startSidecarWithInstances(List.of(cassandraInstance), peersModule);
@@ -120,36 +121,35 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
     @Override
     protected void stopSidecar()
     {
-        sidecarServerMap.values().forEach(serverWrapper -> {
-            try
-            {
-                closeServer(serverWrapper.server);
-            }
-            catch (Exception e)
-            {
-                LOGGER.error("Error trying to close sidecar server", e);
-            }
-        });
+        sidecarServerMap.values()
+                        .forEach(serverWrapper -> {
+                            try
+                            {
+                                closeServer(serverWrapper.server);
+                            }
+                            catch (Exception e)
+                            {
+                                LOGGER.error("Error trying to close sidecar server", e);
+                            }
+                        });
     }
 
     @Test
     void testOnePeerDown()
     {
         SidecarPeerHealthMonitorTask monitor = serverWrapper.injector.getInstance(SidecarPeerHealthMonitorTask.class);
-        assertThat(monitor.status()).as("Monitor hasn't had time to perform checks").isEmpty();
+        assertThat(monitor.status()).as("Monitor hasn't had time to perform checks")
+                                    .isEmpty();
 
-        loopAssert(30, () -> assertThat(checkHostUp(monitor, "localhost2"))
-                             .as("After some time, peer is up")
-                             .isTrue());
+        loopAssert(30, () -> assertThat(checkHostUp(monitor, "localhost2")).as("After some time, peer is up")
+                                                                           .isTrue());
 
         stopSidecarInstanceForTest("localhost2");
-        loopAssert(30, () -> assertThat(checkHostDown(monitor, "localhost2"))
-                             .as("After killing peer sidecar instance, monitor caches up and the host is down")
-                             .isTrue());
+        loopAssert(30, () -> assertThat(checkHostDown(monitor, "localhost2")).as("After killing peer sidecar instance, monitor caches up and the host is down")
+                                                                             .isTrue());
         startSidecarInstanceForTest("localhost2");
-        loopAssert(30, () -> assertThat(checkHostUp(monitor, "localhost2"))
-                             .as("After restarting peer sidecar instance, monitor caches up and the host is down")
-                             .isTrue());
+        loopAssert(30, () -> assertThat(checkHostUp(monitor, "localhost2")).as("After restarting peer sidecar instance, monitor caches up and the host is down")
+                                                                           .isTrue());
     }
 
     @Override
@@ -160,21 +160,27 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
         createTestTable(qualifiedName, "CREATE TABLE %s (id text PRIMARY KEY, name text) WITH cdc=true");
     }
 
-    private boolean checkHostUp(SidecarPeerHealthMonitorTask monitor, String hostname)
+    private boolean checkHostUp(SidecarPeerHealthMonitorTask monitor,
+                                String hostname)
     {
         return checkHostStatus(monitor, hostname, SidecarPeerHealthProvider.Health.UP);
     }
 
-    private boolean checkHostDown(SidecarPeerHealthMonitorTask monitor, String hostname)
+    private boolean checkHostDown(SidecarPeerHealthMonitorTask monitor,
+                                  String hostname)
     {
         return checkHostStatus(monitor, hostname, SidecarPeerHealthProvider.Health.DOWN);
     }
 
-    private boolean checkHostStatus(SidecarPeerHealthMonitorTask monitor, String hostname, SidecarPeerHealthProvider.Health status)
+    private boolean checkHostStatus(SidecarPeerHealthMonitorTask monitor,
+                                    String hostname,
+                                    SidecarPeerHealthProvider.Health status)
     {
-        for (Map.Entry<SidecarInstance, SidecarPeerHealthProvider.Health> entry : monitor.status().entrySet())
+        for (Map.Entry<SidecarInstance, SidecarPeerHealthProvider.Health> entry : monitor.status()
+                                                                                         .entrySet())
         {
-            if (hostname.equals(entry.getKey().hostname()))
+            if (hostname.equals(entry.getKey()
+                                     .hostname()))
             {
                 return status.equals(entry.getValue());
             }
@@ -191,8 +197,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
         Server server = sidecarServerMap.get(hostname).server;
         String deploymentId = server.deploymentId();
         LOGGER.info("Stopping Sidecar server {} with deployment ID {}", hostname, deploymentId);
-        getBlocking(server.stop(deploymentId), 30, TimeUnit.SECONDS,
-                    "Stopping Sidecar server " + hostname + " with deployment ID " + deploymentId);
+        getBlocking(server.stop(deploymentId), 30, TimeUnit.SECONDS, "Stopping Sidecar server " + hostname + " with deployment ID " + deploymentId);
     }
 
     void startSidecarInstanceForTest(String hostname)
@@ -237,17 +242,12 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
                 {
                     LOGGER.info("Enabling test mTLS certificate/keystore.");
 
-                    KeyStoreConfiguration truststoreConfiguration =
-                    new KeyStoreConfigurationImpl(mtlsTestHelper.trustStorePath(),
-                                                  mtlsTestHelper.trustStorePassword(),
-                                                  mtlsTestHelper.trustStoreType(),
-                                                  SecondBoundConfiguration.parse("60s"));
+                    KeyStoreConfiguration truststoreConfiguration = new KeyStoreConfigurationImpl(mtlsTestHelper.trustStorePath(),
+                            mtlsTestHelper.trustStorePassword(), mtlsTestHelper.trustStoreType(), SecondBoundConfiguration.parse("60s"));
 
-                    KeyStoreConfiguration keyStoreConfiguration =
-                    new KeyStoreConfigurationImpl(mtlsTestHelper.clientKeyStorePath(),
-                                                  EMPTY_PASSWORD_STRING,
-                                                  mtlsTestHelper.serverKeyStoreType(), // server and client keystore types are the same
-                                                  SecondBoundConfiguration.parse("60s"));
+                    KeyStoreConfiguration keyStoreConfiguration = new KeyStoreConfigurationImpl(mtlsTestHelper.clientKeyStorePath(), EMPTY_PASSWORD_STRING,
+                            mtlsTestHelper.serverKeyStoreType(), // server and client keystore types are the same
+                            SecondBoundConfiguration.parse("60s"));
 
                     clientSslConfiguration = SslConfigurationImpl.builder()
                                                                  .enabled(true)
@@ -257,18 +257,15 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
                 }
                 else
                 {
-                    LOGGER.info("Not enabling mTLS for testing purposes. Set '{}' to 'true' if you would " +
-                                "like mTLS enabled.", CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS);
+                    LOGGER.info("Not enabling mTLS for testing purposes. Set '{}' to 'true' if you would " + "like mTLS enabled.",
+                            CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS);
                 }
 
                 SidecarClientConfiguration sidecarClientConfiguration = new SidecarClientConfigurationImpl(clientSslConfiguration);
 
                 // Let's run this very frequently for testing purposes
-                SidecarPeerHealthConfigurationImpl sidecarPeerHealthConfiguration
-                = new SidecarPeerHealthConfigurationImpl(true,
-                                                         MillisecondBoundConfiguration.parse("100ms"),
-                                                         1,
-                                                         MillisecondBoundConfiguration.parse("50ms"));
+                SidecarPeerHealthConfigurationImpl sidecarPeerHealthConfiguration = new SidecarPeerHealthConfigurationImpl(true,
+                        MillisecondBoundConfiguration.parse("100ms"), 1, MillisecondBoundConfiguration.parse("50ms"));
                 builder.serviceConfiguration(conf)
                        .sidecarClientConfiguration(sidecarClientConfiguration)
                        .sidecarPeerHealthConfiguration(sidecarPeerHealthConfiguration);
@@ -285,10 +282,8 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
                                                        SidecarConfiguration configuration,
                                                        DnsResolver dnsResolver)
         {
-            return new InnerDcTokenAdjacentPeerTestProvider(metadataFetcher,
-                                                            cassandraClientTokenRingProvider,
-                                                            configuration.serviceConfiguration(),
-                                                            dnsResolver);
+            return new InnerDcTokenAdjacentPeerTestProvider(metadataFetcher, cassandraClientTokenRingProvider, configuration.serviceConfiguration(),
+                    dnsResolver);
         }
     }
 
@@ -312,4 +307,3 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
         }
     }
 }
-

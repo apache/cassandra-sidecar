@@ -22,6 +22,7 @@ import java.io.IOException;
 
 /**
  * Decode response bytes into given java type {@code <T>}
+ *
  * @param <T> expected java type
  */
 public interface ResponseBytesDecoder<T>

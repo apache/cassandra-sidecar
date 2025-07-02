@@ -29,12 +29,14 @@ public interface VertxRoute
 {
     /**
      * Mount the route to router
+     *
      * @param router vertx router for routes definition
      */
     void mountTo(Router router);
 
     /**
      * A helper method to consume from {@link Router} and define route
+     *
      * @param routerConsumer router consumer
      * @return vertx route
      */
@@ -46,5 +48,6 @@ public interface VertxRoute
     /**
      * An empty vertx route that does not mount anything to the router
      */
-    VertxRoute EMPTY = create(r -> {});
+    VertxRoute EMPTY = create(r -> {
+    });
 }

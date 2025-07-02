@@ -28,8 +28,8 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A simple implementation of DataHub {@link Emitter} interface that allows reporting
- * converted schema to the configured HTTP endpoint as a batch of aspects in JSON format
+ * A simple implementation of DataHub {@link Emitter} interface that allows reporting converted schema to the configured HTTP endpoint as a batch of aspects in
+ * JSON format
  */
 @SuppressWarnings("unused")
 public class HttpEmitter extends JsonEmitter
@@ -59,12 +59,11 @@ public class HttpEmitter extends JsonEmitter
         String content = content();
 
         client.request(method, endpoint)
-              .onSuccess(request ->
-        {
-            request.putHeader("Content-Type", "Application/JSON");
-            request.putHeader("Content-Length", Integer.toString(content.length()));
-            request.write(content);
-            request.end();
-        });
+              .onSuccess(request -> {
+                  request.putHeader("Content-Type", "Application/JSON");
+                  request.putHeader("Content-Length", Integer.toString(content.length()));
+                  request.write(content);
+                  request.end();
+              });
     }
 }

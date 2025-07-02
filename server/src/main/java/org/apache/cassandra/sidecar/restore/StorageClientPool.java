@@ -28,6 +28,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,22 +71,24 @@ public class StorageClientPool implements SdkAutoCloseable
         clientConfig = configuration.s3ClientConfiguration();
         this.ingressFileRateLimiter = ingressFileRateLimiter;
         sharedExecutor = new ThreadPoolExecutor(clientConfig.concurrency(), // core
-                                                clientConfig.concurrency(), // max
-                                                // keep alive
-                                                clientConfig.threadKeepAlive().quantity(),
-                                                clientConfig.threadKeepAlive().unit(),
-                                                new LinkedBlockingQueue<>(), // unbounded work queue
-                                                new ThreadFactoryBuilder()
-                                                .threadNamePrefix(clientConfig.threadNamePrefix())
-                                                .daemonThreads(true)
-                                                .build());
+                clientConfig.concurrency(), // max
+                // keep alive
+                clientConfig.threadKeepAlive()
+                            .quantity(),
+                clientConfig.threadKeepAlive()
+                            .unit(),
+                new LinkedBlockingQueue<>(), // unbounded work queue
+                new ThreadFactoryBuilder().threadNamePrefix(clientConfig.threadNamePrefix())
+                                          .daemonThreads(true)
+                                          .build());
         // Must set it to allow threads to time out, so that it can release resources when idle.
         sharedExecutor.allowCoreThreadTimeOut(true);
     }
 
     public StorageClient storageClient(RestoreJob restoreJob) throws RestoreJobFatalException
     {
-        String region = restoreJob.secrets.readCredentials().region();
+        String region = restoreJob.secrets.readCredentials()
+                                          .region();
         StorageClient client = clientByJobId.computeIfAbsent(restoreJob.jobId, id -> storageClient(region));
         return client.authenticate(restoreJob);
     }
@@ -97,7 +100,8 @@ public class StorageClientPool implements SdkAutoCloseable
      */
     public void revokeCredentials(UUID jobId)
     {
-        clientByJobId.computeIfPresent(jobId, (id, client) -> {
+        clientByJobId.computeIfPresent(jobId, (id,
+                                               client) -> {
             client.revokeCredentials(id);
             return null;
         });
@@ -108,17 +112,17 @@ public class StorageClientPool implements SdkAutoCloseable
         return clientPool.computeIfAbsent(region, k -> {
             logIfOpenSslUnavailable();
 
-            Map<SdkAdvancedAsyncClientOption<?>, ?> advancedOptions = Collections.singletonMap(
-            SdkAdvancedAsyncClientOption.FUTURE_COMPLETION_EXECUTOR, sharedExecutor
-            );
-            Duration apiCallTimeout = Duration.ofMillis(clientConfig.apiCallTimeout().toMillis());
-            S3AsyncClientBuilder clientBuilder =
-            S3AsyncClient.builder()
-                         .region(Region.of(region))
-                         // Setting the same timeout for apiCall and apiCallAttempt; There is 1 attempt effectively, as we do retry in the application
-                         .overrideConfiguration(b -> b.apiCallAttemptTimeout(apiCallTimeout)
-                                                      .apiCallTimeout(apiCallTimeout))
-                         .asyncConfiguration(b -> b.advancedOptions(advancedOptions));
+            Map<SdkAdvancedAsyncClientOption<?>, ?> advancedOptions = Collections.singletonMap(SdkAdvancedAsyncClientOption.FUTURE_COMPLETION_EXECUTOR,
+                    sharedExecutor);
+            Duration apiCallTimeout = Duration.ofMillis(clientConfig.apiCallTimeout()
+                                                                    .toMillis());
+            S3AsyncClientBuilder clientBuilder = S3AsyncClient.builder()
+                                                              .region(Region.of(region))
+                                                              // Setting the same timeout for apiCall and apiCallAttempt; There is 1 attempt effectively, as we
+                                                              // do retry in the application
+                                                              .overrideConfiguration(b -> b.apiCallAttemptTimeout(apiCallTimeout)
+                                                                                           .apiCallTimeout(apiCallTimeout))
+                                                              .asyncConfiguration(b -> b.advancedOptions(advancedOptions));
             S3ProxyConfiguration s3ProxyConfiguration = clientConfig.proxyConfig();
             URI endpointOverride = s3ProxyConfiguration.endpointOverride();
             if (endpointOverride != null) // set for local testing only
@@ -130,9 +134,12 @@ public class StorageClientPool implements SdkAutoCloseable
             if (config.isPresent())
             {
                 ProxyConfiguration proxyConfig = ProxyConfiguration.builder()
-                                                                   .host(config.proxy().getHost())
-                                                                   .port(config.proxy().getPort())
-                                                                   .scheme(config.proxy().getScheme())
+                                                                   .host(config.proxy()
+                                                                               .getHost())
+                                                                   .port(config.proxy()
+                                                                               .getPort())
+                                                                   .scheme(config.proxy()
+                                                                                 .getScheme())
                                                                    .username(config.username())
                                                                    .password(config.password())
                                                                    .build();
@@ -147,7 +154,8 @@ public class StorageClientPool implements SdkAutoCloseable
     @Override
     public void close()
     {
-        clientPool.values().forEach(StorageClient::close);
+        clientPool.values()
+                  .forEach(StorageClient::close);
         clientPool.clear();
         clientByJobId.clear();
     }

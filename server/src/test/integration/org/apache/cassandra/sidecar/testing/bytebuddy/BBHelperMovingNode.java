@@ -22,7 +22,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.ClassFileLocator;
@@ -31,20 +30,20 @@ import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.pool.TypePool;
-
 import static net.bytebuddy.matcher.ElementMatchers.named;
 import static org.apache.cassandra.sidecar.testing.IntegrationTestBase.awaitLatchOrTimeout;
 
 /**
- * ByteBuddy Helper for a single moving node
- * Note that the helper cannot be used by multiple tests simultaneously in the same JVM
+ * ByteBuddy Helper for a single moving node Note that the helper cannot be used by multiple tests simultaneously in the same JVM
  */
 public class BBHelperMovingNode
 {
     public static CountDownLatch transientStateStart = new CountDownLatch(1);
     public static CountDownLatch transientStateEnd = new CountDownLatch(1);
 
-    public static void install(ClassLoader cl, int nodeNumber, int movingNodeIndex)
+    public static void install(ClassLoader cl,
+                               int nodeNumber,
+                               int movingNodeIndex)
     {
         if (nodeNumber == movingNodeIndex)
         {

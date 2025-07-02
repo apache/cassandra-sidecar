@@ -18,7 +18,6 @@
 package org.apache.cassandra.sidecar.common.server.data;
 
 import java.util.Objects;
-
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -34,23 +33,26 @@ public class QualifiedTableName
     /**
      * Constructs a qualified name with the given {@code keyspace} and {@code tableName}
      *
-     * @param keyspace  the keyspace in Cassandra
+     * @param keyspace the keyspace in Cassandra
      * @param tableName the table name in Cassandra
      */
-    public QualifiedTableName(String keyspace, String tableName)
+    public QualifiedTableName(String keyspace,
+                              String tableName)
     {
         this(keyspace, tableName, true);
     }
 
     /**
-     * Constructs a qualified name with the given {@code keyspace} and {@code tableName}. When {@code required}
-     * is {@code false}, allow constructing the object with {@code null} {@code keyspace}/{@code tableName}.
+     * Constructs a qualified name with the given {@code keyspace} and {@code tableName}. When {@code required} is {@code false}, allow constructing the object
+     * with {@code null} {@code keyspace}/{@code tableName}.
      *
-     * @param keyspace  the keyspace in Cassandra
+     * @param keyspace the keyspace in Cassandra
      * @param tableName the table name in Cassandra
-     * @param required  true if keyspace and table name are required, false if {@code null} is allowed
+     * @param required true if keyspace and table name are required, false if {@code null} is allowed
      */
-    public QualifiedTableName(String keyspace, String tableName, boolean required)
+    public QualifiedTableName(String keyspace,
+                              String tableName,
+                              boolean required)
     {
         if (required)
         {
@@ -61,7 +63,8 @@ public class QualifiedTableName
         this.table = !required && tableName == null ? null : new Name(tableName);
     }
 
-    public QualifiedTableName(@Nullable Name keyspace, @Nullable Name table)
+    public QualifiedTableName(@Nullable Name keyspace,
+                              @Nullable Name table)
     {
         this.keyspace = keyspace;
         this.table = table;
@@ -76,8 +79,7 @@ public class QualifiedTableName
     }
 
     /**
-     * @return the keyspace in Cassandra, quoted if the original input was quoted and if
-     * the unquoted keyspace needs to be quoted
+     * @return the keyspace in Cassandra, quoted if the original input was quoted and if the unquoted keyspace needs to be quoted
      */
     public String maybeQuotedKeyspace()
     {
@@ -101,8 +103,7 @@ public class QualifiedTableName
     }
 
     /**
-     * @return the table name in Cassandra, quoted if the original input was quoted and if
-     * the unquoted table needs to be quoted
+     * @return the table name in Cassandra, quoted if the original input was quoted and if the unquoted table needs to be quoted
      */
     public String maybeQuotedTableName()
     {

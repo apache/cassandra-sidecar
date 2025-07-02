@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.datahub;
 
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,23 +72,21 @@ public class SchemaReportingTask implements PeriodicTask, ExecuteOnClusterLeaseh
     public void deploy(@NotNull Vertx vertx,
                        @NotNull PeriodicTaskExecutor executor)
     {
-        EventBusUtils.onceLocalConsumer(vertx.eventBus(),
-                                        SidecarServerEvents.ON_CASSANDRA_CQL_READY.address(),
-                                        message -> executor.schedule(this));
+        EventBusUtils.onceLocalConsumer(vertx.eventBus(), SidecarServerEvents.ON_CASSANDRA_CQL_READY.address(), message -> executor.schedule(this));
     }
 
     @Override
     public ScheduleDecision scheduleDecision()
     {
-        return configuration.enabled() ? ScheduleDecision.EXECUTE
-                                       : ScheduleDecision.SKIP;
+        return configuration.enabled() ? ScheduleDecision.EXECUTE : ScheduleDecision.SKIP;
     }
 
     @Override
     public DurationSpec initialDelay()
     {
-        return new MillisecondBoundConfiguration(RANDOM.nextLong(configuration.initialDelay().toMillis()),
-                                                 TimeUnit.MILLISECONDS);
+        return new MillisecondBoundConfiguration(RANDOM.nextLong(configuration.initialDelay()
+                                                                              .toMillis()),
+                TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -108,7 +107,8 @@ public class SchemaReportingTask implements PeriodicTask, ExecuteOnClusterLeaseh
     {
         try
         {
-            reporter.processScheduled(session.get().getCluster());
+            reporter.processScheduled(session.get()
+                                             .getCluster());
             LOGGER.info("Schema report has been completed successfully on attempt {}", attempt);
             promise.complete();
         }
@@ -117,8 +117,9 @@ public class SchemaReportingTask implements PeriodicTask, ExecuteOnClusterLeaseh
             if (attempt < configuration.maxRetries())
             {
                 LOGGER.warn("Schema report has failed, retrying in {}", configuration.retryDelay(), throwable);
-                executor.setTimer(configuration.retryDelay().toMillis(),
-                                  identifier -> execute(promise, attempt + 1));
+                executor.setTimer(configuration.retryDelay()
+                                               .toMillis(),
+                        identifier -> execute(promise, attempt + 1));
                 // Retry will take care of either completing or failing the promise
             }
             else

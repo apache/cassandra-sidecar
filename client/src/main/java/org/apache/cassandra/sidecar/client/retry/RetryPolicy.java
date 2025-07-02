@@ -37,14 +37,13 @@ public abstract class RetryPolicy
     /**
      * Method called when a {@code response} is received and a decision needs to be made about the response status.
      *
-     * @param responseFuture           a future that returns the response, or an exception when the retry is
-     *                                 unsuccessful
-     * @param request                  the HTTP request
-     * @param response                 the {@link HttpResponse} received from the server
-     * @param throwable                the error encountered during the request, or null if no error was encountered
-     * @param attempts                 the number of attempts performed for the request
+     * @param responseFuture a future that returns the response, or an exception when the retry is unsuccessful
+     * @param request the HTTP request
+     * @param response the {@link HttpResponse} received from the server
+     * @param throwable the error encountered during the request, or null if no error was encountered
+     * @param attempts the number of attempts performed for the request
      * @param canRetryOnADifferentHost whether this request can be retried on a different host or not
-     * @param retryAction              an action called when a request is retried
+     * @param retryAction an action called when a request is retried
      */
     public abstract void onResponse(CompletableFuture<HttpResponse> responseFuture,
                                     Request request,

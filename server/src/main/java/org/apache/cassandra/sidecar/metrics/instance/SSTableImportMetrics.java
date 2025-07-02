@@ -42,20 +42,17 @@ public class SSTableImportMetrics
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        pendingImports
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
-                     .withDomain(DOMAIN)
-                     .withName("PendingImports")
-                     .build();
-        successfulImports
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(DOMAIN)
-                     .withName("SuccessfulImports")
-                     .build();
-        failedImports
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(DOMAIN)
-                     .withName("FailedImports")
-                     .build();
+        pendingImports = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+                                    .withDomain(DOMAIN)
+                                    .withName("PendingImports")
+                                    .build();
+        successfulImports = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
+                                       .withDomain(DOMAIN)
+                                       .withName("SuccessfulImports")
+                                       .build();
+        failedImports = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
+                                   .withDomain(DOMAIN)
+                                   .withName("FailedImports")
+                                   .build();
     }
 }

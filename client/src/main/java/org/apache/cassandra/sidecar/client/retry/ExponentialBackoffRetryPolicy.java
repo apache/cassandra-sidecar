@@ -21,8 +21,9 @@ package org.apache.cassandra.sidecar.client.retry;
 /**
  * A retry policy that will perform an exponential backoff. The backoff period increases for each retry attempt.
  *
- * <p>Example: For a configured {@code maxRetries} of {@code 10}, {@code retryDelayMillis} of {@code 200}
- * milliseconds, and {@code maxRetryDelayMillis} of {@code 20,000} milliseconds, the sequence is as follows:
+ * <p>
+ * Example: For a configured {@code maxRetries} of {@code 10}, {@code retryDelayMillis} of {@code 200} milliseconds, and {@code maxRetryDelayMillis} of
+ * {@code 20,000} milliseconds, the sequence is as follows:
  *
  * <pre>
  *     request       backoff
@@ -55,15 +56,16 @@ public class ExponentialBackoffRetryPolicy extends BasicRetryPolicy
     }
 
     /**
-     * Constructs an exponential backoff retry policy with {@code maxRetries} number of retries,
-     * {@code retryDelayMillis} delay between retries, and {@code maxRetryDelayMillis} maximum delay for the
-     * exponential backoff.
+     * Constructs an exponential backoff retry policy with {@code maxRetries} number of retries, {@code retryDelayMillis} delay between retries, and
+     * {@code maxRetryDelayMillis} maximum delay for the exponential backoff.
      *
-     * @param maxRetries          the maximum number of retries
-     * @param retryDelayMillis    the delay between retries in milliseconds
+     * @param maxRetries the maximum number of retries
+     * @param retryDelayMillis the delay between retries in milliseconds
      * @param maxRetryDelayMillis the maximum retry delay in milliseconds
      */
-    public ExponentialBackoffRetryPolicy(int maxRetries, long retryDelayMillis, long maxRetryDelayMillis)
+    public ExponentialBackoffRetryPolicy(int maxRetries,
+                                         long retryDelayMillis,
+                                         long maxRetryDelayMillis)
     {
         super(maxRetries, retryDelayMillis);
         this.maxRetryDelayMillis = maxRetryDelayMillis;
@@ -71,9 +73,8 @@ public class ExponentialBackoffRetryPolicy extends BasicRetryPolicy
     }
 
     /**
-     * Returns the number of milliseconds to wait before attempting the next request. This value is upper-bounded
-     * by {@code maxRetryDelayMillis} if configured. The delay increases exponentially based on the number of
-     * attempts already performed.
+     * Returns the number of milliseconds to wait before attempting the next request. This value is upper-bounded by {@code maxRetryDelayMillis} if configured.
+     * The delay increases exponentially based on the number of attempts already performed.
      *
      * @param attempts the number of attempts already performed for this request
      * @return the number of milliseconds to wait before attempting the next request
@@ -89,7 +90,7 @@ public class ExponentialBackoffRetryPolicy extends BasicRetryPolicy
         }
         else
         {
-            retryDelay = (long) Math.pow(2, attempts - 1)  * retryDelayMillis;
+            retryDelay = (long) Math.pow(2, attempts - 1) * retryDelayMillis;
         }
         if (maxRetryDelayMillis > 0)
         {
@@ -110,7 +111,7 @@ public class ExponentialBackoffRetryPolicy extends BasicRetryPolicy
      * Which is deduced from the {@code retryDelay} calculation in the {@link #retryDelayMillis(int)} method:
      *
      * <pre>
-     *     retryDelay = 2^(attempts - 1) * retryDelayMillis
+     * retryDelay = 2 ^ (attempts - 1) * retryDelayMillis
      * </pre>
      *
      * Where the {@code retryDelay} is the maximum allowed value before overflowing, {@code Long.MAX_VALUE}.

@@ -26,8 +26,7 @@ import org.apache.cassandra.sidecar.metrics.NamedMetric;
 import static org.apache.cassandra.sidecar.metrics.server.ServerMetrics.SERVER_PREFIX;
 
 /**
- * Tracks metrics for {@link SidecarSchema} and other schema related handling
- * done by Sidecar
+ * Tracks metrics for {@link SidecarSchema} and other schema related handling done by Sidecar
  */
 public class SchemaMetrics
 {
@@ -40,15 +39,13 @@ public class SchemaMetrics
     {
         this.metricRegistry = metricRegistry;
 
-        failedInitializations
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(DOMAIN)
-                     .withName("FailedInitializations")
-                     .build();
-        failedModifications
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(DOMAIN)
-                     .withName("FailedModifications")
-                     .build();
+        failedInitializations = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
+                                           .withDomain(DOMAIN)
+                                           .withName("FailedInitializations")
+                                           .build();
+        failedModifications = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
+                                         .withDomain(DOMAIN)
+                                         .withName("FailedModifications")
+                                         .build();
     }
 }

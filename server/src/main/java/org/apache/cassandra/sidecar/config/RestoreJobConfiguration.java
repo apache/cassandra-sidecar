@@ -32,8 +32,8 @@ public interface RestoreJobConfiguration
     MillisecondBoundConfiguration jobDiscoveryActiveLoopDelay();
 
     /**
-     * @return the delay for job discovery idle loop, e.g. no active job discovered at the moment
-     * jobDiscoveryIdleLoopDelay should be configured larger than jobDiscoveryActiveLoopDelay
+     * @return the delay for job discovery idle loop, e.g. no active job discovered at the moment jobDiscoveryIdleLoopDelay should be configured larger than
+     *         jobDiscoveryActiveLoopDelay
      */
     MillisecondBoundConfiguration jobDiscoveryIdleLoopDelay();
 

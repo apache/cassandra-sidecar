@@ -18,15 +18,12 @@
 
 package org.apache.cassandra.sidecar.common.request;
 
-import java.math.BigInteger;
-
-import org.junit.jupiter.api.Test;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
+import java.math.BigInteger;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
-
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -38,13 +35,8 @@ class CreateSliceRequestPayloadTest
     void testReadFromJsonString() throws JsonProcessingException
     {
         int bucketId = 0;
-        String json = "{\"sliceId\":\"TASK_ID-RETRY_COUNT-SEQUENCE\"," +
-                      "\"bucketId\": " + bucketId + "," +
-                      "\"startToken\":\"1\"," +
-                      "\"endToken\":\"10\"," +
-                      "\"storageBucket\":\"myBucket\"," +
-                      "\"storageKey\":\"/path/to/object\"," +
-                      "\"sliceChecksum\":\"12321abc\"}";
+        String json = "{\"sliceId\":\"TASK_ID-RETRY_COUNT-SEQUENCE\"," + "\"bucketId\": " + bucketId + "," + "\"startToken\":\"1\"," + "\"endToken\":\"10\","
+                + "\"storageBucket\":\"myBucket\"," + "\"storageKey\":\"/path/to/object\"," + "\"sliceChecksum\":\"12321abc\"}";
         CreateSliceRequestPayload req = MAPPER.readValue(json, CreateSliceRequestPayload.class);
         assertThat(req).isNotNull();
         assertThat(req.sliceId()).isEqualTo("TASK_ID-RETRY_COUNT-SEQUENCE");
@@ -54,30 +46,26 @@ class CreateSliceRequestPayloadTest
         assertThat(req.key()).isEqualTo("/path/to/object");
         assertThat(req.firstToken()).isEqualTo(BigInteger.ONE);
         assertThat(req.endToken()).isEqualTo(BigInteger.TEN);
-        assertThat(req.compressedSize())
-        .describedAs("size is not present in the json")
-        .isNull();
-        assertThat(req.uncompressedSize())
-        .describedAs("uncompressed size is not present in the json")
-        .isNull();
+        assertThat(req.compressedSize()).describedAs("size is not present in the json")
+                                        .isNull();
+        assertThat(req.uncompressedSize()).describedAs("uncompressed size is not present in the json")
+                                          .isNull();
     }
 
     @Test
     void testReadFromJsonFailsWithMissingFields()
     {
         String json = "{\"sliceId\":\"TASK_ID-RETRY_COUNT-SEQUENCE\"}";
-        assertThatThrownBy(() -> MAPPER.readValue(json, CreateSliceRequestPayload.class))
-        .isInstanceOf(ValueInstantiationException.class)
-        .hasCauseInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Invalid create slice request payload");
+        assertThatThrownBy(() -> MAPPER.readValue(json, CreateSliceRequestPayload.class)).isInstanceOf(ValueInstantiationException.class)
+                                                                                         .hasCauseInstanceOf(IllegalArgumentException.class)
+                                                                                         .hasMessageContaining("Invalid create slice request payload");
     }
 
     @Test
     void testSerDeser() throws JsonProcessingException
     {
         int bucketId = 2;
-        CreateSliceRequestPayload req = new CreateSliceRequestPayload("id", bucketId, "bucket", "key", "checksum",
-                                                                      BigInteger.ONE, BigInteger.TEN, 234L, 123L);
+        CreateSliceRequestPayload req = new CreateSliceRequestPayload("id", bucketId, "bucket", "key", "checksum", BigInteger.ONE, BigInteger.TEN, 234L, 123L);
         String json = MAPPER.writeValueAsString(req);
         CreateSliceRequestPayload test = MAPPER.readValue(json, CreateSliceRequestPayload.class);
         assertThat(test.sliceId()).isEqualTo("id");
@@ -94,17 +82,14 @@ class CreateSliceRequestPayloadTest
     @Test
     void testSerDeserWithoutOptionalFields() throws JsonProcessingException
     {
-        CreateSliceRequestPayload req = new CreateSliceRequestPayload("id", 1, "bucket", "key", "checksum",
-                                                                      BigInteger.ONE, BigInteger.TEN, null, null);
+        CreateSliceRequestPayload req = new CreateSliceRequestPayload("id", 1, "bucket", "key", "checksum", BigInteger.ONE, BigInteger.TEN, null, null);
         String json = MAPPER.writeValueAsString(req);
         assertThat(json).doesNotContain("uncompressedSize")
                         .doesNotContain("compressedSize");
         CreateSliceRequestPayload test = MAPPER.readValue(json, CreateSliceRequestPayload.class);
-        assertThat(test.compressedSize())
-        .describedAs("size was not set in the original object")
-        .isNull();
-        assertThat(test.uncompressedSize())
-        .describedAs("uncompressed size was not set in the original object")
-        .isNull();
+        assertThat(test.compressedSize()).describedAs("size was not set in the original object")
+                                         .isNull();
+        assertThat(test.uncompressedSize()).describedAs("uncompressed size was not set in the original object")
+                                           .isNull();
     }
 }

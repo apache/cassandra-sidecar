@@ -18,26 +18,23 @@
 
 package org.apache.cassandra.sidecar.routes.tokenrange;
 
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.testing.CassandraIntegrationTest;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
-import org.apache.cassandra.testing.CassandraIntegrationTest;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the token range replica mapping endpoint with the in-jvm dtest framework.
  *
- * Note: Some related test classes are broken down to have a single test case to parallelize test execution and
- * therefore limit the instance size required to run the tests from CircleCI as the in-jvm-dtests tests are memory bound
+ * Note: Some related test classes are broken down to have a single test case to parallelize test execution and therefore limit the instance size required to
+ * run the tests from CircleCI as the in-jvm-dtests tests are memory bound
  */
 @Tag("heavy")
 @ExtendWith(VertxExtension.class)
@@ -51,9 +48,7 @@ class BasicMultiDCRf3Test extends BaseTokenRangeIntegrationTest
         retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
             TokenRangeReplicasResponse mappingResponse = response.bodyAsJson(TokenRangeReplicasResponse.class);
             // the keyspace is replicated to both DCs
-            assertMappingResponseOK(mappingResponse,
-                                    replicationFactor,
-                                    Sets.newHashSet(Arrays.asList("datacenter1", "datacenter2")));
+            assertMappingResponseOK(mappingResponse, replicationFactor, Sets.newHashSet(Arrays.asList("datacenter1", "datacenter2")));
             context.completeNow();
         });
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();

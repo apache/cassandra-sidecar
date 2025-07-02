@@ -35,24 +35,21 @@ public final class TestUtils
     public static final String TEST_TABLE_PREFIX = "testtable";
     private static final AtomicInteger TEST_TABLE_ID = new AtomicInteger(0);
 
-    //    public static final int ROW_COUNT = 10_000;
+    // public static final int ROW_COUNT = 10_000;
     public static final int ROW_COUNT = 1_000;
 
     // Replication factor configurations used for tests
     public static final Map<String, Integer> DC1_RF1 = Collections.singletonMap("datacenter1", 1);
     public static final Map<String, Integer> DC1_RF3 = Collections.singletonMap("datacenter1", 3);
-    public static final Map<String, Integer> DC1_RF2_DC2_RF2 = ImmutableMap.of("datacenter1", 2,
-                                                                               "datacenter2", 2);
-    public static final Map<String, Integer> DC1_RF3_DC2_RF3 = ImmutableMap.of("datacenter1", 3,
-                                                                               "datacenter2", 3);
+    public static final Map<String, Integer> DC1_RF2_DC2_RF2 = ImmutableMap.of("datacenter1", 2, "datacenter2", 2);
+    public static final Map<String, Integer> DC1_RF3_DC2_RF3 = ImmutableMap.of("datacenter1", 3, "datacenter2", 3);
 
     /*
-     * Creates the test table with read-repair disabled for the in-jvm-dtests to allow validation of data
-     * on the nodes following bulk-writes without the chance of false-positives from replication resulting from
-     * read repairs.
+     * Creates the test table with read-repair disabled for the in-jvm-dtests to allow validation of data on the nodes following bulk-writes without the chance
+     * of false-positives from replication resulting from read repairs.
      */
     public static final String CREATE_TEST_TABLE_STATEMENT =
-    "CREATE TABLE IF NOT EXISTS %s (id int, course text, marks int, PRIMARY KEY (id)) WITH read_repair='NONE';";
+                                                           "CREATE TABLE IF NOT EXISTS %s (id int, course text, marks int, PRIMARY KEY (id)) WITH read_repair='NONE';";
 
     private TestUtils()
     {
@@ -64,33 +61,36 @@ public final class TestUtils
         return uniqueTestTableFullName(keyspace, TEST_TABLE_PREFIX);
     }
 
-    public static QualifiedName uniqueTestTableFullName(String keyspace, String testTablePrefix)
+    public static QualifiedName uniqueTestTableFullName(String keyspace,
+                                                        String testTablePrefix)
     {
         return new QualifiedName(keyspace, testTablePrefix + TEST_TABLE_ID.getAndIncrement());
     }
 
     /**
-     * @param keyspace    the name of the keyspace
+     * @param keyspace the name of the keyspace
      * @param tablePrefix the prefix for the table
      * @return a {@link QualifiedName} with quoted keyspace and quoted table
      */
-    public static QualifiedName uniqueTestQuotedKeyspaceQuotedTableFullName(String keyspace, String tablePrefix)
+    public static QualifiedName uniqueTestQuotedKeyspaceQuotedTableFullName(String keyspace,
+                                                                            String tablePrefix)
     {
         return new QualifiedName(keyspace, tablePrefix + TEST_TABLE_ID.getAndIncrement(), true, true);
     }
 
     /**
-     * @param keyspace    the name of the keyspace
+     * @param keyspace the name of the keyspace
      * @param tablePrefix the prefix for the table
      * @return a {@link QualifiedName} with unquoted keyspace and quoted table
      */
-    public static QualifiedName uniqueTestKeyspaceQuotedTableFullName(String keyspace, String tablePrefix)
+    public static QualifiedName uniqueTestKeyspaceQuotedTableFullName(String keyspace,
+                                                                      String tablePrefix)
     {
         return new QualifiedName(keyspace, tablePrefix + TEST_TABLE_ID.getAndIncrement(), false, true);
     }
 
     /**
-     * @param keyspace    the name of the keyspace
+     * @param keyspace the name of the keyspace
      * @return a {@link QualifiedName} with quoted keyspace and unquoted table
      */
     public static QualifiedName uniqueTestQuotedKeyspaceTableFullName(String keyspace)

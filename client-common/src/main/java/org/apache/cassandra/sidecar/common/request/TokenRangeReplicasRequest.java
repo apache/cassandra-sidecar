@@ -29,6 +29,7 @@ public class TokenRangeReplicasRequest extends JsonRequest<TokenRangeReplicasRes
 {
     /**
      * Constructs a new request to retrieve information by keyspace from token-range replicas endpoint
+     *
      * @param keyspace the keyspace for which the token range replicas will be retrieved.
      */
     public TokenRangeReplicasRequest(String keyspace)

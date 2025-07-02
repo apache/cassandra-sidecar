@@ -18,18 +18,16 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.nio.file.NoSuchFileException;
-import java.util.List;
-import java.util.function.Predicate;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.vertx.core.Future;
 import io.vertx.core.file.FileProps;
 import io.vertx.core.file.FileSystem;
+import java.nio.file.NoSuchFileException;
+import java.util.List;
+import java.util.function.Predicate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides functionality for filesystem operations
@@ -45,10 +43,10 @@ public class BaseFileSystem
     /**
      * Creates a new FileSystemUtils with the given {@code vertx} instance.
      *
-     * @param fileSystem      async file system abstraction from vertx
+     * @param fileSystem async file system abstraction from vertx
      * @param instancesMetadata the configuration for Cassandra
-     * @param validator       validates cassandra related inputs
-     * @param executorPools   executor pools for blocking executions
+     * @param validator validates cassandra related inputs
+     * @param executorPools executor pools for blocking executions
      */
     public BaseFileSystem(FileSystem fileSystem,
                           InstancesMetadata instancesMetadata,
@@ -67,7 +65,8 @@ public class BaseFileSystem
      */
     protected Future<List<String>> dataDirectories(String host)
     {
-        List<String> dataDirs = instancesMetadata.instanceFromHost(host).dataDirs();
+        List<String> dataDirs = instancesMetadata.instanceFromHost(host)
+                                                 .dataDirs();
         if (dataDirs == null || dataDirs.isEmpty())
         {
             String errMsg = String.format("No data directories are available for host '%s'", host);
@@ -103,16 +102,17 @@ public class BaseFileSystem
      */
     public Future<String> ensureDirectoryExists(String path)
     {
-        return fs.mkdirs(path).compose(v -> Future.succeededFuture(path));
+        return fs.mkdirs(path)
+                 .compose(v -> Future.succeededFuture(path));
     }
 
     /**
-     * @param filename  the path
+     * @param filename the path
      * @param predicate a predicate that evaluates based on {@link FileProps}
-     * @return a future of the {@code filename} if it exists and {@code predicate} evaluates to true,
-     * a failed future otherwise
+     * @return a future of the {@code filename} if it exists and {@code predicate} evaluates to true, a failed future otherwise
      */
-    protected Future<String> isValidOfType(String filename, Predicate<FileProps> predicate)
+    protected Future<String> isValidOfType(String filename,
+                                           Predicate<FileProps> predicate)
     {
         return fs.exists(filename)
                  .compose(exists -> {

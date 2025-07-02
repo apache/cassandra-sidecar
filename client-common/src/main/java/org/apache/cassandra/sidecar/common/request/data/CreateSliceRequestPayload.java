@@ -18,14 +18,12 @@
 
 package org.apache.cassandra.sidecar.common.request.data;
 
-import java.math.BigInteger;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.math.BigInteger;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
-
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.BUCKET_ID;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.SLICE_CHECKSUM;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.SLICE_COMPRESSED_SIZE;
@@ -37,9 +35,7 @@ import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.SLICE
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.SLICE_UNCOMPRESSED_SIZE;
 
 /**
- * Request payload for creating a slice.
- * A slice is a blob object that contains SSTables to be imported into Cassandra.
- * The data covers a sub-range in the ring.
+ * Request payload for creating a slice. A slice is a blob object that contains SSTables to be imported into Cassandra. The data covers a sub-range in the ring.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -68,16 +64,10 @@ public class CreateSliceRequestPayload
                                      @JsonProperty(SLICE_UNCOMPRESSED_SIZE) Long uncompressedSize,
                                      @JsonProperty(SLICE_COMPRESSED_SIZE) Long compressedSize)
     {
-        Preconditions.checkArgument(sliceId != null
-                                    && checksum != null
-                                    && bucket != null
-                                    && key != null
-                                    && firstToken != null
-                                    && endToken != null,
-                                    "Invalid create slice request payload");
+        Preconditions.checkArgument(sliceId != null && checksum != null && bucket != null && key != null && firstToken != null && endToken != null,
+                "Invalid create slice request payload");
         Preconditions.checkArgument(bucketId < Short.MAX_VALUE && bucketId >= 0,
-                                    "Invalid bucketId. Valid range: [0, " + Short.MAX_VALUE + "), " +
-                                    "but got " + bucketId);
+                "Invalid bucketId. Valid range: [0, " + Short.MAX_VALUE + "), " + "but got " + bucketId);
         this.sliceId = sliceId;
         this.bucketId = bucketId;
         this.bucket = bucket;
@@ -196,14 +186,9 @@ public class CreateSliceRequestPayload
      */
     public String toString()
     {
-        return "CreateSliceRequest{" + SLICE_ID + "='" + sliceId + "', " +
-               BUCKET_ID + "='" + bucketId + "', " +
-               SLICE_STORAGE_BUCKET + "='" + bucket + "', " +
-               SLICE_STORAGE_KEY + "='" + key + "', " +
-               SLICE_CHECKSUM + "='" + checksum + "', " +
-               SLICE_START_TOKEN + "='" + firstToken + "', " +
-               SLICE_END_TOKEN + "='" + endToken + "', " +
-               SLICE_COMPRESSED_SIZE + "='" + compressedSize + "', " +
-               SLICE_UNCOMPRESSED_SIZE + "='" + uncompressedSize + "'}";
+        return "CreateSliceRequest{" + SLICE_ID + "='" + sliceId + "', " + BUCKET_ID + "='" + bucketId + "', " + SLICE_STORAGE_BUCKET + "='" + bucket + "', "
+                + SLICE_STORAGE_KEY + "='" + key + "', " + SLICE_CHECKSUM + "='" + checksum + "', " + SLICE_START_TOKEN + "='" + firstToken + "', "
+                + SLICE_END_TOKEN + "='" + endToken + "', " + SLICE_COMPRESSED_SIZE + "='" + compressedSize + "', " + SLICE_UNCOMPRESSED_SIZE + "='"
+                + uncompressedSize + "'}";
     }
 }

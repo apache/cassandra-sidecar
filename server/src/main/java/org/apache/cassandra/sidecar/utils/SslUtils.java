@@ -26,6 +26,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.util.Objects;
 import java.util.function.Function;
+
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.X509KeyManager;
 
@@ -46,15 +47,12 @@ public class SslUtils
      * Given the parameters, validate the keystore can be loaded and is usable
      *
      * @param config the keystore configuration
-     * @throws KeyStoreException        when there is an error accessing the keystore
+     * @throws KeyStoreException when there is an error accessing the keystore
      * @throws NoSuchAlgorithmException when the keystore type algorithm is not available
-     * @throws IOException              when an IO exception occurs
-     * @throws CertificateException     when a problem was encountered with the certificate
+     * @throws IOException when an IO exception occurs
+     * @throws CertificateException when a problem was encountered with the certificate
      */
-    public static void validateSslOpts(KeyStoreConfiguration config) throws KeyStoreException,
-                                                                            NoSuchAlgorithmException,
-                                                                            IOException,
-                                                                            CertificateException
+    public static void validateSslOpts(KeyStoreConfiguration config) throws KeyStoreException, NoSuchAlgorithmException, IOException, CertificateException
     {
         Objects.requireNonNull(config, "config must be provided");
 
@@ -62,73 +60,85 @@ public class SslUtils
 
         if (config.type() != null)
             ks = KeyStore.getInstance(config.type());
-        else if (config.path().endsWith("p12"))
+        else if (config.path()
+                       .endsWith("p12"))
             ks = KeyStore.getInstance("PKCS12");
-        else if (config.path().endsWith("jks"))
+        else if (config.path()
+                       .endsWith("jks"))
             ks = KeyStore.getInstance("JKS");
         else
-            throw new IllegalArgumentException("Unrecognized keystore format extension: "
-                                               + config.path().substring(config.path().length() - 3));
+            throw new IllegalArgumentException("Unrecognized keystore format extension: " + config.path()
+                                                                                                  .substring(config.path()
+                                                                                                                   .length()
+                                                                                                          - 3));
         try (FileInputStream keystore = new FileInputStream(config.path()))
         {
-            ks.load(keystore, config.password().toCharArray());
+            ks.load(keystore, config.password()
+                                    .toCharArray());
         }
     }
 
-    public static void setKeyStoreConfiguration(SSLOptions options, KeyStoreConfiguration keystore, long timestamp)
+    public static void setKeyStoreConfiguration(SSLOptions options,
+                                                KeyStoreConfiguration keystore,
+                                                long timestamp)
     {
         KeyCertOptions keyCertOptions;
         switch (keystore.type())
         {
-            case "JKS":
-                keyCertOptions = new JksOptions().setPath(keystore.path()).setPassword(keystore.password());
+            case "JKS" :
+                keyCertOptions = new JksOptions().setPath(keystore.path())
+                                                 .setPassword(keystore.password());
                 break;
 
-            case "PKCS12":
-                keyCertOptions = new PfxOptions().setPath(keystore.path()).setPassword(keystore.password());
+            case "PKCS12" :
+                keyCertOptions = new PfxOptions().setPath(keystore.path())
+                                                 .setPassword(keystore.password());
                 break;
 
-            default:
+            default :
                 throw new UnsupportedOperationException("KeyStore with type " + keystore.type() + " is not supported");
         }
         options.setKeyCertOptions(new WrappedKeyCertOptions(timestamp, keyCertOptions));
     }
 
-    public static void setTrustStoreConfiguration(SSLOptions options, KeyStoreConfiguration truststore)
+    public static void setTrustStoreConfiguration(SSLOptions options,
+                                                  KeyStoreConfiguration truststore)
     {
         TrustOptions keyCertOptions;
         switch (truststore.type())
         {
-            case "JKS":
-                keyCertOptions = new JksOptions().setPath(truststore.path()).setPassword(truststore.password());
+            case "JKS" :
+                keyCertOptions = new JksOptions().setPath(truststore.path())
+                                                 .setPassword(truststore.password());
                 break;
 
-            case "PKCS12":
-                keyCertOptions = new PfxOptions().setPath(truststore.path()).setPassword(truststore.password());
+            case "PKCS12" :
+                keyCertOptions = new PfxOptions().setPath(truststore.path())
+                                                 .setPassword(truststore.password());
                 break;
 
-            default:
-                throw new UnsupportedOperationException("TrustStore with type " + truststore.type()
-                                                        + " is not supported");
+            default :
+                throw new UnsupportedOperationException("TrustStore with type " + truststore.type() + " is not supported");
         }
         options.setTrustOptions(keyCertOptions);
     }
 
     /**
-     * Vertx makes a determination on whether the SSL context should be reloaded based on whether the
-     * {@link SSLOptions} have changed. This means that if the keystore certificate file changed but the file
-     * name remains the same, the SSL context is not considered to have been changed.
+     * Vertx makes a determination on whether the SSL context should be reloaded based on whether the {@link SSLOptions} have changed. This means that if the
+     * keystore certificate file changed but the file name remains the same, the SSL context is not considered to have been changed.
      *
-     * <p>This class allows for us to keep track of the last modified timestamp of the underlying file, and if
-     * the underlying file changes, we propagate that information to the {@link SSLOptions} via the equality method in
-     * this class. When the old timestamp and new timestamp differ, we'll force the SSL context reloading in vertx.
+     * <p>
+     * This class allows for us to keep track of the last modified timestamp of the underlying file, and if the underlying file changes, we propagate that
+     * information to the {@link SSLOptions} via the equality method in this class. When the old timestamp and new timestamp differ, we'll force the SSL context
+     * reloading in vertx.
      */
     static class WrappedKeyCertOptions implements KeyCertOptions
     {
         private final long timestamp;
         private final KeyCertOptions delegate;
 
-        WrappedKeyCertOptions(long timestamp, KeyCertOptions delegate)
+        WrappedKeyCertOptions(long timestamp,
+                              KeyCertOptions delegate)
         {
             this.timestamp = timestamp;
             this.delegate = delegate;
@@ -161,11 +171,12 @@ public class SslUtils
         @Override
         public boolean equals(Object o)
         {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
             WrappedKeyCertOptions that = (WrappedKeyCertOptions) o;
-            return timestamp == that.timestamp
-                   && Objects.equals(delegate, that.delegate);
+            return timestamp == that.timestamp && Objects.equals(delegate, that.delegate);
         }
 
         @Override

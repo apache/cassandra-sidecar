@@ -37,19 +37,27 @@ public class MultibindingsMapKeyTestUtil
 
     /**
      * Find the periodic task of the key from the map binder
+     *
      * @param injector injector
      * @param key key
      * @return periodic task
      */
-    public static <T extends PeriodicTask> T findPeriodicTask(Injector injector, Class<? extends ClassKey> key)
+    public static <T extends PeriodicTask> T findPeriodicTask(Injector injector,
+                                                              Class<? extends ClassKey> key)
     {
-        TypeLiteral<MultiBindingTypeResolver<PeriodicTask>> type = new TypeLiteral<>(){};
-        //noinspection unchecked
+        TypeLiteral<MultiBindingTypeResolver<PeriodicTask>> type = new TypeLiteral<>()
+        {
+        };
+        // noinspection unchecked
         return (T) find(injector, type, key);
     }
 
-    private static <T> T find(Injector injector, TypeLiteral<MultiBindingTypeResolver<T>> type, Class<? extends ClassKey> key)
+    private static <T> T find(Injector injector,
+                              TypeLiteral<MultiBindingTypeResolver<T>> type,
+                              Class<? extends ClassKey> key)
     {
-        return injector.getInstance(Key.get(type)).resolve().get(key);
+        return injector.getInstance(Key.get(type))
+                       .resolve()
+                       .get(key);
     }
 }

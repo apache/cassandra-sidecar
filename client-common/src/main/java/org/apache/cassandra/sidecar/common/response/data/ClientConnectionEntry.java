@@ -18,11 +18,10 @@
 
 package org.apache.cassandra.sidecar.common.response.data;
 
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -114,7 +113,6 @@ public class ClientConnectionEntry
         return authenticationMetadata;
     }
 
-
     private final String address;
     private final int port;
     private final Boolean sslEnabled;
@@ -130,7 +128,6 @@ public class ClientConnectionEntry
     private final String keyspaceName;
     private final String authenticationMode;
     private final Map<String, String> authenticationMetadata;
-
 
     @JsonCreator
     public ClientConnectionEntry(@NotNull @JsonProperty("address") String address,

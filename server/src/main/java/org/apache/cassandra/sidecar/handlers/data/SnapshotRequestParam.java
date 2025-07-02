@@ -24,8 +24,7 @@ import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.handlers.snapshots.ListSnapshotHandler;
 
 /**
- * Holder class for the {@link ListSnapshotHandler}
- * request parameters
+ * Holder class for the {@link ListSnapshotHandler} request parameters
  */
 public class SnapshotRequestParam
 {
@@ -101,13 +100,8 @@ public class SnapshotRequestParam
     @Override
     public String toString()
     {
-        return "SnapshotRequest{" +
-               "keyspace='" + keyspace() + '\'' +
-               ", tableName='" + tableName() + '\'' +
-               ", snapshotName='" + snapshotName + '\'' +
-               ", includeSecondaryIndexFiles=" + includeSecondaryIndexFiles +
-               ", ttl=" + ttl +
-               '}';
+        return "SnapshotRequest{" + "keyspace='" + keyspace() + '\'' + ", tableName='" + tableName() + '\'' + ", snapshotName='" + snapshotName + '\''
+                + ", includeSecondaryIndexFiles=" + includeSecondaryIndexFiles + ", ttl=" + ttl + '}';
     }
 
     public static Builder builder()
@@ -161,10 +155,11 @@ public class SnapshotRequestParam
          * Sets the {@code qualifiedTableName} and returns a reference to this Builder enabling method chaining.
          *
          * @param keyspace the Cassandra keyspace
-         * @param table    the Cassandra table
+         * @param table the Cassandra table
          * @return a reference to this Builder
          */
-        public Builder qualifiedTableName(String keyspace, String table)
+        public Builder qualifiedTableName(String keyspace,
+                                          String table)
         {
             return update(b -> b.qualifiedTableName = new QualifiedTableName(keyspace, table));
         }

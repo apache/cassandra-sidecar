@@ -23,8 +23,7 @@ import datahub.client.Emitter;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A functional interface that has to be extended in order to provide a new,
- * fresh instance of a DataHub {@link Emitter} for each schema reporting event
+ * A functional interface that has to be extended in order to provide a new, fresh instance of a DataHub {@link Emitter} for each schema reporting event
  */
 @FunctionalInterface
 public interface EmitterFactory

@@ -18,14 +18,10 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.util.List;
-import java.util.function.Function;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.util.List;
+import java.util.function.Function;
 import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
@@ -33,7 +29,8 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.jetbrains.annotations.NotNull;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 
 /**
@@ -65,12 +62,10 @@ public class InstanceMetadataFetcher
     }
 
     /**
-     * Returns the {@link InstanceMetadata} for the given {@code instanceId}, or the first instance when
-     * {@code instanceId} is {@code null}.
+     * Returns the {@link InstanceMetadata} for the given {@code instanceId}, or the first instance when {@code instanceId} is {@code null}.
      *
      * @param instanceId the identifier for the Cassandra instance
-     * @return the {@link InstanceMetadata} for the given {@code instanceId}, or the first instance when
-     * {@code instanceId} is {@code null}
+     * @return the {@link InstanceMetadata} for the given {@code instanceId}, or the first instance when {@code instanceId} is {@code null}
      * @throws NoSuchCassandraInstanceException when the Cassandra instance with {@code instanceId} does not exist
      */
     @NotNull
@@ -82,8 +77,9 @@ public class InstanceMetadataFetcher
     /**
      * Returns the {@link CassandraAdapterDelegate} for the given {@code host}
      *
-     * <p><b>Note</b>: the method to retrieve delegate should not be the responsibility of this class. However, for historic reasons, it is kept.
-     * That said, it does <i>not</i> warrant adding any more convenient methods to return members of {@link InstanceMetadata}.
+     * <p>
+     * <b>Note</b>: the method to retrieve delegate should not be the responsibility of this class. However, for historic reasons, it is kept. That said, it
+     * does <i>not</i> warrant adding any more convenient methods to return members of {@link InstanceMetadata}.
      *
      * @param host the Cassandra instance hostname or IP address
      * @return the {@link CassandraAdapterDelegate} for the given {@code host}
@@ -97,8 +93,8 @@ public class InstanceMetadataFetcher
     }
 
     /**
-     * Iterate through the local instances and call the function on the first available instance, i.e. no CassandraUnavailableException
-     * or OperationUnavailableException is thrown for the operations
+     * Iterate through the local instances and call the function on the first available instance, i.e. no CassandraUnavailableException or
+     * OperationUnavailableException is thrown for the operations
      *
      * @param function function applies to {@link InstanceMetadata}
      * @return function eval result. Null can be returned when all local instances are exhausted
@@ -135,7 +131,8 @@ public class InstanceMetadataFetcher
 
     private void ensureInstancesMetadataConfigured()
     {
-        if (instancesMetadata.instances().isEmpty())
+        if (instancesMetadata.instances()
+                             .isEmpty())
         {
             throw new IllegalStateException("There are no instances configured!");
         }

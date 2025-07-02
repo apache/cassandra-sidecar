@@ -63,44 +63,35 @@ class RouteBuilderTest
         SettableVertxRoute route = routeBuilder.build();
         route.setHttpMethod(HttpMethod.GET);
         route.setRouteURI("/api/v1/__health");
-        assertThatThrownBy(() -> route.mountTo(mockRouter))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Handler chain can not be empty");
+        assertThatThrownBy(() -> route.mountTo(mockRouter)).isInstanceOf(IllegalArgumentException.class)
+                                                           .hasMessage("Handler chain can not be empty");
     }
 
     @Test
     void testBuildAccessProtectedRouteWithoutRequiredAuthorizations()
     {
         Router mockRouter = mock(Router.class);
-        CassandraHealthHandler handler = new CassandraHealthHandler(mock(InstanceMetadataFetcher.class),
-                                                                    mock(ExecutorPools.class),
-                                                                    mock(CassandraInputValidator.class));
-        testRoute(handler,
-                  Factory::builderForRoute,
-                  route -> {
-                      route.setHttpMethod(HttpMethod.GET);
-                      route.setRouteURI(ApiEndpointsV1.HEALTH_ROUTE);
-                      assertThatThrownBy(() -> route.mountTo(mockRouter))
-                      .isInstanceOf(ConfigurationException.class)
-                      .hasMessage("Authorized route must have required authorizations declared");
-                  });
+        CassandraHealthHandler handler = new CassandraHealthHandler(mock(InstanceMetadataFetcher.class), mock(ExecutorPools.class),
+                mock(CassandraInputValidator.class));
+        testRoute(handler, Factory::builderForRoute, route -> {
+            route.setHttpMethod(HttpMethod.GET);
+            route.setRouteURI(ApiEndpointsV1.HEALTH_ROUTE);
+            assertThatThrownBy(() -> route.mountTo(mockRouter)).isInstanceOf(ConfigurationException.class)
+                                                               .hasMessage("Authorized route must have required authorizations declared");
+        });
     }
 
     @Test
     void testBuildUnprotectedRouteWithRequiredAuthorizations()
     {
         Router mockRouter = mock(Router.class);
-        GossipInfoHandler handler = new GossipInfoHandler(mock(InstanceMetadataFetcher.class),
-                                                          mock(ExecutorPools.class));
-        testRoute(handler,
-                  Factory::builderForUnauthorizedRoute,
-                  route -> {
-                      route.setHttpMethod(HttpMethod.GET);
-                      route.setRouteURI(ApiEndpointsV1.GOSSIP_ROUTE);
-                      assertThatThrownBy(() -> route.mountTo(mockRouter))
-                      .isInstanceOf(ConfigurationException.class)
-                      .hasMessage("Unauthorized route must not have required authorizations declared");
-                  });
+        GossipInfoHandler handler = new GossipInfoHandler(mock(InstanceMetadataFetcher.class), mock(ExecutorPools.class));
+        testRoute(handler, Factory::builderForUnauthorizedRoute, route -> {
+            route.setHttpMethod(HttpMethod.GET);
+            route.setRouteURI(ApiEndpointsV1.GOSSIP_ROUTE);
+            assertThatThrownBy(() -> route.mountTo(mockRouter)).isInstanceOf(ConfigurationException.class)
+                                                               .hasMessage("Unauthorized route must not have required authorizations declared");
+        });
     }
 
     private void testRoute(Handler<RoutingContext> handler,
@@ -114,7 +105,8 @@ class RouteBuilderTest
         AuthorizationParameterValidateHandler mockHandler = mock(AuthorizationParameterValidateHandler.class);
         Factory factory = new Factory(mockConfig, mockAuthorizationProvider, mockAdminIdentityResolver, mockHandler);
         RouteBuilder routeBuilder = routeBuilderFunction.apply(factory);
-        SettableVertxRoute route = routeBuilder.handler(handler).build();
+        SettableVertxRoute route = routeBuilder.handler(handler)
+                                               .build();
         test.accept(route);
     }
 }

@@ -17,6 +17,9 @@
  */
 package org.apache.cassandra.sidecar.cdc;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import io.vertx.core.Promise;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,15 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
-import io.vertx.core.Promise;
-
 import org.apache.cassandra.sidecar.common.server.ThrowingRunnable;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
@@ -47,10 +41,14 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Implementation of the interface {@link CdcConfig}, an in-memory representation holding
- * CDC and Kafka configurations from "configs" table inside sidecar internal keyspace.
+ * Implementation of the interface {@link CdcConfig}, an in-memory representation holding CDC and Kafka configurations from "configs" table inside sidecar
+ * internal keyspace.
  */
 @Singleton
 public class CdcConfigImpl implements CdcConfig
@@ -76,8 +74,10 @@ public class CdcConfigImpl implements CdcConfig
                          KafkaConfigAccessor kafkaConfigAccessor,
                          PeriodicTaskExecutor periodicTaskExecutor)
     {
-        this.schemaKeyspaceConfiguration = sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration();
-        this.cdcConfiguration = sidecarConfiguration.serviceConfiguration().cdcConfiguration();
+        this.schemaKeyspaceConfiguration = sidecarConfiguration.serviceConfiguration()
+                                                               .schemaKeyspaceConfiguration();
+        this.cdcConfiguration = sidecarConfiguration.serviceConfiguration()
+                                                    .cdcConfiguration();
         this.cdcConfigAccessor = cdcConfigAccessor;
         this.kafkaConfigAccessor = kafkaConfigAccessor;
 
@@ -110,9 +110,7 @@ public class CdcConfigImpl implements CdcConfig
     @Override
     public boolean isConfigReady()
     {
-        return cdcConfigAccessor.isAvailable()
-                && !kafkaConfigMappings.isEmpty()
-                && !cdcConfigMappings.isEmpty();
+        return cdcConfigAccessor.isAvailable() && !kafkaConfigMappings.isEmpty() && !cdcConfigMappings.isEmpty();
     }
 
     @Override
@@ -223,18 +221,21 @@ public class CdcConfigImpl implements CdcConfig
         return getInt(ConfigKeys.MAX_WATERMARKER_SIZE.lowcaseName, DEFAULT_MAX_WATERMARKER_SIZE);
     }
 
-    protected boolean getBool(String key, boolean orDefault)
+    protected boolean getBool(String key,
+                              boolean orDefault)
     {
         String bool = cdcConfigMappings.get(key);
         return bool != null ? Boolean.parseBoolean(bool) : orDefault;
     }
 
-    protected int getInt(String key, int orDefault)
+    protected int getInt(String key,
+                         int orDefault)
     {
         return getInt(key, () -> orDefault);
     }
 
-    protected int getInt(String key, Supplier<Integer> orDefault)
+    protected int getInt(String key,
+                         Supplier<Integer> orDefault)
     {
         String aInt = cdcConfigMappings.get(key);
         return aInt != null ? Integer.valueOf(aInt) : orDefault.get();
@@ -258,8 +259,7 @@ public class CdcConfigImpl implements CdcConfig
     @VisibleForTesting
     void forceExecuteNotifier()
     {
-        if (configRefreshNotifier != null &&
-                configRefreshNotifier.scheduleDecision() == ScheduleDecision.EXECUTE)
+        if (configRefreshNotifier != null && configRefreshNotifier.scheduleDecision() == ScheduleDecision.EXECUTE)
         {
             configRefreshNotifier.execute(Promise.promise());
         }
@@ -312,8 +312,10 @@ public class CdcConfigImpl implements CdcConfig
             Map<String, String> newCdcConfigMappings;
             try
             {
-                newKafkaConfigMappings = kafkaConfigAccessor.getConfig().getConfigs();
-                newCdcConfigMappings = cdcConfigAccessor.getConfig().getConfigs();
+                newKafkaConfigMappings = kafkaConfigAccessor.getConfig()
+                                                            .getConfigs();
+                newCdcConfigMappings = cdcConfigAccessor.getConfig()
+                                                        .getConfigs();
             }
             catch (Throwable e)
             {
@@ -338,26 +340,14 @@ public class CdcConfigImpl implements CdcConfig
 
     enum ConfigKeys
     {
-        DATACENTER,
-        LOG_ONLY,
-        PERSIST_STATE,
-        ENV,
-        TOPIC,
-        TOPIC_FORMAT_TYPE,
-        CDC_ENABLED,
-        JOBID,
-        WATERMARK_SECONDS,
-        MICRO_BATCH_DELAY_MILLIS,
-        MAX_COMMIT_LOGS,
-        MAX_WATERMARKER_SIZE,
-        FAIL_KAFKA_ERRORS,
-        FAIL_KAFKA_TOO_LARGE_ERRORS,
-        PERSIST_DELAY_MILLIS;
+        DATACENTER, LOG_ONLY, PERSIST_STATE, ENV, TOPIC, TOPIC_FORMAT_TYPE, CDC_ENABLED, JOBID, WATERMARK_SECONDS, MICRO_BATCH_DELAY_MILLIS, MAX_COMMIT_LOGS,
+        MAX_WATERMARKER_SIZE, FAIL_KAFKA_ERRORS, FAIL_KAFKA_TOO_LARGE_ERRORS, PERSIST_DELAY_MILLIS;
         private final String lowcaseName;
 
         ConfigKeys()
         {
-            this.lowcaseName = this.name().toLowerCase();
+            this.lowcaseName = this.name()
+                                   .toLowerCase();
         }
     }
 }

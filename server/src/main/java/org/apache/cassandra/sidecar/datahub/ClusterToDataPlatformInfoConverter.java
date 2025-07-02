@@ -42,11 +42,10 @@ public class ClusterToDataPlatformInfoConverter extends ClusterToAspectConverter
 
         String urn = identifiers.urnDataPlatform();
 
-        DataPlatformInfo aspect = new DataPlatformInfo()
-                .setType(PlatformType.RELATIONAL_DB)
-                .setName(identifiers.platform())
-                .setDisplayName(identifiers.organization())
-                .setDatasetNameDelimiter(DELIMITER);
+        DataPlatformInfo aspect = new DataPlatformInfo().setType(PlatformType.RELATIONAL_DB)
+                                                        .setName(identifiers.platform())
+                                                        .setDisplayName(identifiers.organization())
+                                                        .setDatasetNameDelimiter(DELIMITER);
 
         return wrap(type, urn, aspect);
     }

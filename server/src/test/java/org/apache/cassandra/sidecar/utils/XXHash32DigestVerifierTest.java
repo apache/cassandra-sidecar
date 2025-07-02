@@ -91,20 +91,22 @@ class XXHash32DigestVerifierTest
         runTestScenario(randomFilePath, new XXHash32Digest("invalid"), true);
     }
 
-    private void runTestScenario(Path filePath, XXHash32Digest digest,
-                                 boolean errorExpectedDuringValidation) throws InterruptedException
+    private void runTestScenario(Path filePath,
+                                 XXHash32Digest digest,
+                                 boolean errorExpectedDuringValidation)
+            throws InterruptedException
     {
         CountDownLatch latch = new CountDownLatch(1);
         ExposeAsyncFileXXHash32DigestVerifier verifier = newVerifier(digest);
-        verifier.verify(filePath.toAbsolutePath().toString())
+        verifier.verify(filePath.toAbsolutePath()
+                                .toString())
                 .onComplete(complete -> {
                     if (errorExpectedDuringValidation)
                     {
                         assertThat(complete.failed()).isTrue();
-                        assertThat(complete.cause())
-                        .isInstanceOf(HttpException.class)
-                        .extracting(from(t -> ((HttpException) t).getPayload()), as(InstanceOfAssertFactories.STRING))
-                        .contains("Digest mismatch. expected_digest=" + digest.value());
+                        assertThat(complete.cause()).isInstanceOf(HttpException.class)
+                                                    .extracting(from(t -> ((HttpException) t).getPayload()), as(InstanceOfAssertFactories.STRING))
+                                                    .contains("Digest mismatch. expected_digest=" + digest.value());
                     }
                     else
                     {
@@ -118,9 +120,8 @@ class XXHash32DigestVerifierTest
 
         assertThat(verifier.file).isNotNull();
         // we can't close the file if it's already closed, so we expect the exception here
-        assertThatThrownBy(() -> verifier.file.end())
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("File handle is closed");
+        assertThatThrownBy(() -> verifier.file.end()).isInstanceOf(IllegalStateException.class)
+                                                     .hasMessageContaining("File handle is closed");
     }
 
     static ExposeAsyncFileXXHash32DigestVerifier newVerifier(XXHash32Digest digest)
@@ -129,14 +130,15 @@ class XXHash32DigestVerifierTest
     }
 
     /**
-     * Class that extends from {@link XXHash32DigestVerifier} for testing purposes and holds a reference to the
-     * {@link AsyncFile} to ensure that the file has been closed.
+     * Class that extends from {@link XXHash32DigestVerifier} for testing purposes and holds a reference to the {@link AsyncFile} to ensure that the file has
+     * been closed.
      */
     static class ExposeAsyncFileXXHash32DigestVerifier extends XXHash32DigestVerifier
     {
         AsyncFile file;
 
-        public ExposeAsyncFileXXHash32DigestVerifier(FileSystem fs, XXHash32Digest digest)
+        public ExposeAsyncFileXXHash32DigestVerifier(FileSystem fs,
+                                                     XXHash32Digest digest)
         {
             super(fs, digest, new XXHash32Provider.Lz4XXHash32(maybeGetSeedOrDefault(digest)));
         }

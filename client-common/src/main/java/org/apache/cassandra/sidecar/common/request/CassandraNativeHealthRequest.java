@@ -38,15 +38,12 @@ public class CassandraNativeHealthRequest extends JsonRequest<HealthResponse>
     /**
      * Constructs a request to retrieve the Cassandra native health
      *
-     * @param useDeprecatedHealthEndpoint {@code true} if using the deprecated endpoint, {@code false} to use
-     *                                    the new endpoint
+     * @param useDeprecatedHealthEndpoint {@code true} if using the deprecated endpoint, {@code false} to use the new endpoint
      */
     @SuppressWarnings("deprecation")
     public CassandraNativeHealthRequest(boolean useDeprecatedHealthEndpoint)
     {
-        super(useDeprecatedHealthEndpoint
-              ? ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE
-              : ApiEndpointsV1.CASSANDRA_NATIVE_HEALTH_ROUTE);
+        super(useDeprecatedHealthEndpoint ? ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE : ApiEndpointsV1.CASSANDRA_NATIVE_HEALTH_ROUTE);
     }
 
     /**

@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.client;
 
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -32,23 +31,22 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
  */
 public abstract class SidecarInstanceTest
 {
-    protected abstract SidecarInstance newInstance(String hostname, int port);
+    protected abstract SidecarInstance newInstance(String hostname,
+                                                   int port);
 
     @ParameterizedTest
-    @ValueSource(ints = { -1, 0, 65536, 100_000 })
+    @ValueSource(ints = { -1, 0, 65536, 100_000})
     void failsWithInvalidPortNumber(int port)
     {
-        assertThatExceptionOfType(IllegalArgumentException.class)
-        .isThrownBy(() -> newInstance(null, port))
-        .withMessageContaining("Invalid port number for the Sidecar service: " + port);
+        assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> newInstance(null, port))
+                                                                 .withMessageContaining("Invalid port number for the Sidecar service: " + port);
     }
 
     @Test
     void failsWithNullHostname()
     {
-        assertThatNullPointerException()
-        .isThrownBy(() -> newInstance(null, 8080))
-        .withMessageContaining("The Sidecar hostname must be non-null");
+        assertThatNullPointerException().isThrownBy(() -> newInstance(null, 8080))
+                                        .withMessageContaining("The Sidecar hostname must be non-null");
     }
 
     @Test

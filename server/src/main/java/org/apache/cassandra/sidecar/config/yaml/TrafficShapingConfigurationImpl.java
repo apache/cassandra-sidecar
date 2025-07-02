@@ -30,8 +30,8 @@ import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfigur
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 
 /**
- * Reads the configuration for the global traffic shaping options from a YAML file. These TCP server options enable
- * configuration of bandwidth limiting. Both inbound and outbound bandwidth can be limited through these options.
+ * Reads the configuration for the global traffic shaping options from a YAML file. These TCP server options enable configuration of bandwidth limiting. Both
+ * inbound and outbound bandwidth can be limited through these options.
  */
 public class TrafficShapingConfigurationImpl implements TrafficShapingConfiguration
 {
@@ -48,22 +48,18 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
     public static final long DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT = 0;
 
     /**
-     * Default peak outbound bandwidth limit. Defaults to 400 megabytes/sec
-     * See {@link GlobalTrafficShapingHandler#maxGlobalWriteSize}
+     * Default peak outbound bandwidth limit. Defaults to 400 megabytes/sec See {@link GlobalTrafficShapingHandler#maxGlobalWriteSize}
      */
     public static final long DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT = 400L * 1024L * 1024L;
 
     /**
-     * Default max delay in case of traffic shaping
-     * (during which no communication will occur).
-     * Shall be less than TIMEOUT. Here half of "standard" 30s.
-     * See {@link AbstractTrafficShapingHandler#DEFAULT_MAX_TIME}
+     * Default max delay in case of traffic shaping (during which no communication will occur). Shall be less than TIMEOUT. Here half of "standard" 30s. See
+     * {@link AbstractTrafficShapingHandler#DEFAULT_MAX_TIME}
      */
     public static final MillisecondBoundConfiguration DEFAULT_MAX_DELAY_TIME = MillisecondBoundConfiguration.parse("15s");
 
     /**
-     * Default delay between two checks: 1s (1000ms)
-     * See {@link AbstractTrafficShapingHandler#DEFAULT_CHECK_INTERVAL}
+     * Default delay between two checks: 1s (1000ms) See {@link AbstractTrafficShapingHandler#DEFAULT_CHECK_INTERVAL}
      */
     public static final MillisecondBoundConfiguration DEFAULT_CHECK_INTERVAL = MillisecondBoundConfiguration.parse("1s");
 
@@ -90,13 +86,8 @@ public class TrafficShapingConfigurationImpl implements TrafficShapingConfigurat
 
     public TrafficShapingConfigurationImpl()
     {
-        this(DEFAULT_INBOUND_GLOBAL_BANDWIDTH_LIMIT,
-             DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT,
-             DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT,
-             DEFAULT_MAX_DELAY_TIME,
-             DEFAULT_CHECK_INTERVAL,
-             DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT
-        );
+        this(DEFAULT_INBOUND_GLOBAL_BANDWIDTH_LIMIT, DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT, DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT,
+                DEFAULT_MAX_DELAY_TIME, DEFAULT_CHECK_INTERVAL, DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT);
     }
 
     public TrafficShapingConfigurationImpl(long inboundGlobalBandwidthBytesPerSecond,

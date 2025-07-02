@@ -43,24 +43,18 @@ class SidecarSchemaIntTest extends IntegrationTestBase
     {
         waitForSchemaReady(60, TimeUnit.SECONDS);
         SidecarSchema sidecarSchema = injector.getInstance(SidecarSchema.class);
-        assertThat(sidecarSchema.isInitialized())
-        .describedAs("SidecarSchema should be initialized")
-        .isTrue();
+        assertThat(sidecarSchema.isInitialized()).describedAs("SidecarSchema should be initialized")
+                                                 .isTrue();
 
         SidecarInternalKeyspace sidecarInternalKeyspace = sidecarSchema.sidecarInternalKeyspace();
-        for (Class<? extends TableSchema> clazz : List.of(RestoreJobsSchema.class,
-                                                          RestoreRangesSchema.class,
-                                                          RestoreSlicesSchema.class,
-                                                          SidecarLeaseSchema.class,
-                                                          SidecarRolePermissionsSchema.class,
-                                                          SystemAuthSchema.class))
+        for (Class<? extends TableSchema> clazz : List.of(RestoreJobsSchema.class, RestoreRangesSchema.class, RestoreSlicesSchema.class,
+                SidecarLeaseSchema.class, SidecarRolePermissionsSchema.class, SystemAuthSchema.class))
         {
             assertThat(sidecarInternalKeyspace.tableSchema(clazz)).isExactlyInstanceOf(clazz);
         }
 
         ClusterLease clusterLease = injector.getInstance(ClusterLease.class);
-        assertThat(clusterLease.isClaimedByLocalSidecar())
-        .describedAs("ClusterLease should be claimed by the local sidecar")
-        .isTrue();
+        assertThat(clusterLease.isClaimedByLocalSidecar()).describedAs("ClusterLease should be claimed by the local sidecar")
+                                                          .isTrue();
     }
 }

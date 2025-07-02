@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
 import javax.net.ssl.SSLHandshakeException;
 
 import org.junit.jupiter.api.AfterEach;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,7 +116,8 @@ class ServerSSLTest
     void tearDown() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -124,66 +127,68 @@ class ServerSSLTest
     @Test
     void failsWhenKeyStoreIsNotConfigured()
     {
-        builder.sslConfiguration(SslConfigurationImpl.builder().enabled(true).build());
+        builder.sslConfiguration(SslConfigurationImpl.builder()
+                                                     .enabled(true)
+                                                     .build());
         vertx = vertx();
         server = server();
 
-        assertThatRuntimeException()
-        .isThrownBy(() -> server.start())
-        .withMessage("Invalid keystore parameters for SSL")
-        .withRootCauseInstanceOf(IllegalArgumentException.class)
-        .extracting(from(t -> t.getCause().getMessage()), as(InstanceOfAssertFactories.STRING))
-        .contains("keyStorePath and keyStorePassword must be set if ssl enabled");
+        assertThatRuntimeException().isThrownBy(() -> server.start())
+                                    .withMessage("Invalid keystore parameters for SSL")
+                                    .withRootCauseInstanceOf(IllegalArgumentException.class)
+                                    .extracting(from(t -> t.getCause()
+                                                           .getMessage()),
+                                            as(InstanceOfAssertFactories.STRING))
+                                    .contains("keyStorePath and keyStorePassword must be set if ssl enabled");
     }
 
     @Test
     void failsWhenKeyStorePasswordIsIncorrect()
     {
-        SslConfigurationImpl ssl =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .keystore(new KeyStoreConfigurationImpl(serverKeyStoreP12Path.toString(), "badpassword"))
-                            .build();
+        SslConfigurationImpl ssl = SslConfigurationImpl.builder()
+                                                       .enabled(true)
+                                                       .keystore(new KeyStoreConfigurationImpl(serverKeyStoreP12Path.toString(), "badpassword"))
+                                                       .build();
         builder.sslConfiguration(ssl);
         vertx = vertx();
         server = server();
 
-        assertThatRuntimeException()
-        .isThrownBy(() -> server.start())
-        .withMessage("Invalid keystore parameters for SSL")
-        .extracting(from(t -> t.getCause().getMessage()), as(InstanceOfAssertFactories.STRING))
-        .contains("keystore password was incorrect");
+        assertThatRuntimeException().isThrownBy(() -> server.start())
+                                    .withMessage("Invalid keystore parameters for SSL")
+                                    .extracting(from(t -> t.getCause()
+                                                           .getMessage()),
+                                            as(InstanceOfAssertFactories.STRING))
+                                    .contains("keystore password was incorrect");
     }
 
     @Test
     void failsWhenTrustStorePasswordIsIncorrect()
     {
-        SslConfigurationImpl ssl =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .keystore(new KeyStoreConfigurationImpl(serverKeyStoreP12Path.toString(), DEFAULT_PASSWORD))
-                            .truststore(new KeyStoreConfigurationImpl(trustStoreP12Path.toString(), "badpassword"))
-                            .build();
+        SslConfigurationImpl ssl = SslConfigurationImpl.builder()
+                                                       .enabled(true)
+                                                       .keystore(new KeyStoreConfigurationImpl(serverKeyStoreP12Path.toString(), DEFAULT_PASSWORD))
+                                                       .truststore(new KeyStoreConfigurationImpl(trustStoreP12Path.toString(), "badpassword"))
+                                                       .build();
         builder.sslConfiguration(ssl);
         vertx = vertx();
         server = server();
 
-        assertThatRuntimeException()
-        .isThrownBy(() -> server.start())
-        .withMessage("Invalid keystore parameters for SSL")
-        .extracting(from(t -> t.getCause().getMessage()), as(InstanceOfAssertFactories.STRING))
-        .contains("keystore password was incorrect");
+        assertThatRuntimeException().isThrownBy(() -> server.start())
+                                    .withMessage("Invalid keystore parameters for SSL")
+                                    .extracting(from(t -> t.getCause()
+                                                           .getMessage()),
+                                            as(InstanceOfAssertFactories.STRING))
+                                    .contains("keystore password was incorrect");
     }
 
     @Test
     void testSSLWithPkcs12Succeeds(VertxTestContext context)
     {
-        SslConfigurationImpl ssl =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .keystore(p12KeyStore)
-                            .truststore(p12TrustStore)
-                            .build();
+        SslConfigurationImpl ssl = SslConfigurationImpl.builder()
+                                                       .enabled(true)
+                                                       .keystore(p12KeyStore)
+                                                       .truststore(p12TrustStore)
+                                                       .build();
 
         builder.sslConfiguration(ssl)
                .serviceConfiguration(TestServiceConfiguration.newInstance());
@@ -198,12 +203,11 @@ class ServerSSLTest
     @Test
     void testSSLWithJksSucceeds(VertxTestContext context)
     {
-        SslConfigurationImpl ssl =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .keystore(new KeyStoreConfigurationImpl(serverKeyStoreJksPath.toString(), DEFAULT_PASSWORD))
-                            .truststore(new KeyStoreConfigurationImpl(trustStoreJksPath.toString(), DEFAULT_PASSWORD))
-                            .build();
+        SslConfigurationImpl ssl = SslConfigurationImpl.builder()
+                                                       .enabled(true)
+                                                       .keystore(new KeyStoreConfigurationImpl(serverKeyStoreJksPath.toString(), DEFAULT_PASSWORD))
+                                                       .truststore(new KeyStoreConfigurationImpl(trustStoreJksPath.toString(), DEFAULT_PASSWORD))
+                                                       .build();
 
         builder.sslConfiguration(ssl)
                .serviceConfiguration(TestServiceConfiguration.newInstance());
@@ -218,13 +222,12 @@ class ServerSSLTest
     @Test
     void testOpenSSLSucceeds(VertxTestContext context)
     {
-        SslConfigurationImpl ssl =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .useOpenSsl(true)
-                            .keystore(p12KeyStore)
-                            .truststore(p12TrustStore)
-                            .build();
+        SslConfigurationImpl ssl = SslConfigurationImpl.builder()
+                                                       .enabled(true)
+                                                       .useOpenSsl(true)
+                                                       .keystore(p12KeyStore)
+                                                       .truststore(p12TrustStore)
+                                                       .build();
 
         builder.sslConfiguration(ssl)
                .serviceConfiguration(TestServiceConfiguration.newInstance());
@@ -239,14 +242,13 @@ class ServerSSLTest
     @Test
     void testTwoWaySSLSucceeds(VertxTestContext context)
     {
-        SslConfigurationImpl ssl =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .useOpenSsl(true)
-                            .keystore(p12KeyStore)
-                            .truststore(p12TrustStore)
-                            .clientAuth("REQUIRED")
-                            .build();
+        SslConfigurationImpl ssl = SslConfigurationImpl.builder()
+                                                       .enabled(true)
+                                                       .useOpenSsl(true)
+                                                       .keystore(p12KeyStore)
+                                                       .truststore(p12TrustStore)
+                                                       .clientAuth("REQUIRED")
+                                                       .build();
 
         builder.sslConfiguration(ssl)
                .serviceConfiguration(TestServiceConfiguration.newInstance());
@@ -261,14 +263,13 @@ class ServerSSLTest
     @Test
     void failsOnMissingClientKeystore(VertxTestContext context)
     {
-        SslConfigurationImpl ssl =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .useOpenSsl(true)
-                            .keystore(p12KeyStore)
-                            .truststore(p12TrustStore)
-                            .clientAuth("REQUIRED")
-                            .build();
+        SslConfigurationImpl ssl = SslConfigurationImpl.builder()
+                                                       .enabled(true)
+                                                       .useOpenSsl(true)
+                                                       .keystore(p12KeyStore)
+                                                       .truststore(p12TrustStore)
+                                                       .clientAuth("REQUIRED")
+                                                       .build();
 
         builder.sslConfiguration(ssl)
                .serviceConfiguration(TestServiceConfiguration.newInstance());
@@ -287,13 +288,12 @@ class ServerSSLTest
     @Test
     void testTwoWaySSLSucceedsWithOptionalClientAuth(VertxTestContext context)
     {
-        SslConfigurationImpl ssl =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .keystore(p12KeyStore)
-                            .truststore(p12TrustStore)
-                            .clientAuth("REQUEST") // client auth is optional
-                            .build();
+        SslConfigurationImpl ssl = SslConfigurationImpl.builder()
+                                                       .enabled(true)
+                                                       .keystore(p12KeyStore)
+                                                       .truststore(p12TrustStore)
+                                                       .clientAuth("REQUEST") // client auth is optional
+                                                       .build();
 
         builder.sslConfiguration(ssl)
                .serviceConfiguration(TestServiceConfiguration.newInstance());
@@ -308,12 +308,11 @@ class ServerSSLTest
     @Test
     void failsOnMissingClientTrustStore(VertxTestContext context)
     {
-        SslConfigurationImpl ssl =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .keystore(p12KeyStore)
-                            .truststore(p12TrustStore)
-                            .build();
+        SslConfigurationImpl ssl = SslConfigurationImpl.builder()
+                                                       .enabled(true)
+                                                       .keystore(p12KeyStore)
+                                                       .truststore(p12TrustStore)
+                                                       .build();
 
         builder.sslConfiguration(ssl)
                .serviceConfiguration(TestServiceConfiguration.newInstance());
@@ -333,13 +332,12 @@ class ServerSSLTest
     @Test
     void failsOnClientUsingUnacceptableProtocol(VertxTestContext context)
     {
-        SslConfigurationImpl ssl =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .useOpenSsl(true)
-                            .keystore(p12KeyStore)
-                            .truststore(p12TrustStore)
-                            .build();
+        SslConfigurationImpl ssl = SslConfigurationImpl.builder()
+                                                       .enabled(true)
+                                                       .useOpenSsl(true)
+                                                       .keystore(p12KeyStore)
+                                                       .truststore(p12TrustStore)
+                                                       .build();
 
         builder.sslConfiguration(ssl)
                .serviceConfiguration(TestServiceConfiguration.newInstance());
@@ -358,9 +356,9 @@ class ServerSSLTest
                                        .isInstanceOf(SSLHandshakeException.class)
                                        .hasMessageContaining("Failed to create SSL connection")
                                        .hasCauseInstanceOf(SSLHandshakeException.class);
-                  assertThat(throwable.getCause().getMessage())
-                  .containsAnyOf("No appropriate protocol (protocol is disabled or cipher suites are inappropriate)",
-                                 "Received fatal alert: protocol_version");
+                  assertThat(throwable.getCause()
+                                      .getMessage()).containsAnyOf("No appropriate protocol (protocol is disabled or cipher suites are inappropriate)",
+                                              "Received fatal alert: protocol_version");
                   context.completeNow();
               }));
     }
@@ -368,14 +366,13 @@ class ServerSSLTest
     @Test
     void testHotReloadOfServerCertificates(VertxTestContext context)
     {
-        KeyStoreConfigurationImpl expiredP12KeyStore =
-        new KeyStoreConfigurationImpl(expiredServerKeyStoreP12Path.toString(), DEFAULT_PASSWORD, "PKCS12", SecondBoundConfiguration.ZERO);
-        SslConfigurationImpl ssl =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .keystore(expiredP12KeyStore)
-                            .truststore(p12TrustStore)
-                            .build();
+        KeyStoreConfigurationImpl expiredP12KeyStore = new KeyStoreConfigurationImpl(expiredServerKeyStoreP12Path.toString(), DEFAULT_PASSWORD, "PKCS12",
+                SecondBoundConfiguration.ZERO);
+        SslConfigurationImpl ssl = SslConfigurationImpl.builder()
+                                                       .enabled(true)
+                                                       .keystore(expiredP12KeyStore)
+                                                       .truststore(p12TrustStore)
+                                                       .build();
 
         int serverVerticleInstances = 16;
         builder.sslConfiguration(ssl)
@@ -398,8 +395,7 @@ class ServerSSLTest
                   {
                       int finalI = i;
                       futureList.add(validateHealthEndpoint(client).onComplete(ar -> {
-                          assertThat(ar.cause()).as("The health endpoint request number " + finalI +
-                                                    " is expected to fail with the expired server cert")
+                          assertThat(ar.cause()).as("The health endpoint request number " + finalI + " is expected to fail with the expired server cert")
                                                 .isNotNull()
                                                 .isInstanceOf(SSLHandshakeException.class)
                                                 .hasMessageContaining("Failed to create SSL connection");
@@ -413,8 +409,7 @@ class ServerSSLTest
                   try
                   {
                       // Override the expired certificate with a valid certificate
-                      Files.copy(serverKeyStoreP12Path, expiredServerKeyStoreP12Path,
-                                 StandardCopyOption.REPLACE_EXISTING);
+                      Files.copy(serverKeyStoreP12Path, expiredServerKeyStoreP12Path, StandardCopyOption.REPLACE_EXISTING);
                   }
                   catch (IOException e)
                   {
@@ -460,18 +455,22 @@ class ServerSSLTest
                      .send()
                      .compose(response -> {
                          assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                         assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
+                         assertThat(response.bodyAsJsonObject()
+                                            .getString("status")).isEqualTo("OK");
                          return Future.succeededFuture();
                      });
     }
 
-    WebClient clientWithP12Keystore(boolean includeTrustStore, boolean includeClientKeyStore)
+    WebClient clientWithP12Keystore(boolean includeTrustStore,
+                                    boolean includeClientKeyStore)
     {
         WebClientOptions options = new WebClientOptions().setSsl(true);
         return clientWithP12Keystore(options, includeTrustStore, includeClientKeyStore);
     }
 
-    WebClient clientWithP12Keystore(WebClientOptions options, boolean includeTrustStore, boolean includeClientKeyStore)
+    WebClient clientWithP12Keystore(WebClientOptions options,
+                                    boolean includeTrustStore,
+                                    boolean includeClientKeyStore)
     {
         if (includeTrustStore)
         {
@@ -488,8 +487,10 @@ class ServerSSLTest
 
     WebClient clientWithJksTrustStore()
     {
-        JksOptions trustOptions = new JksOptions().setPath(trustStoreJksPath.toString()).setPassword(DEFAULT_PASSWORD);
-        return WebClient.create(vertx, new WebClientOptions().setSsl(true).setTrustOptions(trustOptions));
+        JksOptions trustOptions = new JksOptions().setPath(trustStoreJksPath.toString())
+                                                  .setPassword(DEFAULT_PASSWORD);
+        return WebClient.create(vertx, new WebClientOptions().setSsl(true)
+                                                             .setTrustOptions(trustOptions));
     }
 
     static class ServerSSLTestModule extends AbstractModule

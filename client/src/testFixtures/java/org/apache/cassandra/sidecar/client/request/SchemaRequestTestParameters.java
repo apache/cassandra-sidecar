@@ -40,44 +40,37 @@ public class SchemaRequestTestParameters implements RequestTestParameters<Schema
     @Override
     public String okResponseBody()
     {
-        return "{\"keyspace\":\"cycling\",\"schema\":\"CREATE KEYSPACE cycling WITH REPLICATION = { 'class' : " +
-               "'org.apache.cassandra.locator.NetworkTopologyStrategy', 'datacenter1': '1' } " +
-               "AND DURABLE_WRITES = true;" +
-               "\\n\\nCREATE TABLE cycling.cyclist_category (\\n    category text,\\n    points int," +
-               "\\n    id uuid,\\n" +
-               "    lastname text,\\n    PRIMARY KEY (category, points)\\n) WITH CLUSTERING ORDER BY (points DESC)\\n" +
-               "    AND read_repair = 'BLOCKING'\\n    AND gc_grace_seconds = 864000\\n    AND " +
-               "additional_write_policy = '99p'\\n    AND bloom_filter_fp_chance = 0.01\\n" +
-               "    AND caching = { 'keys' :" +
-               " 'ALL', 'rows_per_partition' : 'NONE' }\\n    AND comment = ''\\n    AND compaction = { 'class' :" +
-               " 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold' : 32," +
-               " 'min_threshold' : 4 }\\n    AND compression = { 'chunk_length_in_kb' : 16, 'class' :" +
-               " 'org.apache.cassandra.io.compress.LZ4Compressor' }\\n    AND default_time_to_live = 0\\n    " +
-               "AND speculative_retry = '99p'\\n    AND min_index_interval = 128\\n" +
-               "    AND max_index_interval = 2048\\n" +
-               "    AND crc_check_chance = 1.0\\n    AND cdc = false\\n    AND memtable_flush_period_in_ms = 0;" +
-               "\\n\\nCREATE TABLE cycling.cyclist_name (\\n    id uuid,\\n    firstname text," +
-               "\\n    lastname text,\\n" +
-               "    PRIMARY KEY (id)\\n) WITH read_repair = 'BLOCKING'\\n    AND gc_grace_seconds = 864000\\n    " +
-               "AND additional_write_policy = '99p'\\n    AND bloom_filter_fp_chance = 0.01\\n    AND caching = " +
-               "{ 'keys' : 'ALL', 'rows_per_partition' : 'NONE' }\\n    AND comment = ''\\n    AND compaction = { " +
-               "'class' : 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold' : 32, " +
-               "'min_threshold' : 4 }\\n    AND compression = { 'chunk_length_in_kb' : 16, 'class' : " +
-               "'org.apache.cassandra.io.compress.LZ4Compressor' }\\n    AND default_time_to_live = 0\\n    " +
-               "AND speculative_retry = '99p'\\n    AND min_index_interval = 128\\n" +
-               "    AND max_index_interval = 2048\\n" +
-               "    AND crc_check_chance = 1.0\\n    AND cdc = false\\n    AND memtable_flush_period_in_ms = 0;" +
-               "\\n\\nCREATE TABLE cycling.rank_by_year_and_name (\\n    race_year int,\\n    race_name text,\\n    " +
-               "rank int,\\n    cyclist_name text,\\n    PRIMARY KEY ((race_year, race_name), rank)\\n)" +
-               " WITH CLUSTERING" +
-               " ORDER BY (rank ASC)\\n    AND read_repair = 'BLOCKING'\\n    AND gc_grace_seconds = 864000\\n    " +
-               "AND additional_write_policy = '99p'\\n    AND bloom_filter_fp_chance = 0.01\\n    AND caching = " +
-               "{ 'keys' : 'ALL', 'rows_per_partition' : 'NONE' }\\n    AND comment = ''\\n    AND compaction = " +
-               "{ 'class' : 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold' : 32, " +
-               "'min_threshold' : 4 }\\n    AND compression = { 'chunk_length_in_kb' : 16, 'class' : " +
-               "'org.apache.cassandra.io.compress.LZ4Compressor' }\\n    AND default_time_to_live = 0\\n    AND " +
-               "speculative_retry = '99p'\\n    AND min_index_interval = 128\\n    AND max_index_interval = 2048\\n" +
-               "    AND crc_check_chance = 1.0\\n    AND cdc = false\\n    AND memtable_flush_period_in_ms = 0;\\n\"}";
+        return "{\"keyspace\":\"cycling\",\"schema\":\"CREATE KEYSPACE cycling WITH REPLICATION = { 'class' : "
+                + "'org.apache.cassandra.locator.NetworkTopologyStrategy', 'datacenter1': '1' } " + "AND DURABLE_WRITES = true;"
+                + "\\n\\nCREATE TABLE cycling.cyclist_category (\\n    category text,\\n    points int," + "\\n    id uuid,\\n"
+                + "    lastname text,\\n    PRIMARY KEY (category, points)\\n) WITH CLUSTERING ORDER BY (points DESC)\\n"
+                + "    AND read_repair = 'BLOCKING'\\n    AND gc_grace_seconds = 864000\\n    AND "
+                + "additional_write_policy = '99p'\\n    AND bloom_filter_fp_chance = 0.01\\n" + "    AND caching = { 'keys' :"
+                + " 'ALL', 'rows_per_partition' : 'NONE' }\\n    AND comment = ''\\n    AND compaction = { 'class' :"
+                + " 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold' : 32,"
+                + " 'min_threshold' : 4 }\\n    AND compression = { 'chunk_length_in_kb' : 16, 'class' :"
+                + " 'org.apache.cassandra.io.compress.LZ4Compressor' }\\n    AND default_time_to_live = 0\\n    "
+                + "AND speculative_retry = '99p'\\n    AND min_index_interval = 128\\n" + "    AND max_index_interval = 2048\\n"
+                + "    AND crc_check_chance = 1.0\\n    AND cdc = false\\n    AND memtable_flush_period_in_ms = 0;"
+                + "\\n\\nCREATE TABLE cycling.cyclist_name (\\n    id uuid,\\n    firstname text," + "\\n    lastname text,\\n"
+                + "    PRIMARY KEY (id)\\n) WITH read_repair = 'BLOCKING'\\n    AND gc_grace_seconds = 864000\\n    "
+                + "AND additional_write_policy = '99p'\\n    AND bloom_filter_fp_chance = 0.01\\n    AND caching = "
+                + "{ 'keys' : 'ALL', 'rows_per_partition' : 'NONE' }\\n    AND comment = ''\\n    AND compaction = { "
+                + "'class' : 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold' : 32, "
+                + "'min_threshold' : 4 }\\n    AND compression = { 'chunk_length_in_kb' : 16, 'class' : "
+                + "'org.apache.cassandra.io.compress.LZ4Compressor' }\\n    AND default_time_to_live = 0\\n    "
+                + "AND speculative_retry = '99p'\\n    AND min_index_interval = 128\\n" + "    AND max_index_interval = 2048\\n"
+                + "    AND crc_check_chance = 1.0\\n    AND cdc = false\\n    AND memtable_flush_period_in_ms = 0;"
+                + "\\n\\nCREATE TABLE cycling.rank_by_year_and_name (\\n    race_year int,\\n    race_name text,\\n    "
+                + "rank int,\\n    cyclist_name text,\\n    PRIMARY KEY ((race_year, race_name), rank)\\n)" + " WITH CLUSTERING"
+                + " ORDER BY (rank ASC)\\n    AND read_repair = 'BLOCKING'\\n    AND gc_grace_seconds = 864000\\n    "
+                + "AND additional_write_policy = '99p'\\n    AND bloom_filter_fp_chance = 0.01\\n    AND caching = "
+                + "{ 'keys' : 'ALL', 'rows_per_partition' : 'NONE' }\\n    AND comment = ''\\n    AND compaction = "
+                + "{ 'class' : 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold' : 32, "
+                + "'min_threshold' : 4 }\\n    AND compression = { 'chunk_length_in_kb' : 16, 'class' : "
+                + "'org.apache.cassandra.io.compress.LZ4Compressor' }\\n    AND default_time_to_live = 0\\n    AND "
+                + "speculative_retry = '99p'\\n    AND min_index_interval = 128\\n    AND max_index_interval = 2048\\n"
+                + "    AND crc_check_chance = 1.0\\n    AND cdc = false\\n    AND memtable_flush_period_in_ms = 0;\\n\"}";
     }
 
     @Override

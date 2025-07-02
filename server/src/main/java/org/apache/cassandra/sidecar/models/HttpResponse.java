@@ -27,7 +27,6 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.net.SocketAddress;
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
-
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
@@ -39,7 +38,8 @@ public class HttpResponse
     private final HttpServerRequest request;
     private final HttpServerResponse response;
 
-    public HttpResponse(HttpServerRequest request, HttpServerResponse response)
+    public HttpResponse(HttpServerRequest request,
+                        HttpServerResponse response)
     {
         this.request = request;
         this.response = response;
@@ -50,17 +50,21 @@ public class HttpResponse
     {
         response.setStatusCode(HttpResponseStatus.TOO_MANY_REQUESTS.code());
         // round up when converting to second value
-        response.putHeader(HttpHeaderNames.RETRY_AFTER, Long.toString(NANOSECONDS.toSeconds(waitTimeNanos) + 1)).end();
+        response.putHeader(HttpHeaderNames.RETRY_AFTER, Long.toString(NANOSECONDS.toSeconds(waitTimeNanos) + 1))
+                .end();
     }
 
     public void setTooManyRequestsStatus()
     {
-        response.setStatusCode(HttpResponseStatus.TOO_MANY_REQUESTS.code()).end();
+        response.setStatusCode(HttpResponseStatus.TOO_MANY_REQUESTS.code())
+                .end();
     }
 
     public void setRangeNotSatisfiable(String msg)
     {
-        response.setStatusCode(HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE.code()).setStatusMessage(msg).end();
+        response.setStatusCode(HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE.code())
+                .setStatusMessage(msg)
+                .end();
     }
 
     public void setPartialContentStatus(HttpRange range)
@@ -76,28 +80,36 @@ public class HttpResponse
 
     public void setBadRequestStatus(String msg)
     {
-        response.setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).setStatusMessage(msg).end();
+        response.setStatusCode(HttpResponseStatus.BAD_REQUEST.code())
+                .setStatusMessage(msg)
+                .end();
     }
 
     public void setNotFoundStatus(String msg)
     {
-        response.setStatusCode(HttpResponseStatus.NOT_FOUND.code()).setStatusMessage(msg).end();
+        response.setStatusCode(HttpResponseStatus.NOT_FOUND.code())
+                .setStatusMessage(msg)
+                .end();
     }
 
     public void setInternalErrorStatus(String msg)
     {
-        response.setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()).setStatusMessage(msg).end();
+        response.setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
+                .setStatusMessage(msg)
+                .end();
     }
 
     /**
      * Send a range in a file asynchronously
      *
-     * @param fileName   file to send
+     * @param fileName file to send
      * @param fileLength the size of the file to send
-     * @param range      range to send
+     * @param range range to send
      * @return a future completed with the body result
      */
-    public Future<Void> sendFile(String fileName, long fileLength, HttpRange range)
+    public Future<Void> sendFile(String fileName,
+                                 long fileLength,
+                                 HttpRange range)
     {
         // Defer setting headers in case of an error before sending the file
         response.headersEndHandler(v -> {
@@ -109,7 +121,8 @@ public class HttpResponse
                 setPartialContentStatus(range);
             }
 
-            if (!response.headers().contains(HttpHeaders.CONTENT_TYPE))
+            if (!response.headers()
+                         .contains(HttpHeaders.CONTENT_TYPE))
             {
                 response.putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_OCTET_STREAM);
             }

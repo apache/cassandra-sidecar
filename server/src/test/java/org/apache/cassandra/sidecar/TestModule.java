@@ -110,31 +110,27 @@ public class TestModule extends AbstractModule
         ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl(5, SecondBoundConfiguration.parse("5s"));
         SSTableUploadConfiguration uploadConfiguration = new SSTableUploadConfigurationImpl(0F);
         CdcConfiguration cdcConfiguration = new CdcConfigurationImpl(false, MillisecondBoundConfiguration.parse("5m"), SecondBoundConfiguration.parse("1s"));
-        SchemaKeyspaceConfiguration schemaKeyspaceConfiguration =
-        SchemaKeyspaceConfigurationImpl.builder()
-                                       .isEnabled(true)
-                                       .keyspace("sidecar_internal")
-                                       .replicationFactor(1)
-                                       .replicationStrategy("SimpleStrategy")
-                                       .build();
-        ServiceConfiguration serviceConfiguration =
-        TestServiceConfiguration.builder()
-                                .throttleConfiguration(throttleConfiguration)
-                                .schemaKeyspaceConfiguration(schemaKeyspaceConfiguration)
-                                .sstableUploadConfiguration(uploadConfiguration)
-                                .cdcConfiguration(cdcConfiguration)
-                                .build();
-        RestoreJobConfiguration restoreJobConfiguration =
-        RestoreJobConfigurationImpl.builder()
-                                   .restoreJobTablesTtl(SecondBoundConfiguration.parse((TimeUnit.DAYS.toSeconds(14) + 1) + "s"))
-                                   .processMaxConcurrency(RESTORE_MAX_CONCURRENCY)
-                                   .slowTaskThreshold(SecondBoundConfiguration.parse("10s"))
-                                   .slowTaskReportDelay(SecondBoundConfiguration.parse("2m"))
-                                   .build();
-        PeriodicTaskConfiguration healthCheckConfiguration
-        = new PeriodicTaskConfigurationImpl(true,
-                                            MillisecondBoundConfiguration.parse("200ms"),
-                                            MillisecondBoundConfiguration.parse("1s"));
+        SchemaKeyspaceConfiguration schemaKeyspaceConfiguration = SchemaKeyspaceConfigurationImpl.builder()
+                                                                                                 .isEnabled(true)
+                                                                                                 .keyspace("sidecar_internal")
+                                                                                                 .replicationFactor(1)
+                                                                                                 .replicationStrategy("SimpleStrategy")
+                                                                                                 .build();
+        ServiceConfiguration serviceConfiguration = TestServiceConfiguration.builder()
+                                                                            .throttleConfiguration(throttleConfiguration)
+                                                                            .schemaKeyspaceConfiguration(schemaKeyspaceConfiguration)
+                                                                            .sstableUploadConfiguration(uploadConfiguration)
+                                                                            .cdcConfiguration(cdcConfiguration)
+                                                                            .build();
+        RestoreJobConfiguration restoreJobConfiguration = RestoreJobConfigurationImpl.builder()
+                                                                                     .restoreJobTablesTtl(SecondBoundConfiguration.parse(
+                                                                                             (TimeUnit.DAYS.toSeconds(14) + 1) + "s"))
+                                                                                     .processMaxConcurrency(RESTORE_MAX_CONCURRENCY)
+                                                                                     .slowTaskThreshold(SecondBoundConfiguration.parse("10s"))
+                                                                                     .slowTaskReportDelay(SecondBoundConfiguration.parse("2m"))
+                                                                                     .build();
+        PeriodicTaskConfiguration healthCheckConfiguration = new PeriodicTaskConfigurationImpl(true, MillisecondBoundConfiguration.parse("200ms"),
+                MillisecondBoundConfiguration.parse("1s"));
         SidecarConfigurationImpl.Builder builder = SidecarConfigurationImpl.builder()
                                                                            .serviceConfiguration(serviceConfiguration)
                                                                            .sslConfiguration(sslConfiguration)
@@ -149,7 +145,8 @@ public class TestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public InstancesMetadata instancesMetadata(DnsResolver dnsResolver, CassandraAdapterDelegate delegate)
+    public InstancesMetadata instancesMetadata(DnsResolver dnsResolver,
+                                               CassandraAdapterDelegate delegate)
     {
         return new InstancesMetadataImpl(instancesMetas((TestCassandraAdapterDelegate) delegate), dnsResolver);
     }
@@ -166,27 +163,12 @@ public class TestModule extends AbstractModule
 
     public List<InstanceMetadata> instancesMetas(TestCassandraAdapterDelegate delegate)
     {
-        InstanceMetadata instance1 = mockInstance(delegate,
-                                                  "localhost",
-                                                  1,
-                                                  "src/test/resources/instance1/data",
-                                                  "src/test/resources/instance1/sstable-staging",
-                                                  "src/test/resources/instance1",
-                                                  true);
-        InstanceMetadata instance2 = mockInstance(delegate,
-                                                  "localhost2",
-                                                  2,
-                                                  "src/test/resources/instance2/data",
-                                                  "src/test/resources/instance2/sstable-staging",
-                                                  "src/test/resources/instance2",
-                                                  false);
-        InstanceMetadata instance3 = mockInstance(delegate,
-                                                  "localhost3",
-                                                  3,
-                                                  "src/test/resources/instance3/data",
-                                                  "src/test/resources/instance3/sstable-staging",
-                                                  "src/test/resources/instance3",
-                                                  true);
+        InstanceMetadata instance1 = mockInstance(delegate, "localhost", 1, "src/test/resources/instance1/data", "src/test/resources/instance1/sstable-staging",
+                "src/test/resources/instance1", true);
+        InstanceMetadata instance2 = mockInstance(delegate, "localhost2", 2, "src/test/resources/instance2/data",
+                "src/test/resources/instance2/sstable-staging", "src/test/resources/instance2", false);
+        InstanceMetadata instance3 = mockInstance(delegate, "localhost3", 3, "src/test/resources/instance3/data",
+                "src/test/resources/instance3/sstable-staging", "src/test/resources/instance3", true);
         final List<InstanceMetadata> instanceMetas = new ArrayList<>();
         instanceMetas.add(instance1);
         instanceMetas.add(instance2);
@@ -195,7 +177,12 @@ public class TestModule extends AbstractModule
     }
 
     private InstanceMetadata mockInstance(TestCassandraAdapterDelegate delegate,
-                                          String host, int id, String dataDir, String stagingDir, String storageDir, boolean isUp)
+                                          String host,
+                                          int id,
+                                          String dataDir,
+                                          String stagingDir,
+                                          String storageDir,
+                                          boolean isUp)
     {
         StorageOperations mockStorageOperations = mock(StorageOperations.class);
         when(mockStorageOperations.dataFileLocations()).thenReturn(List.of(dataDir));

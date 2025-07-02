@@ -19,14 +19,11 @@
 package org.apache.cassandra.testing;
 
 import java.nio.file.Path;
-
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.testing.utils.tls.CertificateBundle;
 
 /**
- * Passed to integration tests.
- * See {@link CassandraIntegrationTest} for the required annotation
- * See {@link CassandraTestTemplate} for the Test Template
+ * Passed to integration tests. See {@link CassandraIntegrationTest} for the required annotation See {@link CassandraTestTemplate} for the Test Template
  */
 public class CassandraTestContext extends AbstractCassandraTestContext
 {
@@ -43,9 +40,6 @@ public class CassandraTestContext extends AbstractCassandraTestContext
     @Override
     public String toString()
     {
-        return "CassandraTestContext{"
-               + "version=" + version
-               + ", cluster=" + cluster()
-               + '}';
+        return "CassandraTestContext{" + "version=" + version + ", cluster=" + cluster() + '}';
     }
 }

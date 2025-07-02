@@ -21,8 +21,7 @@ package org.apache.cassandra.sidecar.common.data;
 import java.util.HashMap;
 
 /**
- * Options for Cassandra import nodetool command. It is like properties.
- * Supports Json serialization and deserialization.
+ * Options for Cassandra import nodetool command. It is like properties. Supports Json serialization and deserialization.
  */
 public class SSTableImportOptions extends HashMap<String, String>
 {

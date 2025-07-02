@@ -18,12 +18,11 @@
 
 package org.apache.cassandra.sidecar.common.response;
 
-import java.util.List;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
+import java.util.Map;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 
 /**
@@ -54,7 +53,6 @@ public class ConnectedClientStatsResponse
     private final List<ClientConnectionEntry> clientConnections;
     private final long totalConnectedClients;
     private final Map<String, Long> connectionsByUser;
-
 
     /**
      * Constructs a new {@link ConnectedClientStatsResponse}.

@@ -20,36 +20,32 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.Collections;
 import java.util.Set;
-
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
 
 /**
- * Signifies scope of Cassandra data resource. {@code keyspaceScoped} can be set to true to create data scope
- * restricted to a keyspace. {@code tableScoped} can be set to true to create data scope restricted to a table.
+ * Signifies scope of Cassandra data resource. {@code keyspaceScoped} can be set to true to create data scope restricted to a keyspace. {@code tableScoped} can
+ * be set to true to create data scope restricted to a table.
  */
 public class DataResourceScope implements ResourceScope
 {
     public static final String DATA = "data";
 
     /**
-     * Cassandra stores data resource in the format data, data/keyspace or data/keyspace_name/table_name within
-     * role_permissions table. A similar format is followed for storing data resources in sidecar permissions
-     * table role_permissions_v1. Hence, sidecar endpoints expect data resources to be provided in format
-     * data/keyspace_name/table_name.
+     * Cassandra stores data resource in the format data, data/keyspace or data/keyspace_name/table_name within role_permissions table. A similar format is
+     * followed for storing data resources in sidecar permissions table role_permissions_v1. Hence, sidecar endpoints expect data resources to be provided in
+     * format data/keyspace_name/table_name.
      * <p>
-     * In this context, curly braces are used to denote variable parts of the resource. For e.g., when permissions are
-     * checked for resource data/{keyspace} in an endpoint, the part within the curly braces ({keyspace})
-     * represents a placeholder for the actual keyspace name provided as a path parameter. For more context refer to
-     * io.vertx.ext.auth.authorization.impl.VariableAwareExpression
+     * In this context, curly braces are used to denote variable parts of the resource. For e.g., when permissions are checked for resource data/{keyspace} in
+     * an endpoint, the part within the curly braces ({keyspace}) represents a placeholder for the actual keyspace name provided as a path parameter. For more
+     * context refer to io.vertx.ext.auth.authorization.impl.VariableAwareExpression
      * <p>
-     * During the permission matching process, the placeholder {keyspace} is resolved to the actual keyspace
-     * being accessed by the endpoint. For e.g. data/{keyspace} resolves to data/university if the keyspace is
-     * "university".
+     * During the permission matching process, the placeholder {keyspace} is resolved to the actual keyspace being accessed by the endpoint. For e.g.
+     * data/{keyspace} resolves to data/university if the keyspace is "university".
      * <p>
-     * User permissions are then extracted from both Cassandra and sidecar role permissions tables for
-     * the resolved resource and are matched against the expected permissions set defined in the endpoint's handler.
+     * User permissions are then extracted from both Cassandra and sidecar role permissions tables for the resolved resource and are matched against the
+     * expected permissions set defined in the endpoint's handler.
      */
     public static final String DATA_WITH_KEYSPACE = String.format("data/{%s}", KEYSPACE);
 
@@ -71,7 +67,8 @@ public class DataResourceScope implements ResourceScope
     private final boolean tableScoped;
     private final Set<String> expandedResources;
 
-    private DataResourceScope(boolean keyspaceScoped, boolean tableScoped)
+    private DataResourceScope(boolean keyspaceScoped,
+                              boolean tableScoped)
     {
         this.keyspaceScoped = keyspaceScoped;
         this.tableScoped = tableScoped;
@@ -147,7 +144,8 @@ public class DataResourceScope implements ResourceScope
 
         for (String part : parts)
         {
-            if (part.trim().isEmpty())
+            if (part.trim()
+                    .isEmpty())
             {
                 throw new IllegalArgumentException("Keyspace or table can not be empty in data resource");
             }

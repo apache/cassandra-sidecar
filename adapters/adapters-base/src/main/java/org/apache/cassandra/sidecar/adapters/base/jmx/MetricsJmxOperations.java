@@ -27,12 +27,14 @@ public interface MetricsJmxOperations
 
     /**
      * Retrieves the value of the metric of type {@link com.codahale.metrics.Gauge}
+     *
      * @return the value of the Gauge metric
      */
     Object getValue();
 
     /**
      * Retrieves the value of the metric of type {@link com.codahale.metrics.Counter}
+     *
      * @return the value of the Counter metric
      */
     long getCount();

@@ -18,14 +18,13 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Metric;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * {@link DeltaGauge} is a Gauge that tracks a cumulative value, which can be updated by passing delta values. The
- * cumulative value tracked is reset once the gauge is read.
+ * {@link DeltaGauge} is a Gauge that tracks a cumulative value, which can be updated by passing delta values. The cumulative value tracked is reset once the
+ * gauge is read.
  */
 public class DeltaGauge implements Gauge<Long>, Metric
 {
@@ -55,8 +54,7 @@ public class DeltaGauge implements Gauge<Long>, Metric
     }
 
     /**
-     * Returns the cumulative value tracked by this gauge and resets it to 0.
-     * Note: {@code count} is not expected to overflow
+     * Returns the cumulative value tracked by this gauge and resets it to 0. Note: {@code count} is not expected to overflow
      *
      * @return count value
      */

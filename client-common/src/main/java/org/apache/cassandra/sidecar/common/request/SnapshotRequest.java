@@ -28,24 +28,31 @@ import org.jetbrains.annotations.Nullable;
  */
 abstract class SnapshotRequest<T> extends JsonRequest<T>
 {
-    SnapshotRequest(String keyspace, String table, String snapshotName)
+    SnapshotRequest(String keyspace,
+                    String table,
+                    String snapshotName)
     {
         super(requestURI(keyspace, table, snapshotName, false, null));
     }
 
-    SnapshotRequest(String keyspace, String table, String snapshotName, boolean includeSecondaryIndexFiles,
+    SnapshotRequest(String keyspace,
+                    String table,
+                    String snapshotName,
+                    boolean includeSecondaryIndexFiles,
                     @Nullable String snapshotTTL)
     {
         super(requestURI(keyspace, table, snapshotName, includeSecondaryIndexFiles, snapshotTTL));
     }
 
-    static String requestURI(String keyspace, String tableName, String snapshotName,
-                             boolean includeSecondaryIndexFiles, @Nullable String snapshotTTL)
+    static String requestURI(String keyspace,
+                             String tableName,
+                             String snapshotName,
+                             boolean includeSecondaryIndexFiles,
+                             @Nullable String snapshotTTL)
     {
-        String requestUri = ApiEndpointsV1.SNAPSHOTS_ROUTE
-                            .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
-                            .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName)
-                            .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, snapshotName);
+        String requestUri = ApiEndpointsV1.SNAPSHOTS_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
+                                                          .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName)
+                                                          .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, snapshotName);
 
         if (!includeSecondaryIndexFiles && snapshotTTL == null)
         {

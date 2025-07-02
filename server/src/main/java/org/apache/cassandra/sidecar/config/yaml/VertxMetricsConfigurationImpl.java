@@ -39,9 +39,7 @@ public class VertxMetricsConfigurationImpl implements VertxMetricsConfiguration
 
     public VertxMetricsConfigurationImpl()
     {
-        this(DEFAULT_ENABLED,
-             DEFAULT_EXPOSE_VIA_JMX,
-             DEFAULT_JMX_DOMAIN_NAME);
+        this(DEFAULT_ENABLED, DEFAULT_EXPOSE_VIA_JMX, DEFAULT_JMX_DOMAIN_NAME);
     }
 
     public VertxMetricsConfigurationImpl(boolean enabled,

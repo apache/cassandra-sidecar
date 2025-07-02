@@ -18,19 +18,16 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.exceptions.QueryConsistencyException;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
@@ -44,28 +41,26 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.EventBusUtils;
 import org.jetbrains.annotations.VisibleForTesting;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_GLOBAL_LEASE_CLAIMED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_GLOBAL_LEASE_LOST;
 
 /**
- * A best-effort process to determine a single Sidecar instance that holds
- * a cluster-wide lease. The Sidecar instances attempting to claim the lease
- * is determined by the {@link ElectorateMembership}.
- * The electorate is expected to be a small subset of the entirety of Sidecar
- * instances.
+ * A best-effort process to determine a single Sidecar instance that holds a cluster-wide lease. The Sidecar instances attempting to claim the lease is
+ * determined by the {@link ElectorateMembership}. The electorate is expected to be a small subset of the entirety of Sidecar instances.
  *
- * <p>There will be situations where multiple members of the electorate may
- * claim the cluster lease, for example in cases where we have:
+ * <p>
+ * There will be situations where multiple members of the electorate may claim the cluster lease, for example in cases where we have:
  * <ul>
- *     <li>Network partitions
- *     <li>Binary protocol is disabled for a member of the electorate
+ * <li>Network partitions
+ * <li>Binary protocol is disabled for a member of the electorate
  * </ul>
  *
- * <p>The leaseholder instance(s) must keep in mind that there might be other leaseholder
- * instances in the cluster, so operations that they perform must be safe to be performed
- * by one or more Sidecar instances.
+ * <p>
+ * The leaseholder instance(s) must keep in mind that there might be other leaseholder instances in the cluster, so operations that they perform must be safe to
+ * be performed by one or more Sidecar instances.
  */
 public class ClusterLeaseClaimTask implements PeriodicTask
 {
@@ -88,16 +83,19 @@ public class ClusterLeaseClaimTask implements PeriodicTask
                                  ClusterLease clusterLease,
                                  SidecarMetrics metrics)
     {
-        this.configuration = serviceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration();
+        this.configuration = serviceConfiguration.coordinationConfiguration()
+                                                 .clusterLeaseClaimConfiguration();
         this.config = serviceConfiguration;
         this.electorateMembership = electorateMembership;
         this.accessor = accessor;
         this.clusterLease = clusterLease;
-        this.metrics = metrics.server().coordination();
+        this.metrics = metrics.server()
+                              .coordination();
     }
 
     @Override
-    public void deploy(Vertx vertx, PeriodicTaskExecutor executor)
+    public void deploy(Vertx vertx,
+                       PeriodicTaskExecutor executor)
     {
         this.eventBus = vertx.eventBus();
         EventBusUtils.onceLocalConsumer(eventBus, ON_CASSANDRA_CQL_READY.address(), ignored -> executor.schedule(this));
@@ -111,7 +109,9 @@ public class ClusterLeaseClaimTask implements PeriodicTask
     {
         // The Sidecar schema feature is required for this implementation
         // so skip when the feature is not enabled
-        boolean isEnabled = config.schemaKeyspaceConfiguration().isEnabled() && configuration.enabled();
+        boolean isEnabled = config.schemaKeyspaceConfiguration()
+                                  .isEnabled()
+                && configuration.enabled();
         boolean isMember = false;
         if (isEnabled)
         {
@@ -153,7 +153,9 @@ public class ClusterLeaseClaimTask implements PeriodicTask
             // no jitter
             return configuration.initialDelay();
         }
-        long initialDelayMillis = configuration.initialDelay().toMillis() + randomDeltaDelayMillis;
+        long initialDelayMillis = configuration.initialDelay()
+                                               .toMillis()
+                + randomDeltaDelayMillis;
         return new MillisecondBoundConfiguration(initialDelayMillis, TimeUnit.MILLISECONDS);
     }
 
@@ -228,7 +230,8 @@ public class ClusterLeaseClaimTask implements PeriodicTask
         return null; // owner is unknown
     }
 
-    protected void updateClusterLease(String sidecarHostId, boolean wasLeaseholder)
+    protected void updateClusterLease(String sidecarHostId,
+                                      boolean wasLeaseholder)
     {
         // When the lease operation failed, the currentLeaseholder field will be null.
         // This means that we are not able to determine who the leaseholder is.
@@ -243,14 +246,13 @@ public class ClusterLeaseClaimTask implements PeriodicTask
                 // do not extend the lease time here because leaseholder is not resolved in this run
                 currentLeaseholder = sidecarHostId;
                 LOGGER.debug("Lease will expire on {}. Assume the current leaseholder, even though no leaseholder is resolved from this run",
-                             leaseExpirationTime());
+                        leaseExpirationTime());
             }
             else
             {
                 if (leaseExpired)
                 {
-                    LOGGER.info("Giving up lease for sidecarHostId={} leaseAcquired={} leaseExpired={}",
-                                sidecarHostId, leaseTime, leaseExpirationTime());
+                    LOGGER.info("Giving up lease for sidecarHostId={} leaseAcquired={} leaseExpired={}", sidecarHostId, leaseTime, leaseExpirationTime());
                 }
 
                 leaseTime = null;
@@ -271,7 +273,8 @@ public class ClusterLeaseClaimTask implements PeriodicTask
         }
     }
 
-    protected void maybeNotify(String sidecarHostId, boolean wasLeaseholder)
+    protected void maybeNotify(String sidecarHostId,
+                               boolean wasLeaseholder)
     {
         boolean isCurrentLeaseholder = isCurrentLeaseholder(sidecarHostId);
         // lease has been lost
@@ -311,7 +314,10 @@ public class ClusterLeaseClaimTask implements PeriodicTask
 
     private Instant leaseExpirationTime()
     {
-        return leaseTime.plus(config.schemaKeyspaceConfiguration().leaseSchemaTTL().toSeconds(), ChronoUnit.SECONDS);
+        return leaseTime.plus(config.schemaKeyspaceConfiguration()
+                                    .leaseSchemaTTL()
+                                    .toSeconds(),
+                ChronoUnit.SECONDS);
     }
 
     /**

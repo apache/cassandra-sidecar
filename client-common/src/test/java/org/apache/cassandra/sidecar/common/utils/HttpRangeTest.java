@@ -18,10 +18,8 @@
 
 package org.apache.cassandra.sidecar.common.utils;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.cassandra.sidecar.common.exceptions.RangeException;
-
+import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -71,20 +69,16 @@ public class HttpRangeTest
     public void testInvalidRangeFormat()
     {
         String rangeHeader = "bytes=2344--3432";
-        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () ->
-        {
+        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () -> {
             HttpRange.parseHeader(rangeHeader, Long.MAX_VALUE);
         });
-        String msg = "Invalid range header: bytes=2344--3432. Supported Range formats are bytes=<start>-<end>, " +
-                     "bytes=<start>-, bytes=-<suffix-length>";
+        String msg = "Invalid range header: bytes=2344--3432. Supported Range formats are bytes=<start>-<end>, " + "bytes=<start>-, bytes=-<suffix-length>";
         assertEquals(msg, thrownException.getMessage());
 
-        thrownException = assertThrows(IllegalArgumentException.class, () ->
-        {
+        thrownException = assertThrows(IllegalArgumentException.class, () -> {
             HttpRange.parseHeader("bytes=-", Long.MAX_VALUE);
         });
-        msg = "Invalid range header: bytes=-. Supported Range formats are bytes=<start>-<end>, " +
-              "bytes=<start>-, bytes=-<suffix-length>";
+        msg = "Invalid range header: bytes=-. Supported Range formats are bytes=<start>-<end>, " + "bytes=<start>-, bytes=-<suffix-length>";
         assertEquals(msg, thrownException.getMessage());
     }
 
@@ -92,8 +86,7 @@ public class HttpRangeTest
     public void testInvalidSuffixLength()
     {
         final String rangeHeader = "bytes=-0";
-        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () ->
-        {
+        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () -> {
             HttpRange.parseHeader(rangeHeader, Long.MAX_VALUE);
         });
         String msg = "Range does not satisfy boundary requirements. range=[9223372036854775807, 9223372036854775806]";
@@ -104,8 +97,7 @@ public class HttpRangeTest
     public void testInvalidRangeBoundary()
     {
         final String rangeHeader = "bytes=9-2";
-        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () ->
-        {
+        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () -> {
             HttpRange.parseHeader(rangeHeader, Long.MAX_VALUE);
         });
         String msg = "Range does not satisfy boundary requirements. range=[9, 2]";
@@ -116,12 +108,10 @@ public class HttpRangeTest
     public void testWrongRangeUnitUsed()
     {
         final String rangeVal = "bits=0-";
-        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () ->
-        {
+        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () -> {
             HttpRange.parseHeader(rangeVal, 5);
         });
-        String msg = "Invalid range header: bits=0-. Supported Range formats are bytes=<start>-<end>, " +
-                     "bytes=<start>-, bytes=-<suffix-length>";
+        String msg = "Invalid range header: bits=0-. Supported Range formats are bytes=<start>-<end>, " + "bytes=<start>-, bytes=-<suffix-length>";
         assertEquals(msg, thrownException.getMessage());
     }
 
@@ -138,12 +128,11 @@ public class HttpRangeTest
     {
         // the right end of range is larger than long
         final String rangeHeader = "bytes=0-1" + Long.MAX_VALUE;
-        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () ->
-        {
+        IllegalArgumentException thrownException = assertThrows(IllegalArgumentException.class, () -> {
             HttpRange.parseHeader(rangeHeader, Long.MAX_VALUE);
         });
-        String msg = "Invalid range header: bytes=0-19223372036854775807. Supported Range formats are " +
-                     "bytes=<start>-<end>, bytes=<start>-, bytes=-<suffix-length>";
+        String msg = "Invalid range header: bytes=0-19223372036854775807. Supported Range formats are "
+                + "bytes=<start>-<end>, bytes=<start>-, bytes=-<suffix-length>";
         assertEquals(msg, thrownException.getMessage());
     }
 

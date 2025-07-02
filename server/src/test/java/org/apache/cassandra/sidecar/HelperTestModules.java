@@ -18,18 +18,16 @@
 
 package org.apache.cassandra.sidecar;
 
-import java.util.List;
-import java.util.Objects;
-
 import com.google.inject.AbstractModule;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
+import java.util.List;
+import java.util.Objects;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
-
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -84,17 +82,22 @@ public class HelperTestModules
         {
             InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
             when(mockInstancesMetadata.instances()).thenReturn(instanceMetadataList);
-            when(mockInstancesMetadata.instanceFromHost(anyString()))
-            .thenAnswer(invocation -> instanceMetadataList.stream()
-                                                          .filter(instanceMetadata -> Objects.equals(instanceMetadata.host(),
-                                                                                                     invocation.getArgument(0)))
-                                                          .findFirst()
-                                                          .orElseThrow(() -> new NoSuchCassandraInstanceException("Instance does not exist")));
-            when(mockInstancesMetadata.instanceFromId(anyInt()))
-            .thenAnswer(invocation -> instanceMetadataList.stream()
-                                                          .filter(instanceMetadata -> invocation.getArgument(0).equals(instanceMetadata.id()))
-                                                          .findFirst()
-                                                          .orElseThrow(() -> new NoSuchCassandraInstanceException("No Cassandra instance exists with given ID")));
+            when(mockInstancesMetadata.instanceFromHost(anyString())).thenAnswer(invocation -> instanceMetadataList.stream()
+                                                                                                                   .filter(instanceMetadata -> Objects.equals(
+                                                                                                                           instanceMetadata.host(),
+                                                                                                                           invocation.getArgument(0)))
+                                                                                                                   .findFirst()
+                                                                                                                   .orElseThrow(
+                                                                                                                           () -> new NoSuchCassandraInstanceException(
+                                                                                                                                   "Instance does not exist")));
+            when(mockInstancesMetadata.instanceFromId(anyInt())).thenAnswer(invocation -> instanceMetadataList.stream()
+                                                                                                              .filter(instanceMetadata -> invocation.getArgument(
+                                                                                                                      0)
+                                                                                                                                                    .equals(instanceMetadata.id()))
+                                                                                                              .findFirst()
+                                                                                                              .orElseThrow(
+                                                                                                                      () -> new NoSuchCassandraInstanceException(
+                                                                                                                              "No Cassandra instance exists with given ID")));
 
             bind(InstancesMetadata.class).toInstance(mockInstancesMetadata);
         }

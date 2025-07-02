@@ -18,12 +18,11 @@
 
 package org.apache.cassandra.sidecar.client.retry;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpStatusClass;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpStatusClass;
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.exception.ResourceNotFoundException;
 import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
@@ -59,13 +58,13 @@ public class BasicRetryPolicy extends RetryPolicy
     }
 
     /**
-     * Constructs a basic retry policy with {@code maxRetries} number of retries and {@code retryDelayMillis} delay
-     * between retries.
+     * Constructs a basic retry policy with {@code maxRetries} number of retries and {@code retryDelayMillis} delay between retries.
      *
-     * @param maxRetries       the maximum number of retries
+     * @param maxRetries the maximum number of retries
      * @param retryDelayMillis the delay between retries in milliseconds
      */
-    public BasicRetryPolicy(int maxRetries, long retryDelayMillis)
+    public BasicRetryPolicy(int maxRetries,
+                            long retryDelayMillis)
     {
         this.maxRetries = maxRetries;
         this.retryDelayMillis = retryDelayMillis;
@@ -84,8 +83,7 @@ public class BasicRetryPolicy extends RetryPolicy
                            RetryAction retryAction)
     {
         // throwable can be a client connection error that prevents connecting to the remote host
-        if (throwable != null ||
-            response.statusCode() == HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
+        if (throwable != null || response.statusCode() == HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
         {
             if (canRetryOnADifferentHost)
             {
@@ -98,8 +96,7 @@ public class BasicRetryPolicy extends RetryPolicy
             return;
         }
 
-        if (response.statusCode() == HttpResponseStatus.OK.code() ||
-            response.statusCode() == HttpResponseStatus.PARTIAL_CONTENT.code())
+        if (response.statusCode() == HttpResponseStatus.OK.code() || response.statusCode() == HttpResponseStatus.PARTIAL_CONTENT.code())
         {
             responseFuture.complete(response);
             return;
@@ -134,8 +131,7 @@ public class BasicRetryPolicy extends RetryPolicy
             }
             else
             {
-                retry(responseFuture, request, response, retryAction, attempts,
-                      maybeParseRetryAfterOrDefault(response, attempts), null);
+                retry(responseFuture, request, response, retryAction, attempts, maybeParseRetryAfterOrDefault(response, attempts), null);
             }
             return;
         }
@@ -162,8 +158,7 @@ public class BasicRetryPolicy extends RetryPolicy
         }
 
         // 4xx Client Errors - 5xx Server Errors
-        if (HttpStatusClass.CLIENT_ERROR.contains(response.statusCode()) ||
-            HttpStatusClass.SERVER_ERROR.contains(response.statusCode()))
+        if (HttpStatusClass.CLIENT_ERROR.contains(response.statusCode()) || HttpStatusClass.SERVER_ERROR.contains(response.statusCode()))
         {
             if (canRetryOnADifferentHost)
             {
@@ -203,11 +198,11 @@ public class BasicRetryPolicy extends RetryPolicy
     /**
      * Retries the request with no delay
      *
-     * @param future       a future for the {@link HttpResponse}
-     * @param request      the HTTP request
+     * @param future a future for the {@link HttpResponse}
+     * @param request the HTTP request
      * @param lastResponse the last received HTTP response
-     * @param retryAction  the action that is called on retry
-     * @param attempts     the number of attempts for the request
+     * @param retryAction the action that is called on retry
+     * @param attempts the number of attempts for the request
      */
     protected void retryImmediately(CompletableFuture<HttpResponse> future,
                                     Request request,
@@ -221,12 +216,12 @@ public class BasicRetryPolicy extends RetryPolicy
     /**
      * Retries the request with no delay
      *
-     * @param future       a future for the {@link HttpResponse}
-     * @param request      the HTTP request
+     * @param future a future for the {@link HttpResponse}
+     * @param request the HTTP request
      * @param lastResponse the last received HTTP response
-     * @param retryAction  the action that is called on retry
-     * @param attempts     the number of attempts for the request
-     * @param throwable    the underlying exception
+     * @param retryAction the action that is called on retry
+     * @param attempts the number of attempts for the request
+     * @param throwable the underlying exception
      */
     protected void retryImmediately(CompletableFuture<HttpResponse> future,
                                     Request request,
@@ -241,12 +236,12 @@ public class BasicRetryPolicy extends RetryPolicy
     /**
      * Retries the request after waiting for the configured retryDelayMillis
      *
-     * @param future       a future for the {@link HttpResponse}
-     * @param request      the HTTP request
+     * @param future a future for the {@link HttpResponse}
+     * @param request the HTTP request
      * @param lastResponse the last received HTTP response
-     * @param retryAction  the action that is called on retry
-     * @param attempts     the number of attempts for the request
-     * @param throwable    the underlying exception
+     * @param retryAction the action that is called on retry
+     * @param attempts the number of attempts for the request
+     * @param throwable the underlying exception
      */
     protected void retry(CompletableFuture<HttpResponse> future,
                          Request request,
@@ -259,17 +254,16 @@ public class BasicRetryPolicy extends RetryPolicy
     }
 
     /**
-     * Retries the request after waiting for {@code sleepTimeMillis}. If the retries have exceeded the maximum number
-     * of retries allowed, it completes exceptionally with a
-     * {@link org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException}.
+     * Retries the request after waiting for {@code sleepTimeMillis}. If the retries have exceeded the maximum number of retries allowed, it completes
+     * exceptionally with a {@link org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException}.
      *
-     * @param future          a future for the {@link HttpResponse}
-     * @param request         the HTTP request
-     * @param lastResponse    the last received HTTP response
-     * @param retryAction     the action that is called on retry
-     * @param attempts        the number of attempts for the request
+     * @param future a future for the {@link HttpResponse}
+     * @param request the HTTP request
+     * @param lastResponse the last received HTTP response
+     * @param retryAction the action that is called on retry
+     * @param attempts the number of attempts for the request
      * @param sleepTimeMillis the amount of time to wait in milliseconds before attempting the request again
-     * @param throwable       the underlying error
+     * @param throwable the underlying error
      */
     protected void retry(CompletableFuture<HttpResponse> future,
                          Request request,
@@ -291,18 +285,18 @@ public class BasicRetryPolicy extends RetryPolicy
     }
 
     /**
-     * Tries to parse the {@code Retry-After} header from the response, and if successful, returns the number of
-     * milliseconds to wait specified by the header. If it fails to parse, returns the result of
-     * {@link #retryDelayMillis(int)}.
+     * Tries to parse the {@code Retry-After} header from the response, and if successful, returns the number of milliseconds to wait specified by the header.
+     * If it fails to parse, returns the result of {@link #retryDelayMillis(int)}.
      *
      * @param response the HTTP response
      * @param attempts the number of attempts for the request
-     * @return the delay to wait specified by the request if available, or the default specified by
-     * {@link #retryDelayMillis(int)}
+     * @return the delay to wait specified by the request if available, or the default specified by {@link #retryDelayMillis(int)}
      */
-    protected long maybeParseRetryAfterOrDefault(HttpResponse response, int attempts)
+    protected long maybeParseRetryAfterOrDefault(HttpResponse response,
+                                                 int attempts)
     {
-        List<String> retryAfter = response.headers().get(RETRY_AFTER);
+        List<String> retryAfter = response.headers()
+                                          .get(RETRY_AFTER);
         if (retryAfter != null && !retryAfter.isEmpty())
         {
             try

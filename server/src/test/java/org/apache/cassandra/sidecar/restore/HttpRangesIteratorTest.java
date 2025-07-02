@@ -19,12 +19,9 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.util.List;
-
-import org.junit.jupiter.api.Test;
-
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.assertj.core.util.Lists;
-
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -52,12 +49,10 @@ class HttpRangesIteratorTest
     @Test
     void testInvalidArguments()
     {
-        assertThatThrownBy(() -> new HttpRangesIterator(0, 1))
-        .isExactlyInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("totalBytes must be positive");
+        assertThatThrownBy(() -> new HttpRangesIterator(0, 1)).isExactlyInstanceOf(IllegalArgumentException.class)
+                                                              .hasMessageContaining("totalBytes must be positive");
 
-        assertThatThrownBy(() -> new HttpRangesIterator(1, 0))
-        .isExactlyInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("rangeSize must be positive");
+        assertThatThrownBy(() -> new HttpRangesIterator(1, 0)).isExactlyInstanceOf(IllegalArgumentException.class)
+                                                              .hasMessageContaining("rangeSize must be positive");
     }
 }

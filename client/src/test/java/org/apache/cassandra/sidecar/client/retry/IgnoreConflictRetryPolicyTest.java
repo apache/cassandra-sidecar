@@ -24,16 +24,13 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-
+import org.apache.cassandra.sidecar.client.HttpResponse;
+import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
+import org.apache.cassandra.sidecar.common.request.Request;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import org.apache.cassandra.sidecar.client.HttpResponse;
-import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
-import org.apache.cassandra.sidecar.common.request.Request;
-
 import static io.netty.handler.codec.http.HttpResponseStatus.CONFLICT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -60,7 +57,7 @@ class IgnoreConflictRetryPolicyTest
     }
 
     @ParameterizedTest(name = "{index} => canRetryOnADifferentHost={0}")
-    @ValueSource(booleans = { true, false })
+    @ValueSource(booleans = { true, false})
     void testRetryPolicyWhenResponseIsNull(boolean canRetryOnADifferentHost)
     {
         int maxRetries = 2;
@@ -71,8 +68,8 @@ class IgnoreConflictRetryPolicyTest
         for (int currentAttempt = 1; currentAttempt <= maxRetries; currentAttempt++)
         {
             int expectedNextAttempt = currentAttempt + 1;
-            retryPolicy.onResponse(future, mockRequest, null, new RuntimeException(), currentAttempt,
-                                   canRetryOnADifferentHost, (attempts, retryDelayMillis) -> {
+            retryPolicy.onResponse(future, mockRequest, null, new RuntimeException(), currentAttempt, canRetryOnADifferentHost, (attempts,
+                                                                                                                                 retryDelayMillis) -> {
                 if (expectedNextAttempt > maxRetries)
                 {
                     fail("Should not retry");
@@ -91,9 +88,8 @@ class IgnoreConflictRetryPolicyTest
                 }
             });
         }
-        assertThatExceptionOfType(CompletionException.class)
-        .isThrownBy(future::join)
-        .withCauseInstanceOf(RetriesExhaustedException.class);
+        assertThatExceptionOfType(CompletionException.class).isThrownBy(future::join)
+                                                            .withCauseInstanceOf(RetriesExhaustedException.class);
         assertThat(future.isCompletedExceptionally()).isTrue();
     }
 
@@ -103,8 +99,8 @@ class IgnoreConflictRetryPolicyTest
         when(mockResponse.statusCode()).thenReturn(CONFLICT.code());
 
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        new IgnoreConflictRetryPolicy().onResponse(future, mockRequest, mockResponse, null, 1, false,
-                                                   (attempts, retryDelayMillis) -> fail("Should never retry"));
+        new IgnoreConflictRetryPolicy().onResponse(future, mockRequest, mockResponse, null, 1, false, (attempts,
+                                                                                                       retryDelayMillis) -> fail("Should never retry"));
         future.join();
         assertThat(future.isDone()).isTrue();
         assertThat(future.get()).isSameAs(mockResponse);

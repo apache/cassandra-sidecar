@@ -18,21 +18,18 @@
 
 package org.apache.cassandra.sidecar.common.server.dns;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 /**
- * Determines which DnsResolver to use. Currently supported implementations are
- * default and resolve_to_ip. The former will resolve hostname to address and
+ * Determines which DnsResolver to use. Currently supported implementations are default and resolve_to_ip. The former will resolve hostname to address and
  * address to hostname whereas the latter will only resolve hostname to address.
  */
 public enum DnsResolvers implements DnsResolver
 {
     /**
-     * Default implementation of the {@link DnsResolver} that uses the JDK's
-     * underlying DNS resolution mechanism
+     * Default implementation of the {@link DnsResolver} that uses the JDK's underlying DNS resolution mechanism
      */
     @JsonProperty("default")
     DEFAULT
@@ -43,13 +40,13 @@ public enum DnsResolvers implements DnsResolver
         @Override
         public String reverseResolve(String address) throws UnknownHostException
         {
-            return InetAddress.getByName(address).getHostName();
+            return InetAddress.getByName(address)
+                              .getHostName();
         }
     },
 
     /**
-     * Implementation of the {@link DnsResolver} interface that always resolves
-     * and reverse resolves to an IP address
+     * Implementation of the {@link DnsResolver} interface that always resolves and reverse resolves to an IP address
      */
     @JsonProperty("resolve_to_ip")
     RESOLVE_TO_IP
@@ -64,7 +61,8 @@ public enum DnsResolvers implements DnsResolver
         @Override
         public String reverseResolve(String address) throws UnknownHostException
         {
-            return InetAddress.getByName(address).getHostAddress();
+            return InetAddress.getByName(address)
+                              .getHostAddress();
         }
     };
 
@@ -74,6 +72,7 @@ public enum DnsResolvers implements DnsResolver
     @Override
     public String resolve(String hostname) throws UnknownHostException
     {
-           return InetAddress.getByName(hostname).getHostAddress();
+        return InetAddress.getByName(hostname)
+                          .getHostAddress();
     }
 }

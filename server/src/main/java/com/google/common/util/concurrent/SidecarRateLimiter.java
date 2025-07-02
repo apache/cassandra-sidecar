@@ -23,8 +23,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
- * Wrapper class over guava Rate Limiter, uses SmoothBursty Ratelimiter. This class mainly exists to expose
- * package protected method queryEarliestAvailable of guava RateLimiter.
+ * Wrapper class over guava Rate Limiter, uses SmoothBursty Ratelimiter. This class mainly exists to expose package protected method queryEarliestAvailable of
+ * guava RateLimiter.
  * <p>
  * In addition to Guava's Rate Limiter functionality, it adds support for disabling rate-limiting.
  */
@@ -42,11 +42,10 @@ public class SidecarRateLimiter
     }
 
     /**
-     * Creates a new {@link SidecarRateLimiter} with the configured {@code permitsPerSecond}. When the
-     * {@code permitsPerSecond} is less than or equal to zero, the rate-limiter is disabled (unthrottled).
+     * Creates a new {@link SidecarRateLimiter} with the configured {@code permitsPerSecond}. When the {@code permitsPerSecond} is less than or equal to zero,
+     * the rate-limiter is disabled (unthrottled).
      *
-     * @param permitsPerSecond the rate of the returned {@code RateLimiter}, measured in how many
-     *                         permits become available per second
+     * @param permitsPerSecond the rate of the returned {@code RateLimiter}, measured in how many permits become available per second
      * @return the new instance of the rate limiter
      */
     public static SidecarRateLimiter create(final double permitsPerSecond)
@@ -55,8 +54,7 @@ public class SidecarRateLimiter
     }
 
     /**
-     * Returns calculated wait time in micros for next available permit. Permit is not reserved during calculation,
-     * this wait time is an approximation.
+     * Returns calculated wait time in micros for next available permit. Permit is not reserved during calculation, this wait time is an approximation.
      *
      * @return approx wait time in micros for next available permit
      */
@@ -78,9 +76,8 @@ public class SidecarRateLimiter
     }
 
     /**
-     * Updates the stable rate of the internal {@code RateLimiter}, that is, the {@code permitsPerSecond}
-     * argument provided in the factory method that constructed the {@code RateLimiter}. Setting the rate to any
-     * value less than or equal to {@code 0}, will disable rate limiting.
+     * Updates the stable rate of the internal {@code RateLimiter}, that is, the {@code permitsPerSecond} argument provided in the factory method that
+     * constructed the {@code RateLimiter}. Setting the rate to any value less than or equal to {@code 0}, will disable rate limiting.
      *
      * @param permitsPerSecond the new stable rate of this {@code RateLimiter}
      * @throws IllegalArgumentException if {@code permitsPerSecond} is negative or zero
@@ -107,11 +104,10 @@ public class SidecarRateLimiter
     }
 
     /**
-     * Returns the stable rate (as {@code permits per seconds}) with which this {@code SidecarRateLimiter} is
-     * configured with. The initial value of this is the same as the {@code permitsPerSecond} argument passed in
-     * the factory method that produced this {@code SidecarRateLimiter}, and it is only updated after invocations
-     * to {@linkplain #rate(double)}. If rate-limiting has been disabled, then returns {@code 0} to indicate that
-     * no rate limiting has been configured.
+     * Returns the stable rate (as {@code permits per seconds}) with which this {@code SidecarRateLimiter} is configured with. The initial value of this is the
+     * same as the {@code permitsPerSecond} argument passed in the factory method that produced this {@code SidecarRateLimiter}, and it is only updated after
+     * invocations to {@linkplain #rate(double)}. If rate-limiting has been disabled, then returns {@code 0} to indicate that no rate limiting has been
+     * configured.
      *
      * @return the stable rate configured in the rate limiter, or {@code 0} when rate limiting is disabled
      */
@@ -122,11 +118,11 @@ public class SidecarRateLimiter
     }
 
     /**
-     * Acquires a single permit from this {@code SidecarRateLimiter}, blocking until the request can be
-     * granted. Tells the amount of time slept, if any. When rate-limiting is disabled, it will return {@code 0.0}
-     * to indicate that no amount of time was spent sleeping.
+     * Acquires a single permit from this {@code SidecarRateLimiter}, blocking until the request can be granted. Tells the amount of time slept, if any. When
+     * rate-limiting is disabled, it will return {@code 0.0} to indicate that no amount of time was spent sleeping.
      *
-     * <p>This method is equivalent to {@code acquire(1)}.
+     * <p>
+     * This method is equivalent to {@code acquire(1)}.
      *
      * @return time spent sleeping to enforce rate, in seconds; 0.0 if not rate-limited
      */
@@ -138,11 +134,10 @@ public class SidecarRateLimiter
     }
 
     /**
-     * Acquires the given number of permits from this {@code RateLimiter}, blocking until the request
-     * can be granted. Tells the amount of time slept, if any. When rate-limiting is disabled, it will return
-     * {@code 0.0} to indicate that no amount of time was spent sleeping. As opposed to the delegating class,
-     * {@code 0} or negative are allowed permit values, and it will result in essentially disabling rate-limiting
-     * and the method will return {@code 0.0} to indicate that no amount of time was spent sleeping.
+     * Acquires the given number of permits from this {@code RateLimiter}, blocking until the request can be granted. Tells the amount of time slept, if any.
+     * When rate-limiting is disabled, it will return {@code 0.0} to indicate that no amount of time was spent sleeping. As opposed to the delegating class,
+     * {@code 0} or negative are allowed permit values, and it will result in essentially disabling rate-limiting and the method will return {@code 0.0} to
+     * indicate that no amount of time was spent sleeping.
      *
      * @param permits the number of permits to acquire
      * @return time spent sleeping to enforce rate, in seconds; 0.0 if not rate-limited
@@ -161,7 +156,8 @@ public class SidecarRateLimiter
         private final RateLimiter rateLimiter;
         private final RateLimiter.SleepingStopwatch stopwatch;
 
-        private RateLimiterWrapper(RateLimiter rateLimiter, RateLimiter.SleepingStopwatch stopwatch)
+        private RateLimiterWrapper(RateLimiter rateLimiter,
+                                   RateLimiter.SleepingStopwatch stopwatch)
         {
             this.rateLimiter = rateLimiter;
             this.stopwatch = stopwatch;

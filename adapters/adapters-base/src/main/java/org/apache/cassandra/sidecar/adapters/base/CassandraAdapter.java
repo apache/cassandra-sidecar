@@ -18,14 +18,13 @@
 
 package org.apache.cassandra.sidecar.adapters.base;
 
-import java.net.InetSocketAddress;
-
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
+import java.net.InetSocketAddress;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
@@ -38,7 +37,6 @@ import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.jetbrains.annotations.NotNull;
-
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
 
 /**
@@ -73,7 +71,9 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public Metadata metadata() throws CassandraUnavailableException
     {
-        return cqlSessionProvider.get().getCluster().getMetadata();
+        return cqlSessionProvider.get()
+                                 .getCluster()
+                                 .getMetadata();
     }
 
     /**

@@ -18,21 +18,19 @@
 
 package org.apache.cassandra.sidecar.routes.tokenrange;
 
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
-
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test the token range replica mapping endpoint with the in-jvm dtest framework.
  *
- * Note: Some related test classes are broken down to have a single test case to parallelize test execution and
- * therefore limit the instance size required to run the tests from CircleCI as the in-jvm-dtests tests are memory bound
+ * Note: Some related test classes are broken down to have a single test case to parallelize test execution and therefore limit the instance size required to
+ * run the tests from CircleCI as the in-jvm-dtests tests are memory bound
  */
 @ExtendWith(VertxExtension.class)
 class BasicUnknownKeyspaceTest extends BaseTokenRangeIntegrationTest

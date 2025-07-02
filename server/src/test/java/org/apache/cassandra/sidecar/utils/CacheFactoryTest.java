@@ -18,18 +18,13 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import io.vertx.core.Future;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import com.google.common.testing.FakeTicker;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import com.github.benmanes.caffeine.cache.Cache;
-import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
@@ -37,7 +32,9 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SSTableImportConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
-
+import com.google.common.testing.FakeTicker;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -56,15 +53,12 @@ class CacheFactoryTest
     {
         fakeTicker = new FakeTicker();
 
-        CacheConfiguration ssTableImportCacheConfiguration =
-        new CacheConfigurationImpl(SSTABLE_IMPORT_EXPIRE_AFTER_ACCESS, SSTABLE_IMPORT_CACHE_MAX_SIZE);
+        CacheConfiguration ssTableImportCacheConfiguration = new CacheConfigurationImpl(SSTABLE_IMPORT_EXPIRE_AFTER_ACCESS, SSTABLE_IMPORT_CACHE_MAX_SIZE);
 
-        SSTableImportConfiguration ssTableImportConfiguration =
-        new SSTableImportConfigurationImpl(ssTableImportCacheConfiguration);
-        ServiceConfiguration serviceConfiguration =
-        TestServiceConfiguration.builder()
-                                .sstableImportConfiguration(ssTableImportConfiguration)
-                                .build();
+        SSTableImportConfiguration ssTableImportConfiguration = new SSTableImportConfigurationImpl(ssTableImportCacheConfiguration);
+        ServiceConfiguration serviceConfiguration = TestServiceConfiguration.builder()
+                                                                            .sstableImportConfiguration(ssTableImportConfiguration)
+                                                                            .build();
         SSTableImporter mockSSTableImporter = mock(SSTableImporter.class);
         cacheFactory = new CacheFactory(serviceConfiguration, mockSSTableImporter, fakeTicker::read);
     }
@@ -178,22 +172,26 @@ class CacheFactoryTest
     }
 
     private Void ssTableImportCacheEntry(Cache<SSTableImporter.ImportOptions, Future<Void>> cache,
-                                         SSTableImporter.ImportOptions key, Void value)
-    throws ExecutionException, InterruptedException
+                                         SSTableImporter.ImportOptions key,
+                                         Void value)
+            throws ExecutionException, InterruptedException
     {
         Future<Void> voidFuture = cache.get(key, k -> Future.succeededFuture(value));
         assertThat(voidFuture).isNotNull();
-        return voidFuture.toCompletionStage().toCompletableFuture().get();
+        return voidFuture.toCompletionStage()
+                         .toCompletableFuture()
+                         .get();
     }
 
-    private static SSTableImporter.ImportOptions buildImportOptions(String keyspace, String tableName, String uuid)
+    private static SSTableImporter.ImportOptions buildImportOptions(String keyspace,
+                                                                    String tableName,
+                                                                    String uuid)
     {
-        return new SSTableImporter.ImportOptions.Builder()
-               .keyspace(keyspace)
-               .tableName(tableName)
-               .directory("/tmp/" + uuid)
-               .uploadId(uuid)
-               .host("localhost")
-               .build();
+        return new SSTableImporter.ImportOptions.Builder().keyspace(keyspace)
+                                                          .tableName(tableName)
+                                                          .directory("/tmp/" + uuid)
+                                                          .uploadId(uuid)
+                                                          .host("localhost")
+                                                          .build();
     }
 }

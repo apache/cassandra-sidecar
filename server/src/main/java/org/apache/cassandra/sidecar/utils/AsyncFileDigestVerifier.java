@@ -18,12 +18,6 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.io.IOException;
-import java.util.Objects;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -32,8 +26,11 @@ import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.ext.web.handler.HttpException;
+import java.io.IOException;
+import java.util.Objects;
 import org.apache.cassandra.sidecar.common.request.data.Digest;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus.CHECKSUM_MISMATCH;
 
 /**
@@ -49,7 +46,9 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
     protected final D digest;
     private final DigestAlgorithm digestAlgorithm;
 
-    protected AsyncFileDigestVerifier(FileSystem fs, D digest, DigestAlgorithm digestAlgorithm)
+    protected AsyncFileDigestVerifier(FileSystem fs,
+                                      D digest,
+                                      DigestAlgorithm digestAlgorithm)
     {
         this.fs = fs;
         this.digest = Objects.requireNonNull(digest, "digest is required");
@@ -70,14 +69,10 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
                  .compose(computedDigest -> {
                      if (!computedDigest.equals(digest.value()))
                      {
-                         logger.error("Digest mismatch. computed_digest={}, expected_digest={}, algorithm={}",
-                                      computedDigest, digest.value(), digest.algorithm());
+                         logger.error("Digest mismatch. computed_digest={}, expected_digest={}, algorithm={}", computedDigest, digest.value(),
+                                 digest.algorithm());
                          return Future.failedFuture(new HttpException(CHECKSUM_MISMATCH.code(),
-                                                                      String.format("Digest mismatch. "
-                                                                                    + "expected_digest=%s, "
-                                                                                    + "algorithm=%s",
-                                                                                    digest.value(),
-                                                                                    digest.algorithm())));
+                                 String.format("Digest mismatch. " + "expected_digest=%s, " + "algorithm=%s", digest.value(), digest.algorithm())));
                      }
                      return Future.succeededFuture(filePath);
                  });
@@ -93,32 +88,33 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
     {
         Promise<String> result = Promise.promise();
 
-        readFile(asyncFile, result,
-                 buf -> {
-                     byte[] bytes = buf.getBytes();
-                     digestAlgorithm.update(bytes, 0, bytes.length);
-                 },
-                 onReadComplete -> {
-                     result.complete(digestAlgorithm.digest());
-                     try
-                     {
-                         digestAlgorithm.close();
-                     }
-                     catch (IOException e)
-                     {
-                         logger.warn("Potential memory leak due to failed to close hasher {}",
-                                     digestAlgorithm.getClass().getSimpleName());
-                     }
-                 });
+        readFile(asyncFile, result, buf -> {
+            byte[] bytes = buf.getBytes();
+            digestAlgorithm.update(bytes, 0, bytes.length);
+        }, onReadComplete -> {
+            result.complete(digestAlgorithm.digest());
+            try
+            {
+                digestAlgorithm.close();
+            }
+            catch (IOException e)
+            {
+                logger.warn("Potential memory leak due to failed to close hasher {}", digestAlgorithm.getClass()
+                                                                                                     .getSimpleName());
+            }
+        });
 
         return result.future();
     }
 
-    protected void readFile(AsyncFile file, Promise<String> result, Handler<Buffer> onBufferAvailable,
+    protected void readFile(AsyncFile file,
+                            Promise<String> result,
+                            Handler<Buffer> onBufferAvailable,
                             Handler<Void> onReadComplete)
     {
         // Make sure to close the file when complete
-        result.future().onComplete(ignored -> file.end());
+        result.future()
+              .onComplete(ignored -> file.end());
         file.pause()
             .setReadBufferSize(DEFAULT_READ_BUFFER_SIZE)
             .handler(onBufferAvailable)

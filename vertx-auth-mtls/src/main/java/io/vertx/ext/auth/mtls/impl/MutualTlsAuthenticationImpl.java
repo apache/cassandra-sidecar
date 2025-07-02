@@ -18,8 +18,6 @@
 
 package io.vertx.ext.auth.mtls.impl;
 
-import java.util.List;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -32,10 +30,11 @@ import io.vertx.ext.auth.authentication.Credentials;
 import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
 import io.vertx.ext.auth.mtls.CertificateValidator;
 import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
+import java.util.List;
 
 /**
- * {@link AuthenticationProvider} implementation for mTLS (MutualTLS) authentication. With mTLS authentication
- * both server and client exchange certificates and validates each other's certificates.
+ * {@link AuthenticationProvider} implementation for mTLS (MutualTLS) authentication. With mTLS authentication both server and client exchange certificates and
+ * validates each other's certificates.
  */
 public class MutualTlsAuthenticationImpl implements MutualTlsAuthentication
 {
@@ -74,7 +73,8 @@ public class MutualTlsAuthenticationImpl implements MutualTlsAuthentication
      */
     @Deprecated
     @Override
-    public void authenticate(JsonObject credentials, Handler<AsyncResult<User>> resultHandler)
+    public void authenticate(JsonObject credentials,
+                             Handler<AsyncResult<User>> resultHandler)
     {
         throw new UnsupportedOperationException("Deprecated authentication method");
     }

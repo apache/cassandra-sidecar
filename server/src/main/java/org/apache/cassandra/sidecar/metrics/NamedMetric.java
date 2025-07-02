@@ -18,18 +18,17 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
+import com.codahale.metrics.Metric;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import com.codahale.metrics.Metric;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 
 /**
- * {@link NamedMetric} is for creating {@link Metric} with a structured name. Metric name should contain domain it
- * is captured for and optional tags for additional context.
+ * {@link NamedMetric} is for creating {@link Metric} with a structured name. Metric name should contain domain it is captured for and optional tags for
+ * additional context.
  *
  * @param <T> Metric type
  */
@@ -63,6 +62,7 @@ public class NamedMetric<T extends Metric>
 
         /**
          * Construct the build with the function to create metric
+         *
          * @param metricCreator function to create metric from the canonical name, which consists of the domain, tags and the simple name.
          */
         public Builder(Function<String, T> metricCreator)
@@ -93,8 +93,7 @@ public class NamedMetric<T extends Metric>
         }
 
         /**
-         * Additional name tag added to metric name for more clarity. Tags are usually added like,
-         * component=data, route=/stream/component, etc.
+         * Additional name tag added to metric name for more clarity. Tags are usually added like, component=data, route=/stream/component, etc.
          *
          * @param tag tag added to {@code tags}
          * @return a reference to this Builder
@@ -105,14 +104,14 @@ public class NamedMetric<T extends Metric>
         }
 
         /**
-         * Additional name tag added to metric name for more clarity. Tags are usually added like,
-         * component=data, route=/stream/component, etc.
+         * Additional name tag added to metric name for more clarity. Tags are usually added like, component=data, route=/stream/component, etc.
          *
          * @param key key of tag to be added
          * @param value value of tag to be added
          * @return a reference to this Builder
          */
-        public Builder<T> addTag(String key, String value)
+        public Builder<T> addTag(String key,
+                                 String value)
         {
             return addTag(Tag.of(key, value));
         }
@@ -142,7 +141,9 @@ public class NamedMetric<T extends Metric>
 
         private String combineTags()
         {
-            return tags.stream().map(tag -> tag.key + '=' + tag.value).collect(Collectors.joining("."));
+            return tags.stream()
+                       .map(tag -> tag.key + '=' + tag.value)
+                       .collect(Collectors.joining("."));
         }
 
         private T register(String metricName)
@@ -159,12 +160,14 @@ public class NamedMetric<T extends Metric>
         public final String key;
         public final String value;
 
-        public static Tag of(String key, String value)
+        public static Tag of(String key,
+                             String value)
         {
             return new Tag(key, value);
         }
 
-        private Tag(String key, String value)
+        private Tag(String key,
+                    String value)
         {
             this.key = Objects.requireNonNull(key, "Key can not be null");
             this.value = Objects.requireNonNull(value, "Value can not be null");

@@ -18,18 +18,15 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -44,13 +41,16 @@ public class NamedMetricTest
     @AfterEach
     void clear()
     {
-        registry.removeMatching((name, metric) -> true);
+        registry.removeMatching((name,
+                                 metric) -> true);
     }
 
     @Test
     void printAllMetricNames()
     {
-        registry.getMetrics().forEach((name, metric) -> logger.info("Metric name: {}, value: {}", name, metric));
+        registry.getMetrics()
+                .forEach((name,
+                          metric) -> logger.info("Metric name: {}, value: {}", name, metric));
     }
 
     @Test

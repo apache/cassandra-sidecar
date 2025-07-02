@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.client.request;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import okhttp3.mockwebserver.MockWebServer;
 import org.apache.cassandra.sidecar.client.HttpClient;
 import org.apache.cassandra.sidecar.client.HttpClientConfig;
@@ -54,9 +53,8 @@ public abstract class BaseRequestTest
 
     protected RequestContext.Builder builder(InstanceSelectionPolicy instanceSelectionPolicy)
     {
-        return newBuilder()
-               .instanceSelectionPolicy(instanceSelectionPolicy)
-               .retryPolicy(retryPolicy());
+        return newBuilder().instanceSelectionPolicy(instanceSelectionPolicy)
+                           .retryPolicy(retryPolicy());
     }
 
     protected RequestContext.Builder newBuilder()

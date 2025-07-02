@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
+import com.codahale.metrics.MetricRegistry;
+import com.vdurmont.semver4j.Semver;
+import io.vertx.core.Vertx;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.AbstractMap;
@@ -26,16 +29,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.codahale.metrics.MetricRegistry;
-import com.vdurmont.semver4j.Semver;
-import io.vertx.core.Vertx;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.IInstance;
@@ -62,7 +55,11 @@ import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.testing.TestVersion;
-
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.apache.cassandra.sidecar.coordination.ClusterLeaseClaimTaskIntegrationTest.buildContactList;
 import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.cassandraVersionProvider;
@@ -87,7 +84,8 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
     void test(TestVersion version) throws IOException
     {
         Versions versions = Versions.find();
-        assertThat(versions).as("No dtest jar versions found").isNotNull();
+        assertThat(versions).as("No dtest jar versions found")
+                            .isNotNull();
         Versions.Version requestedVersion = versions.getLatest(new Semver(version.version(), Semver.SemverType.LOOSE));
 
         // Spin up a 12 node cluster with 2 DCs
@@ -109,8 +107,9 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
 
     private void runTestScenario(AbstractCluster<?> cluster)
     {
-        AbstractMap.SimpleEntry<List<? extends ElectorateMembership>, List<? extends ElectorateMembership>> pair
-        = buildElectorateMembershipPerCassandraInstance(cluster);
+        AbstractMap.SimpleEntry<List<? extends ElectorateMembership>, List<? extends ElectorateMembership>> pair =
+                                                                                                                 buildElectorateMembershipPerCassandraInstance(
+                                                                                                                         cluster);
         List<? extends ElectorateMembership> mostReplicatedMemberships = pair.getKey();
         List<? extends ElectorateMembership> sidecarInternalMemberships = pair.getValue();
         // When there are no user keyspaces, we default to the sidecar_internal keyspace
@@ -162,7 +161,8 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
         assertMembership(sidecarInternalMemberships, 1);
     }
 
-    static void assertMembership(List<? extends ElectorateMembership> memberships, int expectedElectorateSize)
+    static void assertMembership(List<? extends ElectorateMembership> memberships,
+                                 int expectedElectorateSize)
     {
         int localElectorateCount = 0;
         for (ElectorateMembership membership : memberships)
@@ -177,18 +177,17 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
                                         .isEqualTo(expectedElectorateSize);
     }
 
-    AbstractMap.SimpleEntry<List<? extends ElectorateMembership>, List<? extends ElectorateMembership>>
-    buildElectorateMembershipPerCassandraInstance(AbstractCluster<?> cluster)
+    AbstractMap.SimpleEntry<List<? extends ElectorateMembership>, List<? extends ElectorateMembership>> buildElectorateMembershipPerCassandraInstance(AbstractCluster<?> cluster)
     {
         List<MostReplicatedKeyspaceTokenZeroElectorateMembership> r1 = new ArrayList<>();
         List<SidecarInternalTokenZeroElectorateMembership> r2 = new ArrayList<>();
-        AbstractMap.SimpleEntry<List<? extends ElectorateMembership>, List<? extends ElectorateMembership>> result
-        = new AbstractMap.SimpleEntry<>(r1, r2);
+        AbstractMap.SimpleEntry<List<? extends ElectorateMembership>, List<? extends ElectorateMembership>> result = new AbstractMap.SimpleEntry<>(r1, r2);
         for (IInstance instance : cluster)
         {
             List<InetSocketAddress> address = buildContactList(instance);
-            CQLSessionProvider sessionProvider =
-            new CQLSessionProviderImpl(address, address, 500, instance.config().localDatacenter(), 0, SharedExecutorNettyOptions.INSTANCE);
+            CQLSessionProvider sessionProvider = new CQLSessionProviderImpl(address, address, 500, instance.config()
+                                                                                                           .localDatacenter(),
+                    0, SharedExecutorNettyOptions.INSTANCE);
             InstancesMetadata instancesMetadata = buildInstancesMetadata(instance, sessionProvider, metricRegistryProvider);
             InstanceMetadataFetcher instanceMetadataFetcher = new InstanceMetadataFetcher(instancesMetadata);
             r1.add(new MostReplicatedKeyspaceTokenZeroElectorateMembership(instanceMetadataFetcher, sessionProvider, CONFIG));
@@ -207,7 +206,6 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
         int nativeTransportPort = tryGetIntConfig(config, "native_transport_port", 9042);
         String[] dataDirectories = (String[]) config.get("data_file_directories");
 
-
         JmxClient jmxClient = JmxClient.builder()
                                        .host(hostName)
                                        .port(config.jmxPort())
@@ -215,43 +213,37 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
                                        .connectionRetryDelay(MillisecondBoundConfiguration.parse("500ms"))
                                        .build();
 
-        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
-                                                                         config.num(),
-                                                                         cassandraVersionProvider,
-                                                                         sessionProvider,
-                                                                         jmxClient,
-                                                                         driverUtils,
-                                                                         "1.0-TEST",
-                                                                         hostName,
-                                                                         nativeTransportPort,
-                                                                         new InstanceHealthMetrics(instanceSpecificRegistry));
+        CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx, config.num(), cassandraVersionProvider, sessionProvider, jmxClient, driverUtils,
+                "1.0-TEST", hostName, nativeTransportPort, new InstanceHealthMetrics(instanceSpecificRegistry));
 
         // we need to establish CQL + JMX connections required by the implementation
         // so run the healthcheck
         delegate.healthCheck();
 
         // equivalent of one Sidecar instance managing a single Cassandra instance
-        List<InstanceMetadata> metadata =
-        Collections.singletonList(InstanceMetadataImpl.builder()
-                                                      .id(config.num())
-                                                      .host(config.broadcastAddress().getAddress().getHostAddress())
-                                                      .port(nativeTransportPort)
-                                                      .dataDirs(Arrays.asList(dataDirectories))
-                                                      .cdcDir(config.getString("cdc_raw_directory"))
-                                                      .commitlogDir(config.getString("commitlog_directory"))
-                                                      .hintsDir(config.getString("hints_directory"))
-                                                      .savedCachesDir(config.getString("saved_caches_directory"))
-                                                      .delegate(delegate)
-                                                      .metricRegistry(instanceSpecificRegistry)
-                                                      .build());
+        List<InstanceMetadata> metadata = Collections.singletonList(InstanceMetadataImpl.builder()
+                                                                                        .id(config.num())
+                                                                                        .host(config.broadcastAddress()
+                                                                                                    .getAddress()
+                                                                                                    .getHostAddress())
+                                                                                        .port(nativeTransportPort)
+                                                                                        .dataDirs(Arrays.asList(dataDirectories))
+                                                                                        .cdcDir(config.getString("cdc_raw_directory"))
+                                                                                        .commitlogDir(config.getString("commitlog_directory"))
+                                                                                        .hintsDir(config.getString("hints_directory"))
+                                                                                        .savedCachesDir(config.getString("saved_caches_directory"))
+                                                                                        .delegate(delegate)
+                                                                                        .metricRegistry(instanceSpecificRegistry)
+                                                                                        .build());
         return new InstancesMetadataImpl(metadata, DnsResolvers.DEFAULT);
     }
 
     void initializeSchema(AbstractCluster<?> cluster)
     {
-        SchemaKeyspaceConfiguration config = CONFIG.serviceConfiguration().schemaKeyspaceConfiguration();
-        String createKeyspaceStatement = String.format("CREATE KEYSPACE %s WITH REPLICATION = %s ;",
-                                                       config.keyspace(), config.createReplicationStrategyString());
+        SchemaKeyspaceConfiguration config = CONFIG.serviceConfiguration()
+                                                   .schemaKeyspaceConfiguration();
+        String createKeyspaceStatement =
+                                       String.format("CREATE KEYSPACE %s WITH REPLICATION = %s ;", config.keyspace(), config.createReplicationStrategyString());
         cluster.schemaChange(createKeyspaceStatement);
         LOGGER.info("Creating keyspace with DDL: {}", createKeyspaceStatement);
     }

@@ -52,9 +52,8 @@ public class ResourceScopes
     };
 
     /**
-     * Signifies the Cassandra cluster scope. For example, to determine whether you have access to
-     * retrieve basic Cassandra ring, gossip, or other Cassandra-related information. Currently, cluster scope
-     * does not contain any resource variables.
+     * Signifies the Cassandra cluster scope. For example, to determine whether you have access to retrieve basic Cassandra ring, gossip, or other
+     * Cassandra-related information. Currently, cluster scope does not contain any resource variables.
      */
     public static final ResourceScope CLUSTER_SCOPE = new ResourceScope()
     {
@@ -79,9 +78,8 @@ public class ResourceScopes
     };
 
     /**
-     * Signifies the Cassandra Sidecar operations scope. Whether Sidecar operator has sufficient permissions to
-     * run operations against both Cassandra Sidecar and Cassandra clusters that Sidecar is managing. Currently
-     * operation scope does not contain any resource variables.
+     * Signifies the Cassandra Sidecar operations scope. Whether Sidecar operator has sufficient permissions to run operations against both Cassandra Sidecar
+     * and Cassandra clusters that Sidecar is managing. Currently operation scope does not contain any resource variables.
      */
     public static final ResourceScope OPERATION_SCOPE = new ResourceScope()
     {

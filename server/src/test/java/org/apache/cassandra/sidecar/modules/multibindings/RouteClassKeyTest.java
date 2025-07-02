@@ -39,27 +39,27 @@ class RouteClassKeyTest
     @Test
     void testExtractAbsentStaticFieldShouldFail()
     {
-        assertThatThrownBy(() -> RouteClassKey.httpMethod(EmptyKey.class))
-        .isExactlyInstanceOf(RuntimeException.class)
-        .hasCauseInstanceOf(NoSuchFieldException.class)
-        .hasMessage("java.lang.NoSuchFieldException: HTTP_METHOD");
+        assertThatThrownBy(() -> RouteClassKey.httpMethod(EmptyKey.class)).isExactlyInstanceOf(RuntimeException.class)
+                                                                          .hasCauseInstanceOf(NoSuchFieldException.class)
+                                                                          .hasMessage("java.lang.NoSuchFieldException: HTTP_METHOD");
 
-        assertThatThrownBy(() -> RouteClassKey.routeURI(EmptyKey.class))
-        .isExactlyInstanceOf(RuntimeException.class)
-        .hasCauseInstanceOf(NoSuchFieldException.class)
-        .hasMessage("java.lang.NoSuchFieldException: ROUTE_URI");
+        assertThatThrownBy(() -> RouteClassKey.routeURI(EmptyKey.class)).isExactlyInstanceOf(RuntimeException.class)
+                                                                        .hasCauseInstanceOf(NoSuchFieldException.class)
+                                                                        .hasMessage("java.lang.NoSuchFieldException: ROUTE_URI");
     }
 
     @Test
     void testExtractFromMalformedKey()
     {
-        assertThatThrownBy(() -> RouteClassKey.httpMethod(MalformedKey.class))
-        .isExactlyInstanceOf(RuntimeException.class)
-        .hasCauseInstanceOf(ClassCastException.class)
-        .hasMessageContaining("Cannot cast java.lang.String to io.vertx.core.http.HttpMethod");
+        assertThatThrownBy(() -> RouteClassKey.httpMethod(MalformedKey.class)).isExactlyInstanceOf(RuntimeException.class)
+                                                                              .hasCauseInstanceOf(ClassCastException.class)
+                                                                              .hasMessageContaining(
+                                                                                      "Cannot cast java.lang.String to io.vertx.core.http.HttpMethod");
     }
 
-    interface EmptyKey extends RouteClassKey {}
+    interface EmptyKey extends RouteClassKey
+    {
+    }
     interface MalformedKey extends RouteClassKey
     {
         String HTTP_METHOD = "POST";

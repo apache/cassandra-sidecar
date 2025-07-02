@@ -18,31 +18,27 @@
 
 package org.apache.cassandra.sidecar.server;
 
-import java.util.LinkedHashSet;
-import java.util.function.Function;
-
-import org.apache.commons.lang3.SystemUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.Singleton;
 import io.vertx.core.http.ClientAuth;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.OpenSSLEngineOptions;
 import io.vertx.core.net.SSLOptions;
 import io.vertx.core.net.TrafficShapingOptions;
+import java.util.LinkedHashSet;
+import java.util.function.Function;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.TrafficShapingConfiguration;
 import org.apache.cassandra.sidecar.utils.SslUtils;
-
+import org.apache.commons.lang3.SystemUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.cassandra.sidecar.common.server.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
 
 /**
- * A provider that takes the {@link SidecarConfiguration} and builds {@link HttpServerOptions} from the configured
- * values
+ * A provider that takes the {@link SidecarConfiguration} and builds {@link HttpServerOptions} from the configured values
  */
 @Singleton
 public class HttpServerOptionsProvider implements Function<SidecarConfiguration, HttpServerOptions>
@@ -58,7 +54,8 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
         HttpServerOptions options = new HttpServerOptions().setLogActivity(true);
         ServiceConfiguration serviceConf = configuration.serviceConfiguration();
         options.setIdleTimeoutUnit(MILLISECONDS)
-               .setIdleTimeout(serviceConf.requestIdleTimeout().toIntMillis())
+               .setIdleTimeout(serviceConf.requestIdleTimeout()
+                                          .toIntMillis())
                .setTcpKeepAlive(serviceConf.tcpKeepAlive())
                .setAcceptBacklog(serviceConf.acceptBacklog());
 
@@ -101,14 +98,18 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
     /**
      * Configures the SSL options for the server
      *
-     * @param options   the SSL options
-     * @param ssl       the SSL configuration
+     * @param options the SSL options
+     * @param ssl the SSL configuration
      * @param timestamp a timestamp for the keystore file for when the file was last changed, or 0 for the startup value
      */
-    protected void configureSSLOptions(SSLOptions options, SslConfiguration ssl, long timestamp)
+    protected void configureSSLOptions(SSLOptions options,
+                                       SslConfiguration ssl,
+                                       long timestamp)
     {
-        options.setSslHandshakeTimeout(ssl.handshakeTimeout().quantity())
-               .setSslHandshakeTimeoutUnit(ssl.handshakeTimeout().unit());
+        options.setSslHandshakeTimeout(ssl.handshakeTimeout()
+                                          .quantity())
+               .setSslHandshakeTimeoutUnit(ssl.handshakeTimeout()
+                                              .unit());
 
         configureKeyStore(options, ssl, timestamp);
         configureTrustStore(options, ssl);
@@ -117,11 +118,13 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
     /**
      * Configures the key store
      *
-     * @param options   the SSL options
-     * @param ssl       the SSL configuration
+     * @param options the SSL options
+     * @param ssl the SSL configuration
      * @param timestamp a timestamp for the keystore file for when the file was last changed, or 0 for the startup value
      */
-    protected void configureKeyStore(SSLOptions options, SslConfiguration ssl, long timestamp)
+    protected void configureKeyStore(SSLOptions options,
+                                     SslConfiguration ssl,
+                                     long timestamp)
     {
         SslUtils.setKeyStoreConfiguration(options, ssl.keystore(), timestamp);
     }
@@ -130,9 +133,10 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
      * Configures the trust store if provided
      *
      * @param options the SSL options
-     * @param ssl     the SSL configuration
+     * @param ssl the SSL configuration
      */
-    protected void configureTrustStore(SSLOptions options, SslConfiguration ssl)
+    protected void configureTrustStore(SSLOptions options,
+                                       SslConfiguration ssl)
     {
         if (ssl.isTrustStoreConfigured())
         {
@@ -151,26 +155,27 @@ public class HttpServerOptionsProvider implements Function<SidecarConfiguration,
         long inboundGlobalBandwidthBytesPerSecond = config.inboundGlobalBandwidthBytesPerSecond();
         long outboundGlobalBandwidthBytesPerSecond = config.outboundGlobalBandwidthBytesPerSecond();
         long peakOutboundGlobalBandwidthBytesPerSecond = config.peakOutboundGlobalBandwidthBytesPerSecond();
-        LOGGER.info("Configured traffic shaping options. InboundGlobalBandwidth={}/s " +
-                    "rawInboundGlobalBandwidth={} B/s OutboundGlobalBandwidth={}/s rawOutboundGlobalBandwidth={} B/s " +
-                    "PeakOutboundGlobalBandwidth={}/s rawPeakOutboundGlobalBandwidth={} B/s IntervalForStats={}ms " +
-                    "MaxDelayToWait={}ms",
-                    bytesToHumanReadableBinaryPrefix(inboundGlobalBandwidthBytesPerSecond),
-                    inboundGlobalBandwidthBytesPerSecond,
-                    bytesToHumanReadableBinaryPrefix(outboundGlobalBandwidthBytesPerSecond),
-                    outboundGlobalBandwidthBytesPerSecond,
-                    bytesToHumanReadableBinaryPrefix(peakOutboundGlobalBandwidthBytesPerSecond),
-                    peakOutboundGlobalBandwidthBytesPerSecond,
-                    config.checkIntervalForStats().toMillis(),
-                    config.maxDelayToWait().toMillis()
-        );
-        return new TrafficShapingOptions()
-               .setInboundGlobalBandwidth(inboundGlobalBandwidthBytesPerSecond)
-               .setOutboundGlobalBandwidth(outboundGlobalBandwidthBytesPerSecond)
-               .setPeakOutboundGlobalBandwidth(peakOutboundGlobalBandwidthBytesPerSecond)
-               .setCheckIntervalForStats(config.checkIntervalForStats().quantity())
-               .setCheckIntervalForStatsTimeUnit(config.checkIntervalForStats().unit())
-               .setMaxDelayToWait(config.maxDelayToWait().quantity())
-               .setMaxDelayToWaitUnit(config.maxDelayToWait().unit());
+        LOGGER.info(
+                "Configured traffic shaping options. InboundGlobalBandwidth={}/s "
+                        + "rawInboundGlobalBandwidth={} B/s OutboundGlobalBandwidth={}/s rawOutboundGlobalBandwidth={} B/s "
+                        + "PeakOutboundGlobalBandwidth={}/s rawPeakOutboundGlobalBandwidth={} B/s IntervalForStats={}ms " + "MaxDelayToWait={}ms",
+                bytesToHumanReadableBinaryPrefix(inboundGlobalBandwidthBytesPerSecond), inboundGlobalBandwidthBytesPerSecond,
+                bytesToHumanReadableBinaryPrefix(outboundGlobalBandwidthBytesPerSecond), outboundGlobalBandwidthBytesPerSecond,
+                bytesToHumanReadableBinaryPrefix(peakOutboundGlobalBandwidthBytesPerSecond), peakOutboundGlobalBandwidthBytesPerSecond,
+                config.checkIntervalForStats()
+                      .toMillis(),
+                config.maxDelayToWait()
+                      .toMillis());
+        return new TrafficShapingOptions().setInboundGlobalBandwidth(inboundGlobalBandwidthBytesPerSecond)
+                                          .setOutboundGlobalBandwidth(outboundGlobalBandwidthBytesPerSecond)
+                                          .setPeakOutboundGlobalBandwidth(peakOutboundGlobalBandwidthBytesPerSecond)
+                                          .setCheckIntervalForStats(config.checkIntervalForStats()
+                                                                          .quantity())
+                                          .setCheckIntervalForStatsTimeUnit(config.checkIntervalForStats()
+                                                                                  .unit())
+                                          .setMaxDelayToWait(config.maxDelayToWait()
+                                                                   .quantity())
+                                          .setMaxDelayToWaitUnit(config.maxDelayToWait()
+                                                                       .unit());
     }
 }

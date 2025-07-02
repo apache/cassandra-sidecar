@@ -56,28 +56,23 @@ import org.jetbrains.annotations.VisibleForTesting;
 /**
  * A {@link RestoreRange}, similar to {@link RestoreSlice}, represents the data of a narrower token range.
  * <p>
- * Conceptually, a {@link RestoreSlice} can be split into multiple {@link RestoreRange}s. A range only belongs to,
- * i.e. fully enclosed in, a slice. In other words, a range is derived from a lice.
- * As slices do not overlap, the ranges have no overlap too.
- * When no split is needed for a slice, its range is equivalent to itself, in terms of token range.
+ * Conceptually, a {@link RestoreSlice} can be split into multiple {@link RestoreRange}s. A range only belongs to, i.e. fully enclosed in, a slice. In other
+ * words, a range is derived from a lice. As slices do not overlap, the ranges have no overlap too. When no split is needed for a slice, its range is equivalent
+ * to itself, in terms of token range.
  * <p>
  * In additional, {@link RestoreRange} contains the control flow of applying/importing data to Cassandra.
  * <p>
- * Why is {@link RestoreRange} required?
- * Range is introduced to better align with the current Cassandra token topology.
- * Restore slice represents the client-side generated dataset and its token range,
- * submitted via the create slice API.
- * On the server side, especially the token topology of Cassandra has changed, there can be no exact match of the
- * token range of a slice and the Cassandra node's owning token range. The slice has to be split into ranges that fit
- * into the Cassandra nodes properly.
+ * Why is {@link RestoreRange} required? Range is introduced to better align with the current Cassandra token topology. Restore slice represents the client-side
+ * generated dataset and its token range, submitted via the create slice API. On the server side, especially the token topology of Cassandra has changed, there
+ * can be no exact match of the token range of a slice and the Cassandra node's owning token range. The slice has to be split into ranges that fit into the
+ * Cassandra nodes properly.
  * <p>
  * How the staged files are organized on disk?
  * <p>
  * For each slice,
  * <ul>
- *     <li>the S3 object is downloaded to the path at "stageDirectory/key". It is a zip file.</li>
- *     <li>the zip is then extracted to the directory at "stageDirectory/keyspace/table/".
- *     The extracted sstables are imported into Cassandra.</li>
+ * <li>the S3 object is downloaded to the path at "stageDirectory/key". It is a zip file.</li>
+ * <li>the zip is then extracted to the directory at "stageDirectory/keyspace/table/". The extracted sstables are imported into Cassandra.</li>
  * </ul>
  */
 public class RestoreRange
@@ -125,16 +120,15 @@ public class RestoreRange
 
     public static RestoreRange from(Row row)
     {
-        return new Builder()
-               .jobId(row.getUUID("job_id"))
-               .bucketId(row.getShort("bucket_id"))
-               .startToken(row.getVarint("start_token"))
-               .endToken(row.getVarint("end_token"))
-               .replicaStatusText(row.getMap("status_by_replica", String.class, String.class))
-               .sliceId(row.getString("slice_id"))
-               .sliceBucket(row.getString("slice_bucket"))
-               .sliceKey(row.getString("slice_key"))
-               .build();
+        return new Builder().jobId(row.getUUID("job_id"))
+                            .bucketId(row.getShort("bucket_id"))
+                            .startToken(row.getVarint("start_token"))
+                            .endToken(row.getVarint("end_token"))
+                            .replicaStatusText(row.getMap("status_by_replica", String.class, String.class))
+                            .sliceId(row.getString("slice_id"))
+                            .sliceBucket(row.getString("slice_bucket"))
+                            .sliceKey(row.getString("slice_key"))
+                            .build();
     }
 
     public static Builder builderFromSlice(RestoreSlice slice)
@@ -188,23 +182,15 @@ public class RestoreRange
         RestoreRange that = (RestoreRange) obj;
         // Note: destinationPathInStaging and owner are not included as they are 'transient'.
         // Mutable states are not included, e.g. status_by_replicas.
-        return Objects.equals(this.tokenRange, that.tokenRange)
-               && Objects.equals(this.jobId, that.jobId)
-               && Objects.equals(this.bucketId, that.bucketId)
-               && Objects.equals(this.sliceId, that.sliceId);
+        return Objects.equals(this.tokenRange, that.tokenRange) && Objects.equals(this.jobId, that.jobId) && Objects.equals(this.bucketId, that.bucketId)
+                && Objects.equals(this.sliceId, that.sliceId);
     }
 
     @Override
     public String toString()
     {
-        return "RestoreRange{" +
-               "jobId=" + jobId +
-               ", sliceId='" + sliceId + '\'' +
-               ", tokenRange=" + tokenRange +
-               ", statusByReplica=" + statusByReplica +
-               ", sliceKey='" + sliceKey + '\'' +
-               ", sliceBucket='" + sliceBucket + '\'' +
-               '}';
+        return "RestoreRange{" + "jobId=" + jobId + ", sliceId='" + sliceId + '\'' + ", tokenRange=" + tokenRange + ", statusByReplica=" + statusByReplica
+                + ", sliceKey='" + sliceKey + '\'' + ", sliceBucket='" + sliceBucket + '\'' + '}';
     }
 
     // -- INTERNAL FLOW CONTROL METHODS --
@@ -302,44 +288,36 @@ public class RestoreRange
         // Otherwise, it is an unexpected state and cannot be retried
         if (!canProduceTask())
         {
-            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore range is missing progress tracker or source slice",
-                                                                        this, null), this);
+            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore range is missing progress tracker or source slice", this, null), this);
         }
 
         if (isCancelled)
         {
-            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore range is cancelled",
-                                                                        this, null), this);
+            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore range is cancelled", this, null), this);
         }
 
         RestoreJobFatalException failure = tracker.failureCause();
         if (failure != null)
         {
-            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore job has already failed due to prior failure",
-                                                                        this, failure), this);
+            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore job has already failed due to prior failure", this, failure), this);
         }
 
-        if (tracker.restoreJob().hasExpired(System.currentTimeMillis()))
+        if (tracker.restoreJob()
+                   .hasExpired(System.currentTimeMillis()))
         {
-            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore job expired on " + tracker.restoreJob().expireAt.toInstant(),
-                                                                        this, null), this);
+            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore job expired on " + tracker.restoreJob().expireAt.toInstant(), this, null),
+                    this);
         }
 
         try
         {
             StorageClient s3Client = s3ClientPool.storageClient(job());
-            return new RestoreRangeTask(this, s3Client,
-                                        executorPool, importer,
-                                        requiredUsableSpacePercentage,
-                                        rangeDatabaseAccessor,
-                                        restoreJobUtil,
-                                        localTokenRangesProvider,
-                                        metrics);
+            return new RestoreRangeTask(this, s3Client, executorPool, importer, requiredUsableSpacePercentage, rangeDatabaseAccessor, restoreJobUtil,
+                    localTokenRangesProvider, metrics);
         }
         catch (Exception cause)
         {
-            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore range is failed",
-                                                                        this, cause), this);
+            return RestoreRangeTask.failed(RestoreJobExceptions.ofFatal("Restore range is failed", this, cause), this);
         }
     }
 
@@ -437,13 +415,13 @@ public class RestoreRange
     public Map<String, String> statusTextByReplica()
     {
         Map<String, String> result = new HashMap<>(statusByReplica.size());
-        statusByReplica.forEach((k, v) -> result.put(k, v.name()));
+        statusByReplica.forEach((k,
+                                 v) -> result.put(k, v.name()));
         return result;
     }
 
     /**
-     * @return the path to the directory that stores the s3 object of the slice
-     *         and the sstables after unzipping
+     * @return the path to the directory that stores the s3 object of the slice and the sstables after unzipping
      */
     public Path stageDirectory()
     {
@@ -494,9 +472,8 @@ public class RestoreRange
     }
 
     /**
-     * A {@link RestoreRange} is eligible to produce {@link RestoreRangeTask} only if it is backed by both the source {@link RestoreSlice}
-     * and the {@link RestoreJobProgressTracker}
-     * Otherwise, the {@link RestoreRange} is loaded from persistence, and it is only good for restore job progress check.
+     * A {@link RestoreRange} is eligible to produce {@link RestoreRangeTask} only if it is backed by both the source {@link RestoreSlice} and the
+     * {@link RestoreJobProgressTracker} Otherwise, the {@link RestoreRange} is loaded from persistence, and it is only good for restore job progress check.
      *
      * @return true if it can produce task; false otherwise
      */
@@ -514,11 +491,7 @@ public class RestoreRange
 
     public String shortDescription()
     {
-        return "RestoreRange{" +
-               "sliceId='" + sliceId + '\'' +
-               ", sliceKey='" + sliceKey() + '\'' +
-               ", sliceBucket='" + sliceBucket() + '\'' +
-               '}';
+        return "RestoreRange{" + "sliceId='" + sliceId + '\'' + ", sliceKey='" + sliceKey() + '\'' + ", sliceBucket='" + sliceBucket() + '\'' + '}';
     }
 
     @VisibleForTesting
@@ -537,7 +510,8 @@ public class RestoreRange
         return func.apply(source);
     }
 
-    private void updateRangeStatusForInstance(InstanceMetadata instance, RestoreRangeStatus status)
+    private void updateRangeStatusForInstance(InstanceMetadata instance,
+                                              RestoreRangeStatus status)
     {
         // skip if the belong job is not managed by sidecar
         if (!job().isManagedBySidecar())
@@ -550,7 +524,8 @@ public class RestoreRange
 
     private String storageAddressWithPort(InstanceMetadata instance) throws CassandraUnavailableException
     {
-        InetSocketAddress storageAddress = instance.delegate().localStorageBroadcastAddress();
+        InetSocketAddress storageAddress = instance.delegate()
+                                                   .localStorageBroadcastAddress();
         return StringUtils.cassandraFormattedHostAndPort(storageAddress);
     }
 
@@ -609,14 +584,13 @@ public class RestoreRange
 
         public Builder sourceSlice(RestoreSlice sourceSlice)
         {
-            return update(b -> b.sourceSlice = sourceSlice)
-                   .jobId(sourceSlice.jobId())
-                   .sliceId(sourceSlice.sliceId())
-                   .sliceBucket(sourceSlice.bucket())
-                   .sliceKey(sourceSlice.key())
-                   .bucketId(sourceSlice.bucketId())
-                   .startToken(sourceSlice.startToken())
-                   .endToken(sourceSlice.endToken());
+            return update(b -> b.sourceSlice = sourceSlice).jobId(sourceSlice.jobId())
+                                                           .sliceId(sourceSlice.sliceId())
+                                                           .sliceBucket(sourceSlice.bucket())
+                                                           .sliceKey(sourceSlice.key())
+                                                           .bucketId(sourceSlice.bucketId())
+                                                           .startToken(sourceSlice.startToken())
+                                                           .endToken(sourceSlice.endToken());
         }
 
         public Builder sliceId(String sliceId)
@@ -634,7 +608,8 @@ public class RestoreRange
             return update(b -> b.sliceKey = sliceKey);
         }
 
-        public Builder stageDirectory(Path basePath, String uploadId)
+        public Builder stageDirectory(Path basePath,
+                                      String uploadId)
         {
             return update(b -> {
                 b.stageDirectory = basePath.resolve(uploadId);
@@ -665,7 +640,8 @@ public class RestoreRange
         public Builder replicaStatusText(Map<String, String> statusTextByReplica)
         {
             Map<String, RestoreRangeStatus> map = new HashMap<>(statusTextByReplica.size());
-            statusTextByReplica.forEach((k, v) -> map.put(k, RestoreRangeStatus.valueOf(v)));
+            statusTextByReplica.forEach((k,
+                                         v) -> map.put(k, RestoreRangeStatus.valueOf(v)));
             return replicaStatus(map);
         }
 

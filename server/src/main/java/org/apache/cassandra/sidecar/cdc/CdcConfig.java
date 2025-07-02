@@ -66,8 +66,8 @@ public interface CdcConfig
     Map<String, Object> cdcConfigs();
 
     /**
-     * @return if logOnly config is set, mutations will not be published to kafka, instead they
-     * would be logged, this would be useful for debugging and running sidecar application locally
+     * @return if logOnly config is set, mutations will not be published to kafka, instead they would be logged, this would be useful for debugging and running
+     *         sidecar application locally
      */
     boolean logOnly();
 
@@ -103,8 +103,7 @@ public interface CdcConfig
     boolean failOnKafkaError();
 
     /**
-     * Initialization of tables and loading config takes some time, returns if the config
-     * is ready to be loaded or not.
+     * Initialization of tables and loading config takes some time, returns if the config is ready to be loaded or not.
      *
      * @return true if config is ready to be read.
      */
@@ -122,9 +121,8 @@ public interface CdcConfig
     int maxCommitLogsPerInstance();
 
     /**
-     * @return the maximum number of entries to hold in the watermarker state for mutations that
-     * are have not achieved the consistency level. Each entry is an MD5 with a byte integer,
-     * approximately 30-60 bytes per entry before compression.
+     * @return the maximum number of entries to hold in the watermarker state for mutations that are have not achieved the consistency level. Each entry is an
+     *         MD5 with a byte integer, approximately 30-60 bytes per entry before compression.
      */
     int maxWatermarkerSize();
 
@@ -143,11 +141,6 @@ public interface CdcConfig
      */
     enum TopicFormatType
     {
-        STATIC,
-        KEYSPACE,
-        KEYSPACETABLE,
-        TABLE,
-        MAP
+        STATIC, KEYSPACE, KEYSPACETABLE, TABLE, MAP
     }
 }
-

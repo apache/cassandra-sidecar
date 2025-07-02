@@ -79,13 +79,11 @@ public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSch
     @NotNull
     public Map<String, String> getSettings(String... names) throws SchemaUnavailableException
     {
-        BoundStatement statement = tableSchema.selectSettings().bind(Arrays.asList(names));
+        BoundStatement statement = tableSchema.selectSettings()
+                                              .bind(Arrays.asList(names));
         ResultSet result = execute(statement);
         return result.all()
                      .stream()
-                     .collect(Collectors.toMap(
-                              row -> row.getString(0),
-                              row -> row.getString(1))
-                     );
+                     .collect(Collectors.toMap(row -> row.getString(0), row -> row.getString(1)));
     }
 }

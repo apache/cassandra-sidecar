@@ -43,10 +43,11 @@ public class VertxRequestExecutor extends RequestExecutor
      * Use vertx's primitives to schedule the delay
      *
      * @param delayMillis the delay before retrying in milliseconds
-     * @param runnable    the code to execute
+     * @param runnable the code to execute
      */
     @Override
-    protected void schedule(long delayMillis, Runnable runnable)
+    protected void schedule(long delayMillis,
+                            Runnable runnable)
     {
         if (delayMillis > 0)
         {
@@ -64,7 +65,10 @@ public class VertxRequestExecutor extends RequestExecutor
         super.close();
         try
         {
-            vertx.close().toCompletionStage().toCompletableFuture().get(1, TimeUnit.MINUTES);
+            vertx.close()
+                 .toCompletionStage()
+                 .toCompletableFuture()
+                 .get(1, TimeUnit.MINUTES);
         }
         catch (InterruptedException | ExecutionException | TimeoutException exception)
         {

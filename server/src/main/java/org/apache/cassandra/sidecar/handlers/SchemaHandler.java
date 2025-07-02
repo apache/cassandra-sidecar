@@ -40,8 +40,8 @@ public class SchemaHandler extends KeyspaceSchemaHandler
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the interface to retrieve metadata
-     * @param executorPools   executor pools for blocking executions
-     * @param validator       a validator instance to validate Cassandra-specific input
+     * @param executorPools executor pools for blocking executions
+     * @param validator a validator instance to validate Cassandra-specific input
      */
     @Inject
     protected SchemaHandler(InstanceMetadataFetcher metadataFetcher,

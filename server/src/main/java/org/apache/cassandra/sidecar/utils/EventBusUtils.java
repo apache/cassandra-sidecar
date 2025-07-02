@@ -35,12 +35,15 @@ public class EventBusUtils
 
     /**
      * Create a local consumer against the specific address. The consumer is going to receive the message at most once
+     *
      * @param eventBus event bus for message distribution
      * @param address the address that will register it at
      * @param handler the handler that will process the received messages
      * @param <T> message type
      */
-    public static <T> void onceLocalConsumer(EventBus eventBus, String address, Handler<Message<T>> handler)
+    public static <T> void onceLocalConsumer(EventBus eventBus,
+                                             String address,
+                                             Handler<Message<T>> handler)
     {
         MessageConsumer<T> consumer = eventBus.localConsumer(address);
         consumer.handler(msg -> {

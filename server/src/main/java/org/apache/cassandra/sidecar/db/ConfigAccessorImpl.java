@@ -17,23 +17,20 @@
  */
 package org.apache.cassandra.sidecar.db;
 
-import java.util.Map;
-import java.util.Optional;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
-
+import java.util.Map;
+import java.util.Optional;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Configurations for CDC feature are stored inside a table "config" in an internal sidecar keyspace.
- * {@link ConfigAccessorImpl} is an accessor for the above-mentioned table and encapsulates database
- * access operations of the "config" table.
+ * Configurations for CDC feature are stored inside a table "config" in an internal sidecar keyspace. {@link ConfigAccessorImpl} is an accessor for the
+ * above-mentioned table and encapsulates database access operations of the "config" table.
  */
 public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema> implements ConfigAccessor
 {

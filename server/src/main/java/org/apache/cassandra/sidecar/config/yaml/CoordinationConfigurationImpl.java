@@ -32,7 +32,8 @@ public class CoordinationConfigurationImpl implements CoordinationConfiguration
 
     public CoordinationConfigurationImpl()
     {
-        this(ClusterLeaseClaimConfigurationImpl.builder().build());
+        this(ClusterLeaseClaimConfigurationImpl.builder()
+                                               .build());
     }
 
     public CoordinationConfigurationImpl(ClusterLeaseClaimConfiguration clusterLeaseClaimConfiguration)

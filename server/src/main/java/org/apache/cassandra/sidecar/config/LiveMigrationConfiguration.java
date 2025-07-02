@@ -29,12 +29,14 @@ public interface LiveMigrationConfiguration
 
     /**
      * Files to be excluded from Live Migration.
+     *
      * @return set of file exclusion patterns.
      */
     Set<String> filesToExclude();
 
     /**
      * Directories to be excluded from Live Migration.
+     *
      * @return set of directory exclusion patterns.
      */
     Set<String> directoriesToExclude();

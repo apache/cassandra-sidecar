@@ -29,8 +29,8 @@ import org.apache.cassandra.sidecar.client.SidecarInstancesProvider;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * An instance selection policy that returns instances in random order, and does not necessarily return the instances
- * in the provided order from the underlying {@link Iterator} for the {@link SidecarInstancesProvider#instances()}.
+ * An instance selection policy that returns instances in random order, and does not necessarily return the instances in the provided order from the underlying
+ * {@link Iterator} for the {@link SidecarInstancesProvider#instances()}.
  */
 public class RandomInstanceSelectionPolicy extends OrderedInstanceSelectionPolicy
 {
@@ -45,8 +45,8 @@ public class RandomInstanceSelectionPolicy extends OrderedInstanceSelectionPolic
     }
 
     /**
-     * Returns an iterator of {@link SidecarInstance instances} in random order. This is a non-deterministic operation
-     * because the underlying list will be shuffled every time this iterator is called.
+     * Returns an iterator of {@link SidecarInstance instances} in random order. This is a non-deterministic operation because the underlying list will be
+     * shuffled every time this iterator is called.
      *
      * @return an iterator of {@link SidecarInstance instances} in random order
      */

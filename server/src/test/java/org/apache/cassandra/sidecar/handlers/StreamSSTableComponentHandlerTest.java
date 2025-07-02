@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
 import javax.management.InstanceNotFoundException;
 
 import org.junit.jupiter.api.AfterEach;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +84,8 @@ class StreamSSTableComponentHandlerTest
     @BeforeEach
     void setUp() throws InterruptedException
     {
-        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(testModule));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
+                                                        .with(testModule));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 
@@ -98,10 +101,14 @@ class StreamSSTableComponentHandlerTest
     void tearDown() throws InterruptedException
     {
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
-        registry().removeMatching((name, metric) -> true);
-        registry(1).removeMatching((name, metric) -> true);
-        registry(2).removeMatching((name, metric) -> true);
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
+        registry().removeMatching((name,
+                                   metric) -> true);
+        registry(1).removeMatching((name,
+                                    metric) -> true);
+        registry(2).removeMatching((name,
+                                    metric) -> true);
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else
@@ -109,8 +116,10 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testRoute(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testRoute(boolean useLegacyEndpoint,
+                   VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
@@ -130,8 +139,10 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void failsWhenKeyspaceContainsInvalidCharacters(boolean useLegacyEndpoint, VertxTestContext context) throws URISyntaxException
+    @ValueSource(booleans = { true, false})
+    void failsWhenKeyspaceContainsInvalidCharacters(boolean useLegacyEndpoint,
+                                                    VertxTestContext context)
+            throws URISyntaxException
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = testRoute(useLegacyEndpoint, "i_❤_u", TEST_TABLE);
@@ -144,14 +155,12 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "system_schema", "system_traces", "system_distributed", "system", "system_auth",
-                             "system_views", "system_virtual_schema" })
+    @ValueSource(strings = { "system_schema", "system_traces", "system_distributed", "system", "system_auth", "system_views", "system_virtual_schema"})
     void failsWhenKeyspaceIsForbidden(String forbiddenKeyspace) throws InterruptedException
     {
         VertxTestContext context = new VertxTestContext();
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspaces/" + forbiddenKeyspace + "/tables/table/snapshots/snapshot" +
-                           "/components/component-Data.db";
+        String testRoute = "/keyspaces/" + forbiddenKeyspace + "/tables/table/snapshots/snapshot" + "/components/component-Data.db";
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(FORBIDDEN.code());
@@ -165,29 +174,30 @@ class StreamSSTableComponentHandlerTest
     void testKeyspaceNotFound(VertxTestContext context) throws IOException
     {
         TableOperations mockTableOperations = mock(TableOperations.class);
-        when(mockTableOperations.getDataPaths("random", TEST_TABLE))
-        .thenThrow(new UndeclaredThrowableException(new InstanceNotFoundException("keyspace not found")));
+        when(mockTableOperations.getDataPaths("random", TEST_TABLE)).thenThrow(
+                new UndeclaredThrowableException(new InstanceNotFoundException("keyspace not found")));
         testModule.delegate.setTableOperations(mockTableOperations);
 
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspaces/random/tables/" + TEST_TABLE + "/snapshots" +
-                           "/TestSnapshot/components/nb-1-big-Data.db";
+        String testRoute = "/keyspaces/random/tables/" + TEST_TABLE + "/snapshots" + "/TestSnapshot/components/nb-1-big-Data.db";
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
-                  assertThat(response.bodyAsJsonObject().getString("message")).isEqualTo("keyspace/table combination not found");
+                  assertThat(response.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo("keyspace/table combination not found");
                   context.completeNow();
               })));
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testSnapshotNotFound(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testSnapshotNotFound(boolean useLegacyEndpoint,
+                              VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
-        String testRoute = testRoute(useLegacyEndpoint, TEST_KEYSPACE, TEST_TABLE, TEST_TABLE_ID,
-                                     "random", "nb-1-big-Data.db");
+        String testRoute = testRoute(useLegacyEndpoint, TEST_KEYSPACE, TEST_TABLE, TEST_TABLE_ID, "random", "nb-1-big-Data.db");
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
@@ -196,8 +206,9 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testForbiddenKeyspace(boolean useLegacyEndpoint, VertxTestContext context)
+    @ValueSource(booleans = { true, false})
+    void testForbiddenKeyspace(boolean useLegacyEndpoint,
+                               VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = testRoute(useLegacyEndpoint, "system", TEST_TABLE);
@@ -210,8 +221,9 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testIncorrectKeyspaceFormat(boolean useLegacyEndpoint, VertxTestContext context)
+    @ValueSource(booleans = { true, false})
+    void testIncorrectKeyspaceFormat(boolean useLegacyEndpoint,
+                                     VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = testRoute(useLegacyEndpoint, "k*s", TEST_TABLE);
@@ -224,13 +236,15 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testIncorrectComponentFormat(boolean useLegacyEndpoint, VertxTestContext context) throws IOException, URISyntaxException
+    @ValueSource(booleans = { true, false})
+    void testIncorrectComponentFormat(boolean useLegacyEndpoint,
+                                      VertxTestContext context)
+            throws IOException, URISyntaxException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
-        String testRoute = testRoute(useLegacyEndpoint, TEST_KEYSPACE, TEST_TABLE, TEST_TABLE_ID,
-                                     "TestSnapshot", TEST_KEYSPACE + "-" + TEST_TABLE + "-Data...db");
+        String testRoute = testRoute(useLegacyEndpoint, TEST_KEYSPACE, TEST_TABLE, TEST_TABLE_ID, "TestSnapshot",
+                TEST_KEYSPACE + "-" + TEST_TABLE + "-Data...db");
         client.get(server.actualPort(), "localhost", "/api/v1" + new URI(testRoute).toASCIIString())
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
@@ -240,13 +254,15 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testAccessDeniedToCertainComponents(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testAccessDeniedToCertainComponents(boolean useLegacyEndpoint,
+                                             VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
-        String testRoute = testRoute(useLegacyEndpoint, TEST_KEYSPACE, TEST_TABLE, TEST_TABLE_ID,
-                                     "TestSnapshot", TEST_KEYSPACE + "-" + TEST_TABLE + "-Digest.crc32d");
+        String testRoute = testRoute(useLegacyEndpoint, TEST_KEYSPACE, TEST_TABLE, TEST_TABLE_ID, "TestSnapshot",
+                TEST_KEYSPACE + "-" + TEST_TABLE + "-Digest.crc32d");
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
@@ -256,8 +272,10 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void failsWhenTableNameContainsInvalidCharacters(boolean useLegacyEndpoint, VertxTestContext context) throws URISyntaxException
+    @ValueSource(booleans = { true, false})
+    void failsWhenTableNameContainsInvalidCharacters(boolean useLegacyEndpoint,
+                                                     VertxTestContext context)
+            throws URISyntaxException
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = testRoute(useLegacyEndpoint, TEST_KEYSPACE, "i_❤_u");
@@ -270,21 +288,20 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "null-char\0-is-not-allowed" })
+    @ValueSource(strings = { "null-char\0-is-not-allowed"})
     void failsWhenSnapshotNameContainsInvalidCharacters(String invalidSnapshotName) throws InterruptedException, IOException
     {
         configureTableDirectoryLocations();
         VertxTestContext context = new VertxTestContext();
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/TestTable/snapshots/" +
-                           invalidSnapshotName + "/components/component-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/TestTable/snapshots/" + invalidSnapshotName + "/components/component-Data.db";
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .send()
               .onSuccess(response -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  assertThat(response.bodyAsJsonObject().getString("message"))
-                  .isEqualTo("Invalid characters in snapshot name: " + invalidSnapshotName);
+                  assertThat(response.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo("Invalid characters in snapshot name: " + invalidSnapshotName);
                   context.completeNow();
               })
               .onFailure(context::failNow);
@@ -292,13 +309,12 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "slash/is-not-allowed", "../../../etc/passwd" })
+    @ValueSource(strings = { "slash/is-not-allowed", "../../../etc/passwd"})
     void failsWhenSnapshotNameHasPathTraversalAttack(String invalidSnapshotName) throws InterruptedException, URISyntaxException
     {
         VertxTestContext context = new VertxTestContext();
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/TestTable/snapshots/" +
-                           invalidSnapshotName + "/components/component-Data.db";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/TestTable/snapshots/" + invalidSnapshotName + "/components/component-Data.db";
         String url = new URI("/api/v1" + testRoute).toASCIIString();
         client.get(server.actualPort(), "localhost", url)
               .send()
@@ -312,21 +328,21 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "i_❤_u.db", "this-is-not-allowed.jar" })
+    @ValueSource(strings = { "i_❤_u.db", "this-is-not-allowed.jar"})
     void failsWhenComponentNameContainsInvalidCharacters(String invalidComponentName) throws InterruptedException, URISyntaxException, IOException
     {
         configureTableDirectoryLocations();
         VertxTestContext context = new VertxTestContext();
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots/snap/components/" +
-                           invalidComponentName;
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots/snap/components/" + invalidComponentName;
         String url = new URI("/api/v1" + testRoute).toASCIIString();
         client.get(server.actualPort(), "localhost", url)
               .send()
               .onSuccess(response -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  assertThat(response.bodyAsJsonObject().getString("message")).isEqualTo("Invalid component name: " + invalidComponentName);
+                  assertThat(response.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo("Invalid component name: " + invalidComponentName);
                   context.completeNow();
               })
               .onFailure(context::failNow);
@@ -334,14 +350,13 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "../../../etc/passwd.db", "../not-an-index-file-Data.db" })
+    @ValueSource(strings = { "../../../etc/passwd.db", "../not-an-index-file-Data.db"})
     void failsWhenComponentNameHasPathTraversalAttack(String invalidComponentName) throws InterruptedException, URISyntaxException
     {
         // 404 is expected here as adding `/` means that a different route is created
         VertxTestContext context = new VertxTestContext();
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots/snap/components/" +
-                           invalidComponentName;
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/snapshots/snap/components/" + invalidComponentName;
         String url = new URI("/api/v1" + testRoute).toASCIIString();
         client.get(server.actualPort(), "localhost", url)
               .send()
@@ -355,20 +370,21 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "i_❤_u.db", "this_is_not_allowed.jar", "not_a_valid_hex", "aag" })
+    @ValueSource(strings = { "i_❤_u.db", "this_is_not_allowed.jar", "not_a_valid_hex", "aag"})
     void failsWhenTableIdContainsInvalidCharacters(String invalidTableId) throws InterruptedException, URISyntaxException
     {
         VertxTestContext context = new VertxTestContext();
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "-" + invalidTableId +
-                           "/snapshots/snap/components/nb-1-big-Data.db?dataDirectoryIndex=0";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "-" + invalidTableId
+                + "/snapshots/snap/components/nb-1-big-Data.db?dataDirectoryIndex=0";
         String url = new URI("/api/v1" + testRoute).toASCIIString();
         client.get(server.actualPort(), "localhost", url)
               .send()
               .onSuccess(response -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  assertThat(response.bodyAsJsonObject().getString("message")).isEqualTo("Invalid characters in table id: " + invalidTableId);
+                  assertThat(response.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo("Invalid characters in table id: " + invalidTableId);
                   context.completeNow();
               })
               .onFailure(context::failNow);
@@ -376,20 +392,21 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "53464aa75e6b3d8a84c4e87abbdcbbefa", "53464aa75e6b3d8a84c4e87abbdcbbefa5e6b3d8a84" })
+    @ValueSource(strings = { "53464aa75e6b3d8a84c4e87abbdcbbefa", "53464aa75e6b3d8a84c4e87abbdcbbefa5e6b3d8a84"})
     void failsWhenTableIdExceedsLength(String invalidTableId) throws InterruptedException, URISyntaxException
     {
         VertxTestContext context = new VertxTestContext();
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "-" + invalidTableId +
-                           "/snapshots/snap/components/nb-1-big-Data.db?dataDirectoryIndex=0";
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "-" + invalidTableId
+                + "/snapshots/snap/components/nb-1-big-Data.db?dataDirectoryIndex=0";
         String url = new URI("/api/v1" + testRoute).toASCIIString();
         client.get(server.actualPort(), "localhost", url)
               .send()
               .onSuccess(response -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  assertThat(response.bodyAsJsonObject().getString("message")).isEqualTo("tableId cannot be longer than 32 characters");
+                  assertThat(response.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo("tableId cannot be longer than 32 characters");
                   context.completeNow();
               })
               .onFailure(context::failNow);
@@ -397,20 +414,21 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { -1, 2, 100 })
+    @ValueSource(ints = { -1, 2, 100})
     void failsWhenDataDirectoryIndexIsOutOfRange(int dataDirectoryIndex) throws InterruptedException, URISyntaxException
     {
         VertxTestContext context = new VertxTestContext();
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "-abc123" +
-                           "/snapshots/snap/components/nb-1-big-Data.db?dataDirectoryIndex=" + dataDirectoryIndex;
+        String testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "-abc123"
+                + "/snapshots/snap/components/nb-1-big-Data.db?dataDirectoryIndex=" + dataDirectoryIndex;
         String url = new URI("/api/v1" + testRoute).toASCIIString();
         client.get(server.actualPort(), "localhost", url)
               .send()
               .onSuccess(response -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  assertThat(response.bodyAsJsonObject().getString("message")).isEqualTo("Invalid data directory index: " + dataDirectoryIndex);
+                  assertThat(response.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo("Invalid data directory index: " + dataDirectoryIndex);
                   context.completeNow();
               })
               .onFailure(context::failNow);
@@ -418,8 +436,10 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testPartialTableName(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testPartialTableName(boolean useLegacyEndpoint,
+                              VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
@@ -440,8 +460,10 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testInvalidRange(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testInvalidRange(boolean useLegacyEndpoint,
+                          VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
@@ -455,8 +477,10 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testRangeExceeds(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testRangeExceeds(boolean useLegacyEndpoint,
+                          VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
@@ -470,8 +494,10 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testPartialRangeExceeds(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testPartialRangeExceeds(boolean useLegacyEndpoint,
+                                 VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
@@ -485,8 +511,10 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testRangeBoundaryExceeds(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testRangeBoundaryExceeds(boolean useLegacyEndpoint,
+                                  VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
@@ -507,8 +535,10 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testPartialRangeStreamed(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testPartialRangeStreamed(boolean useLegacyEndpoint,
+                                  VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
@@ -529,8 +559,10 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testSuffixRange(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testSuffixRange(boolean useLegacyEndpoint,
+                         VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
@@ -551,8 +583,10 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testSuffixRangeExceeds(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testSuffixRangeExceeds(boolean useLegacyEndpoint,
+                                VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
@@ -562,9 +596,8 @@ class StreamSSTableComponentHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   vertx.setTimer(100, v -> {
                       assertThat(response.statusCode()).isEqualTo(OK.code());
-                      assertThat(response.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString()))
-                      .describedAs("Server should shrink the range to the file length")
-                      .isEqualTo("4");
+                      assertThat(response.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString())).describedAs("Server should shrink the range to the file length")
+                                                                                               .isEqualTo("4");
                       assertThat(instanceMetrics(1).streamSSTable()
                                                    .forComponent("Data.db").bytesStreamedRate.metric.getCount()).isEqualTo(4);
                       assertThat(instanceMetrics(1).streamSSTable().totalBytesStreamedRate.metric.getCount()).isEqualTo(4);
@@ -574,8 +607,10 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testInvalidRangeUnit(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testInvalidRangeUnit(boolean useLegacyEndpoint,
+                              VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
@@ -589,21 +624,22 @@ class StreamSSTableComponentHandlerTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void testStreamingFromSpecificInstance(boolean useLegacyEndpoint, VertxTestContext context) throws IOException
+    @ValueSource(booleans = { true, false})
+    void testStreamingFromSpecificInstance(boolean useLegacyEndpoint,
+                                           VertxTestContext context)
+            throws IOException
     {
         configureTableDirectoryLocations();
         WebClient client = WebClient.create(vertx);
         String testRoute;
         if (useLegacyEndpoint)
         {
-            testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/" +
-                        "snapshots/TestSnapshot/components/nb-1-big-Data.db?instanceId=2";
+            testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "/" + "snapshots/TestSnapshot/components/nb-1-big-Data.db?instanceId=2";
         }
         else
         {
-            testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "-" + TEST_TABLE_ID + "/" +
-                        "snapshots/TestSnapshot/components/nb-1-big-Data.db?dataDirectoryIndex=0&instanceId=2";
+            testRoute = "/keyspaces/" + TEST_KEYSPACE + "/tables/" + TEST_TABLE + "-" + TEST_TABLE_ID + "/"
+                    + "snapshots/TestSnapshot/components/nb-1-big-Data.db?dataDirectoryIndex=0&instanceId=2";
         }
 
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
@@ -627,12 +663,11 @@ class StreamSSTableComponentHandlerTest
 
     void configureTableDirectoryLocations() throws IOException
     {
-        List<String> tableDirectoryLocations = testModule.delegate
-                                               .storageOperations()
-                                               .dataFileLocations()
-                                               .stream()
-                                               .map(dataDir -> dataDir + "/" + TEST_KEYSPACE + "/" + TEST_TABLE + "-" + TEST_TABLE_ID)
-                                               .collect(Collectors.toList());
+        List<String> tableDirectoryLocations = testModule.delegate.storageOperations()
+                                                                  .dataFileLocations()
+                                                                  .stream()
+                                                                  .map(dataDir -> dataDir + "/" + TEST_KEYSPACE + "/" + TEST_TABLE + "-" + TEST_TABLE_ID)
+                                                                  .collect(Collectors.toList());
 
         TableOperations mockTableOperations = mock(TableOperations.class);
         when(mockTableOperations.getDataPaths(TEST_KEYSPACE, TEST_TABLE)).thenReturn(tableDirectoryLocations);
@@ -644,23 +679,28 @@ class StreamSSTableComponentHandlerTest
         return testRoute(useLegacyEndpoint, TEST_KEYSPACE, TEST_TABLE);
     }
 
-    static String testRoute(boolean useLegacyEndpoint, String keyspace, String table)
+    static String testRoute(boolean useLegacyEndpoint,
+                            String keyspace,
+                            String table)
     {
         return testRoute(useLegacyEndpoint, keyspace, table, TEST_TABLE_ID, "TestSnapshot", "nb-1-big-Data.db");
     }
 
-    static String testRoute(boolean useLegacyEndpoint, String keyspace, String table, String tableId,
-                            String snapshot, String component)
+    static String testRoute(boolean useLegacyEndpoint,
+                            String keyspace,
+                            String table,
+                            String tableId,
+                            String snapshot,
+                            String component)
     {
         if (useLegacyEndpoint)
         {
-            return "/keyspaces/" + keyspace + "/tables/" + table + "/snapshots" +
-                   "/" + snapshot + "/components/" + component;
+            return "/keyspaces/" + keyspace + "/tables/" + table + "/snapshots" + "/" + snapshot + "/components/" + component;
         }
         else
         {
-            return "/keyspaces/" + keyspace + "/tables/" + table + "-" + tableId + "/snapshots" +
-                   "/" + snapshot + "/components/" + component + "?dataDirectoryIndex=0";
+            return "/keyspaces/" + keyspace + "/tables/" + table + "-" + tableId + "/snapshots" + "/" + snapshot + "/components/" + component
+                    + "?dataDirectoryIndex=0";
         }
     }
 }

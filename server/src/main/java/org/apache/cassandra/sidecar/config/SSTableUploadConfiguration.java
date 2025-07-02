@@ -36,11 +36,10 @@ public interface SSTableUploadConfiguration
     float minimumSpacePercentageRequired();
 
     /**
-     * Returns the String representation of a set of posix file permissions used during an SSTable file upload.
-     * When an SSTable file is created the specified permissions will be used to create the file.
-     * For example, the String {@code rw-r--r--} represents the set of permissions
-     * {@link PosixFilePermission#OWNER_READ}, {@link PosixFilePermission#OWNER_WRITE},
-     * {@link PosixFilePermission#GROUP_READ}, and {@link PosixFilePermission#OTHERS_READ}.
+     * Returns the String representation of a set of posix file permissions used during an SSTable file upload. When an SSTable file is created the specified
+     * permissions will be used to create the file. For example, the String {@code rw-r--r--} represents the set of permissions
+     * {@link PosixFilePermission#OWNER_READ}, {@link PosixFilePermission#OWNER_WRITE}, {@link PosixFilePermission#GROUP_READ}, and
+     * {@link PosixFilePermission#OTHERS_READ}.
      *
      * @return the String representation of a set of posix file permissions used during an SSTable file upload
      */

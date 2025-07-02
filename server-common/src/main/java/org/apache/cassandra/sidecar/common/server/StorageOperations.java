@@ -38,22 +38,26 @@ public interface StorageOperations
     /**
      * Takes the snapshot of a multiple column family from different keyspaces. A snapshot name must be specified.
      *
-     * @param tag      the tag given to the snapshot; may not be null or empty
+     * @param tag the tag given to the snapshot; may not be null or empty
      * @param keyspace the keyspace in the Cassandra database to use for the snapshot
-     * @param table    the table in the Cassandra database to use for the snapshot
-     * @param options  map of options, for example ttl, skipFlush
+     * @param table the table in the Cassandra database to use for the snapshot
+     * @param options map of options, for example ttl, skipFlush
      */
-    void takeSnapshot(@NotNull String tag, @NotNull String keyspace, @NotNull String table,
+    void takeSnapshot(@NotNull String tag,
+                      @NotNull String keyspace,
+                      @NotNull String table,
                       @Nullable Map<String, String> options);
 
     /**
      * Remove the snapshot with the given {@code tag} from the given {@code keyspace}/{@code table}.
      *
-     * @param tag      the tag used to create the snapshot (name of the snapshot)
+     * @param tag the tag used to create the snapshot (name of the snapshot)
      * @param keyspace the keyspace in the Cassandra database to use for the snapshot
-     * @param table    the table in the Cassandra database to use for the snapshot
+     * @param table the table in the Cassandra database to use for the snapshot
      */
-    void clearSnapshot(@NotNull String tag, @NotNull String keyspace, @NotNull String table);
+    void clearSnapshot(@NotNull String tag,
+                       @NotNull String keyspace,
+                       @NotNull String table);
 
     /**
      * Get the ring view of the cluster
@@ -62,18 +66,18 @@ public interface StorageOperations
      * @return ring view
      * @throws UnknownHostException when hostname of peer Cassandra nodes cannot be resolved
      *
-     * TODO: refactor. Do not return http response payload object from this layer.
+     *             TODO: refactor. Do not return http response payload object from this layer.
      */
     RingResponse ring(@Nullable Name keyspace) throws UnknownHostException;
 
     /**
      * Get the token ranges and the corresponding read and write replicas by datacenter
      *
-     * @param keyspace    the keyspace in the Cassandra database
+     * @param keyspace the keyspace in the Cassandra database
      * @param partitioner token partitioner used for token assignment
      * @return token range to read and write replica mappings
      *
-     * TODO: refactor. Do not return http response payload object from this layer.
+     *         TODO: refactor. Do not return http response payload object from this layer.
      */
     TokenRangeReplicasResponse tokenRangeReplicas(@NotNull Name keyspace,
                                                   @NotNull String partitioner);
@@ -88,20 +92,22 @@ public interface StorageOperations
      *
      * @param keyspace keyspace of the table to clean
      * @param table table to clean
-     * @param concurrency concurrency of the cleanup (compaction) job.
-     *                    Note that it cannot exceed the configured `concurrent_compactors` in Cassandra
+     * @param concurrency concurrency of the cleanup (compaction) job. Note that it cannot exceed the configured `concurrent_compactors` in Cassandra
      * @throws IOException i/o exception during cleanup
      * @throws ExecutionException it does not really throw but declared in MBean
      * @throws InterruptedException it does not really throw but declared in MBean
      */
-    void outOfRangeDataCleanup(@NotNull String keyspace, @NotNull String table, int concurrency)
-    throws IOException, ExecutionException, InterruptedException;
+    void outOfRangeDataCleanup(@NotNull String keyspace,
+                               @NotNull String table,
+                               int concurrency)
+            throws IOException, ExecutionException, InterruptedException;
 
     /**
      * Similar to {@link #outOfRangeDataCleanup(String, String, int)}, but use 1 for concurrency
      */
-    default void outOfRangeDataCleanup(@NotNull String keyspace, @NotNull String table)
-    throws IOException, ExecutionException, InterruptedException
+    default void outOfRangeDataCleanup(@NotNull String keyspace,
+                                       @NotNull String table)
+            throws IOException, ExecutionException, InterruptedException
     {
         outOfRangeDataCleanup(keyspace, table, 1);
     }

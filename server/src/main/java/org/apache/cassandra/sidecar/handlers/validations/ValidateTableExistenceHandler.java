@@ -38,10 +38,8 @@ import org.jetbrains.annotations.NotNull;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * Validate the request table (and the keyspace) should exist in Cassandra, when the endpoint
- * contains keyspace and/or table names.
- * On successful validation, it stores the fetched {@link KeyspaceMetadata} and {@link TableMetadata}
- * in the {@link RoutingContext}
+ * Validate the request table (and the keyspace) should exist in Cassandra, when the endpoint contains keyspace and/or table names. On successful validation, it
+ * stores the fetched {@link KeyspaceMetadata} and {@link TableMetadata} in the {@link RoutingContext}
  */
 @Singleton
 public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTableName>
@@ -76,45 +74,46 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
             return;
         }
 
-        getKeyspaceMetadata(host, input.keyspace())
-        .onFailure(context::fail) // fail the request with the internal server error thrown from getKeyspaceMetadata
-        .onSuccess(keyspaceMetadata -> {
-            if (keyspaceMetadata == null)
-            {
-                context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND,
-                                               "Keyspace " + input.keyspace() + " was not found"));
-                return;
-            }
+        getKeyspaceMetadata(host, input.keyspace()).onFailure(context::fail) // fail the request with the internal server error thrown from getKeyspaceMetadata
+                                                   .onSuccess(keyspaceMetadata -> {
+                                                       if (keyspaceMetadata == null)
+                                                       {
+                                                           context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND,
+                                                                   "Keyspace " + input.keyspace() + " was not found"));
+                                                           return;
+                                                       }
 
-            RoutingContextUtils.put(context, RoutingContextUtils.SC_KEYSPACE_METADATA, keyspaceMetadata);
+                                                       RoutingContextUtils.put(context, RoutingContextUtils.SC_KEYSPACE_METADATA, keyspaceMetadata);
 
-            String table = input.tableName();
-            if (table == null)
-            {
-                context.next();
-                return;
-            }
+                                                       String table = input.tableName();
+                                                       if (table == null)
+                                                       {
+                                                           context.next();
+                                                           return;
+                                                       }
 
-            TableMetadata tableMetadata = keyspaceMetadata.getTable(table);
-            if (tableMetadata == null)
-            {
-                String errMsg = "Table " + input.tableName() + " was not found for keyspace " + input.keyspace();
-                context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, errMsg));
-            }
-            else
-            {
-                RoutingContextUtils.put(context, RoutingContextUtils.SC_TABLE_METADATA, tableMetadata);
-                // keyspace / [table] exists
-                context.next();
-            }
-        });
+                                                       TableMetadata tableMetadata = keyspaceMetadata.getTable(table);
+                                                       if (tableMetadata == null)
+                                                       {
+                                                           String errMsg = "Table " + input.tableName() + " was not found for keyspace " + input.keyspace();
+                                                           context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, errMsg));
+                                                       }
+                                                       else
+                                                       {
+                                                           RoutingContextUtils.put(context, RoutingContextUtils.SC_TABLE_METADATA, tableMetadata);
+                                                           // keyspace / [table] exists
+                                                           context.next();
+                                                       }
+                                                   });
     }
 
-    private Future<KeyspaceMetadata> getKeyspaceMetadata(String host, String keyspace)
+    private Future<KeyspaceMetadata> getKeyspaceMetadata(String host,
+                                                         String keyspace)
     {
-        return executorPools.service().executeBlocking(() -> metadataFetcher.instance(host)
-                                                                            .delegate()
-                                                                            .metadata()
-                                                                            .getKeyspace(keyspace));
+        return executorPools.service()
+                            .executeBlocking(() -> metadataFetcher.instance(host)
+                                                                  .delegate()
+                                                                  .metadata()
+                                                                  .getKeyspace(keyspace));
     }
 }

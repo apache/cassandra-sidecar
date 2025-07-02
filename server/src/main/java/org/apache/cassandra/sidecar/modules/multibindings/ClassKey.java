@@ -21,4 +21,6 @@ package org.apache.cassandra.sidecar.modules.multibindings;
 /**
  * Key for map bindings. Defines the type lower bound in {@link KeyClassMapKey} value
  */
-public interface ClassKey {}
+public interface ClassKey
+{
+}

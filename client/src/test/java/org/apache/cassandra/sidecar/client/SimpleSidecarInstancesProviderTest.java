@@ -35,17 +35,15 @@ class SimpleSidecarInstancesProviderTest
     @Test
     void testConstructionFailsWhenInstancesAreNull()
     {
-        assertThatIllegalArgumentException()
-        .isThrownBy(() -> new SimpleSidecarInstancesProvider(null))
-        .withMessage("The instances parameter must be non-null and must contain at least one element");
+        assertThatIllegalArgumentException().isThrownBy(() -> new SimpleSidecarInstancesProvider(null))
+                                            .withMessage("The instances parameter must be non-null and must contain at least one element");
     }
 
     @Test
     void testConstructionFailsWhenInstancesAreEmpty()
     {
-        assertThatIllegalArgumentException()
-        .isThrownBy(() -> new SimpleSidecarInstancesProvider(Collections.emptyList()))
-        .withMessage("The instances parameter must be non-null and must contain at least one element");
+        assertThatIllegalArgumentException().isThrownBy(() -> new SimpleSidecarInstancesProvider(Collections.emptyList()))
+                                            .withMessage("The instances parameter must be non-null and must contain at least one element");
     }
 
     @Test
@@ -61,7 +59,7 @@ class SimpleSidecarInstancesProviderTest
     {
         List<SidecarInstanceImpl> instances = Collections.singletonList(new SidecarInstanceImpl("localhost", 9043));
         SidecarInstancesProvider instancesProvider = new SimpleSidecarInstancesProvider(instances);
-        assertThatExceptionOfType(UnsupportedOperationException.class)
-        .isThrownBy(() -> instancesProvider.instances().add(new SidecarInstanceImpl("bad", 80)));
+        assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> instancesProvider.instances()
+                                                                                                         .add(new SidecarInstanceImpl("bad", 80)));
     }
 }

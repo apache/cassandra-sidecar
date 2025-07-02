@@ -26,13 +26,11 @@ import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayloa
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * Base handler for "node command" endpoints (e.g. start/stop gossip or native transport).
- * Extracts a {@link NodeCommandRequestPayload} from the request body, validates it,
- * and defers to subclasses in {@link #handleInternal} to perform the actual operation.
+ * Base handler for "node command" endpoints (e.g. start/stop gossip or native transport). Extracts a {@link NodeCommandRequestPayload} from the request body,
+ * validates it, and defers to subclasses in {@link #handleInternal} to perform the actual operation.
  */
 public abstract class NodeCommandHandler extends AbstractHandler<NodeCommandRequestPayload>
 {
@@ -40,10 +38,12 @@ public abstract class NodeCommandHandler extends AbstractHandler<NodeCommandRequ
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the interface to retrieve instance metadata
-     * @param executorPools   the executor pools for blocking executions
-     * @param validator       a validator instance to validate Cassandra-specific input
+     * @param executorPools the executor pools for blocking executions
+     * @param validator a validator instance to validate Cassandra-specific input
      */
-    protected NodeCommandHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools, CassandraInputValidator validator)
+    protected NodeCommandHandler(InstanceMetadataFetcher metadataFetcher,
+                                 ExecutorPools executorPools,
+                                 CassandraInputValidator validator)
     {
         super(metadataFetcher, executorPools, validator);
     }
@@ -57,7 +57,8 @@ public abstract class NodeCommandHandler extends AbstractHandler<NodeCommandRequ
     @Override
     protected NodeCommandRequestPayload extractParamsOrThrow(RoutingContext ctx)
     {
-        String body = ctx.body().asString();
+        String body = ctx.body()
+                         .asString();
         if (body == null || body.equalsIgnoreCase("null"))
         {
             logger.warn("Bad request. Received null payload.");

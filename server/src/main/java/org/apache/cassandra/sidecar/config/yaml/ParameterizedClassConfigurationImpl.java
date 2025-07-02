@@ -18,9 +18,8 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Map;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,7 +40,8 @@ public class ParameterizedClassConfigurationImpl implements ParameterizedClassCo
         this.parameters = null;
     }
 
-    public ParameterizedClassConfigurationImpl(String className, Map<String, String> parameters)
+    public ParameterizedClassConfigurationImpl(String className,
+                                               Map<String, String> parameters)
     {
         this.className = className;
         this.parameters = parameters;

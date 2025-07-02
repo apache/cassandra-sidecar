@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
+import com.codahale.metrics.MetricRegistry;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -27,12 +28,6 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import com.google.common.util.concurrent.Uninterruptibles;
-import org.apache.commons.lang3.RandomUtils;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadataImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -47,7 +42,10 @@ import org.apache.cassandra.sidecar.metrics.server.ServerMetrics;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 import org.mockito.stubbing.Answer;
-
+import com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.commons.lang3.RandomUtils;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -72,8 +70,7 @@ public class CdcRawDirectorySpaceCleanerTest
     {
         TimeProvider timeProvider = TimeProvider.DEFAULT_TIME_PROVIDER;
         SystemViewsDatabaseAccessor systemViewsDatabaseAccessor = mock(SystemViewsDatabaseAccessor.class);
-        when(systemViewsDatabaseAccessor.getSettings(any()))
-        .thenAnswer((Answer<Map<String, String>>) invocation -> Map.of("cdc_total_space", "1MiB"));
+        when(systemViewsDatabaseAccessor.getSettings(any())).thenAnswer((Answer<Map<String, String>>) invocation -> Map.of("cdc_total_space", "1MiB"));
         when(systemViewsDatabaseAccessor.getCdcTotalSpaceSetting()).thenCallRealMethod();
         CdcConfiguration cdcConfiguration = new CdcConfigurationImpl();
         ServiceConfiguration serviceConfiguration = mock(ServiceConfiguration.class);
@@ -85,13 +82,8 @@ public class CdcRawDirectorySpaceCleanerTest
         CdcMetrics cdcMetrics = new CdcMetrics(METRIC_REGISTRY);
         when(sidecarMetrics.server()).thenReturn(serverMetrics);
         when(serverMetrics.cdc()).thenReturn(cdcMetrics);
-        CdcRawDirectorySpaceCleaner cleaner = new CdcRawDirectorySpaceCleaner(
-        timeProvider,
-        systemViewsDatabaseAccessor,
-        serviceConfiguration,
-        instancesMetadata,
-        sidecarMetrics
-        );
+        CdcRawDirectorySpaceCleaner cleaner = new CdcRawDirectorySpaceCleaner(timeProvider, systemViewsDatabaseAccessor, serviceConfiguration,
+                instancesMetadata, sidecarMetrics);
 
         checkExists(tempDir, TEST_ORPHANED_SEGMENT_FILE_NAME, true, false);
         checkExists(tempDir, TEST_SEGMENT_FILE_NAME_1);
@@ -133,7 +125,8 @@ public class CdcRawDirectorySpaceCleanerTest
     {
         InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
 
-        File cdcDir = Files.createDirectory(tempDir.resolve(CdcRawDirectorySpaceCleaner.CDC_DIR_NAME)).toFile();
+        File cdcDir = Files.createDirectory(tempDir.resolve(CdcRawDirectorySpaceCleaner.CDC_DIR_NAME))
+                           .toFile();
         writeCdcSegment(cdcDir, TEST_ORPHANED_SEGMENT_FILE_NAME, 67108864, true, true, false);
         writeCdcSegment(cdcDir, TEST_SEGMENT_FILE_NAME_1, 2097152, true);
         writeCdcSegment(cdcDir, TEST_SEGMENT_FILE_NAME_2, 524288, true);
@@ -147,12 +140,22 @@ public class CdcRawDirectorySpaceCleanerTest
         return new InstancesMetadataImpl(instanceMetadata, DnsResolvers.DEFAULT);
     }
 
-    private static void writeCdcSegment(File cdcDir, String filename, int size, boolean complete) throws IOException
+    private static void writeCdcSegment(File cdcDir,
+                                        String filename,
+                                        int size,
+                                        boolean complete)
+            throws IOException
     {
         writeCdcSegment(cdcDir, filename, size, complete, false, false);
     }
 
-    private static void writeCdcSegment(File cdcDir, String filename, int size, boolean complete, boolean orphaned, boolean intact) throws IOException
+    private static void writeCdcSegment(File cdcDir,
+                                        String filename,
+                                        int size,
+                                        boolean complete,
+                                        boolean orphaned,
+                                        boolean intact)
+            throws IOException
     {
         if (!orphaned)
         {
@@ -169,18 +172,23 @@ public class CdcRawDirectorySpaceCleanerTest
         }
     }
 
-    private void checkExists(Path tempDir, String logFileName)
+    private void checkExists(Path tempDir,
+                             String logFileName)
     {
         checkExists(tempDir, logFileName, false, false);
     }
 
-    private void checkExists(Path tempDir, String logFileName, boolean orphaned, boolean intact)
+    private void checkExists(Path tempDir,
+                             String logFileName,
+                             boolean orphaned,
+                             boolean intact)
     {
         assertEquals(!orphaned, Files.exists(Paths.get(tempDir.toString(), CdcRawDirectorySpaceCleaner.CDC_DIR_NAME, logFileName)));
         assertEquals(!intact, Files.exists(Paths.get(tempDir.toString(), CdcRawDirectorySpaceCleaner.CDC_DIR_NAME, CdcUtil.getIdxFileName(logFileName))));
     }
 
-    private void checkNotExists(Path tempDir, String logFileName)
+    private void checkNotExists(Path tempDir,
+                                String logFileName)
     {
         assertFalse(Files.exists(Paths.get(tempDir.toString(), CdcRawDirectorySpaceCleaner.CDC_DIR_NAME, logFileName)));
         assertFalse(Files.exists(Paths.get(tempDir.toString(), CdcRawDirectorySpaceCleaner.CDC_DIR_NAME, CdcUtil.getIdxFileName(logFileName))));

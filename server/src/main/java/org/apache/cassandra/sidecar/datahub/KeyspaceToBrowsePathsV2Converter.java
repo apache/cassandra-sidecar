@@ -42,16 +42,12 @@ public class KeyspaceToBrowsePathsV2Converter extends KeyspaceToAspectConverter<
     {
         String urn = identifiers.urnContainer(keyspace);
 
-        BrowsePathsV2 aspect = new BrowsePathsV2().setPath(new BrowsePathEntryArray(
-                new BrowsePathEntry()
-                        .setId(identifiers.environment())
-                        .setUrn(null, SetMode.REMOVE_IF_NULL),
-                new BrowsePathEntry()
-                        .setId(identifiers.application())
-                        .setUrn(null, SetMode.REMOVE_IF_NULL),
-                new BrowsePathEntry()
-                        .setId(identifiers.cluster())
-                        .setUrn(null, SetMode.REMOVE_IF_NULL)));
+        BrowsePathsV2 aspect = new BrowsePathsV2().setPath(new BrowsePathEntryArray(new BrowsePathEntry().setId(identifiers.environment())
+                                                                                                         .setUrn(null, SetMode.REMOVE_IF_NULL),
+                new BrowsePathEntry().setId(identifiers.application())
+                                     .setUrn(null, SetMode.REMOVE_IF_NULL),
+                new BrowsePathEntry().setId(identifiers.cluster())
+                                     .setUrn(null, SetMode.REMOVE_IF_NULL)));
 
         return wrap(urn, aspect);
     }

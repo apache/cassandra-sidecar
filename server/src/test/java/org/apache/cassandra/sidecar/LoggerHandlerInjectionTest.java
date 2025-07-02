@@ -18,17 +18,6 @@
 
 package org.apache.cassandra.sidecar;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
@@ -45,9 +34,17 @@ import io.vertx.ext.web.handler.LoggerFormatter;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -75,7 +72,8 @@ public class LoggerHandlerInjectionTest
         vertx = injector.getInstance(Vertx.class);
         Router router = injector.getInstance(Router.class);
 
-        router.get("/fake-route").handler(promise -> promise.json("done"));
+        router.get("/fake-route")
+              .handler(promise -> promise.json("done"));
 
         VertxTestContext context = new VertxTestContext();
         server = injector.getInstance(Server.class);
@@ -90,7 +88,8 @@ public class LoggerHandlerInjectionTest
     void tearDown() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
         {
             logger.info("Close event received before timeout.");
@@ -111,7 +110,8 @@ public class LoggerHandlerInjectionTest
             testContext.completeNow();
         });
         client.get(server.actualPort(), "localhost", "/fake-route")
-              .as(BodyCodec.string()).ssl(false)
+              .as(BodyCodec.string())
+              .ssl(false)
               .send(testContext.succeeding(responseVerifier));
     }
 
@@ -140,7 +140,8 @@ public class LoggerHandlerInjectionTest
         public void handle(RoutingContext context)
         {
             HttpServerRequest request = context.request();
-            context.addBodyEndHandler(v -> logger.info("{}", request.response().getStatusCode()));
+            context.addBodyEndHandler(v -> logger.info("{}", request.response()
+                                                                    .getStatusCode()));
             context.next();
         }
     }

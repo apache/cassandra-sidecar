@@ -45,7 +45,8 @@ public class RestoreSliceTest
         RestoreSlice slice1 = createTestingSlice(jobId, "slice-id", 0L, 10L);
         RestoreSlice slice2 = createTestingSlice(jobId, "slice-id", 0L, 10L);
         assertThat(slice1).isEqualTo(slice2);
-        RestoreSlice slice3 = slice1.unbuild().build();
+        RestoreSlice slice3 = slice1.unbuild()
+                                    .build();
         assertThat(slice1).isEqualTo(slice3);
     }
 
@@ -53,10 +54,14 @@ public class RestoreSliceTest
     void testNotEquals()
     {
         RestoreSlice slice1 = createTestingSlice(UUIDs.timeBased(), "slice-id", 0L, 10L);
-        RestoreSlice slice2 = slice1.unbuild().endToken(BigInteger.valueOf(20L)).build();
+        RestoreSlice slice2 = slice1.unbuild()
+                                    .endToken(BigInteger.valueOf(20L))
+                                    .build();
         assertThat(slice1).isNotEqualTo(slice2);
 
-        RestoreSlice slice3 = slice1.unbuild().compressedSize(123).build();
+        RestoreSlice slice3 = slice1.unbuild()
+                                    .compressedSize(123)
+                                    .build();
         assertThat(slice1).isNotEqualTo(slice3);
         assertThat(slice2).isNotEqualTo(slice3);
     }
@@ -86,20 +91,20 @@ public class RestoreSliceTest
     @Test
     void testCreateFromPayload()
     {
-        CreateSliceRequestPayload payload = new CreateSliceRequestPayload("slice-id", 0, "bucket", "key", "checksum",
-                                                                          BigInteger.ONE, // first token
-                                                                          BigInteger.TEN, // end token
-                                                                          123L, // uncompressed size
-                                                                          100L); // compressed size
-        RestoreSlice slice = RestoreSlice.builder().createSliceRequestPayload(payload).build();
+        CreateSliceRequestPayload payload = new CreateSliceRequestPayload("slice-id", 0, "bucket", "key", "checksum", BigInteger.ONE, // first token
+                BigInteger.TEN, // end token
+                123L, // uncompressed size
+                100L); // compressed size
+        RestoreSlice slice = RestoreSlice.builder()
+                                         .createSliceRequestPayload(payload)
+                                         .build();
         assertThat(slice.sliceId()).isEqualTo("slice-id");
         assertThat(slice.bucketId()).isEqualTo((short) 0);
         assertThat(slice.bucket()).isEqualTo("bucket");
         assertThat(slice.key()).isEqualTo("key");
         assertThat(slice.checksum()).isEqualTo("checksum");
-        assertThat(slice.startToken())
-        .describedAs("Start token is exclusive end in the range")
-        .isEqualTo(BigInteger.ZERO);
+        assertThat(slice.startToken()).describedAs("Start token is exclusive end in the range")
+                                      .isEqualTo(BigInteger.ZERO);
         assertThat(slice.endToken()).isEqualTo(BigInteger.TEN);
         assertThat(slice.uncompressedSize()).isEqualTo(123L);
         assertThat(slice.compressedSize()).isEqualTo(100L);
@@ -110,9 +115,8 @@ public class RestoreSliceTest
     {
         RestoreSlice slice = createTestingSlice(UUIDs.timeBased(), "slice-id", 0L, 10L);
         RestoreSlice result = slice.trimMaybe(new TokenRange(-10L, 10L));
-        assertThat(result)
-        .describedAs("No trim is done when fully enclosed by the local token range")
-        .isSameAs(slice);
+        assertThat(result).describedAs("No trim is done when fully enclosed by the local token range")
+                          .isSameAs(slice);
     }
 
     @Test
@@ -120,28 +124,34 @@ public class RestoreSliceTest
     {
         RestoreSlice slice = createTestingSlice(UUIDs.timeBased(), "slice-id", 0L, 10L);
         // (0, 10] does not intersect with (100, 110]
-        assertThatThrownBy(() -> slice.trimMaybe(new TokenRange(100L, 110L)))
-        .isExactlyInstanceOf(IllegalStateException.class)
-        .hasMessage("Token range of the slice does not intersect with the local token range. " +
-                    "slice_range: TokenRange(0, 10], local_range: TokenRange(100, 110]");
+        assertThatThrownBy(() -> slice.trimMaybe(new TokenRange(100L, 110L))).isExactlyInstanceOf(IllegalStateException.class)
+                                                                             .hasMessage(
+                                                                                     "Token range of the slice does not intersect with the local token range. "
+                                                                                             + "slice_range: TokenRange(0, 10], local_range: TokenRange(100, 110]");
     }
 
-    public static RestoreSlice createTestingSlice(RestoreJob restoreJob, String sliceId, long startToken, long endToken)
+    public static RestoreSlice createTestingSlice(RestoreJob restoreJob,
+                                                  String sliceId,
+                                                  long startToken,
+                                                  long endToken)
     {
-        return createTestingSlice(restoreJob.jobId, sliceId, startToken, endToken)
-               .unbuild()
-               .keyspace(restoreJob.keyspaceName)
-               .table(restoreJob.tableName)
-               .build();
+        return createTestingSlice(restoreJob.jobId, sliceId, startToken, endToken).unbuild()
+                                                                                  .keyspace(restoreJob.keyspaceName)
+                                                                                  .table(restoreJob.tableName)
+                                                                                  .build();
     }
 
-    public static RestoreSlice createTestingSlice(UUID jobId, String sliceId, long startToken, long endToken)
+    public static RestoreSlice createTestingSlice(UUID jobId,
+                                                  String sliceId,
+                                                  long startToken,
+                                                  long endToken)
     {
         return RestoreSlice.builder()
                            .jobId(jobId)
                            .keyspace("keyspace")
                            .table("table")
-                           .sliceId(sliceId).bucketId((short) 0)
+                           .sliceId(sliceId)
+                           .bucketId((short) 0)
                            .storageBucket("myBucket")
                            .storageKey("myKey")
                            .checksum("checksum")

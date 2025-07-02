@@ -18,12 +18,10 @@
 
 package org.apache.cassandra.testing.utils;
 
+import io.vertx.core.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
 import com.google.common.util.concurrent.Uninterruptibles;
-
-import io.vertx.core.Future;
 
 /**
  * Collection of methods to assist while asserting conditions in tests
@@ -36,25 +34,26 @@ public class AssertionUtils
     }
 
     /**
-     * Run the assertions in a loop until the first success within the timeout.
-     * Otherwise, it fails with the last assertion failure.
+     * Run the assertions in a loop until the first success within the timeout. Otherwise, it fails with the last assertion failure.
      *
      * @param timeoutSeconds timeout
-     * @param assertions     assertions
+     * @param assertions assertions
      */
-    public static void loopAssert(int timeoutSeconds, Runnable assertions)
+    public static void loopAssert(int timeoutSeconds,
+                                  Runnable assertions)
     {
         loopAssert(timeoutSeconds, 100, assertions);
     }
 
     /**
-     * Run the assertions in a loop until the first success within the timeout.
-     * Otherwise, it fails with the last assertion failure.
+     * Run the assertions in a loop until the first success within the timeout. Otherwise, it fails with the last assertion failure.
      *
      * @param timeoutSeconds timeout
-     * @param assertions     assertions
+     * @param assertions assertions
      */
-    public static void loopAssert(int timeoutSeconds, int delayMillis, Runnable assertions)
+    public static void loopAssert(int timeoutSeconds,
+                                  int delayMillis,
+                                  Runnable assertions)
     {
         long start = System.nanoTime();
         long timeout = TimeUnit.SECONDS.toNanos(timeoutSeconds);
@@ -87,7 +86,9 @@ public class AssertionUtils
     {
         try
         {
-            return fut.toCompletionStage().toCompletableFuture().get();
+            return fut.toCompletionStage()
+                      .toCompletableFuture()
+                      .get();
         }
         catch (Exception exception)
         {
@@ -95,11 +96,16 @@ public class AssertionUtils
         }
     }
 
-    public static <T> T getBlocking(Future<T> future, long timeout, TimeUnit timeUnit, String hint)
+    public static <T> T getBlocking(Future<T> future,
+                                    long timeout,
+                                    TimeUnit timeUnit,
+                                    String hint)
     {
         try
         {
-            return future.toCompletionStage().toCompletableFuture().get(timeout, timeUnit);
+            return future.toCompletionStage()
+                         .toCompletableFuture()
+                         .get(timeout, timeUnit);
         }
         catch (TimeoutException te)
         {

@@ -29,7 +29,8 @@ public class StreamCdcSegmentRequest extends Request
 {
     private final HttpRange range;
 
-    public StreamCdcSegmentRequest(String segment, HttpRange range)
+    public StreamCdcSegmentRequest(String segment,
+                                   HttpRange range)
     {
         super(requestURI(segment));
         this.range = range;

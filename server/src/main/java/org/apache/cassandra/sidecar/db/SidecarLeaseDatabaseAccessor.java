@@ -34,13 +34,15 @@ import org.jetbrains.annotations.VisibleForTesting;
 public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseSchema>
 {
     @Inject
-    public SidecarLeaseDatabaseAccessor(SidecarSchema sidecarSchema, CQLSessionProvider sessionProvider)
+    public SidecarLeaseDatabaseAccessor(SidecarSchema sidecarSchema,
+                                        CQLSessionProvider sessionProvider)
     {
         this(sidecarSchema.tableSchema(SidecarLeaseSchema.class), sessionProvider);
     }
 
     @VisibleForTesting
-    public SidecarLeaseDatabaseAccessor(SidecarLeaseSchema leaseSchema, CQLSessionProvider sessionProvider)
+    public SidecarLeaseDatabaseAccessor(SidecarLeaseSchema leaseSchema,
+                                        CQLSessionProvider sessionProvider)
     {
         super(leaseSchema, sessionProvider);
     }
@@ -54,7 +56,8 @@ public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseS
      */
     public LeaseClaimResult claimLease(String leaseClaimer)
     {
-        BoundStatement statement = tableSchema.claimLeaseStatement().bind(leaseClaimer);
+        BoundStatement statement = tableSchema.claimLeaseStatement()
+                                              .bind(leaseClaimer);
         ResultSet resultSet = execute(statement);
         return LeaseClaimResult.from(resultSet, leaseClaimer);
     }
@@ -68,7 +71,8 @@ public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseS
      */
     public LeaseClaimResult extendLease(String currentOwner)
     {
-        BoundStatement statement = tableSchema.extendLeaseStatement().bind(currentOwner, currentOwner);
+        BoundStatement statement = tableSchema.extendLeaseStatement()
+                                              .bind(currentOwner, currentOwner);
         ResultSet resultSet = execute(statement);
         return LeaseClaimResult.from(resultSet, currentOwner);
     }
@@ -85,15 +89,17 @@ public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseS
             this.currentOwner = currentOwner;
         }
 
-        static LeaseClaimResult from(ResultSet resultSet, String newOwner)
+        static LeaseClaimResult from(ResultSet resultSet,
+                                     String newOwner)
         {
             return resultSet.wasApplied()
-                   ? new LeaseClaimResult(newOwner)
-                   // In some rare cases, the resultSet will not contain the owner information
-                   // even though the resultSet was not applied. This will translate into an
-                   // IllegalArgumentException being thrown when trying to retrieve the non-existing
-                   // owner string. This exception is left to be handled by the caller method
-                   : new LeaseClaimResult(resultSet.one().getString("owner"));
+                    ? new LeaseClaimResult(newOwner)
+                    // In some rare cases, the resultSet will not contain the owner information
+                    // even though the resultSet was not applied. This will translate into an
+                    // IllegalArgumentException being thrown when trying to retrieve the non-existing
+                    // owner string. This exception is left to be handled by the caller method
+                    : new LeaseClaimResult(resultSet.one()
+                                                    .getString("owner"));
         }
     }
 }

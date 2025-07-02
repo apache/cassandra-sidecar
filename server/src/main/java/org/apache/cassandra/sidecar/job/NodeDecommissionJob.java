@@ -19,12 +19,10 @@
 package org.apache.cassandra.sidecar.job;
 
 import java.util.UUID;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of {@link OperationalJob} to perform node decommission operation.
@@ -36,7 +34,9 @@ public class NodeDecommissionJob extends OperationalJob
     private final boolean isForce;
     protected StorageOperations storageOperations;
 
-    public NodeDecommissionJob(UUID jobId, StorageOperations storageOps, boolean isForce)
+    public NodeDecommissionJob(UUID jobId,
+                               StorageOperations storageOps,
+                               boolean isForce)
     {
         super(jobId);
         this.storageOperations = storageOps;
@@ -97,4 +97,3 @@ public class NodeDecommissionJob extends OperationalJob
         return OPERATION;
     }
 }
-

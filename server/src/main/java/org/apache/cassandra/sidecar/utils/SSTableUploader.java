@@ -22,7 +22,9 @@ import java.io.File;
 import java.nio.file.AtomicMoveNotSupportedException;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
+
 import org.apache.commons.lang3.StringUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +58,7 @@ public class SSTableUploader
     /**
      * Constructs an instance of {@link SSTableUploader} with provided params for uploading an SSTable component.
      *
-     * @param vertx       Vertx reference
+     * @param vertx Vertx reference
      * @param rateLimiter rate limiter for uploading SSTable components
      */
     @Inject
@@ -70,11 +72,11 @@ public class SSTableUploader
     /**
      * This method when called uploads the SSTable component in context and returns the component's path.
      *
-     * @param readStream        server request from which file upload is acquired
-     * @param uploadDirectory   the absolute path to the upload directory in the target {@code fs}
+     * @param readStream server request from which file upload is acquired
+     * @param uploadDirectory the absolute path to the upload directory in the target {@code fs}
      * @param componentFileName the file name of the component
-     * @param digestVerifier    the digest verifier instance
-     * @param filePermissions   specifies the posix file permissions used to create the SSTable file
+     * @param digestVerifier the digest verifier instance
+     * @param filePermissions specifies the posix file permissions used to create the SSTable file
      * @return path of SSTable component to which data was uploaded
      */
     public Future<String> uploadComponent(ReadStream<Buffer> readStream,
@@ -84,8 +86,7 @@ public class SSTableUploader
                                           String filePermissions)
     {
 
-        String targetPath = StringUtils.removeEnd(uploadDirectory, File.separator)
-                            + File.separatorChar + componentFileName;
+        String targetPath = StringUtils.removeEnd(uploadDirectory, File.separator) + File.separatorChar + componentFileName;
 
         return fs.mkdirs(uploadDirectory) // ensure the parent directory is created
                  .compose(v -> createTempFile(uploadDirectory, componentFileName, filePermissions))
@@ -93,16 +94,17 @@ public class SSTableUploader
                  .compose(verifiedTempFilePath -> moveAtomicallyWithFallBack(verifiedTempFilePath, targetPath));
     }
 
-    private Future<String> streamAndVerify(ReadStream<Buffer> readStream, String tempFilePath,
+    private Future<String> streamAndVerify(ReadStream<Buffer> readStream,
+                                           String tempFilePath,
                                            DigestVerifier digestVerifier)
     {
         // pipe read stream to temp file
-        return streamToFile(readStream, tempFilePath)
-               .compose(v -> digestVerifier.verify(tempFilePath))
-               .onFailure(throwable -> fs.delete(tempFilePath));
+        return streamToFile(readStream, tempFilePath).compose(v -> digestVerifier.verify(tempFilePath))
+                                                     .onFailure(throwable -> fs.delete(tempFilePath));
     }
 
-    private Future<Void> streamToFile(ReadStream<Buffer> readStream, String tempFilename)
+    private Future<Void> streamToFile(ReadStream<Buffer> readStream,
+                                      String tempFilename)
     {
         LOGGER.debug("Uploading data to={}", tempFilename);
         return fs.open(tempFilename, new OpenOptions()) // open the temp file
@@ -113,21 +115,22 @@ public class SSTableUploader
                  }); // stream to file
     }
 
-    private Future<String> createTempFile(String uploadDirectory, String componentFileName, String permissions)
+    private Future<String> createTempFile(String uploadDirectory,
+                                          String componentFileName,
+                                          String permissions)
     {
-        LOGGER.debug("Creating temp file in directory={} with name={}{}, permissions={}",
-                     uploadDirectory, componentFileName, DEFAULT_TEMP_SUFFIX, permissions);
+        LOGGER.debug("Creating temp file in directory={} with name={}{}, permissions={}", uploadDirectory, componentFileName, DEFAULT_TEMP_SUFFIX, permissions);
 
         return fs.createTempFile(uploadDirectory, componentFileName, DEFAULT_TEMP_SUFFIX, permissions);
     }
 
-    private Future<String> moveAtomicallyWithFallBack(String source, String target)
+    private Future<String> moveAtomicallyWithFallBack(String source,
+                                                      String target)
     {
         LOGGER.debug("Moving from={} to={}", source, target);
         return fs.move(source, target, new CopyOptions().setAtomicMove(true))
                  .recover(cause -> {
-                     Exception atomicMoveNotSupportedException =
-                     ThrowableUtils.getCause(cause, AtomicMoveNotSupportedException.class);
+                     Exception atomicMoveNotSupportedException = ThrowableUtils.getCause(cause, AtomicMoveNotSupportedException.class);
                      if (atomicMoveNotSupportedException != null)
                      {
                          LOGGER.warn("Failed to perform atomic move from={} to={}", source, target, cause);
@@ -146,7 +149,8 @@ public class SSTableUploader
         private final SidecarRateLimiter limiter;
         private final WriteStream<Buffer> delegate;
 
-        public RateLimitedWriteStream(SidecarRateLimiter limiter, WriteStream<Buffer> delegate)
+        public RateLimitedWriteStream(SidecarRateLimiter limiter,
+                                      WriteStream<Buffer> delegate)
         {
             this.limiter = limiter;
             this.delegate = delegate;
@@ -166,7 +170,8 @@ public class SSTableUploader
         }
 
         @Override
-        public void write(Buffer data, Handler<AsyncResult<Void>> handler)
+        public void write(Buffer data,
+                          Handler<AsyncResult<Void>> handler)
         {
             limiter.acquire(data.length()); // apply backpressure on the received bytes
             delegate.write(data, handler);
@@ -191,7 +196,8 @@ public class SSTableUploader
         }
 
         @Override
-        public void end(Buffer data, Handler<AsyncResult<Void>> handler)
+        public void end(Buffer data,
+                        Handler<AsyncResult<Void>> handler)
         {
             delegate.end(data, handler);
         }

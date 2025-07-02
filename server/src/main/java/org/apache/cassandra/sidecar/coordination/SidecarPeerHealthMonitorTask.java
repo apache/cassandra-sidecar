@@ -50,8 +50,7 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_PEER_UP;
 
 /**
- * Pings other 'peer' Sidecar(s) that are relevant to this Sidecar over HTTP and notifies
- * listeners when other Sidecar(s) goes DOWN or OK.
+ * Pings other 'peer' Sidecar(s) that are relevant to this Sidecar over HTTP and notifies listeners when other Sidecar(s) goes DOWN or OK.
  */
 @Singleton
 public class SidecarPeerHealthMonitorTask implements PeriodicTask
@@ -81,7 +80,8 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     }
 
     @Override
-    public void deploy(Vertx vertx, PeriodicTaskExecutor executor)
+    public void deploy(Vertx vertx,
+                       PeriodicTaskExecutor executor)
     {
         this.eventBus = vertx.eventBus();
         // TODO: Find a better place to register this codec
@@ -126,23 +126,25 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
             return Future.succeededFuture();
         }
 
-        List<Future<SidecarPeerHealthProvider.Health>> futures =
-        sidecarPeers.stream()
-                    .map(instance ->
-                         healthProvider.health(instance)
-                                       .onSuccess(healthCheckResult -> updateHealth(instance, healthCheckResult))
-                                       .onFailure(throwable -> {
-                                           LOGGER.error("Failed to run health check, marking instance as DOWN host={} port={}",
-                                                        instance.hostname(), instance.port(), throwable);
-                                           markDown(instance);
-                                       }))
-                    .collect(Collectors.toList());
+        List<Future<SidecarPeerHealthProvider.Health>> futures = sidecarPeers.stream()
+                                                                             .map(instance -> healthProvider.health(instance)
+                                                                                                            .onSuccess(healthCheckResult -> updateHealth(
+                                                                                                                    instance, healthCheckResult))
+                                                                                                            .onFailure(throwable -> {
+                                                                                                                LOGGER.error(
+                                                                                                                        "Failed to run health check, marking instance as DOWN host={} port={}",
+                                                                                                                        instance.hostname(), instance.port(),
+                                                                                                                        throwable);
+                                                                                                                markDown(instance);
+                                                                                                            }))
+                                                                             .collect(Collectors.toList());
 
         return Future.all(futures)
                      .onComplete(f -> {
                          if (f.succeeded())
                          {
-                             status.keySet().retainAll(sidecarPeers);
+                             status.keySet()
+                                   .retainAll(sidecarPeers);
                          }
                          else
                          {
@@ -152,14 +154,15 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
     }
 
     // listener notifications
-    protected void updateHealth(SidecarInstance instance, SidecarPeerHealthProvider.Health health)
+    protected void updateHealth(SidecarInstance instance,
+                                SidecarPeerHealthProvider.Health health)
     {
         switch (health)
         {
-            case UP:
+            case UP :
                 markOk(instance);
                 break;
-            case DOWN:
+            case DOWN :
                 markDown(instance);
                 break;
         }
@@ -183,7 +186,8 @@ public class SidecarPeerHealthMonitorTask implements PeriodicTask
         }
     }
 
-    protected boolean compareAndUpdate(SidecarInstance instance, SidecarPeerHealthProvider.Health newStatus)
+    protected boolean compareAndUpdate(SidecarInstance instance,
+                                       SidecarPeerHealthProvider.Health newStatus)
     {
         return status.put(instance, newStatus) != newStatus;
     }

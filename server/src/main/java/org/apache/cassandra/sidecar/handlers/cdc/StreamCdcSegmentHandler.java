@@ -104,10 +104,12 @@ public class StreamCdcSegmentHandler extends AbstractHandler<String> implements 
         File indexFile = new File(cdcDir, indexFileName);
         HttpResponse response = new HttpResponse(context.request(), context.response());
         streamCdcSegmentAsync(context, segmentFile, indexFile, response, instance)
-        // Touch the files at the end of the request
-        // If the file exists in cache, its expiry is extended; otherwise, the cache is not changed.
-        .onSuccess(res -> cdcLogCache.touch(segmentFile, indexFile))
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, segment));
+                                                                                  // Touch the files at the end of the request
+                                                                                  // If the file exists in cache, its expiry is extended; otherwise, the cache
+                                                                                  // is not changed.
+                                                                                  .onSuccess(res -> cdcLogCache.touch(segmentFile, indexFile))
+                                                                                  .onFailure(cause -> processFailure(cause, context, host, remoteAddress,
+                                                                                          segment));
     }
 
     private Future<Void> streamCdcSegmentAsync(RoutingContext context,
@@ -117,24 +119,28 @@ public class StreamCdcSegmentHandler extends AbstractHandler<String> implements 
                                                InstanceMetadata instance)
     {
         long segmentFileLength = segmentFile.length();
-        return getOrCreateLinkedCdcFilePairAsync(segmentFile, indexFile)
-               .compose(cdcFilePair ->
-                        openCdcIndexFileAsync(cdcFilePair)
-                        .compose(cdcIndex -> {
-                            // stream the segment file; depending on whether the cdc segment is complete or not, cap the range of file to stream
-                            String rangeHeader = context.request().getHeader(HttpHeaderNames.RANGE);
-                            return cdcIndex.isCompleted
-                                   ? fileStreamer.parseRangeHeader(rangeHeader, segmentFileLength)
-                                   : fileStreamer.parseRangeHeader(rangeHeader, cdcIndex.latestFlushPosition);
-                        })
-                        .compose(range -> fileStreamer.stream(response, instance.id(), cdcFilePair.segmentFile.getAbsolutePath(), segmentFileLength, range))
-               );
+        return getOrCreateLinkedCdcFilePairAsync(segmentFile, indexFile).compose(cdcFilePair -> openCdcIndexFileAsync(cdcFilePair).compose(cdcIndex -> {
+            // stream the segment file; depending on whether the cdc segment is complete or not, cap the range of file to stream
+            String rangeHeader = context.request()
+                                        .getHeader(HttpHeaderNames.RANGE);
+            return cdcIndex.isCompleted
+                    ? fileStreamer.parseRangeHeader(rangeHeader, segmentFileLength)
+                    : fileStreamer.parseRangeHeader(rangeHeader, cdcIndex.latestFlushPosition);
+        })
+                                                                                                                                  .compose(
+                                                                                                                                          range -> fileStreamer.stream(
+                                                                                                                                                  response,
+                                                                                                                                                  instance.id(),
+                                                                                                                                                  cdcFilePair.segmentFile.getAbsolutePath(),
+                                                                                                                                                  segmentFileLength,
+                                                                                                                                                  range)));
     }
 
     @Override
     protected String extractParamsOrThrow(RoutingContext context)
     {
-        return context.request().getParam("segment");
+        return context.request()
+                      .getParam("segment");
     }
 
     private void validateCdcSegmentFile(File segmentFile) throws HttpException
@@ -159,7 +165,8 @@ public class StreamCdcSegmentHandler extends AbstractHandler<String> implements 
         }
     }
 
-    private Future<CdcFilePair> getOrCreateLinkedCdcFilePairAsync(File segmentFile, File indexFile)
+    private Future<CdcFilePair> getOrCreateLinkedCdcFilePairAsync(File segmentFile,
+                                                                  File indexFile)
     {
         return serviceExecutorPool.executeBlocking(() -> {
             // hardlink the segment and its index file,
@@ -199,7 +206,8 @@ public class StreamCdcSegmentHandler extends AbstractHandler<String> implements 
         private final File segmentFile;
         private final File indexFile;
 
-        private CdcFilePair(File segmentFile, File indexFile)
+        private CdcFilePair(File segmentFile,
+                            File indexFile)
         {
             this.segmentFile = segmentFile;
             this.indexFile = indexFile;

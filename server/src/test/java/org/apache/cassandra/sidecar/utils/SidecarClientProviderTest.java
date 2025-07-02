@@ -84,32 +84,34 @@ class SidecarClientProviderTest
     @BeforeAll
     static void configureCertificates() throws Exception
     {
-        CertificateBundle certificateAuthority = new CertificateBuilder()
-                                                 .subject("CN=Apache Cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
-                                                 .alias("fakerootca")
-                                                 .isCertificateAuthority(true)
-                                                 .buildSelfSigned();
+        CertificateBundle certificateAuthority =
+                                               new CertificateBuilder().subject("CN=Apache Cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
+                                                                       .alias("fakerootca")
+                                                                       .isCertificateAuthority(true)
+                                                                       .buildSelfSigned();
         truststorePath = certificateAuthority.toTempKeyStorePath(secretsPath, EMPTY_PASSWORD, EMPTY_PASSWORD);
 
-        CertificateBuilder serverKeyStoreBuilder = new CertificateBuilder()
-                                                   .subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                                   .addSanDnsName("localhost");
+        CertificateBuilder serverKeyStoreBuilder = new CertificateBuilder().subject(
+                "CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                                           .addSanDnsName("localhost");
         CertificateBundle serverKeyStore = serverKeyStoreBuilder.buildIssuedBy(certificateAuthority);
         serverKeyStorePath = serverKeyStore.toTempKeyStorePath(secretsPath, EMPTY_PASSWORD, EMPTY_PASSWORD);
 
-        CertificateBundle expiredClientKeyStore = new CertificateBuilder()
-                                                  .subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                                  .addSanDnsName("localhost")
-                                                  .notBefore(Instant.now().minus(7, ChronoUnit.DAYS))
-                                                  .notAfter(Instant.now().minus(1, ChronoUnit.DAYS))
-                                                  .buildIssuedBy(certificateAuthority);
+        CertificateBundle expiredClientKeyStore = new CertificateBuilder().subject(
+                "CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                                          .addSanDnsName("localhost")
+                                                                          .notBefore(Instant.now()
+                                                                                            .minus(7, ChronoUnit.DAYS))
+                                                                          .notAfter(Instant.now()
+                                                                                           .minus(1, ChronoUnit.DAYS))
+                                                                          .buildIssuedBy(certificateAuthority);
         // Assign the expired client cert to the cert path
         clientCertPath = expiredClientKeyStore.toTempKeyStorePath(secretsPath, EMPTY_PASSWORD, EMPTY_PASSWORD);
 
-        CertificateBundle validClientKeyStore = new CertificateBuilder()
-                                                .subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                                .addSanDnsName("localhost")
-                                                .buildIssuedBy(certificateAuthority);
+        CertificateBundle validClientKeyStore =
+                                              new CertificateBuilder().subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                                      .addSanDnsName("localhost")
+                                                                      .buildIssuedBy(certificateAuthority);
         validClientCertPath = validClientKeyStore.toTempKeyStorePath(secretsPath, EMPTY_PASSWORD, EMPTY_PASSWORD);
     }
 
@@ -118,7 +120,8 @@ class SidecarClientProviderTest
     {
         testModule = new SidecarClientProviderModule();
 
-        injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(testModule));
+        injector = Guice.createInjector(Modules.override(SidecarModules.all())
+                                               .with(testModule));
         vertx = injector.getInstance(Vertx.class);
         server = getMTLSServerAndStart();
         provider = injector.getInstance(SidecarClientProvider.class);
@@ -162,9 +165,9 @@ class SidecarClientProviderTest
 
     private void unsuccessfulClientRequest(SidecarClient client)
     {
-        assertThatThrownBy(() -> client.sidecarHealth(new SidecarInstanceImpl("localhost", server.actualPort())).get(30, TimeUnit.SECONDS))
-        .describedAs("Unsuccessful client requests are expected to fail")
-        .isNotNull();
+        assertThatThrownBy(() -> client.sidecarHealth(new SidecarInstanceImpl("localhost", server.actualPort()))
+                                       .get(30, TimeUnit.SECONDS)).describedAs("Unsuccessful client requests are expected to fail")
+                                                                  .isNotNull();
     }
 
     private void successfulClientRequest(SidecarClient client)
@@ -172,7 +175,8 @@ class SidecarClientProviderTest
         HealthResponse healthResponse = null;
         try
         {
-            healthResponse = client.sidecarHealth(new SidecarInstanceImpl("localhost", server.actualPort())).get(30, TimeUnit.SECONDS);
+            healthResponse = client.sidecarHealth(new SidecarInstanceImpl("localhost", server.actualPort()))
+                                   .get(30, TimeUnit.SECONDS);
         }
         catch (Exception exception)
         {
@@ -195,28 +199,33 @@ class SidecarClientProviderTest
         @Override
         public SidecarConfigurationImpl abstractConfig()
         {
-            SslConfiguration serverSslConfiguration =
-            SslConfigurationImpl.builder()
-                                .enabled(true)
-                                .useOpenSsl(true)
-                                .handshakeTimeout(SecondBoundConfiguration.parse("10s"))
-                                .clientAuth("REQUIRED")
-                                .keystore(new KeyStoreConfigurationImpl(serverKeyStorePath.toAbsolutePath().toString(), ""))
-                                .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), ""))
-                                .build();
+            SslConfiguration serverSslConfiguration = SslConfigurationImpl.builder()
+                                                                          .enabled(true)
+                                                                          .useOpenSsl(true)
+                                                                          .handshakeTimeout(SecondBoundConfiguration.parse("10s"))
+                                                                          .clientAuth("REQUIRED")
+                                                                          .keystore(new KeyStoreConfigurationImpl(serverKeyStorePath.toAbsolutePath()
+                                                                                                                                    .toString(),
+                                                                                  ""))
+                                                                          .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath()
+                                                                                                                                  .toString(),
+                                                                                  ""))
+                                                                          .build();
 
-            Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configOverrides =
-            builder -> {
+            Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configOverrides = builder -> {
                 String type = "PKCS12";
                 SecondBoundConfiguration checkInterval = SecondBoundConfiguration.ONE;
 
-                SslConfiguration clientSslConfiguration =
-                SslConfigurationImpl.builder()
-                                    .enabled(true)
-                                    .useOpenSsl(true)
-                                    .keystore(new KeyStoreConfigurationImpl(clientCertPath.toAbsolutePath().toString(), "", type, checkInterval))
-                                    .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), "", type, checkInterval))
-                                    .build();
+                SslConfiguration clientSslConfiguration = SslConfigurationImpl.builder()
+                                                                              .enabled(true)
+                                                                              .useOpenSsl(true)
+                                                                              .keystore(new KeyStoreConfigurationImpl(clientCertPath.toAbsolutePath()
+                                                                                                                                    .toString(),
+                                                                                      "", type, checkInterval))
+                                                                              .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath()
+                                                                                                                                      .toString(),
+                                                                                      "", type, checkInterval))
+                                                                              .build();
                 SidecarClientConfiguration sidecarClientConfiguration = new SidecarClientConfigurationImpl(clientSslConfiguration);
                 return builder.sidecarClientConfiguration(sidecarClientConfiguration);
             };

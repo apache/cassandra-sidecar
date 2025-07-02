@@ -18,26 +18,22 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.Arrays;
-
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
 import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
-
+import java.util.Arrays;
 import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.NO_SCOPE;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 
 /**
- * Domain aware permissions allow grouping allowed permissions for a domain. They can be represented with
- * ':' wildcard parts divider. Wildcard sub parts divider token ',' can be used to group actions for a domain.
- * Wildcard token '*' is restricted in {@link DomainAwarePermission} to avoid unpredictable behaviour. Majority
- * of sidecar permissions are represented in format {@code domain}:{@code action}.
+ * Domain aware permissions allow grouping allowed permissions for a domain. They can be represented with ':' wildcard parts divider. Wildcard sub parts divider
+ * token ',' can be used to group actions for a domain. Wildcard token '*' is restricted in {@link DomainAwarePermission} to avoid unpredictable behaviour.
+ * Majority of sidecar permissions are represented in format {@code domain}:{@code action}.
  * <p>
- * Example, with SNAPSHOT:CREATE permission, CREATE action is allowed for the SNAPSHOT domain. Sample actions are
- * CREATE, READ, EDIT, UPDATE, DELETE, IMPORT, UPLOAD, START, ABORT etc.
+ * Example, with SNAPSHOT:CREATE permission, CREATE action is allowed for the SNAPSHOT domain. Sample actions are CREATE, READ, EDIT, UPDATE, DELETE, IMPORT,
+ * UPLOAD, START, ABORT etc.
  * <p>
- * Some examples of wildcard permissions are:
- * - SNAPSHOT:CREATE,READ,DELETE allows SNAPSHOT:CREATE, SNAPSHOT:READ and SNAPSHOT:DELETE.
+ * Some examples of wildcard permissions are: - SNAPSHOT:CREATE,READ,DELETE allows SNAPSHOT:CREATE, SNAPSHOT:READ and SNAPSHOT:DELETE.
  */
 public class DomainAwarePermission extends StandardPermission
 {
@@ -52,10 +48,11 @@ public class DomainAwarePermission extends StandardPermission
     /**
      * Creates an instance of {@link DomainAwarePermission} with given permission name and resource scope.
      *
-     * @param name      permission name
-     * @param scope     resource scope for permission
+     * @param name permission name
+     * @param scope resource scope for permission
      */
-    public DomainAwarePermission(String name, ResourceScope scope)
+    public DomainAwarePermission(String name,
+                                 ResourceScope scope)
     {
         super(name, scope);
         validate(name);
@@ -65,16 +62,15 @@ public class DomainAwarePermission extends StandardPermission
     {
         if (name.contains(WILDCARD_TOKEN))
         {
-            throw new IllegalArgumentException("DomainAwarePermission can not have " + WILDCARD_TOKEN +
-                                               " to avoid unpredictable behavior");
+            throw new IllegalArgumentException("DomainAwarePermission can not have " + WILDCARD_TOKEN + " to avoid unpredictable behavior");
         }
         if (!name.contains(WILDCARD_PART_DIVIDER_TOKEN))
         {
-            throw new IllegalArgumentException("DomainAwarePermission must have " + WILDCARD_PART_DIVIDER_TOKEN +
-                                               " to divide domain and action");
+            throw new IllegalArgumentException("DomainAwarePermission must have " + WILDCARD_PART_DIVIDER_TOKEN + " to divide domain and action");
         }
         String[] wildcardParts = name.split(WILDCARD_PART_DIVIDER_TOKEN);
-        boolean hasEmptyParts = Arrays.stream(wildcardParts).anyMatch(String::isEmpty);
+        boolean hasEmptyParts = Arrays.stream(wildcardParts)
+                                      .anyMatch(String::isEmpty);
         if (wildcardParts.length == 0 || hasEmptyParts)
         {
             throw new IllegalArgumentException("DomainAwarePermission parts can not be empty");

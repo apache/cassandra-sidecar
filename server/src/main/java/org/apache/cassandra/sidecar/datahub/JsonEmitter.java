@@ -19,11 +19,6 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
-
 import com.linkedin.data.template.JacksonDataTemplateCodec;
 import com.linkedin.mxe.MetadataChangeProposal;
 import datahub.client.Callback;
@@ -37,12 +32,16 @@ import datahub.shaded.jackson.core.PrettyPrinter;
 import datahub.shaded.jackson.core.util.DefaultIndenter;
 import datahub.shaded.jackson.core.util.DefaultPrettyPrinter;
 import datahub.shaded.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A custom implementation of DataHub {@link Emitter} interface that buffers emitted metadata into
- * a {@link StringBuilder} using JSON format and allows accessing converted schema after closure
+ * A custom implementation of DataHub {@link Emitter} interface that buffers emitted metadata into a {@link StringBuilder} using JSON format and allows
+ * accessing converted schema after closure
  */
 public class JsonEmitter implements Emitter, AutoCloseable
 {
@@ -93,17 +92,19 @@ public class JsonEmitter implements Emitter, AutoCloseable
     @Override
     @NotNull
     public synchronized Future<MetadataWriteResponse> emit(@NotNull MetadataChangeProposalWrapper wrapper,
-                                                           @Nullable Callback callback) throws IOException
+                                                           @Nullable Callback callback)
+            throws IOException
     {
         MetadataChangeProposal proposal = FORMATTER.convert(wrapper);
 
-         return emit(proposal, callback);
+        return emit(proposal, callback);
     }
 
     @Override
     @NotNull
     public synchronized Future<MetadataWriteResponse> emit(@NotNull MetadataChangeProposal proposal,
-                                                           @Nullable Callback callback) throws IOException
+                                                           @Nullable Callback callback)
+            throws IOException
     {
         if (callback != null)
         {
@@ -135,8 +136,7 @@ public class JsonEmitter implements Emitter, AutoCloseable
     /**
      * Return the current content of the {@link StringBuilder} buffer.
      * <p>
-     * Should only be called after this {@link Emitter} has been closed,
-     * otherwise the result is not going to be a correctly formatted JSON.
+     * Should only be called after this {@link Emitter} has been closed, otherwise the result is not going to be a correctly formatted JSON.
      *
      * @return the current content of the buffer
      */

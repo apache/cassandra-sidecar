@@ -33,10 +33,12 @@ public class RestoreJobSummaryRequest extends JsonRequest<RestoreJobSummaryRespo
      * Constructs a Sidecar request with the given {@code requestURI}. Defaults to {@code ssl} enabled.
      *
      * @param keyspace the keyspace in Cassandra
-     * @param table    the table name in Cassandra
-     * @param jobId    a unique identifier for the job
+     * @param table the table name in Cassandra
+     * @param jobId a unique identifier for the job
      */
-    public RestoreJobSummaryRequest(String keyspace, String table, UUID jobId)
+    public RestoreJobSummaryRequest(String keyspace,
+                                    String table,
+                                    UUID jobId)
     {
         super(requestURI(keyspace, table, jobId));
     }
@@ -47,11 +49,12 @@ public class RestoreJobSummaryRequest extends JsonRequest<RestoreJobSummaryRespo
         return HttpMethod.GET;
     }
 
-    static String requestURI(String keyspace, String table, UUID jobId)
+    static String requestURI(String keyspace,
+                             String table,
+                             UUID jobId)
     {
-        return ApiEndpointsV1.RESTORE_JOB_ROUTE
-               .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
-               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table)
-               .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, jobId.toString());
+        return ApiEndpointsV1.RESTORE_JOB_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
+                                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table)
+                                               .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, jobId.toString());
     }
 }

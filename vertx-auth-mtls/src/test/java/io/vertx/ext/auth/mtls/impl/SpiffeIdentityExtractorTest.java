@@ -41,68 +41,62 @@ public class SpiffeIdentityExtractorTest
     @Test
     public void testSpiffeIdentity() throws Exception
     {
-        X509Certificate certificate = new CertificateBuilder()
-                                      .subject("CN=Vertx Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                      .addSanUriName("spiffe://vertx.auth/unitTest/mtls")
-                                      .buildSelfSigned()
-                                      .certificate();
-        assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate)))
-        .contains("spiffe://vertx.auth/unitTest/mtls");
+        X509Certificate certificate = new CertificateBuilder().subject("CN=Vertx Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                              .addSanUriName("spiffe://vertx.auth/unitTest/mtls")
+                                                              .buildSelfSigned()
+                                                              .certificate();
+        assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate))).contains("spiffe://vertx.auth/unitTest/mtls");
     }
 
     @Test
     public void testDifferentCertificateType()
     {
         Certificate mockCertificate = mock(Certificate.class);
-        assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(mockCertificate)))
-        .isInstanceOf(CredentialValidationException.class);
+        assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(mockCertificate))).isInstanceOf(
+                CredentialValidationException.class);
     }
 
     @Test
     public void testNonSpiffeIdentity() throws Exception
     {
-        X509Certificate certificate = new CertificateBuilder()
-                                      .subject("CN=Vertx Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                      .addSanUriName("randomuri://extracted/from/certificate")
-                                      .buildSelfSigned()
-                                      .certificate();
-        assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate)))
-        .isInstanceOf(CredentialValidationException.class)
-        .hasMessage("Unable to extract SPIFFE identity from certificate");
+        X509Certificate certificate = new CertificateBuilder().subject("CN=Vertx Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                              .addSanUriName("randomuri://extracted/from/certificate")
+                                                              .buildSelfSigned()
+                                                              .certificate();
+        assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate))).isInstanceOf(CredentialValidationException.class)
+                                                                                                            .hasMessage(
+                                                                                                                    "Unable to extract SPIFFE identity from certificate");
     }
 
     @Test
     public void testInvalidCertificate() throws Exception
     {
-        X509Certificate certificate = new CertificateBuilder()
-                                      .subject("CN=Vertx Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                      .buildSelfSigned()
-                                      .certificate();
-        assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate)))
-        .isInstanceOf(CredentialValidationException.class)
-        .hasMessage("Error reading SAN of certificate");
+        X509Certificate certificate = new CertificateBuilder().subject("CN=Vertx Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                              .buildSelfSigned()
+                                                              .certificate();
+        assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate))).isInstanceOf(CredentialValidationException.class)
+                                                                                                            .hasMessage("Error reading SAN of certificate");
     }
 
     @Test
     public void testNonTrustedDomain() throws Exception
     {
-        X509Certificate certificate = new CertificateBuilder()
-                                      .subject("CN=Vertx Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                      .addSanUriName("spiffe://nontrusted/unitTest/mtls")
-                                      .buildSelfSigned()
-                                      .certificate();
+        X509Certificate certificate = new CertificateBuilder().subject("CN=Vertx Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                              .addSanUriName("spiffe://nontrusted/unitTest/mtls")
+                                                              .buildSelfSigned()
+                                                              .certificate();
         SpiffeIdentityExtractor identityExtractorWithTrust = new SpiffeIdentityExtractor("vertx.auth");
-        assertThatThrownBy(() -> identityExtractorWithTrust.validIdentities(new CertificateCredentials(certificate)))
-        .isInstanceOf(CredentialValidationException.class)
-        .hasMessage("SPIFFE Identity domain nontrusted is not trusted");
+        assertThatThrownBy(() -> identityExtractorWithTrust.validIdentities(
+                new CertificateCredentials(certificate))).isInstanceOf(CredentialValidationException.class)
+                                                         .hasMessage("SPIFFE Identity domain nontrusted is not trusted");
     }
 
     @Test
     public void testNonX509CertificatePeerCertificate()
     {
         Certificate certificate = mock(Certificate.class);
-        assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate)))
-        .isInstanceOf(CredentialValidationException.class)
-        .hasMessage("No X509Certificate found for validating");
+        assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate))).isInstanceOf(CredentialValidationException.class)
+                                                                                                            .hasMessage(
+                                                                                                                    "No X509Certificate found for validating");
     }
 }

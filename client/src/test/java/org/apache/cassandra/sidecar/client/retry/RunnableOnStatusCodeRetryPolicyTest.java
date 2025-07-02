@@ -61,16 +61,13 @@ class RunnableOnStatusCodeRetryPolicyTest
         AtomicInteger count = new AtomicInteger();
         Runnable incrementEveryTwoTimes = count::incrementAndGet;
 
-        RetryPolicy retryPolicy = new RunnableOnStatusCodeRetryPolicy(incrementEveryTwoTimes,
-                                                                      new BasicRetryPolicy(),
-                                                                      HttpResponseStatus.OK.code(),
-                                                                      2);
+        RetryPolicy retryPolicy = new RunnableOnStatusCodeRetryPolicy(incrementEveryTwoTimes, new BasicRetryPolicy(), HttpResponseStatus.OK.code(), 2);
 
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
         for (int i = 0; i < 19; i++)
         {
-            retryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false,
-                                   (attempts, retryDelayMillis) -> fail("Should never retry"));
+            retryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false, (attempts,
+                                                                                       retryDelayMillis) -> fail("Should never retry"));
         }
         assertThat(count.get()).isEqualTo(10);
     }
@@ -82,15 +79,13 @@ class RunnableOnStatusCodeRetryPolicyTest
         AtomicInteger count = new AtomicInteger();
         Runnable incrementEveryTenTimes = count::incrementAndGet;
 
-        RetryPolicy retryPolicy = new RunnableOnStatusCodeRetryPolicy(incrementEveryTenTimes,
-                                                                      new BasicRetryPolicy(),
-                                                                      HttpResponseStatus.OK.code());
+        RetryPolicy retryPolicy = new RunnableOnStatusCodeRetryPolicy(incrementEveryTenTimes, new BasicRetryPolicy(), HttpResponseStatus.OK.code());
 
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
         for (int i = 0; i < 20; i++)
         {
-            retryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false,
-                                   (attempts, retryDelayMillis) -> fail("Should never retry"));
+            retryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false, (attempts,
+                                                                                       retryDelayMillis) -> fail("Should never retry"));
         }
         assertThat(count.get()).isEqualTo(2);
     }

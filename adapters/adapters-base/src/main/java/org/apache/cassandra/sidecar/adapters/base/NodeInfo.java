@@ -30,18 +30,16 @@ public class NodeInfo
      */
     public enum NodeState
     {
-        JOINING,
-        LEAVING,
-        MOVING,
-        NORMAL,
-        REPLACING;
+        JOINING, LEAVING, MOVING, NORMAL, REPLACING;
 
         private final String displayName;
 
         NodeState()
         {
-            String firstChar = String.valueOf(name().charAt(0)).toLowerCase(Locale.ROOT);
-            displayName = name().toLowerCase().replaceFirst(firstChar, firstChar.toUpperCase(Locale.ROOT));
+            String firstChar = String.valueOf(name().charAt(0))
+                                     .toLowerCase(Locale.ROOT);
+            displayName = name().toLowerCase()
+                                .replaceFirst(firstChar, firstChar.toUpperCase(Locale.ROOT));
         }
 
         public String displayName()
@@ -55,14 +53,15 @@ public class NodeInfo
      */
     public enum NodeStatus
     {
-        UP,
-        DOWN;
+        UP, DOWN;
 
         private final String displayName;
         NodeStatus()
         {
-            String firstChar = String.valueOf(name().charAt(0)).toLowerCase(Locale.ROOT);
-            displayName = name().toLowerCase().replaceFirst(firstChar, firstChar.toUpperCase(Locale.ROOT));
+            String firstChar = String.valueOf(name().charAt(0))
+                                     .toLowerCase(Locale.ROOT);
+            displayName = name().toLowerCase()
+                                .replaceFirst(firstChar, firstChar.toUpperCase(Locale.ROOT));
         }
         public String displayName()
         {

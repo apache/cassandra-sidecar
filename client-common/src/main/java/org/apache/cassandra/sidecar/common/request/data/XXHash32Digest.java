@@ -50,21 +50,22 @@ public class XXHash32Digest implements Digest
      * Constructs a new instance with the provided XXHash {@code value} and the {@code seed} value.
      *
      * @param value the xxhash value
-     * @param seed  the seed
+     * @param seed the seed
      */
-    public XXHash32Digest(String value, int seed)
+    public XXHash32Digest(String value,
+                          int seed)
     {
         this(value, Integer.toHexString(seed));
     }
 
     /**
-     * Constructs a new XXHashDigest with the provided XXHash {@code value} and the seed value represented as
-     * a hexadecimal string
+     * Constructs a new XXHashDigest with the provided XXHash {@code value} and the seed value represented as a hexadecimal string
      *
-     * @param value   the xxhash value
+     * @param value the xxhash value
      * @param seedHex the value of the seed represented as a hexadecimal value
      */
-    public XXHash32Digest(@NotNull String value, @Nullable String seedHex)
+    public XXHash32Digest(@NotNull String value,
+                          @Nullable String seedHex)
     {
         this.value = Objects.requireNonNull(value, "value is required");
         this.seedHex = seedHex;

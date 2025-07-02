@@ -18,24 +18,21 @@
 
 package org.apache.cassandra.sidecar.acl;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import java.util.Collections;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.jetbrains.annotations.VisibleForTesting;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 
 /**
@@ -86,14 +83,13 @@ public abstract class AuthCache<K, V>
     }
 
     /**
-     * Retrieves a value from the cache. Will call {@link LoadingCache#get(Object)} which will
-     * "load" the value if it's not present, thus populating the key. When the cache is disabled, data is fetched
-     * with loadFunction.
+     * Retrieves a value from the cache. Will call {@link LoadingCache#get(Object)} which will "load" the value if it's not present, thus populating the key.
+     * When the cache is disabled, data is fetched with loadFunction.
      *
      * @param k key
      * @return The current value of {@code K} if cached or loaded.
-     * <p>
-     * See {@link LoadingCache#get(Object)} for possible exceptions.
+     *         <p>
+     *         See {@link LoadingCache#get(Object)} for possible exceptions.
      */
     public V get(K k)
     {
@@ -105,8 +101,8 @@ public abstract class AuthCache<K, V>
     }
 
     /**
-     * Retrieves all cached entries. Will call {@link LoadingCache#asMap()} which does not trigger "load". When cache
-     * is disabled, data is fetched with bulkLoadFunction.
+     * Retrieves all cached entries. Will call {@link LoadingCache#asMap()} which does not trigger "load". When cache is disabled, data is fetched with
+     * bulkLoadFunction.
      *
      * @return a map of cached key-value pairs
      */
@@ -124,8 +120,14 @@ public abstract class AuthCache<K, V>
         return Caffeine.newBuilder()
                        // setting refreshAfterWrite and expireAfterWrite to same value makes sure no stale
                        // data is fetched after expire time
-                       .refreshAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
-                       .expireAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
+                       .refreshAfterWrite(config.expireAfterAccess()
+                                                .quantity(),
+                               config.expireAfterAccess()
+                                     .unit())
+                       .expireAfterWrite(config.expireAfterAccess()
+                                               .quantity(),
+                               config.expireAfterAccess()
+                                     .unit())
                        .maximumSize(config.maximumSize())
                        .build(loadFunction::apply);
     }
@@ -171,7 +173,9 @@ public abstract class AuthCache<K, V>
         catch (Exception e)
         {
             LOGGER.warn("Unexpected error encountered during pre-warming of cache={} ", name, e);
-            vertx.setTimer(config.warmupRetryInterval().toMillis(), t -> warmUpAsync(availableRetries - 1));
+            vertx.setTimer(config.warmupRetryInterval()
+                                 .toMillis(),
+                    t -> warmUpAsync(availableRetries - 1));
         }
     }
 }

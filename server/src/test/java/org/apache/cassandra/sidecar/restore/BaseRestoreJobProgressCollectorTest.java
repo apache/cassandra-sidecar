@@ -18,17 +18,14 @@
 
 package org.apache.cassandra.sidecar.restore;
 
-import java.nio.file.Paths;
-
-import org.junit.jupiter.api.Test;
-
 import com.datastax.driver.core.utils.UUIDs;
+import java.nio.file.Paths;
 import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobProgressResponsePayload;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobSummaryResponsePayload;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
-
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 abstract class BaseRestoreJobProgressCollectorTest
@@ -41,7 +38,8 @@ abstract class BaseRestoreJobProgressCollectorTest
     @Test
     void testCollectNothing()
     {
-        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
+        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress()
+                                                             .toResponsePayload();
         assertThat(payload.message()).isEqualTo("All ranges have succeeded. Current job status: CREATED");
         assertJobSummary(payload.summary());
         assertThat(payload.failedRanges()).isNull();
@@ -50,7 +48,8 @@ abstract class BaseRestoreJobProgressCollectorTest
         assertThat(payload.succeededRanges()).isNull();
     }
 
-    protected void createRangesAndCollect(int count, ConsistencyVerificationResult result)
+    protected void createRangesAndCollect(int count,
+                                          ConsistencyVerificationResult result)
     {
         for (int i = 0; i < count; i++)
         {

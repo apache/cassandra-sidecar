@@ -32,8 +32,7 @@ public class SSTableImportConfigurationImpl extends PeriodicTaskConfigurationImp
 {
     private static final MillisecondBoundConfiguration DEFAULT_IMPORT_EXECUTE_INTERVAL = MillisecondBoundConfiguration.parse("100ms");
     public static final String CACHE_PROPERTY = "cache";
-    protected static final CacheConfiguration DEFAULT_CACHE_CONFIGURATION =
-    new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("2h"), 10_000);
+    protected static final CacheConfiguration DEFAULT_CACHE_CONFIGURATION = new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("2h"), 10_000);
 
     @JsonProperty(value = CACHE_PROPERTY)
     protected final CacheConfiguration cacheConfiguration;
@@ -50,8 +49,7 @@ public class SSTableImportConfigurationImpl extends PeriodicTaskConfigurationImp
 
     public SSTableImportConfigurationImpl(int importIntervalMillis)
     {
-        this(new MillisecondBoundConfiguration(importIntervalMillis, TimeUnit.MILLISECONDS),
-             DEFAULT_CACHE_CONFIGURATION);
+        this(new MillisecondBoundConfiguration(importIntervalMillis, TimeUnit.MILLISECONDS), DEFAULT_CACHE_CONFIGURATION);
     }
 
     public SSTableImportConfigurationImpl(MillisecondBoundConfiguration importExecuteInterval,

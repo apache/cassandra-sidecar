@@ -63,14 +63,16 @@ class RoleBasedAuthorizationProviderTest
     void testAuthorizationsFetched(VertxTestContext testContext)
     {
         RoleAuthorizationsCache mockRolePermissionsCache = mock(RoleAuthorizationsCache.class);
-        when(mockRolePermissionsCache.getAuthorizations("test_role"))
-        .thenReturn(new HashSet<>(Arrays.asList(CassandraPermissions.CREATE.toAuthorization(), BasicPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        when(mockRolePermissionsCache.getAuthorizations("test_role")).thenReturn(
+                new HashSet<>(Arrays.asList(CassandraPermissions.CREATE.toAuthorization(), BasicPermissions.CREATE_SNAPSHOT.toAuthorization())));
         RoleBasedAuthorizationProvider authorizationProvider = new RoleBasedAuthorizationProvider(mockRolePermissionsCache);
         User user = User.fromName("test_user");
-        user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, List.of("test_role"));
+        user.attributes()
+            .put(CASSANDRA_ROLES_ATTRIBUTE_NAME, List.of("test_role"));
         authorizationProvider.getAuthorizations(user)
                              .onComplete(testContext.succeeding(v -> {
-                                 assertThat(user.authorizations().get(authorizationProvider.getId())).hasSize(2);
+                                 assertThat(user.authorizations()
+                                                .get(authorizationProvider.getId())).hasSize(2);
                                  testContext.completeNow();
                              }));
     }

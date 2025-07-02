@@ -44,7 +44,7 @@ public class SchemaResponse
      * Constructs a {@link SchemaResponse} object with the {@code schema} for the given {@code keyspace}.
      *
      * @param keyspace the keyspace in Cassandra
-     * @param schema   the schema for the given {@code keyspace}
+     * @param schema the schema for the given {@code keyspace}
      */
     public SchemaResponse(@JsonProperty("keyspace") String keyspace,
                           @JsonProperty("schema") String schema)

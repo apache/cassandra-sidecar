@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -49,9 +50,8 @@ final class SchemaReporterIntegrationTest extends IntegrationTestBase
 {
     private static final IdentifiersProvider IDENTIFIERS = new TestIdentifiers();
     private static final JacksonDataCodec CODEC = new JacksonDataCodec();
-    private static final MetricRegistryFactory FACTORY = new MetricRegistryFactory(SchemaReporterTest.class.getSimpleName(),
-                                                                                   Collections.emptyList(),
-                                                                                   Collections.emptyList());
+    private static final MetricRegistryFactory FACTORY = new MetricRegistryFactory(SchemaReporterTest.class.getSimpleName(), Collections.emptyList(),
+            Collections.emptyList());
 
     private SidecarMetrics metrics;
 
@@ -68,16 +68,14 @@ final class SchemaReporterIntegrationTest extends IntegrationTestBase
     }
 
     /**
-     * Private helper method that removes all numeric suffixes added non-deterministically
-     * to the names of data centers, clusters, keyspaces, and tables during preparation
+     * Private helper method that removes all numeric suffixes added non-deterministically to the names of data centers, clusters, keyspaces, and tables during
+     * preparation
      */
     @NotNull
     private static String normalizeNames(@NotNull String schema)
     {
-        return schema.replaceAll("(?is)(?<=\\b(" + DATA_CENTER_PREFIX + "|"
-                                 + TEST_CLUSTER_PREFIX + "|"
-                                 + TEST_KEYSPACE + "|"
-                                 + TEST_TABLE_PREFIX + "))\\d+\\b", "");
+        return schema.replaceAll("(?is)(?<=\\b(" + DATA_CENTER_PREFIX + "|" + TEST_CLUSTER_PREFIX + "|" + TEST_KEYSPACE + "|" + TEST_TABLE_PREFIX + "))\\d+\\b",
+                "");
     }
 
     @CassandraIntegrationTest
@@ -87,35 +85,14 @@ final class SchemaReporterIntegrationTest extends IntegrationTestBase
         // the goal is to cover all supported data types and their combinations
         waitForSchemaReady(1L, TimeUnit.MINUTES);
         createTestKeyspace();
-        createTestUdt("numbers",     "ti tinyint, " +
-                                     "si smallint, " +
-                                     "bi bigint, " +
-                                     "vi varint, " +
-                                     "sf float, " +
-                                     "df double, " +
-                                     "de decimal");
-        createTestUdt("datetime",    "dd date, " +
-                                     "ts timestamp, " +
-                                     "tt time");
-        createTestUdt("strings",     "tu timeuuid, " +
-                                     "ru uuid, " +
-                                     "ip inet, " +
-                                     "as ascii, " +
-                                     "us text, " +
-                                     "vc varchar");
-        createTestUdt("collections", "t tuple<int, ascii>, " +
-                                     "s set<ascii>, " +
-                                     "l frozen<list<ascii>>, " +
-                                     "m map<ascii, frozen<map<ascii, int>>>");
-        createTestUdt("types",       "b blob");
-        createTestUdt("other",       "t frozen<types>");
-        createTestTable("CREATE TABLE " + TEST_KEYSPACE + "." + TEST_TABLE_PREFIX + " (" +
-                        "b boolean PRIMARY KEY, " +
-                        "n numbers, " +
-                        "t frozen<datetime>, " +
-                        "s strings, " +
-                        "c frozen<collections>, " +
-                        "o other)" + WITH_COMPACTION_DISABLED + ";");
+        createTestUdt("numbers", "ti tinyint, " + "si smallint, " + "bi bigint, " + "vi varint, " + "sf float, " + "df double, " + "de decimal");
+        createTestUdt("datetime", "dd date, " + "ts timestamp, " + "tt time");
+        createTestUdt("strings", "tu timeuuid, " + "ru uuid, " + "ip inet, " + "as ascii, " + "us text, " + "vc varchar");
+        createTestUdt("collections", "t tuple<int, ascii>, " + "s set<ascii>, " + "l frozen<list<ascii>>, " + "m map<ascii, frozen<map<ascii, int>>>");
+        createTestUdt("types", "b blob");
+        createTestUdt("other", "t frozen<types>");
+        createTestTable("CREATE TABLE " + TEST_KEYSPACE + "." + TEST_TABLE_PREFIX + " (" + "b boolean PRIMARY KEY, " + "n numbers, " + "t frozen<datetime>, "
+                + "s strings, " + "c frozen<collections>, " + "o other)" + WITH_COMPACTION_DISABLED + ";");
 
         // First, ensure the returned schema matches the reference one
         // (while ignoring name suffixes and whitespace characters)
@@ -133,17 +110,20 @@ final class SchemaReporterIntegrationTest extends IntegrationTestBase
         DataList actualData = CODEC.readList(new StringReader(actualJson));
         DataList expectedData = CODEC.readList(new StringReader(expectedJson));
         assertThat(actualData).isEqualTo(expectedData);
-        
+
         // Third, validate the captured metrics: one execution triggered by the schedule and
         // completed successfully, with thirteen aspects produced in zero or more milliseconds
-        SchemaReportingMetrics metrics = this.metrics.server().schemaReporting();
+        SchemaReportingMetrics metrics = this.metrics.server()
+                                                     .schemaReporting();
         assertThat(metrics.startedRequest.metric.getValue()).isZero();
         assertThat(metrics.startedSchedule.metric.getValue()).isOne();
         assertThat(metrics.finishedSuccess.metric.getValue()).isOne();
         assertThat(metrics.finishedFailure.metric.getValue()).isZero();
         assertThat(metrics.sizeAspects.metric.getCount()).isOne();
-        assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(13L);
+        assertThat(metrics.sizeAspects.metric.getSnapshot()
+                                             .getValues()).containsExactly(13L);
         assertThat(metrics.totalDuration.metric.getCount()).isOne();
-        assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();
+        assertThat(metrics.totalDuration.metric.getSnapshot()
+                                               .getValues()[0]).isNotNegative();
     }
 }

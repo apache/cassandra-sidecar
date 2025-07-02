@@ -73,7 +73,10 @@ class RoleAuthorizationsCacheTest
     @AfterEach
     void cleanup()
     {
-        TestResourceReaper.create().with(vertx).with(executorPools).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(executorPools)
+                          .close();
     }
 
     @Test
@@ -88,15 +91,14 @@ class RoleAuthorizationsCacheTest
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         when(mockSidecarPermissionsAccessor.rolesToAuthorizations()).thenReturn(sidecarAuthorizations);
         SidecarConfiguration mockConfig = mockConfig();
-        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
-                                                                    executorPools,
-                                                                    mockConfig,
-                                                                    mockSidecarSchema,
-                                                                    mockDbAccessor,
-                                                                    mockSidecarPermissionsAccessor);
-        assertThat(cache.getAll().size()).isZero();
-        assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(2);
-        assertThat(cache.getAll().size()).isOne();
+        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx, executorPools, mockConfig, mockSidecarSchema, mockDbAccessor,
+                mockSidecarPermissionsAccessor);
+        assertThat(cache.getAll()
+                        .size()).isZero();
+        assertThat(cache.getAuthorizations("test_role1")
+                        .size()).isEqualTo(2);
+        assertThat(cache.getAll()
+                        .size()).isOne();
 
         sidecarAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(BasicPermissions.STREAM_SNAPSHOT.toAuthorization())));
         when(mockSidecarPermissionsAccessor.rolesToAuthorizations()).thenReturn(sidecarAuthorizations);
@@ -105,8 +107,10 @@ class RoleAuthorizationsCacheTest
         Thread.sleep(3000);
 
         // New entries fetched during refreshes
-        assertThat(cache.getAuthorizations("test_role2").size()).isOne();
-        assertThat(cache.getAll().size()).isOne();
+        assertThat(cache.getAuthorizations("test_role2")
+                        .size()).isOne();
+        assertThat(cache.getAll()
+                        .size()).isOne();
     }
 
     @Test
@@ -121,18 +125,16 @@ class RoleAuthorizationsCacheTest
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         when(mockSidecarPermissionsAccessor.rolesToAuthorizations()).thenReturn(sidecarAuthorizations);
         SidecarConfiguration mockConfig = mockConfig();
-        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
-                                                                    executorPools,
-                                                                    mockConfig,
-                                                                    mockSidecarSchema,
-                                                                    mockDbAccessor,
-                                                                    mockSidecarPermissionsAccessor);
-        assertThat(cache.getAll().size()).isZero();
+        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx, executorPools, mockConfig, mockSidecarSchema, mockDbAccessor,
+                mockSidecarPermissionsAccessor);
+        assertThat(cache.getAll()
+                        .size()).isZero();
 
         cache.warmUp(5);
 
         // New entries fetched during refreshes
-        assertThat(cache.getAll().size()).isOne();
+        assertThat(cache.getAll()
+                        .size()).isOne();
         assertThat(cache.getAuthorizations("test_role2")).isNull();
     }
 
@@ -146,22 +148,25 @@ class RoleAuthorizationsCacheTest
         when(mockDbAccessor.findAllRolesAndPermissions()).thenReturn(sidecarAuthorizations);
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         SidecarConfiguration mockConfig = mockConfig();
-        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
-                                                                    executorPools,
-                                                                    mockConfig,
-                                                                    mockSidecarSchema,
-                                                                    mockDbAccessor,
-                                                                    mockSidecarPermissionsAccessor);
-        assertThat(cache.getAll().size()).isZero();
+        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx, executorPools, mockConfig, mockSidecarSchema, mockDbAccessor,
+                mockSidecarPermissionsAccessor);
+        assertThat(cache.getAll()
+                        .size()).isZero();
 
         // warming cache
-        vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
+        vertx.eventBus()
+             .publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
 
         // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
         Thread.sleep(3000);
-        assertThat(cache.getAll().size()).isOne();
-        assertThat(cache.get("unique_cache_entry_key").get("test_role1").size()).isOne();
-        assertThat(cache.get("unique_cache_entry_key").get("test_role2").size()).isOne();
+        assertThat(cache.getAll()
+                        .size()).isOne();
+        assertThat(cache.get("unique_cache_entry_key")
+                        .get("test_role1")
+                        .size()).isOne();
+        assertThat(cache.get("unique_cache_entry_key")
+                        .get("test_role2")
+                        .size()).isOne();
     }
 
     @Test
@@ -178,15 +183,14 @@ class RoleAuthorizationsCacheTest
         when(mockCacheConfig.enabled()).thenReturn(true);
         when(mockCacheConfig.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse("1s"));
         when(mockCacheConfig.maximumSize()).thenReturn(100L);
-        when(mockConfig.accessControlConfiguration().permissionCacheConfiguration()).thenReturn(mockCacheConfig);
-        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
-                                                                    executorPools,
-                                                                    mockConfig,
-                                                                    mockSidecarSchema,
-                                                                    mockDbAccessor,
-                                                                    mockSidecarPermissionsAccessor);
-        assertThat(cache.getAuthorizations("test_role1").size()).isOne();
-        assertThat(cache.getAuthorizations("test_role2").size()).isOne();
+        when(mockConfig.accessControlConfiguration()
+                       .permissionCacheConfiguration()).thenReturn(mockCacheConfig);
+        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx, executorPools, mockConfig, mockSidecarSchema, mockDbAccessor,
+                mockSidecarPermissionsAccessor);
+        assertThat(cache.getAuthorizations("test_role1")
+                        .size()).isOne();
+        assertThat(cache.getAuthorizations("test_role2")
+                        .size()).isOne();
     }
 
     @Test
@@ -196,21 +200,21 @@ class RoleAuthorizationsCacheTest
         when(mockDbAccessor.findAllRolesAndPermissions()).thenReturn(Collections.emptyMap());
         SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
         SidecarConfiguration mockConfig = mockConfig();
-        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
-                                                                    executorPools,
-                                                                    mockConfig,
-                                                                    mockSidecarSchema,
-                                                                    mockDbAccessor,
-                                                                    mockSidecarPermissionsAccessor);
-        assertThat(cache.getAll().size()).isZero();
+        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx, executorPools, mockConfig, mockSidecarSchema, mockDbAccessor,
+                mockSidecarPermissionsAccessor);
+        assertThat(cache.getAll()
+                        .size()).isZero();
 
         // warming cache
-        vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
+        vertx.eventBus()
+             .publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
 
         // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
         Thread.sleep(3000);
-        assertThat(cache.getAll().size()).isOne();
-        assertThat(cache.get("unique_cache_entry_key").size()).isZero();
+        assertThat(cache.getAll()
+                        .size()).isOne();
+        assertThat(cache.get("unique_cache_entry_key")
+                        .size()).isZero();
     }
 
     @Test
@@ -228,21 +232,24 @@ class RoleAuthorizationsCacheTest
         SidecarConfiguration mockConfig = mockConfig();
         SidecarSchema mockSidecarSchema = mock(SidecarSchema.class);
         when(mockSidecarSchema.isInitialized()).thenReturn(false);
-        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
-                                                                    executorPools,
-                                                                    mockConfig,
-                                                                    mockSidecarSchema,
-                                                                    mockDbAccessor,
-                                                                    mockSidecarPermissionsAccessor);
-        assertThat(cache.getAll().size()).isZero();
+        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx, executorPools, mockConfig, mockSidecarSchema, mockDbAccessor,
+                mockSidecarPermissionsAccessor);
+        assertThat(cache.getAll()
+                        .size()).isZero();
 
         // force warmup of cache
         cache.warmUp(5);
 
-        assertThat(cache.getAll().size()).isOne();
-        assertThat(cache.get("unique_cache_entry_key").get("test_role1").size()).isOne();
-        assertThat(cache.get("unique_cache_entry_key").get("test_role2").size()).isOne();
-        assertThat(cache.get("unique_cache_entry_key").get("test_role3")).isNull();
+        assertThat(cache.getAll()
+                        .size()).isOne();
+        assertThat(cache.get("unique_cache_entry_key")
+                        .get("test_role1")
+                        .size()).isOne();
+        assertThat(cache.get("unique_cache_entry_key")
+                        .get("test_role2")
+                        .size()).isOne();
+        assertThat(cache.get("unique_cache_entry_key")
+                        .get("test_role3")).isNull();
     }
 
     private SidecarConfiguration mockConfig()

@@ -48,10 +48,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
- * Test for role based access control in Sidecar
- * Note:
- * - Do not add new test cases in this class. Add them into test method, example refer to testForAdmin.
- * - Create a new keyspace or test role for each test method as required to prevent permissions overlapping
+ * Test for role based access control in Sidecar Note: - Do not add new test cases in this class. Add them into test method, example refer to testForAdmin. -
+ * Create a new keyspace or test role for each test method as required to prevent permissions overlapping
  */
 @ExtendWith(VertxExtension.class)
 class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
@@ -62,7 +60,9 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     private CountDownLatch testCompleteLatch;
 
     @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testAuthorizationScenarios(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
+    void testAuthorizationScenarios(VertxTestContext context,
+                                    CassandraTestContext cassandraContext)
+            throws Exception
     {
         prepareForTest(cassandraContext);
 
@@ -121,8 +121,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
     void testGrantingForTable(VertxTestContext context)
     {
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "grant_table_test_keyspace", "test_table");
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", "grant_table_test_keyspace", "test_table");
 
         // SNAPSHOT:CREATE permission granted for data/grant_table_test_keyspace/test_table
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
@@ -133,16 +132,14 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
     void testGrantingForKeyspace(VertxTestContext context)
     {
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "grant_keyspace_test_keyspace", "test_table");
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", "grant_keyspace_test_keyspace", "test_table");
 
         // SNAPSHOT:CREATE permission granted for data/grant_keyspace_test_keyspace/test_table with
         // data/grant_tables_test_keyspace grant
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, false);
 
         // access not granted for different keyspace
-        String notAllowedSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                       "not_allowed_keyspace", "test_table");
+        String notAllowedSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", "not_allowed_keyspace", "test_table");
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, notAllowedSnapshotRoute, nonAdminClientKeystorePath, true);
 
         // SNAPSHOT:DELETE permission not granted for data/grant_keyspace_test_keyspace/test_table
@@ -151,8 +148,8 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
     void testGrantingAllTablesExceptKeyspace(VertxTestContext context)
     {
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "grant_tables_except_keyspace_test_keyspace", "test_table");
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", "grant_tables_except_keyspace_test_keyspace",
+                "test_table");
 
         // SNAPSHOT:CREATE permission granted for data/grant_tables_except_keyspace_test_keyspace/test_table
         // with data/grant_tables_except_keyspace_test_keyspace grant
@@ -165,8 +162,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
     void testGrantingAtDataLevel(VertxTestContext context) throws Exception
     {
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "test_keyspace", "test_table");
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", "test_keyspace", "test_table");
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/grant_data_test_user");
 
         // SNAPSHOT:CREATE permission granted for data/test_keyspace/test_table with data resource grant
@@ -195,69 +191,75 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
     void testEndpointRequiringMultipleActions(VertxTestContext context)
     {
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "multiple_permissions_required_test_keyspace", "test_table");
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", "multiple_permissions_required_test_keyspace",
+                "test_table");
 
-        String listSnapshotRoute
-        = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s",
-                        "multiple_permissions_required_test_keyspace", "test_table", "my-snapshot");
+        String listSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/%s", "multiple_permissions_required_test_keyspace", "test_table",
+                "my-snapshot");
 
         // SNAPSHOT:CREATE permission granted for data/multiple_permissions_required_test_keyspace/test_table
         WebClient client = createClient(nonAdminClientKeystorePath, truststorePath);
 
-        createReq(client, HttpMethod.PUT, createSnapshotRoute)
-        .compose(createResp -> {
+        createReq(client, HttpMethod.PUT, createSnapshotRoute).compose(createResp -> {
             // grant sidecar permission for streaming
-            updateSidecarPermission("non_admin_test_role",
-                                    "data/multiple_permissions_required_test_keyspace/test_table",
-                                    "SNAPSHOT:READ");
+            updateSidecarPermission("non_admin_test_role", "data/multiple_permissions_required_test_keyspace/test_table", "SNAPSHOT:READ");
 
             // wait for cache refresh
-            return waitForCacheRefresh(2000)
-                   .compose(v -> createReq(client, HttpMethod.GET, listSnapshotRoute));
+            return waitForCacheRefresh(2000).compose(v -> createReq(client, HttpMethod.GET, listSnapshotRoute));
         })
-        .compose(listSnapshotResp -> {
-            ListSnapshotFilesResponse snapshotFiles = listSnapshotResp.bodyAsJson(ListSnapshotFilesResponse.class);
-            List<ListSnapshotFilesResponse.FileInfo> filesToStream =
-            snapshotFiles.snapshotFilesInfo()
-                         .stream()
-                         .filter(info -> info.fileName.endsWith("-Data.db"))
-                         .sorted(Comparator.comparing(o -> o.fileName))
-                         .collect(Collectors.toList());
+                                                              .compose(listSnapshotResp -> {
+                                                                  ListSnapshotFilesResponse snapshotFiles = listSnapshotResp.bodyAsJson(
+                                                                          ListSnapshotFilesResponse.class);
+                                                                  List<ListSnapshotFilesResponse.FileInfo> filesToStream = snapshotFiles.snapshotFilesInfo()
+                                                                                                                                        .stream()
+                                                                                                                                        .filter(info -> info.fileName.endsWith(
+                                                                                                                                                "-Data.db"))
+                                                                                                                                        .sorted(Comparator.comparing(
+                                                                                                                                                o -> o.fileName))
+                                                                                                                                        .collect(
+                                                                                                                                                Collectors.toList());
 
-            // grant sidecar permission for streaming
-            updateSidecarPermission("non_admin_test_role",
-                                    "data/multiple_permissions_required_test_keyspace/test_table",
-                                    "SNAPSHOT:STREAM");
+                                                                  // grant sidecar permission for streaming
+                                                                  updateSidecarPermission("non_admin_test_role",
+                                                                          "data/multiple_permissions_required_test_keyspace/test_table", "SNAPSHOT:STREAM");
 
-            return waitForCacheRefresh(2000)
-                   // STREAM SSTable request requires both Sidecar SNAPSHOT:STREAM permission and Cassandra's SELECT
-                   // permission on a table it accesses data.
-                   .compose(v -> createReq(client, HttpMethod.GET, filesToStream.get(0).componentDownloadUrl()))
-                   .compose(deniedStreamResp -> {
-                       // request denied without SELECT permission
-                       assertThat(deniedStreamResp.statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
+                                                                  return waitForCacheRefresh(2000)
+                                                                                                  // STREAM SSTable request requires both Sidecar
+                                                                                                  // SNAPSHOT:STREAM permission and Cassandra's SELECT
+                                                                                                  // permission on a table it accesses data.
+                                                                                                  .compose(v -> createReq(client, HttpMethod.GET,
+                                                                                                          filesToStream.get(0)
+                                                                                                                       .componentDownloadUrl()))
+                                                                                                  .compose(deniedStreamResp -> {
+                                                                                                      // request denied without SELECT permission
+                                                                                                      assertThat(deniedStreamResp.statusCode()).isEqualTo(
+                                                                                                              HttpResponseStatus.FORBIDDEN.code());
 
-                       // grant SELECT permission with cassandra role
-                       grantTablePermission("multiple_permissions_required_test_keyspace", "test_table", "non_admin_test_role");
+                                                                                                      // grant SELECT permission with cassandra role
+                                                                                                      grantTablePermission(
+                                                                                                              "multiple_permissions_required_test_keyspace",
+                                                                                                              "test_table", "non_admin_test_role");
 
-                       return waitForCacheRefresh(2000);
-                   }).compose(v -> createReq(client, HttpMethod.GET, filesToStream.get(0).componentDownloadUrl()));
-        })
-        .onSuccess(acceptedStreamResp ->  {
-            // stream request goes through with both SNAPSHOT:STREAM and SELECT permissions
-            context.verify(() -> assertThat(acceptedStreamResp.statusCode()).isEqualTo(HttpResponseStatus.OK.code()));
-            testCompleteLatch.countDown();
-        })
-        .onFailure(context::failNow);
+                                                                                                      return waitForCacheRefresh(2000);
+                                                                                                  })
+                                                                                                  .compose(v -> createReq(client, HttpMethod.GET,
+                                                                                                          filesToStream.get(0)
+                                                                                                                       .componentDownloadUrl()));
+                                                              })
+                                                              .onSuccess(acceptedStreamResp -> {
+                                                                  // stream request goes through with both SNAPSHOT:STREAM and SELECT permissions
+                                                                  context.verify(() -> assertThat(acceptedStreamResp.statusCode()).isEqualTo(
+                                                                          HttpResponseStatus.OK.code()));
+                                                                  testCompleteLatch.countDown();
+                                                              })
+                                                              .onFailure(context::failNow);
     }
 
     void testGrantingBulkReadFeaturePermission(VertxTestContext context) throws Exception
     {
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/bulk_read_test_user");
 
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "grant_bulk_read_test_keyspace", "test_table");
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", "grant_bulk_read_test_keyspace", "test_table");
 
         // SNAPSHOT:CREATE permission granted for data/grant_bulk_read_test_keyspace/test_table with ANALYTICS:READ_DIRECT
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
@@ -271,8 +273,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // TOPOLOGY:READ permission not granted with ANALYTICS:READ_DIRECT
         verifyAccess(context, testCompleteLatch, HttpMethod.GET, topologyRoute, clientKeystorePath, true);
 
-        String tableStatsRoute = String.format("/api/v1/cassandra/keyspaces/%s/tables/%s/stats",
-                                               "grant_bulk_read_test_keyspace", "test_table");
+        String tableStatsRoute = String.format("/api/v1/cassandra/keyspaces/%s/tables/%s/stats", "grant_bulk_read_test_keyspace", "test_table");
         // STATS permission granted with ANALYTICS:READ_DIRECT
         verifyAccess(context, testCompleteLatch, HttpMethod.GET, tableStatsRoute, clientKeystorePath, false);
 
@@ -285,26 +286,24 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     {
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/bulk_read_test_user");
 
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "grant_bulk_read_across_tables_test_keyspace", "test_table");
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", "grant_bulk_read_across_tables_test_keyspace",
+                "test_table");
 
         // SNAPSHOT:CREATE permission granted for data/grant_bulk_read_across_tables_test_keyspace/test_table with ANALYTICS:READ_DIRECT
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
 
-        String createSnapshotRouteTable2 = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                         "grant_bulk_read_across_tables_test_keyspace", "test_table2");
+        String createSnapshotRouteTable2 = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", "grant_bulk_read_across_tables_test_keyspace",
+                "test_table2");
 
         // SNAPSHOT:CREATE for different table also granted with keyspace scoped ANALYTICS:READ_DIRECT permission
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRouteTable2, clientKeystorePath, false);
 
-        String createSnapshotRouteKeyspace2 = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                            "test_keyspace", "test_table2");
+        String createSnapshotRouteKeyspace2 = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", "test_keyspace", "test_table2");
 
         // SNAPSHOT:CREATE for different keyspace not granted with keyspace scoped ANALYTICS:READ_DIRECT permission
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRouteKeyspace2, clientKeystorePath, true);
 
-        String tableStatsRoute = String.format("/api/v1/cassandra/keyspaces/%s/tables/%s/stats",
-                                               "grant_bulk_read_across_tables_test_keyspace", "test_table");
+        String tableStatsRoute = String.format("/api/v1/cassandra/keyspaces/%s/tables/%s/stats", "grant_bulk_read_across_tables_test_keyspace", "test_table");
         // STATS permission granted with ANALYTICS:READ_DIRECT
         verifyAccess(context, testCompleteLatch, HttpMethod.GET, tableStatsRoute, clientKeystorePath, false);
     }
@@ -313,14 +312,12 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     {
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/bulk_read_across_data_test_user");
 
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot-2",
-                                                   "test_keyspace", "test_table");
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot-2", "test_keyspace", "test_table");
 
         // SNAPSHOT:CREATE permission granted for data/test_keyspace/test_table with ANALYTICS:READ_DIRECT permission
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
 
-        String createSnapshotRouteKeyspace2 = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot-3",
-                                                            "non_admin_test_keyspace", "test_table");
+        String createSnapshotRouteKeyspace2 = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot-3", "non_admin_test_keyspace", "test_table");
 
         // SNAPSHOT:CREATE for different keyspace also granted with data scoped ANALYTICS:READ_DIRECT permission
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRouteKeyspace2, clientKeystorePath, false);
@@ -353,8 +350,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // RING:READ permission granted for data/grant_bulk_read_write_test_keyspace with ANALYTICS:READ_DIRECT,WRITE_DIRECT
         verifyAccess(context, testCompleteLatch, HttpMethod.GET, keyspaceRingRoute, clientKeystorePath, false);
 
-        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                                   "grant_bulk_read_write_test_keyspace", "test_table");
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", "grant_bulk_read_write_test_keyspace", "test_table");
 
         // SNAPSHOT:CREATE permission granted for data/grant_bulk_read_write_test_keyspace/test_table with ANALYTICS:READ_DIRECT,WRITE_DIRECT
         verifyAccess(context, testCompleteLatch, HttpMethod.PUT, createSnapshotRoute, clientKeystorePath, false);
@@ -380,23 +376,22 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/cdc_test_user");
         // CDC permission granted with CDC
         WebClient client = createClient(clientKeystorePath, truststorePath);
-        createReq(client, HttpMethod.GET, listCdcPath)
-        .onFailure(context::failNow)
-        .onSuccess(listResp -> {
-            // CDC permission granted
-            // CDC is not turned on for cluster, hence 500 or 503 expected
-            context.verify(() -> assertThat(listResp.statusCode()).isIn(HttpResponseStatus.SERVICE_UNAVAILABLE.code(),
-                                                                        HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
-            testCompleteLatch.countDown();
-        });
+        createReq(client, HttpMethod.GET, listCdcPath).onFailure(context::failNow)
+                                                      .onSuccess(listResp -> {
+                                                          // CDC permission granted
+                                                          // CDC is not turned on for cluster, hence 500 or 503 expected
+                                                          context.verify(
+                                                                  () -> assertThat(listResp.statusCode()).isIn(HttpResponseStatus.SERVICE_UNAVAILABLE.code(),
+                                                                          HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
+                                                          testCompleteLatch.countDown();
+                                                      });
     }
 
     private void prepareForTest(CassandraTestContext cassandraContext) throws Exception
     {
         // mTLS authentication was added in Cassandra starting 5.0 version
-        assumeThat(cassandraContext.version.major)
-        .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
-        .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
+        assumeThat(cassandraContext.version.major).withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
+                                                  .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
 
         // required for authentication of sidecar requests to Cassandra. Only superusers can grant permissions
         insertIdentityRole(cassandraContext, ADMIN_IDENTITY, "cassandra");
@@ -408,11 +403,13 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createRequiredKeystores();
     }
 
-    private void insertIdentityRole(CassandraTestContext cassandraContext, String identity, String role)
+    private void insertIdentityRole(CassandraTestContext cassandraContext,
+                                    String identity,
+                                    String role)
     {
-        String statement = String.format("INSERT INTO system_auth.identity_to_role (identity, role) VALUES ('%s','%s')",
-                                         identity, role);
-        cassandraContext.cluster().schemaChangeIgnoringStoppedInstances(statement);
+        String statement = String.format("INSERT INTO system_auth.identity_to_role (identity, role) VALUES ('%s','%s')", identity, role);
+        cassandraContext.cluster()
+                        .schemaChangeIgnoringStoppedInstances(statement);
     }
 
     private void createRequiredKeyspaceTables()
@@ -499,9 +496,7 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         grantSidecarPermission("wildcard_with_subparts_test_role", "cluster", "GOSSIP,SCHEMA:READ");
 
         // permission for testEndpointRequiringMultipleActions
-        grantSidecarPermission("non_admin_test_role",
-                               "data/multiple_permissions_required_test_keyspace/test_table",
-                               "SNAPSHOT:CREATE");
+        grantSidecarPermission("non_admin_test_role", "data/multiple_permissions_required_test_keyspace/test_table", "SNAPSHOT:CREATE");
 
         // permission for testGrantingBulkReadFeaturePermission
         grantSidecarPermission("bulk_read_test_role", "data/grant_bulk_read_test_keyspace/test_table", "ANALYTICS:READ_DIRECT");
@@ -536,35 +531,47 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         session.execute("CREATE KEYSPACE IF NOT EXISTS " + keyspace + " WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor':'3'}");
     }
 
-    private void createTable(String keyspace, String table)
+    private void createTable(String keyspace,
+                             String table)
     {
         Session session = maybeGetSession();
         session.execute(String.format("CREATE TABLE %s.%s (a int, b text, PRIMARY KEY (a));", keyspace, table));
         session.execute("INSERT INTO " + keyspace + "." + table + " (a, b) VALUES (1, 'text');");
     }
 
-    private void grantTablePermission(String keyspace, String table, String role)
+    private void grantTablePermission(String keyspace,
+                                      String table,
+                                      String role)
     {
         Session session = maybeGetSession();
         session.execute("GRANT ALL PERMISSIONS ON " + keyspace + "." + table + " TO " + role);
     }
 
-    private void grantSidecarPermission(String role, String resource, String permission)
+    private void grantSidecarPermission(String role,
+                                        String resource,
+                                        String permission)
     {
         Session session = maybeGetSession();
-        session.execute(String.format("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
-                                      "VALUES ('%s', '%s', {'%s'})", role, resource, permission));
+        session.execute(String.format("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " + "VALUES ('%s', '%s', {'%s'})", role,
+                resource, permission));
     }
 
-    private void updateSidecarPermission(String role, String resource, String permission)
+    private void updateSidecarPermission(String role,
+                                         String resource,
+                                         String permission)
     {
         Session session = maybeGetSession();
-        session.execute(String.format("UPDATE sidecar_internal.role_permissions_v1 SET permissions = permissions + {'%s'} " +
-                                      "where role = '%s' and resource = '%s'", permission, role, resource));
+        session.execute(
+                String.format("UPDATE sidecar_internal.role_permissions_v1 SET permissions = permissions + {'%s'} " + "where role = '%s' and resource = '%s'",
+                        permission, role, resource));
     }
 
-    private void verifyAccess(VertxTestContext context, CountDownLatch countDownLatch, HttpMethod method,
-                              String testRoute, Path clientKeystorePath, boolean expectForbidden)
+    private void verifyAccess(VertxTestContext context,
+                              CountDownLatch countDownLatch,
+                              HttpMethod method,
+                              String testRoute,
+                              Path clientKeystorePath,
+                              boolean expectForbidden)
     {
         WebClient client = createClient(clientKeystorePath, truststorePath);
         client.request(method, server.actualPort(), "127.0.0.1", testRoute)
@@ -577,17 +584,21 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
 
                   if (expectForbidden)
                   {
-                      if (response.result().statusCode() != HttpResponseStatus.FORBIDDEN.code())
+                      if (response.result()
+                                  .statusCode() != HttpResponseStatus.FORBIDDEN.code())
                       {
-                          context.failNow(HttpResponseStatus.FORBIDDEN.code() + " expected but got " + response.result().statusCode());
+                          context.failNow(HttpResponseStatus.FORBIDDEN.code() + " expected but got " + response.result()
+                                                                                                               .statusCode());
                           return;
                       }
                   }
                   else
                   {
-                      if (response.result().statusCode() != HttpResponseStatus.OK.code())
+                      if (response.result()
+                                  .statusCode() != HttpResponseStatus.OK.code())
                       {
-                          context.failNow(HttpResponseStatus.OK.code() + " expected but got " + response.result().statusCode());
+                          context.failNow(HttpResponseStatus.OK.code() + " expected but got " + response.result()
+                                                                                                        .statusCode());
                           return;
                       }
                   }
@@ -595,9 +606,12 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
               });
     }
 
-    private Future<HttpResponse<Buffer>> createReq(WebClient client, HttpMethod method, String route)
+    private Future<HttpResponse<Buffer>> createReq(WebClient client,
+                                                   HttpMethod method,
+                                                   String route)
     {
-        return client.request(method, server.actualPort(), "127.0.0.1", route).send();
+        return client.request(method, server.actualPort(), "127.0.0.1", route)
+                     .send();
     }
 
     // Helper method to wait for cache refresh

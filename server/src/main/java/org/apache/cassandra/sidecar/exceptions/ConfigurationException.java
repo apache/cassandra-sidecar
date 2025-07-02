@@ -19,8 +19,7 @@
 package org.apache.cassandra.sidecar.exceptions;
 
 /**
- * Exception thrown when an error occurs during configuration processing. It could be thrown when configuration is
- * missing, invalid or not supported.
+ * Exception thrown when an error occurs during configuration processing. It could be thrown when configuration is missing, invalid or not supported.
  */
 public class ConfigurationException extends RuntimeException
 {
@@ -29,7 +28,8 @@ public class ConfigurationException extends RuntimeException
         super(message);
     }
 
-    public ConfigurationException(String message, Throwable cause)
+    public ConfigurationException(String message,
+                                  Throwable cause)
     {
         super(message, cause);
     }

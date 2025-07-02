@@ -29,9 +29,8 @@ import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
 
 /**
- * This class is used to encapsulate several heavy-weight objects that can be shared across all executions
- * of tests within a test run. It intentionally does not close these resources when the Cassandra Driver's
- * cluster is closed, so they can be reused for the next test.
+ * This class is used to encapsulate several heavy-weight objects that can be shared across all executions of tests within a test run. It intentionally does not
+ * close these resources when the Cassandra Driver's cluster is closed, so they can be reused for the next test.
  */
 public class SharedExecutorNettyOptions extends NettyOptions
 {
@@ -41,10 +40,9 @@ public class SharedExecutorNettyOptions extends NettyOptions
 
     public static final SharedExecutorNettyOptions INSTANCE = new SharedExecutorNettyOptions();
 
-    private final ThreadFactory threadFactory = new ThreadFactoryBuilder()
-                                                .setDaemon(true)
-                                                .setNameFormat("IntegrationTest-%d")
-                                                .build();
+    private final ThreadFactory threadFactory = new ThreadFactoryBuilder().setDaemon(true)
+                                                                          .setNameFormat("IntegrationTest-%d")
+                                                                          .build();
     private final HashedWheelTimer sharedHWT = new HashedWheelTimer(threadFactory);
     private final EventLoopGroup sharedEventLoopGroup = new NioEventLoopGroup(0, threadFactory);
 

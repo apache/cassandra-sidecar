@@ -58,15 +58,14 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
     private final Cache<SSTableImporter.ImportOptions, Future<Void>> cache;
 
     /**
-     * Constructs a handler with the provided {@code metadataFetcher} and {@code builder} for the SSTableUploads
-     * staging directory
+     * Constructs a handler with the provided {@code metadataFetcher} and {@code builder} for the SSTableUploads staging directory
      *
-     * @param metadataFetcher   a class for fetching InstanceMetadata
-     * @param importer          a class that handles importing the requests into Cassandra
+     * @param metadataFetcher a class for fetching InstanceMetadata
+     * @param importer a class that handles importing the requests into Cassandra
      * @param uploadPathBuilder a class that provides SSTableUploads directories
-     * @param cacheFactory      a factory for caches used in sidecar
-     * @param executorPools     executor pools for blocking executions
-     * @param validator         a validator instance to validate Cassandra-specific input
+     * @param cacheFactory a factory for caches used in sidecar
+     * @param executorPools executor pools for blocking executions
+     * @param validator a validator instance to validate Cassandra-specific input
      */
     @Inject
     protected SSTableImportHandler(InstanceMetadataFetcher metadataFetcher,
@@ -105,8 +104,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
     {
         uploadPathBuilder.build(host, request)
                          .onSuccess(uploadDirectory -> {
-                             SSTableImporter.ImportOptions importOptions =
-                             importOptions(host, request, uploadDirectory);
+                             SSTableImporter.ImportOptions importOptions = importOptions(host, request, uploadDirectory);
 
                              Future<Void> importResult = cache.get(importOptions, this::importSSTablesAsync);
                              if (importResult == null)
@@ -117,9 +115,10 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
 
                              if (!importResult.isComplete())
                              {
-                                 logger.debug("ImportHandler accepted request={}, remoteAddress={}, instance={}",
-                                              request, remoteAddress, host);
-                                 context.response().setStatusCode(HttpResponseStatus.ACCEPTED.code()).end();
+                                 logger.debug("ImportHandler accepted request={}, remoteAddress={}, instance={}", request, remoteAddress, host);
+                                 context.response()
+                                        .setStatusCode(HttpResponseStatus.ACCEPTED.code())
+                                        .end();
                              }
                              else if (importResult.failed())
                              {
@@ -127,12 +126,11 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
                              }
                              else
                              {
-                                 context.json(new SSTableImportResponse(true,
-                                                                        request.uploadId(),
-                                                                        request.keyspace().name(),
-                                                                        request.table().name()));
-                                 logger.debug("ImportHandler completed request={}, remoteAddress={}, instance={}",
-                                              request, remoteAddress, host);
+                                 context.json(new SSTableImportResponse(true, request.uploadId(), request.keyspace()
+                                                                                                         .name(),
+                                         request.table()
+                                                .name()));
+                                 logger.debug("ImportHandler completed request={}, remoteAddress={}, instance={}", request, remoteAddress, host);
                              }
                          })
                          .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
@@ -147,14 +145,12 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
     {
         if (cause instanceof NoSuchFileException)
         {
-            logger.error("Upload directory not found for request={}, remoteAddress={}, " +
-                         "instance={}", request, remoteAddress, host, cause);
+            logger.error("Upload directory not found for request={}, remoteAddress={}, " + "instance={}", request, remoteAddress, host, cause);
             context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
         }
         else if (cause instanceof IllegalArgumentException)
         {
-            context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, cause.getMessage(),
-                                           cause));
+            context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, cause.getMessage(), cause));
         }
         else if (cause instanceof HttpException)
         {
@@ -182,7 +178,8 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
         {
             // ensure that table operations are available from the delegate before doing the import
             // otherwise fail fast propagating the HttpException
-            metadataFetcher.delegate(importOptions.host()).tableOperations();
+            metadataFetcher.delegate(importOptions.host())
+                           .tableOperations();
             return uploadPathBuilder.isValidDirectory(importOptions.directory())
                                     .compose(validDirectory -> importer.scheduleImport(importOptions));
         }
@@ -192,22 +189,24 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
         }
     }
 
-    private static SSTableImporter.ImportOptions importOptions(String host, SSTableImportRequestParam request,
+    private static SSTableImporter.ImportOptions importOptions(String host,
+                                                               SSTableImportRequestParam request,
                                                                String uploadDirectory)
     {
-        return new SSTableImporter.ImportOptions.Builder()
-               .host(host)
-               .keyspace(request.keyspace().name())
-               .tableName(request.table().name())
-               .directory(uploadDirectory)
-               .uploadId(request.uploadId())
-               .resetLevel(request.resetLevel())
-               .clearRepaired(request.clearRepaired())
-               .verifySSTables(request.verifySSTables())
-               .verifyTokens(request.verifyTokens())
-               .invalidateCaches(request.invalidateCaches())
-               .extendedVerify(request.extendedVerify())
-               .copyData(request.copyData())
-               .build();
+        return new SSTableImporter.ImportOptions.Builder().host(host)
+                                                          .keyspace(request.keyspace()
+                                                                           .name())
+                                                          .tableName(request.table()
+                                                                            .name())
+                                                          .directory(uploadDirectory)
+                                                          .uploadId(request.uploadId())
+                                                          .resetLevel(request.resetLevel())
+                                                          .clearRepaired(request.clearRepaired())
+                                                          .verifySSTables(request.verifySSTables())
+                                                          .verifyTokens(request.verifyTokens())
+                                                          .invalidateCaches(request.invalidateCaches())
+                                                          .extendedVerify(request.extendedVerify())
+                                                          .copyData(request.copyData())
+                                                          .build();
     }
 }

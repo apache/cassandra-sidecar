@@ -45,16 +45,15 @@ public class RingRequestForKeyspaceTestParameters implements RequestTestParamete
     @Override
     public String okResponseBody()
     {
-        return "[{\"datacenter\":\"LO\",\"address\":\"172.17.0.2\",\"port\":7000,\"rack\":\"101000101\"," +
-               "\"status\":\"Up\",\"state\":\"Normal\",\"load\":\"86.99 KiB\",\"owns\":\"100.00%\"," +
-               "\"token\":\"-9223372036854775808\",\"fqdn\":\"172.17.0.2\"," +
-               "\"hostId\":\"33cae238-8203-41c1-880f-8cdf98ee6720\"},{\"datacenter\":\"LO\"," +
-               "\"address\":\"127.0.0.2\",\"port\":7000,\"rack\":\"101000201\",\"status\":\"Up\"," +
-               "\"state\":\"Normal\",\"load\":\"87 KiB\",\"owns\":\"100.00%\",\"token\":\"-3074457345618258603\"," +
-               "\"fqdn\":\"127.0.0.2\",\"hostId\":\"dba02656-ea8c-4a1d-8011-cbc0dab5f411\"},{\"datacenter\":\"LO\"," +
-               "\"address\":\"127.0.0.3\",\"port\":7000,\"rack\":\"101000301\",\"status\":\"Up\"," +
-               "\"state\":\"Normal\",\"load\":\"87 KiB\",\"owns\":\"100.00%\",\"token\":\"3074457345618258602\"," +
-               "\"fqdn\":\"127.0.0.3\",\"hostId\":\"be19c254-becb-40b9-8951-30c589c7028e\"}]";
+        return "[{\"datacenter\":\"LO\",\"address\":\"172.17.0.2\",\"port\":7000,\"rack\":\"101000101\","
+                + "\"status\":\"Up\",\"state\":\"Normal\",\"load\":\"86.99 KiB\",\"owns\":\"100.00%\","
+                + "\"token\":\"-9223372036854775808\",\"fqdn\":\"172.17.0.2\"," + "\"hostId\":\"33cae238-8203-41c1-880f-8cdf98ee6720\"},{\"datacenter\":\"LO\","
+                + "\"address\":\"127.0.0.2\",\"port\":7000,\"rack\":\"101000201\",\"status\":\"Up\","
+                + "\"state\":\"Normal\",\"load\":\"87 KiB\",\"owns\":\"100.00%\",\"token\":\"-3074457345618258603\","
+                + "\"fqdn\":\"127.0.0.2\",\"hostId\":\"dba02656-ea8c-4a1d-8011-cbc0dab5f411\"},{\"datacenter\":\"LO\","
+                + "\"address\":\"127.0.0.3\",\"port\":7000,\"rack\":\"101000301\",\"status\":\"Up\","
+                + "\"state\":\"Normal\",\"load\":\"87 KiB\",\"owns\":\"100.00%\",\"token\":\"3074457345618258602\","
+                + "\"fqdn\":\"127.0.0.3\",\"hostId\":\"be19c254-becb-40b9-8951-30c589c7028e\"}]";
     }
 
     @Override
@@ -67,11 +66,13 @@ public class RingRequestForKeyspaceTestParameters implements RequestTestParamete
     public void validateResponse(RingResponse response)
     {
         assertThat(response.size()).isEqualTo(3);
-        List<RingEntry> ringEntryList = StreamSupport
-                                        .stream(((Iterable<RingEntry>) response).spliterator(), false)
-                                        .collect(Collectors.toList());
-        assertThat(ringEntryList.get(0).token()).isEqualTo("-9223372036854775808");
-        assertThat(ringEntryList.get(1).token()).isEqualTo("-3074457345618258603");
-        assertThat(ringEntryList.get(2).token()).isEqualTo("3074457345618258602");
+        List<RingEntry> ringEntryList = StreamSupport.stream(((Iterable<RingEntry>) response).spliterator(), false)
+                                                     .collect(Collectors.toList());
+        assertThat(ringEntryList.get(0)
+                                .token()).isEqualTo("-9223372036854775808");
+        assertThat(ringEntryList.get(1)
+                                .token()).isEqualTo("-3074457345618258603");
+        assertThat(ringEntryList.get(2)
+                                .token()).isEqualTo("3074457345618258602");
     }
 }

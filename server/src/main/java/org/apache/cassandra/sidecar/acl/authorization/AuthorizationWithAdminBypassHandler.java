@@ -18,13 +18,11 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.List;
-
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.impl.AuthorizationHandlerImpl;
+import java.util.List;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
-
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 
 /**
@@ -56,7 +54,8 @@ public class AuthorizationWithAdminBypassHandler extends AuthorizationHandlerImp
         List<String> identities = extractIdentities(ctx.user());
 
         // Admin identities bypass route specific authorization checks
-        if (!identities.isEmpty() && identities.stream().anyMatch(adminIdentityResolver::isAdmin))
+        if (!identities.isEmpty() && identities.stream()
+                                               .anyMatch(adminIdentityResolver::isAdmin))
         {
             ctx.next();
             return;

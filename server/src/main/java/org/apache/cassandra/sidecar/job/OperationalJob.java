@@ -18,20 +18,18 @@
 
 package org.apache.cassandra.sidecar.job;
 
-import java.util.UUID;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import java.util.UUID;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.tasks.Task;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An abstract class representing operational jobs that run on Cassandra
@@ -91,7 +89,8 @@ public abstract class OperationalJob implements Task<Void>
      *
      * @return true if the job's life duration has exceeded ttlInMillis; otherwise, false
      */
-    public boolean isStale(long referenceTimestampInMillis, long ttlInMillis)
+    public boolean isStale(long referenceTimestampInMillis,
+                           long ttlInMillis)
     {
         long createdAt = creationTime();
         Preconditions.checkArgument(referenceTimestampInMillis >= createdAt, "Invalid referenceTimestampInMillis");
@@ -101,21 +100,20 @@ public abstract class OperationalJob implements Task<Void>
 
     /**
      * The concrete-job-specific implementation to determine if the job is running on the Cassandra node.
-     * @return true if the job is running on the Cassandra node. For example, node decommission is tracked by the
-     * operationMode exposed from Cassandra.
+     *
+     * @return true if the job is running on the Cassandra node. For example, node decommission is tracked by the operationMode exposed from Cassandra.
      */
     public abstract boolean isRunningOnCassandra();
 
     /**
      * Determines the status of the job. OperationalJob subclasses could choose to override the method.
      * <p>
-     * For long-lived jobs, the implementations should return the {@link OperationalJobStatus#RUNNING} status intelligently.
-     * If the operationMode is LEAVING, the corresponding OperationalJob is {@link OperationalJobStatus#RUNNING}.
-     * In this case, even if the OperationalJobStatus determined from this method is {@link OperationalJobStatus#CREATED},
-     * the concrete implementation can override and return {@link OperationalJobStatus#RUNNING}.
+     * For long-lived jobs, the implementations should return the {@link OperationalJobStatus#RUNNING} status intelligently. If the operationMode is LEAVING,
+     * the corresponding OperationalJob is {@link OperationalJobStatus#RUNNING}. In this case, even if the OperationalJobStatus determined from this method is
+     * {@link OperationalJobStatus#CREATED}, the concrete implementation can override and return {@link OperationalJobStatus#RUNNING}.
      * <p>
-     * For short-lived jobs, i.e. the result is known right away, the implementations do not return the {@link OperationalJobStatus#RUNNING} status.
-     * They return either {@link OperationalJobStatus#SUCCEEDED} or {@link OperationalJobStatus#FAILED}
+     * For short-lived jobs, i.e. the result is known right away, the implementations do not return the {@link OperationalJobStatus#RUNNING} status. They return
+     * either {@link OperationalJobStatus#SUCCEEDED} or {@link OperationalJobStatus#FAILED}
      *
      * @return status of the OperationalJob execution
      */
@@ -152,12 +150,13 @@ public abstract class OperationalJob implements Task<Void>
      * Note: This call does not block the calling thread.
      *
      * @param executorPool executor pool to run the timer
-     * @param waitTime     maximum time to wait before returning
-     * @return a future that is either the result of the configured timeout based on {@code waitTime} or the async
-     * result. A succeeded future here, represents either a timeout or the result of the job and a failure is
-     * represented by an exception thrown by the job execution, within the configured timeout.
+     * @param waitTime maximum time to wait before returning
+     * @return a future that is either the result of the configured timeout based on {@code waitTime} or the async result. A succeeded future here, represents
+     *         either a timeout or the result of the job and a failure is represented by an exception thrown by the job execution, within the configured
+     *         timeout.
      */
-    public Future<Void> asyncResult(TaskExecutorPool executorPool, DurationSpec waitTime)
+    public Future<Void> asyncResult(TaskExecutorPool executorPool,
+                                    DurationSpec waitTime)
     {
         Future<Void> resultFut = asyncResult();
         if (resultFut.isComplete())
@@ -192,15 +191,15 @@ public abstract class OperationalJob implements Task<Void>
     protected abstract void executeInternal();
 
     /**
-     * Execute the job behavior as specified in the internal execution {@link #executeInternal()},
-     * while tracking the status of the job's lifecycle.
+     * Execute the job behavior as specified in the internal execution {@link #executeInternal()}, while tracking the status of the job's lifecycle.
      */
     @Override
     public void execute(Promise<Void> promise)
     {
         isExecuting = true;
         LOGGER.info("Executing job. jobId={}", jobId);
-        promise.future().onComplete(executionPromise);
+        promise.future()
+               .onComplete(executionPromise);
         try
         {
             // Blocking call to perform concrete job-specific execution, returning the status

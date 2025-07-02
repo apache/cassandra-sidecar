@@ -18,23 +18,20 @@
 
 package org.apache.cassandra.sidecar;
 
+import com.google.inject.Guice;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.inject.Guice;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.jetbrains.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Main class for initiating the Cassandra sidecar
- * Note: remember to start and stop all delegates of instances
+ * Main class for initiating the Cassandra sidecar Note: remember to start and stop all delegates of instances
  */
 public class CassandraSidecarDaemon
 {
@@ -47,16 +44,19 @@ public class CassandraSidecarDaemon
         Server app = Guice.createInjector(SidecarModules.all(determineConfigPath()))
                           .getInstance(Server.class);
         runningApplication = app;
-        app.start().onSuccess(deploymentId -> Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (close(app))
-            {
-                LOGGER.info("Cassandra Sidecar stopped successfully");
-            }
-        }))).onFailure(throwable -> {
-            LOGGER.error("Failed to start Sidecar", throwable);
-            close(app);
-            System.exit(1);
-        });
+        app.start()
+           .onSuccess(deploymentId -> Runtime.getRuntime()
+                                             .addShutdownHook(new Thread(() -> {
+                                                 if (close(app))
+                                                 {
+                                                     LOGGER.info("Cassandra Sidecar stopped successfully");
+                                                 }
+                                             })))
+           .onFailure(throwable -> {
+               LOGGER.error("Failed to start Sidecar", throwable);
+               close(app);
+               System.exit(1);
+           });
     }
 
     /**
@@ -109,10 +109,8 @@ public class CassandraSidecarDaemon
     {
         if (!Files.exists(confPath))
         {
-            throw new IllegalArgumentException(String.format("Sidecar configuration file '%s' does not exist",
-                                                             confPath.toAbsolutePath()));
+            throw new IllegalArgumentException(String.format("Sidecar configuration file '%s' does not exist", confPath.toAbsolutePath()));
         }
         return confPath;
     }
 }
-

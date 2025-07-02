@@ -58,7 +58,8 @@ class RestoreJobProgressCollectFirstFailedTest extends BaseRestoreJobProgressCol
         createRangesAndCollect(1, ConsistencyVerificationResult.FAILED);
         // collector should stop from collecting
         createRangesAndCollect(5, ConsistencyVerificationResult.PENDING); // not being collected
-        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
+        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress()
+                                                             .toResponsePayload();
         assertThat(payload.message()).isEqualTo("One or more ranges have failed. Current job status: CREATED");
         assertJobSummary(payload.summary());
         assertThat(payload.failedRanges()).hasSize(1);
@@ -70,7 +71,6 @@ class RestoreJobProgressCollectFirstFailedTest extends BaseRestoreJobProgressCol
     @Override
     protected RestoreJobProgressCollector createCollector(RestoreJob restoreJob)
     {
-        return RestoreJobProgressCollectors.create(restoreJob,
-                                                   RestoreJobProgressFetchPolicy.FIRST_FAILED);
+        return RestoreJobProgressCollectors.create(restoreJob, RestoreJobProgressFetchPolicy.FIRST_FAILED);
     }
 }

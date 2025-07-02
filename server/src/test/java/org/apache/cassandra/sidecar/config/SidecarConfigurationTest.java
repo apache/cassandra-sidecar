@@ -74,8 +74,12 @@ class SidecarConfigurationTest
         Path yamlPath = yaml("config/sidecar_custom_allowable_time_skew.yaml");
         SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         assertThat(config.serviceConfiguration()).isNotNull();
-        assertThat(config.serviceConfiguration().allowableTimeSkew().quantity()).isEqualTo(1);
-        assertThat(config.serviceConfiguration().allowableTimeSkew().unit()).isEqualTo(TimeUnit.MINUTES);
+        assertThat(config.serviceConfiguration()
+                         .allowableTimeSkew()
+                         .quantity()).isEqualTo(1);
+        assertThat(config.serviceConfiguration()
+                         .allowableTimeSkew()
+                         .unit()).isEqualTo(TimeUnit.MINUTES);
     }
 
     @Test
@@ -83,9 +87,11 @@ class SidecarConfigurationTest
     {
         Path yamlPath = yaml("config/sidecar_with_single_multiple_instances.yaml");
         SidecarConfiguration configuration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
-        assertThat(configuration.cassandraInstances()).isNotNull().hasSize(1);
+        assertThat(configuration.cassandraInstances()).isNotNull()
+                                                      .hasSize(1);
 
-        InstanceConfiguration i1 = configuration.cassandraInstances().get(0);
+        InstanceConfiguration i1 = configuration.cassandraInstances()
+                                                .get(0);
         assertThat(i1.host()).isEqualTo("localhost");
         assertThat(i1.port()).isEqualTo(9042);
     }
@@ -95,16 +101,13 @@ class SidecarConfigurationTest
     {
         Path yamlPath = yaml("config/sidecar_validation_configuration.yaml");
         SidecarConfiguration configuration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
-        CassandraInputValidationConfiguration validationConfiguration =
-        configuration.cassandraInputValidationConfiguration();
+        CassandraInputValidationConfiguration validationConfiguration = configuration.cassandraInputValidationConfiguration();
 
         assertThat(validationConfiguration.forbiddenKeyspaces()).contains("a", "b", "c");
         assertThat(validationConfiguration.allowedPatternForName()).isEqualTo("[a-z]+");
         assertThat(validationConfiguration.allowedPatternForQuotedName()).isEqualTo("[A-Z]+");
-        assertThat(validationConfiguration.allowedPatternForComponentName())
-        .isEqualTo("(.db|.cql|.json|.crc32|TOC.txt)");
-        assertThat(validationConfiguration.allowedPatternForRestrictedComponentName())
-        .isEqualTo("(.db|TOC.txt)");
+        assertThat(validationConfiguration.allowedPatternForComponentName()).isEqualTo("(.db|.cql|.json|.crc32|TOC.txt)");
+        assertThat(validationConfiguration.allowedPatternForRestrictedComponentName()).isEqualTo("(.db|TOC.txt)");
     }
 
     @Test
@@ -112,11 +115,15 @@ class SidecarConfigurationTest
     {
         Path yamlPath = yaml("config/sidecar_multiple_instances.yaml");
         SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
-        assertThat(config.serviceConfiguration().jmxConfiguration()).isNotNull();
-        JmxConfiguration jmxConfiguration = config.serviceConfiguration().jmxConfiguration();
+        assertThat(config.serviceConfiguration()
+                         .jmxConfiguration()).isNotNull();
+        JmxConfiguration jmxConfiguration = config.serviceConfiguration()
+                                                  .jmxConfiguration();
         assertThat(jmxConfiguration.maxRetries()).isEqualTo(1);
-        assertThat(jmxConfiguration.retryDelay().quantity()).isEqualTo(1234L);
-        assertThat(jmxConfiguration.retryDelay().unit()).isEqualTo(TimeUnit.MILLISECONDS);
+        assertThat(jmxConfiguration.retryDelay()
+                                   .quantity()).isEqualTo(1234L);
+        assertThat(jmxConfiguration.retryDelay()
+                                   .unit()).isEqualTo(TimeUnit.MILLISECONDS);
     }
 
     @Test
@@ -124,11 +131,15 @@ class SidecarConfigurationTest
     {
         Path yamlPath = yaml("config/sidecar_missing_jmx.yaml");
         SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
-        assertThat(config.serviceConfiguration().jmxConfiguration()).isNotNull();
-        JmxConfiguration jmxConfiguration = config.serviceConfiguration().jmxConfiguration();
+        assertThat(config.serviceConfiguration()
+                         .jmxConfiguration()).isNotNull();
+        JmxConfiguration jmxConfiguration = config.serviceConfiguration()
+                                                  .jmxConfiguration();
         assertThat(jmxConfiguration.maxRetries()).isEqualTo(3);
-        assertThat(jmxConfiguration.retryDelay().quantity()).isEqualTo(200L);
-        assertThat(jmxConfiguration.retryDelay().unit()).isEqualTo(TimeUnit.MILLISECONDS);
+        assertThat(jmxConfiguration.retryDelay()
+                                   .quantity()).isEqualTo(200L);
+        assertThat(jmxConfiguration.retryDelay()
+                                   .unit()).isEqualTo(TimeUnit.MILLISECONDS);
     }
 
     @Test
@@ -162,29 +173,30 @@ class SidecarConfigurationTest
 
         assertThat(config).isNotNull();
         assertThat(config.serviceConfiguration()).isNotNull();
-        assertThat(config.serviceConfiguration().sstableUploadConfiguration()).isNotNull();
-        assertThat(config.serviceConfiguration().sstableUploadConfiguration().filePermissions()).isEqualTo("rw-rw-rw-");
+        assertThat(config.serviceConfiguration()
+                         .sstableUploadConfiguration()).isNotNull();
+        assertThat(config.serviceConfiguration()
+                         .sstableUploadConfiguration()
+                         .filePermissions()).isEqualTo("rw-rw-rw-");
     }
 
     @Test
     void testInvalidFilePermissions()
     {
         Path yamlPath = yaml("config/sidecar_invalid_file_permissions.yaml");
-        assertThatExceptionOfType(JsonMappingException.class)
-        .isThrownBy(() -> SidecarConfigurationImpl.readYamlConfiguration(yamlPath))
-        .withRootCauseInstanceOf(IllegalArgumentException.class)
-        .withMessageContaining("Invalid file_permissions configuration=\"not-valid\"");
+        assertThatExceptionOfType(JsonMappingException.class).isThrownBy(() -> SidecarConfigurationImpl.readYamlConfiguration(yamlPath))
+                                                             .withRootCauseInstanceOf(IllegalArgumentException.class)
+                                                             .withMessageContaining("Invalid file_permissions configuration=\"not-valid\"");
     }
 
     @Test
     void testInvalidClientAuth()
     {
         Path yamlPath = yaml("config/sidecar_invalid_client_auth.yaml");
-        assertThatExceptionOfType(JsonMappingException.class)
-        .isThrownBy(() -> SidecarConfigurationImpl.readYamlConfiguration(yamlPath))
-        .withRootCauseInstanceOf(IllegalArgumentException.class)
-        .withMessageContaining("Invalid client_auth configuration=\"notvalid\", " +
-                               "valid values are (NONE,REQUEST,REQUIRED)");
+        assertThatExceptionOfType(JsonMappingException.class).isThrownBy(() -> SidecarConfigurationImpl.readYamlConfiguration(yamlPath))
+                                                             .withRootCauseInstanceOf(IllegalArgumentException.class)
+                                                             .withMessageContaining("Invalid client_auth configuration=\"notvalid\", "
+                                                                     + "valid values are (NONE,REQUEST,REQUIRED)");
     }
 
     @Test
@@ -196,23 +208,29 @@ class SidecarConfigurationTest
         DriverConfiguration driverConfiguration = config.driverConfiguration();
         assertThat(driverConfiguration).isNotNull();
         assertThat(driverConfiguration.localDc()).isEqualTo("dc1");
-        List<InetSocketAddress> endpoints = Arrays.asList(new InetSocketAddress("127.0.0.1", 9042),
-                                                          new InetSocketAddress("127.0.0.2", 9042));
+        List<InetSocketAddress> endpoints = Arrays.asList(new InetSocketAddress("127.0.0.1", 9042), new InetSocketAddress("127.0.0.2", 9042));
         assertThat(driverConfiguration.contactPoints()).isEqualTo(endpoints);
         assertThat(driverConfiguration.numConnections()).isEqualTo(6);
         assertThat(driverConfiguration.username()).isEqualTo("cassandra");
         assertThat(driverConfiguration.password()).isEqualTo("cassandra");
         SslConfiguration sslConfiguration = driverConfiguration.sslConfiguration();
         assertThat(sslConfiguration.enabled()).isTrue();
-        assertThat(sslConfiguration.secureTransportProtocols().size()).isEqualTo(2);
+        assertThat(sslConfiguration.secureTransportProtocols()
+                                   .size()).isEqualTo(2);
         assertThat(sslConfiguration.isKeystoreConfigured()).isTrue();
-        assertThat(sslConfiguration.keystore().type()).isEqualTo("PKCS12");
-        assertThat(sslConfiguration.keystore().path()).isEqualTo("path/to/keystore.p12");
-        assertThat(sslConfiguration.keystore().password()).isEqualTo("password");
+        assertThat(sslConfiguration.keystore()
+                                   .type()).isEqualTo("PKCS12");
+        assertThat(sslConfiguration.keystore()
+                                   .path()).isEqualTo("path/to/keystore.p12");
+        assertThat(sslConfiguration.keystore()
+                                   .password()).isEqualTo("password");
         assertThat(sslConfiguration.isTrustStoreConfigured()).isTrue();
-        assertThat(sslConfiguration.truststore().type()).isEqualTo("PKCS12");
-        assertThat(sslConfiguration.truststore().path()).isEqualTo("path/to/keystore.p12");
-        assertThat(sslConfiguration.truststore().password()).isEqualTo("password");
+        assertThat(sslConfiguration.truststore()
+                                   .type()).isEqualTo("PKCS12");
+        assertThat(sslConfiguration.truststore()
+                                   .path()).isEqualTo("path/to/keystore.p12");
+        assertThat(sslConfiguration.truststore()
+                                   .password()).isEqualTo("password");
     }
 
     @Test
@@ -221,15 +239,16 @@ class SidecarConfigurationTest
         Path yamlPath = yaml("config/sidecar_schema_keyspace_configuration.yaml");
         SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
 
-        SchemaKeyspaceConfiguration configuration = config.serviceConfiguration().schemaKeyspaceConfiguration();
+        SchemaKeyspaceConfiguration configuration = config.serviceConfiguration()
+                                                          .schemaKeyspaceConfiguration();
         assertThat(configuration).isNotNull();
         assertThat(configuration.isEnabled()).isTrue();
         assertThat(configuration.keyspace()).isEqualTo("sidecar_internal");
         assertThat(configuration.replicationStrategy()).isEqualTo("SimpleStrategy");
         assertThat(configuration.replicationFactor()).isEqualTo(3);
-        assertThat(configuration.createReplicationStrategyString())
-        .isEqualTo("{'class':'SimpleStrategy', 'replication_factor':'3'}");
-        assertThat(configuration.leaseSchemaTTL().toSeconds()).isEqualTo(300L);
+        assertThat(configuration.createReplicationStrategyString()).isEqualTo("{'class':'SimpleStrategy', 'replication_factor':'3'}");
+        assertThat(configuration.leaseSchemaTTL()
+                                .toSeconds()).isEqualTo(300L);
     }
 
     @Test
@@ -239,7 +258,8 @@ class SidecarConfigurationTest
         SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
 
         assertThat(config.serviceConfiguration()).isNotNull();
-        assertThat(config.serviceConfiguration().sstableSnapshotConfiguration()).isNull();
+        assertThat(config.serviceConfiguration()
+                         .sstableSnapshotConfiguration()).isNull();
     }
 
     @Test
@@ -258,19 +278,29 @@ class SidecarConfigurationTest
         List<MetricsFilteringConfiguration> excludeConfigurations = configuration.excludeConfigurations();
         assertThat(includeConfigurations.size()).isEqualTo(1);
         assertThat(excludeConfigurations.size()).isEqualTo(2);
-        assertThat(includeConfigurations.get(0).type()).isEqualTo("regex");
-        assertThat(includeConfigurations.get(0).value()).isEqualTo(".*");
-        if (excludeConfigurations.get(0).type().equals("regex"))
+        assertThat(includeConfigurations.get(0)
+                                        .type()).isEqualTo("regex");
+        assertThat(includeConfigurations.get(0)
+                                        .value()).isEqualTo(".*");
+        if (excludeConfigurations.get(0)
+                                 .type()
+                                 .equals("regex"))
         {
-            assertThat(excludeConfigurations.get(0).value()).isEqualTo("vertx.eventbus.*");
-            assertThat(excludeConfigurations.get(1).type()).isEqualTo("equals");
-            assertThat(excludeConfigurations.get(1).value()).isEqualTo("instances_up");
+            assertThat(excludeConfigurations.get(0)
+                                            .value()).isEqualTo("vertx.eventbus.*");
+            assertThat(excludeConfigurations.get(1)
+                                            .type()).isEqualTo("equals");
+            assertThat(excludeConfigurations.get(1)
+                                            .value()).isEqualTo("instances_up");
         }
         else
         {
-            assertThat(excludeConfigurations.get(1).value()).isEqualTo("vertx.eventbus.*");
-            assertThat(excludeConfigurations.get(1).type()).isEqualTo("regex");
-            assertThat(excludeConfigurations.get(0).value()).isEqualTo("instances_up");
+            assertThat(excludeConfigurations.get(1)
+                                            .value()).isEqualTo("vertx.eventbus.*");
+            assertThat(excludeConfigurations.get(1)
+                                            .type()).isEqualTo("regex");
+            assertThat(excludeConfigurations.get(0)
+                                            .value()).isEqualTo("instances_up");
         }
     }
 
@@ -278,11 +308,11 @@ class SidecarConfigurationTest
     void testInvalidMetricOptions()
     {
         Path yamlPath = yaml("config/sidecar_invalid_metrics.yaml");
-        assertThatExceptionOfType(JsonMappingException.class)
-        .isThrownBy(() -> SidecarConfigurationImpl.readYamlConfiguration(yamlPath))
-        .withRootCauseInstanceOf(IllegalArgumentException.class)
-        .withMessageContaining("contains passed for metric filtering is not recognized. Expected types are "
-                               + REGEX_TYPE + " or " + EQUALS_TYPE);
+        assertThatExceptionOfType(JsonMappingException.class).isThrownBy(() -> SidecarConfigurationImpl.readYamlConfiguration(yamlPath))
+                                                             .withRootCauseInstanceOf(IllegalArgumentException.class)
+                                                             .withMessageContaining(
+                                                                     "contains passed for metric filtering is not recognized. Expected types are " + REGEX_TYPE
+                                                                             + " or " + EQUALS_TYPE);
     }
 
     @Test
@@ -298,61 +328,52 @@ class SidecarConfigurationTest
     @Test
     void testSidecarPeerHealthConfiguration() throws IOException
     {
-        String yaml = "sidecar_peer_health:\n" +
-                      "  enabled: true\n" +
-                      "  execute_interval: 63s\n" +
-                      "  max_retries: 15\n" +
-                      "  retry_delay: 5s";
+        String yaml = "sidecar_peer_health:\n" + "  enabled: true\n" + "  execute_interval: 63s\n" + "  max_retries: 15\n" + "  retry_delay: 5s";
         SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.fromYamlString(yaml);
         assertThat(sidecarConfiguration).isNotNull();
         SidecarPeerHealthConfiguration config = sidecarConfiguration.sidecarPeerHealthConfiguration();
         assertThat(config).isNotNull();
         assertThat(config.enabled()).isTrue();
-        assertThat(config.executeInterval().toMillis()).isEqualTo(63_000);
+        assertThat(config.executeInterval()
+                         .toMillis()).isEqualTo(63_000);
         assertThat(config.maxRetries()).isEqualTo(15);
-        assertThat(config.retryDelay().toMillis()).isEqualTo(5_000);
+        assertThat(config.retryDelay()
+                         .toMillis()).isEqualTo(5_000);
     }
 
     @Test
     void testSidecarClientConfiguration() throws IOException
     {
-        String yaml = "sidecar_client:\n" +
-                      "  request_timeout: 1s\n" +
-                      "  request_idle_timeout: 1s\n" +
-                      "  connection_pool_max_size: 10\n" +
-                      "  connection_pool_clearing_period: 10s\n" +
-                      "  connection_pool_event_loop_size: 10\n" +
-                      "  connection_pool_max_wait_queue_size: 10\n" +
-                      "  max_retries: 3\n" +
-                      "  retry_delay: 1s\n" +
-                      "  max_retry_delay: 2s\n" +
-                      "  ssl:\n" +
-                      "    enabled: false\n" +
-                      "    keystore:\n" +
-                      "      type: PKCS12\n" +
-                      "      path: path/to/keystore.p12\n" +
-                      "      password: password\n" +
-                      "    truststore:\n" +
-                      "      type: PKCS12\n" +
-                      "      path: path/to/keystore.p12\n" +
-                      "      password: password";
+        String yaml = "sidecar_client:\n" + "  request_timeout: 1s\n" + "  request_idle_timeout: 1s\n" + "  connection_pool_max_size: 10\n"
+                + "  connection_pool_clearing_period: 10s\n" + "  connection_pool_event_loop_size: 10\n" + "  connection_pool_max_wait_queue_size: 10\n"
+                + "  max_retries: 3\n" + "  retry_delay: 1s\n" + "  max_retry_delay: 2s\n" + "  ssl:\n" + "    enabled: false\n" + "    keystore:\n"
+                + "      type: PKCS12\n" + "      path: path/to/keystore.p12\n" + "      password: password\n" + "    truststore:\n" + "      type: PKCS12\n"
+                + "      path: path/to/keystore.p12\n" + "      password: password";
         SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.fromYamlString(yaml);
         assertThat(sidecarConfiguration).isNotNull();
         SidecarClientConfiguration config = sidecarConfiguration.sidecarClientConfiguration();
         assertThat(config).isNotNull();
         assertThat(config.sslConfiguration()).isNotNull();
-        assertThat(config.sslConfiguration().enabled()).isFalse();
-        assertThat(config.sslConfiguration().isKeystoreConfigured()).isTrue();
-        assertThat(config.sslConfiguration().isTrustStoreConfigured()).isTrue();
-        assertThat(config.requestTimeout().toMillis()).isEqualTo(1_000);
-        assertThat(config.requestIdleTimeout().toMillis()).isEqualTo(1_000);
+        assertThat(config.sslConfiguration()
+                         .enabled()).isFalse();
+        assertThat(config.sslConfiguration()
+                         .isKeystoreConfigured()).isTrue();
+        assertThat(config.sslConfiguration()
+                         .isTrustStoreConfigured()).isTrue();
+        assertThat(config.requestTimeout()
+                         .toMillis()).isEqualTo(1_000);
+        assertThat(config.requestIdleTimeout()
+                         .toMillis()).isEqualTo(1_000);
         assertThat(config.connectionPoolMaxSize()).isEqualTo(10);
-        assertThat(config.connectionPoolCleanerPeriod().toMillis()).isEqualTo(10_000);
+        assertThat(config.connectionPoolCleanerPeriod()
+                         .toMillis()).isEqualTo(10_000);
         assertThat(config.connectionPoolEventLoopSize()).isEqualTo(10);
         assertThat(config.connectionPoolMaxWaitQueueSize()).isEqualTo(10);
         assertThat(config.maxRetries()).isEqualTo(3);
-        assertThat(config.retryDelay().toMillis()).isEqualTo(1_000);
-        assertThat(config.maxRetryDelay().toMillis()).isEqualTo(2_000);
+        assertThat(config.retryDelay()
+                         .toMillis()).isEqualTo(1_000);
+        assertThat(config.maxRetryDelay()
+                         .toMillis()).isEqualTo(2_000);
     }
 
     @Test
@@ -377,9 +398,12 @@ class SidecarConfigurationTest
         Path yamlPath = yaml("config/sidecar_cdc.yaml");
         SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
         assertThat(sidecarConfiguration).isNotNull();
-        CdcConfiguration cdcConfig = sidecarConfiguration.serviceConfiguration().cdcConfiguration();
-        assertThat(cdcConfig.segmentHardLinkCacheExpiry().quantity()).isEqualTo(1);
-        assertThat(cdcConfig.segmentHardLinkCacheExpiry().unit()).isEqualTo(TimeUnit.MINUTES);
+        CdcConfiguration cdcConfig = sidecarConfiguration.serviceConfiguration()
+                                                         .cdcConfiguration();
+        assertThat(cdcConfig.segmentHardLinkCacheExpiry()
+                            .quantity()).isEqualTo(1);
+        assertThat(cdcConfig.segmentHardLinkCacheExpiry()
+                            .unit()).isEqualTo(TimeUnit.MINUTES);
         assertThat(cdcConfig.isEnabled()).isEqualTo(true);
         assertThat(cdcConfig.cdcConfigRefreshTime()).isEqualTo(MillisecondBoundConfiguration.parse("10s"));
     }
@@ -395,47 +419,50 @@ class SidecarConfigurationTest
         assertThat(accessControlConfiguration.enabled()).isTrue();
 
         List<ParameterizedClassConfiguration> authenticators = accessControlConfiguration.authenticatorsConfiguration();
-        assertThat(authenticators).isNotNull().hasSize(2);
-        assertThat(authenticators.get(0).className()).isEqualTo("org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationHandlerFactory");
-        assertThat(authenticators.get(0).namedParameters())
-        .contains(entry("certificate_validator", "io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator"),
-                  entry("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor"));
-        assertThat(authenticators.get(1).className()).isEqualTo("org.apache.cassandra.sidecar.acl.authentication.JwtAuthenticationHandlerFactory");
-        assertThat(authenticators.get(1).namedParameters())
-        .contains(entry("site", "https://authorization.com"),
-                  entry("client_id", "recognized_client_id"),
-                  entry("config_discover_interval", "1m"));
+        assertThat(authenticators).isNotNull()
+                                  .hasSize(2);
+        assertThat(authenticators.get(0)
+                                 .className()).isEqualTo("org.apache.cassandra.sidecar.acl.authentication.MutualTLSAuthenticationHandlerFactory");
+        assertThat(authenticators.get(0)
+                                 .namedParameters()).contains(entry("certificate_validator", "io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator"),
+                                         entry("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor"));
+        assertThat(authenticators.get(1)
+                                 .className()).isEqualTo("org.apache.cassandra.sidecar.acl.authentication.JwtAuthenticationHandlerFactory");
+        assertThat(authenticators.get(1)
+                                 .namedParameters()).contains(entry("site", "https://authorization.com"), entry("client_id", "recognized_client_id"),
+                                         entry("config_discover_interval", "1m"));
 
         ParameterizedClassConfiguration authorizer = accessControlConfiguration.authorizerConfiguration();
         assertThat(authorizer.className()).isEqualTo("org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider");
 
-        assertThat(accessControlConfiguration.adminIdentities().size()).isEqualTo(2);
+        assertThat(accessControlConfiguration.adminIdentities()
+                                             .size()).isEqualTo(2);
         assertThat(accessControlConfiguration.adminIdentities()).contains("spiffe://authorized/admin/identity1");
         assertThat(accessControlConfiguration.adminIdentities()).contains("spiffe://authorized/admin/identity2");
 
         assertThat(accessControlConfiguration.permissionCacheConfiguration()).isNotNull();
         CacheConfiguration permissionCacheConfiguration = accessControlConfiguration.permissionCacheConfiguration();
         assertThat(permissionCacheConfiguration.enabled()).isTrue();
-        assertThat(permissionCacheConfiguration.expireAfterAccess().quantity()).isEqualTo(5);
-        assertThat(permissionCacheConfiguration.expireAfterAccess().unit()).isEqualTo(TimeUnit.MINUTES);
+        assertThat(permissionCacheConfiguration.expireAfterAccess()
+                                               .quantity()).isEqualTo(5);
+        assertThat(permissionCacheConfiguration.expireAfterAccess()
+                                               .unit()).isEqualTo(TimeUnit.MINUTES);
         assertThat(permissionCacheConfiguration.maximumSize()).isEqualTo(1000);
         assertThat(permissionCacheConfiguration.warmupRetries()).isEqualTo(5);
-        assertThat(permissionCacheConfiguration.warmupRetryInterval().quantity()).isEqualTo(2);
-        assertThat(permissionCacheConfiguration.warmupRetryInterval().unit()).isEqualTo(TimeUnit.SECONDS);
-        assertThat(permissionCacheConfiguration.warmupRetryInterval().toMillis()).isEqualTo(2_000L);
+        assertThat(permissionCacheConfiguration.warmupRetryInterval()
+                                               .quantity()).isEqualTo(2);
+        assertThat(permissionCacheConfiguration.warmupRetryInterval()
+                                               .unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(permissionCacheConfiguration.warmupRetryInterval()
+                                               .toMillis()).isEqualTo(2_000L);
     }
 
     @Test
     void testCoordinationConfiguration() throws Exception
     {
-        String yaml = "sidecar:\n" +
-                      "  coordination:\n" +
-                      "    cluster_lease_claim:\n" +
-                      "      electorate_membership_strategy: SidecarInternalTokenZeroElectorateMembership\n" +
-                      "      enabled: false\n" +
-                      "      initial_delay: 5s\n" +
-                      "      execute_interval: 31s\n" +
-                      "      initial_delay_random_delta: 10s";
+        String yaml = "sidecar:\n" + "  coordination:\n" + "    cluster_lease_claim:\n"
+                + "      electorate_membership_strategy: SidecarInternalTokenZeroElectorateMembership\n" + "      enabled: false\n"
+                + "      initial_delay: 5s\n" + "      execute_interval: 31s\n" + "      initial_delay_random_delta: 10s";
         SidecarConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml);
         ServiceConfiguration serviceConfiguration = config.serviceConfiguration();
         assertThat(serviceConfiguration).isNotNull();
@@ -444,9 +471,12 @@ class SidecarConfigurationTest
         assertThat(coordinationConfiguration).isNotNull();
         ClusterLeaseClaimConfiguration clusterLeaseConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
         assertThat(clusterLeaseConfig.enabled()).isFalse();
-        assertThat(clusterLeaseConfig.initialDelay().toMillis()).isEqualTo(5_000L);
-        assertThat(clusterLeaseConfig.executeInterval().toMillis()).isEqualTo(31_000L);
-        assertThat(clusterLeaseConfig.initialDelayRandomDelta().toMillis()).isEqualTo(10_000L);
+        assertThat(clusterLeaseConfig.initialDelay()
+                                     .toMillis()).isEqualTo(5_000L);
+        assertThat(clusterLeaseConfig.executeInterval()
+                                     .toMillis()).isEqualTo(31_000L);
+        assertThat(clusterLeaseConfig.initialDelayRandomDelta()
+                                     .toMillis()).isEqualTo(10_000L);
         assertThat(clusterLeaseConfig.randomDeltaDelayMillis()).isBetween(0L, 10_000L);
         assertThat(clusterLeaseConfig.electorateMembershipStrategy()).isEqualTo("SidecarInternalTokenZeroElectorateMembership");
     }
@@ -454,12 +484,8 @@ class SidecarConfigurationTest
     @Test
     void testCoordinationDefaultElectorateMembershipStrategy() throws Exception
     {
-        String yaml = "sidecar:\n" +
-                      "  coordination:\n" +
-                      "    cluster_lease_claim:\n" +
-                      "      enabled: false\n" +
-                      "      initial_delay: 5s\n" +
-                      "      execute_interval: 31s";
+        String yaml = "sidecar:\n" + "  coordination:\n" + "    cluster_lease_claim:\n" + "      enabled: false\n" + "      initial_delay: 5s\n"
+                + "      execute_interval: 31s";
         SidecarConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml);
         ServiceConfiguration serviceConfiguration = config.serviceConfiguration();
         assertThat(serviceConfiguration).isNotNull();
@@ -468,8 +494,10 @@ class SidecarConfigurationTest
         assertThat(coordinationConfiguration).isNotNull();
         ClusterLeaseClaimConfiguration clusterLeaseConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
         assertThat(clusterLeaseConfig.enabled()).isFalse();
-        assertThat(clusterLeaseConfig.initialDelay().toMillis()).isEqualTo(5_000L);
-        assertThat(clusterLeaseConfig.executeInterval().toMillis()).isEqualTo(31_000L);
+        assertThat(clusterLeaseConfig.initialDelay()
+                                     .toMillis()).isEqualTo(5_000L);
+        assertThat(clusterLeaseConfig.executeInterval()
+                                     .toMillis()).isEqualTo(31_000L);
         assertThat(clusterLeaseConfig.electorateMembershipStrategy()).isEqualTo("MostReplicatedKeyspaceTokenZeroElectorateMembership");
     }
 
@@ -490,8 +518,7 @@ class SidecarConfigurationTest
     @Test
     void testDnsResolverResolveToIp() throws Exception
     {
-        String yaml = "sidecar:\n" +
-                "  dns_resolver: resolve_to_ip";
+        String yaml = "sidecar:\n" + "  dns_resolver: resolve_to_ip";
         SidecarConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml);
         ServiceConfiguration serviceConfiguration = config.serviceConfiguration();
         assertThat(serviceConfiguration).isNotNull();
@@ -525,9 +552,11 @@ class SidecarConfigurationTest
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
     {
-        assertThat(config.cassandraInstances()).isNotNull().hasSize(1);
+        assertThat(config.cassandraInstances()).isNotNull()
+                                               .hasSize(1);
 
-        InstanceConfiguration i1 = config.cassandraInstances().get(0);
+        InstanceConfiguration i1 = config.cassandraInstances()
+                                         .get(0);
 
         // instance 1
         assertThat(i1.id()).isEqualTo(0);
@@ -564,14 +593,19 @@ class SidecarConfigurationTest
         validateVertxFilesystemOptionsClasspathResolvingDisabled(vertxConfiguration.filesystemOptionsConfiguration());
     }
 
-    void validateMultipleInstancesSidecarConfiguration(SidecarConfiguration config, boolean withSslConfiguration)
+    void validateMultipleInstancesSidecarConfiguration(SidecarConfiguration config,
+                                                       boolean withSslConfiguration)
     {
         // instances configuration
-        assertThat(config.cassandraInstances()).isNotNull().hasSize(3);
+        assertThat(config.cassandraInstances()).isNotNull()
+                                               .hasSize(3);
 
-        InstanceConfiguration i1 = config.cassandraInstances().get(0);
-        InstanceConfiguration i2 = config.cassandraInstances().get(1);
-        InstanceConfiguration i3 = config.cassandraInstances().get(2);
+        InstanceConfiguration i1 = config.cassandraInstances()
+                                         .get(0);
+        InstanceConfiguration i2 = config.cassandraInstances()
+                                         .get(1);
+        InstanceConfiguration i3 = config.cassandraInstances()
+                                         .get(2);
 
         // instance 1
         assertThat(i1.id()).isEqualTo(1);
@@ -642,9 +676,11 @@ class SidecarConfigurationTest
     {
         assertThat(config).isNotNull();
         assertThat(config.enabled()).isFalse();
-        assertThat(config.executeInterval().toMillis()).isEqualTo(30_000);
+        assertThat(config.executeInterval()
+                         .toMillis()).isEqualTo(30_000);
         assertThat(config.maxRetries()).isEqualTo(5);
-        assertThat(config.retryDelay().toMillis()).isEqualTo(10_000);
+        assertThat(config.retryDelay()
+                         .toMillis()).isEqualTo(10_000);
     }
 
     void validateServiceConfigurationFromYaml(ServiceConfiguration serviceConfiguration)
@@ -652,15 +688,24 @@ class SidecarConfigurationTest
         assertThat(serviceConfiguration).isNotNull();
         assertThat(serviceConfiguration.host()).isEqualTo("0.0.0.0");
         assertThat(serviceConfiguration.port()).is(new Condition<>(port -> port == 9043 || port == 0, "port"));
-        assertThat(serviceConfiguration.requestIdleTimeout().quantity()).isEqualTo(5);
-        assertThat(serviceConfiguration.requestIdleTimeout().unit()).isEqualTo(TimeUnit.MINUTES);
-        assertThat(serviceConfiguration.requestIdleTimeout().toMillis()).isEqualTo(300_000);
-        assertThat(serviceConfiguration.requestTimeout().quantity()).isEqualTo(5);
-        assertThat(serviceConfiguration.requestTimeout().unit()).isEqualTo(TimeUnit.MINUTES);
-        assertThat(serviceConfiguration.requestTimeout().toMillis()).isEqualTo(300_000);
-        assertThat(serviceConfiguration.allowableTimeSkew().quantity()).isEqualTo(1);
-        assertThat(serviceConfiguration.allowableTimeSkew().unit()).isEqualTo(TimeUnit.HOURS);
-        assertThat(serviceConfiguration.allowableTimeSkew().toSeconds()).isEqualTo(3_600);
+        assertThat(serviceConfiguration.requestIdleTimeout()
+                                       .quantity()).isEqualTo(5);
+        assertThat(serviceConfiguration.requestIdleTimeout()
+                                       .unit()).isEqualTo(TimeUnit.MINUTES);
+        assertThat(serviceConfiguration.requestIdleTimeout()
+                                       .toMillis()).isEqualTo(300_000);
+        assertThat(serviceConfiguration.requestTimeout()
+                                       .quantity()).isEqualTo(5);
+        assertThat(serviceConfiguration.requestTimeout()
+                                       .unit()).isEqualTo(TimeUnit.MINUTES);
+        assertThat(serviceConfiguration.requestTimeout()
+                                       .toMillis()).isEqualTo(300_000);
+        assertThat(serviceConfiguration.allowableTimeSkew()
+                                       .quantity()).isEqualTo(1);
+        assertThat(serviceConfiguration.allowableTimeSkew()
+                                       .unit()).isEqualTo(TimeUnit.HOURS);
+        assertThat(serviceConfiguration.allowableTimeSkew()
+                                       .toSeconds()).isEqualTo(3_600);
         assertThat(serviceConfiguration.tcpKeepAlive()).isFalse();
         assertThat(serviceConfiguration.acceptBacklog()).isEqualTo(1024);
 
@@ -669,15 +714,20 @@ class SidecarConfigurationTest
 
         assertThat(throttle).isNotNull();
         assertThat(throttle.rateLimitStreamRequestsPerSecond()).isEqualTo(5000);
-        assertThat(throttle.timeout().quantity()).isEqualTo(10);
-        assertThat(throttle.timeout().unit()).isEqualTo(TimeUnit.SECONDS);
-        assertThat(throttle.timeout().toSeconds()).isEqualTo(10);
+        assertThat(throttle.timeout()
+                           .quantity()).isEqualTo(10);
+        assertThat(throttle.timeout()
+                           .unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(throttle.timeout()
+                           .toSeconds()).isEqualTo(10);
 
         // sstable import configuration
         SSTableImportConfiguration importConfig = serviceConfiguration.sstableImportConfiguration();
         assertThat(importConfig).isNotNull();
-        assertThat(importConfig.executeInterval().quantity()).isEqualTo(100);
-        assertThat(importConfig.executeInterval().unit()).isEqualTo(TimeUnit.MILLISECONDS);
+        assertThat(importConfig.executeInterval()
+                               .quantity()).isEqualTo(100);
+        assertThat(importConfig.executeInterval()
+                               .unit()).isEqualTo(TimeUnit.MILLISECONDS);
 
         // validate traffic shaping options
         TrafficShapingConfiguration trafficShaping = serviceConfiguration.trafficShapingConfiguration();
@@ -685,31 +735,46 @@ class SidecarConfigurationTest
         assertThat(trafficShaping.inboundGlobalBandwidthBytesPerSecond()).isEqualTo(500L);
         assertThat(trafficShaping.outboundGlobalBandwidthBytesPerSecond()).isEqualTo(1500L);
         assertThat(trafficShaping.peakOutboundGlobalBandwidthBytesPerSecond()).isEqualTo(2000L);
-        assertThat(trafficShaping.maxDelayToWait().quantity()).isEqualTo(15);
-        assertThat(trafficShaping.maxDelayToWait().unit()).isEqualTo(TimeUnit.SECONDS);
-        assertThat(trafficShaping.maxDelayToWait().toMillis()).isEqualTo(15_000L);
-        assertThat(trafficShaping.checkIntervalForStats().quantity()).isEqualTo(1);
-        assertThat(trafficShaping.checkIntervalForStats().unit()).isEqualTo(TimeUnit.SECONDS);
-        assertThat(trafficShaping.checkIntervalForStats().toMillis()).isEqualTo(1_000L);
+        assertThat(trafficShaping.maxDelayToWait()
+                                 .quantity()).isEqualTo(15);
+        assertThat(trafficShaping.maxDelayToWait()
+                                 .unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(trafficShaping.maxDelayToWait()
+                                 .toMillis()).isEqualTo(15_000L);
+        assertThat(trafficShaping.checkIntervalForStats()
+                                 .quantity()).isEqualTo(1);
+        assertThat(trafficShaping.checkIntervalForStats()
+                                 .unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(trafficShaping.checkIntervalForStats()
+                                 .toMillis()).isEqualTo(1_000L);
 
         // SSTable snapshot configuration section
         SSTableSnapshotConfiguration snapshotConfig = serviceConfiguration.sstableSnapshotConfiguration();
 
         assertThat(snapshotConfig).isNotNull();
 
-        assertThat(snapshotConfig.snapshotListCacheConfiguration().enabled()).isTrue();
-        assertThat(snapshotConfig.snapshotListCacheConfiguration().maximumSize()).isEqualTo(450);
-        assertThat(snapshotConfig.snapshotListCacheConfiguration().expireAfterAccess().quantity()).isEqualTo(350);
-        assertThat(snapshotConfig.snapshotListCacheConfiguration().expireAfterAccess().unit()).isEqualTo(TimeUnit.MILLISECONDS);
+        assertThat(snapshotConfig.snapshotListCacheConfiguration()
+                                 .enabled()).isTrue();
+        assertThat(snapshotConfig.snapshotListCacheConfiguration()
+                                 .maximumSize()).isEqualTo(450);
+        assertThat(snapshotConfig.snapshotListCacheConfiguration()
+                                 .expireAfterAccess()
+                                 .quantity()).isEqualTo(350);
+        assertThat(snapshotConfig.snapshotListCacheConfiguration()
+                                 .expireAfterAccess()
+                                 .unit()).isEqualTo(TimeUnit.MILLISECONDS);
 
         // Validate default configuration
         CoordinationConfiguration coordinationConfiguration = serviceConfiguration.coordinationConfiguration();
         assertThat(coordinationConfiguration).isNotNull();
         ClusterLeaseClaimConfiguration clusterLeaseConfig = coordinationConfiguration.clusterLeaseClaimConfiguration();
         assertThat(clusterLeaseConfig.enabled()).isTrue();
-        assertThat(clusterLeaseConfig.executeInterval().toMillis()).isEqualTo(100_000L);
-        assertThat(clusterLeaseConfig.initialDelay().toMillis()).isEqualTo(1_000L);
-        assertThat(clusterLeaseConfig.initialDelayRandomDelta().toMillis()).isEqualTo(30_000L);
+        assertThat(clusterLeaseConfig.executeInterval()
+                                     .toMillis()).isEqualTo(100_000L);
+        assertThat(clusterLeaseConfig.initialDelay()
+                                     .toMillis()).isEqualTo(1_000L);
+        assertThat(clusterLeaseConfig.initialDelayRandomDelta()
+                                     .toMillis()).isEqualTo(30_000L);
         assertThat(clusterLeaseConfig.randomDeltaDelayMillis()).isBetween(0L, 30_000L);
         assertThat(clusterLeaseConfig.electorateMembershipStrategy()).isEqualTo("MostReplicatedKeyspaceTokenZeroElectorateMembership");
     }
@@ -717,29 +782,28 @@ class SidecarConfigurationTest
     private void validateHealthCheckConfigurationFromYaml(PeriodicTaskConfiguration config)
     {
         assertThat(config).isNotNull();
-        assertThat(config.initialDelay().quantity()).isEqualTo(100);
-        assertThat(config.initialDelay().unit()).isEqualTo(TimeUnit.MILLISECONDS);
-        assertThat(config.initialDelay().toMillis()).isEqualTo(100L);
-        assertThat(config.executeInterval().quantity()).isEqualTo(30);
-        assertThat(config.executeInterval().unit()).isEqualTo(TimeUnit.SECONDS);
-        assertThat(config.executeInterval().toMillis()).isEqualTo(30_000);
+        assertThat(config.initialDelay()
+                         .quantity()).isEqualTo(100);
+        assertThat(config.initialDelay()
+                         .unit()).isEqualTo(TimeUnit.MILLISECONDS);
+        assertThat(config.initialDelay()
+                         .toMillis()).isEqualTo(100L);
+        assertThat(config.executeInterval()
+                         .quantity()).isEqualTo(30);
+        assertThat(config.executeInterval()
+                         .unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(config.executeInterval()
+                         .toMillis()).isEqualTo(30_000);
     }
 
     void validateCassandraInputValidationConfigurationFromYaml(CassandraInputValidationConfiguration config)
     {
         assertThat(config).isNotNull();
-        assertThat(config.forbiddenKeyspaces()).containsExactlyInAnyOrder("system_schema",
-                                                                          "system_traces",
-                                                                          "system_distributed",
-                                                                          "system",
-                                                                          "system_auth",
-                                                                          "system_views",
-                                                                          "system_virtual_schema",
-                                                                          "sidecar_internal");
+        assertThat(config.forbiddenKeyspaces()).containsExactlyInAnyOrder("system_schema", "system_traces", "system_distributed", "system", "system_auth",
+                "system_views", "system_virtual_schema", "sidecar_internal");
         assertThat(config.allowedPatternForName()).isEqualTo("[a-zA-Z][a-zA-Z0-9_]{0,47}");
         assertThat(config.allowedPatternForQuotedName()).isEqualTo("[a-zA-Z_0-9]{1,48}");
-        assertThat(config.allowedPatternForComponentName())
-        .isEqualTo("[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)");
+        assertThat(config.allowedPatternForComponentName()).isEqualTo("[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)");
         assertThat(config.allowedPatternForRestrictedComponentName()).isEqualTo("[a-zA-Z0-9_-]+(.db|TOC.txt)");
     }
 
@@ -756,32 +820,45 @@ class SidecarConfigurationTest
         assertThat(config).isNotNull();
         assertThat(config.enabled()).isTrue();
         assertThat(config.preferOpenSSL()).isFalse();
-        assertThat(config.handshakeTimeout().quantity()).isEqualTo(25);
-        assertThat(config.handshakeTimeout().unit()).isEqualTo(TimeUnit.SECONDS);
-        assertThat(config.handshakeTimeout().toSeconds()).isEqualTo(25);
+        assertThat(config.handshakeTimeout()
+                         .quantity()).isEqualTo(25);
+        assertThat(config.handshakeTimeout()
+                         .unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(config.handshakeTimeout()
+                         .toSeconds()).isEqualTo(25);
         assertThat(config.clientAuth()).isEqualTo("REQUEST");
         assertThat(config.keystore()).isNotNull();
-        assertThat(config.keystore().type()).isEqualTo("PKCS12");
-        assertThat(config.keystore().path()).isEqualTo("path/to/keystore.p12");
-        assertThat(config.keystore().password()).isEqualTo("password");
-        assertThat(config.keystore().reloadStore()).isTrue();
-        assertThat(config.keystore().checkInterval().quantity()).isEqualTo(5);
-        assertThat(config.keystore().checkInterval().unit()).isEqualTo(TimeUnit.MINUTES);
+        assertThat(config.keystore()
+                         .type()).isEqualTo("PKCS12");
+        assertThat(config.keystore()
+                         .path()).isEqualTo("path/to/keystore.p12");
+        assertThat(config.keystore()
+                         .password()).isEqualTo("password");
+        assertThat(config.keystore()
+                         .reloadStore()).isTrue();
+        assertThat(config.keystore()
+                         .checkInterval()
+                         .quantity()).isEqualTo(5);
+        assertThat(config.keystore()
+                         .checkInterval()
+                         .unit()).isEqualTo(TimeUnit.MINUTES);
         assertThat(config.truststore()).isNotNull();
-        assertThat(config.truststore().path()).isEqualTo("path/to/truststore.p12");
-        assertThat(config.truststore().password()).isEqualTo("password");
-        assertThat(config.truststore().reloadStore()).isFalse();
-        assertThat(config.truststore().checkInterval().quantity()).isEqualTo(0);
-        assertThat(config.truststore().checkInterval().unit()).isEqualTo(TimeUnit.SECONDS);
+        assertThat(config.truststore()
+                         .path()).isEqualTo("path/to/truststore.p12");
+        assertThat(config.truststore()
+                         .password()).isEqualTo("password");
+        assertThat(config.truststore()
+                         .reloadStore()).isFalse();
+        assertThat(config.truststore()
+                         .checkInterval()
+                         .quantity()).isEqualTo(0);
+        assertThat(config.truststore()
+                         .checkInterval()
+                         .unit()).isEqualTo(TimeUnit.SECONDS);
         assertThat(config.secureTransportProtocols()).containsExactly("TLSv1.3");
-        assertThat(config.cipherSuites()).contains("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
-                                                   "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-                                                   "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-                                                   "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
-                                                   "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
-                                                   "TLS_RSA_WITH_AES_128_GCM_SHA256",
-                                                   "TLS_RSA_WITH_AES_128_CBC_SHA",
-                                                   "TLS_RSA_WITH_AES_256_CBC_SHA");
+        assertThat(config.cipherSuites()).contains("TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+                "TLS_RSA_WITH_AES_128_GCM_SHA256", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_256_CBC_SHA");
     }
 
     void validateMetricsConfiguration(MetricsConfiguration config)
@@ -794,7 +871,8 @@ class SidecarConfigurationTest
 
     private Path yaml(String resourceName)
     {
-        ClassLoader classLoader = this.getClass().getClassLoader();
+        ClassLoader classLoader = this.getClass()
+                                      .getClassLoader();
         return writeResourceToPath(classLoader, configPath, resourceName);
     }
 }

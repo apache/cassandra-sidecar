@@ -26,15 +26,17 @@ import io.vertx.core.http.HttpServerRequest;
 public class RequestUtils
 {
     /**
-     * Parses a boolean parameter from the {@code request}, for the given {@code paramName}. If the request param
-     * is not {@code true} or {@code false}, it returns the {@code defaultValue}.
+     * Parses a boolean parameter from the {@code request}, for the given {@code paramName}. If the request param is not {@code true} or {@code false}, it
+     * returns the {@code defaultValue}.
      *
-     * @param request      the request
-     * @param paramName    the name of the query parameter
+     * @param request the request
+     * @param paramName the name of the query parameter
      * @param defaultValue the default value when the request parameter does not match {@code true} or {@code false}
      * @return the parsed value for the {@code paramName} from the {@code request}
      */
-    public static boolean parseBooleanQueryParam(HttpServerRequest request, String paramName, boolean defaultValue)
+    public static boolean parseBooleanQueryParam(HttpServerRequest request,
+                                                 String paramName,
+                                                 boolean defaultValue)
     {
         String value = request.getParam(paramName);
         if ("true".equalsIgnoreCase(value))
@@ -47,12 +49,14 @@ public class RequestUtils
     /**
      * Parses an optional integer parameter from the {@code request}, for the given {@code paramName}.
      *
-     * @param request      the request
-     * @param paramName    the name of the query parameter
+     * @param request the request
+     * @param paramName the name of the query parameter
      * @param defaultValue the default value when the parameter does not exist
      * @return the parsed value for the {@code paramName} from the {@code request}
      */
-    public static Integer parseIntegerQueryParam(HttpServerRequest request, String paramName, Integer defaultValue)
+    public static Integer parseIntegerQueryParam(HttpServerRequest request,
+                                                 String paramName,
+                                                 Integer defaultValue)
     {
         String value = request.getParam(paramName);
         if (value != null)

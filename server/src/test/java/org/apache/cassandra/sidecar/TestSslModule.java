@@ -32,7 +32,6 @@ import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 
-
 /**
  * Changes to the TestModule to define SSL dependencies
  */
@@ -65,17 +64,18 @@ public class TestSslModule extends TestModule
             logger.error("Trust Store file not found in path={}", trustStorePath);
         }
 
-        SslConfiguration sslConfiguration =
-        SslConfigurationImpl.builder()
-                            .enabled(true)
-                            .useOpenSsl(true)
-                            .handshakeTimeout(SecondBoundConfiguration.parse("10s"))
-                            .clientAuth("NONE")
-                            .keystore(new KeyStoreConfigurationImpl(keyStorePath.toAbsolutePath().toString(),
-                                                                    keyStorePassword))
-                            .truststore(new KeyStoreConfigurationImpl(trustStorePath.toAbsolutePath().toString(),
-                                                                      trustStorePassword))
-                            .build();
+        SslConfiguration sslConfiguration = SslConfigurationImpl.builder()
+                                                                .enabled(true)
+                                                                .useOpenSsl(true)
+                                                                .handshakeTimeout(SecondBoundConfiguration.parse("10s"))
+                                                                .clientAuth("NONE")
+                                                                .keystore(new KeyStoreConfigurationImpl(keyStorePath.toAbsolutePath()
+                                                                                                                    .toString(),
+                                                                        keyStorePassword))
+                                                                .truststore(new KeyStoreConfigurationImpl(trustStorePath.toAbsolutePath()
+                                                                                                                        .toString(),
+                                                                        trustStorePassword))
+                                                                .build();
 
         return super.abstractConfig(sslConfiguration);
     }

@@ -34,6 +34,7 @@ import java.util.function.BiConsumer;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SidecarRateLimiter;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,12 +79,12 @@ public class StorageClient
     StorageClient(S3AsyncClient client)
     {
         // no rate-limiting
-        this(client,
-             S3ClientConfigurationImpl.DEFAULT_RANGE_GET_OBJECT_BYTES_SIZE,
-             SidecarRateLimiter.create(-1));
+        this(client, S3ClientConfigurationImpl.DEFAULT_RANGE_GET_OBJECT_BYTES_SIZE, SidecarRateLimiter.create(-1));
     }
 
-    StorageClient(S3AsyncClient client, int rangeHeaderSize, SidecarRateLimiter downloadRateLimiter)
+    StorageClient(S3AsyncClient client,
+                  int rangeHeaderSize,
+                  SidecarRateLimiter downloadRateLimiter)
     {
         this.client = client;
         this.rangeHeaderSize = rangeHeaderSize;
@@ -97,11 +98,11 @@ public class StorageClient
     {
         Credentials newCredentials = new Credentials(restoreJob);
         // Update the credential if absent or secrets is outdated.
-        credentialsProviders.compute(restoreJob.jobId, (jobId, credentials) -> {
+        credentialsProviders.compute(restoreJob.jobId, (jobId,
+                                                        credentials) -> {
             if (credentials == null || !matches(credentials, newCredentials))
             {
-                LOGGER.info("Credentials are updated in the storage client. jobId={} credentials={}",
-                            restoreJob.jobId, newCredentials.readCredentials);
+                LOGGER.info("Credentials are updated in the storage client. jobId={} credentials={}", restoreJob.jobId, newCredentials.readCredentials);
                 newCredentials.init();
                 return newCredentials;
             }
@@ -114,8 +115,8 @@ public class StorageClient
     }
 
     /**
-     * Revoke the credentials of a {@link RestoreJob}
-     * It should be called when the job is in a final {@link org.apache.cassandra.sidecar.common.data.RestoreJobStatus}
+     * Revoke the credentials of a {@link RestoreJob} It should be called when the job is in a final
+     * {@link org.apache.cassandra.sidecar.common.data.RestoreJobStatus}
      *
      * @param jobId the unique identifier for the job
      */
@@ -127,6 +128,7 @@ public class StorageClient
 
     /**
      * Check object existence with matching checksum
+     *
      * @param range restore range
      * @return future of HeadObjectResponse
      */
@@ -140,19 +142,19 @@ public class StorageClient
         }
 
         // https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html
-        HeadObjectRequest request =
-        HeadObjectRequest.builder()
-                         .overrideConfiguration(b -> b.credentialsProvider(credentials.awsCredentialsProvider()))
-                         .bucket(range.sliceBucket())
-                         .key(range.sliceKey())
-                         .ifMatch(quoteIfNeeded(range.sliceChecksum()))
-                         .build();
+        HeadObjectRequest request = HeadObjectRequest.builder()
+                                                     .overrideConfiguration(b -> b.credentialsProvider(credentials.awsCredentialsProvider()))
+                                                     .bucket(range.sliceBucket())
+                                                     .key(range.sliceKey())
+                                                     .ifMatch(quoteIfNeeded(range.sliceChecksum()))
+                                                     .build();
 
         return client.headObject(request)
                      .whenComplete(logCredentialOnRequestFailure(range, credentials));
     }
 
-    public Future<File> downloadObjectIfAbsent(RestoreRange range, TaskExecutorPool taskExecutorPool)
+    public Future<File> downloadObjectIfAbsent(RestoreRange range,
+                                               TaskExecutorPool taskExecutorPool)
     {
         Credentials credentials = credentialsProviders.get(range.jobId());
         if (credentials == null)
@@ -165,13 +167,12 @@ public class StorageClient
         File object = objectPath.toFile();
         if (object.exists())
         {
-            LOGGER.info("Skipping download, file already exists. jobId={} sliceKey={}",
-                        range.jobId(), range.sliceKey());
+            LOGGER.info("Skipping download, file already exists. jobId={} sliceKey={}", range.jobId(), range.sliceKey());
             // Skip downloading if the file already exists on disk. It should be a rare scenario.
             // Note that the on-disk file could be different from the remote object, although the name matches.
             // TODO 1: verify etag does not change after s3 replication and batch copy
             // TODO 2: extend restore_job table to define the multi-part upload chunk size, in order to perform local
-            //         verification of the etag/checksum
+            // verification of the etag/checksum
             // For now, we just skip download, assuming the scenario is rare and no maliciousness
             return Future.succeededFuture(object);
         }
@@ -182,8 +183,7 @@ public class StorageClient
         }
         catch (Exception ex)
         {
-            LOGGER.error("Error occurred while creating directory. jobId={} sliceKey={}",
-                         range.jobId(), range.sliceKey(), ex);
+            LOGGER.error("Error occurred while creating directory. jobId={} sliceKey={}", range.jobId(), range.sliceKey(), ex);
             return Future.failedFuture(ex);
         }
 
@@ -204,7 +204,10 @@ public class StorageClient
     }
 
     // Range-GetObject with http range header
-    private Future<File> rangeGetObject(RestoreRange range, Credentials credentials, Path destinationPath, TaskExecutorPool taskExecutorPool)
+    private Future<File> rangeGetObject(RestoreRange range,
+                                        Credentials credentials,
+                                        Path destinationPath,
+                                        TaskExecutorPool taskExecutorPool)
     {
         HttpRangesIterator iterator = new HttpRangesIterator(range.sliceObjectLength(), rangeHeaderSize);
         Preconditions.checkState(iterator.hasNext(), "SliceObject is empty. sliceKey=" + range.sliceKey());
@@ -216,8 +219,7 @@ public class StorageClient
         }
         catch (IOException e)
         {
-            LOGGER.error("Failed to create file channel for downloading. jobId={} sliceKey={}",
-                         range.jobId(), range.sliceKey(), e);
+            LOGGER.error("Failed to create file channel for downloading. jobId={} sliceKey={}", range.jobId(), range.sliceKey(), e);
             return Future.failedFuture(e);
         }
         Future<SeekableByteChannel> channelFuture = Future.succeededFuture(seekableByteChannel);
@@ -232,43 +234,41 @@ public class StorageClient
                 // throttle the download throughput
                 downloadRateLimiter.acquire(actualRangeSize);
                 // https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html
-                GetObjectRequest request =
-                GetObjectRequest.builder()
-                                .overrideConfiguration(b -> b.credentialsProvider(credentials.awsCredentialsProvider()))
-                                .bucket(range.sliceBucket())
-                                .key(range.sliceKey())
-                                .range(httpRange.toString())
-                                .build();
+                GetObjectRequest request = GetObjectRequest.builder()
+                                                           .overrideConfiguration(b -> b.credentialsProvider(credentials.awsCredentialsProvider()))
+                                                           .bucket(range.sliceBucket())
+                                                           .key(range.sliceKey())
+                                                           .range(httpRange.toString())
+                                                           .build();
                 // note: it is a blocking get; No parallelism in getting the ranges of the same object
-                ResponseBytes<GetObjectResponse> bytes = client.getObject(request, AsyncResponseTransformer.toBytes()).get();
+                ResponseBytes<GetObjectResponse> bytes = client.getObject(request, AsyncResponseTransformer.toBytes())
+                                                               .get();
                 channel.write(bytes.asByteBuffer());
                 return channel;
             }, true));
         }
         return channelFuture
-               // eventually is evaluated in both success and failure cases
-               .eventually(() -> taskExecutorPool.runBlocking(() -> {
-                   ThrowableUtils.propagate(() -> closeChannel(seekableByteChannel));
-               }, true))
-               .compose(channel -> Future.succeededFuture(destinationPath.toFile()),
-                        failure -> { // failure mapper; log the credential on failure
-                            LOGGER.error("Request is not successful. jobId={} credentials={}",
-                                         range.jobId(), credentials.readCredentials, failure);
-                            try
-                            {
-                                Files.deleteIfExists(destinationPath);
-                            }
-                            catch (IOException e)
-                            {
-                                LOGGER.warn("Failed to clean up the failed download. jobId={} sliceKey={}",
-                                            range.jobId(), range.sliceKey(), e);
-                                failure.addSuppressed(e);
-                            }
-                            return Future.failedFuture(failure);
-                        });
+                            // eventually is evaluated in both success and failure cases
+                            .eventually(() -> taskExecutorPool.runBlocking(() -> {
+                                ThrowableUtils.propagate(() -> closeChannel(seekableByteChannel));
+                            }, true))
+                            .compose(channel -> Future.succeededFuture(destinationPath.toFile()), failure -> { // failure mapper; log the credential on failure
+                                LOGGER.error("Request is not successful. jobId={} credentials={}", range.jobId(), credentials.readCredentials, failure);
+                                try
+                                {
+                                    Files.deleteIfExists(destinationPath);
+                                }
+                                catch (IOException e)
+                                {
+                                    LOGGER.warn("Failed to clean up the failed download. jobId={} sliceKey={}", range.jobId(), range.sliceKey(), e);
+                                    failure.addSuppressed(e);
+                                }
+                                return Future.failedFuture(failure);
+                            });
     }
 
-    private boolean matches(Credentials c1, Credentials c2)
+    private boolean matches(Credentials c1,
+                            Credentials c2)
     {
         if (c1 == c2)
             return true;
@@ -285,18 +285,17 @@ public class StorageClient
 
     private IllegalStateException credentialsNotFound(RestoreRange range)
     {
-        return new IllegalStateException("No credential available. The job might already have failed." +
-                                         "jobId: " + range.jobId());
+        return new IllegalStateException("No credential available. The job might already have failed." + "jobId: " + range.jobId());
     }
 
     private BiConsumer<Object, ? super Throwable> logCredentialOnRequestFailure(RestoreRange range,
                                                                                 Credentials credentials)
     {
-        return (ignored, cause) -> {
+        return (ignored,
+                cause) -> {
             if (cause != null)
             {
-                LOGGER.error("Request is not successful. jobId={} credentials={}",
-                             range.jobId(), credentials.readCredentials, cause);
+                LOGGER.error("Request is not successful. jobId={} credentials={}", range.jobId(), credentials.readCredentials, cause);
             }
         };
     }
@@ -338,9 +337,8 @@ public class StorageClient
 
         void init()
         {
-            AwsCredentials credentials = AwsSessionCredentials.create(readCredentials.accessKeyId(),
-                                                                      readCredentials.secretAccessKey(),
-                                                                      readCredentials.sessionToken());
+            AwsCredentials credentials = AwsSessionCredentials.create(readCredentials.accessKeyId(), readCredentials.secretAccessKey(),
+                    readCredentials.sessionToken());
             this.awsCredential = StaticCredentialsProvider.create(credentials);
         }
 

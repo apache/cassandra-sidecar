@@ -18,16 +18,15 @@
 
 package org.apache.cassandra.sidecar.client.retry;
 
-import java.util.concurrent.CompletableFuture;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
+import java.util.concurrent.CompletableFuture;
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.common.request.Request;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
- * A retry policy that ignores status code {@link HttpResponseStatus#CONFLICT} ({@code 409}), and assumes success
- * when that status code is returned by the server.
+ * A retry policy that ignores status code {@link HttpResponseStatus#CONFLICT} ({@code 409}), and assumes success when that status code is returned by the
+ * server.
  */
 public class IgnoreConflictRetryPolicy extends ExponentialBackoffRetryPolicy
 {
@@ -40,11 +39,13 @@ public class IgnoreConflictRetryPolicy extends ExponentialBackoffRetryPolicy
     /**
      * Constructs a new instance of this class
      *
-     * @param maxRetries          the maximum number of retries
-     * @param retryDelayMillis    the delay between retries in milliseconds
+     * @param maxRetries the maximum number of retries
+     * @param retryDelayMillis the delay between retries in milliseconds
      * @param maxRetryDelayMillis the maximum retry delay in milliseconds
      */
-    public IgnoreConflictRetryPolicy(int maxRetries, long retryDelayMillis, long maxRetryDelayMillis)
+    public IgnoreConflictRetryPolicy(int maxRetries,
+                                     long retryDelayMillis,
+                                     long maxRetryDelayMillis)
     {
         super(maxRetries, retryDelayMillis, maxRetryDelayMillis);
     }
@@ -67,8 +68,7 @@ public class IgnoreConflictRetryPolicy extends ExponentialBackoffRetryPolicy
         }
         else
         {
-            super.onResponse(responseFuture, request, response, throwable, attempts, canRetryOnADifferentHost,
-                             retryAction);
+            super.onResponse(responseFuture, request, response, throwable, attempts, canRetryOnADifferentHost, retryAction);
         }
     }
 }

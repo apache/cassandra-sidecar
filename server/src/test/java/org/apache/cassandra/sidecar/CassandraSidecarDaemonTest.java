@@ -18,6 +18,10 @@
 
 package org.apache.cassandra.sidecar;
 
+import io.vertx.core.Vertx;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.codec.BodyCodec;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,19 +29,11 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
+import org.apache.cassandra.sidecar.server.Server;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.vertx.core.Vertx;
-import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.codec.BodyCodec;
-import org.apache.cassandra.sidecar.server.Server;
-
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
@@ -83,7 +79,8 @@ class CassandraSidecarDaemonTest
         Path path = Paths.get("../conf/sidecar.yaml");
         assertThat(path).exists();
 
-        System.setProperty("sidecar.config", path.toUri().toString());
+        System.setProperty("sidecar.config", path.toUri()
+                                                 .toString());
         Vertx vertx = Vertx.vertx();
         WebClient client = WebClient.create(vertx);
         try
@@ -94,8 +91,7 @@ class CassandraSidecarDaemonTest
                 HttpResponse<String> response = getBlocking(client.get(9043, "localhost", "/api/v1/__health")
                                                                   .as(BodyCodec.string())
                                                                   .send(),
-                                                            2, TimeUnit.SECONDS,
-                                                            "Query for sidecar health");
+                        2, TimeUnit.SECONDS, "Query for sidecar health");
                 assertThat(response.statusCode()).isEqualTo(OK.code());
                 assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
             });
@@ -103,7 +99,10 @@ class CassandraSidecarDaemonTest
         finally
         {
             maybeStopCassandraSidecar();
-            TestResourceReaper.create().with(vertx).with(client).close();
+            TestResourceReaper.create()
+                              .with(vertx)
+                              .with(client)
+                              .close();
         }
     }
 
@@ -133,8 +132,7 @@ class CassandraSidecarDaemonTest
                 HttpResponse<String> response = getBlocking(client.get(9043, "localhost", "/api/v1/__health")
                                                                   .as(BodyCodec.string())
                                                                   .send(),
-                                                            2, TimeUnit.SECONDS,
-                                                            "Query for sidecar health");
+                        2, TimeUnit.SECONDS, "Query for sidecar health");
                 assertThat(response.statusCode()).isEqualTo(OK.code());
                 assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
             });
@@ -152,7 +150,10 @@ class CassandraSidecarDaemonTest
                     Files.deleteIfExists(createdParent);
                 }
             }
-            TestResourceReaper.create().with(vertx).with(client).close();
+            TestResourceReaper.create()
+                              .with(vertx)
+                              .with(client)
+                              .close();
         }
     }
 

@@ -18,14 +18,13 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
-import java.util.Set;
-
 import com.google.inject.Inject;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Collections;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
@@ -33,7 +32,6 @@ import org.apache.cassandra.sidecar.common.server.utils.GossipInfoParser;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
 
 /**
  * Handler for retrieving gossip info
@@ -44,10 +42,11 @@ public class GossipInfoHandler extends AbstractHandler<Void> implements AccessPr
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the metadata fetcher
-     * @param executorPools   executor pools for blocking executions
+     * @param executorPools executor pools for blocking executions
      */
     @Inject
-    public GossipInfoHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools)
+    public GossipInfoHandler(InstanceMetadataFetcher metadataFetcher,
+                             ExecutorPools executorPools)
     {
         super(metadataFetcher, executorPools, null);
     }

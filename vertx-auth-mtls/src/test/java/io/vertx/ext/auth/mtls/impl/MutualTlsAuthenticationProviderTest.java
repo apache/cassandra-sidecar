@@ -18,19 +18,6 @@
 
 package io.vertx.ext.auth.mtls.impl;
 
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Collections;
-import java.util.List;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -41,8 +28,18 @@ import io.vertx.ext.auth.mtls.CertificateValidator;
 import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Collections;
+import java.util.List;
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
@@ -111,17 +108,15 @@ class MutualTlsAuthenticationProviderTest
     @Test
     public void testValidCertificate(VertxTestContext context) throws Exception
     {
-        CertificateValidator certificateValidator
-        = new CertificateValidatorImpl(Collections.singleton("Vertx Auth"), "oss", "ssl_test", "US");
+        CertificateValidator certificateValidator = new CertificateValidatorImpl(Collections.singleton("Vertx Auth"), "oss", "ssl_test", "US");
         CertificateIdentityExtractor identityExtracter = new SpiffeIdentityExtractor();
 
         mTlsAuth = new MutualTlsAuthenticationImpl(vertx, certificateValidator, identityExtracter);
 
-        X509Certificate certificate = new CertificateBuilder()
-                                      .subject("CN=Vertx Auth, OU=ssl_test, O=oss, L=Unknown, ST=Unknown, C=US")
-                                      .addSanUriName("spiffe://vertx.auth/unitTest/mtls")
-                                      .buildSelfSigned()
-                                      .certificate();
+        X509Certificate certificate = new CertificateBuilder().subject("CN=Vertx Auth, OU=ssl_test, O=oss, L=Unknown, ST=Unknown, C=US")
+                                                              .addSanUriName("spiffe://vertx.auth/unitTest/mtls")
+                                                              .buildSelfSigned()
+                                                              .certificate();
         List<Certificate> certChain = Collections.singletonList(certificate);
         CertificateCredentials credentials = new CertificateCredentials(certChain);
 
@@ -133,19 +128,18 @@ class MutualTlsAuthenticationProviderTest
     @Test
     public void testInvalidCertificate(VertxTestContext context) throws Exception
     {
-        CertificateValidator certificateValidator
-        = new CertificateValidatorImpl(Collections.singleton("Vertx Auth"), "oss", "ssl_test", "US");
+        CertificateValidator certificateValidator = new CertificateValidatorImpl(Collections.singleton("Vertx Auth"), "oss", "ssl_test", "US");
         CertificateIdentityExtractor identityExtracter = new SpiffeIdentityExtractor();
 
         mTlsAuth = new MutualTlsAuthenticationImpl(vertx, certificateValidator, identityExtracter);
 
-        Instant yesterday = Instant.now().minus(1, ChronoUnit.DAYS);
-        X509Certificate certificate = new CertificateBuilder()
-                                      .subject("CN=Vertx Auth, OU=ssl_test, O=oss, L=Unknown, ST=Unknown, C=US")
-                                      .addSanUriName("spiffe://vertx.auth/unitTest/mtls")
-                                      .notAfter(yesterday)
-                                      .buildSelfSigned()
-                                      .certificate();
+        Instant yesterday = Instant.now()
+                                   .minus(1, ChronoUnit.DAYS);
+        X509Certificate certificate = new CertificateBuilder().subject("CN=Vertx Auth, OU=ssl_test, O=oss, L=Unknown, ST=Unknown, C=US")
+                                                              .addSanUriName("spiffe://vertx.auth/unitTest/mtls")
+                                                              .notAfter(yesterday)
+                                                              .buildSelfSigned()
+                                                              .certificate();
         List<Certificate> certChain = Collections.singletonList(certificate);
         CertificateCredentials credentials = new CertificateCredentials(certChain);
 
@@ -168,7 +162,8 @@ class MutualTlsAuthenticationProviderTest
         Certificate mockCertificate = mock(Certificate.class);
         CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(mockCertificate));
 
-        doThrow(new RuntimeException("Invalid certificate")).when(mockCertificateValidator).verifyCertificate(credentials);
+        doThrow(new RuntimeException("Invalid certificate")).when(mockCertificateValidator)
+                                                            .verifyCertificate(credentials);
 
         mTlsAuth.authenticate(credentials)
                 .onSuccess(res -> context.failNow("Should have failed"))
@@ -202,17 +197,15 @@ class MutualTlsAuthenticationProviderTest
     @Test
     public void testEmptyIdentity(VertxTestContext context) throws Exception
     {
-        CertificateValidator certificateValidator
-        = new CertificateValidatorImpl(Collections.singleton("Vertx Auth"), "oss", "ssl_test", "US");
+        CertificateValidator certificateValidator = new CertificateValidatorImpl(Collections.singleton("Vertx Auth"), "oss", "ssl_test", "US");
         CertificateIdentityExtractor identityExtracter = new SpiffeIdentityExtractor();
 
         mTlsAuth = new MutualTlsAuthenticationImpl(vertx, certificateValidator, identityExtracter);
 
-        X509Certificate certificate = new CertificateBuilder()
-                                      .subject("CN=Vertx Auth, OU=ssl_test, O=oss, L=Unknown, ST=Unknown, C=US")
-                                      .addSanUriName("")
-                                      .buildSelfSigned()
-                                      .certificate();
+        X509Certificate certificate = new CertificateBuilder().subject("CN=Vertx Auth, OU=ssl_test, O=oss, L=Unknown, ST=Unknown, C=US")
+                                                              .addSanUriName("")
+                                                              .buildSelfSigned()
+                                                              .certificate();
         List<Certificate> certChain = Collections.singletonList(certificate);
         CertificateCredentials credentials = new CertificateCredentials(certChain);
 
@@ -228,17 +221,15 @@ class MutualTlsAuthenticationProviderTest
     @Test
     public void testInvalidIdentity(VertxTestContext context) throws Exception
     {
-        CertificateValidator certificateValidator
-        = new CertificateValidatorImpl(Collections.singleton("Vertx Auth"), "oss", "ssl_test", "US");
+        CertificateValidator certificateValidator = new CertificateValidatorImpl(Collections.singleton("Vertx Auth"), "oss", "ssl_test", "US");
         CertificateIdentityExtractor identityExtracter = new SpiffeIdentityExtractor();
 
         mTlsAuth = new MutualTlsAuthenticationImpl(vertx, certificateValidator, identityExtracter);
 
-        X509Certificate certificate = new CertificateBuilder()
-                                      .subject("CN=Vertx Auth, OU=ssl_test, O=oss, L=Unknown, ST=Unknown, C=US")
-                                      .addSanUriName("badIdentity")
-                                      .buildSelfSigned()
-                                      .certificate();
+        X509Certificate certificate = new CertificateBuilder().subject("CN=Vertx Auth, OU=ssl_test, O=oss, L=Unknown, ST=Unknown, C=US")
+                                                              .addSanUriName("badIdentity")
+                                                              .buildSelfSigned()
+                                                              .certificate();
         List<Certificate> certChain = Collections.singletonList(certificate);
         CertificateCredentials credentials = new CertificateCredentials(certChain);
 
@@ -260,7 +251,6 @@ class MutualTlsAuthenticationProviderTest
         JsonObject json = new JsonObject();
 
         assertThatThrownBy(() -> mTlsAuth.authenticate(json, user -> {
-        }))
-        .isInstanceOf(UnsupportedOperationException.class);
+        })).isInstanceOf(UnsupportedOperationException.class);
     }
 }

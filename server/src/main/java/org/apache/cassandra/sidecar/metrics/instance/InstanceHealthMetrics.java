@@ -18,12 +18,10 @@
 
 package org.apache.cassandra.sidecar.metrics.instance;
 
-import java.util.Objects;
-
 import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
+import java.util.Objects;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
-
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
 
 /**
@@ -40,15 +38,13 @@ public class InstanceHealthMetrics
     {
         this.metricRegistry = Objects.requireNonNull(registry, "Metric registry can not be null");
 
-        jmxDown
-        = NamedMetric.builder(name -> registry.gauge(name, () -> new DefaultSettableGauge<>(0)))
-                     .withDomain(DOMAIN)
-                     .withName("JmxDown")
-                     .build();
-        nativeDown
-        = NamedMetric.builder(name -> registry.gauge(name, () -> new DefaultSettableGauge<>(0)))
-                     .withDomain(DOMAIN)
-                     .withName("NativeDown")
-                     .build();
+        jmxDown = NamedMetric.builder(name -> registry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+                             .withDomain(DOMAIN)
+                             .withName("JmxDown")
+                             .build();
+        nativeDown = NamedMetric.builder(name -> registry.gauge(name, () -> new DefaultSettableGauge<>(0)))
+                                .withDomain(DOMAIN)
+                                .withName("NativeDown")
+                                .build();
     }
 }

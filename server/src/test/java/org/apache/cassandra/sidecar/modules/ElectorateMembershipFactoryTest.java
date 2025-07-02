@@ -18,11 +18,6 @@
 
 package org.apache.cassandra.sidecar.modules;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
@@ -30,7 +25,10 @@ import org.apache.cassandra.sidecar.coordination.MostReplicatedKeyspaceTokenZero
 import org.apache.cassandra.sidecar.coordination.SidecarInternalTokenZeroElectorateMembership;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -51,7 +49,7 @@ class ElectorateMembershipFactoryTest
     }
 
     @ParameterizedTest(name = "{index} => strategy=\"{0}\"")
-    @ValueSource(strings = { "invalid", "", "a" })
+    @ValueSource(strings = { "invalid", "", "a"})
     void testInvalidStrategy(String strategy)
     {
         SidecarConfiguration config = mock(SidecarConfiguration.class, RETURNS_DEEP_STUBS);
@@ -60,9 +58,9 @@ class ElectorateMembershipFactoryTest
                    .clusterLeaseClaimConfiguration()
                    .electorateMembershipStrategy()).thenReturn(strategy);
 
-        assertThatExceptionOfType(ConfigurationException.class)
-        .isThrownBy(() -> factory.create(mock(InstanceMetadataFetcher.class), mock(CQLSessionProvider.class), config))
-        .withMessage("Invalid electorate membership strategy value '" + strategy + "'");
+        assertThatExceptionOfType(ConfigurationException.class).isThrownBy(
+                () -> factory.create(mock(InstanceMetadataFetcher.class), mock(CQLSessionProvider.class), config))
+                                                               .withMessage("Invalid electorate membership strategy value '" + strategy + "'");
     }
 
     @Test

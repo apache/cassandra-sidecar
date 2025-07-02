@@ -18,19 +18,16 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
+import io.vertx.ext.auth.authorization.AndAuthorization;
+import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.impl.PermissionBasedAuthorizationImpl;
+import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.junit.jupiter.api.Test;
-
-import io.vertx.ext.auth.authorization.AndAuthorization;
-import io.vertx.ext.auth.authorization.Authorization;
-import io.vertx.ext.auth.authorization.impl.PermissionBasedAuthorizationImpl;
-import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
-
 import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.CLUSTER_SCOPE;
 import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.DATA_SCOPE;
 import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.KEYSPACE_SCOPE;
@@ -47,8 +44,7 @@ class CompositePermissionTest
     @Test
     void testEmptyChildPermissions()
     {
-        assertThatThrownBy(() -> new CompositePermission("feature", Collections.emptyList()))
-        .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new CompositePermission("feature", Collections.emptyList())).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -63,22 +59,17 @@ class CompositePermissionTest
         permissions.add(new DomainAwarePermission("domain5:action5", TABLE_SCOPE));
 
         CompositePermission compositePermission = new CompositePermission("composite", permissions);
-        assertThat(compositePermission.childPermissions().size()).isEqualTo(6);
-        AndAuthorization compositeAuthorization
-        = (AndAuthorization) compositePermission.toAuthorization("data/university/student");
+        assertThat(compositePermission.childPermissions()
+                                      .size()).isEqualTo(6);
+        AndAuthorization compositeAuthorization = (AndAuthorization) compositePermission.toAuthorization("data/university/student");
         Set<Authorization> resolvedAuthorizations = new HashSet<>(compositeAuthorization.getAuthorizations());
-        assertThat(resolvedAuthorizations.contains(new PermissionBasedAuthorizationImpl("permission1")
-                                                   .setResource("cluster"))).isTrue();
-        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("domain1:action1")
-                                                   .setResource("cluster"))).isTrue();
-        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("domain2:action2")
-                                                   .setResource("operation"))).isTrue();
-        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("domain3:action3")
-                                                   .setResource("data"))).isTrue();
-        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("domain4:action4")
-                                                   .setResource("data/university"))).isTrue();
-        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("domain5:action5")
-                                                   .setResource("data/university/student"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new PermissionBasedAuthorizationImpl("permission1").setResource("cluster"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("domain1:action1").setResource("cluster"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("domain2:action2").setResource("operation"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("domain3:action3").setResource("data"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("domain4:action4").setResource("data/university"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(
+                new WildcardPermissionBasedAuthorizationImpl("domain5:action5").setResource("data/university/student"))).isTrue();
     }
 
     @Test
@@ -96,13 +87,11 @@ class CompositePermissionTest
 
         CompositePermission combinedPermission = new CompositePermission("permission5", combinedPermissions);
 
-        assertThat(combinedPermission.childPermissions().size()).isEqualTo(2);
+        assertThat(combinedPermission.childPermissions()
+                                     .size()).isEqualTo(2);
         Authorization combinedAuthorization = combinedPermission.toAuthorization("data/university/student");
-        assertThat(combinedAuthorization.verify(new PermissionBasedAuthorizationImpl("permission1")
-                                                .setResource("cluster"))).isTrue();
-        assertThat(combinedAuthorization.verify(new PermissionBasedAuthorizationImpl("permission2")
-                                                .setResource("data/university"))).isTrue();
-        assertThat(combinedAuthorization.verify(new PermissionBasedAuthorizationImpl("permission4")
-                                                .setResource("data/university/student"))).isTrue();
+        assertThat(combinedAuthorization.verify(new PermissionBasedAuthorizationImpl("permission1").setResource("cluster"))).isTrue();
+        assertThat(combinedAuthorization.verify(new PermissionBasedAuthorizationImpl("permission2").setResource("data/university"))).isTrue();
+        assertThat(combinedAuthorization.verify(new PermissionBasedAuthorizationImpl("permission4").setResource("data/university/student"))).isTrue();
     }
 }

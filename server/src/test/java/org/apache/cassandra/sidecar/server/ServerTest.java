@@ -24,12 +24,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,7 +88,10 @@ class ServerTest
         {
             try
             {
-                server.close().toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+                server.close()
+                      .toCompletionStage()
+                      .toCompletableFuture()
+                      .get(5, TimeUnit.SECONDS);
             }
             catch (Exception ex)
             {
@@ -106,8 +111,10 @@ class ServerTest
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint serverStopped = context.checkpoint();
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
 
         server.start()
               .compose(this::validateHealthEndpoint)
@@ -125,8 +132,10 @@ class ServerTest
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint serverStopped = context.checkpoint();
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
 
         server.start()
               .compose(this::validateHealthEndpoint)
@@ -141,8 +150,10 @@ class ServerTest
         Checkpoint serverStarted = context.checkpoint(2);
         Checkpoint serverStopped = context.checkpoint(2);
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
 
         server.start()
               .compose(this::validateHealthEndpoint)
@@ -160,8 +171,10 @@ class ServerTest
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint serverStopped = context.checkpoint();
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
 
         server.start()
               .compose(this::validateHealthEndpoint)
@@ -179,8 +192,10 @@ class ServerTest
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint serverStopped = context.checkpoint();
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_STOP.address(), message -> serverStopped.flag());
 
         server.start()
               .compose(this::validateHealthEndpoint)
@@ -200,14 +215,14 @@ class ServerTest
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint waitUntilUpdate = context.checkpoint();
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
 
         server.start()
               .compose(this::validateHealthEndpoint)
               .onFailure(context::failNow)
               .onSuccess(v -> {
-                  TrafficShapingOptions update = new TrafficShapingOptions()
-                                                 .setOutboundGlobalBandwidth(100 * 1024 * 1024);
+                  TrafficShapingOptions update = new TrafficShapingOptions().setOutboundGlobalBandwidth(100 * 1024 * 1024);
                   server.updateTrafficShapingOptions(update);
                   waitUntilUpdate.flag();
                   context.completeNow();
@@ -221,9 +236,11 @@ class ServerTest
         configureServer("config/sidecar_single_instance_non_zero_port.yaml");
 
         assertThatNoException().isThrownBy(() -> {
-            server.start().toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
-            TrafficShapingOptions update = new TrafficShapingOptions()
-                                           .setOutboundGlobalBandwidth(100 * 1024 * 1024);
+            server.start()
+                  .toCompletionStage()
+                  .toCompletableFuture()
+                  .get(30, TimeUnit.SECONDS);
+            TrafficShapingOptions update = new TrafficShapingOptions().setOutboundGlobalBandwidth(100 * 1024 * 1024);
             server.updateTrafficShapingOptions(update);
         });
     }
@@ -250,15 +267,15 @@ class ServerTest
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint waitUntilUpdate = context.checkpoint();
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
 
         server.start()
               .compose(this::validateHealthEndpoint)
               .onFailure(context::failNow)
               .onSuccess(v -> {
-                  assertThatIllegalArgumentException()
-                  .isThrownBy(() -> server.updateTrafficShapingOptions(null))
-                  .withMessage("Invalid null value passed for traffic shaping options update");
+                  assertThatIllegalArgumentException().isThrownBy(() -> server.updateTrafficShapingOptions(null))
+                                                      .withMessage("Invalid null value passed for traffic shaping options update");
                   waitUntilUpdate.flag();
                   context.completeNow();
               });
@@ -271,15 +288,17 @@ class ServerTest
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint waitUntilCheck = context.checkpoint();
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
 
         server.start()
               .compose(this::validateHealthEndpoint)
               .onFailure(context::failNow)
               .onSuccess(v -> {
                   vertx.setTimer(100, handle -> {
-                      assertThat(registry().getMetrics().keySet().stream())
-                      .anyMatch(name -> name.contains("/api/v1/__health"));
+                      assertThat(registry().getMetrics()
+                                           .keySet()
+                                           .stream()).anyMatch(name -> name.contains("/api/v1/__health"));
                       waitUntilCheck.flag();
                       context.completeNow();
                   });
@@ -290,29 +309,29 @@ class ServerTest
     @DisplayName("Invalid access control config, zero authenticators set")
     void invalidAccessControlConfig()
     {
-        assertThatThrownBy(() -> configureServer("config/sidecar_invalid_accesscontrol_config.yaml"))
-        .hasCauseInstanceOf(ConfigurationException.class)
-        .hasMessageContaining("Invalid access control configuration. There are no configured authenticators");
+        assertThatThrownBy(() -> configureServer("config/sidecar_invalid_accesscontrol_config.yaml")).hasCauseInstanceOf(ConfigurationException.class)
+                                                                                                     .hasMessageContaining(
+                                                                                                             "Invalid access control configuration. There are no configured authenticators");
     }
 
     @Test
     @DisplayName("Invalid access control config, unrecognized authentication handler set")
     void unrecognizedAuthenticationHandlerSet()
     {
-        assertThatThrownBy(() -> configureServer("config/sidecar_unrecognized_authenticator.yaml"))
-        .hasCauseInstanceOf(RuntimeException.class)
-        .hasMessageContaining("Implementation for class org.apache.cassandra.sidecar.acl.authentication." +
-                              "UnrecognizedAuthenticationHandler has not been registered");
+        assertThatThrownBy(() -> configureServer("config/sidecar_unrecognized_authenticator.yaml")).hasCauseInstanceOf(RuntimeException.class)
+                                                                                                   .hasMessageContaining(
+                                                                                                           "Implementation for class org.apache.cassandra.sidecar.acl.authentication."
+                                                                                                                   + "UnrecognizedAuthenticationHandler has not been registered");
     }
 
     @Test
     @DisplayName("Invalid access control config, unrecognized authorization provider set")
     void unrecognizedAuthorizationProviderSet()
     {
-        assertThatThrownBy(() -> configureServer("config/sidecar_unrecognized_authorizer.yaml"))
-        .hasCauseInstanceOf(ConfigurationException.class)
-        .hasMessageContaining("Unrecognized authorization provider org.apache.cassandra.sidecar.acl." +
-                              "authorization.UnrecognizedAuthorizationProvider set");
+        assertThatThrownBy(() -> configureServer("config/sidecar_unrecognized_authorizer.yaml")).hasCauseInstanceOf(ConfigurationException.class)
+                                                                                                .hasMessageContaining(
+                                                                                                        "Unrecognized authorization provider org.apache.cassandra.sidecar.acl."
+                                                                                                                + "authorization.UnrecognizedAuthorizationProvider set");
     }
 
     Future<String> validateHealthEndpoint(String deploymentId)
@@ -322,7 +341,8 @@ class ServerTest
                      .send()
                      .compose(response -> {
                          assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                         assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
+                         assertThat(response.bodyAsJsonObject()
+                                            .getString("status")).isEqualTo("OK");
                          return Future.succeededFuture(deploymentId);
                      });
     }

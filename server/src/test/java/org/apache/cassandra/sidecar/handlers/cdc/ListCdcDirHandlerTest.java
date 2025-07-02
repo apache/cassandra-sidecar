@@ -18,15 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.cdc;
 
-import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -37,12 +28,20 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.data.CdcSegmentInfo;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 /**
@@ -61,14 +60,14 @@ class ListCdcDirHandlerTest
     {
         Module testOverride = new TestModule();
         Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
-                .with(testOverride));
+                                                        .with(testOverride));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 
         VertxTestContext context = new VertxTestContext();
         server.start()
-                .onSuccess(s -> context.completeNow())
-                .onFailure(context::failNow);
+              .onSuccess(s -> context.completeNow())
+              .onFailure(context::failNow);
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
 
@@ -76,7 +75,8 @@ class ListCdcDirHandlerTest
     void after() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -93,7 +93,8 @@ class ListCdcDirHandlerTest
               .send(context.succeeding(resp -> {
                   context.verify(() -> {
                       ListCdcSegmentsResponse listCDCSegmentsResponse = resp.bodyAsJson(ListCdcSegmentsResponse.class);
-                      assertThat(listCDCSegmentsResponse.segmentsInfo().size()).isEqualTo(2);
+                      assertThat(listCDCSegmentsResponse.segmentsInfo()
+                                                        .size()).isEqualTo(2);
                       for (CdcSegmentInfo segmentInfo : listCDCSegmentsResponse.segmentsInfo())
                       {
                           if (segmentInfo.name.equals("CommitLog-1-1.log"))

@@ -23,13 +23,17 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
 import com.google.common.util.concurrent.Uninterruptibles;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -80,7 +84,8 @@ class StreamCdcSegmentHandlerTest
     void after() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -103,7 +108,7 @@ class StreamCdcSegmentHandlerTest
         spinAssertCdcRawTempEmpty();
     }
 
-    @Test  // A variant of testRouteSucceeds. It sends concurrent requests for the same segment and assert the all requests should be satisfied.
+    @Test // A variant of testRouteSucceeds. It sends concurrent requests for the same segment and assert the all requests should be satisfied.
     void testConcurrentRequestsForSegmentSucceeds(VertxTestContext context)
     {
         int requests = 5;
@@ -147,8 +152,8 @@ class StreamCdcSegmentHandlerTest
                   context.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(404);
                       assertThat(resp.statusMessage()).isEqualTo("Not Found");
-                      assertThat(resp.bodyAsJsonObject().getString("message"))
-                      .isEqualTo("CDC segment not found: CommitLog-1-123456.log");
+                      assertThat(resp.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo("CDC segment not found: CommitLog-1-123456.log");
                   });
                   client.close();
                   context.completeNow();
@@ -166,8 +171,8 @@ class StreamCdcSegmentHandlerTest
                   context.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(400);
                       assertThat(resp.statusMessage()).isEqualTo("Bad Request");
-                      assertThat(resp.bodyAsJsonObject().getString("message"))
-                      .isEqualTo("Invalid path param for CDC segment: CommitLog-1-1");
+                      assertThat(resp.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo("Invalid path param for CDC segment: CommitLog-1-1");
                   });
                   context.completeNow();
                   client.close();
@@ -186,8 +191,8 @@ class StreamCdcSegmentHandlerTest
                   context.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(416);
                       assertThat(resp.statusMessage()).isEqualTo("Requested Range Not Satisfiable");
-                      assertThat(resp.bodyAsJsonObject().getString("message"))
-                      .isEqualTo("Range does not satisfy boundary requirements. range=[4, 3]");
+                      assertThat(resp.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo("Range does not satisfy boundary requirements. range=[4, 3]");
                   });
                   client.close();
                   context.completeNow();
@@ -207,12 +212,14 @@ class StreamCdcSegmentHandlerTest
               .send(context.succeeding(resp -> {
                   context.verify(() -> {
                       assertThat(resp.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString()))
-                      .withFailMessage("It should only stream to the last flushed position: 1")
-                      .isEqualTo("1");
+                                                                                           .withFailMessage(
+                                                                                                   "It should only stream to the last flushed position: 1")
+                                                                                           .isEqualTo("1");
                       // see src/test/resources/cdc_raw/CommitLog-1-2_cdc.idx
                       assertThat(resp.getHeader(HttpHeaderNames.CONTENT_RANGE.toString()))
-                      .withFailMessage("It should only stream to the last flushed position: 1")
-                      .isEqualTo("bytes 0-0/1");
+                                                                                          .withFailMessage(
+                                                                                                  "It should only stream to the last flushed position: 1")
+                                                                                          .isEqualTo("bytes 0-0/1");
                       assertThat(resp.bodyAsString()).isEqualTo("x");
                   });
                   client.close();
@@ -249,8 +256,8 @@ class StreamCdcSegmentHandlerTest
                   context.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(400);
                       assertThat(resp.statusMessage()).isEqualTo("Bad Request");
-                      assertThat(resp.bodyAsJsonObject().getString("message"))
-                      .isEqualTo("Invalid path param for CDC segment: CommitLog-1-2_cdc.idx");
+                      assertThat(resp.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo("Invalid path param for CDC segment: CommitLog-1-2_cdc.idx");
                   });
                   client.close();
                   context.completeNow();
@@ -272,9 +279,8 @@ class StreamCdcSegmentHandlerTest
                 attempts--;
                 if (attempts == 0)
                 {
-                    assertThat(files.length)
-                    .withFailMessage("Expect empty directory. But found those files: " + Arrays.toString(files))
-                    .isEqualTo(0);
+                    assertThat(files.length).withFailMessage("Expect empty directory. But found those files: " + Arrays.toString(files))
+                                            .isEqualTo(0);
                 }
             }
             else

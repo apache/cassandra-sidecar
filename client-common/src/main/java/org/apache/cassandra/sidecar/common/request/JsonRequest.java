@@ -40,7 +40,8 @@ public abstract class JsonRequest<T> extends Request
     protected JsonRequest(String requestURI)
     {
         super(requestURI);
-        Class<T> type = (Class<T>) ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        Class<T> type = (Class<T>) ((ParameterizedType) this.getClass()
+                                                            .getGenericSuperclass()).getActualTypeArguments()[0];
         this.responseDecoder = new JsonResponseBytesDecoder<>(type);
     }
 

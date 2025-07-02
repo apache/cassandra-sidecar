@@ -18,11 +18,10 @@
 
 package org.apache.cassandra.sidecar.common.response.data;
 
-import java.util.Objects;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Objects;
 
 /**
  * Class representing segment information.
@@ -37,8 +36,10 @@ public class CdcSegmentInfo
     public final boolean completed;
     public final long lastModifiedTimestamp;
 
-    public CdcSegmentInfo(@JsonProperty("name") String name, @JsonProperty("size") long size,
-                          @JsonProperty("idx") long idx, @JsonProperty("completed") boolean completed,
+    public CdcSegmentInfo(@JsonProperty("name") String name,
+                          @JsonProperty("size") long size,
+                          @JsonProperty("idx") long idx,
+                          @JsonProperty("completed") boolean completed,
                           @JsonProperty("lastModifiedTimestamp") long lastModifiedTimestamp)
     {
         this.name = name;
@@ -60,8 +61,8 @@ public class CdcSegmentInfo
             return false;
         }
         CdcSegmentInfo that = (CdcSegmentInfo) o;
-        return size == that.size && idx == that.idx && completed == that.completed && lastModifiedTimestamp == that.lastModifiedTimestamp &&
-                Objects.equals(name, that.name);
+        return size == that.size && idx == that.idx && completed == that.completed && lastModifiedTimestamp == that.lastModifiedTimestamp
+                && Objects.equals(name, that.name);
     }
 
     @Override

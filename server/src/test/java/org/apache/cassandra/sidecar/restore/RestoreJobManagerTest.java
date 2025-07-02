@@ -78,7 +78,8 @@ class RestoreJobManagerTest
     @BeforeEach
     void setup()
     {
-        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(new TestModule()));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
+                                                        .with(new TestModule()));
         vertx = injector.getInstance(Vertx.class);
         executorPools = ExecutorPoolsHelper.createdSharedTestPool(vertx);
         processor = mock(RestoreProcessor.class);
@@ -90,21 +91,19 @@ class RestoreJobManagerTest
         when(restoreJobConfiguration.jobDiscoveryIdleLoopDelay()).thenReturn(MillisecondBoundConfiguration.ZERO);
         when(restoreJobConfiguration.jobDiscoveryMinimumRecencyDays()).thenReturn(jobRecencyDays);
         when(restoreJobConfiguration.processMaxConcurrency()).thenReturn(0);
-        when(restoreJobConfiguration.restoreJobTablesTtl())
-        .thenReturn(SecondBoundConfiguration.parse((TimeUnit.DAYS.toSeconds(14) + 1) + "s"));
+        when(restoreJobConfiguration.restoreJobTablesTtl()).thenReturn(SecondBoundConfiguration.parse((TimeUnit.DAYS.toSeconds(14) + 1) + "s"));
 
-        manager = new RestoreJobManager(restoreJobConfiguration,
-                                        instanceMetadata,
-                                        executorPools,
-                                        processor,
-                                        false /* do not trigger the first deletion */);
+        manager = new RestoreJobManager(restoreJobConfiguration, instanceMetadata, executorPools, processor, false /* do not trigger the first deletion */);
     }
 
     @AfterEach
     void teardown()
     {
         // close in the fire-and-forget way
-        TestResourceReaper.create().with(vertx).with(executorPools).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(executorPools)
+                          .close();
     }
 
     @Test
@@ -112,52 +111,47 @@ class RestoreJobManagerTest
     {
         // submit the first time
         RestoreRange range = getTestRange();
-        assertThat(manager.trySubmit(range, range.job()))
-        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
+        assertThat(manager.trySubmit(range, range.job())).isEqualTo(RestoreJobProgressTracker.Status.CREATED);
 
         // submit twice
-        assertThat(manager.trySubmit(range, range.job()))
-        .isEqualTo(RestoreJobProgressTracker.Status.PENDING);
+        assertThat(manager.trySubmit(range, range.job())).isEqualTo(RestoreJobProgressTracker.Status.PENDING);
 
         range.complete();
-        assertThat(manager.trySubmit(range, range.job()))
-        .isEqualTo(RestoreJobProgressTracker.Status.COMPLETED);
+        assertThat(manager.trySubmit(range, range.job())).isEqualTo(RestoreJobProgressTracker.Status.COMPLETED);
     }
 
     @Test
     void testTrySubmitAfterJobFailure() throws RestoreJobException
     {
         RestoreRange range = getTestRange();
-        assertThat(manager.trySubmit(range, range.job()))
-        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
+        assertThat(manager.trySubmit(range, range.job())).isEqualTo(RestoreJobProgressTracker.Status.CREATED);
 
         RestoreJobFatalException failure = new RestoreJobFatalException("fatal");
         range.fail(failure);
-        assertThatThrownBy(() -> manager.trySubmit(range, range.job()))
-        .isSameAs(failure);
+        assertThatThrownBy(() -> manager.trySubmit(range, range.job())).isSameAs(failure);
 
         // submitting other ranges in the same job should fail too
         RestoreRange anotherRange = getTestRange(range.job());
-        assertThatThrownBy(() -> manager.trySubmit(anotherRange, anotherRange.job()))
-        .describedAs("Once a range failed, no more range can be submitted")
-        .isSameAs(failure);
+        assertThatThrownBy(() -> manager.trySubmit(anotherRange, anotherRange.job())).describedAs("Once a range failed, no more range can be submitted")
+                                                                                     .isSameAs(failure);
 
         // however, ranges from a different job are still permitted
         RestoreRange rangeOfDifferentJob = getTestRange();
-        assertThat(manager.trySubmit(rangeOfDifferentJob, rangeOfDifferentJob.job()))
-        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
+        assertThat(manager.trySubmit(rangeOfDifferentJob, rangeOfDifferentJob.job())).isEqualTo(RestoreJobProgressTracker.Status.CREATED);
     }
 
     @Test
     void testRemoveJobInternal() throws RestoreJobException
     {
         RestoreRange range = getTestRange();
-        assertThat(manager.trySubmit(range, range.job()))
-        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
+        assertThat(manager.trySubmit(range, range.job())).isEqualTo(RestoreJobProgressTracker.Status.CREATED);
 
-        Map<RestoreRange, ?> ranges = manager.progressTrackerUnsafe(range.job()).rangesForTesting();
+        Map<RestoreRange, ?> ranges = manager.progressTrackerUnsafe(range.job())
+                                             .rangesForTesting();
         assertThat(ranges.size()).isOne();
-        RestoreRange submittedRange = ranges.keySet().iterator().next();
+        RestoreRange submittedRange = ranges.keySet()
+                                            .iterator()
+                                            .next();
         assertThat(submittedRange.isCancelled()).isFalse();
 
         manager.removeJobInternal(submittedRange.jobId()); // it cancels the non-completed ranges
@@ -172,8 +166,7 @@ class RestoreJobManagerTest
         // test setup and submit range
         RestoreRange range = getTestRange();
         RestoreJob job = range.job();
-        assertThat(manager.trySubmit(range, job))
-        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
+        assertThat(manager.trySubmit(range, job)).isEqualTo(RestoreJobProgressTracker.Status.CREATED);
 
         assertThat(range.job()).isNotNull();
         assertThat(range.job()).isSameAs(job);
@@ -196,14 +189,12 @@ class RestoreJobManagerTest
         // not old enough
         assertThat(manager.isObsoleteRestoreJobDir(jobDir)).isFalse();
         // still not old enough (not 1 day yet)
-        jobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(System.currentTimeMillis()
-                                                                   - TimeUnit.DAYS.toMillis(jobRecencyDays)
-                                                                   + 9000)));
+        jobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(jobRecencyDays) + 9000)));
         assertThat(manager.isObsoleteRestoreJobDir(jobDir)).isFalse();
 
         // invalid format: missing 'restore-' prefix
-        jobDir = newDir(UUIDs.startOf(System.currentTimeMillis()
-                                      - TimeUnit.DAYS.toMillis(jobRecencyDays + 1)).toString());
+        jobDir = newDir(UUIDs.startOf(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(jobRecencyDays + 1))
+                             .toString());
         assertThat(manager.isObsoleteRestoreJobDir(jobDir)).isFalse();
         // invalid format
         jobDir = newDir("foo");
@@ -216,14 +207,12 @@ class RestoreJobManagerTest
         assertThat(manager.isObsoleteRestoreJobDir(jobDir)).isFalse();
         // it is not a directory
         jobDir = testDir.resolve("I_am_file");
-        assertThat(jobDir.toFile().createNewFile()).isTrue();
+        assertThat(jobDir.toFile()
+                         .createNewFile()).isTrue();
         assertThat(manager.isObsoleteRestoreJobDir(jobDir)).isFalse();
 
-
         // format is good; directory is older than jobRecencyDays
-        jobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(System.currentTimeMillis()
-                                                                   - TimeUnit.DAYS.toMillis(jobRecencyDays)
-                                                                   - 1)));
+        jobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(jobRecencyDays) - 1)));
         assertThat(manager.isObsoleteRestoreJobDir(jobDir)).isTrue();
     }
 
@@ -231,14 +220,10 @@ class RestoreJobManagerTest
     void testDeleteObsoleteData() throws IOException
     {
         long nowMillis = System.currentTimeMillis();
-        Path oldJobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(nowMillis
-                                                                           - TimeUnit.DAYS.toMillis(jobRecencyDays)
-                                                                           - 1)));
+        Path oldJobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(nowMillis - TimeUnit.DAYS.toMillis(jobRecencyDays) - 1)));
         createFileInDirectory(oldJobDir, 5);
 
-        Path olderJobDir
-        = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(nowMillis
-                                                            - TimeUnit.DAYS.toMillis(jobRecencyDays + 1))));
+        Path olderJobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(nowMillis - TimeUnit.DAYS.toMillis(jobRecencyDays + 1))));
         createFileInDirectory(olderJobDir, 5);
 
         Path newJobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(nowMillis)));
@@ -246,12 +231,15 @@ class RestoreJobManagerTest
 
         manager.deleteObsoleteDataAsync();
         loopAssert(3, 10, () -> {
-            assertThat(Files.exists(oldJobDir)).describedAs("Should be deleted").isFalse();
-            assertThat(Files.exists(olderJobDir)).describedAs("Should be deleted").isFalse();
-            assertThat(Files.exists(newJobDir)).describedAs("Should survive").isTrue();
-            assertThat(newJobDir.toFile().list())
-            .describedAs("Should have 5 files intact")
-            .hasSize(5);
+            assertThat(Files.exists(oldJobDir)).describedAs("Should be deleted")
+                                               .isFalse();
+            assertThat(Files.exists(olderJobDir)).describedAs("Should be deleted")
+                                                 .isFalse();
+            assertThat(Files.exists(newJobDir)).describedAs("Should survive")
+                                               .isTrue();
+            assertThat(newJobDir.toFile()
+                                .list()).describedAs("Should have 5 files intact")
+                                        .hasSize(5);
         });
     }
 
@@ -263,8 +251,8 @@ class RestoreJobManagerTest
             RestoreRange input = invocation.getArgument(0, RestoreRange.class);
             input.discard();
             return null;
-        })
-        .when(processor).discardAndRemove(any(RestoreRange.class));
+        }).when(processor)
+          .discardAndRemove(any(RestoreRange.class));
         RestoreRange template = getTestRange();
         RestoreJob job = template.job();
         RestoreRange rangeToDiscard = template.unbuild()
@@ -277,27 +265,30 @@ class RestoreJobManagerTest
                                            .startToken(BigInteger.valueOf(100))
                                            .endToken(BigInteger.valueOf(110))
                                            .build();
-        assertThat(manager.progressTrackerUnsafe(job).rangesForTesting())
-        .describedAs("No range is submitted yet")
-        .hasSize(0);
-        assertThat(manager.trySubmit(rangeToDiscard, job))
-        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
-        assertThat(manager.trySubmit(rangeToKeep, job))
-        .isEqualTo(RestoreJobProgressTracker.Status.CREATED);
+        assertThat(manager.progressTrackerUnsafe(job)
+                          .rangesForTesting()).describedAs("No range is submitted yet")
+                                              .hasSize(0);
+        assertThat(manager.trySubmit(rangeToDiscard, job)).isEqualTo(RestoreJobProgressTracker.Status.CREATED);
+        assertThat(manager.trySubmit(rangeToKeep, job)).isEqualTo(RestoreJobProgressTracker.Status.CREATED);
 
-        assertThat(manager.progressTrackerUnsafe(job).rangesForTesting())
-        .describedAs("There are two ranges submitted")
-        .hasSize(2);
+        assertThat(manager.progressTrackerUnsafe(job)
+                          .rangesForTesting()).describedAs("There are two ranges submitted")
+                                              .hasSize(2);
         // (0, 10] overlaps with (-10, 50]; but (100, 110] does not
         Set<RestoreRange> rangesDiscarded = manager.discardOverlappingRanges(job, Collections.singleton(new TokenRange(-10, 50)));
         assertThat(rangesDiscarded).hasSize(1);
-        RestoreRange rangeDiscarded = rangesDiscarded.iterator().next();
+        RestoreRange rangeDiscarded = rangesDiscarded.iterator()
+                                                     .next();
         assertThat(rangeDiscarded.isDiscarded()).isTrue();
         assertThat(rangeDiscarded.sliceId()).isEqualTo("rangeToDiscard");
-        assertThat(manager.progressTrackerUnsafe(job).rangesForTesting())
-        .describedAs("One of the two ranges should be discarded")
-        .hasSize(1);
-        RestoreRange rangeKept = manager.progressTrackerUnsafe(job).rangesForTesting().keySet().iterator().next();
+        assertThat(manager.progressTrackerUnsafe(job)
+                          .rangesForTesting()).describedAs("One of the two ranges should be discarded")
+                                              .hasSize(1);
+        RestoreRange rangeKept = manager.progressTrackerUnsafe(job)
+                                        .rangesForTesting()
+                                        .keySet()
+                                        .iterator()
+                                        .next();
         assertThat(rangeKept.sliceId()).isEqualTo("rangeToKeep");
     }
 
@@ -310,16 +301,15 @@ class RestoreJobManagerTest
     {
         InstanceMetadata owner = mock(InstanceMetadata.class);
         when(owner.id()).thenReturn(1);
-        RestoreSlice slice = RestoreSlice
-                             .builder()
-                             .jobId(job.jobId)
-                             .sliceId("testSliceId")
-                             .bucketId((short) 0)
-                             .storageKey("storageKey")
-                             .storageBucket("storageBucket")
-                             .startToken(BigInteger.ONE)
-                             .endToken(BigInteger.TEN)
-                             .build();
+        RestoreSlice slice = RestoreSlice.builder()
+                                         .jobId(job.jobId)
+                                         .sliceId("testSliceId")
+                                         .bucketId((short) 0)
+                                         .storageKey("storageKey")
+                                         .storageBucket("storageBucket")
+                                         .startToken(BigInteger.ONE)
+                                         .endToken(BigInteger.TEN)
+                                         .build();
         RestoreJobProgressTracker tracker = manager.progressTrackerUnsafe(job);
         return RestoreRange.builderFromSlice(slice)
                            .restoreJobProgressTracker(tracker)
@@ -336,14 +326,16 @@ class RestoreJobManagerTest
         return dir;
     }
 
-    private void createFileInDirectory(Path path, int nFiles) throws IOException
+    private void createFileInDirectory(Path path,
+                                       int nFiles)
+            throws IOException
     {
         for (int i = 0; i < nFiles; i++)
         {
             Files.createFile(Paths.get(path.toString(), "file" + i));
         }
-        assertThat(path.toFile().list())
-        .describedAs("listing files in " + path.toAbsolutePath())
-        .hasSize(nFiles);
+        assertThat(path.toFile()
+                       .list()).describedAs("listing files in " + path.toAbsolutePath())
+                               .hasSize(nFiles);
     }
 }

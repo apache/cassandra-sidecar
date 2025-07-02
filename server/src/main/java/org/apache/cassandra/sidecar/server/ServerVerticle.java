@@ -55,8 +55,8 @@ public class ServerVerticle extends AbstractVerticle
      * Constructs a new instance of the {@link ServerVerticle} with the provided parameters.
      *
      * @param sidecarConfiguration the configuration for running Sidecar
-     * @param router               the configured router for this Service
-     * @param options              the {@link HttpServerOptions} to create the HTTP server
+     * @param router the configured router for this Service
+     * @param options the {@link HttpServerOptions} to create the HTTP server
      */
     public ServerVerticle(SidecarConfiguration sidecarConfiguration,
                           Router router,
@@ -85,13 +85,11 @@ public class ServerVerticle extends AbstractVerticle
         Future.all(futures)
               .onSuccess((CompositeFuture startedServerFuture) -> {
                   deployedServers = new ArrayList<>(startedServerFuture.list());
-                  LOGGER.info("Successfully deployed Cassandra Sidecar server verticle on socket addresses={}",
-                              listenSocketAddresses);
+                  LOGGER.info("Successfully deployed Cassandra Sidecar server verticle on socket addresses={}", listenSocketAddresses);
                   startPromise.complete(); // notify that server started successfully
               })
               .onFailure(cause -> {
-                  LOGGER.error("Failed to deploy Cassandra Sidecar verticle failed on socket addresses={}",
-                               listenSocketAddresses, cause);
+                  LOGGER.error("Failed to deploy Cassandra Sidecar verticle failed on socket addresses={}", listenSocketAddresses, cause);
                   startPromise.fail(cause); // propagate failure to deploying class
               });
     }
@@ -137,9 +135,9 @@ public class ServerVerticle extends AbstractVerticle
                 // Sidecar always configures the traffic shaping option; such IllegalStateException is thrown due
                 // to a vert.x bug.
                 // See following comment for details
-                if (ex.getMessage() != null
-                    && ex.getMessage().contains("Unable to update traffic shaping options " +
-                                                "because the server was not configured to use traffic shaping during startup"))
+                if (ex.getMessage() != null && ex.getMessage()
+                                                 .contains("Unable to update traffic shaping options "
+                                                         + "because the server was not configured to use traffic shaping during startup"))
                 {
                     // TODO: we need to rollback this change once vert.x fixes this problem
                     // Swallowing the exception here is okay for now until we get a proper fix in vert.x.
@@ -168,7 +166,8 @@ public class ServerVerticle extends AbstractVerticle
     int actualPort()
     {
         if (deployedServers != null && !deployedServers.isEmpty())
-            return deployedServers.get(0).actualPort();
+            return deployedServers.get(0)
+                                  .actualPort();
         throw new IllegalStateException("No deployed server. Maybe server failed to deploy due to port conflict");
     }
 }

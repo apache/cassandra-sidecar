@@ -36,8 +36,8 @@ public class SidecarClientVertxRequestExecutor extends VertxRequestExecutor
     }
 
     /**
-     * @throws Exception Closing the client vertx should not close general Vertx, that's why we are overriding
-     * the close method from the VertxRequestExecutor class.
+     * @throws Exception Closing the client vertx should not close general Vertx, that's why we are overriding the close method from the VertxRequestExecutor
+     *             class.
      */
     @Override
     public void close() throws Exception

@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.cluster.locator;
 
+import com.datastax.driver.core.Host;
+import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Metadata;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
@@ -29,28 +32,23 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
-
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.datastax.driver.core.Host;
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.jetbrains.annotations.NotNull;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Get token ranges owned and replicated to the local Cassandra instance(s) by keyspace
- * The results are cached and gets invalidated when local instances or cluster topology changed
+ * Get token ranges owned and replicated to the local Cassandra instance(s) by keyspace The results are cached and gets invalidated when local instances or
+ * cluster topology changed
  */
 public class CachedLocalTokenRanges implements LocalTokenRangesProvider
 {
@@ -67,7 +65,8 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
     @GuardedBy("this")
     private ImmutableMap<String, Map<Integer, Set<TokenRange>>> localTokenRangesCache;
 
-    public CachedLocalTokenRanges(InstancesMetadata instancesMetadata, DnsResolver dnsResolver)
+    public CachedLocalTokenRanges(InstancesMetadata instancesMetadata,
+                                  DnsResolver dnsResolver)
     {
         this.instancesMetadata = instancesMetadata;
         this.dnsResolver = dnsResolver;
@@ -83,7 +82,8 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
      * @param forceRefresh the parameter is ignored. This implementation always serves from cache first and manages reload internally
      */
     @Override
-    public Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace, boolean forceRefresh)
+    public Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace,
+                                                          boolean forceRefresh)
     {
         List<InstanceMetadata> localInstances = instancesMetadata.instances();
 
@@ -96,7 +96,9 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
         Metadata metadata;
         try
         {
-            metadata = localInstances.get(0).delegate().metadata();
+            metadata = localInstances.get(0)
+                                     .delegate()
+                                     .metadata();
         }
         catch (CassandraUnavailableException ignored)
         {
@@ -117,8 +119,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
     }
 
     /**
-     * Return the token ranges owned and replicated to the host according to the replication strategy of the keyspace
-     * The result set is unmodifiable.
+     * Return the token ranges owned and replicated to the host according to the replication strategy of the keyspace The result set is unmodifiable.
      */
     @Nullable
     private Pair<Host, Set<TokenRange>> tokenRangesOfHost(Metadata metadata,
@@ -133,8 +134,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
             host = allHosts.get(ip);
             if (host == null)
             {
-                LOGGER.warn("Could not map InstanceMetadata to Host host={} port={} ip={}",
-                            instance.host(), instance.port(), ip.ipAddress);
+                LOGGER.warn("Could not map InstanceMetadata to Host host={} port={} ip={}", instance.host(), instance.port(), ip.ipAddress);
                 return null;
             }
         }
@@ -145,11 +145,14 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
         return Pair.of(host, tokenRangesOfHost(metadata, keyspace, host));
     }
 
-    public Set<TokenRange> tokenRangesOfHost(Metadata metadata, String keyspace, Host host)
+    public Set<TokenRange> tokenRangesOfHost(Metadata metadata,
+                                             String keyspace,
+                                             Host host)
     {
         return metadata.getTokenRanges(keyspace, host)
                        .stream()
-                       .flatMap(range -> TokenRange.from(range).stream())
+                       .flatMap(range -> TokenRange.from(range)
+                                                   .stream())
                        .collect(Collectors.toSet());
     }
 
@@ -163,11 +166,8 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
                                                                         Set<Host> allInstances)
     {
         // exit early if no change is found
-        boolean isClusterTheSame = allInstances.equals(allInstancesCache)
-                                   && localInstanceIds.equals(localInstanceIdsCache);
-        if (localTokenRangesCache != null
-            && localTokenRangesCache.containsKey(keyspace)
-            && isClusterTheSame)
+        boolean isClusterTheSame = allInstances.equals(allInstancesCache) && localInstanceIds.equals(localInstanceIdsCache);
+        if (localTokenRangesCache != null && localTokenRangesCache.containsKey(keyspace) && isClusterTheSame)
         {
             return localTokenRangesCache.getOrDefault(keyspace, Collections.emptyMap());
         }
@@ -180,7 +180,8 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
             LOGGER.warn("No instances found in client session");
         }
         Map<IpAddressAndPort, Host> allHosts = new HashMap<>(allInstancesCache.size());
-        BiConsumer<InetSocketAddress, Host> putNullSafe = (endpoint, host) -> {
+        BiConsumer<InetSocketAddress, Host> putNullSafe = (endpoint,
+                                                           host) -> {
             if (endpoint != null)
             {
                 allHosts.put(IpAddressAndPort.of(endpoint), host);
@@ -238,16 +239,19 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
 
         static IpAddressAndPort of(@NotNull InetSocketAddress endpoint)
         {
-            return IpAddressAndPort.of(endpoint.getAddress().getHostAddress(),
-                                       endpoint.getPort());
+            return IpAddressAndPort.of(endpoint.getAddress()
+                                               .getHostAddress(),
+                    endpoint.getPort());
         }
 
-        static IpAddressAndPort of(String ipAddress, int port)
+        static IpAddressAndPort of(String ipAddress,
+                                   int port)
         {
             return new IpAddressAndPort(ipAddress, port);
         }
 
-        IpAddressAndPort(String ipAddress, int port)
+        IpAddressAndPort(String ipAddress,
+                         int port)
         {
             this.ipAddress = ipAddress;
             this.port = port;

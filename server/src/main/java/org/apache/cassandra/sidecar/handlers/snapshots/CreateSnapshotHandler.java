@@ -18,13 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.snapshots;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
-
-import com.google.common.collect.ImmutableMap;
-import org.apache.commons.lang3.StringUtils;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -33,6 +26,9 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.exceptions.NodeBootstrappingException;
@@ -44,7 +40,8 @@ import org.apache.cassandra.sidecar.handlers.data.SnapshotRequestParam;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
+import com.google.common.collect.ImmutableMap;
+import org.apache.commons.lang3.StringUtils;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -72,9 +69,9 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
     /**
      * Creates a new snapshot for the given keyspace and table.
      *
-     * @param context       the event to handle
-     * @param httpRequest   the {@link HttpServerRequest} object
-     * @param host          the name of the host
+     * @param context the event to handle
+     * @param httpRequest the {@link HttpServerRequest} object
+     * @param host the name of the host
      * @param remoteAddress the remote address that originated the request
      * @param requestParams parameters obtained from the request
      */
@@ -85,18 +82,15 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
                                SocketAddress remoteAddress,
                                SnapshotRequestParam requestParams)
     {
-        StorageOperations storageOperations = metadataFetcher.delegate(host).storageOperations();
-        executorPools.service().runBlocking(() -> {
-                         logger.debug("Creating snapshot request={}, remoteAddress={}, instance={}",
-                                      requestParams, remoteAddress, host);
-                         Map<String, String> options = requestParams.ttl() != null
-                                                       ? ImmutableMap.of("ttl", requestParams.ttl())
-                                                       : ImmutableMap.of();
+        StorageOperations storageOperations = metadataFetcher.delegate(host)
+                                                             .storageOperations();
+        executorPools.service()
+                     .runBlocking(() -> {
+                         logger.debug("Creating snapshot request={}, remoteAddress={}, instance={}", requestParams, remoteAddress, host);
+                         Map<String, String> options = requestParams.ttl() != null ? ImmutableMap.of("ttl", requestParams.ttl()) : ImmutableMap.of();
 
-                         storageOperations.takeSnapshot(requestParams.snapshotName(), requestParams.keyspace(),
-                                                        requestParams.tableName(), options);
-                         JsonObject jsonObject = new JsonObject()
-                                                 .put("result", "Success");
+                         storageOperations.takeSnapshot(requestParams.snapshotName(), requestParams.keyspace(), requestParams.tableName(), options);
+                         JsonObject jsonObject = new JsonObject().put("result", "Success");
                          context.json(jsonObject);
                      })
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestParams));
@@ -109,8 +103,9 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
                                   SocketAddress remoteAddress,
                                   SnapshotRequestParam requestParams)
     {
-        logger.error("SnapshotsHandler failed for request={}, remoteAddress={}, instance={}, method={}",
-                     requestParams, remoteAddress, host, context.request().method(), cause);
+        logger.error("SnapshotsHandler failed for request={}, remoteAddress={}, instance={}, method={}", requestParams, remoteAddress, host, context.request()
+                                                                                                                                                    .method(),
+                cause);
 
         if (cause instanceof SnapshotAlreadyExistsException)
         {
@@ -120,15 +115,12 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
         else if (cause instanceof NodeBootstrappingException)
         {
             // Cassandra does not allow taking snapshots while the node is JOINING the ring
-            context.fail(wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE,
-                                           "The Cassandra instance " + host + " is not available"));
+            context.fail(wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE, "The Cassandra instance " + host + " is not available"));
         }
         else if (cause instanceof IllegalArgumentException)
         {
-            if (StringUtils.contains(cause.getMessage(),
-                                     "Keyspace " + requestParams.keyspace() + " does not exist") ||
-                StringUtils.contains(cause.getMessage(),
-                                     "Unknown keyspace/cf pair"))
+            if (StringUtils.contains(cause.getMessage(), "Keyspace " + requestParams.keyspace() + " does not exist")
+                    || StringUtils.contains(cause.getMessage(), "Unknown keyspace/cf pair"))
             {
                 context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
             }
@@ -147,7 +139,8 @@ public class CreateSnapshotHandler extends AbstractHandler<SnapshotRequestParam>
     @Override
     protected SnapshotRequestParam extractParamsOrThrow(RoutingContext context)
     {
-        String ttl = context.request().getParam(TTL_QUERY_PARAM);
+        String ttl = context.request()
+                            .getParam(TTL_QUERY_PARAM);
 
         SnapshotRequestParam snapshotRequestParam = SnapshotRequestParam.builder()
                                                                         .qualifiedTableName(qualifiedTableName(context))

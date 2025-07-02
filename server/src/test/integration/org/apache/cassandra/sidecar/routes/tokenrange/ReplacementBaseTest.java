@@ -65,7 +65,7 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
                                               UpgradeableCluster cluster,
                                               List<IUpgradeableInstance> nodesToRemove,
                                               Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings)
-    throws Exception
+            throws Exception
     {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         try
@@ -84,11 +84,10 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
 
             IUpgradeableInstance seed = cluster.get(1);
             List<String> removedNodeAddresses = nodesToRemove.stream()
-                                                             .map(n ->
-                                                                  n.config()
-                                                                   .broadcastAddress()
-                                                                   .getAddress()
-                                                                   .getHostAddress())
+                                                             .map(n -> n.config()
+                                                                        .broadcastAddress()
+                                                                        .getAddress()
+                                                                        .getHostAddress())
                                                              .collect(Collectors.toList());
 
             List<ClusterUtils.RingInstanceDetails> ring = ClusterUtils.ring(seed);
@@ -109,29 +108,31 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
                 ClusterUtils.awaitRingState(newInstance, newInstance, "Joining");
                 ClusterUtils.awaitGossipStatus(newInstance, newInstance, "BOOT_REPLACE");
 
-                String newAddress = newInstance.config().broadcastAddress().getAddress().getHostAddress();
+                String newAddress = newInstance.config()
+                                               .broadcastAddress()
+                                               .getAddress()
+                                               .getHostAddress();
                 Optional<ClusterUtils.RingInstanceDetails> replacementInstance = ClusterUtils.ring(seed)
                                                                                              .stream()
-                                                                                             .filter(
-                                                                                             i -> i.getAddress()
-                                                                                                   .equals(newAddress))
+                                                                                             .filter(i -> i.getAddress()
+                                                                                                           .equals(newAddress))
                                                                                              .findFirst();
                 assertThat(replacementInstance).isPresent();
                 // Verify that replacement node tokens match the removed nodes
-                assertThat(removedNodeTokens).contains(replacementInstance.get().getToken());
+                assertThat(removedNodeTokens).contains(replacementInstance.get()
+                                                                          .getToken());
             }
 
             retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
                 assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                 TokenRangeReplicasResponse mappingResponse = response.bodyAsJson(TokenRangeReplicasResponse.class);
-                assertMappingResponseOK(mappingResponse,
-                                        DEFAULT_RF,
-                                        dcReplication);
+                assertMappingResponseOK(mappingResponse, DEFAULT_RF, dcReplication);
 
-                List<Integer> nodeNums = newNodes.stream().map(i -> i.config().num()).collect(Collectors.toList());
-                validateNodeStates(mappingResponse,
-                                   dcReplication,
-                                   nodeNumber -> nodeNums.contains(nodeNumber) ? "Replacing" : "Normal");
+                List<Integer> nodeNums = newNodes.stream()
+                                                 .map(i -> i.config()
+                                                            .num())
+                                                 .collect(Collectors.toList());
+                validateNodeStates(mappingResponse, dcReplication, nodeNumber -> nodeNums.contains(nodeNumber) ? "Replacing" : "Normal");
 
                 int nodeCount = annotation.nodesPerDc() * annotation.numDcs();
                 validateTokenRanges(mappingResponse, generateExpectedRanges(nodeCount));
@@ -159,34 +160,30 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
         {
             // Add new instance for each removed instance as a replacement of its owned token
             IInstanceConfig removedConfig = removed.config();
-            String remAddress = removedConfig.broadcastAddress().getAddress().getHostAddress();
+            String remAddress = removedConfig.broadcastAddress()
+                                             .getAddress()
+                                             .getHostAddress();
             int remPort = removedConfig.getInt("storage_port");
-            IUpgradeableInstance replacement =
-            addInstanceLocal(cluster, removedConfig.localDatacenter(), removedConfig.localRack(),
-                             c -> {
-                                 c.set("auto_bootstrap", true);
-                                 // explicitly DOES NOT set instances that failed startup as "shutdown"
-                                 // so subsequent attempts to shut down the instance are honored
-                                 c.set("dtest.api.startup.failure_as_shutdown", false);
-                                 c.with(Feature.GOSSIP,
-                                        Feature.JMX,
-                                        Feature.NATIVE_PROTOCOL);
-                                 c.set("storage_port", remPort);
-                             });
+            IUpgradeableInstance replacement = addInstanceLocal(cluster, removedConfig.localDatacenter(), removedConfig.localRack(), c -> {
+                c.set("auto_bootstrap", true);
+                // explicitly DOES NOT set instances that failed startup as "shutdown"
+                // so subsequent attempts to shut down the instance are honored
+                c.set("dtest.api.startup.failure_as_shutdown", false);
+                c.with(Feature.GOSSIP, Feature.JMX, Feature.NATIVE_PROTOCOL);
+                c.set("storage_port", remPort);
+            });
 
-            startAsync("Start replacement node node" + replacement.config().num(),
-                       () -> ClusterUtils.start(replacement, (properties) -> {
-                           properties.set(CassandraRelevantProperties.BOOTSTRAP_SKIP_SCHEMA_CHECK, true);
-                           properties.set(CassandraRelevantProperties.BOOTSTRAP_SCHEMA_DELAY_MS,
-                                          TimeUnit.SECONDS.toMillis(10L));
-                           properties.with("cassandra.broadcast_interval_ms",
-                                           Long.toString(TimeUnit.SECONDS.toMillis(30L)));
-                           properties.with("cassandra.ring_delay_ms",
-                                           Long.toString(TimeUnit.SECONDS.toMillis(10L)));
-                           // This property tells cassandra that this new instance is replacing the node with
-                           // address remAddress and port remPort
-                           properties.with("cassandra.replace_address_first_boot", remAddress + ":" + remPort);
-                       }));
+            startAsync("Start replacement node node" + replacement.config()
+                                                                  .num(),
+                    () -> ClusterUtils.start(replacement, (properties) -> {
+                        properties.set(CassandraRelevantProperties.BOOTSTRAP_SKIP_SCHEMA_CHECK, true);
+                        properties.set(CassandraRelevantProperties.BOOTSTRAP_SCHEMA_DELAY_MS, TimeUnit.SECONDS.toMillis(10L));
+                        properties.with("cassandra.broadcast_interval_ms", Long.toString(TimeUnit.SECONDS.toMillis(30L)));
+                        properties.with("cassandra.ring_delay_ms", Long.toString(TimeUnit.SECONDS.toMillis(10L)));
+                        // This property tells cassandra that this new instance is replacing the node with
+                        // address remAddress and port remPort
+                        properties.with("cassandra.replace_address_first_boot", remAddress + ":" + remPort);
+                    }));
 
             awaitLatchOrThrow(nodeStart, 2, TimeUnit.MINUTES, "nodeStart");
             newNodes.add(replacement);
@@ -203,11 +200,13 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
         Objects.requireNonNull(rack, "rack");
         IInstanceConfig config = cluster.newInstanceConfig();
         fn.accept(config);
-        config.networkTopology().put(config.broadcastAddress(), NetworkTopology.dcAndRack(dc, rack));
+        config.networkTopology()
+              .put(config.broadcastAddress(), NetworkTopology.dcAndRack(dc, rack));
         return cluster.bootstrap(config);
     }
 
-    private void stopNodes(IUpgradeableInstance seed, List<IUpgradeableInstance> removedNodes)
+    private void stopNodes(IUpgradeableInstance seed,
+                           List<IUpgradeableInstance> removedNodes)
     {
         for (IUpgradeableInstance nodeToRemove : removedNodes)
         {
@@ -221,12 +220,15 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
                                         List<IUpgradeableInstance> newInstances,
                                         Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings)
     {
-        List<String> transientNodeAddresses = newInstances.stream().map(i -> {
-            InetSocketAddress address = i.config().broadcastAddress();
-            return address.getAddress().getHostAddress() +
-                   ":" +
-                   address.getPort();
-        }).collect(Collectors.toList());
+        List<String> transientNodeAddresses = newInstances.stream()
+                                                          .map(i -> {
+                                                              InetSocketAddress address = i.config()
+                                                                                           .broadcastAddress();
+                                                              return address.getAddress()
+                                                                            .getHostAddress()
+                                                                      + ":" + address.getPort();
+                                                          })
+                                                          .collect(Collectors.toList());
 
         Set<String> writeReplicaInstances = instancesFromReplicaSet(mappingResponse.writeReplicas());
         Set<String> readReplicaInstances = instancesFromReplicaSet(mappingResponse.readReplicas());

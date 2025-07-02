@@ -18,20 +18,21 @@
 
 package org.apache.cassandra.sidecar.modules.multibindings;
 
-import java.util.Map;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import java.util.Map;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 
 /**
  * Provides the capability to resolve bindings in the map binder
- * <p>This module employs the {@link IdentityMultiBindingTypeResolver}, which does not modify the bindings in the map binder.
- * <p>If it is desired to update the bindings in the map binder, a custom {@link MultiBindingTypeResolver} can be provided to
- * override the provided resolver from this module.
+ * <p>
+ * This module employs the {@link IdentityMultiBindingTypeResolver}, which does not modify the bindings in the map binder.
+ * <p>
+ * If it is desired to update the bindings in the map binder, a custom {@link MultiBindingTypeResolver} can be provided to override the provided resolver from
+ * this module.
  */
 public class MultiBindingTypeResolverModule extends AbstractModule
 {

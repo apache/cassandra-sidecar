@@ -34,20 +34,20 @@ public interface SidecarClientConfig
     /**
      * @return the initial amount of time to wait before retrying a failed request
      */
-     long retryDelayMillis();
+    long retryDelayMillis();
 
     /**
      * @return the maximum amount of time to wait before retrying a failed request
      */
-     long maxRetryDelayMillis();
+    long maxRetryDelayMillis();
 
     /**
      * @return the minimum amount of time to wait before retrying a failed health check
      */
-     Duration minimumHealthRetryDelay();
+    Duration minimumHealthRetryDelay();
 
     /**
      * @return the maximum amount of time to wait before retrying a failed health check
      */
-     Duration maximumHealthRetryDelay();
+    Duration maximumHealthRetryDelay();
 }

@@ -66,8 +66,7 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
                   JsonObject error = response.bodyAsJsonObject();
                   assertThat(error.getInteger("code")).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
                   assertThat(error.getString("status")).isEqualTo("Bad Request");
-                  assertThat(error.getString("message"))
-                  .isEqualTo("Invalid upload id is supplied, uploadId=1234");
+                  assertThat(error.getString("message")).isEqualTo("Invalid upload id is supplied, uploadId=1234");
                   context.completeNow();
               })));
     }
@@ -76,15 +75,13 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
     void testInvalidKeyspace(VertxTestContext context)
     {
         UUID uploadId = UUID.randomUUID();
-        client.put(server.actualPort(), "localhost", "/api/v1/uploads/"
-                                                     + uploadId + "/keyspaces/_n$ks_/tables/tbl/import")
+        client.put(server.actualPort(), "localhost", "/api/v1/uploads/" + uploadId + "/keyspaces/_n$ks_/tables/tbl/import")
               .expect(ResponsePredicate.SC_BAD_REQUEST)
               .send(context.succeeding(response -> context.verify(() -> {
                   JsonObject error = response.bodyAsJsonObject();
                   assertThat(error.getInteger("code")).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
                   assertThat(error.getString("status")).isEqualTo("Bad Request");
-                  assertThat(error.getString("message"))
-                  .isEqualTo("Invalid characters in keyspace: _n$ks_");
+                  assertThat(error.getString("message")).isEqualTo("Invalid characters in keyspace: _n$ks_");
                   context.completeNow();
               })));
     }
@@ -93,15 +90,13 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
     void testInvalidTable(VertxTestContext context)
     {
         UUID uploadId = UUID.randomUUID();
-        client.put(server.actualPort(), "localhost",
-                   "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/_n$t_valid_/import")
+        client.put(server.actualPort(), "localhost", "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/_n$t_valid_/import")
               .expect(ResponsePredicate.SC_BAD_REQUEST)
               .send(context.succeeding(response -> context.verify(() -> {
                   JsonObject error = response.bodyAsJsonObject();
                   assertThat(error.getInteger("code")).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
                   assertThat(error.getString("status")).isEqualTo("Bad Request");
-                  assertThat(error.getString("message"))
-                  .isEqualTo("Invalid characters in table name: _n$t_valid_");
+                  assertThat(error.getString("message")).isEqualTo("Invalid characters in table name: _n$t_valid_");
                   context.completeNow();
               })));
     }
@@ -112,9 +107,7 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         UUID uploadId = UUID.randomUUID();
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
-        clientRequest(context, requestURI,
-                      response -> assertThat(response.statusCode())
-                                  .isEqualTo(HttpResponseStatus.NOT_FOUND.code()));
+        clientRequest(context, requestURI, response -> assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code()));
     }
 
     @Test
@@ -124,29 +117,22 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         createStagedUploadFiles(uploadId);
         testDelegate.setTableOperations(null);
 
-        client.put(server.actualPort(), "localhost", "/api/v1/uploads/"
-                                                     + uploadId + "/keyspaces/ks/tables/table/import")
+        client.put(server.actualPort(), "localhost", "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import")
               .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
               .send(context.succeedingThenComplete());
     }
 
     @Test
-    void testFailsWhenImportReturnsNonEmptyListOfFailedDirectories(VertxTestContext context)
-    throws IOException, InterruptedException
+    void testFailsWhenImportReturnsNonEmptyListOfFailedDirectories(VertxTestContext context) throws IOException, InterruptedException
     {
         UUID uploadId = UUID.randomUUID();
         Path stagedUploadDirectory = createStagedUploadFiles(uploadId);
         String stageDirectoryAbsolutePath = stagedUploadDirectory.toString();
-        when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
-                                                true, true, true,
-                                                DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES, true,
-                                                DEFAULT_COPY_DATA))
-        .thenReturn(Collections.singletonList(stageDirectoryAbsolutePath));
+        when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath, true, true, true, DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES,
+                true, DEFAULT_COPY_DATA)).thenReturn(Collections.singletonList(stageDirectoryAbsolutePath));
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
-        clientRequest(context, requestURI,
-                      response -> assertThat(response.statusCode())
-                                  .isEqualTo(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
+        clientRequest(context, requestURI, response -> assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
     }
 
     @Test
@@ -155,19 +141,14 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         UUID uploadId = UUID.randomUUID();
         Path stagedUploadDirectory = createStagedUploadFiles(uploadId);
         String stageDirectoryAbsolutePath = stagedUploadDirectory.toString();
-        when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
-                                                false, true, true,
-                                                DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES, true,
-                                                DEFAULT_COPY_DATA))
-        .thenReturn(Collections.emptyList());
+        when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath, false, true, true, DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES,
+                true, DEFAULT_COPY_DATA)).thenReturn(Collections.emptyList());
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
-        clientRequest(context, requestURI,
-                      response -> assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code()));
+        clientRequest(context, requestURI, response -> assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code()));
 
         // should retrieve Future result from cache
-        clientRequest(context, requestURI,
-                      response -> assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code()));
+        clientRequest(context, requestURI, response -> assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code()));
 
         validateCleanup(context, stagedUploadDirectory);
     }
@@ -178,30 +159,18 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         UUID uploadId = UUID.randomUUID();
         Path stagedUploadDirectory = createStagedUploadFiles(uploadId);
         String stageDirectoryAbsolutePath = stagedUploadDirectory.toString();
-        when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
-                                                false, true, true,
-                                                DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES, true,
-                                                DEFAULT_COPY_DATA))
-        .thenReturn(Collections.emptyList());
+        when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath, false, true, true, DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES,
+                true, DEFAULT_COPY_DATA)).thenReturn(Collections.emptyList());
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
-        sendRequest(context,
-                    () -> client.put(server.actualPort(), "localhost", requestURI)
-                                .addQueryParam("resetLevel", "false"),
-                    context.succeeding(response -> context.verify(() -> {
-                        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                        verify(mockCFOperations).importNewSSTables("ks",
-                                                                   "table",
-                                                                   stageDirectoryAbsolutePath,
-                                                                   false,
-                                                                   true,
-                                                                   true,
-                                                                   DEFAULT_VERIFY_TOKENS,
-                                                                   DEFAULT_INVALIDATE_CACHES,
-                                                                   true,
-                                                                   DEFAULT_COPY_DATA);
-                        context.completeNow();
-                    })));
+        sendRequest(context, () -> client.put(server.actualPort(), "localhost", requestURI)
+                                         .addQueryParam("resetLevel", "false"),
+                context.succeeding(response -> context.verify(() -> {
+                    assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                    verify(mockCFOperations).importNewSSTables("ks", "table", stageDirectoryAbsolutePath, false, true, true, DEFAULT_VERIFY_TOKENS,
+                            DEFAULT_INVALIDATE_CACHES, true, DEFAULT_COPY_DATA);
+                    context.completeNow();
+                })));
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
@@ -211,30 +180,18 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         UUID uploadId = UUID.randomUUID();
         Path stagedUploadDirectory = createStagedUploadFiles(uploadId);
         String stageDirectoryAbsolutePath = stagedUploadDirectory.toString();
-        when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
-                                                true, false, true,
-                                                DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES, true,
-                                                DEFAULT_COPY_DATA))
-        .thenReturn(Collections.emptyList());
+        when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath, true, false, true, DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES,
+                true, DEFAULT_COPY_DATA)).thenReturn(Collections.emptyList());
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
-        sendRequest(context,
-                    () -> client.put(server.actualPort(), "localhost", requestURI)
-                                .addQueryParam("clearRepaired", "false"),
-                    context.succeeding(response -> context.verify(() -> {
-                        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                        verify(mockCFOperations).importNewSSTables("ks",
-                                                                   "table",
-                                                                   stageDirectoryAbsolutePath,
-                                                                   true,
-                                                                   false,
-                                                                   true,
-                                                                   DEFAULT_VERIFY_TOKENS,
-                                                                   DEFAULT_INVALIDATE_CACHES,
-                                                                   true,
-                                                                   DEFAULT_COPY_DATA);
-                        context.completeNow();
-                    })));
+        sendRequest(context, () -> client.put(server.actualPort(), "localhost", requestURI)
+                                         .addQueryParam("clearRepaired", "false"),
+                context.succeeding(response -> context.verify(() -> {
+                    assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                    verify(mockCFOperations).importNewSSTables("ks", "table", stageDirectoryAbsolutePath, true, false, true, DEFAULT_VERIFY_TOKENS,
+                            DEFAULT_INVALIDATE_CACHES, true, DEFAULT_COPY_DATA);
+                    context.completeNow();
+                })));
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
@@ -244,30 +201,18 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         UUID uploadId = UUID.randomUUID();
         Path stagedUploadDirectory = createStagedUploadFiles(uploadId);
         String stageDirectoryAbsolutePath = stagedUploadDirectory.toString();
-        when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
-                                                true, true, false,
-                                                DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES, true,
-                                                DEFAULT_COPY_DATA))
-        .thenReturn(Collections.emptyList());
+        when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath, true, true, false, DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES,
+                true, DEFAULT_COPY_DATA)).thenReturn(Collections.emptyList());
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
-        sendRequest(context,
-                    () -> client.put(server.actualPort(), "localhost", requestURI)
-                                .addQueryParam("verifySSTables", "false"),
-                    context.succeeding(response -> context.verify(() -> {
-                        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                        verify(mockCFOperations).importNewSSTables("ks",
-                                                                   "table",
-                                                                   stageDirectoryAbsolutePath,
-                                                                   true,
-                                                                   true,
-                                                                   false,
-                                                                   DEFAULT_VERIFY_TOKENS,
-                                                                   DEFAULT_INVALIDATE_CACHES,
-                                                                   true,
-                                                                   DEFAULT_COPY_DATA);
-                        context.completeNow();
-                    })));
+        sendRequest(context, () -> client.put(server.actualPort(), "localhost", requestURI)
+                                         .addQueryParam("verifySSTables", "false"),
+                context.succeeding(response -> context.verify(() -> {
+                    assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                    verify(mockCFOperations).importNewSSTables("ks", "table", stageDirectoryAbsolutePath, true, true, false, DEFAULT_VERIFY_TOKENS,
+                            DEFAULT_INVALIDATE_CACHES, true, DEFAULT_COPY_DATA);
+                    context.completeNow();
+                })));
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
@@ -277,34 +222,25 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         UUID uploadId = UUID.randomUUID();
         Path stagedUploadDirectory = createStagedUploadFiles(uploadId);
         String stageDirectoryAbsolutePath = stagedUploadDirectory.toString();
-        when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
-                                                true, true, true,
-                                                DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES, false,
-                                                DEFAULT_COPY_DATA)).thenReturn(Collections.emptyList());
+        when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath, true, true, true, DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES,
+                false, DEFAULT_COPY_DATA)).thenReturn(Collections.emptyList());
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
-        sendRequest(context,
-                    () -> client.put(server.actualPort(), "localhost", requestURI)
-                                .addQueryParam("extendedVerify", "false"),
-                    context.succeeding(response -> context.verify(() -> {
-                        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                        verify(mockCFOperations).importNewSSTables("ks",
-                                                                   "table",
-                                                                   stageDirectoryAbsolutePath,
-                                                                   true,
-                                                                   true,
-                                                                   true,
-                                                                   DEFAULT_VERIFY_TOKENS,
-                                                                   DEFAULT_INVALIDATE_CACHES,
-                                                                   false,
-                                                                   DEFAULT_COPY_DATA);
-                        context.completeNow();
-                    })));
+        sendRequest(context, () -> client.put(server.actualPort(), "localhost", requestURI)
+                                         .addQueryParam("extendedVerify", "false"),
+                context.succeeding(response -> context.verify(() -> {
+                    assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                    verify(mockCFOperations).importNewSSTables("ks", "table", stageDirectoryAbsolutePath, true, true, true, DEFAULT_VERIFY_TOKENS,
+                            DEFAULT_INVALIDATE_CACHES, false, DEFAULT_COPY_DATA);
+                    context.completeNow();
+                })));
 
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    private void validateCleanup(VertxTestContext context, Path stagedUploadDirectory) throws InterruptedException
+    private void validateCleanup(VertxTestContext context,
+                                 Path stagedUploadDirectory)
+            throws InterruptedException
     {
         // give vertx some time to do the cleanup
         vertx.setTimer(500, id -> {
@@ -314,19 +250,20 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    private void clientRequest(VertxTestContext context, String requestURI, Consumer<HttpResponse<Buffer>> validator)
-    throws InterruptedException
+    private void clientRequest(VertxTestContext context,
+                               String requestURI,
+                               Consumer<HttpResponse<Buffer>> validator)
+            throws InterruptedException
     {
-        sendRequest(context,
-                    () -> client.put(server.actualPort(), "localhost", requestURI),
-                    context.succeeding(response -> context.verify(() -> {
-                        validator.accept(response);
-                        context.completeNow();
-                    })));
+        sendRequest(context, () -> client.put(server.actualPort(), "localhost", requestURI), context.succeeding(response -> context.verify(() -> {
+            validator.accept(response);
+            context.completeNow();
+        })));
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    private void sendRequest(VertxTestContext context, Supplier<HttpRequest<Buffer>> requestSupplier,
+    private void sendRequest(VertxTestContext context,
+                             Supplier<HttpRequest<Buffer>> requestSupplier,
                              Handler<AsyncResult<HttpResponse<Buffer>>> handler)
     {
         requestSupplier.get()

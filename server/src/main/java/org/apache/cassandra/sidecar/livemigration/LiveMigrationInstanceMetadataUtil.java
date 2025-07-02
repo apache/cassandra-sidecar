@@ -26,14 +26,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.jetbrains.annotations.NotNull;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.CDC_RAW_DIR;
 import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.COMMIT_LOG_DIR;
 import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.DATA_FIlE_DIR;
@@ -48,8 +45,7 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholde
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.SAVED_CACHES_DIR_PLACEHOLDER;
 
 /**
- * Utility class for having all {@link InstanceMetadata} related helper functions related to
- * Live Migration in one place.
+ * Utility class for having all {@link InstanceMetadata} related helper functions related to Live Migration in one place.
  */
 @SuppressWarnings("ConstantValue")
 public class LiveMigrationInstanceMetadataUtil
@@ -59,8 +55,8 @@ public class LiveMigrationInstanceMetadataUtil
     public static final String LIVE_MIGRATION_COMMITLOG_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + COMMIT_LOG_DIR.dirType;
     public static final String LIVE_MIGRATION_DATA_FILE_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + DATA_FIlE_DIR.dirType;
     public static final String LIVE_MIGRATION_HINTS_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + HINTS_DIR.dirType;
-    public static final String LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API
-                                                                                + "/" + LOCAL_SYSTEM_DATA_FILE_DIR.dirType;
+    public static final String LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/"
+            + LOCAL_SYSTEM_DATA_FILE_DIR.dirType;
     public static final String LIVE_MIGRATION_SAVED_CACHES_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + SAVED_CACHES_DIR.dirType;
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationInstanceMetadataUtil.class);
 
@@ -89,8 +85,7 @@ public class LiveMigrationInstanceMetadataUtil
     }
 
     /**
-     * Returns map of directory that can be copied and the index to use while constructing
-     * url for file transfer.
+     * Returns map of directory that can be copied and the index to use while constructing url for file transfer.
      */
     public static Map<String, String> dirPathPrefixMap(InstanceMetadata instanceMetadata)
     {
@@ -109,9 +104,12 @@ public class LiveMigrationInstanceMetadataUtil
         {
             dirIndexMap.put(instanceMetadata.localSystemDataFileDir(), LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH + "/0");
         }
-        for (int i = 0; i < instanceMetadata.dataDirs().size(); i++)
+        for (int i = 0; i < instanceMetadata.dataDirs()
+                                            .size(); i++)
         {
-            dirIndexMap.put(instanceMetadata.dataDirs().get(i), LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/" + i);
+            dirIndexMap.put(instanceMetadata.dataDirs()
+                                            .get(i),
+                    LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/" + i);
         }
         return Collections.unmodifiableMap(dirIndexMap);
     }
@@ -137,8 +135,7 @@ public class LiveMigrationInstanceMetadataUtil
 
         if (instanceMetadata.localSystemDataFileDir() != null)
         {
-            placeholderMap.put(instanceMetadata.localSystemDataFileDir(),
-                               Collections.singleton(LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER));
+            placeholderMap.put(instanceMetadata.localSystemDataFileDir(), Collections.singleton(LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER));
         }
 
         List<String> dataDirs = instanceMetadata.dataDirs();
@@ -174,8 +171,7 @@ public class LiveMigrationInstanceMetadataUtil
 
         if (instanceMetadata.localSystemDataFileDir() != null)
         {
-            placeholderDirsMap.put(LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER,
-                                  Collections.singleton(instanceMetadata.localSystemDataFileDir()));
+            placeholderDirsMap.put(LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.localSystemDataFileDir()));
         }
 
         placeholderDirsMap.put(DATA_FILE_DIR_PLACEHOLDER, Set.copyOf(instanceMetadata.dataDirs()));
@@ -189,11 +185,10 @@ public class LiveMigrationInstanceMetadataUtil
         return placeholderDirsMap;
     }
 
-
     /**
      * Converts given live migration file download URL to local path.
      *
-     * @param fileUrl  Live migration file download URL
+     * @param fileUrl Live migration file download URL
      * @param metadata Cassandra instance metadata
      * @return local path for given live migration file download URL
      */
@@ -214,8 +209,11 @@ public class LiveMigrationInstanceMetadataUtil
             if (fileUrl.startsWith(entry.getKey()))
             {
                 Objects.requireNonNull(entry.getValue(), () -> "No local path found for url " + fileUrl);
-                String relativePath = fileUrl.substring(entry.getKey().length());
-                return Paths.get(entry.getValue(), relativePath).toAbsolutePath().toString();
+                String relativePath = fileUrl.substring(entry.getKey()
+                                                             .length());
+                return Paths.get(entry.getValue(), relativePath)
+                            .toAbsolutePath()
+                            .toString();
             }
         }
 
@@ -238,9 +236,11 @@ public class LiveMigrationInstanceMetadataUtil
             urlToLocalDirMap.put(LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH + "/0/", instanceMetadata.localSystemDataFileDir());
         }
 
-        for (int i = 0; i < instanceMetadata.dataDirs().size(); i++)
+        for (int i = 0; i < instanceMetadata.dataDirs()
+                                            .size(); i++)
         {
-            urlToLocalDirMap.put(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/" + i + "/", instanceMetadata.dataDirs().get(0));
+            urlToLocalDirMap.put(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/" + i + "/", instanceMetadata.dataDirs()
+                                                                                                    .get(0));
         }
 
         return urlToLocalDirMap;

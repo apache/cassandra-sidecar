@@ -18,13 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.junit.jupiter.api.Test;
-
 import com.codahale.metrics.MetricRegistry;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -33,12 +26,16 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.cassandra.sidecar.HelperTestModules.InstanceMetadataTestModule;
 import org.apache.cassandra.sidecar.HelperTestModules.RoutingContextTestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
-
+import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -51,17 +48,23 @@ class LiveMigrationApiEnableDisableHandlerTest
     private static final InstanceMetadata DEST_META = createMockInstanceMeta(100002, "localhost2", "/tmp/dummy2");
     private static final InstanceMetadata NON_MIGRATION_INSTANCE_META = createMockInstanceMeta(100003, "localhost3", "/tmp/dummy3");
     private static final List<InstanceMetadata> INSTANCE_METADATA_LIST = new ArrayList<>(2)
-    {{
-        add(SOURCE_META);
-        add(DEST_META);
-        add(NON_MIGRATION_INSTANCE_META);
-    }};
+    {
+        {
+            add(SOURCE_META);
+            add(DEST_META);
+            add(NON_MIGRATION_INSTANCE_META);
+        }
+    };
     private static final Map<String, String> MIGRATION_MAP = new HashMap<>()
-    {{
-        put(SOURCE_META.host(), DEST_META.host());
-    }};
+    {
+        {
+            put(SOURCE_META.host(), DEST_META.host());
+        }
+    };
 
-    private static InstanceMetadata createMockInstanceMeta(int id, String host, String rootDir)
+    private static InstanceMetadata createMockInstanceMeta(int id,
+                                                           String host,
+                                                           String rootDir)
     {
 
         return InstanceMetadataImpl.builder()
@@ -129,7 +132,8 @@ class LiveMigrationApiEnableDisableHandlerTest
         verify(routingContext, times(1)).fail(eq(404));
     }
 
-    private void configureReqLocalHost(final Injector injector, final InstanceMetadata source)
+    private void configureReqLocalHost(final Injector injector,
+                                       final InstanceMetadata source)
     {
         final SocketAddress socketAddress = injector.getInstance(SocketAddress.class);
         final HttpServerRequest serverRequest = injector.getInstance(HttpServerRequest.class);

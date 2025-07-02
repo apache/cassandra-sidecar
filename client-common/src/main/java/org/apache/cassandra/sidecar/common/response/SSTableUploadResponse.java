@@ -34,8 +34,9 @@ public class SSTableUploadResponse
 
     /**
      * Constructs upload response object with given params.
-     * @param uploadId          an identifier for the upload
-     * @param uploadSizeBytes   size of SSTable component uploaded
+     *
+     * @param uploadId an identifier for the upload
+     * @param uploadSizeBytes size of SSTable component uploaded
      * @param serviceTimeMillis time taken to complete upload job
      */
     @JsonCreator

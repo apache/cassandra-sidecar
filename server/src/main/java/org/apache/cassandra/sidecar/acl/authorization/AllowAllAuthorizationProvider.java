@@ -62,7 +62,8 @@ public class AllowAllAuthorizationProvider implements AuthorizationProvider
     }
 
     @Override
-    public void getAuthorizations(User user, Handler<AsyncResult<Void>> handler)
+    public void getAuthorizations(User user,
+                                  Handler<AsyncResult<Void>> handler)
     {
         getAuthorizations(user).onComplete(handler);
     }
@@ -75,7 +76,8 @@ public class AllowAllAuthorizationProvider implements AuthorizationProvider
             return Future.failedFuture("User cannot be null");
         }
 
-        user.authorizations().add(getId(), authorization);
+        user.authorizations()
+            .add(getId(), authorization);
         return Future.succeededFuture();
     }
 }

@@ -28,10 +28,8 @@ import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
 
-
 /**
- * Provides the health of a Sidecar instance over HTTP API, retrying to
- * confirm Sidecar is DOWN for extended period of time.
+ * Provides the health of a Sidecar instance over HTTP API, retrying to confirm Sidecar is DOWN for extended period of time.
  */
 @Singleton
 public class SidecarHttpHealthProvider implements SidecarPeerHealthProvider
@@ -52,9 +50,7 @@ public class SidecarHttpHealthProvider implements SidecarPeerHealthProvider
             SidecarClient client = clientProvider.get();
             CompletableFuture<HealthResponse> healthRequest = client.sidecarHealth(instance);
             return Future.fromCompletionStage(healthRequest)
-                         .map(healthResponse -> healthResponse.isOk()
-                                                ? Health.UP
-                                                : Health.DOWN);
+                         .map(healthResponse -> healthResponse.isOk() ? Health.UP : Health.DOWN);
         }
         catch (Exception e)
         {

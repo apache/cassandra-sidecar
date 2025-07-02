@@ -51,8 +51,7 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
         JsonObject payload = getRequestPayload();
         mockUpdateRestoreJob(x -> createTestNewJob("8e5799a4-d277-11ed-8d85-6916bb9b8056"));
-        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                             payload, context, HttpResponseStatus.OK.code());
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", payload, context, HttpResponseStatus.OK.code());
     }
 
     @Test
@@ -60,8 +59,7 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
     {
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
         JsonObject payload = getRequestPayload();
-        sendUpdateRestoreJobRequestAndVerify("ks", "table", "12951f25-d393-4158-9e90-ec0cbe05af21",
-                                             payload, context, HttpResponseStatus.BAD_REQUEST.code());
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", "12951f25-d393-4158-9e90-ec0cbe05af21", payload, context, HttpResponseStatus.BAD_REQUEST.code());
     }
 
     @Test
@@ -69,8 +67,8 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
     {
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
         JsonObject payload = getRequestPayload();
-        sendUpdateRestoreJobRequestAndVerify("sidecar_internal", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                             payload, context, HttpResponseStatus.FORBIDDEN.code());
+        sendUpdateRestoreJobRequestAndVerify("sidecar_internal", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", payload, context,
+                HttpResponseStatus.FORBIDDEN.code());
     }
 
     @Test
@@ -78,8 +76,7 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
     {
         mockLookupRestoreJob(id -> null);
         JsonObject payload = getRequestPayload();
-        sendUpdateRestoreJobRequestAndVerify("ks", "table", "7cd82ff9-d276-11ed-93e5-7fce0df1306f",
-                                             payload, context, HttpResponseStatus.NOT_FOUND.code());
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", "7cd82ff9-d276-11ed-93e5-7fce0df1306f", payload, context, HttpResponseStatus.NOT_FOUND.code());
     }
 
     @Test
@@ -93,8 +90,7 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
         secrets.put("auth_token", "token");
         payload.put("secrets", secrets);
         payload.put("status", "RUNNING");
-        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                             payload, context, HttpResponseStatus.BAD_REQUEST.code());
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", payload, context, HttpResponseStatus.BAD_REQUEST.code());
     }
 
     @Test
@@ -102,8 +98,7 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
     {
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
         JsonObject payload = new JsonObject();
-        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                             payload, context, HttpResponseStatus.BAD_REQUEST.code());
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", payload, context, HttpResponseStatus.BAD_REQUEST.code());
     }
 
     @Test
@@ -113,8 +108,7 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
         JsonObject payload = new JsonObject();
         Map<String, String> secrets = new HashMap<>();
         payload.put("secrets", secrets);
-        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                             payload, context, HttpResponseStatus.BAD_REQUEST.code());
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", payload, context, HttpResponseStatus.BAD_REQUEST.code());
     }
 
     @Test
@@ -122,8 +116,7 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
     {
         mockLookupRestoreJob(id -> RestoreJobTest.createTestingJob(id, RestoreJobStatus.SUCCEEDED));
         JsonObject payload = getRequestPayload();
-        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                             payload, context, HttpResponseStatus.CONFLICT.code());
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", payload, context, HttpResponseStatus.CONFLICT.code());
     }
 
     @Test
@@ -137,8 +130,7 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
         });
         JsonObject payload = new JsonObject();
         payload.put("expireAt", futureTime);
-        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                             payload, context, HttpResponseStatus.OK.code());
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", payload, context, HttpResponseStatus.OK.code());
     }
 
     @Test
@@ -153,15 +145,15 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
         });
         JsonObject payload = new JsonObject();
         payload.put("sliceCount", sliceCount);
-        sendUpdateRestoreJobRequestAndVerify("ks", "table", jobId,
-                                             payload, context, HttpResponseStatus.OK.code());
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", jobId, payload, context, HttpResponseStatus.OK.code());
     }
 
     private RestoreJob createTestNewJob(String jobId)
     {
         return RestoreJob.builder()
                          .jobId(UUID.fromString(jobId))
-                         .keyspace("ks").table("table")
+                         .keyspace("ks")
+                         .table("table")
                          .jobAgent("agent")
                          .jobStatus(RestoreJobStatus.SUCCEEDED)
                          .jobSecrets(SECRETS)
@@ -183,18 +175,18 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
                                                       String jobId,
                                                       JsonObject payload,
                                                       VertxTestContext context,
-                                                      int expectedStatusCode) throws Throwable
+                                                      int expectedStatusCode)
+            throws Throwable
     {
         WebClient client = WebClient.create(vertx, new WebClientOptions());
-        client.patch(server.actualPort(),
-                     "localhost",
-                     String.format(RESTORE_JOB_UPDATE_ENDPOINT, keyspace, table, jobId))
+        client.patch(server.actualPort(), "localhost", String.format(RESTORE_JOB_UPDATE_ENDPOINT, keyspace, table, jobId))
               .as(BodyCodec.buffer())
               .sendJsonObject(payload, resp -> {
                   context.verify(() -> {
-                      assertThat(resp.result().statusCode()).isEqualTo(expectedStatusCode);
+                      assertThat(resp.result()
+                                     .statusCode()).isEqualTo(expectedStatusCode);
                   })
-                  .completeNow();
+                         .completeNow();
                   client.close();
               });
         context.awaitCompletion(10, TimeUnit.SECONDS);

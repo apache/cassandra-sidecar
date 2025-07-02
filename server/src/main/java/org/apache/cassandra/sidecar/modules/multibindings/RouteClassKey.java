@@ -22,11 +22,12 @@ import io.vertx.core.http.HttpMethod;
 
 /**
  * Used for defining the class key for VertxRoute multi-binding map.
- * <p>The RouteClassKey also defines the contract on the existence of static fields in its implementations.
- * The required static fields are read out using reflection. Below is the list:
+ * <p>
+ * The RouteClassKey also defines the contract on the existence of static fields in its implementations. The required static fields are read out using
+ * reflection. Below is the list:
  * <ul>
- *     <li>{@code HttpMethod HTTP_METHOD}</li>
- *     <li>{@code String ROUTE_URI}</li>
+ * <li>{@code HttpMethod HTTP_METHOD}</li>
+ * <li>{@code String ROUTE_URI}</li>
  * </ul>
  */
 public interface RouteClassKey extends ClassKey
@@ -47,6 +48,7 @@ public interface RouteClassKey extends ClassKey
 
     /**
      * Reads the static route URI string defined in the class
+     *
      * @param classKey class to read from
      * @return route URI string
      */
@@ -55,11 +57,14 @@ public interface RouteClassKey extends ClassKey
         return readStaticFieldValue(classKey, ROUTE_URI_FIELD_NAME, String.class);
     }
 
-    private static <T> T readStaticFieldValue(Class<? extends RouteClassKey> classKey, String declaredFieldName, Class<T> expectedType)
+    private static <T> T readStaticFieldValue(Class<? extends RouteClassKey> classKey,
+                                              String declaredFieldName,
+                                              Class<T> expectedType)
     {
         try
         {
-            return expectedType.cast(classKey.getDeclaredField(declaredFieldName).get(null));
+            return expectedType.cast(classKey.getDeclaredField(declaredFieldName)
+                                             .get(null));
         }
         catch (IllegalAccessException | NoSuchFieldException | ClassCastException e)
         {

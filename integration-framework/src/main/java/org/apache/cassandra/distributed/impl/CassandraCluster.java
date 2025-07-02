@@ -19,6 +19,7 @@
 
 package org.apache.cassandra.distributed.impl;
 
+import com.vdurmont.semver4j.Semver;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
@@ -28,10 +29,6 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
-import com.google.common.base.Preconditions;
-
-import com.vdurmont.semver4j.Semver;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.ICluster;
 import org.apache.cassandra.distributed.api.ICoordinator;
@@ -48,13 +45,13 @@ import org.apache.cassandra.testing.IClusterExtension;
 import org.apache.cassandra.testing.Partitioner;
 import org.apache.cassandra.testing.TestTokenSupplier;
 import org.jetbrains.annotations.NotNull;
-
+import com.google.common.base.Preconditions;
 import static org.apache.cassandra.distributed.shared.NetworkTopology.dcAndRack;
 import static org.apache.cassandra.distributed.shared.NetworkTopology.networkTopology;
 
 /**
- * Implements the {@link IClusterExtension} interface, delegating the functionality to the
- * {@link AbstractCluster delegate}. This class is meant to be loaded in a different classloader.
+ * Implements the {@link IClusterExtension} interface, delegating the functionality to the {@link AbstractCluster delegate}. This class is meant to be loaded in
+ * a different classloader.
  *
  * @param <I> the type of the cluster instance
  */
@@ -67,20 +64,22 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
         // In the test scenario containing cassandra instance shutdown, there is a chance that it pick the class
         // that is loaded by the closed instance classloader, causing the following exception.
         // java.lang.IllegalStateException: Can't load <CLASS>. Instance class loader is already closed.
-        return className.equals("org.apache.cassandra.utils.concurrent.Ref$OnLeak")
-               || className.startsWith("org.apache.cassandra.metrics.RestorableMeter")
-               || className.equals("org.apache.logging.slf4j.EventDataConverter")
-               || (className.startsWith("org.apache.cassandra.analytics.") && className.contains("BBHelper"));
+        return className.equals("org.apache.cassandra.utils.concurrent.Ref$OnLeak") || className.startsWith("org.apache.cassandra.metrics.RestorableMeter")
+                || className.equals("org.apache.logging.slf4j.EventDataConverter")
+                || (className.startsWith("org.apache.cassandra.analytics.") && className.contains("BBHelper"));
     };
 
-    public CassandraCluster(String versionString, ClusterBuilderConfiguration configuration) throws IOException
+    public CassandraCluster(String versionString,
+                            ClusterBuilderConfiguration configuration)
+            throws IOException
     {
         delegate = initializeCluster(versionString, configuration);
     }
 
     @SuppressWarnings("unchecked")
     public AbstractCluster<I> initializeCluster(String versionString,
-                                                ClusterBuilderConfiguration configuration) throws IOException
+                                                ClusterBuilderConfiguration configuration)
+            throws IOException
     {
         // spin up a C* cluster using the in-jvm dtest
         Versions versions = Versions.find();
@@ -105,8 +104,8 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
         Consumer<IInstanceConfig> instanceConfigUpdater;
         if (configuration.partitioner != null)
         {
-            tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(Partitioner.fromClassName(configuration.partitioner),
-                                                                      nodesPerDc, newNodesPerDc, dcCount, 1);
+            tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(Partitioner.fromClassName(configuration.partitioner), nodesPerDc, newNodesPerDc, dcCount,
+                    1);
             instanceConfigUpdater = instanceConfig -> {
                 instanceConfig.set("partitioner", configuration.partitioner);
                 configuration.features.forEach(instanceConfig::with);
@@ -126,10 +125,8 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
 
         if (dcCount > 1)
         {
-            clusterBuilder.withNodeIdTopology(networkTopology(finalNodeCount,
-                                                              (nodeId) -> nodeId % 2 != 0 ?
-                                                                          dcAndRack("datacenter1", "rack1") :
-                                                                          dcAndRack("datacenter2", "rack2")));
+            clusterBuilder.withNodeIdTopology(
+                    networkTopology(finalNodeCount, (nodeId) -> nodeId % 2 != 0 ? dcAndRack("datacenter1", "rack1") : dcAndRack("datacenter2", "rack2")));
         }
 
         if (configuration.instanceInitializer != null)
@@ -155,7 +152,9 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
     }
 
     @Override
-    public I addInstance(String dc, String rack, Consumer<IInstanceConfig> fn)
+    public I addInstance(String dc,
+                         String rack,
+                         Consumer<IInstanceConfig> fn)
     {
         return ClusterUtils.addInstance(delegate, dc, rack, fn);
     }
@@ -179,19 +178,25 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
     }
 
     @Override
-    public void awaitRingState(IInstance instance, IInstance expectedInRing, String state)
+    public void awaitRingState(IInstance instance,
+                               IInstance expectedInRing,
+                               String state)
     {
         ClusterUtils.awaitRingState(instance, expectedInRing, state);
     }
 
     @Override
-    public void awaitRingStatus(IInstance instance, IInstance expectedInRing, String status)
+    public void awaitRingStatus(IInstance instance,
+                                IInstance expectedInRing,
+                                String status)
     {
         ClusterUtils.awaitRingStatus(instance, expectedInRing, status);
     }
 
     @Override
-    public void awaitGossipStatus(IInstance instance, IInstance expectedInGossip, String targetStatus)
+    public void awaitGossipStatus(IInstance instance,
+                                  IInstance expectedInGossip,
+                                  String targetStatus)
     {
         ClusterUtils.awaitGossipStatus(instance, expectedInGossip, targetStatus);
     }
@@ -241,7 +246,8 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
     }
 
     @Override
-    public void schemaChange(String s, int i)
+    public void schemaChange(String s,
+                             int i)
     {
         delegate.schemaChange(s, i);
     }
@@ -265,7 +271,8 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
     }
 
     @Override
-    public Stream<I> stream(String s, String s1)
+    public Stream<I> stream(String s,
+                            String s1)
     {
         return delegate.stream(s, s1);
     }
@@ -290,7 +297,8 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
     }
 
     @Override
-    public void deliverMessage(InetSocketAddress to, IMessage msg)
+    public void deliverMessage(InetSocketAddress to,
+                               IMessage msg)
     {
         delegate.deliverMessage(to, msg);
     }
@@ -339,11 +347,9 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
         // else bootstrap will fail with 'Unable to find sufficient sources for streaming range <range> in keyspace <name>'
         for (String ks : Arrays.asList("system_auth", "system_traces"))
         {
-            cluster.schemaChange("ALTER KEYSPACE " + ks +
-                                 " WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': "
-                                 + Math.min(cluster.size(), 3) + "}",
-                                 true,
-                                 cluster.getFirstRunningInstance());
+            cluster.schemaChange(
+                    "ALTER KEYSPACE " + ks + " WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': " + Math.min(cluster.size(), 3) + "}", true,
+                    cluster.getFirstRunningInstance());
         }
 
         // in real live repair is needed in this case, but in the test case it doesn't matter if the tables loose

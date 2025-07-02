@@ -24,18 +24,15 @@ import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.OPER
 import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABLE_SCOPE;
 
 /**
- * Basic permissions are the building blocks of the permission-ing system in Sidecar. It offers more granular
- * permissions on specific targets which are listed here. The majority of Sidecar permissions are represented in
- * format {@code domain}:{@code action}. They are created for a resource scope.
+ * Basic permissions are the building blocks of the permission-ing system in Sidecar. It offers more granular permissions on specific targets which are listed
+ * here. The majority of Sidecar permissions are represented in format {@code domain}:{@code action}. They are created for a resource scope.
  * <p>
- * For example, the SNAPSHOT:CREATE permission, CREATE action is allowed for the SNAPSHOT domain. Sample actions are
- * CREATE, READ, EDIT, DELETE, IMPORT, UPLOAD, START etc.
+ * For example, the SNAPSHOT:CREATE permission, CREATE action is allowed for the SNAPSHOT domain. Sample actions are CREATE, READ, EDIT, DELETE, IMPORT, UPLOAD,
+ * START etc.
  * <p>
- * Domain aware permissions are supported with ':' wildcard parts divider. Wildcard token '*' is restricted
- * to avoid unpredictable behavior.
+ * Domain aware permissions are supported with ':' wildcard parts divider. Wildcard token '*' is restricted to avoid unpredictable behavior.
  * <p>
- * Some examples of domain aware permissions are:
- * - SNAPSHOT:CREATE,READ,DELETE allows SNAPSHOT:CREATE, SNAPSHOT:READ and SNAPSHOT:DELETE.
+ * Some examples of domain aware permissions are: - SNAPSHOT:CREATE,READ,DELETE allows SNAPSHOT:CREATE, SNAPSHOT:READ and SNAPSHOT:DELETE.
  */
 public class BasicPermissions
 {
@@ -75,7 +72,6 @@ public class BasicPermissions
     public static final Permission READ_RING_KEYSPACE_SCOPED = new DomainAwarePermission("RING:READ", KEYSPACE_SCOPE);
     public static final Permission READ_TOPOLOGY = new DomainAwarePermission("TOPOLOGY:READ", KEYSPACE_SCOPE);
     public static final Permission MODIFY_NATIVE = new DomainAwarePermission("NATIVE:MODIFY", CLUSTER_SCOPE);
-
 
     // cassandra stats permissions
     public static final Permission STATS_CLUSTER_SCOPED = new StandardPermission("STATS", CLUSTER_SCOPE);

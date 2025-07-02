@@ -37,10 +37,10 @@ public class HttpResponseImpl implements HttpResponse
     /**
      * Constructs a response object with the provided values
      *
-     * @param statusCode    the status code of the response
+     * @param statusCode the status code of the response
      * @param statusMessage the status message of the response
-     * @param headers       the headers from the response
-     * @param server        the server that returns the response
+     * @param headers the headers from the response
+     * @param server the server that returns the response
      */
     public HttpResponseImpl(int statusCode,
                             String statusMessage,
@@ -53,11 +53,11 @@ public class HttpResponseImpl implements HttpResponse
     /**
      * Constructs a response object with the provided values
      *
-     * @param statusCode    the status code of the response
+     * @param statusCode the status code of the response
      * @param statusMessage the status message of the response
-     * @param raw           the raw bytes received from the response
-     * @param headers       the headers from the response
-     * @param server        the server that returns the response
+     * @param raw the raw bytes received from the response
+     * @param headers the headers from the response
+     * @param server the server that returns the response
      */
     public HttpResponseImpl(int statusCode,
                             String statusMessage,
@@ -143,11 +143,7 @@ public class HttpResponseImpl implements HttpResponse
     @Override
     public String toString()
     {
-        return "HttpResponseImpl{" +
-               "statusCode=" + statusCode +
-               ", statusMessage='" + statusMessage + '\'' +
-               ", contentAsString='" + contentAsString() + '\'' +
-               ", headers=" + headers +
-               '}';
+        return "HttpResponseImpl{" + "statusCode=" + statusCode + ", statusMessage='" + statusMessage + '\'' + ", contentAsString='" + contentAsString() + '\''
+                + ", headers=" + headers + '}';
     }
 }

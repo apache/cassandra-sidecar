@@ -18,21 +18,18 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import com.codahale.metrics.MetricRegistry;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadataImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolvers;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -45,31 +42,30 @@ class InstanceMetadataFetcherTest
     @Test
     void testCallOnFirstAvailableInstance()
     {
-        List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1", false),
-                                                         instance(2, "127.0.0.2", true),
-                                                         instance(3, "127.0.0.3", true));
+        List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1", false), instance(2, "127.0.0.2", true), instance(3, "127.0.0.3", true));
         InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolvers.DEFAULT);
         InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
         CassandraAdapterDelegate delegate = fetcher.callOnFirstAvailableInstance(InstanceMetadata::delegate);
-        assertThat(delegate)
-        .describedAs("The delegate of instance 2 should be returned")
-        .isNotNull()
-        .isSameAs(instances.get(1).delegate());
+        assertThat(delegate).describedAs("The delegate of instance 2 should be returned")
+                            .isNotNull()
+                            .isSameAs(instances.get(1)
+                                               .delegate());
     }
 
     @Test
     void testCallOnFirstAvailableInstanceExhausts()
     {
-        List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1", false),
-                                                         instance(2, "127.0.0.2", false));
+        List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1", false), instance(2, "127.0.0.2", false));
         InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolvers.DEFAULT);
         InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
-        assertThatThrownBy(() -> fetcher.callOnFirstAvailableInstance(InstanceMetadata::delegate))
-        .isExactlyInstanceOf(CassandraUnavailableException.class)
-        .hasMessageContaining("All local Cassandra nodes are exhausted. But none is available");
+        assertThatThrownBy(() -> fetcher.callOnFirstAvailableInstance(InstanceMetadata::delegate)).isExactlyInstanceOf(CassandraUnavailableException.class)
+                                                                                                  .hasMessageContaining(
+                                                                                                          "All local Cassandra nodes are exhausted. But none is available");
     }
 
-    private InstanceMetadata instance(int id, String host, boolean isAvailable)
+    private InstanceMetadata instance(int id,
+                                      String host,
+                                      boolean isAvailable)
     {
         InstanceMetadataImpl.Builder builder = InstanceMetadataImpl.builder()
                                                                    .id(id)

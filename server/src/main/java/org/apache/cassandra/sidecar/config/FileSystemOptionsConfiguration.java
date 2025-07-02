@@ -26,8 +26,7 @@ import io.vertx.core.file.FileSystemOptions;
 public interface FileSystemOptionsConfiguration
 {
     /**
-     * When vert.x cannot find the file on the filesystem it tries to resolve the
-     * file from the classpath when this is set to {@code true}. Otherwise, vert.x
+     * When vert.x cannot find the file on the filesystem it tries to resolve the file from the classpath when this is set to {@code true}. Otherwise, vert.x
      * will not attempt to resolve the file on the classpath
      *
      * @return {@code true} if classpath resolving is enabled, {@code false} otherwise.
@@ -35,21 +34,17 @@ public interface FileSystemOptionsConfiguration
     boolean classpathResolvingEnabled();
 
     /**
-     * When vert.x reads a file that is packaged with the application it gets
-     * extracted to this directory first and subsequent reads will use the extracted
-     * file to get better IO performance.
+     * When vert.x reads a file that is packaged with the application it gets extracted to this directory first and subsequent reads will use the extracted file
+     * to get better IO performance.
      *
      * @return the configured file cache dir
      */
     String fileCacheDir();
 
     /**
-     * Returns {@code true} to enable caching files on the real file system
-     * when the filesystem performs class path resolving. {@code false} to
-     * disable caching.
+     * Returns {@code true} to enable caching files on the real file system when the filesystem performs class path resolving. {@code false} to disable caching.
      *
-     * @return {@code true} when caching files on the underlying file system is enabled
-     * {@code false} otherwise
+     * @return {@code true} when caching files on the underlying file system is enabled {@code false} otherwise
      */
     boolean fileCachingEnabled();
 }

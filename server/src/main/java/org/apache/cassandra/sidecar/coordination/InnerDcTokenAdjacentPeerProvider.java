@@ -18,6 +18,12 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
+import com.datastax.driver.core.DataType;
+import com.datastax.driver.core.Host;
+import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Metadata;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -32,17 +38,6 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.Host;
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
@@ -53,9 +48,10 @@ import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.VisibleForTesting;
-
+import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_FORBIDDEN_KEYSPACES;
-
 
 /**
  * Return Sidecar(s) adjacent to current Sidecar in the token ring within the same datacenter.
@@ -91,7 +87,8 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         Metadata metadata;
         try
         {
-            metadata = instanceFetcher.callOnFirstAvailableInstance(instance -> instance.delegate().metadata());
+            metadata = instanceFetcher.callOnFirstAvailableInstance(instance -> instance.delegate()
+                                                                                        .metadata());
         }
         catch (Throwable cause)
         {
@@ -118,40 +115,53 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
                                 .findAny()
                                 .orElseThrow(() -> new RuntimeException("No local instances found."));
         Optional<KeyspaceMetadata> maxRfKeyspace = keyspaces.stream()
-                                                            .filter(ks -> ks.getReplication().containsKey(localDc))
-                                                            .max(Comparator.comparingInt(a -> Integer.parseInt(a.getReplication().get(localDc))));
+                                                            .filter(ks -> ks.getReplication()
+                                                                            .containsKey(localDc))
+                                                            .max(Comparator.comparingInt(a -> Integer.parseInt(a.getReplication()
+                                                                                                                .get(localDc))));
         if (maxRfKeyspace.isEmpty())
         {
             LOGGER.info("No keyspace found replicated in DC dc={}", localDc);
             return Set.of();
         }
 
-        int rf = Integer.parseInt(maxRfKeyspace.get().getReplication().get(localDc));
+        int rf = Integer.parseInt(maxRfKeyspace.get()
+                                               .getReplication()
+                                               .get(localDc));
         int quorum = rf / 2;
-        List<Pair<Host, BigInteger>> sortedLocalDcHosts = Objects.requireNonNull(cassandraClientTokenRingProvider.allInstances(),
-                                                                                 "CachedLocalTokenRanges not initialized").stream()
-                                                                 .filter(host -> host.getDatacenter().equals(localDc))
+        List<Pair<Host, BigInteger>> sortedLocalDcHosts = Objects
+                                                                 .requireNonNull(cassandraClientTokenRingProvider.allInstances(),
+                                                                         "CachedLocalTokenRanges not initialized")
+                                                                 .stream()
+                                                                 .filter(host -> host.getDatacenter()
+                                                                                     .equals(localDc))
                                                                  .map(host -> Pair.of(host, minToken(host)))
                                                                  .sorted(Comparator.comparing(Pair::getRight))
                                                                  .collect(Collectors.toList());
 
         BigInteger localMinToken = minToken(localHosts);
-        return adjacentHosts(driverUtils, localHosts::contains, localMinToken, sortedLocalDcHosts, quorum)
-               .stream()
-               .map(host -> driverUtils.getSocketAddress(host).getAddress().getHostAddress())
-               .map(sidecarIpAddress -> {
-                   String sidecarHostname = sidecarIpAddress;
-                   try
-                   {
-                       sidecarHostname = dnsResolver.reverseResolve(sidecarIpAddress);
-                   }
-                   catch (UnknownHostException unknownHostException)
-                   {
-                       LOGGER.warn("Unable to reverse resolve hostname for {}", sidecarHostname, unknownHostException);
-                   }
-                   return new SidecarInstanceImpl(sidecarHostname, sidecarServicePort(sidecarHostname));
-               })
-               .collect(Collectors.toSet());
+        return adjacentHosts(driverUtils, localHosts::contains, localMinToken, sortedLocalDcHosts, quorum).stream()
+                                                                                                          .map(host -> driverUtils.getSocketAddress(host)
+                                                                                                                                  .getAddress()
+                                                                                                                                  .getHostAddress())
+                                                                                                          .map(sidecarIpAddress -> {
+                                                                                                              String sidecarHostname = sidecarIpAddress;
+                                                                                                              try
+                                                                                                              {
+                                                                                                                  sidecarHostname = dnsResolver.reverseResolve(
+                                                                                                                          sidecarIpAddress);
+                                                                                                              }
+                                                                                                              catch (UnknownHostException unknownHostException)
+                                                                                                              {
+                                                                                                                  LOGGER.warn(
+                                                                                                                          "Unable to reverse resolve hostname for {}",
+                                                                                                                          sidecarHostname,
+                                                                                                                          unknownHostException);
+                                                                                                              }
+                                                                                                              return new SidecarInstanceImpl(sidecarHostname,
+                                                                                                                      sidecarServicePort(sidecarHostname));
+                                                                                                          })
+                                                                                                          .collect(Collectors.toSet());
     }
 
     @VisibleForTesting
@@ -187,26 +197,25 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         {
             return BigInteger.valueOf((Long) token.getValue());
         }
-        throw new IllegalArgumentException("Unsupported token type: " + token.getType() +
-                                           ". Only tokens of Murmur3Partitioner and RandomPartitioner are supported.");
+        throw new IllegalArgumentException(
+                "Unsupported token type: " + token.getType() + ". Only tokens of Murmur3Partitioner and RandomPartitioner are supported.");
     }
 
     protected static BigInteger minToken(Stream<TokenRange> tokenRanges)
     {
-        return tokenRanges
-               .map(TokenRange::start)
-               .min(Token::compareTo)
-               .map(Token::toBigInteger)
-               .orElseThrow(() -> new IllegalStateException("No tokens for host"));
+        return tokenRanges.map(TokenRange::start)
+                          .min(Token::compareTo)
+                          .map(Token::toBigInteger)
+                          .orElseThrow(() -> new IllegalStateException("No tokens for host"));
     }
 
     /**
      * Using the minToken per host find the next adjacent host(s) in the token ring
      *
-     * @param isLocal            predicate that returns true if host is local to the Sidecar, used to validate output.
-     * @param localMinToken      min token owned by this Sidecar
+     * @param isLocal predicate that returns true if host is local to the Sidecar, used to validate output.
+     * @param localMinToken min token owned by this Sidecar
      * @param sortedLocalDcHosts list of dc-local Cassandra hosts sorted by minToken
-     * @param quorum             minimum availability required to meet maximum replication factor in DC
+     * @param quorum minimum availability required to meet maximum replication factor in DC
      * @return set of hosts that are adjacent to current Sidecar
      */
     protected static Set<Host> adjacentHosts(DriverUtils driverUtils,
@@ -218,7 +227,8 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         Set<Host> adjacentHosts = new HashSet<>(quorum);
 
         // all hosts in token order
-        int idx = Collections.binarySearch(sortedLocalDcHosts, null, (o1, o2) -> {
+        int idx = Collections.binarySearch(sortedLocalDcHosts, null, (o1,
+                                                                      o2) -> {
             BigInteger token1 = (o1 == null) ? localMinToken : o1.getValue();
             BigInteger token2 = (o2 == null) ? localMinToken : o2.getValue();
             return token1.compareTo(token2);
@@ -233,7 +243,8 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         {
             // if max RF is greater than the number of other available hosts then it will wrap around
             int nextIdx = (idx + i) % (sortedLocalDcHosts.size());
-            Host nextHost = sortedLocalDcHosts.get(nextIdx).getKey();
+            Host nextHost = sortedLocalDcHosts.get(nextIdx)
+                                              .getKey();
             if (isLocal.test(nextHost))
             {
                 LOGGER.warn("Insufficient other hosts to satisfy quorum quorum={} numHosts={}", quorum, i);
@@ -245,7 +256,8 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         for (int i = 1; i <= quorum; i++)
         {
             int nextIdx = (idx + i) % (sortedLocalDcHosts.size());
-            adjacentHosts.add(sortedLocalDcHosts.get(nextIdx).getKey());
+            adjacentHosts.add(sortedLocalDcHosts.get(nextIdx)
+                                                .getKey());
         }
 
         Preconditions.checkArgument(adjacentHosts.size() == quorum, String.format("Failed to find %d adjacent node(s) in the ring", quorum));
@@ -253,13 +265,10 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
         {
             if (isLocal.test(host))
             {
-                InetAddress address = driverUtils.getSocketAddress(host).getAddress();
-                LOGGER.warn("Local instance selected as adjacent host localMinToken={} hostId={} address={} hostname={} canonicalHostname={}",
-                            localMinToken,
-                            host.getHostId(),
-                            address.getHostAddress(),
-                            address.getHostName(),
-                            address.getCanonicalHostName());
+                InetAddress address = driverUtils.getSocketAddress(host)
+                                                 .getAddress();
+                LOGGER.warn("Local instance selected as adjacent host localMinToken={} hostId={} address={} hostname={} canonicalHostname={}", localMinToken,
+                        host.getHostId(), address.getHostAddress(), address.getHostName(), address.getCanonicalHostName());
                 throw new IllegalArgumentException(String.format("Local instance selected as adjacent host: %s", host.getHostId()));
             }
         }

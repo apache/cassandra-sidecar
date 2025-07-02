@@ -23,8 +23,8 @@ import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 
 /**
- * This class consists exclusively of static methods that operate on or return {@link Exception}s of type
- * {@link HttpException}. It contains convenience methods and wrappers to produce {@link HttpException} instances.
+ * This class consists exclusively of static methods that operate on or return {@link Exception}s of type {@link HttpException}. It contains convenience methods
+ * and wrappers to produce {@link HttpException} instances.
  */
 public class HttpExceptions
 {
@@ -34,41 +34,42 @@ public class HttpExceptions
     }
 
     /**
-     * Convenience method that returns a {@link HttpException} with the provided {@link HttpResponseStatus status} and
-     * {@code cause}
+     * Convenience method that returns a {@link HttpException} with the provided {@link HttpResponseStatus status} and {@code cause}
      *
      * @param status the {@link HttpResponseStatus}
-     * @param cause  the cause
+     * @param cause the cause
      * @return the {@link HttpException} with the provided parameters
      */
-    public static HttpException wrapHttpException(HttpResponseStatus status, Throwable cause)
+    public static HttpException wrapHttpException(HttpResponseStatus status,
+                                                  Throwable cause)
     {
         return wrapHttpException(status, null, cause);
     }
 
     /**
-     * Convenience method that returns a {@link HttpException} with the provided {@link HttpResponseStatus status} and
-     * {@code payload}.
+     * Convenience method that returns a {@link HttpException} with the provided {@link HttpResponseStatus status} and {@code payload}.
      *
-     * @param status  the {@link HttpResponseStatus}
+     * @param status the {@link HttpResponseStatus}
      * @param payload the payload for the {@link HttpException}
      * @return the {@link HttpException} with the provided parameters
      */
-    public static HttpException wrapHttpException(HttpResponseStatus status, String payload)
+    public static HttpException wrapHttpException(HttpResponseStatus status,
+                                                  String payload)
     {
         return wrapHttpException(status, payload, null);
     }
 
     /**
-     * Convenience method that returns a {@link HttpException} with the provided {@link HttpResponseStatus status},
-     * {@code payload}, and {@code cause}.
+     * Convenience method that returns a {@link HttpException} with the provided {@link HttpResponseStatus status}, {@code payload}, and {@code cause}.
      *
-     * @param status  the {@link HttpResponseStatus}
+     * @param status the {@link HttpResponseStatus}
      * @param payload the payload for the {@link HttpException}
-     * @param cause   the cause
+     * @param cause the cause
      * @return the {@link HttpException} with the provided parameters
      */
-    public static HttpException wrapHttpException(HttpResponseStatus status, String payload, Throwable cause)
+    public static HttpException wrapHttpException(HttpResponseStatus status,
+                                                  String payload,
+                                                  Throwable cause)
     {
         if (cause instanceof HttpException)
         {

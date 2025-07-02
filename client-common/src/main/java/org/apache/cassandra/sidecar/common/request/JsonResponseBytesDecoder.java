@@ -18,20 +18,20 @@
 
 package org.apache.cassandra.sidecar.common.request;
 
-import java.io.IOException;
-
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 
 /**
  * Decoder for json response body bytes
+ *
  * @param <T> expected java type
  */
 public class JsonResponseBytesDecoder<T> implements ResponseBytesDecoder<T>
 {
     private static final ObjectMapper MAPPER = new ObjectMapper()
-                                       // ignore all the properties that are not declared
-                                       .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+                                                                 // ignore all the properties that are not declared
+                                                                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     private final Class<T> type;
 
     public JsonResponseBytesDecoder(Class<T> type)

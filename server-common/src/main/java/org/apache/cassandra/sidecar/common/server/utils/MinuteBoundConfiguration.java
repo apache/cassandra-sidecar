@@ -18,14 +18,12 @@
 
 package org.apache.cassandra.sidecar.common.server.utils;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import java.util.concurrent.TimeUnit;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-
 /**
- * Represents a duration used for Sidecar configuration. The bound is [0, Long.MAX_VALUE) in minutes.
- * If the user sets a different unit - we still validate that converted to minutes the quantity will not exceed
- * that upper bound.
+ * Represents a duration used for Sidecar configuration. The bound is [0, Long.MAX_VALUE) in minutes. If the user sets a different unit - we still validate that
+ * converted to minutes the quantity will not exceed that upper bound.
  */
 public class MinuteBoundConfiguration extends DurationSpec
 {
@@ -35,7 +33,8 @@ public class MinuteBoundConfiguration extends DurationSpec
         super(value);
     }
 
-    public MinuteBoundConfiguration(long quantity, TimeUnit unit)
+    public MinuteBoundConfiguration(long quantity,
+                                    TimeUnit unit)
     {
         super(quantity, unit);
     }

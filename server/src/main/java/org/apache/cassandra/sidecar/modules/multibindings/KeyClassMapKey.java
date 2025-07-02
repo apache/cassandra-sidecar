@@ -18,19 +18,18 @@
 
 package org.apache.cassandra.sidecar.modules.multibindings;
 
+import com.google.inject.multibindings.MapKey;
+import com.google.inject.multibindings.ProvidesIntoMap;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.google.inject.multibindings.MapKey;
-import com.google.inject.multibindings.ProvidesIntoMap;
-
 /**
- * Allows {@literal @}{@link ProvidesIntoMap} to specify a {@link ClassKey} class as map key.
- * The class must extends from {@link ClassKey}
- * <p>The annotation name {@link KeyClassMapKey} is read as "map key type is of {@link ClassKey} class"
+ * Allows {@literal @}{@link ProvidesIntoMap} to specify a {@link ClassKey} class as map key. The class must extends from {@link ClassKey}
+ * <p>
+ * The annotation name {@link KeyClassMapKey} is read as "map key type is of {@link ClassKey} class"
  */
 @MapKey(unwrapValue = true)
 @Documented

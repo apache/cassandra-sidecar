@@ -18,16 +18,14 @@
 
 package org.apache.cassandra.sidecar.client.retry;
 
-import java.util.concurrent.CompletableFuture;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
+import java.util.concurrent.CompletableFuture;
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
 import org.apache.cassandra.sidecar.common.request.Request;
 
 /**
- * A policy to handle specific status codes for the response. Delegates all other response codes to the
- * provided delegate
+ * A policy to handle specific status codes for the response. Delegates all other response codes to the provided delegate
  */
 public class CreateRestoreJobRetryPolicy extends RetryPolicy
 {
@@ -47,16 +45,14 @@ public class CreateRestoreJobRetryPolicy extends RetryPolicy
                            boolean canRetryOnADifferentHost,
                            RetryAction retryAction)
     {
-        if (response != null && (response.statusCode() == HttpResponseStatus.CONFLICT.code() ||
-                                 response.statusCode() == HttpResponseStatus.BAD_REQUEST.code()))
+        if (response != null && (response.statusCode() == HttpResponseStatus.CONFLICT.code() || response.statusCode() == HttpResponseStatus.BAD_REQUEST.code()))
         {
             logger.error("Request exhausted. response={}, attempts={}", response, attempts);
             responseFuture.completeExceptionally(RetriesExhaustedException.of(attempts, request, response));
         }
         else
         {
-            delegate.onResponse(responseFuture, request, response, throwable, attempts, canRetryOnADifferentHost,
-                                retryAction);
+            delegate.onResponse(responseFuture, request, response, throwable, attempts, canRetryOnADifferentHost, retryAction);
         }
     }
 }

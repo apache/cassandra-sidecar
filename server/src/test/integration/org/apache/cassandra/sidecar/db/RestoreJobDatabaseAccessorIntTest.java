@@ -57,13 +57,11 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
         assertJob(accessor.find(jobId), jobId, RestoreJobStatus.CREATED, expiresAtMillis, secrets);
 
         // update the slice count field and verify the correct value is read back
-        UpdateRestoreJobRequestPayload setSliceCount
-        = new UpdateRestoreJobRequestPayload(null, null, null, null, 100L);
+        UpdateRestoreJobRequestPayload setSliceCount = new UpdateRestoreJobRequestPayload(null, null, null, null, 100L);
         accessor.update(setSliceCount, jobId);
         assertThat(accessor.find(jobId).sliceCount).isEqualTo(100L);
 
-        UpdateRestoreJobRequestPayload markSucceeded
-        = new UpdateRestoreJobRequestPayload(null, null, RestoreJobStatus.SUCCEEDED, null, null);
+        UpdateRestoreJobRequestPayload markSucceeded = new UpdateRestoreJobRequestPayload(null, null, RestoreJobStatus.SUCCEEDED, null, null);
         accessor.update(markSucceeded, jobId);
         assertJob(accessor.find(jobId), jobId, RestoreJobStatus.SUCCEEDED, expiresAtMillis, secrets);
 
@@ -94,14 +92,21 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
         return jobId;
     }
 
-    private void assertJob(RestoreJob job, UUID jobId, RestoreJobStatus status, long expiresAtMillis,
+    private void assertJob(RestoreJob job,
+                           UUID jobId,
+                           RestoreJobStatus status,
+                           long expiresAtMillis,
                            RestoreJobSecrets secrets)
     {
         assertJob(job, jobId, status, expiresAtMillis, secrets, null);
     }
 
-    private void assertJob(RestoreJob job, UUID jobId, RestoreJobStatus status, long expiresAtMillis,
-                           RestoreJobSecrets secrets, String abortReason)
+    private void assertJob(RestoreJob job,
+                           UUID jobId,
+                           RestoreJobStatus status,
+                           long expiresAtMillis,
+                           RestoreJobSecrets secrets,
+                           String abortReason)
     {
         assertThat(job).isNotNull();
         assertThat(job.jobId).isEqualTo(jobId);

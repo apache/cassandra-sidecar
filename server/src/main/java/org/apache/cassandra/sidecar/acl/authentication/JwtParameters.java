@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.acl.authentication;
 
 import java.util.List;
-
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
 /**
@@ -48,8 +47,8 @@ public interface JwtParameters
     List<String> scopes();
 
     /**
-     * @return interval at which {@link io.vertx.ext.auth.oauth2.providers.OpenIDConnectAuth} discover is called to
-     * dynamically retrieve configuration information of an OpenID provider.
+     * @return interval at which {@link io.vertx.ext.auth.oauth2.providers.OpenIDConnectAuth} discover is called to dynamically retrieve configuration
+     *         information of an OpenID provider.
      */
     SecondBoundConfiguration configDiscoverInterval();
 }

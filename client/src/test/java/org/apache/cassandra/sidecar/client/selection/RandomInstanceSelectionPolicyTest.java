@@ -44,9 +44,7 @@ class RandomInstanceSelectionPolicyTest
     @BeforeEach
     void setup()
     {
-        mockInstanceList = Arrays.asList(mock(SidecarInstance.class), mock(SidecarInstance.class),
-                                         mock(SidecarInstance.class), mock(SidecarInstance.class)
-        );
+        mockInstanceList = Arrays.asList(mock(SidecarInstance.class), mock(SidecarInstance.class), mock(SidecarInstance.class), mock(SidecarInstance.class));
     }
 
     @Test
@@ -56,8 +54,10 @@ class RandomInstanceSelectionPolicyTest
         InstanceSelectionPolicy instanceSelectionPolicy = new RandomInstanceSelectionPolicy(provider);
         Iterator<SidecarInstance> iterator = instanceSelectionPolicy.iterator();
 
-        assertThat(iterator.hasNext()).isTrue().as("Expected to be true");
-        assertThat(iterator.hasNext()).isTrue().as("Test idempotency of hasNext by running it again");
+        assertThat(iterator.hasNext()).isTrue()
+                                      .as("Expected to be true");
+        assertThat(iterator.hasNext()).isTrue()
+                                      .as("Test idempotency of hasNext by running it again");
         assertThat(iterator.next()).isIn(mockInstanceList);
         assertThat(iterator.hasNext()).isTrue();
         assertThat(iterator.next()).isIn(mockInstanceList);
@@ -65,8 +65,10 @@ class RandomInstanceSelectionPolicyTest
         assertThat(iterator.next()).isIn(mockInstanceList);
         assertThat(iterator.hasNext()).isTrue();
         assertThat(iterator.next()).isIn(mockInstanceList);
-        assertThat(iterator.hasNext()).isFalse().as("Expected to be false");
-        assertThat(iterator.hasNext()).isFalse().as("Test idempotency of hasNext by running it again");;
+        assertThat(iterator.hasNext()).isFalse()
+                                      .as("Expected to be false");
+        assertThat(iterator.hasNext()).isFalse()
+                                      .as("Test idempotency of hasNext by running it again");;
         assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(iterator::next);
     }
 }

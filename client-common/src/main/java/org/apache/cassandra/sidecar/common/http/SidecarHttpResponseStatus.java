@@ -33,15 +33,17 @@ public class SidecarHttpResponseStatus extends HttpResponseStatus
     /**
      * Creates a new instance with the specified {@code code} and its {@code reasonPhrase}.
      *
-     * @param code         the HTTP status code
+     * @param code the HTTP status code
      * @param reasonPhrase the HTTP status reason
      */
-    public SidecarHttpResponseStatus(int code, String reasonPhrase)
+    public SidecarHttpResponseStatus(int code,
+                                     String reasonPhrase)
     {
         super(code, reasonPhrase);
     }
 
-    private static HttpResponseStatus newStatus(int statusCode, String reasonPhrase)
+    private static HttpResponseStatus newStatus(int statusCode,
+                                                String reasonPhrase)
     {
         return new SidecarHttpResponseStatus(statusCode, reasonPhrase);
     }

@@ -34,10 +34,9 @@ import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
 /**
- * Caches role and authorizations held by it. Entries from system_auth.role_permissions table in Cassandra and
- * sidecar_internal.role_permissions_v1 table are processed into authorizations and cached here. All table entries are
- * stored against a unique cache key. Caching against UNIQUE_CACHE_ENTRY is done to make sure new entries in the table
- * are picked up during cache refreshes.
+ * Caches role and authorizations held by it. Entries from system_auth.role_permissions table in Cassandra and sidecar_internal.role_permissions_v1 table are
+ * processed into authorizations and cached here. All table entries are stored against a unique cache key. Caching against UNIQUE_CACHE_ENTRY is done to make
+ * sure new entries in the table are picked up during cache refreshes.
  */
 @Singleton
 public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<Authorization>>>
@@ -53,24 +52,17 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
                                    SystemAuthDatabaseAccessor systemAuthDatabaseAccessor,
                                    SidecarPermissionsDatabaseAccessor sidecarPermissionsDatabaseAccessor)
     {
-        super(NAME,
-              vertx,
-              executorPools,
-              k -> loadAuthorizations(systemAuthDatabaseAccessor,
-                                      sidecarSchema,
-                                      sidecarPermissionsDatabaseAccessor),
-              () -> Collections.singletonMap(UNIQUE_CACHE_ENTRY,
-                                             loadAuthorizations(systemAuthDatabaseAccessor,
-                                                                sidecarSchema,
-                                                                sidecarPermissionsDatabaseAccessor)),
-              sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration());
+        super(NAME, vertx, executorPools, k -> loadAuthorizations(systemAuthDatabaseAccessor, sidecarSchema, sidecarPermissionsDatabaseAccessor),
+                () -> Collections.singletonMap(UNIQUE_CACHE_ENTRY,
+                        loadAuthorizations(systemAuthDatabaseAccessor, sidecarSchema, sidecarPermissionsDatabaseAccessor)),
+                sidecarConfiguration.accessControlConfiguration()
+                                    .permissionCacheConfiguration());
     }
 
     /**
      * {@code get} retrieves all role to authorizations mapping maintained in this cache.
      *
-     * @param ignored key for retrieval. Cache always contains one entry stored against unique_cache_entry_key,
-     *                hence key is ignored
+     * @param ignored key for retrieval. Cache always contains one entry stored against unique_cache_entry_key, hence key is ignored
      * @return Cache entry stored against unique_cache_entry_key
      */
     @Override
@@ -103,12 +95,13 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
 
         if (sidecarSchema.isInitialized())
         {
-            Map<String, Set<Authorization>> sidecarAuthorizations
-            = sidecarPermissionsDatabaseAccessor.rolesToAuthorizations();
+            Map<String, Set<Authorization>> sidecarAuthorizations = sidecarPermissionsDatabaseAccessor.rolesToAuthorizations();
 
             // merge authorizations from Cassandra and Sidecar tables
-            sidecarAuthorizations.forEach((role, authorizations) -> {
-                roleAuthorizations.merge(role, authorizations, (existingAuthorizations, newAuthorizations) -> {
+            sidecarAuthorizations.forEach((role,
+                                           authorizations) -> {
+                roleAuthorizations.merge(role, authorizations, (existingAuthorizations,
+                                                                newAuthorizations) -> {
                     existingAuthorizations.addAll(newAuthorizations);
                     return existingAuthorizations;
                 });

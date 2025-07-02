@@ -17,9 +17,6 @@
  */
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
-import java.util.Set;
-
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.google.inject.Inject;
@@ -30,6 +27,8 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Collections;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.common.server.data.Name;
@@ -38,7 +37,6 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import org.jetbrains.annotations.NotNull;
-
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -51,8 +49,8 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the interface to retrieve metadata
-     * @param executorPools   executor pools for blocking executions
-     * @param validator       a validator instance to validate Cassandra-specific input
+     * @param executorPools executor pools for blocking executions
+     * @param validator a validator instance to validate Cassandra-specific input
      */
     @Inject
     protected KeyspaceSchemaHandler(InstanceMetadataFetcher metadataFetcher,
@@ -78,19 +76,20 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
                                SocketAddress remoteAddress,
                                Name keyspace)
     {
-        metadata(host)
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace))
-        .onSuccess(metadata -> handleWithMetadata(context, keyspace, metadata));
+        metadata(host).onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace))
+                      .onSuccess(metadata -> handleWithMetadata(context, keyspace, metadata));
     }
 
     /**
      * Handles the request with the Cassandra {@link Metadata metadata}.
      *
-     * @param context  the event to handle
+     * @param context the event to handle
      * @param keyspace the keyspace parsed from the request
      * @param metadata the metadata on the connected cluster, including known nodes and schema definitions
      */
-    private void handleWithMetadata(RoutingContext context, Name keyspace, Metadata metadata)
+    private void handleWithMetadata(RoutingContext context,
+                                    Name keyspace,
+                                    Metadata metadata)
     {
         if (keyspace == null)
         {
@@ -111,8 +110,7 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
             return;
         }
 
-        SchemaResponse schemaResponse = new SchemaResponse(keyspace.name(),
-                                                           ksMetadata.exportAsString());
+        SchemaResponse schemaResponse = new SchemaResponse(keyspace.name(), ksMetadata.exportAsString());
         context.json(schemaResponse);
     }
 
@@ -124,10 +122,12 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
      */
     private Future<Metadata> metadata(String host)
     {
-        return executorPools.service().executeBlocking(() -> {
-            // metadata can block so we need to run in a blocking thread
-            return metadataFetcher.delegate(host).metadata();
-        });
+        return executorPools.service()
+                            .executeBlocking(() -> {
+                                // metadata can block so we need to run in a blocking thread
+                                return metadataFetcher.delegate(host)
+                                                      .metadata();
+                            });
     }
 
     /**

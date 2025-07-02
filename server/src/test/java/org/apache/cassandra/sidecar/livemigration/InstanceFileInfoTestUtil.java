@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.livemigration;
 
 import java.util.List;
-
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 
 /**
@@ -27,7 +26,8 @@ import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
  */
 public class InstanceFileInfoTestUtil
 {
-    public static InstanceFileInfo findInstanceFileInfo(List<InstanceFileInfo> fileInfoList, String fileUrl)
+    public static InstanceFileInfo findInstanceFileInfo(List<InstanceFileInfo> fileInfoList,
+                                                        String fileUrl)
     {
         for (InstanceFileInfo fileInfo : fileInfoList)
         {

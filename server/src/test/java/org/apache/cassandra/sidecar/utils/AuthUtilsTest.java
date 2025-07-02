@@ -18,13 +18,10 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import io.vertx.ext.auth.User;
 import java.util.Arrays;
 import java.util.List;
-
 import org.junit.jupiter.api.Test;
-
-import io.vertx.ext.auth.User;
-
 import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLES_ATTRIBUTE_NAME;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractCassandraRoles;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,13 +36,16 @@ class AuthUtilsTest
     void testExtractingRoles()
     {
         User user = User.fromName("test_user");
-        user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, List.of());
+        user.attributes()
+            .put(CASSANDRA_ROLES_ATTRIBUTE_NAME, List.of());
         assertThat(extractCassandraRoles(user)).isEmpty();
 
-        user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, List.of("role1", "role2"));
+        user.attributes()
+            .put(CASSANDRA_ROLES_ATTRIBUTE_NAME, List.of("role1", "role2"));
         assertThat(extractCassandraRoles(user)).containsAll(Arrays.asList("role1", "role2"));
 
-        user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, "role1,role2");
+        user.attributes()
+            .put(CASSANDRA_ROLES_ATTRIBUTE_NAME, "role1,role2");
         assertThatThrownBy(() -> extractCassandraRoles(user)).isInstanceOf(ClassCastException.class);
     }
 
@@ -53,7 +53,8 @@ class AuthUtilsTest
     void testRolesSetToNull()
     {
         User user = User.fromName("test_user");
-        user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, null);
+        user.attributes()
+            .put(CASSANDRA_ROLES_ATTRIBUTE_NAME, null);
         assertThat(extractCassandraRoles(user)).isEmpty();
     }
 }

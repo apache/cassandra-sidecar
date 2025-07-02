@@ -18,19 +18,17 @@
 
 package io.vertx.ext.auth.authentication;
 
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.impl.logging.Logger;
+import io.vertx.core.impl.logging.LoggerFactory;
+import io.vertx.core.json.JsonObject;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.impl.logging.Logger;
-import io.vertx.core.impl.logging.LoggerFactory;
-import io.vertx.core.json.JsonObject;
-
 /**
- * Certificates based {@link Credentials} implementation, carries user's certificates, which can be used for
- * authenticating or authorizing users.
+ * Certificates based {@link Credentials} implementation, carries user's certificates, which can be used for authenticating or authorizing users.
  */
 public class CertificateCredentials implements Credentials
 {
@@ -58,7 +56,8 @@ public class CertificateCredentials implements Credentials
     {
         try
         {
-            return new CertificateCredentials(request.connection().peerCertificates());
+            return new CertificateCredentials(request.connection()
+                                                     .peerCertificates());
         }
         catch (Exception e)
         {

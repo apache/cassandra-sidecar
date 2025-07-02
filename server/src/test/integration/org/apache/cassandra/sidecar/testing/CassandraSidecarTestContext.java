@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.testing;
 
+import com.codahale.metrics.MetricRegistry;
+import com.datastax.driver.core.Session;
+import io.vertx.core.Vertx;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -29,10 +32,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
-import com.codahale.metrics.MetricRegistry;
-import com.datastax.driver.core.Session;
-import io.vertx.core.Vertx;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.impl.AbstractClusterUtils;
@@ -57,7 +56,6 @@ import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
 import org.jetbrains.annotations.NotNull;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -66,9 +64,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class CassandraSidecarTestContext implements AutoCloseable
 {
     public final SimpleCassandraVersion version;
-    private final MetricRegistryFactory metricRegistryProvider = new MetricRegistryFactory("cassandra_sidecar",
-                                                                                           Collections.emptyList(),
-                                                                                           Collections.emptyList());
+    private final MetricRegistryFactory metricRegistryProvider =
+                                                               new MetricRegistryFactory("cassandra_sidecar", Collections.emptyList(), Collections.emptyList());
     private final CassandraVersionProvider versionProvider;
     private final DnsResolver dnsResolver;
     private final AbstractCassandraTestContext abstractCassandraTestContext;
@@ -108,29 +105,22 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                                    SslConfiguration sslConfiguration)
     {
         org.apache.cassandra.testing.SimpleCassandraVersion rootVersion = cassandraTestContext.version;
-        SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(rootVersion.major,
-                                                                             rootVersion.minor,
-                                                                             rootVersion.patch);
+        SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(rootVersion.major, rootVersion.minor, rootVersion.patch);
         CassandraVersionProvider versionProvider = cassandraVersionProvider(dnsResolver);
-        return new CassandraSidecarTestContext(vertx,
-                                               cassandraTestContext,
-                                               versionParsed,
-                                               versionProvider,
-                                               dnsResolver,
-                                               instancesToManage,
-                                               sslConfiguration);
+        return new CassandraSidecarTestContext(vertx, cassandraTestContext, versionParsed, versionProvider, dnsResolver, instancesToManage, sslConfiguration);
     }
 
     public static CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
     {
         DriverUtils driverUtils = new DriverUtils();
-        return new CassandraVersionProvider.Builder()
-               .add(new CassandraFactory(dnsResolver, driverUtils))
-               .add(new Cassandra41Factory(dnsResolver, driverUtils))
-               .build();
+        return new CassandraVersionProvider.Builder().add(new CassandraFactory(dnsResolver, driverUtils))
+                                                     .add(new Cassandra41Factory(dnsResolver, driverUtils))
+                                                     .build();
     }
 
-    public static int tryGetIntConfig(IInstanceConfig config, String configName, int defaultValue)
+    public static int tryGetIntConfig(IInstanceConfig config,
+                                      String configName,
+                                      int defaultValue)
     {
         try
         {
@@ -173,7 +163,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
         refreshInstancesMetadata();
     }
 
-    public void setUsernamePassword(String username, String password)
+    public void setUsernamePassword(String username,
+                                    String password)
     {
         this.username = username;
         this.password = password;
@@ -215,10 +206,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
     @Override
     public String toString()
     {
-        return "CassandraTestContext{" +
-               ", version=" + version +
-               ", cluster=" + abstractCassandraTestContext.cluster() +
-               '}';
+        return "CassandraTestContext{" + ", version=" + version + ", cluster=" + abstractCassandraTestContext.cluster() + '}';
     }
 
     @Override
@@ -226,7 +214,9 @@ public class CassandraSidecarTestContext implements AutoCloseable
     {
         if (instancesMetadata != null)
         {
-            instancesMetadata.instances().forEach(instance -> instance.delegate().close());
+            instancesMetadata.instances()
+                             .forEach(instance -> instance.delegate()
+                                                          .close());
         }
 
         closeSessionProvider();
@@ -246,9 +236,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
         UpgradeableCluster cluster = cluster();
         List<IInstanceConfig> configs = buildInstanceConfigs(cluster);
         List<InetSocketAddress> addresses = buildContactList(configs);
-        return new CQLSessionProviderImpl(addresses, addresses, 500, null,
-                                          0, username, password,
-                                          sslConfiguration, SharedExecutorNettyOptions.INSTANCE);
+        return new CQLSessionProviderImpl(addresses, addresses, 500, null, 0, username, password, sslConfiguration, SharedExecutorNettyOptions.INSTANCE);
     }
 
     private synchronized InstancesMetadata buildInstancesMetadata(CassandraVersionProvider versionProvider,
@@ -259,9 +247,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
         jmxClients = new ArrayList<>();
         List<IInstanceConfig> configs = buildInstanceConfigs(cluster);
         List<InetSocketAddress> addresses = buildContactList(configs);
-        sessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, null,
-                                                     0, username, password,
-                                                     sslConfiguration, SharedExecutorNettyOptions.INSTANCE);
+        sessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, null, 0, username, password, sslConfiguration,
+                SharedExecutorNettyOptions.INSTANCE);
         for (int i = 0; i < configs.size(); i++)
         {
             if (configs.get(i) == null)
@@ -283,26 +270,22 @@ public class CassandraSidecarTestContext implements AutoCloseable
 
             String[] dataDirectories = (String[]) config.get("data_file_directories");
             // Use the parent of the first data directory as the staging directory
-            Path dataDirParentPath = Paths.get(dataDirectories[0]).getParent();
+            Path dataDirParentPath = Paths.get(dataDirectories[0])
+                                          .getParent();
             // If the cluster has not started yet, the node's root directory doesn't exist yet
             assertThat(dataDirParentPath).isNotNull();
             Path stagingPath = dataDirParentPath.resolve("staging");
-            String stagingDir = stagingPath.toFile().getAbsolutePath();
+            String stagingDir = stagingPath.toFile()
+                                           .getAbsolutePath();
 
             MetricRegistry instanceSpecificRegistry = metricRegistryProvider.getOrCreate(i + 1);
-            CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
-                                                                             i + 1,
-                                                                             versionProvider,
-                                                                             sessionProvider,
-                                                                             jmxClient,
-                                                                             new DriverUtils(),
-                                                                             "1.0-TEST",
-                                                                             hostName,
-                                                                             nativeTransportPort,
-                                                                             new InstanceHealthMetrics(instanceSpecificRegistry));
+            CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx, i + 1, versionProvider, sessionProvider, jmxClient, new DriverUtils(),
+                    "1.0-TEST", hostName, nativeTransportPort, new InstanceHealthMetrics(instanceSpecificRegistry));
             metadata.add(InstanceMetadataImpl.builder()
                                              .id(i + 1)
-                                             .host(config.broadcastAddress().getAddress().getHostAddress())
+                                             .host(config.broadcastAddress()
+                                                         .getAddress()
+                                                         .getHostAddress())
                                              .port(nativeTransportPort)
                                              .dataDirs(Arrays.asList(dataDirectories))
                                              .cdcDir(config.getString("cdc_raw_directory"))
@@ -323,8 +306,9 @@ public class CassandraSidecarTestContext implements AutoCloseable
         // this way, we populate the entire local instance list
         return configs.stream()
                       .filter(Objects::nonNull)
-                      .map(config -> new InetSocketAddress(config.broadcastAddress().getAddress(),
-                                                           tryGetIntConfig(config, "native_transport_port", 9042)))
+                      .map(config -> new InetSocketAddress(config.broadcastAddress()
+                                                                 .getAddress(),
+                              tryGetIntConfig(config, "native_transport_port", 9042)))
                       .collect(Collectors.toList());
     }
 
@@ -340,14 +324,19 @@ public class CassandraSidecarTestContext implements AutoCloseable
         }
         else
         {
-            testManagedInstances = Arrays.stream(instancesToManage).boxed().collect(Collectors.toSet());
+            testManagedInstances = Arrays.stream(instancesToManage)
+                                         .boxed()
+                                         .collect(Collectors.toSet());
             // throws if test sets an empty array, it is a test configuration error
-            maxNodeNum = Arrays.stream(instancesToManage).max().getAsInt();
+            maxNodeNum = Arrays.stream(instancesToManage)
+                               .max()
+                               .getAsInt();
         }
         return IntStream.range(1, maxNodeNum + 1)
                         .mapToObj(nodeNum -> {
                             // check whether the instances are managed by the test framework first. Because the nodeNum might be greater than the cluster size
-                            if (manageInstanceByTestFramework() && cluster.get(nodeNum).isShutdown())
+                            if (manageInstanceByTestFramework() && cluster.get(nodeNum)
+                                                                          .isShutdown())
                             {
                                 return null;
                             }

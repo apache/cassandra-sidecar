@@ -89,11 +89,8 @@ public class StorageCredentials
     @Override
     public String toString()
     {
-        return String.format("StorageCredentials{%s=%s, %s=%s, %s=%s, %s=%s}",
-                             CREDENTIALS_ACCESS_KEY_ID, accessKeyId,
-                             CREDENTIALS_SECRET_ACCESS_KEY, "redacted",
-                             CREDENTIALS_SESSION_TOKEN, "redacted",
-                             CREDENTIALS_REGION, region);
+        return String.format("StorageCredentials{%s=%s, %s=%s, %s=%s, %s=%s}", CREDENTIALS_ACCESS_KEY_ID, accessKeyId, CREDENTIALS_SECRET_ACCESS_KEY,
+                "redacted", CREDENTIALS_SESSION_TOKEN, "redacted", CREDENTIALS_REGION, region);
     }
 
     @Override
@@ -106,10 +103,8 @@ public class StorageCredentials
             return false;
 
         StorageCredentials that = (StorageCredentials) obj;
-        return Objects.equals(this.accessKeyId, that.accessKeyId)
-               && Objects.equals(this.secretAccessKey, that.secretAccessKey)
-               && Objects.equals(this.sessionToken, that.sessionToken)
-               && Objects.equals(this.region, that.region);
+        return Objects.equals(this.accessKeyId, that.accessKeyId) && Objects.equals(this.secretAccessKey, that.secretAccessKey)
+                && Objects.equals(this.sessionToken, that.sessionToken) && Objects.equals(this.region, that.region);
     }
 
     @Override

@@ -23,9 +23,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
 import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 class InstanceSetByDcTest
@@ -34,12 +32,14 @@ class InstanceSetByDcTest
     void testGetInstanceSetOfDc()
     {
         InstanceSetByDc empty = new InstanceSetByDc(new HashMap<>());
-        assertThat(empty.get("dc1")).isNotNull().isEmpty();
+        assertThat(empty.get("dc1")).isNotNull()
+                                    .isEmpty();
 
         Map<String, Set<String>> mapping = new HashMap<>();
         mapping.put("dc1", new HashSet<>(Arrays.asList("i-1", "i-2")));
         InstanceSetByDc nonEmpty = new InstanceSetByDc(mapping);
         assertThat(nonEmpty.get("dc1")).hasSize(2);
-        assertThat(nonEmpty.get("dc2")).isNotNull().isEmpty();
+        assertThat(nonEmpty.get("dc2")).isNotNull()
+                                       .isEmpty();
     }
 }

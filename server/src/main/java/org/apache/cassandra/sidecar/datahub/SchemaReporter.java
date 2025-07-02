@@ -21,8 +21,10 @@ package org.apache.cassandra.sidecar.datahub;
 
 import java.util.List;
 import java.util.stream.Stream;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,12 +45,11 @@ import org.apache.cassandra.sidecar.metrics.server.SchemaReportingMetrics;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Utility class for converting and reporting the provided Cassandra metadata objects
- * in a DataHub-compliant format describing the current schema of the cluster.
+ * Utility class for converting and reporting the provided Cassandra metadata objects in a DataHub-compliant format describing the current schema of the
+ * cluster.
  * <p>
- * Note that the extensive usage of {@link Stream} types here enables late creation and
- * early destruction of DataHub aspect objects while the schema is being converted
- * (since all of them can potentially take up to a gigabyte on largest clusters).
+ * Note that the extensive usage of {@link Stream} types here enables late creation and early destruction of DataHub aspect objects while the schema is being
+ * converted (since all of them can potentially take up to a gigabyte on largest clusters).
  */
 @Singleton
 public class SchemaReporter
@@ -80,16 +81,15 @@ public class SchemaReporter
                           @NotNull EmitterFactory emitterFactory,
                           @NotNull SidecarMetrics sidecarMetrics)
     {
-        this(identifiersProvider,
-             emitterFactory,
-             sidecarMetrics.server().schemaReporting());
+        this(identifiersProvider, emitterFactory, sidecarMetrics.server()
+                                                                .schemaReporting());
     }
 
     /**
      * A protected constructor that can be used to instantiate {@link SchemaReporter} with custom configuration
      * <p>
-     * NOTE: The specific combination of converters used by this constructor should be considered a part
-     *       of the API and should not generally be changed, as any change will break existing users
+     * NOTE: The specific combination of converters used by this constructor should be considered a part of the API and should not generally be changed, as any
+     * change will break existing users
      *
      * @param identifiersProvider an instance of {@link IdentifiersProvider} to use
      * @param emitterFactory an instance of {@link EmitterFactory} to use
@@ -100,21 +100,15 @@ public class SchemaReporter
                              @NotNull SchemaReportingMetrics reportingMetrics)
     {
         this(identifiersProvider,
-             ImmutableList.of(new ClusterToDataPlatformInfoConverter(identifiersProvider),
-                              new ClusterToDataPlatformInstancePropertiesConverter(identifiersProvider)),
-             ImmutableList.of(new KeyspaceToContainerPropertiesConverter(identifiersProvider),
-                              new KeyspaceToSubTypesConverter(identifiersProvider),
-                              new KeyspaceToDataPlatformInstanceConverter(identifiersProvider),
-                              new KeyspaceToBrowsePathsV2Converter(identifiersProvider)),
-             ImmutableList.of(new TableToDatasetPropertiesConverter(identifiersProvider),
-                              new TableToSchemaMetadataConverter(identifiersProvider),
-                              new TableToContainerConverter(identifiersProvider),
-                              new TableToSubTypesConverter(identifiersProvider),
-                              new TableToDataPlatformInstanceConverter(identifiersProvider),
-                              new TableToBrowsePathsV2Converter(identifiersProvider),
-                              new TableToBrowsePathsConverter(identifiersProvider)),
-             emitterFactory,
-             reportingMetrics);
+                ImmutableList.of(new ClusterToDataPlatformInfoConverter(identifiersProvider),
+                        new ClusterToDataPlatformInstancePropertiesConverter(identifiersProvider)),
+                ImmutableList.of(new KeyspaceToContainerPropertiesConverter(identifiersProvider), new KeyspaceToSubTypesConverter(identifiersProvider),
+                        new KeyspaceToDataPlatformInstanceConverter(identifiersProvider), new KeyspaceToBrowsePathsV2Converter(identifiersProvider)),
+                ImmutableList.of(new TableToDatasetPropertiesConverter(identifiersProvider), new TableToSchemaMetadataConverter(identifiersProvider),
+                        new TableToContainerConverter(identifiersProvider), new TableToSubTypesConverter(identifiersProvider),
+                        new TableToDataPlatformInstanceConverter(identifiersProvider), new TableToBrowsePathsV2Converter(identifiersProvider),
+                        new TableToBrowsePathsConverter(identifiersProvider)),
+                emitterFactory, reportingMetrics);
     }
 
     /**
@@ -190,14 +184,12 @@ public class SchemaReporter
             reportingMetrics.finishedFailure.metric.increment();
             LOGGER.error("Failed to report schema for cluster, identifiers={}", identifiersProvider);
 
-            throw new RuntimeException("Failed to report schema for cluster with identifiers " + identifiersProvider,
-                                       exception);
+            throw new RuntimeException("Failed to report schema for cluster with identifiers " + identifiersProvider, exception);
         }
     }
 
     /**
-     * Protected method that converts Cassandra cluster metadata
-     * into a non-empty {@link Stream} of DataHub aspects
+     * Protected method that converts Cassandra cluster metadata into a non-empty {@link Stream} of DataHub aspects
      *
      * @param metadata Cassandra cluster metadata
      * @return non-empty {@link Stream} of DataHub aspects
@@ -205,18 +197,16 @@ public class SchemaReporter
     @NotNull
     protected Stream<MetadataChangeProposalWrapper<? extends RecordTemplate>> stream(@NotNull Metadata metadata)
     {
-        return Streams.concat(
-        clusterConverters.stream()
-                         .map(ThrowableUtils.function(converter -> converter.convert(metadata))),
-        metadata.getKeyspaces()
-                .stream()
-                .filter(this::neitherVirtualNorSystem)
-                .flatMap(this::stream));
+        return Streams.concat(clusterConverters.stream()
+                                               .map(ThrowableUtils.function(converter -> converter.convert(metadata))),
+                metadata.getKeyspaces()
+                        .stream()
+                        .filter(this::neitherVirtualNorSystem)
+                        .flatMap(this::stream));
     }
 
     /**
-     * Protected method that converts Cassandra keyspace metadata
-     * into a non-empty {@link Stream} of DataHub aspects
+     * Protected method that converts Cassandra keyspace metadata into a non-empty {@link Stream} of DataHub aspects
      *
      * @param keyspace Cassandra keyspace metadata
      * @return non-empty {@link Stream} of DataHub aspects
@@ -224,17 +214,15 @@ public class SchemaReporter
     @NotNull
     protected Stream<MetadataChangeProposalWrapper<? extends RecordTemplate>> stream(@NotNull KeyspaceMetadata keyspace)
     {
-        return Streams.concat(
-        keyspaceConverters.stream()
-                          .map(ThrowableUtils.function(converter -> converter.convert(keyspace))),
-        keyspace.getTables()
-                .stream()
-                .flatMap(this::stream));
+        return Streams.concat(keyspaceConverters.stream()
+                                                .map(ThrowableUtils.function(converter -> converter.convert(keyspace))),
+                keyspace.getTables()
+                        .stream()
+                        .flatMap(this::stream));
     }
 
     /**
-     * Protected method that converts Cassandra table metadata
-     * into a non-empty {@link Stream} of DataHub aspects
+     * Protected method that converts Cassandra table metadata into a non-empty {@link Stream} of DataHub aspects
      *
      * @param table Cassandra table metadata
      * @return non-empty {@link Stream} of DataHub aspects
@@ -247,12 +235,10 @@ public class SchemaReporter
     }
 
     /**
-     * Protected method for filtering out virtual keyspaces,
-     * Cassandra system keyspaces, and Sidecar internal keyspaces
+     * Protected method for filtering out virtual keyspaces, Cassandra system keyspaces, and Sidecar internal keyspaces
      *
      * @param keyspace Cassandra keyspace metadata
-     * @return {@code true} if the keyspace is neither virtual nor system,
-     *         {@code false} otherwise
+     * @return {@code true} if the keyspace is neither virtual nor system, {@code false} otherwise
      */
     protected boolean neitherVirtualNorSystem(@NotNull KeyspaceMetadata keyspace)
     {
@@ -262,8 +248,6 @@ public class SchemaReporter
         }
 
         String name = keyspace.getName();
-        return !name.equals("system") &&
-               !name.startsWith("system_") &&
-               !name.equals("sidecar_internal");
+        return !name.equals("system") && !name.startsWith("system_") && !name.equals("sidecar_internal");
     }
 }

@@ -26,13 +26,14 @@ import java.math.BigInteger;
  */
 public enum Partitioner
 {
-    Murmur3(BigInteger.valueOf(Long.MIN_VALUE), BigInteger.valueOf(Long.MAX_VALUE)),
-    Random(BigInteger.ONE.negate(), BigInteger.valueOf(2).pow(127));
+    Murmur3(BigInteger.valueOf(Long.MIN_VALUE), BigInteger.valueOf(Long.MAX_VALUE)), Random(BigInteger.ONE.negate(), BigInteger.valueOf(2)
+                                                                                                                               .pow(127));
 
     public final BigInteger minToken;
     public final BigInteger maxToken;
 
-    Partitioner(BigInteger minToken, BigInteger maxToken)
+    Partitioner(BigInteger minToken,
+                BigInteger maxToken)
     {
         this.minToken = minToken;
         this.maxToken = maxToken;
@@ -42,11 +43,11 @@ public enum Partitioner
     {
         switch (className)
         {
-            case "org.apache.cassandra.dht.Murmur3Partitioner":
+            case "org.apache.cassandra.dht.Murmur3Partitioner" :
                 return Murmur3;
-            case "org.apache.cassandra.dht.RandomPartitioner":
+            case "org.apache.cassandra.dht.RandomPartitioner" :
                 return Random;
-            default:
+            default :
                 throw new UnsupportedOperationException("Unexpected partitioner: " + className);
         }
     }

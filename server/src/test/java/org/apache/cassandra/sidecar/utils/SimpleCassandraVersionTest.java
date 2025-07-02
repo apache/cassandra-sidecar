@@ -34,14 +34,10 @@ public class SimpleCassandraVersionTest
     @Test
     void testNegativeVersionsFail()
     {
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> SimpleCassandraVersion.create(-1, 0, 0));
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> SimpleCassandraVersion.create(4, -1, 0));
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> SimpleCassandraVersion.create(0, 0, -1));
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> SimpleCassandraVersion.create("-3.0.0"));
+        assertThatIllegalArgumentException().isThrownBy(() -> SimpleCassandraVersion.create(-1, 0, 0));
+        assertThatIllegalArgumentException().isThrownBy(() -> SimpleCassandraVersion.create(4, -1, 0));
+        assertThatIllegalArgumentException().isThrownBy(() -> SimpleCassandraVersion.create(0, 0, -1));
+        assertThatIllegalArgumentException().isThrownBy(() -> SimpleCassandraVersion.create("-3.0.0"));
     }
 
     @Test

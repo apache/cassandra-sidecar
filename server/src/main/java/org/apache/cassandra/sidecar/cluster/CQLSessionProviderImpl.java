@@ -18,6 +18,19 @@
 
 package org.apache.cassandra.sidecar.cluster;
 
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.NettyOptions;
+import com.datastax.driver.core.PlainTextAuthProvider;
+import com.datastax.driver.core.QueryOptions;
+import com.datastax.driver.core.RemoteEndpointAwareNettySSLOptions;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.exceptions.DriverException;
+import com.datastax.driver.core.exceptions.DriverInternalError;
+import com.datastax.driver.core.policies.ExponentialReconnectionPolicy;
+import com.datastax.driver.core.policies.LoadBalancingPolicy;
+import com.datastax.driver.core.policies.ReconnectionPolicy;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -32,25 +45,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.TrustManagerFactory;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.NettyOptions;
-import com.datastax.driver.core.PlainTextAuthProvider;
-import com.datastax.driver.core.QueryOptions;
-import com.datastax.driver.core.RemoteEndpointAwareNettySSLOptions;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.exceptions.DriverException;
-import com.datastax.driver.core.exceptions.DriverInternalError;
-import com.datastax.driver.core.policies.ExponentialReconnectionPolicy;
-import com.datastax.driver.core.policies.LoadBalancingPolicy;
-import com.datastax.driver.core.policies.ReconnectionPolicy;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import org.apache.cassandra.sidecar.cluster.driver.SidecarLoadBalancingPolicy;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
@@ -63,12 +57,14 @@ import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
-
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
 
 /**
- * Provides connections to the local Cassandra cluster as defined in the Configuration. Currently, it only supports
- * returning the local connection.
+ * Provides connections to the local Cassandra cluster as defined in the Configuration. Currently, it only supports returning the local connection.
  */
 public class CQLSessionProviderImpl implements CQLSessionProvider
 {
@@ -93,15 +89,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
                                   int numAdditionalConnections,
                                   NettyOptions options)
     {
-        this(contactPoints,
-             localInstances,
-             healthCheckFrequencyMillis,
-             localDc,
-             numAdditionalConnections,
-             null,
-             null,
-             null,
-             options);
+        this(contactPoints, localInstances, healthCheckFrequencyMillis, localDc, numAdditionalConnections, null, null, null, options);
     }
 
     @VisibleForTesting
@@ -144,7 +132,9 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         this.sslConfiguration = driverConfiguration.sslConfiguration();
         this.numAdditionalConnections = driverConfiguration.numConnections();
         this.nettyOptions = options;
-        long maxDelayMs = configuration.healthCheckConfiguration().executeInterval().toMillis();
+        long maxDelayMs = configuration.healthCheckConfiguration()
+                                       .executeInterval()
+                                       .toMillis();
         this.reconnectionPolicy = new ExponentialReconnectionPolicy(500, maxDelayMs);
     }
 
@@ -152,7 +142,8 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
     {
         Throwable cause = e.getCause();
 
-        if (cause instanceof Error) throw ((Error) cause);
+        if (cause instanceof Error)
+            throw ((Error) cause);
 
         // We could just rethrow e.getCause(). However, the cause of the ExecutionException has likely
         // been
@@ -160,14 +151,15 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         // with said cause will make no mention of the current thread. This is painful for say, finding
         // out which execute() statement actually raised the exception. So instead, we re-create the
         // exception.
-        if (cause instanceof DriverException) throw ((DriverException) cause).copy();
-        else throw new DriverInternalError("Unexpected exception thrown", cause);
+        if (cause instanceof DriverException)
+            throw ((DriverException) cause).copy();
+        else
+            throw new DriverInternalError("Unexpected exception thrown", cause);
     }
 
     /**
-     * Provides a Session connected to the cluster. If null it means the connection was
-     * could not be established. The session still might throw a NoHostAvailableException if the
-     * cluster is otherwise unreachable.
+     * Provides a Session connected to the cluster. If null it means the connection was could not be established. The session still might throw a
+     * NoHostAvailableException if the cluster is otherwise unreachable.
      *
      * @return Session
      */
@@ -185,26 +177,23 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         {
             logger.info("Connecting to cluster using contact points {}", contactPoints);
 
-            LoadBalancingPolicy lbp = new SidecarLoadBalancingPolicy(localInstances, localDc, numAdditionalConnections,
-                                                                     driverUtils);
+            LoadBalancingPolicy lbp = new SidecarLoadBalancingPolicy(localInstances, localDc, numAdditionalConnections, driverUtils);
             // Prevent spurious reconnects of ignored down nodes on `onUp` events
             QueryOptions queryOptions = new QueryOptions().setReprepareOnUp(false);
-            Cluster.Builder builder
-            = Cluster.builder()
-                     .addContactPointsWithPorts(contactPoints)
-                     .withReconnectionPolicy(reconnectionPolicy)
-                     .withoutMetrics()
-                     .withLoadBalancingPolicy(lbp)
-                     .withQueryOptions(queryOptions)
-                     // tests can create a lot of these Cluster objects, to avoid creating HWTs and
-                     // event thread pools for each we have the override
-                     .withNettyOptions(nettyOptions);
+            Cluster.Builder builder = Cluster.builder()
+                                             .addContactPointsWithPorts(contactPoints)
+                                             .withReconnectionPolicy(reconnectionPolicy)
+                                             .withoutMetrics()
+                                             .withLoadBalancingPolicy(lbp)
+                                             .withQueryOptions(queryOptions)
+                                             // tests can create a lot of these Cluster objects, to avoid creating HWTs and
+                                             // event thread pools for each we have the override
+                                             .withNettyOptions(nettyOptions);
 
             SslContext sslContext = createSslContext(sslConfiguration);
             if (sslContext != null)
             {
-                RemoteEndpointAwareNettySSLOptions sslOptions
-                = new RemoteEndpointAwareNettySSLOptions(sslContext);
+                RemoteEndpointAwareNettySSLOptions sslOptions = new RemoteEndpointAwareNettySSLOptions(sslContext);
                 builder.withSSL(sslOptions);
             }
 
@@ -264,11 +253,14 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         {
             try
             {
-                localSession.getCluster().closeAsync().get(1, TimeUnit.MINUTES);
+                localSession.getCluster()
+                            .closeAsync()
+                            .get(1, TimeUnit.MINUTES);
             }
             catch (InterruptedException e)
             {
-                Thread.currentThread().interrupt();
+                Thread.currentThread()
+                      .interrupt();
             }
             catch (TimeoutException e)
             {
@@ -282,9 +274,9 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
     }
 
     /**
-     * We configure the SslContext in the driver when establishing an SSL or mTLS connection with Cassandra. For an
-     * SSL connection, the driver only needs to provide the truststore, while Cassandra supplies its keystore for
-     * validation. In the case of an mTLS connection, both the keystore and truststore are configured on the driver side.
+     * We configure the SslContext in the driver when establishing an SSL or mTLS connection with Cassandra. For an SSL connection, the driver only needs to
+     * provide the truststore, while Cassandra supplies its keystore for validation. In the case of an mTLS connection, both the keystore and truststore are
+     * configured on the driver side.
      */
     private SslContext createSslContext(SslConfiguration sslConfiguration)
     {
@@ -303,7 +295,9 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
             {
                 KeyStore keyStore = createKeystore(sslConfiguration.keystore());
                 KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-                kmf.init(keyStore, sslConfiguration.keystore().password().toCharArray());
+                kmf.init(keyStore, sslConfiguration.keystore()
+                                                   .password()
+                                                   .toCharArray());
                 sslContextBuilder.keyManager(kmf);
             }
 
@@ -324,13 +318,13 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         }
     }
 
-    private KeyStore createKeystore(KeyStoreConfiguration config)
-    throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException
+    private KeyStore createKeystore(KeyStoreConfiguration config) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException
     {
         KeyStore keystore = KeyStore.getInstance(config.type());
         try (InputStream inputStream = Files.newInputStream(Paths.get(config.path())))
         {
-            keystore.load(inputStream, config.password().toCharArray());
+            keystore.load(inputStream, config.password()
+                                             .toCharArray());
         }
         return keystore;
     }

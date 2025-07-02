@@ -24,7 +24,6 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
-
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
@@ -46,41 +45,43 @@ public class ConsistencyVerifiers
 
     /**
      * Similar to {@link #forConsistencyLevel(ConsistencyLevel, String)}, but set {@code localDatacenter} to null.
+     *
      * @param consistencyLevel consistency level to verify
      * @return consistency verifier
      */
     public static ConsistencyVerifier forConsistencyLevel(ConsistencyLevel consistencyLevel)
     {
-        Preconditions.checkArgument(!consistencyLevel.isLocalDcOnly,
-                                    "Cannot create verifier with local consistency level");
+        Preconditions.checkArgument(!consistencyLevel.isLocalDcOnly, "Cannot create verifier with local consistency level");
         return forConsistencyLevel(consistencyLevel, null);
     }
 
     /**
      * Create {@link ConsistencyVerifier} based on the consistency level and the local datacenter name.
+     *
      * @param consistencyLevel consistency level to verify
      * @param localDatacenter local datacenter name when the consistency level is local, e.g. LOCAL_QUORUM
      * @return consistency verifier
      */
-    public static ConsistencyVerifier forConsistencyLevel(ConsistencyLevel consistencyLevel, @Nullable String localDatacenter)
+    public static ConsistencyVerifier forConsistencyLevel(ConsistencyLevel consistencyLevel,
+                                                          @Nullable String localDatacenter)
     {
         switch (consistencyLevel)
         {
-            case ONE:
+            case ONE :
                 return ForOne.INSTANCE;
-            case TWO:
+            case TWO :
                 return ForTwo.INSTANCE;
-            case QUORUM:
+            case QUORUM :
                 return ForQuorum.INSTANCE;
-            case ALL:
+            case ALL :
                 return ForAll.INSTANCE;
-            case EACH_QUORUM:
+            case EACH_QUORUM :
                 return ForEachQuorum.INSTANCE;
-            case LOCAL_ONE:
+            case LOCAL_ONE :
                 return new ForLocalOne(localDatacenter);
-            case LOCAL_QUORUM:
+            case LOCAL_QUORUM :
                 return new ForLocalQuorum(localDatacenter);
-            default:
+            default :
                 throw new IllegalStateException("Encountered unknown consistency level: " + consistencyLevel);
         }
     }
@@ -97,49 +98,57 @@ public class ConsistencyVerifiers
 
         protected int sum(InstanceSetByDc instanceSetByDc)
         {
-            return instanceSetByDc.mapping.values().stream().mapToInt(Set::size).sum();
+            return instanceSetByDc.mapping.values()
+                                          .stream()
+                                          .mapToInt(Set::size)
+                                          .sum();
         }
 
-        protected boolean geQuorum(int count, int total)
+        protected boolean geQuorum(int count,
+                                   int total)
         {
             return count >= quorum(total);
         }
 
-        protected InstanceSetByDc groupByDc(Set<String> instances, UnaryOperator<String> dcClassifier)
+        protected InstanceSetByDc groupByDc(Set<String> instances,
+                                            UnaryOperator<String> dcClassifier)
         {
             return new InstanceSetByDc(instances.stream()
                                                 .collect(Collectors.groupingBy(dcClassifier, Collectors.toSet())));
         }
 
-        protected InstanceSetByDc filterByDc(Set<String> instances, String dcName, Predicate<String> dcFilter)
+        protected InstanceSetByDc filterByDc(Set<String> instances,
+                                             String dcName,
+                                             Predicate<String> dcFilter)
         {
-            Set<String> localDcInstances = instances.stream().filter(dcFilter).collect(Collectors.toSet());
+            Set<String> localDcInstances = instances.stream()
+                                                    .filter(dcFilter)
+                                                    .collect(Collectors.toSet());
             return new InstanceSetByDc(dcName, localDcInstances);
         }
 
-        protected void validateNoneFromUnknownDc(InstanceSetByDc instanceSetByDc, String kind)
+        protected void validateNoneFromUnknownDc(InstanceSetByDc instanceSetByDc,
+                                                 String kind)
         {
             if (instanceSetByDc.mapping.containsKey(UNKNOWN_DC))
             {
-                throw new IllegalStateException("Instances from the " + kind + " set belongs to unknown datacenter. " +
-                                                "Instances: " + instanceSetByDc.mapping.get(UNKNOWN_DC));
+                throw new IllegalStateException(
+                        "Instances from the " + kind + " set belongs to unknown datacenter. " + "Instances: " + instanceSetByDc.mapping.get(UNKNOWN_DC));
             }
         }
     }
 
     /**
-     * Verifier for consistency level ONE
-     * It concludes result
-     * - SATISFIED: one instance succeeds
-     * - FAILED: all instances fail
-     * - PENDING: default
+     * Verifier for consistency level ONE It concludes result - SATISFIED: one instance succeeds - FAILED: all instances fail - PENDING: default
      */
     public static class ForOne extends BaseVerifier
     {
         public static final ForOne INSTANCE = new ForOne();
 
         @Override
-        public ConsistencyVerificationResult verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
+        public ConsistencyVerificationResult verify(Set<String> succeeded,
+                                                    Set<String> failed,
+                                                    InstanceSetByDc all)
         {
             if (!succeeded.isEmpty())
             {
@@ -156,18 +165,16 @@ public class ConsistencyVerifiers
     }
 
     /**
-     * Verifier for consistency level TWO
-     * It concludes result
-     * - SATISFIED: one instance succeeds
-     * - FAILED: all instances fail
-     * - PENDING: default
+     * Verifier for consistency level TWO It concludes result - SATISFIED: one instance succeeds - FAILED: all instances fail - PENDING: default
      */
     public static class ForTwo extends BaseVerifier
     {
         public static final ForTwo INSTANCE = new ForTwo();
 
         @Override
-        public ConsistencyVerificationResult verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
+        public ConsistencyVerificationResult verify(Set<String> succeeded,
+                                                    Set<String> failed,
+                                                    InstanceSetByDc all)
         {
             if (succeeded.size() >= 2)
             {
@@ -185,22 +192,22 @@ public class ConsistencyVerifiers
     }
 
     /**
-     * Verifier for consistency level EACH_QUORUM
-     * It concludes result
-     * - SATISFIED: quorum instances in all datacenters succeed
-     * - FAILED: quorum instances in any datacenter fail
-     * - PENDING: default
+     * Verifier for consistency level EACH_QUORUM It concludes result - SATISFIED: quorum instances in all datacenters succeed - FAILED: quorum instances in any
+     * datacenter fail - PENDING: default
      */
     public static class ForEachQuorum extends BaseVerifier
     {
         public static final ForEachQuorum INSTANCE = new ForEachQuorum();
 
         @Override
-        public ConsistencyVerificationResult verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
+        public ConsistencyVerificationResult verify(Set<String> succeeded,
+                                                    Set<String> failed,
+                                                    InstanceSetByDc all)
         {
             // flatten and invert to get the mapping from instance to dc name
             Map<String, String> dcByInstance = new HashMap<>(sum(all));
-            all.forEach((dcName, replicaSet) -> {
+            all.forEach((dcName,
+                         replicaSet) -> {
                 replicaSet.forEach(instance -> {
                     dcByInstance.put(instance, dcName);
                 });
@@ -221,13 +228,19 @@ public class ConsistencyVerifiers
             for (String dcName : all.keySet())
             {
                 // if any of the datacenter cannot satisfy quorum locally
-                if (!geQuorum(passedByDc.get(dcName).size(), all.get(dcName).size()))
+                if (!geQuorum(passedByDc.get(dcName)
+                                        .size(),
+                        all.get(dcName)
+                           .size()))
                 {
                     allSatisfied = false;
                 }
 
                 // if any of the datacenter has failed quorum locally
-                if (geQuorum(failedByDc.get(dcName).size(), all.get(dcName).size()))
+                if (geQuorum(failedByDc.get(dcName)
+                                       .size(),
+                        all.get(dcName)
+                           .size()))
                 {
                     anyFailed = true;
                 }
@@ -247,18 +260,16 @@ public class ConsistencyVerifiers
     }
 
     /**
-     * Verifier for consistency level QUORUM
-     * It concludes result
-     * - SATISFIED: quorum instances succeed
-     * - FAILED: quorum instances fail
-     * - PENDING: default
+     * Verifier for consistency level QUORUM It concludes result - SATISFIED: quorum instances succeed - FAILED: quorum instances fail - PENDING: default
      */
     public static class ForQuorum extends BaseVerifier
     {
         public static final ForQuorum INSTANCE = new ForQuorum();
 
         @Override
-        public ConsistencyVerificationResult verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
+        public ConsistencyVerificationResult verify(Set<String> succeeded,
+                                                    Set<String> failed,
+                                                    InstanceSetByDc all)
         {
             if (geQuorum(succeeded.size(), sum(all)))
             {
@@ -275,18 +286,16 @@ public class ConsistencyVerifiers
     }
 
     /**
-     * Verifier for consistency level ALL
-     * It concludes result
-     * - SATISFIED: all instances succeed
-     * - FAILED: one instance fails
-     * - PENDING: default
+     * Verifier for consistency level ALL It concludes result - SATISFIED: all instances succeed - FAILED: one instance fails - PENDING: default
      */
     public static class ForAll extends BaseVerifier
     {
         public static final ForAll INSTANCE = new ForAll();
 
         @Override
-        public ConsistencyVerificationResult verify(Set<String> succeeded, Set<String> failed, InstanceSetByDc all)
+        public ConsistencyVerificationResult verify(Set<String> succeeded,
+                                                    Set<String> failed,
+                                                    InstanceSetByDc all)
         {
             if (succeeded.size() == sum(all))
             {
@@ -303,11 +312,8 @@ public class ConsistencyVerifiers
     }
 
     /**
-     * Verifier for consistency level LOCAL_ONE
-     * It concludes result
-     * - SATISFIED: one instance in local datacenter succeeds
-     * - FAILED: all instances in local datacenter fail
-     * - PENDING: default
+     * Verifier for consistency level LOCAL_ONE It concludes result - SATISFIED: one instance in local datacenter succeeds - FAILED: all instances in local
+     * datacenter fail - PENDING: default
      */
     public static class ForLocalOne extends BaseLocalDcVerifier
     {
@@ -317,7 +323,9 @@ public class ConsistencyVerifiers
         }
 
         @Override
-        protected ConsistencyVerificationResult verifyForLocalDC(InstanceSetByDc localPassed, InstanceSetByDc localFailed, InstanceSetByDc localAll)
+        protected ConsistencyVerificationResult verifyForLocalDC(InstanceSetByDc localPassed,
+                                                                 InstanceSetByDc localFailed,
+                                                                 InstanceSetByDc localAll)
         {
             if (sum(localPassed) > 0)
             {
@@ -334,11 +342,8 @@ public class ConsistencyVerifiers
     }
 
     /**
-     * Verifier for consistency level LOCAL_QUORUM
-     * It concludes result
-     * - SATISFIED: quorum instances in local datacenter succeed
-     * - FAILED: quorum instances in local datacenter fail
-     * - PENDING: default
+     * Verifier for consistency level LOCAL_QUORUM It concludes result - SATISFIED: quorum instances in local datacenter succeed - FAILED: quorum instances in
+     * local datacenter fail - PENDING: default
      */
     public static class ForLocalQuorum extends BaseLocalDcVerifier
     {
@@ -348,7 +353,9 @@ public class ConsistencyVerifiers
         }
 
         @Override
-        protected ConsistencyVerificationResult verifyForLocalDC(InstanceSetByDc localPassed, InstanceSetByDc localFailed, InstanceSetByDc localAll)
+        protected ConsistencyVerificationResult verifyForLocalDC(InstanceSetByDc localPassed,
+                                                                 InstanceSetByDc localFailed,
+                                                                 InstanceSetByDc localAll)
         {
             // Over quorum instances have passed
             if (geQuorum(sum(localPassed), sum(localAll)))
@@ -373,15 +380,16 @@ public class ConsistencyVerifiers
         BaseLocalDcVerifier(String localDatacenter)
         {
             Preconditions.checkArgument(localDatacenter != null && !localDatacenter.isEmpty(),
-                                        "localDatacenter must present for local DC consistency verifier");
+                    "localDatacenter must present for local DC consistency verifier");
             this.localDatacenter = localDatacenter;
         }
 
         @Override
-        public ConsistencyVerificationResult verify(@NotNull Set<String> succeeded, @NotNull Set<String> failed, @NotNull InstanceSetByDc all)
+        public ConsistencyVerificationResult verify(@NotNull Set<String> succeeded,
+                                                    @NotNull Set<String> failed,
+                                                    @NotNull InstanceSetByDc all)
         {
-            Preconditions.checkArgument(all.containsDatacenter(localDatacenter),
-                                        "Parameter 'all' should contain the local datacenter: " + localDatacenter);
+            Preconditions.checkArgument(all.containsDatacenter(localDatacenter), "Parameter 'all' should contain the local datacenter: " + localDatacenter);
             Set<String> localReplicas = all.get(localDatacenter);
             InstanceSetByDc localAll = new InstanceSetByDc(localDatacenter, localReplicas);
             InstanceSetByDc localPassed = filterByDc(succeeded, localDatacenter, localReplicas::contains);

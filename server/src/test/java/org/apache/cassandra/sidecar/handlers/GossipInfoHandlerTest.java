@@ -18,18 +18,15 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.Collections;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -58,25 +55,18 @@ public class GossipInfoHandlerTest extends CommonTest
                   GossipInfoResponse gossipResponse = response.bodyAsJson(GossipInfoResponse.class);
                   assertThat(gossipResponse).isNotNull();
                   GossipInfoResponse.GossipInfo gossipInfo = gossipResponse.get("/127.0.0.1:7000");
-                  assertThat(gossipInfo).isNotNull().hasSize(6);
+                  assertThat(gossipInfo).isNotNull()
+                                        .hasSize(6);
                   assertThat(gossipInfo.generation()).isEqualTo("1668100877");
                   assertThat(gossipInfo.heartbeat()).isEqualTo("242");
                   assertThat(gossipInfo.load()).isEqualTo("88971.0");
-                  assertThat(gossipInfo.statusWithPort())
-                  .isEqualTo("NORMAL,-9223372036854775808");
-                  assertThat(gossipInfo.sstableVersions())
-                  .isEqualTo(Collections.singletonList("big-nb"));
+                  assertThat(gossipInfo.statusWithPort()).isEqualTo("NORMAL,-9223372036854775808");
+                  assertThat(gossipInfo.sstableVersions()).isEqualTo(Collections.singletonList("big-nb"));
                   assertThat(gossipInfo.tokens()).isEqualTo("<hidden>");
                   context.completeNow();
               }));
     }
 
-    private static final String SAMPLE_GOSSIP_INFO =
-    "/127.0.0.1:7000\n" +
-    "  generation:1668100877\n" +
-    "  heartbeat:242\n" +
-    "  LOAD:211:88971.0\n" +
-    "  STATUS_WITH_PORT:19:NORMAL,-9223372036854775808\n" +
-    "  SSTABLE_VERSIONS:6:big-nb\n" +
-    "  TOKENS:18:<hidden>";
+    private static final String SAMPLE_GOSSIP_INFO = "/127.0.0.1:7000\n" + "  generation:1668100877\n" + "  heartbeat:242\n" + "  LOAD:211:88971.0\n"
+            + "  STATUS_WITH_PORT:19:NORMAL,-9223372036854775808\n" + "  SSTABLE_VERSIONS:6:big-nb\n" + "  TOKENS:18:<hidden>";
 }

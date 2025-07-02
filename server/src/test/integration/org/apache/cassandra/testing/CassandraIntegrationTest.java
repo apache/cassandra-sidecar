@@ -23,7 +23,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.function.Consumer;
-
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,7 +31,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * Interface to mark an integration test which should be run against multiple Cassandra versions
  */
 @TestTemplate
-@Target({ ElementType.ANNOTATION_TYPE, ElementType.METHOD })
+@Target({ ElementType.ANNOTATION_TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Tag("integrationTest")
 @ExtendWith(CassandraTestTemplate.class)
@@ -60,8 +59,8 @@ public @interface CassandraIntegrationTest
     int numDcs() default 1;
 
     /**
-     * Returns the number of data directories to use per instance. Cassandra supports multiple data directories
-     * for each instance. Defaults to 1 data directory per instance.
+     * Returns the number of data directories to use per instance. Cassandra supports multiple data directories for each instance. Defaults to 1 data directory
+     * per instance.
      *
      * @return the number of data directories to use per instance
      */
@@ -89,46 +88,42 @@ public @interface CassandraIntegrationTest
     boolean jmx() default true;
 
     /**
-     * Returns whether the native transport protocol is enabled or disabled for the integration test. Defaults to
-     * {@code true}.
+     * Returns whether the native transport protocol is enabled or disabled for the integration test. Defaults to {@code true}.
      *
      * @return whether the native transport protocol is enabled or disabled for the integration test
      */
     boolean nativeTransport() default true;
 
     /**
-     * Return whether the cluster should be started before the test begins.
-     * It may be necessary to delay start/start in a thread if using ByteBuddy-based
+     * Return whether the cluster should be started before the test begins. It may be necessary to delay start/start in a thread if using ByteBuddy-based
      * interception of cluster startup.
+     *
      * @return true, if the cluster should be started before the test starts, false otherwise
      */
     boolean startCluster() default true;
 
     /**
-     * Return whether the cluster should be built, or to simply add the cluster builder to the context.
-     * This may be useful in cases where the test requires more complex cluster startup.
-     * If false, the test should take an instance of {@link ConfigurableCassandraTestContext}
-     *     and call {@link ConfigurableCassandraTestContext#configureCluster(Consumer)}
-     *     or {@link ConfigurableCassandraTestContext#configureAndStartCluster(Consumer)} to get the cluster.
-     *     NOTE: This cluster object must be closed by the test as the framework doesn't have access to it.
-     * If true (the default), the test should take an instance of {@link CassandraTestContext}
-     *          {@link CassandraTestContext#cluster()} will contain the built cluster.
+     * Return whether the cluster should be built, or to simply add the cluster builder to the context. This may be useful in cases where the test requires more
+     * complex cluster startup. If false, the test should take an instance of {@link ConfigurableCassandraTestContext} and call
+     * {@link ConfigurableCassandraTestContext#configureCluster(Consumer)} or {@link ConfigurableCassandraTestContext#configureAndStartCluster(Consumer)} to get
+     * the cluster. NOTE: This cluster object must be closed by the test as the framework doesn't have access to it. If true (the default), the test should take
+     * an instance of {@link CassandraTestContext} {@link CassandraTestContext#cluster()} will contain the built cluster.
+     *
      * @return true if the cluster should be built by the test framework, false otherwise
      */
     boolean buildCluster() default true;
 
     /**
-     * If the integration test does not need to be run on each version of Cassandra, set this to false
-     *      and it will be run only on the first version specified.
-     * @return true if the test should be run on all tested versions of Cassandra,
-     *         false if it should be run on the first version.
+     * If the integration test does not need to be run on each version of Cassandra, set this to false and it will be run only on the first version specified.
+     *
+     * @return true if the test should be run on all tested versions of Cassandra, false if it should be run on the first version.
      */
     boolean versionDependent() default true;
 
     /**
      * AuthMode set for Cassandra cluster. Cassandra is started with required authenticator depending on the mode.
-     * @return AuthMode selected for the cluster. Possible options are {@code AuthMode.NONE}, {@code AuthMode.PASSWORD}
-     * {@code AuthMode.MUTUAL_TLS}
+     *
+     * @return AuthMode selected for the cluster. Possible options are {@code AuthMode.NONE}, {@code AuthMode.PASSWORD} {@code AuthMode.MUTUAL_TLS}
      */
     AuthMode authMode() default AuthMode.NONE;
 
@@ -136,6 +131,7 @@ public @interface CassandraIntegrationTest
      * Enables SSL for Cassandra cluster when set to true
      *
      * Note: enabledSsl is not required when AuthMode is set to {@code AuthMode.MUTUAL_TLS}
+     *
      * @return whether SSL is enabled for Cassandra cluster
      */
     boolean enableSsl() default false;

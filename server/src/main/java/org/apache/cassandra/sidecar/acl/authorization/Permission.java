@@ -18,10 +18,9 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.Set;
-
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.OrAuthorization;
+import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -49,11 +48,11 @@ public interface Permission
     Authorization toAuthorization(String resource);
 
     /**
-     * User authorization created with expanded resources of given resource scope. When no resource scope is set,
-     * {@link Authorization} is created with just permission {@link #name}
+     * User authorization created with expanded resources of given resource scope. When no resource scope is set, {@link Authorization} is created with just
+     * permission {@link #name}
      *
-     * @return {@link Authorization} created with expanded resources of associated resource scope, when expanded
-     * resources are empty, {@link Authorization} is created with permission {@link #name}
+     * @return {@link Authorization} created with expanded resources of associated resource scope, when expanded resources are empty, {@link Authorization} is
+     *         created with permission {@link #name}
      */
     default Authorization toAuthorization()
     {
@@ -63,10 +62,10 @@ public interface Permission
     /**
      * User authorization created with eligible resources.
      *
-     * @param eligibleResources authorization is created with all the eligible resources, so that if user holds grant
-     *                          for <b>any</b> of the eligibleResources, then they are granted access
-     * @return {@link Authorization} created with given eligibleResources, when empty list is passed
-     * {@link Authorization} is created with just permission {@link #name}.
+     * @param eligibleResources authorization is created with all the eligible resources, so that if user holds grant for <b>any</b> of the eligibleResources,
+     *            then they are granted access
+     * @return {@link Authorization} created with given eligibleResources, when empty list is passed {@link Authorization} is created with just permission
+     *         {@link #name}.
      */
     default Authorization toAuthorization(Set<String> eligibleResources)
     {

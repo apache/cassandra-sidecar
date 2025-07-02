@@ -48,8 +48,7 @@ public final class ApiEndpointsV1
     public static final String PER_TABLE = "/tables/" + TABLE_PATH_PARAM;
     public static final String PER_SNAPSHOT = "/snapshots/" + SNAPSHOT_PATH_PARAM;
     public static final String PER_COMPONENT = "/components/" + COMPONENT_PATH_PARAM;
-    public static final String PER_SECONDARY_INDEX_COMPONENT = "/components/" + INDEX_PATH_PARAM
-                                                               + "/" + COMPONENT_PATH_PARAM;
+    public static final String PER_SECONDARY_INDEX_COMPONENT = "/components/" + INDEX_PATH_PARAM + "/" + COMPONENT_PATH_PARAM;
     public static final String PER_UPLOAD = "/uploads/" + UPLOAD_ID_PATH_PARAM;
 
     public static final String HEALTH_ROUTE = API_V1 + HEALTH;
@@ -63,20 +62,16 @@ public final class ApiEndpointsV1
     public static final String CASSANDRA_NATIVE_HEALTH_ROUTE = CASSANDRA_NATIVE_ROUTE + HEALTH;
     public static final String CASSANDRA_JMX_HEALTH_ROUTE = API_V1 + CASSANDRA + JMX + HEALTH;
 
-    @Deprecated  // NOTE: Uses singular forms of "keyspace" and "table"
-    public static final String DEPRECATED_SNAPSHOTS_ROUTE = API_V1 + "/keyspace/" + KEYSPACE_PATH_PARAM +
-                                                            "/table/" + TABLE_PATH_PARAM +
-                                                            PER_SNAPSHOT;
+    @Deprecated // NOTE: Uses singular forms of "keyspace" and "table"
+    public static final String DEPRECATED_SNAPSHOTS_ROUTE = API_V1 + "/keyspace/" + KEYSPACE_PATH_PARAM + "/table/" + TABLE_PATH_PARAM + PER_SNAPSHOT;
     @Deprecated
-    public static final String DEPRECATED_COMPONENTS_ROUTE = DEPRECATED_SNAPSHOTS_ROUTE +
-                                                             "/component/" + COMPONENT_PATH_PARAM;
+    public static final String DEPRECATED_COMPONENTS_ROUTE = DEPRECATED_SNAPSHOTS_ROUTE + "/component/" + COMPONENT_PATH_PARAM;
 
     // Replaces DEPRECATED_SNAPSHOT_ROUTE
     public static final String SNAPSHOTS_ROUTE = API_V1 + PER_KEYSPACE + PER_TABLE + PER_SNAPSHOT;
     // Replaces DEPRECATED_COMPONENTS_ROUTE
     public static final String COMPONENTS_ROUTE = SNAPSHOTS_ROUTE + PER_COMPONENT;
-    public static final String COMPONENTS_WITH_SECONDARY_INDEX_ROUTE_SUPPORT = SNAPSHOTS_ROUTE
-                                                                               + PER_SECONDARY_INDEX_COMPONENT;
+    public static final String COMPONENTS_WITH_SECONDARY_INDEX_ROUTE_SUPPORT = SNAPSHOTS_ROUTE + PER_SECONDARY_INDEX_COMPONENT;
 
     @Deprecated
     public static final String DEPRECATED_ALL_KEYSPACES_SCHEMA_ROUTE = API_V1 + "/schema/keyspaces";
@@ -142,7 +137,6 @@ public final class ApiEndpointsV1
     public static final String STREAM_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/streams";
     public static final String TABLE_STATS_ROUTE = API_V1 + CASSANDRA + PER_KEYSPACE + PER_TABLE + "/stats";
 
-
     // Live Migration APIs
     public static final String LIVE_MIGRATION_API_PREFIX = API_V1 + "/live-migration";
 
@@ -151,11 +145,10 @@ public final class ApiEndpointsV1
     public static final String DIR_TYPE_PARAM = "dirType";
     public static final String DIR_INDEX_PARAM = "dirIndex";
     // API endpoint allows files transfer of specific directories handled by Cassandra during live migration operation.
-    // dirType path parameter    : The type of directory (data, commitlog, etc.)
-    // dirIndex path parameter   : The index of the directory
+    // dirType path parameter : The type of directory (data, commitlog, etc.)
+    // dirIndex path parameter : The index of the directory
     // The remaining path ('/*') : Represents the relative path within the specified directory
-    public static final String LIVE_MIGRATION_FILE_TRANSFER_API = LIVE_MIGRATION_FILES_API + "/:" + DIR_TYPE_PARAM
-                                                                  + "/:" + DIR_INDEX_PARAM + "/*";
+    public static final String LIVE_MIGRATION_FILE_TRANSFER_API = LIVE_MIGRATION_FILES_API + "/:" + DIR_TYPE_PARAM + "/:" + DIR_INDEX_PARAM + "/*";
 
     private ApiEndpointsV1()
     {

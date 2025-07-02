@@ -31,9 +31,11 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 class SnapshotPathBuilderTest extends AbstractSnapshotPathBuilderTest
 {
     @Override
-    public SnapshotPathBuilder initialize(Vertx vertx, ServiceConfiguration serviceConfiguration,
+    public SnapshotPathBuilder initialize(Vertx vertx,
+                                          ServiceConfiguration serviceConfiguration,
                                           InstancesMetadata instancesMetadata,
-                                          CassandraInputValidator validator, ExecutorPools executorPools)
+                                          CassandraInputValidator validator,
+                                          ExecutorPools executorPools)
     {
         return new SnapshotPathBuilder(vertx, instancesMetadata, validator, executorPools);
     }

@@ -18,18 +18,16 @@
 
 package org.apache.cassandra.sidecar;
 
+import io.vertx.core.Vertx;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.WorkerPoolConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.WorkerPoolConfigurationImpl;
-
 import static org.apache.cassandra.sidecar.config.ServiceConfiguration.INTERNAL_POOL;
 import static org.apache.cassandra.sidecar.config.ServiceConfiguration.SERVICE_POOL;
 
@@ -40,22 +38,21 @@ public class ExecutorPoolsHelper
 {
     public static ExecutorPools createdSharedTestPool(Vertx vertx)
     {
-        ServiceConfiguration serviceConfiguration
-        = TestServiceConfiguration.builder()
-                                  .workerPoolsConfiguration(buildTestWorkerPoolConfiguration())
-                                  .build();
+        ServiceConfiguration serviceConfiguration = TestServiceConfiguration.builder()
+                                                                            .workerPoolsConfiguration(buildTestWorkerPoolConfiguration())
+                                                                            .build();
         return new ExecutorPools(vertx, serviceConfiguration);
     }
 
     public static Map<String, WorkerPoolConfiguration> buildTestWorkerPoolConfiguration()
     {
-        WorkerPoolConfiguration workerPoolConf = new WorkerPoolConfigurationImpl("test-pool",
-                                                                                 20,
-                                                                                 MillisecondBoundConfiguration.parse("30s"));
+        WorkerPoolConfiguration workerPoolConf = new WorkerPoolConfigurationImpl("test-pool", 20, MillisecondBoundConfiguration.parse("30s"));
         return Collections.unmodifiableMap(new HashMap<String, WorkerPoolConfiguration>()
-        {{
-            put(SERVICE_POOL, workerPoolConf);
-            put(INTERNAL_POOL, workerPoolConf);
-        }});
+        {
+            {
+                put(SERVICE_POOL, workerPoolConf);
+                put(INTERNAL_POOL, workerPoolConf);
+            }
+        });
     }
 }

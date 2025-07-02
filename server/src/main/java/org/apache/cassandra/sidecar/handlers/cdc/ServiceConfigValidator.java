@@ -29,9 +29,8 @@ import org.apache.cassandra.sidecar.common.request.Service;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * Certain validations on payload and services have to be done before updating or deleting
- * configs for services in "configs" table. {@link ServiceConfigValidator} has static
- * utility methods for some of those validations.
+ * Certain validations on payload and services have to be done before updating or deleting configs for services in "configs" table.
+ * {@link ServiceConfigValidator} has static utility methods for some of those validations.
  */
 @Singleton
 public class ServiceConfigValidator
@@ -44,10 +43,11 @@ public class ServiceConfigValidator
         }
         catch (Exception e)
         {
-            Set<String> services = Stream.of(Service.values()).map(v -> v.serviceName).collect(Collectors.toSet());
+            Set<String> services = Stream.of(Service.values())
+                                         .map(v -> v.serviceName)
+                                         .collect(Collectors.toSet());
             String supportedServices = String.join(", ", services);
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid service provided. Supported services: "
-                    + supportedServices);
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid service provided. Supported services: " + supportedServices);
         }
     }
 
@@ -55,7 +55,8 @@ public class ServiceConfigValidator
     {
         try
         {
-            payload.getJsonObject(ConfigPayloadParams.CONFIG).getMap();
+            payload.getJsonObject(ConfigPayloadParams.CONFIG)
+                   .getMap();
         }
         catch (ClassCastException ex)
         {
@@ -67,8 +68,7 @@ public class ServiceConfigValidator
     {
         if (!payload.containsKey(ConfigPayloadParams.CONFIG))
         {
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid request payload. "
-                    + "config needs to be passed");
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid request payload. " + "config needs to be passed");
         }
     }
 }

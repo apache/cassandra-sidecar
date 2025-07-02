@@ -55,14 +55,8 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         UpgradeableCluster cluster = cassandraTestContext.cluster();
 
         createTestKeyspace(Map.of("datacenter1", 2));
-        QualifiedTableName tableName = createTestTable(
-        "CREATE TABLE %s ( \n" +
-        "  race_year int, \n" +
-        "  race_name text, \n" +
-        "  cyclist_name text, \n" +
-        "  rank int, \n" +
-        "  PRIMARY KEY ((race_year, race_name), rank) \n" +
-        ");");
+        QualifiedTableName tableName = createTestTable("CREATE TABLE %s ( \n" + "  race_year int, \n" + "  race_name text, \n" + "  cyclist_name text, \n"
+                + "  rank int, \n" + "  PRIMARY KEY ((race_year, race_name), rank) \n" + ");");
         // craft inconsistency for repair
         populateDataAtNode2Only(cluster, tableName);
 
@@ -89,18 +83,21 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
                                   QualifiedTableName tableName,
                                   AtomicReference<RuntimeException> nodetoolError)
     {
-        startAsync("Repairing node" + node.config().num(),
-                   () -> {
-                       Uninterruptibles.awaitUninterruptibly(testStart);
-                       try
-                       {
-                           node.nodetoolResult("repair", tableName.keyspace(), tableName.tableName(), "--full").asserts().success();
-                       }
-                       catch (Throwable cause)
-                       {
-                           nodetoolError.set(new RuntimeException("Nodetool failed", cause));
-                       }
-                   });
+        startAsync("Repairing node" + node.config()
+                                          .num(),
+                () -> {
+                    Uninterruptibles.awaitUninterruptibly(testStart);
+                    try
+                    {
+                        node.nodetoolResult("repair", tableName.keyspace(), tableName.tableName(), "--full")
+                            .asserts()
+                            .success();
+                    }
+                    catch (Throwable cause)
+                    {
+                        nodetoolError.set(new RuntimeException("Nodetool failed", cause));
+                    }
+                });
     }
 
     private void streamStats(TestState testState)
@@ -108,8 +105,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         String testRoute = "/api/v1/cassandra/stats/streams";
         StreamStatsResponse streamStatsResponse = getBlocking(client.get(server.actualPort(), "127.0.0.1", testRoute)
                                                                     .expect(ResponsePredicate.SC_OK)
-                                                                    .send())
-                                                  .bodyAsJson(StreamStatsResponse.class);
+                                                                    .send()).bodyAsJson(StreamStatsResponse.class);
         assertThat(streamStatsResponse).isNotNull();
         StreamsProgressStats streamProgress = streamStatsResponse.streamsProgressStats();
         assertThat(streamProgress).isNotNull();
@@ -138,26 +134,26 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
 
         void assertCompletion()
         {
-            assertThat(streamStarted)
-            .describedAs("Expecting to have non-empty stream stats. last stats: " + lastStats)
-            .isTrue();
-            assertThat(streamCompleted)
-            .describedAs("Expecting to complete. last stats: " + lastStats)
-            .isTrue();
+            assertThat(streamStarted).describedAs("Expecting to have non-empty stream stats. last stats: " + lastStats)
+                                     .isTrue();
+            assertThat(streamCompleted).describedAs("Expecting to complete. last stats: " + lastStats)
+                                       .isTrue();
         }
     }
 
-    void populateDataAtNode2Only(UpgradeableCluster cluster, QualifiedTableName tableName)
+    void populateDataAtNode2Only(UpgradeableCluster cluster,
+                                 QualifiedTableName tableName)
     {
         // disable compaction for the table to have more files to stream
         cluster.stream()
                .forEach(node -> node.nodetoolResult("disableautocompaction", tableName.keyspace(), tableName.tableName())
-                                    .asserts().success());
+                                    .asserts()
+                                    .success());
         IInstance node = cluster.get(2);
         for (int i = 1; i <= 200; i++)
         {
-            node.executeInternal("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
-                                 "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', " + i + ", 'Benjamin PRADES');");
+            node.executeInternal("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) "
+                    + "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', " + i + ", 'Benjamin PRADES');");
             node.flush(TEST_KEYSPACE);
         }
     }

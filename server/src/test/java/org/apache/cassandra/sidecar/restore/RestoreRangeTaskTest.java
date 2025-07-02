@@ -113,12 +113,17 @@ class RestoreRangeTaskTest
         when(instanceMetadata.id()).thenReturn(1);
         when(instanceMetadata.host()).thenReturn("host-1");
         when(instanceMetadata.metrics()).thenReturn(new InstanceMetricsImpl(registry(1)));
-        when(instanceMetadata.delegate().localStorageBroadcastAddress()).thenReturn(new InetSocketAddress(9043));
+        when(instanceMetadata.delegate()
+                             .localStorageBroadcastAddress()).thenReturn(new InetSocketAddress(9043));
         InstanceMetadataFetcher mockInstanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
         when(mockInstanceMetadataFetcher.instance(1)).thenReturn(instanceMetadata);
         RestoreSlice slice = RestoreSlice.builder()
-                                         .sliceId("testing-slice").storageKey("storage-key").keyspace("test_ks").table("test_tbl")
-                                         .startToken(BigInteger.ONE).endToken(BigInteger.TEN)
+                                         .sliceId("testing-slice")
+                                         .storageKey("storage-key")
+                                         .keyspace("test_ks")
+                                         .table("test_tbl")
+                                         .startToken(BigInteger.ONE)
+                                         .endToken(BigInteger.TEN)
                                          .build();
         RestoreRange range = RestoreRange.builderFromSlice(slice)
                                          .stageDirectory(Paths.get("."), "upload-id")
@@ -143,7 +148,10 @@ class RestoreRangeTaskTest
     void clear()
     {
         SharedMetricRegistries.clear();
-        TestResourceReaper.create().with(executorPools).with(vertx).close();
+        TestResourceReaper.create()
+                          .with(executorPools)
+                          .with(vertx)
+                          .close();
     }
 
     @Test
@@ -153,32 +161,42 @@ class RestoreRangeTaskTest
         HeadObjectResponse headObjectResponse = mock(HeadObjectResponse.class);
         when(headObjectResponse.contentLength()).thenReturn(1L);
         when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(headObjectResponse));
-        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
-        .thenReturn(Future.succeededFuture(new File(".")));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class))).thenReturn(Future.succeededFuture(new File(".")));
         RestoreRangeTask task = createTask(mockRange, job);
 
         Promise<RestoreRange> promise = Promise.promise();
         task.handle(promise);
         getBlocking(promise.future()); // no error is thrown
 
-        assertThat(mockRange.hasStaged())
-        .describedAs("hasStaged should only be set by sidecar-managed restore job")
-        .isFalse();
-        assertThat(mockRange.hasImported())
-        .describedAs("Succeeded range should result in hasImported state")
-        .isTrue();
+        assertThat(mockRange.hasStaged()).describedAs("hasStaged should only be set by sidecar-managed restore job")
+                                         .isFalse();
+        assertThat(mockRange.hasImported()).describedAs("Succeeded range should result in hasImported state")
+                                           .isTrue();
         // assert on the stats collected
-        InstanceRestoreMetrics instanceRestoreMetrics = metrics.instance(1).restore();
-        assertThat(metrics.server().restore().sliceReplicationTime.metric.getSnapshot().getValues()).hasSize(1);
-        assertThat(metrics.server().restore().sliceReplicationTime.metric.getSnapshot().getValues()[0]).isPositive();
-        assertThat(instanceRestoreMetrics.sliceDownloadTime.metric.getSnapshot().getValues()).hasSize(1);
-        assertThat(instanceRestoreMetrics.sliceDownloadTime.metric.getSnapshot().getValues()[0]).isPositive();
-        assertThat(instanceRestoreMetrics.sliceUnzipTime.metric.getSnapshot().getValues()).hasSize(1);
-        assertThat(instanceRestoreMetrics.sliceUnzipTime.metric.getSnapshot().getValues()[0]).isPositive();
-        assertThat(instanceRestoreMetrics.sliceValidationTime.metric.getSnapshot().getValues()).hasSize(1);
-        assertThat(instanceRestoreMetrics.sliceValidationTime.metric.getSnapshot().getValues()[0]).isPositive();
-        assertThat(instanceRestoreMetrics.sliceImportTime.metric.getSnapshot().getValues()).hasSize(1);
-        assertThat(instanceRestoreMetrics.sliceImportTime.metric.getSnapshot().getValues()[0]).isPositive();
+        InstanceRestoreMetrics instanceRestoreMetrics = metrics.instance(1)
+                                                               .restore();
+        assertThat(metrics.server()
+                          .restore().sliceReplicationTime.metric.getSnapshot()
+                                                                .getValues()).hasSize(1);
+        assertThat(metrics.server()
+                          .restore().sliceReplicationTime.metric.getSnapshot()
+                                                                .getValues()[0]).isPositive();
+        assertThat(instanceRestoreMetrics.sliceDownloadTime.metric.getSnapshot()
+                                                                  .getValues()).hasSize(1);
+        assertThat(instanceRestoreMetrics.sliceDownloadTime.metric.getSnapshot()
+                                                                  .getValues()[0]).isPositive();
+        assertThat(instanceRestoreMetrics.sliceUnzipTime.metric.getSnapshot()
+                                                               .getValues()).hasSize(1);
+        assertThat(instanceRestoreMetrics.sliceUnzipTime.metric.getSnapshot()
+                                                               .getValues()[0]).isPositive();
+        assertThat(instanceRestoreMetrics.sliceValidationTime.metric.getSnapshot()
+                                                                    .getValues()).hasSize(1);
+        assertThat(instanceRestoreMetrics.sliceValidationTime.metric.getSnapshot()
+                                                                    .getValues()[0]).isPositive();
+        assertThat(instanceRestoreMetrics.sliceImportTime.metric.getSnapshot()
+                                                                .getValues()).hasSize(1);
+        assertThat(instanceRestoreMetrics.sliceImportTime.metric.getSnapshot()
+                                                                .getValues()[0]).isPositive();
     }
 
     @Test
@@ -187,18 +205,19 @@ class RestoreRangeTaskTest
         RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
         // the existence of the slice is already confirmed by the s3 client
         when(mockRange.existsOnS3()).thenReturn(true);
-        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
-        .thenReturn(Future.succeededFuture(new File(".")));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class))).thenReturn(Future.succeededFuture(new File(".")));
         RestoreRangeTask task = createTask(mockRange, job);
 
         Promise<RestoreRange> promise = Promise.promise();
         task.handle(promise);
         getBlocking(promise.future()); // no error is thrown
 
-        assertThat(metrics.server().restore().sliceReplicationTime.metric.getSnapshot().getValues())
-        .describedAs("The replication time of the slice has been captured when confirming the existence." +
-                     "It should not be captured again in this run.")
-        .isEmpty();
+        assertThat(metrics.server()
+                          .restore().sliceReplicationTime.metric.getSnapshot()
+                                                                .getValues()).describedAs(
+                                                                        "The replication time of the slice has been captured when confirming the existence."
+                                                                                + "It should not be captured again in this run.")
+                                                                             .isEmpty();
         assertThat(mockRange.hasStaged()).isFalse();
         assertThat(mockRange.hasImported()).isTrue();
     }
@@ -213,9 +232,8 @@ class RestoreRangeTaskTest
         Promise<RestoreRange> promise = Promise.promise();
         task.handle(promise);
 
-        assertThatThrownBy(() -> getBlocking(promise.future()))
-        .hasRootCauseExactlyInstanceOf(RestoreJobFatalException.class)
-        .hasMessageContaining("Restore range is cancelled");
+        assertThatThrownBy(() -> getBlocking(promise.future())).hasRootCauseExactlyInstanceOf(RestoreJobFatalException.class)
+                                                               .hasMessageContaining("Restore range is cancelled");
         assertThat(mockRange.hasStaged()).isFalse();
         assertThat(mockRange.hasImported()).isFalse();
     }
@@ -231,9 +249,8 @@ class RestoreRangeTaskTest
 
         Promise<RestoreRange> promise = Promise.promise();
         task.handle(promise);
-        assertThatThrownBy(() -> getBlocking(promise.future()))
-        .hasRootCauseExactlyInstanceOf(RestoreJobException.class) // NOT a fatal exception
-        .hasMessageContaining("Object not found");
+        assertThatThrownBy(() -> getBlocking(promise.future())).hasRootCauseExactlyInstanceOf(RestoreJobException.class) // NOT a fatal exception
+                                                               .hasMessageContaining("Object not found");
         assertThat(mockRange.hasStaged()).isFalse();
         assertThat(mockRange.hasImported()).isFalse();
     }
@@ -243,14 +260,16 @@ class RestoreRangeTaskTest
     {
         // test specific setup
         RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGE_READY));
-        doReturn(true).when(job).isManagedBySidecar();
-        doReturn(job).when(mockRange).job();
-        doReturn(Paths.get("nonexist")).when(mockRange).stagedObjectPath();
+        doReturn(true).when(job)
+                      .isManagedBySidecar();
+        doReturn(job).when(mockRange)
+                     .job();
+        doReturn(Paths.get("nonexist")).when(mockRange)
+                                       .stagedObjectPath();
         HeadObjectResponse headObjectResponse = mock(HeadObjectResponse.class);
         when(headObjectResponse.contentLength()).thenReturn(1L);
         when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(headObjectResponse));
-        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
-        .thenReturn(Future.succeededFuture(new File(".")));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class))).thenReturn(Future.succeededFuture(new File(".")));
         RestoreRangeTask task = createTask(mockRange, job);
 
         Promise<RestoreRange> promise = Promise.promise();
@@ -269,15 +288,16 @@ class RestoreRangeTaskTest
     {
         // test specific setup
         RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGE_READY));
-        doReturn(true).when(job).isManagedBySidecar();
-        doReturn(job).when(mockRange).job();
+        doReturn(true).when(job)
+                      .isManagedBySidecar();
+        doReturn(job).when(mockRange)
+                     .job();
         Path stagedPath = testFolder.resolve("slice.zip");
         Files.createFile(stagedPath);
         when(mockRange.stagedObjectPath()).thenReturn(stagedPath);
-        when(mockStorageClient.objectExists(mockRange))
-        .thenThrow(new RuntimeException("Should not call this method"));
-        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
-        .thenThrow(new RuntimeException("Should not call this method"));
+        when(mockStorageClient.objectExists(mockRange)).thenThrow(new RuntimeException("Should not call this method"));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class))).thenThrow(
+                new RuntimeException("Should not call this method"));
         RestoreRangeTask task = createTask(mockRange, job);
 
         Promise<RestoreRange> promise = Promise.promise();
@@ -296,9 +316,12 @@ class RestoreRangeTaskTest
     {
         // test specific setup
         RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.IMPORT_READY));
-        doReturn(true).when(job).isManagedBySidecar();
-        doReturn(job).when(mockRange).job();
-        doReturn(true).when(mockRange).hasStaged();
+        doReturn(true).when(job)
+                      .isManagedBySidecar();
+        doReturn(job).when(mockRange)
+                     .job();
+        doReturn(true).when(mockRange)
+                      .hasStaged();
         RestoreRangeTask task = createTask(mockRange, job);
 
         Promise<RestoreRange> promise = Promise.promise();
@@ -316,15 +339,18 @@ class RestoreRangeTaskTest
     {
         // test specific setup
         RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.IMPORT_READY));
-        doReturn(true).when(job).isManagedBySidecar();
-        doReturn(job).when(mockRange).job();
-        doReturn(false).when(mockRange).hasStaged();
-        doReturn(Paths.get("nonexist")).when(mockRange).stagedObjectPath();
+        doReturn(true).when(job)
+                      .isManagedBySidecar();
+        doReturn(job).when(mockRange)
+                     .job();
+        doReturn(false).when(mockRange)
+                       .hasStaged();
+        doReturn(Paths.get("nonexist")).when(mockRange)
+                                       .stagedObjectPath();
         HeadObjectResponse headObjectResponse = mock(HeadObjectResponse.class);
         when(headObjectResponse.contentLength()).thenReturn(1L);
         when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(headObjectResponse));
-        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
-        .thenReturn(Future.succeededFuture(new File(".")));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class))).thenReturn(Future.succeededFuture(new File(".")));
         RestoreRangeTask task = createTask(mockRange, job);
 
         Promise<RestoreRange> promise = Promise.promise();
@@ -371,10 +397,9 @@ class RestoreRangeTaskTest
         RestoreRangeTask task = createTask(mockRange, job);
         task.handle(promise);
 
-        assertThatThrownBy(() -> getBlocking(promise.future()))
-        .satisfies(throwable -> assertThat(ThrowableUtils.getCause(throwable, RestoreJobException.class))
-                                .hasCauseInstanceOf(RuntimeException.class)
-                                .hasMessage("Random exception"));
+        assertThatThrownBy(() -> getBlocking(promise.future())).satisfies(
+                throwable -> assertThat(ThrowableUtils.getCause(throwable, RestoreJobException.class)).hasCauseInstanceOf(RuntimeException.class)
+                                                                                                      .hasMessage("Random exception"));
     }
 
     @Test
@@ -387,18 +412,16 @@ class RestoreRangeTaskTest
         HeadObjectResponse headObjectResponse = mock(HeadObjectResponse.class);
         when(headObjectResponse.contentLength()).thenReturn(1L);
         when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(headObjectResponse));
-        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
-        .thenThrow(new RuntimeException("Random exception"));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class))).thenThrow(new RuntimeException("Random exception"));
 
         Promise<RestoreRange> promise = Promise.promise();
 
         RestoreRangeTask task = createTask(mockRange, job);
         task.handle(promise);
 
-        assertThatThrownBy(() -> getBlocking(promise.future()))
-        .satisfies(throwable -> assertThat(ThrowableUtils.getCause(throwable, RestoreJobException.class))
-                                .hasCauseInstanceOf(RuntimeException.class)
-                                .hasMessage("Random exception"));
+        assertThatThrownBy(() -> getBlocking(promise.future())).satisfies(
+                throwable -> assertThat(ThrowableUtils.getCause(throwable, RestoreJobException.class)).hasCauseInstanceOf(RuntimeException.class)
+                                                                                                      .hasMessage("Random exception"));
     }
 
     @Test
@@ -413,10 +436,9 @@ class RestoreRangeTaskTest
         RestoreRangeTask task = createTaskWithExceptions(mockRange, job);
         task.handle(promise);
 
-        assertThatThrownBy(() -> getBlocking(promise.future()))
-        .satisfies(throwable -> assertThat(ThrowableUtils.getCause(throwable, RestoreJobException.class))
-                                .hasRootCauseExactlyInstanceOf(RuntimeException.class)
-                                .hasMessage("Random exception"));
+        assertThatThrownBy(() -> getBlocking(promise.future())).satisfies(
+                throwable -> assertThat(ThrowableUtils.getCause(throwable, RestoreJobException.class)).hasRootCauseExactlyInstanceOf(RuntimeException.class)
+                                                                                                      .hasMessage("Random exception"));
     }
 
     @Test
@@ -429,18 +451,16 @@ class RestoreRangeTaskTest
         HeadObjectResponse headObjectResponse = mock(HeadObjectResponse.class);
         when(headObjectResponse.contentLength()).thenReturn(1L);
         when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(headObjectResponse));
-        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
-        .thenReturn(Future.succeededFuture(null));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class))).thenReturn(Future.succeededFuture(null));
 
         Promise<RestoreRange> promise = Promise.promise();
 
         RestoreRangeTask task = createTaskWithExceptions(mockRange, job);
         task.handle(promise);
 
-        assertThatThrownBy(() -> getBlocking(promise.future()))
-        .satisfies(throwable -> assertThat(ThrowableUtils.getCause(throwable, RestoreJobException.class))
-                                .hasCauseInstanceOf(RuntimeException.class)
-                                .hasMessage("Random exception"));
+        assertThatThrownBy(() -> getBlocking(promise.future())).satisfies(
+                throwable -> assertThat(ThrowableUtils.getCause(throwable, RestoreJobException.class)).hasCauseInstanceOf(RuntimeException.class)
+                                                                                                      .hasMessage("Random exception"));
     }
 
     @Test
@@ -464,9 +484,9 @@ class RestoreRangeTaskTest
 
         // the mocked localTokenRangesProvider returns null, so retry later
         RestoreSliceManifest manifest = new RestoreSliceManifest();
-        assertThatThrownBy(() -> task.removeOutOfRangeSSTablesUnsafe(tempDir.toFile(), manifest))
-        .isExactlyInstanceOf(RestoreJobException.class)
-        .hasMessageContaining("Unable to fetch local range, retry later");
+        assertThatThrownBy(() -> task.removeOutOfRangeSSTablesUnsafe(tempDir.toFile(), manifest)).isExactlyInstanceOf(RestoreJobException.class)
+                                                                                                 .hasMessageContaining(
+                                                                                                         "Unable to fetch local range, retry later");
 
         // enclosed in the node's owning range: [1, 10] is fully enclosed in (0, 100]
         // it should not remove the manifest entry, and no cleanup is needed
@@ -475,9 +495,8 @@ class RestoreRangeTaskTest
         nodeRanges.add(new TokenRange(0, 100)); // not using vnode, so a single range
         localRanges.put(1, nodeRanges); // instance id is 1. See setup()
         when(localTokenRangesProvider.localTokenRanges(any())).thenReturn(localRanges);
-        ManifestEntry rangeEnclosed = new ManifestEntry(Collections.emptyMap(),
-                                                        BigInteger.valueOf(1), // start
-                                                        BigInteger.valueOf(10)); // end
+        ManifestEntry rangeEnclosed = new ManifestEntry(Collections.emptyMap(), BigInteger.valueOf(1), // start
+                BigInteger.valueOf(10)); // end
         manifest.put("foo-", rangeEnclosed);
         task.removeOutOfRangeSSTablesUnsafe(tempDir.toFile(), manifest);
         assertThat(manifest).hasSize(1);
@@ -486,9 +505,8 @@ class RestoreRangeTaskTest
         // fully out of range: [-10, 0] is fully out of range of (0, 100]
         // it should remove the manifest entry entirely; no clean up required
         manifest.clear();
-        ManifestEntry outOfRange = new ManifestEntry(Collections.emptyMap(),
-                                                     BigInteger.valueOf(-10), // start
-                                                     BigInteger.valueOf(0)); // end
+        ManifestEntry outOfRange = new ManifestEntry(Collections.emptyMap(), BigInteger.valueOf(-10), // start
+                BigInteger.valueOf(0)); // end
         manifest.put("foo-", outOfRange);
         task.removeOutOfRangeSSTablesUnsafe(tempDir.toFile(), manifest);
         assertThat(manifest).isEmpty();
@@ -497,9 +515,8 @@ class RestoreRangeTaskTest
         // partially out of range: [-10, 10] is partially out of range of (0, 100]
         // it should not remove the manifest entry, but it should signal to request out of range data cleanup
         manifest.clear();
-        ManifestEntry partiallyOutOfRange = new ManifestEntry(Collections.emptyMap(),
-                                                              BigInteger.valueOf(-10), // start
-                                                              BigInteger.valueOf(10)); // end
+        ManifestEntry partiallyOutOfRange = new ManifestEntry(Collections.emptyMap(), BigInteger.valueOf(-10), // start
+                BigInteger.valueOf(10)); // end
         manifest.put("foo-", partiallyOutOfRange);
         task.removeOutOfRangeSSTablesUnsafe(tempDir.toFile(), manifest);
         assertThat(manifest).hasSize(1);
@@ -513,8 +530,10 @@ class RestoreRangeTaskTest
         RestoreRangeTask task = createTask(mockRange, job);
 
         byte[] bytes = "Hello".getBytes(StandardCharsets.UTF_8);
-        File[] testFiles = IntStream.range(0, 10).mapToObj(i -> new File(tempDir.toFile(), "f" + i))
-                                    .map(f -> ThrowableUtils.propagate(() -> Files.write(f.toPath(), bytes)).toFile())
+        File[] testFiles = IntStream.range(0, 10)
+                                    .mapToObj(i -> new File(tempDir.toFile(), "f" + i))
+                                    .map(f -> ThrowableUtils.propagate(() -> Files.write(f.toPath(), bytes))
+                                                            .toFile())
                                     .toArray(File[]::new);
         Map<String, String> expectedChecksums = new HashMap<>(10);
         for (File f : testFiles)
@@ -522,9 +541,8 @@ class RestoreRangeTaskTest
             expectedChecksums.put(f.getName(), util.checksum(f));
         }
 
-        assertThat(expectedChecksums)
-        .hasSize(10)
-        .containsEntry("f0", "f206d28f"); // hash value for "Hello"
+        assertThat(expectedChecksums).hasSize(10)
+                                     .containsEntry("f0", "f206d28f"); // hash value for "Hello"
 
         // it should not throw
         task.compareChecksumsUnsafe(expectedChecksums, testFiles);
@@ -532,16 +550,15 @@ class RestoreRangeTaskTest
         // test check with file that does not exist
         Map<String, String> nonexistFileChecksums = new HashMap<>(10);
         nonexistFileChecksums.put("non-exist-file", "hash");
-        assertThatThrownBy(() -> task.compareChecksumsUnsafe(nonexistFileChecksums, testFiles))
-        .isInstanceOf(RestoreJobFatalException.class)
-        .hasMessageContaining("File not found in manifest");
+        assertThatThrownBy(() -> task.compareChecksumsUnsafe(nonexistFileChecksums, testFiles)).isInstanceOf(RestoreJobFatalException.class)
+                                                                                               .hasMessageContaining("File not found in manifest");
 
         // test check with invalid checksum value
         Map<String, String> invalidChecksums = new HashMap<>(expectedChecksums);
         invalidChecksums.put("f0", "invalid_hash"); // modify the hash of the file
-        assertThatThrownBy(() -> task.compareChecksumsUnsafe(invalidChecksums, testFiles))
-        .isInstanceOf(RestoreJobFatalException.class)
-        .hasMessageContaining("Checksum does not match. Expected: invalid_hash; actual: f206d28f");
+        assertThatThrownBy(() -> task.compareChecksumsUnsafe(invalidChecksums, testFiles)).isInstanceOf(RestoreJobFatalException.class)
+                                                                                          .hasMessageContaining(
+                                                                                                  "Checksum does not match. Expected: invalid_hash; actual: f206d28f");
     }
 
     @Test
@@ -565,109 +582,107 @@ class RestoreRangeTaskTest
         // when zip file is not on disk
         Path absentFile = stagingPath.resolve("none-exist");
         RestoreRange range = RestoreRangeTest.createTestRange(stagingPath, false);
-        RestoreRangeTask task = new TestRestoreRangeTask(range, mockStorageClient, executorPool,
-                                                         mockSSTableImporter, 0, mockRangeAccessor,
-                                                         util, localTokenRangesProvider, metrics);
-        assertThatThrownBy(() -> task.unzipAction(absentFile.toFile()))
-        .isExactlyInstanceOf(RestoreJobException.class)
-        .hasMessage("Object not found from disk. File: " + absentFile);
+        RestoreRangeTask task = new TestRestoreRangeTask(range, mockStorageClient, executorPool, mockSSTableImporter, 0, mockRangeAccessor, util,
+                localTokenRangesProvider, metrics);
+        assertThatThrownBy(() -> task.unzipAction(absentFile.toFile())).isExactlyInstanceOf(RestoreJobException.class)
+                                                                       .hasMessage("Object not found from disk. File: " + absentFile);
 
         // when the (unzipped) target directory already exists, but zip file does not exist.
         // We consider the zip file has been extracted and deleted
-        Path unzipped = range.stageDirectory().resolve(range.keyspace()).resolve(range.table());
+        Path unzipped = range.stageDirectory()
+                             .resolve(range.keyspace())
+                             .resolve(range.table());
         Files.createDirectories(unzipped);
         assertThat(task.unzipAction(absentFile.toFile())).isEqualTo(unzipped.toFile());
         Files.deleteIfExists(unzipped);
 
         // unzip a valid zip
-        Path zipFile = ResourceUtils.writeResourceToPath(RestoreRangeTaskTest.class.getClassLoader(),
-                                                         stagingPath,
-                                                         "test_unzip.zip");
+        Path zipFile = ResourceUtils.writeResourceToPath(RestoreRangeTaskTest.class.getClassLoader(), stagingPath, "test_unzip.zip");
         assertThat(task.unzipAction(zipFile.toFile())).isEqualTo(unzipped.toFile());
         assertThat(Files.exists(unzipped)).isTrue();
-        assertThat(Files.exists(zipFile))
-        .describedAs("zip file should be deleted on completion of the method")
-        .isFalse();
+        assertThat(Files.exists(zipFile)).describedAs("zip file should be deleted on completion of the method")
+                                         .isFalse();
 
-        Path malformedZipFile = ResourceUtils.writeResourceToPath(RestoreRangeTaskTest.class.getClassLoader(),
-                                                                  stagingPath,
-                                                                  "test_unzip_malformed.zip");
-        assertThatThrownBy(() -> task.unzipAction(malformedZipFile.toFile()))
-        .isExactlyInstanceOf(RestoreJobFatalException.class)
-        .hasMessageContaining("Failed to unzip")
-        .hasMessageContaining("Unexpected directory in slice zip file");
+        Path malformedZipFile = ResourceUtils.writeResourceToPath(RestoreRangeTaskTest.class.getClassLoader(), stagingPath, "test_unzip_malformed.zip");
+        assertThatThrownBy(() -> task.unzipAction(malformedZipFile.toFile())).isExactlyInstanceOf(RestoreJobFatalException.class)
+                                                                             .hasMessageContaining("Failed to unzip")
+                                                                             .hasMessageContaining("Unexpected directory in slice zip file");
     }
 
     @Test
     void testValidateFilesAction(@TempDir Path testDir) throws IOException, RestoreJobException
     {
         RestoreRange range = RestoreRangeTest.createTestRange();
-        RestoreRangeTask task = new TestRestoreRangeTask(range, mockStorageClient, executorPool,
-                                                         mockSSTableImporter, 0, mockRangeAccessor,
-                                                         util, localTokenRangesProvider, metrics);
+        RestoreRangeTask task = new TestRestoreRangeTask(range, mockStorageClient, executorPool, mockSSTableImporter, 0, mockRangeAccessor, util,
+                localTokenRangesProvider, metrics);
         // empty manifest file
         Path manifestFile = testDir.resolve(RestoreSliceManifest.MANIFEST_FILE_NAME);
         Files.createFile(manifestFile);
-        assertThatThrownBy(() -> task.validateFilesAction(testDir.toFile()))
-        .isExactlyInstanceOf(RestoreJobFatalException.class)
-        .hasMessageContaining("Unable to read manifest");
+        assertThatThrownBy(() -> task.validateFilesAction(testDir.toFile())).isExactlyInstanceOf(RestoreJobFatalException.class)
+                                                                            .hasMessageContaining("Unable to read manifest");
 
         // manifest has empty json
         Files.write(manifestFile, "{}".getBytes(StandardCharsets.UTF_8));
-        assertThatThrownBy(() -> task.validateFilesAction(testDir.toFile()))
-        .isExactlyInstanceOf(RestoreJobFatalException.class)
-        .hasMessageContaining("The downloaded slice has no data.");
+        assertThatThrownBy(() -> task.validateFilesAction(testDir.toFile())).isExactlyInstanceOf(RestoreJobFatalException.class)
+                                                                            .hasMessageContaining("The downloaded slice has no data.");
 
         // manifest json has more entries than files under the directory
-        String json = "{\"sstable1\":{\"components_checksum\":{\"file1\":\"checksum1\"},\"start_token\":1,\"end_token\":2}," +
-                      "\"sstable2\":{\"components_checksum\":{\"file2\":\"checksum1\"},\"start_token\":1,\"end_token\":2}}";
+        String json = "{\"sstable1\":{\"components_checksum\":{\"file1\":\"checksum1\"},\"start_token\":1,\"end_token\":2},"
+                + "\"sstable2\":{\"components_checksum\":{\"file2\":\"checksum1\"},\"start_token\":1,\"end_token\":2}}";
         Files.write(manifestFile, json.getBytes(StandardCharsets.UTF_8));
-        assertThatThrownBy(() -> task.validateFilesAction(testDir.toFile()))
-        .isExactlyInstanceOf(RestoreJobFatalException.class)
-        .hasMessageContaining("Number of files does not match");
+        assertThatThrownBy(() -> task.validateFilesAction(testDir.toFile())).isExactlyInstanceOf(RestoreJobFatalException.class)
+                                                                            .hasMessageContaining("Number of files does not match");
 
         // checksum does not match
         Path file1 = Files.createFile(testDir.resolve("file1"));
         Path file2 = Files.createFile(testDir.resolve("file2"));
-        assertThatThrownBy(() -> task.validateFilesAction(testDir.toFile()))
-        .isExactlyInstanceOf(RestoreJobFatalException.class)
-        .hasMessageContaining("Checksum does not match");
+        assertThatThrownBy(() -> task.validateFilesAction(testDir.toFile())).isExactlyInstanceOf(RestoreJobFatalException.class)
+                                                                            .hasMessageContaining("Checksum does not match");
 
         // valid case
-        json = "{\"sstable1\":{\"components_checksum\":{\"file1\":\"" + util.checksum(file1.toFile()) + "\"},\"start_token\":1,\"end_token\":2}," +
-               "\"sstable2\":{\"components_checksum\":{\"file2\":\"" + util.checksum(file2.toFile()) + "\"},\"start_token\":1,\"end_token\":2}}";
+        json = "{\"sstable1\":{\"components_checksum\":{\"file1\":\"" + util.checksum(file1.toFile()) + "\"},\"start_token\":1,\"end_token\":2},"
+                + "\"sstable2\":{\"components_checksum\":{\"file2\":\"" + util.checksum(file2.toFile()) + "\"},\"start_token\":1,\"end_token\":2}}";
         Files.write(manifestFile, json.getBytes(StandardCharsets.UTF_8));
         assertThat(task.validateFilesAction(testDir.toFile())).isEqualTo(testDir.toFile());
     }
 
-    private RestoreRangeTask createTask(RestoreRange range, RestoreJob job)
+    private RestoreRangeTask createTask(RestoreRange range,
+                                        RestoreJob job)
     {
         return createTask(range, job, System::nanoTime);
     }
 
-    private RestoreRangeTask createTask(RestoreRange range, RestoreJob job, Supplier<Long> currentNanoTimeSupplier)
+    private RestoreRangeTask createTask(RestoreRange range,
+                                        RestoreJob job,
+                                        Supplier<Long> currentNanoTimeSupplier)
     {
-        doReturn(job).when(range).job();
-        doNothing().when(range).requestOutOfRangeDataCleanup();
+        doReturn(job).when(range)
+                     .job();
+        doNothing().when(range)
+                   .requestOutOfRangeDataCleanup();
         assertThat(range.job()).isSameAs(job);
-        assertThat(range.job().isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
+        assertThat(range.job()
+                        .isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
         assertThat(range.job().status).isEqualTo(job.status);
         RestoreJobUtil spiedUtil = spy(util);
         when(spiedUtil.currentTimeNanos()).thenAnswer(invok -> currentNanoTimeSupplier.get());
-        return new TestRestoreRangeTask(range, mockStorageClient, executorPool, mockSSTableImporter,
-                                        0, mockRangeAccessor, spiedUtil, localTokenRangesProvider, metrics);
+        return new TestRestoreRangeTask(range, mockStorageClient, executorPool, mockSSTableImporter, 0, mockRangeAccessor, spiedUtil, localTokenRangesProvider,
+                metrics);
     }
 
-    private RestoreRangeTask createTaskWithExceptions(RestoreRange range, RestoreJob job)
+    private RestoreRangeTask createTaskWithExceptions(RestoreRange range,
+                                                      RestoreJob job)
     {
-        doReturn(job).when(range).job();
-        doNothing().when(range).requestOutOfRangeDataCleanup();
+        doReturn(job).when(range)
+                     .job();
+        doNothing().when(range)
+                   .requestOutOfRangeDataCleanup();
         assertThat(range.job()).isSameAs(job);
-        assertThat(range.job().isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
+        assertThat(range.job()
+                        .isManagedBySidecar()).isEqualTo(job.isManagedBySidecar());
         assertThat(range.job().status).isEqualTo(job.status);
-        return new TestUnexpectedExceptionInRestoreSliceTask(range, mockStorageClient, executorPool,
-                                                             mockSSTableImporter, 0, mockRangeAccessor,
-                                                             util, localTokenRangesProvider, metrics);
+        return new TestUnexpectedExceptionInRestoreSliceTask(range, mockStorageClient, executorPool, mockSSTableImporter, 0, mockRangeAccessor, util,
+                localTokenRangesProvider, metrics);
     }
 
     static class TestRestoreRangeTask extends RestoreRangeTask
@@ -675,21 +690,26 @@ class RestoreRangeTaskTest
         private final RestoreRange range;
         private final InstanceMetrics instanceMetrics;
 
-        public TestRestoreRangeTask(RestoreRange range, StorageClient s3Client, TaskExecutorPool executorPool,
-                                    SSTableImporter importer, double requiredUsableSpacePercentage,
+        public TestRestoreRangeTask(RestoreRange range,
+                                    StorageClient s3Client,
+                                    TaskExecutorPool executorPool,
+                                    SSTableImporter importer,
+                                    double requiredUsableSpacePercentage,
                                     RestoreRangeDatabaseAccessor rangeDatabaseAccessor,
                                     RestoreJobUtil restoreJobUtil,
                                     LocalTokenRangesProvider localTokenRangesProvider,
                                     SidecarMetrics metrics)
         {
-            super(range, s3Client, executorPool, importer, requiredUsableSpacePercentage,
-                  rangeDatabaseAccessor, restoreJobUtil, localTokenRangesProvider, metrics);
+            super(range, s3Client, executorPool, importer, requiredUsableSpacePercentage, rangeDatabaseAccessor, restoreJobUtil, localTokenRangesProvider,
+                    metrics);
             this.range = range;
-            this.instanceMetrics = metrics.instance(range.owner().id());
+            this.instanceMetrics = metrics.instance(range.owner()
+                                                         .id());
         }
 
         @Override
-        Future<Void> unzipAndImport(File file, Runnable onSuccessCommit)
+        Future<Void> unzipAndImport(File file,
+                                    Runnable onSuccessCommit)
         {
             instanceMetrics.restore().sliceUnzipTime.metric.update(123L, TimeUnit.NANOSECONDS);
             instanceMetrics.restore().sliceValidationTime.metric.update(123L, TimeUnit.NANOSECONDS);
@@ -711,20 +731,22 @@ class RestoreRangeTaskTest
 
     static class TestUnexpectedExceptionInRestoreSliceTask extends RestoreRangeTask
     {
-        public TestUnexpectedExceptionInRestoreSliceTask(RestoreRange range, StorageClient s3Client,
-                                                         TaskExecutorPool executorPool, SSTableImporter importer,
+        public TestUnexpectedExceptionInRestoreSliceTask(RestoreRange range,
+                                                         StorageClient s3Client,
+                                                         TaskExecutorPool executorPool,
+                                                         SSTableImporter importer,
                                                          double requiredUsableSpacePercentage,
                                                          RestoreRangeDatabaseAccessor rangeDatabaseAccessor,
                                                          RestoreJobUtil util,
                                                          LocalTokenRangesProvider localTokenRangesProvider,
                                                          SidecarMetrics metrics)
         {
-            super(range, s3Client, executorPool, importer, requiredUsableSpacePercentage,
-                  rangeDatabaseAccessor, util, localTokenRangesProvider, metrics);
+            super(range, s3Client, executorPool, importer, requiredUsableSpacePercentage, rangeDatabaseAccessor, util, localTokenRangesProvider, metrics);
         }
 
         @Override
-        Future<Void> unzipAndImport(File file, Runnable onSuccessCommit)
+        Future<Void> unzipAndImport(File file,
+                                    Runnable onSuccessCommit)
         {
             throw new RuntimeException("Random exception");
         }

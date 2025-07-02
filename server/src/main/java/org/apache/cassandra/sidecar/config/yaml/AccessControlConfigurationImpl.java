@@ -18,11 +18,10 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
@@ -36,11 +35,11 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
 {
     private static final boolean DEFAULT_ENABLED = false;
     private static final List<ParameterizedClassConfiguration> DEFAULT_AUTHENTICATORS_CONFIGURATION = Collections.emptyList();
-    private static final ParameterizedClassConfiguration DEFAULT_AUTHORIZER_CONFIGURATION
-    = new ParameterizedClassConfigurationImpl(AllowAllAuthorizationProvider.class.getName(), Collections.emptyMap());
+    private static final ParameterizedClassConfiguration DEFAULT_AUTHORIZER_CONFIGURATION = new ParameterizedClassConfigurationImpl(
+            AllowAllAuthorizationProvider.class.getName(), Collections.emptyMap());
     private static final Set<String> DEFAULT_ADMIN_IDENTITIES = Collections.emptySet();
     private static final CacheConfiguration DEFAULT_PERMISSION_CACHE_CONFIGURATION =
-    new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("2h"), 1_000);
+                                                                                   new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("2h"), 1_000);
 
     @JsonProperty(value = "enabled")
     protected final boolean enabled;
@@ -59,8 +58,8 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
 
     public AccessControlConfigurationImpl()
     {
-        this(DEFAULT_ENABLED, DEFAULT_AUTHENTICATORS_CONFIGURATION, DEFAULT_AUTHORIZER_CONFIGURATION,
-             DEFAULT_ADMIN_IDENTITIES, DEFAULT_PERMISSION_CACHE_CONFIGURATION);
+        this(DEFAULT_ENABLED, DEFAULT_AUTHENTICATORS_CONFIGURATION, DEFAULT_AUTHORIZER_CONFIGURATION, DEFAULT_ADMIN_IDENTITIES,
+                DEFAULT_PERMISSION_CACHE_CONFIGURATION);
     }
 
     public AccessControlConfigurationImpl(boolean enabled,

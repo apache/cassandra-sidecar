@@ -23,9 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
-
 import org.apache.cassandra.sidecar.config.MetricsFilteringConfiguration;
-
 import static org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl.EQUALS_TYPE;
 import static org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl.REGEX_TYPE;
 
@@ -48,11 +46,13 @@ public abstract class MetricFilter
         List<MetricFilter> filters = new ArrayList<>();
         for (MetricsFilteringConfiguration filterConfiguration : filterConfigurations)
         {
-            if (filterConfiguration.type().equalsIgnoreCase(REGEX_TYPE))
+            if (filterConfiguration.type()
+                                   .equalsIgnoreCase(REGEX_TYPE))
             {
                 filters.add(new Regex(filterConfiguration.value()));
             }
-            else if (filterConfiguration.type().equalsIgnoreCase(EQUALS_TYPE))
+            else if (filterConfiguration.type()
+                                        .equalsIgnoreCase(EQUALS_TYPE))
             {
                 filters.add(new Equals(filterConfiguration.value()));
             }
@@ -76,7 +76,8 @@ public abstract class MetricFilter
         @Override
         public boolean matches(String name)
         {
-            return pattern.matcher(name).matches();
+            return pattern.matcher(name)
+                          .matches();
         }
     }
 

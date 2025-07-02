@@ -24,11 +24,9 @@ package org.apache.cassandra.sidecar.common.server.exceptions;
 public class JmxAuthenticationException extends RuntimeException
 {
     /**
-     * Constructs a JMX authentication exception with the specified detail
-     * message.
+     * Constructs a JMX authentication exception with the specified detail message.
      *
-     * @param message the detail message (which is saved for later retrieval
-     *                by the {@link #getMessage()} method).
+     * @param message the detail message (which is saved for later retrieval by the {@link #getMessage()} method).
      */
     public JmxAuthenticationException(String message)
     {
@@ -36,16 +34,12 @@ public class JmxAuthenticationException extends RuntimeException
     }
 
     /**
-     * Constructs a JMX authentication exception with the specified cause
-     * and a detail message of {@code (cause==null ? null : cause.toString())}
-     * (which typically contains the class and detail message of
-     * {@code cause}).  This constructor is useful for runtime exceptions
-     * that are little more than wrappers for other throwables.
+     * Constructs a JMX authentication exception with the specified cause and a detail message of {@code (cause==null ? null : cause.toString())} (which
+     * typically contains the class and detail message of {@code cause}). This constructor is useful for runtime exceptions that are little more than wrappers
+     * for other throwables.
      *
-     * @param cause the cause (which is saved for later retrieval by the
-     *              {@link #getCause()} method).  (A {@code null} value is
-     *              permitted, and indicates that the cause is nonexistent or
-     *              unknown.)
+     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method). (A {@code null} value is permitted, and indicates that the
+     *            cause is nonexistent or unknown.)
      */
     public JmxAuthenticationException(Throwable cause)
     {
@@ -53,17 +47,14 @@ public class JmxAuthenticationException extends RuntimeException
     }
 
     /**
-     * Constructs a JMX authentication exception with the specified detail
-     * message and cause.
+     * Constructs a JMX authentication exception with the specified detail message and cause.
      *
-     * @param message the detail message (which is saved for later retrieval
-     *                by the {@link #getMessage()} method).
-     * @param cause   the cause (which is saved for later retrieval by the
-     *                {@link #getCause()} method).  (A {@code null} value is
-     *                permitted, and indicates that the cause is nonexistent or
-     *                unknown.)
+     * @param message the detail message (which is saved for later retrieval by the {@link #getMessage()} method).
+     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method). (A {@code null} value is permitted, and indicates that the
+     *            cause is nonexistent or unknown.)
      */
-    public JmxAuthenticationException(String message, Throwable cause)
+    public JmxAuthenticationException(String message,
+                                      Throwable cause)
     {
         super(message, cause);
     }

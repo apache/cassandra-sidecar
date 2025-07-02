@@ -25,8 +25,7 @@ import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.common.request.Request;
 
 /**
- * A delegate retry policy that executes the Runnable every configured number of requests retries on the
- * configured status code.
+ * A delegate retry policy that executes the Runnable every configured number of requests retries on the configured status code.
  */
 public class RunnableOnStatusCodeRetryPolicy extends RetryPolicy
 {
@@ -36,7 +35,9 @@ public class RunnableOnStatusCodeRetryPolicy extends RetryPolicy
     private final int numberOfEntriesToSkip;
     private final Runnable runnable;
 
-    public RunnableOnStatusCodeRetryPolicy(Runnable runnable, RetryPolicy delegate, int statusCode)
+    public RunnableOnStatusCodeRetryPolicy(Runnable runnable,
+                                           RetryPolicy delegate,
+                                           int statusCode)
     {
         this(runnable, delegate, statusCode, 10);
     }
@@ -64,14 +65,11 @@ public class RunnableOnStatusCodeRetryPolicy extends RetryPolicy
                            boolean canRetryOnADifferentHost,
                            RetryAction retryAction)
     {
-        if (response != null
-            && response.statusCode() == statusCode
-            && recordedAttempts.getAndIncrement() % numberOfEntriesToSkip == 0)
+        if (response != null && response.statusCode() == statusCode && recordedAttempts.getAndIncrement() % numberOfEntriesToSkip == 0)
         {
             runnable.run();
         }
 
-        delegate.onResponse(responseFuture, request, response, throwable, attempts, canRetryOnADifferentHost,
-                            retryAction);
+        delegate.onResponse(responseFuture, request, response, throwable, attempts, canRetryOnADifferentHost, retryAction);
     }
 }

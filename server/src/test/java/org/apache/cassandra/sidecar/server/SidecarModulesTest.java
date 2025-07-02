@@ -34,7 +34,8 @@ class SidecarModulesTest
     @Test
     public void testSidecarVersion()
     {
-        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(new TestModule()));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
+                                                        .with(new TestModule()));
         SidecarVersionProvider sidecarVersionProvider = injector.getInstance(SidecarVersionProvider.class);
 
         String sidecarVersion = sidecarVersionProvider.sidecarVersion();

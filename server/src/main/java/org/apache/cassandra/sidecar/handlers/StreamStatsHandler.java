@@ -43,7 +43,7 @@ public class StreamStatsHandler extends AbstractHandler<Void> implements AccessP
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the metadata fetcher
-     * @param executorPools   executor pools for blocking executions
+     * @param executorPools executor pools for blocking executions
      */
     @Inject
     protected StreamStatsHandler(InstanceMetadataFetcher metadataFetcher,
@@ -73,8 +73,10 @@ public class StreamStatsHandler extends AbstractHandler<Void> implements AccessP
 
         executorPools.service()
                      .executeBlocking(() -> {
-                         String mode = delegate.storageOperations().operationMode();
-                         StreamsProgressStats stats = delegate.metricsOperations().streamsProgressStats();
+                         String mode = delegate.storageOperations()
+                                               .operationMode();
+                         StreamsProgressStats stats = delegate.metricsOperations()
+                                                              .streamsProgressStats();
                          return new StreamStatsResponse(mode, stats);
                      })
                      .onSuccess(context::json)

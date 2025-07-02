@@ -71,8 +71,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     private static final String OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY = "operations_job_sync_response_timeout";
     private static final int DEFAULT_SERVER_VERTICLE_INSTANCES = 1;
     private static final int DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE = 64;
-    private static final MillisecondBoundConfiguration DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME =
-    MillisecondBoundConfiguration.parse("5s");
+    private static final MillisecondBoundConfiguration DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME = MillisecondBoundConfiguration.parse("5s");
     public static final String THROTTLE_PROPERTY = "throttle";
     public static final String SSTABLE_UPLOAD_PROPERTY = "sstable_upload";
     public static final String SSTABLE_IMPORT_PROPERTY = "sstable_import";
@@ -84,16 +83,15 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     private static final String CDC = "cdc";
     private static final String COORDINATION = "coordination";
     public static final String DNS_RESOLVER_PROPERTY = "dns_resolver";
-    protected static final Map<String, WorkerPoolConfiguration> DEFAULT_WORKER_POOLS_CONFIGURATION
-    = Collections.unmodifiableMap(new HashMap<String, WorkerPoolConfiguration>()
-    {{
-        put(SERVICE_POOL, new WorkerPoolConfigurationImpl("sidecar-worker-pool", 20,
-                                                          MillisecondBoundConfiguration.parse("60s")));
+    protected static final Map<String, WorkerPoolConfiguration> DEFAULT_WORKER_POOLS_CONFIGURATION = Collections.unmodifiableMap(
+            new HashMap<String, WorkerPoolConfiguration>()
+            {
+                {
+                    put(SERVICE_POOL, new WorkerPoolConfigurationImpl("sidecar-worker-pool", 20, MillisecondBoundConfiguration.parse("60s")));
 
-        put(INTERNAL_POOL, new WorkerPoolConfigurationImpl("sidecar-internal-worker-pool", 20,
-                                                           MillisecondBoundConfiguration.parse("15m")));
-    }});
-
+                    put(INTERNAL_POOL, new WorkerPoolConfigurationImpl("sidecar-internal-worker-pool", 20, MillisecondBoundConfiguration.parse("15m")));
+                }
+            });
 
     @JsonProperty(value = HOST_PROPERTY, defaultValue = DEFAULT_HOST)
     protected final String host;
@@ -308,8 +306,8 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     {
         if (allowableTimeSkew.compareTo(MinuteBoundConfiguration.parse("1m")) < 0)
         {
-            throw new ConfigurationException(String.format("Invalid %s value (%s). The minimum allowed value is 1 minute (1m)",
-                                                           ALLOWABLE_TIME_SKEW_PROPERTY, allowableTimeSkew));
+            throw new ConfigurationException(
+                    String.format("Invalid %s value (%s). The minimum allowed value is 1 minute (1m)", ALLOWABLE_TIME_SKEW_PROPERTY, allowableTimeSkew));
         }
         this.allowableTimeSkew = allowableTimeSkew;
     }
@@ -487,8 +485,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected SSTableUploadConfiguration sstableUploadConfiguration = new SSTableUploadConfigurationImpl();
         protected SSTableImportConfiguration sstableImportConfiguration = new SSTableImportConfigurationImpl();
         protected SSTableSnapshotConfiguration sstableSnapshotConfiguration = new SSTableSnapshotConfigurationImpl();
-        protected Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration =
-        DEFAULT_WORKER_POOLS_CONFIGURATION;
+        protected Map<String, ? extends WorkerPoolConfiguration> workerPoolsConfiguration = DEFAULT_WORKER_POOLS_CONFIGURATION;
         protected JmxConfiguration jmxConfiguration = new JmxConfigurationImpl();
         protected TrafficShapingConfiguration trafficShapingConfiguration = new TrafficShapingConfigurationImpl();
         protected SchemaKeyspaceConfiguration schemaKeyspaceConfiguration = new SchemaKeyspaceConfigurationImpl();
@@ -606,8 +603,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         }
 
         /**
-         * Sets the {@code operationalJobExecutionMaxWaitTime} and returns a reference to this Builder
-         * enabling method chaining.
+         * Sets the {@code operationalJobExecutionMaxWaitTime} and returns a reference to this Builder enabling method chaining.
          *
          * @param operationalJobExecutionMaxWaitTime the {@code operationalJobExecutionMaxWaitTime} to set
          * @return a reference to this Builder
@@ -651,8 +647,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         }
 
         /**
-         * Sets the {@code sstableSnapshotConfiguration} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code sstableSnapshotConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param sstableSnapshotConfiguration the {@code sstableSnapshotConfiguration} to set
          * @return a reference to this Builder
@@ -685,8 +680,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         }
 
         /**
-         * Sets the {@code trafficShapingConfiguration} and returns a reference to this Builder enabling method
-         * chaining.
+         * Sets the {@code trafficShapingConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param trafficShapingConfiguration the {@code trafficShapingConfiguration} to set
          * @return a reference to this Builder
@@ -697,8 +691,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         }
 
         /**
-         * Sets the {@code schemaKeyspaceConfiguration} and returns a reference to this Builder enabling method
-         * chaining.
+         * Sets the {@code schemaKeyspaceConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param schemaKeyspaceConfiguration the {@code schemaKeyspaceConfiguration} to set
          * @return a reference to this Builder
@@ -709,8 +702,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         }
 
         /**
-         * Set the {@code cdcConfiguration} and returns a reference to this Builder enabling
-         * method chaining.
+         * Set the {@code cdcConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param configuration th {@code cdcConfiguration} to set
          * @return a reference to the Builder
@@ -721,8 +713,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         }
 
         /**
-         * Sets the {@code coordinationConfiguration} and returns a reference to this Builder enabling method
-         * chaining.
+         * Sets the {@code coordinationConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param coordinationConfiguration the {@code coordinationConfiguration} to set
          * @return a reference to this Builder
@@ -735,8 +726,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         /**
          * Returns a {@code ServiceConfigurationImpl} built from the parameters previously set.
          *
-         * @return a {@code ServiceConfigurationImpl} built with parameters of this
-         * {@code ServiceConfigurationImpl.Builder}
+         * @return a {@code ServiceConfigurationImpl} built with parameters of this {@code ServiceConfigurationImpl.Builder}
          */
         @Override
         public ServiceConfigurationImpl build()

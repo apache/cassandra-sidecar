@@ -41,18 +41,17 @@ public class RingEntry
     private final String hostId;
 
     @JsonCreator
-    public RingEntry(
-    @JsonProperty("datacenter") String datacenter,
-    @JsonProperty("address") String address,
-    @JsonProperty("port") int port,
-    @JsonProperty("rack") String rack,
-    @JsonProperty("status") String status,
-    @JsonProperty("state") String state,
-    @JsonProperty("load") String load,
-    @JsonProperty("owns") String owns,
-    @JsonProperty("token") String token,
-    @JsonProperty("fqdn") String fqdn,
-    @JsonProperty("hostId") String hostId)
+    public RingEntry(@JsonProperty("datacenter") String datacenter,
+                     @JsonProperty("address") String address,
+                     @JsonProperty("port") int port,
+                     @JsonProperty("rack") String rack,
+                     @JsonProperty("status") String status,
+                     @JsonProperty("state") String state,
+                     @JsonProperty("load") String load,
+                     @JsonProperty("owns") String owns,
+                     @JsonProperty("token") String token,
+                     @JsonProperty("fqdn") String fqdn,
+                     @JsonProperty("hostId") String hostId)
     {
         this.datacenter = datacenter;
         this.address = address;
@@ -137,8 +136,7 @@ public class RingEntry
     }
 
     /**
-     * @return The amount of file system data under the cassandra data directory after excluding all content in the
-     * snapshots subdirectories
+     * @return The amount of file system data under the cassandra data directory after excluding all content in the snapshots subdirectories
      */
     @JsonProperty("load")
     public String load()
@@ -188,19 +186,9 @@ public class RingEntry
     @Override
     public String toString()
     {
-        return "RingEntry{" +
-               "datacenter='" + datacenter + '\'' +
-               ", address='" + address + '\'' +
-               ", port=" + port +
-               ", rack='" + rack + '\'' +
-               ", status='" + status + '\'' +
-               ", state='" + state + '\'' +
-               ", load='" + load + '\'' +
-               ", owns='" + owns + '\'' +
-               ", token='" + token + '\'' +
-               ", fqdn='" + fqdn + '\'' +
-               ", hostId='" + hostId + '\'' +
-               '}';
+        return "RingEntry{" + "datacenter='" + datacenter + '\'' + ", address='" + address + '\'' + ", port=" + port + ", rack='" + rack + '\'' + ", status='"
+                + status + '\'' + ", state='" + state + '\'' + ", load='" + load + '\'' + ", owns='" + owns + '\'' + ", token='" + token + '\'' + ", fqdn='"
+                + fqdn + '\'' + ", hostId='" + hostId + '\'' + '}';
     }
 
     /**
@@ -209,20 +197,15 @@ public class RingEntry
     @Override
     public boolean equals(Object o)
     {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         RingEntry ringEntry = (RingEntry) o;
-        return port == ringEntry.port
-               && Objects.equals(datacenter, ringEntry.datacenter)
-               && Objects.equals(address, ringEntry.address)
-               && Objects.equals(rack, ringEntry.rack)
-               && Objects.equals(status, ringEntry.status)
-               && Objects.equals(state, ringEntry.state)
-               && Objects.equals(load, ringEntry.load)
-               && Objects.equals(owns, ringEntry.owns)
-               && Objects.equals(token, ringEntry.token)
-               && Objects.equals(fqdn, ringEntry.fqdn)
-               && Objects.equals(hostId, ringEntry.hostId);
+        return port == ringEntry.port && Objects.equals(datacenter, ringEntry.datacenter) && Objects.equals(address, ringEntry.address)
+                && Objects.equals(rack, ringEntry.rack) && Objects.equals(status, ringEntry.status) && Objects.equals(state, ringEntry.state)
+                && Objects.equals(load, ringEntry.load) && Objects.equals(owns, ringEntry.owns) && Objects.equals(token, ringEntry.token)
+                && Objects.equals(fqdn, ringEntry.fqdn) && Objects.equals(hostId, ringEntry.hostId);
     }
 
     /**
@@ -360,8 +343,7 @@ public class RingEntry
         }
 
         /**
-         * Sets the {@code fqdn} (fully qualified domain name) and
-         * returns a reference to this Builder enabling method chaining.
+         * Sets the {@code fqdn} (fully qualified domain name) and returns a reference to this Builder enabling method chaining.
          *
          * @param fqdn the {@code fqdn} to set
          * @return a reference to this Builder
@@ -395,4 +377,3 @@ public class RingEntry
         }
     }
 }
-

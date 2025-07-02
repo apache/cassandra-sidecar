@@ -101,8 +101,6 @@ public abstract class Request
     @Override
     public String toString()
     {
-        return getClass().getSimpleName() + "{" +
-               "requestURI='" + requestURI + '\'' +
-               '}';
+        return getClass().getSimpleName() + "{" + "requestURI='" + requestURI + '\'' + '}';
     }
 }

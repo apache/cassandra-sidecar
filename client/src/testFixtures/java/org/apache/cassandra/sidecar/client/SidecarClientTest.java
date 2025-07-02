@@ -153,13 +153,13 @@ abstract class SidecarClientTest
     @Test
     void testSidecarHealthOk() throws Exception
     {
-        MockResponse response = new MockResponse()
-                                .setResponseCode(200)
-                                .setHeader("content-type", "application/json")
-                                .setBody("{\"status\":\"OK\"}");
+        MockResponse response = new MockResponse().setResponseCode(200)
+                                                  .setHeader("content-type", "application/json")
+                                                  .setBody("{\"status\":\"OK\"}");
         enqueue(response);
 
-        HealthResponse result = client.sidecarHealth().get(30, TimeUnit.SECONDS);
+        HealthResponse result = client.sidecarHealth()
+                                      .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualToIgnoringCase("OK");
         assertThat(result.isOk()).isTrue();
@@ -170,15 +170,14 @@ abstract class SidecarClientTest
     @Test
     void testSidecarHealthNotOk() throws Exception
     {
-        MockResponse response = new MockResponse()
-                                .setResponseCode(503)
-                                .setHeader("content-type", "application/json")
-                                .setBody("{\"status\":\"NOT_OK\"}");
+        MockResponse response = new MockResponse().setResponseCode(503)
+                                                  .setHeader("content-type", "application/json")
+                                                  .setBody("{\"status\":\"NOT_OK\"}");
         enqueue(response);
 
-        assertThatThrownBy(() -> client.sidecarHealth().get(30, TimeUnit.SECONDS))
-        .isInstanceOf(ExecutionException.class)
-        .hasCauseInstanceOf(RetriesExhaustedException.class);
+        assertThatThrownBy(() -> client.sidecarHealth()
+                                       .get(30, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                                                                  .hasCauseInstanceOf(RetriesExhaustedException.class);
 
         validateResponseServed(ApiEndpointsV1.HEALTH_ROUTE);
     }
@@ -187,13 +186,13 @@ abstract class SidecarClientTest
     @Test
     void testCassandraDeprecatedHealthOk() throws Exception
     {
-        MockResponse response = new MockResponse()
-                                .setResponseCode(200)
-                                .setHeader("content-type", "application/json")
-                                .setBody("{\"status\":\"OK\"}");
+        MockResponse response = new MockResponse().setResponseCode(200)
+                                                  .setHeader("content-type", "application/json")
+                                                  .setBody("{\"status\":\"OK\"}");
         enqueue(response);
 
-        HealthResponse result = client.cassandraHealth().get(30, TimeUnit.SECONDS);
+        HealthResponse result = client.cassandraHealth()
+                                      .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualToIgnoringCase("OK");
         assertThat(result.isOk()).isTrue();
@@ -205,15 +204,14 @@ abstract class SidecarClientTest
     @Test
     void testCassandraDeprecatedHealthNotOk() throws Exception
     {
-        MockResponse response = new MockResponse()
-                                .setResponseCode(503)
-                                .setHeader("content-type", "application/json")
-                                .setBody("{\"status\":\"NOT_OK\"}");
+        MockResponse response = new MockResponse().setResponseCode(503)
+                                                  .setHeader("content-type", "application/json")
+                                                  .setBody("{\"status\":\"NOT_OK\"}");
         enqueue(response);
 
-        assertThatThrownBy(() -> client.cassandraHealth().get(30, TimeUnit.SECONDS))
-        .isInstanceOf(ExecutionException.class)
-        .hasCauseInstanceOf(RetriesExhaustedException.class);
+        assertThatThrownBy(() -> client.cassandraHealth()
+                                       .get(30, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                                                                  .hasCauseInstanceOf(RetriesExhaustedException.class);
 
         validateResponseServed(ApiEndpointsV1.CASSANDRA_HEALTH_ROUTE);
     }
@@ -221,13 +219,13 @@ abstract class SidecarClientTest
     @Test
     void testCassandraNativeHealthOk() throws Exception
     {
-        MockResponse response = new MockResponse()
-                                .setResponseCode(200)
-                                .setHeader("content-type", "application/json")
-                                .setBody("{\"status\":\"OK\"}");
+        MockResponse response = new MockResponse().setResponseCode(200)
+                                                  .setHeader("content-type", "application/json")
+                                                  .setBody("{\"status\":\"OK\"}");
         enqueue(response);
 
-        HealthResponse result = client.cassandraNativeHealth().get(30, TimeUnit.SECONDS);
+        HealthResponse result = client.cassandraNativeHealth()
+                                      .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualToIgnoringCase("OK");
         assertThat(result.isOk()).isTrue();
@@ -238,15 +236,14 @@ abstract class SidecarClientTest
     @Test
     void testCassandraNativeHealthNotOk() throws Exception
     {
-        MockResponse response = new MockResponse()
-                                .setResponseCode(503)
-                                .setHeader("content-type", "application/json")
-                                .setBody("{\"status\":\"NOT_OK\"}");
+        MockResponse response = new MockResponse().setResponseCode(503)
+                                                  .setHeader("content-type", "application/json")
+                                                  .setBody("{\"status\":\"NOT_OK\"}");
         enqueue(response);
 
-        assertThatThrownBy(() -> client.cassandraNativeHealth().get(30, TimeUnit.SECONDS))
-        .isInstanceOf(ExecutionException.class)
-        .hasCauseInstanceOf(RetriesExhaustedException.class);
+        assertThatThrownBy(() -> client.cassandraNativeHealth()
+                                       .get(30, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                                                                  .hasCauseInstanceOf(RetriesExhaustedException.class);
 
         validateResponseServed(ApiEndpointsV1.CASSANDRA_NATIVE_HEALTH_ROUTE);
     }
@@ -254,13 +251,13 @@ abstract class SidecarClientTest
     @Test
     void testCassandraJmxHealthOk() throws Exception
     {
-        MockResponse response = new MockResponse()
-                                .setResponseCode(200)
-                                .setHeader("content-type", "application/json")
-                                .setBody("{\"status\":\"OK\"}");
+        MockResponse response = new MockResponse().setResponseCode(200)
+                                                  .setHeader("content-type", "application/json")
+                                                  .setBody("{\"status\":\"OK\"}");
         enqueue(response);
 
-        HealthResponse result = client.cassandraJmxHealth().get(1, TimeUnit.SECONDS);
+        HealthResponse result = client.cassandraJmxHealth()
+                                      .get(1, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo("OK");
         assertThat(result.isOk()).isTrue();
@@ -271,15 +268,14 @@ abstract class SidecarClientTest
     @Test
     void testCassandraJmxHealthNotOk() throws Exception
     {
-        MockResponse response = new MockResponse()
-                                .setResponseCode(503)
-                                .setHeader("content-type", "application/json")
-                                .setBody("{\"status\":\"NOT_OK\"}");
+        MockResponse response = new MockResponse().setResponseCode(503)
+                                                  .setHeader("content-type", "application/json")
+                                                  .setBody("{\"status\":\"NOT_OK\"}");
         enqueue(response);
 
-        assertThatThrownBy(() -> client.cassandraJmxHealth().get(1, TimeUnit.SECONDS))
-        .isInstanceOf(ExecutionException.class)
-        .hasCauseInstanceOf(RetriesExhaustedException.class);
+        assertThatThrownBy(() -> client.cassandraJmxHealth()
+                                       .get(1, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class)
+                                                                 .hasCauseInstanceOf(RetriesExhaustedException.class);
 
         validateResponseServed(ApiEndpointsV1.CASSANDRA_JMX_HEALTH_ROUTE);
     }
@@ -288,10 +284,12 @@ abstract class SidecarClientTest
     void testFullSchema() throws Exception
     {
         String fullSchemaAsString = "{\"schema\":\"CREATE KEYSPACE sample_ks.sample_table ...\"}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(fullSchemaAsString);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(fullSchemaAsString);
         enqueue(response);
 
-        SchemaResponse result = client.fullSchema().get(30, TimeUnit.SECONDS);
+        SchemaResponse result = client.fullSchema()
+                                      .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.keyspace()).isNull();
         assertThat(result.schema()).isEqualTo("CREATE KEYSPACE sample_ks.sample_table ...");
@@ -303,31 +301,34 @@ abstract class SidecarClientTest
     void testSchema() throws Exception
     {
         String schemaAsString = "{\"keyspace\":\"cycling\",\"schema\":\"CREATE KEYSPACE sample_ks.sample_table ...\"}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(schemaAsString);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(schemaAsString);
         enqueue(response);
 
-        SchemaResponse result = client.schema("cycling").get(30, TimeUnit.SECONDS);
+        SchemaResponse result = client.schema("cycling")
+                                      .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.keyspace()).isEqualTo("cycling");
         assertThat(result.schema()).isEqualTo("CREATE KEYSPACE sample_ks.sample_table ...");
 
-        validateResponseServed(ApiEndpointsV1.KEYSPACE_SCHEMA_ROUTE.replaceAll(KEYSPACE_PATH_PARAM,
-                                                                               "cycling"));
+        validateResponseServed(ApiEndpointsV1.KEYSPACE_SCHEMA_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling"));
     }
 
     @Test
     void testRing() throws Exception
     {
-        String schemaAsString = "[{\"datacenter\":\"dc\",\"address\":\"127.0.0.1\",\"port\":80,\"rack\":\"r1\"," +
-                                "\"status\":\"up\",\"state\":\"normal\",\"load\":\"1 KiB\",\"owns\":\"1%\"," +
-                                "\"token\":\"100\",\"fqdn\":\"local\",\"hostId\":\"000\"}]";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(schemaAsString);
+        String schemaAsString = "[{\"datacenter\":\"dc\",\"address\":\"127.0.0.1\",\"port\":80,\"rack\":\"r1\","
+                + "\"status\":\"up\",\"state\":\"normal\",\"load\":\"1 KiB\",\"owns\":\"1%\"," + "\"token\":\"100\",\"fqdn\":\"local\",\"hostId\":\"000\"}]";
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(schemaAsString);
         enqueue(response);
 
-        RingResponse result = client.ring("cycling").get(30, TimeUnit.SECONDS);
+        RingResponse result = client.ring("cycling")
+                                    .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull()
                           .hasSize(1);
-        RingEntry entry = result.iterator().next();
+        RingEntry entry = result.iterator()
+                                .next();
         assertThat(entry.datacenter()).isEqualTo("dc");
         assertThat(entry.address()).isEqualTo("127.0.0.1");
         assertThat(entry.port()).isEqualTo(80);
@@ -340,18 +341,19 @@ abstract class SidecarClientTest
         assertThat(entry.fqdn()).isEqualTo("local");
         assertThat(entry.hostId()).isEqualTo("000");
 
-        validateResponseServed(ApiEndpointsV1.RING_WITH_KEYSPACE_ROUTE.replaceAll(KEYSPACE_PATH_PARAM,
-                                                                                  "cycling"));
+        validateResponseServed(ApiEndpointsV1.RING_WITH_KEYSPACE_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling"));
     }
 
     @Test
     public void testNodeSettings() throws Exception
     {
         String nodeSettingsAsString = "{\"partitioner\":\"test-partitioner\", \"releaseVersion\": \"4.0.0\"}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(nodeSettingsAsString);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(nodeSettingsAsString);
         enqueue(response);
 
-        NodeSettings result = client.nodeSettings().get(30, TimeUnit.SECONDS);
+        NodeSettings result = client.nodeSettings()
+                                    .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.partitioner()).isEqualTo("test-partitioner");
         assertThat(result.releaseVersion()).isEqualTo("4.0.0");
@@ -363,12 +365,14 @@ abstract class SidecarClientTest
     public void testNodeSettingsFromSpecifiedInstance() throws Exception
     {
         String nodeSettingsAsString = "{\"partitioner\":\"test-partitioner\", \"releaseVersion\": \"4.0.0\"}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(nodeSettingsAsString);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(nodeSettingsAsString);
         MockWebServer mockWebServer = servers.get(1);
         mockWebServer.enqueue(response);
 
         SidecarInstanceImpl instance = new SidecarInstanceImpl(mockWebServer.getHostName(), mockWebServer.getPort());
-        NodeSettings result = client.nodeSettings(instance).get(30, TimeUnit.SECONDS);
+        NodeSettings result = client.nodeSettings(instance)
+                                    .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.partitioner()).isEqualTo("test-partitioner");
         assertThat(result.releaseVersion()).isEqualTo("4.0.0");
@@ -381,15 +385,20 @@ abstract class SidecarClientTest
     @Test
     public void testGossipInfo() throws Exception
     {
-        String gossipInfoAsString = "{\"/127.0.0.1:7000\":{\"generation\":\"1\",\"schema\":\"4994b214\"," +
-                                    "\"rack\":\"r2\",\"heartbeat\":\"214\",\"releaseVersion\":\"4.0.7\"," +
-                                    "\"sstableVersions\":\"big-nb\"}}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(gossipInfoAsString);
+        String gossipInfoAsString = "{\"/127.0.0.1:7000\":{\"generation\":\"1\",\"schema\":\"4994b214\","
+                + "\"rack\":\"r2\",\"heartbeat\":\"214\",\"releaseVersion\":\"4.0.7\"," + "\"sstableVersions\":\"big-nb\"}}";
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(gossipInfoAsString);
         enqueue(response);
 
-        GossipInfoResponse result = client.gossipInfo().get(30, TimeUnit.SECONDS);
-        assertThat(result).isNotNull().hasSize(1);
-        String key = result.entrySet().iterator().next().getKey();
+        GossipInfoResponse result = client.gossipInfo()
+                                          .get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull()
+                          .hasSize(1);
+        String key = result.entrySet()
+                           .iterator()
+                           .next()
+                           .getKey();
         GossipInfoResponse.GossipInfo gossipInfo = result.get(key);
         assertThat(gossipInfo.generation()).isEqualTo("1");
         assertThat(gossipInfo.schema()).isEqualTo("4994b214");
@@ -406,10 +415,12 @@ abstract class SidecarClientTest
     {
         SidecarInstanceImpl sidecarInstance = instances.get(3);
         String gossipHealthAsString = "{\"status\":\"OK\"}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(gossipHealthAsString);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(gossipHealthAsString);
         enqueue(response);
 
-        HealthResponse result = client.gossipHealth(sidecarInstance).get(30, TimeUnit.SECONDS);
+        HealthResponse result = client.gossipHealth(sidecarInstance)
+                                      .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo("OK");
 
@@ -421,10 +432,12 @@ abstract class SidecarClientTest
     {
         SidecarInstanceImpl sidecarInstance = instances.get(3);
         String gossipHealthAsString = "{\"status\":\"NOT_OK\"}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(gossipHealthAsString);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(gossipHealthAsString);
         enqueue(response);
 
-        HealthResponse result = client.gossipHealth(sidecarInstance).get(30, TimeUnit.SECONDS);
+        HealthResponse result = client.gossipHealth(sidecarInstance)
+                                      .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo("NOT_OK");
 
@@ -435,10 +448,12 @@ abstract class SidecarClientTest
     public void testTimeSkew() throws Exception
     {
         String timeSkewAsString = "{\"currentTime\":\"123456789\",\"allowableSkewInMinutes\":\"122\"}}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(timeSkewAsString);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(timeSkewAsString);
         enqueue(response);
 
-        TimeSkewResponse result = client.timeSkew().get(30, TimeUnit.SECONDS);
+        TimeSkewResponse result = client.timeSkew()
+                                        .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.allowableSkewInMinutes).isEqualTo(122);
         assertThat(result.currentTime).isEqualTo(123456789);
@@ -450,10 +465,12 @@ abstract class SidecarClientTest
     public void testTimeSkewFromReplicaSet() throws Exception
     {
         String timeSkewAsString = "{\"currentTime\":\"5555555\",\"allowableSkewInMinutes\":\"24\"}}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(timeSkewAsString);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(timeSkewAsString);
         enqueue(response);
 
-        TimeSkewResponse result = client.timeSkew(instances.subList(1, 2)).get(30, TimeUnit.SECONDS);
+        TimeSkewResponse result = client.timeSkew(instances.subList(1, 2))
+                                        .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.allowableSkewInMinutes).isEqualTo(24);
         assertThat(result.currentTime).isEqualTo(5555555);
@@ -470,66 +487,63 @@ abstract class SidecarClientTest
         String nodeWithPort = nodeAddress + ":" + port;
         String expectedRangeStart = "-9223372036854775808";
         String expectedRangeEnd = "9223372036854775807";
-        String tokenRangeReplicasAsString = "{\"replicaMetadata\":{\"127.0.0.1:7000\":{" +
-                                            "\"state\":\"Normal\"," +
-                                            "\"status\":\"Up\"," +
-                                            "\"fqdn\":\"localhost\"," +
-                                            "\"address\":\"127.0.0.1\"," +
-                                            "\"port\":7000," +
-                                            "\"datacenter\":\"datacenter1\"}}," +
-                                            "\"writeReplicas\":[{\"start\":\"-9223372036854775808\"," +
-                                            "\"end\":\"9223372036854775807\",\"replicasByDatacenter\":" +
-                                            "{\"datacenter1\":[\"127.0.0.1:7000\"]}}],\"readReplicas\":" +
-                                            "[{\"start\":\"-9223372036854775808\",\"end\":\"9223372036854775807\"," +
-                                            "\"replicasByDatacenter\":{\"datacenter1\":[\"127.0.0.1:7000\"]}}]}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(tokenRangeReplicasAsString);
+        String tokenRangeReplicasAsString = "{\"replicaMetadata\":{\"127.0.0.1:7000\":{" + "\"state\":\"Normal\"," + "\"status\":\"Up\","
+                + "\"fqdn\":\"localhost\"," + "\"address\":\"127.0.0.1\"," + "\"port\":7000," + "\"datacenter\":\"datacenter1\"}},"
+                + "\"writeReplicas\":[{\"start\":\"-9223372036854775808\"," + "\"end\":\"9223372036854775807\",\"replicasByDatacenter\":"
+                + "{\"datacenter1\":[\"127.0.0.1:7000\"]}}],\"readReplicas\":" + "[{\"start\":\"-9223372036854775808\",\"end\":\"9223372036854775807\","
+                + "\"replicasByDatacenter\":{\"datacenter1\":[\"127.0.0.1:7000\"]}}]}";
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(tokenRangeReplicasAsString);
         enqueue(response);
 
         TokenRangeReplicasResponse result = client.tokenRangeReplicas(instances.subList(1, 2), keyspace)
                                                   .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.writeReplicas()).hasSize(1);
-        TokenRangeReplicasResponse.ReplicaInfo writeReplica = result.writeReplicas().get(0);
+        TokenRangeReplicasResponse.ReplicaInfo writeReplica = result.writeReplicas()
+                                                                    .get(0);
         assertThat(writeReplica.start()).isEqualTo(expectedRangeStart);
         assertThat(writeReplica.end()).isEqualTo(expectedRangeEnd);
         assertThat(writeReplica.replicasByDatacenter()).containsKey("datacenter1");
-        assertThat(writeReplica.replicasByDatacenter().get("datacenter1")).containsExactly(nodeWithPort);
+        assertThat(writeReplica.replicasByDatacenter()
+                               .get("datacenter1")).containsExactly(nodeWithPort);
         assertThat(result.readReplicas()).hasSize(1);
-        TokenRangeReplicasResponse.ReplicaInfo readReplica = result.readReplicas().get(0);
+        TokenRangeReplicasResponse.ReplicaInfo readReplica = result.readReplicas()
+                                                                   .get(0);
         assertThat(readReplica.start()).isEqualTo(expectedRangeStart);
         assertThat(readReplica.end()).isEqualTo(expectedRangeEnd);
         assertThat(readReplica.replicasByDatacenter()).containsKey("datacenter1");
-        assertThat(readReplica.replicasByDatacenter().get("datacenter1")).containsExactly(nodeWithPort);
+        assertThat(readReplica.replicasByDatacenter()
+                              .get("datacenter1")).containsExactly(nodeWithPort);
         assertThat(result.replicaMetadata()).hasSize(1);
-        TokenRangeReplicasResponse.ReplicaMetadata instanceMetadata = result.replicaMetadata().get(nodeWithPort);
+        TokenRangeReplicasResponse.ReplicaMetadata instanceMetadata = result.replicaMetadata()
+                                                                            .get(nodeWithPort);
         assertThat(instanceMetadata.state()).isEqualTo("Normal");
         assertThat(instanceMetadata.status()).isEqualTo("Up");
         assertThat(instanceMetadata.fqdn()).isEqualTo("localhost");
         assertThat(instanceMetadata.datacenter()).isEqualTo("datacenter1");
 
-        validateResponseServed(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE.replaceAll(
-        KEYSPACE_PATH_PARAM, keyspace));
+        validateResponseServed(ApiEndpointsV1.KEYSPACE_TOKEN_MAPPING_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, keyspace));
     }
 
     @Test
     public void testListSnapshotFiles() throws Exception
     {
-        String responseAsString = "{\"snapshotFilesInfo\":[{\"size\":15,\"host\":\"localhost1\",\"port\":2020," +
-                                  "\"dataDirIndex\":1,\"snapshotName\":\"2023.04.11\",\"keySpaceName\":\"cycling\"," +
-                                  "\"tableName\":\"cyclist_name\",\"fileName\":\"nb-203-big-TOC.txt\"}]}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(responseAsString);
+        String responseAsString = "{\"snapshotFilesInfo\":[{\"size\":15,\"host\":\"localhost1\",\"port\":2020,"
+                + "\"dataDirIndex\":1,\"snapshotName\":\"2023.04.11\",\"keySpaceName\":\"cycling\","
+                + "\"tableName\":\"cyclist_name\",\"fileName\":\"nb-203-big-TOC.txt\"}]}";
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(responseAsString);
         SidecarInstanceImpl sidecarInstance = instances.get(2);
         MockWebServer mockWebServer = servers.get(2);
         mockWebServer.enqueue(response);
 
-        ListSnapshotFilesResponse result = client.listSnapshotFiles(sidecarInstance,
-                                                                    "cycling",
-                                                                    "cyclist_name",
-                                                                    "2023.04.11")
+        ListSnapshotFilesResponse result = client.listSnapshotFiles(sidecarInstance, "cycling", "cyclist_name", "2023.04.11")
                                                  .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.snapshotFilesInfo()).hasSize(1);
-        ListSnapshotFilesResponse.FileInfo fileInfo = result.snapshotFilesInfo().get(0);
+        ListSnapshotFilesResponse.FileInfo fileInfo = result.snapshotFilesInfo()
+                                                            .get(0);
         assertThat(fileInfo.size).isEqualTo(15);
         assertThat(fileInfo.host).isEqualTo("localhost1");
         assertThat(fileInfo.port).isEqualTo(2020);
@@ -541,39 +555,36 @@ abstract class SidecarClientTest
 
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
-        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE
-                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                                                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                                                .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11")
-                                                + "?includeSecondaryIndexFiles=true");
+        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                                              .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                                              .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11")
+                + "?includeSecondaryIndexFiles=true");
     }
 
     /**
-     * CASSANDRASC-94 introduced a new field ({@code tableId}) to the payload when listing snapshots. We
-     * need to make sure the client is able to handle the payload with the additional field (and ignore it).
+     * CASSANDRASC-94 introduced a new field ({@code tableId}) to the payload when listing snapshots. We need to make sure the client is able to handle the
+     * payload with the additional field (and ignore it).
      *
      * @throws Exception when the test fails
      */
     @Test
     public void testListSnapshotFilesPayloadWithTableId() throws Exception
     {
-        String responseAsString = "{\"snapshotFilesInfo\":[{\"size\":15,\"host\":\"localhost1\",\"port\":2020," +
-                                  "\"dataDirIndex\":1,\"snapshotName\":\"2023.04.11\",\"keySpaceName\":\"cycling\"," +
-                                  "\"tableName\":\"cyclist_name\",\"tableId\":\"1234\",\"fileName\":" +
-                                  "\"nb-203-big-TOC.txt\"}]}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(responseAsString);
+        String responseAsString = "{\"snapshotFilesInfo\":[{\"size\":15,\"host\":\"localhost1\",\"port\":2020,"
+                + "\"dataDirIndex\":1,\"snapshotName\":\"2023.04.11\",\"keySpaceName\":\"cycling\","
+                + "\"tableName\":\"cyclist_name\",\"tableId\":\"1234\",\"fileName\":" + "\"nb-203-big-TOC.txt\"}]}";
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(responseAsString);
         SidecarInstanceImpl sidecarInstance = instances.get(2);
         MockWebServer mockWebServer = servers.get(2);
         mockWebServer.enqueue(response);
 
-        ListSnapshotFilesResponse result = client.listSnapshotFiles(sidecarInstance,
-                                                                    "cycling",
-                                                                    "cyclist_name",
-                                                                    "2023.04.11")
+        ListSnapshotFilesResponse result = client.listSnapshotFiles(sidecarInstance, "cycling", "cyclist_name", "2023.04.11")
                                                  .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.snapshotFilesInfo()).hasSize(1);
-        ListSnapshotFilesResponse.FileInfo fileInfo = result.snapshotFilesInfo().get(0);
+        ListSnapshotFilesResponse.FileInfo fileInfo = result.snapshotFilesInfo()
+                                                            .get(0);
         assertThat(fileInfo.size).isEqualTo(15);
         assertThat(fileInfo.host).isEqualTo("localhost1");
         assertThat(fileInfo.port).isEqualTo(2020);
@@ -585,33 +596,30 @@ abstract class SidecarClientTest
 
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
-        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE
-                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                                                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                                                .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11")
-                                                + "?includeSecondaryIndexFiles=true");
+        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                                              .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                                              .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11")
+                + "?includeSecondaryIndexFiles=true");
     }
 
     @Test
     public void testListSnapshotFilesWithoutSecondaryIndexFiles() throws Exception
     {
-        String responseAsString = "{\"snapshotFilesInfo\":[{\"size\":15,\"host\":\"localhost1\",\"port\":2020," +
-                                  "\"dataDirIndex\":1,\"snapshotName\":\"2023.04.11\",\"keySpaceName\":\"cycling\"," +
-                                  "\"tableName\":\"cyclist_name\",\"fileName\":\"nb-203-big-TOC.txt\"}]}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(responseAsString);
+        String responseAsString = "{\"snapshotFilesInfo\":[{\"size\":15,\"host\":\"localhost1\",\"port\":2020,"
+                + "\"dataDirIndex\":1,\"snapshotName\":\"2023.04.11\",\"keySpaceName\":\"cycling\","
+                + "\"tableName\":\"cyclist_name\",\"fileName\":\"nb-203-big-TOC.txt\"}]}";
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(responseAsString);
         SidecarInstanceImpl sidecarInstance = instances.get(2);
         MockWebServer mockWebServer = servers.get(2);
         mockWebServer.enqueue(response);
 
-        ListSnapshotFilesResponse result = client.listSnapshotFiles(sidecarInstance,
-                                                                    "cycling",
-                                                                    "cyclist_name",
-                                                                    "2023.04.11",
-                                                                    false)
+        ListSnapshotFilesResponse result = client.listSnapshotFiles(sidecarInstance, "cycling", "cyclist_name", "2023.04.11", false)
                                                  .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.snapshotFilesInfo()).hasSize(1);
-        ListSnapshotFilesResponse.FileInfo fileInfo = result.snapshotFilesInfo().get(0);
+        ListSnapshotFilesResponse.FileInfo fileInfo = result.snapshotFilesInfo()
+                                                            .get(0);
         assertThat(fileInfo.size).isEqualTo(15);
         assertThat(fileInfo.host).isEqualTo("localhost1");
         assertThat(fileInfo.port).isEqualTo(2020);
@@ -623,12 +631,10 @@ abstract class SidecarClientTest
 
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
-        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE
-                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                                                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                                                .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11"));
+        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                                              .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                                              .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11"));
     }
-
 
     @Test
     void testClearSnapshot() throws Exception
@@ -643,10 +649,9 @@ abstract class SidecarClientTest
 
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
-        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE
-                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                                                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                                                .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11"));
+        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                                              .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                                              .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11"));
         assertThat(request.getMethod()).isEqualTo("DELETE");
     }
 
@@ -664,10 +669,9 @@ abstract class SidecarClientTest
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
-        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE
-                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                                                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                                                .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11"));
+        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SNAPSHOTS_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                                              .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                                              .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11"));
         assertThat(request.getMethod()).isEqualTo("PUT");
     }
 
@@ -684,10 +688,10 @@ abstract class SidecarClientTest
 
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
-        String expected = ApiEndpointsV1.SNAPSHOTS_ROUTE
-                          .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                          .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                          .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11") + "?ttl=2d";
+        String expected = ApiEndpointsV1.SNAPSHOTS_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                        .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                        .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.11")
+                + "?ttl=2d";
         assertThat(request.getPath()).isEqualTo(expected);
         assertThat(request.getMethod()).isEqualTo("PUT");
     }
@@ -705,27 +709,22 @@ abstract class SidecarClientTest
 
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
-        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_CLEANUP_ROUTE
-                                                .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "00000"));
+        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_CLEANUP_ROUTE.replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "00000"));
         assertThat(request.getMethod()).isEqualTo("DELETE");
     }
 
     @Test
     void testSSTableImport() throws Exception
     {
-        String responseAsString = "{\"success\":true,\"uploadId\":\"0000-0000\",\"keyspace\":\"cycling\"," +
-                                  "\"tableName\":\"cyclist_name\"}";
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(responseAsString);
+        String responseAsString = "{\"success\":true,\"uploadId\":\"0000-0000\",\"keyspace\":\"cycling\"," + "\"tableName\":\"cyclist_name\"}";
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(responseAsString);
         SidecarInstanceImpl sidecarInstance = instances.get(0);
         MockWebServer mockWebServer = servers.get(0);
         mockWebServer.enqueue(response);
 
         ImportSSTableRequest.ImportOptions options = new ImportSSTableRequest.ImportOptions();
-        SSTableImportResponse result = client.importSSTableRequest(sidecarInstance,
-                                                                   "cycling",
-                                                                   "cyclist_name",
-                                                                   "0000-0000",
-                                                                   options)
+        SSTableImportResponse result = client.importSSTableRequest(sidecarInstance, "cycling", "cyclist_name", "0000-0000", options)
                                              .get(30, TimeUnit.SECONDS);
 
         assertThat(result).isNotNull();
@@ -736,32 +735,27 @@ abstract class SidecarClientTest
 
         assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
         RecordedRequest request = mockWebServer.takeRequest();
-        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_IMPORT_ROUTE
-                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                                                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                                                .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000"));
+        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_IMPORT_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                                                   .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                                                   .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000"));
         assertThat(request.getMethod()).isEqualTo("PUT");
     }
 
     @Test
     void testSSTableImportWithAcceptedResponse() throws Exception
     {
-        String responseAsString = "{\"success\":true,\"uploadId\":\"0000-0000\",\"keyspace\":\"cycling\"," +
-                                  "\"tableName\":\"cyclist_name\"}";
+        String responseAsString = "{\"success\":true,\"uploadId\":\"0000-0000\",\"keyspace\":\"cycling\"," + "\"tableName\":\"cyclist_name\"}";
         SidecarInstanceImpl sidecarInstance = instances.get(0);
         MockWebServer mockWebServer = servers.get(0);
         mockWebServer.enqueue(new MockResponse().setResponseCode(ACCEPTED.code()));
         mockWebServer.enqueue(new MockResponse().setResponseCode(ACCEPTED.code()));
         mockWebServer.enqueue(new MockResponse().setResponseCode(ACCEPTED.code()));
         mockWebServer.enqueue(new MockResponse().setResponseCode(ACCEPTED.code()));
-        mockWebServer.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(responseAsString));
+        mockWebServer.enqueue(new MockResponse().setResponseCode(OK.code())
+                                                .setBody(responseAsString));
 
         ImportSSTableRequest.ImportOptions options = new ImportSSTableRequest.ImportOptions();
-        SSTableImportResponse result = client.importSSTableRequest(sidecarInstance,
-                                                                   "cycling",
-                                                                   "cyclist_name",
-                                                                   "0000-0000",
-                                                                   options)
+        SSTableImportResponse result = client.importSSTableRequest(sidecarInstance, "cycling", "cyclist_name", "0000-0000", options)
                                              .get(30, TimeUnit.SECONDS);
 
         assertThat(result).isNotNull();
@@ -772,10 +766,9 @@ abstract class SidecarClientTest
 
         assertThat(mockWebServer.getRequestCount()).isEqualTo(5);
         RecordedRequest request = mockWebServer.takeRequest();
-        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_IMPORT_ROUTE
-                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                                                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                                                .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000"));
+        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_IMPORT_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                                                   .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                                                   .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000"));
         assertThat(request.getMethod()).isEqualTo("PUT");
     }
 
@@ -783,16 +776,11 @@ abstract class SidecarClientTest
     void testUploadSSTableFailsWhenFileDoesNotExist()
     {
 
-        assertThatIllegalArgumentException()
-        .isThrownBy(() -> client.uploadSSTableRequest(new SidecarInstanceImpl("host", 8080),
-                                                      "cycling",
-                                                      "cyclist_name",
-                                                      "0000-0000",
-                                                      "nb-1-big-TOC.txt",
-                                                      null,
-                                                      "path")
-                                .get(30, TimeUnit.SECONDS))
-        .withMessage("File 'path' does not exist");
+        assertThatIllegalArgumentException().isThrownBy(() -> client
+                                                                    .uploadSSTableRequest(new SidecarInstanceImpl("host", 8080), "cycling", "cyclist_name",
+                                                                            "0000-0000", "nb-1-big-TOC.txt", null, "path")
+                                                                    .get(30, TimeUnit.SECONDS))
+                                            .withMessage("File 'path' does not exist");
     }
 
     @Test
@@ -804,23 +792,15 @@ abstract class SidecarClientTest
             server.enqueue(new MockResponse().setResponseCode(OK.code()));
 
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            client.uploadSSTableRequest(sidecarInstance,
-                                        "cycling",
-                                        "cyclist_name",
-                                        "0000-0000",
-                                        "nb-1-big-TOC.txt",
-                                        null,
-                                        fileToUpload.toString())
+            client.uploadSSTableRequest(sidecarInstance, "cycling", "cyclist_name", "0000-0000", "nb-1-big-TOC.txt", null, fileToUpload.toString())
                   .get(30, TimeUnit.SECONDS);
 
             assertThat(server.getRequestCount()).isEqualTo(1);
             RecordedRequest request = server.takeRequest();
-            assertThat(request.getPath())
-            .isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE
-                       .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
-                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
+            assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE.replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
+                                                                                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                                                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                                                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
             assertThat(request.getMethod()).isEqualTo("PUT");
             assertThat(request.getHeader(HttpHeaderNames.CONTENT_MD5.toString())).isNull();
             assertThat(request.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString())).isEqualTo("80");
@@ -837,26 +817,18 @@ abstract class SidecarClientTest
             server.enqueue(new MockResponse().setResponseCode(OK.code()));
 
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            client.uploadSSTableRequest(sidecarInstance,
-                                        "cycling",
-                                        "cyclist_name",
-                                        "0000-0000",
-                                        "nb-1-big-TOC.txt",
-                                        new MD5Digest("15a69dc6501aa5ae17af037fe053f610"),
-                                        fileToUpload.toString())
+            client.uploadSSTableRequest(sidecarInstance, "cycling", "cyclist_name", "0000-0000", "nb-1-big-TOC.txt",
+                    new MD5Digest("15a69dc6501aa5ae17af037fe053f610"), fileToUpload.toString())
                   .get(30, TimeUnit.SECONDS);
 
             assertThat(server.getRequestCount()).isEqualTo(1);
             RecordedRequest request = server.takeRequest();
-            assertThat(request.getPath())
-            .isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE
-                       .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
-                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
+            assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE.replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
+                                                                                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                                                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                                                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
             assertThat(request.getMethod()).isEqualTo("PUT");
-            assertThat(request.getHeader(HttpHeaderNames.CONTENT_MD5.toString()))
-            .isEqualTo("15a69dc6501aa5ae17af037fe053f610");
+            assertThat(request.getHeader(HttpHeaderNames.CONTENT_MD5.toString())).isEqualTo("15a69dc6501aa5ae17af037fe053f610");
             assertThat(request.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString())).isEqualTo("80");
             assertThat(request.getBodySize()).isEqualTo(80);
         }
@@ -871,26 +843,18 @@ abstract class SidecarClientTest
             server.enqueue(new MockResponse().setResponseCode(OK.code()));
 
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            client.uploadSSTableRequest(sidecarInstance,
-                                        "cycling",
-                                        "cyclist_name",
-                                        "0000-0000",
-                                        "nb-1-big-TOC.txt",
-                                        new XXHash32Digest("15a69dc6501aa5ae17af037fe053f610"),
-                                        fileToUpload.toString())
+            client.uploadSSTableRequest(sidecarInstance, "cycling", "cyclist_name", "0000-0000", "nb-1-big-TOC.txt",
+                    new XXHash32Digest("15a69dc6501aa5ae17af037fe053f610"), fileToUpload.toString())
                   .get(30, TimeUnit.SECONDS);
 
             assertThat(server.getRequestCount()).isEqualTo(1);
             RecordedRequest request = server.takeRequest();
-            assertThat(request.getPath())
-            .isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE
-                       .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
-                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
+            assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE.replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
+                                                                                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                                                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                                                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
             assertThat(request.getMethod()).isEqualTo("PUT");
-            assertThat(request.getHeader(CONTENT_XXHASH32))
-            .isEqualTo("15a69dc6501aa5ae17af037fe053f610");
+            assertThat(request.getHeader(CONTENT_XXHASH32)).isEqualTo("15a69dc6501aa5ae17af037fe053f610");
             assertThat(request.getHeader(CONTENT_XXHASH32_SEED)).isNull();
             assertThat(request.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString())).isEqualTo("80");
             assertThat(request.getBodySize()).isEqualTo(80);
@@ -906,26 +870,18 @@ abstract class SidecarClientTest
             server.enqueue(new MockResponse().setResponseCode(OK.code()));
 
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            client.uploadSSTableRequest(sidecarInstance,
-                                        "cycling",
-                                        "cyclist_name",
-                                        "0000-0000",
-                                        "nb-1-big-TOC.txt",
-                                        new XXHash32Digest("15a69dc6501aa5ae17af037fe053f610", "123456"),
-                                        fileToUpload.toString())
+            client.uploadSSTableRequest(sidecarInstance, "cycling", "cyclist_name", "0000-0000", "nb-1-big-TOC.txt",
+                    new XXHash32Digest("15a69dc6501aa5ae17af037fe053f610", "123456"), fileToUpload.toString())
                   .get(30, TimeUnit.SECONDS);
 
             assertThat(server.getRequestCount()).isEqualTo(1);
             RecordedRequest request = server.takeRequest();
-            assertThat(request.getPath())
-            .isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE
-                       .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
-                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
+            assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE.replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
+                                                                                       .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                                                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                                                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt"));
             assertThat(request.getMethod()).isEqualTo("PUT");
-            assertThat(request.getHeader(CONTENT_XXHASH32))
-            .isEqualTo("15a69dc6501aa5ae17af037fe053f610");
+            assertThat(request.getHeader(CONTENT_XXHASH32)).isEqualTo("15a69dc6501aa5ae17af037fe053f610");
             assertThat(request.getHeader(CONTENT_XXHASH32_SEED)).isEqualTo("123456");
             assertThat(request.getHeader(HttpHeaderNames.CONTENT_LENGTH.toString())).isEqualTo("80");
             assertThat(request.getBodySize()).isEqualTo(80);
@@ -933,7 +889,7 @@ abstract class SidecarClientTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
+    @ValueSource(booleans = { true, false})
     void testLegacyStreamSSTableComponentWithNoRange(boolean useLegacyApi) throws Exception
     {
         try (MockWebServer server = new MockWebServer())
@@ -965,7 +921,8 @@ abstract class SidecarClientTest
                 }
             };
             InputStream inputStream = resourceInputStream("sstables/nb-1-big-TOC.txt");
-            Buffer buffer = Okio.buffer(Okio.source(inputStream)).getBuffer();
+            Buffer buffer = Okio.buffer(Okio.source(inputStream))
+                                .getBuffer();
             Okio.use(buffer, buffer1 -> {
                 try
                 {
@@ -978,39 +935,25 @@ abstract class SidecarClientTest
             });
 
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            MockResponse response =
-            new MockResponse().setResponseCode(OK.code())
-                              .setHeader(HttpHeaderNames.CONTENT_TYPE.toString(),
-                                         HttpHeaderValues.APPLICATION_OCTET_STREAM)
-                              .setHeader(HttpHeaderNames.ACCEPT_RANGES.toString(), "bytes")
-                              .setBody(buffer);
+            MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                      .setHeader(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_OCTET_STREAM)
+                                                      .setHeader(HttpHeaderNames.ACCEPT_RANGES.toString(), "bytes")
+                                                      .setBody(buffer);
             server.enqueue(response);
 
             String expectedPath;
             if (useLegacyApi)
             {
-                client.streamSSTableComponent(sidecarInstance,
-                                              "cycling",
-                                              "cyclist_name",
-                                              "2023.04.12",
-                                              "nb-203-big-Data.db",
-                                              null,
-                                              mockStreamConsumer);
-                expectedPath = ApiEndpointsV1.COMPONENTS_ROUTE
-                               .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                               .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
-                               .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-203-big-Data.db");
+                client.streamSSTableComponent(sidecarInstance, "cycling", "cyclist_name", "2023.04.12", "nb-203-big-Data.db", null, mockStreamConsumer);
+                expectedPath = ApiEndpointsV1.COMPONENTS_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                              .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                              .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
+                                                              .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-203-big-Data.db");
             }
             else
             {
-                ListSnapshotFilesResponse.FileInfo fileInfo = new ListSnapshotFilesResponse.FileInfo(2023,
-                                                                                                     server.getHostName(),
-                                                                                                     server.getPort(), 0,
-                                                                                                     "2023.04.12",
-                                                                                                     "cycling",
-                                                                                                     "cyclist_name-1234",
-                                                                                                     "nb-1-big-TOC.txt");
+                ListSnapshotFilesResponse.FileInfo fileInfo = new ListSnapshotFilesResponse.FileInfo(2023, server.getHostName(), server.getPort(), 0,
+                        "2023.04.12", "cycling", "cyclist_name-1234", "nb-1-big-TOC.txt");
                 client.streamSSTableComponent(sidecarInstance, fileInfo, null, mockStreamConsumer);
                 expectedPath = fileInfo.componentDownloadUrl();
             }
@@ -1023,24 +966,19 @@ abstract class SidecarClientTest
             assertThat(request.getHeader("range")).isNull();
 
             byte[] bytes = receivedBytes.stream()
-                                        .collect(ByteArrayOutputStream::new,
-                                                 (outputStream, src) -> outputStream.write(src, 0, src.length),
-                                                 (outputStream, src) -> {
-                                                 })
+                                        .collect(ByteArrayOutputStream::new, (outputStream,
+                                                                              src) -> outputStream.write(src, 0, src.length),
+                                                (outputStream,
+                                                 src) -> {
+                                                })
                                         .toByteArray();
-            assertThat(new String(bytes, StandardCharsets.UTF_8)).isEqualTo("Summary.db\n" +
-                                                                            "TOC.txt\n" +
-                                                                            "Statistics.db\n" +
-                                                                            "Filter.db\n" +
-                                                                            "Data.db\n" +
-                                                                            "CRC.db\n" +
-                                                                            "Digest.crc32\n" +
-                                                                            "Index.db\n");
+            assertThat(new String(bytes, StandardCharsets.UTF_8)).isEqualTo(
+                    "Summary.db\n" + "TOC.txt\n" + "Statistics.db\n" + "Filter.db\n" + "Data.db\n" + "CRC.db\n" + "Digest.crc32\n" + "Index.db\n");
         }
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
+    @ValueSource(booleans = { true, false})
     void testStreamSSTableComponentWithRange(boolean useLegacyApi) throws Exception
     {
         try (MockWebServer server = new MockWebServer())
@@ -1073,40 +1011,27 @@ abstract class SidecarClientTest
             };
 
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            MockResponse response =
-            new MockResponse().setResponseCode(PARTIAL_CONTENT.code())
-                              .setHeader(HttpHeaderNames.CONTENT_TYPE.toString(),
-                                         HttpHeaderValues.APPLICATION_OCTET_STREAM)
-                              .setHeader(HttpHeaderNames.ACCEPT_RANGES.toString(), "bytes")
-                              .setHeader(HttpHeaderNames.CONTENT_RANGE.toString(), "bytes 10-20/80")
-                              .setBody("TOC.txt\nSt");
+            MockResponse response = new MockResponse().setResponseCode(PARTIAL_CONTENT.code())
+                                                      .setHeader(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_OCTET_STREAM)
+                                                      .setHeader(HttpHeaderNames.ACCEPT_RANGES.toString(), "bytes")
+                                                      .setHeader(HttpHeaderNames.CONTENT_RANGE.toString(), "bytes 10-20/80")
+                                                      .setBody("TOC.txt\nSt");
             server.enqueue(response);
 
             String expectedPath;
             if (useLegacyApi)
             {
-                client.streamSSTableComponent(sidecarInstance,
-                                              "cycling",
-                                              "cyclist_name",
-                                              "2023.04.12",
-                                              "nb-1-big-TOC.txt",
-                                              HttpRange.of(10, 20),
-                                              mockStreamConsumer);
-                expectedPath = ApiEndpointsV1.COMPONENTS_ROUTE
-                               .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                               .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
-                               .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt");
+                client.streamSSTableComponent(sidecarInstance, "cycling", "cyclist_name", "2023.04.12", "nb-1-big-TOC.txt", HttpRange.of(10, 20),
+                        mockStreamConsumer);
+                expectedPath = ApiEndpointsV1.COMPONENTS_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                              .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                              .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
+                                                              .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt");
             }
             else
             {
-                ListSnapshotFilesResponse.FileInfo fileInfo = new ListSnapshotFilesResponse.FileInfo(2023,
-                                                                                                     server.getHostName(),
-                                                                                                     server.getPort(), 0,
-                                                                                                     "2023.04.12",
-                                                                                                     "cycling",
-                                                                                                     "cyclist_name-1234",
-                                                                                                     "nb-1-big-TOC.txt");
+                ListSnapshotFilesResponse.FileInfo fileInfo = new ListSnapshotFilesResponse.FileInfo(2023, server.getHostName(), server.getPort(), 0,
+                        "2023.04.12", "cycling", "cyclist_name-1234", "nb-1-big-TOC.txt");
 
                 client.streamSSTableComponent(sidecarInstance, fileInfo, HttpRange.of(10, 20), mockStreamConsumer);
                 expectedPath = fileInfo.componentDownloadUrl();
@@ -1120,17 +1045,18 @@ abstract class SidecarClientTest
             assertThat(request.getHeader("range")).isEqualTo("bytes=10-20");
 
             byte[] bytes = receivedBytes.stream()
-                                        .collect(ByteArrayOutputStream::new,
-                                                 (outputStream, src) -> outputStream.write(src, 0, src.length),
-                                                 (outputStream, src) -> {
-                                                 })
+                                        .collect(ByteArrayOutputStream::new, (outputStream,
+                                                                              src) -> outputStream.write(src, 0, src.length),
+                                                (outputStream,
+                                                 src) -> {
+                                                })
                                         .toByteArray();
             assertThat(new String(bytes, StandardCharsets.UTF_8)).isEqualTo("TOC.txt\nSt");
         }
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
+    @ValueSource(booleans = { true, false})
     void testStreamSSTableComponentFailsMidStream(boolean useLegacyApi) throws Exception
     {
         try (MockWebServer server = new MockWebServer())
@@ -1161,7 +1087,8 @@ abstract class SidecarClientTest
                 }
             };
             InputStream inputStream = resourceInputStream("sstables/nb-1-big-TOC.txt");
-            Buffer buffer = Okio.buffer(Okio.source(inputStream)).getBuffer();
+            Buffer buffer = Okio.buffer(Okio.source(inputStream))
+                                .getBuffer();
             Okio.use(buffer, buffer1 -> {
                 try
                 {
@@ -1174,41 +1101,27 @@ abstract class SidecarClientTest
             });
 
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            MockResponse response =
-            new MockResponse().setResponseCode(OK.code())
-                              .setHeader(HttpHeaderNames.CONTENT_TYPE.toString(),
-                                         HttpHeaderValues.APPLICATION_OCTET_STREAM)
-                              .setHeader(HttpHeaderNames.ACCEPT_RANGES.toString(), "bytes")
-                              .setBody(buffer)
-                              .setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY);
+            MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                      .setHeader(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_OCTET_STREAM)
+                                                      .setHeader(HttpHeaderNames.ACCEPT_RANGES.toString(), "bytes")
+                                                      .setBody(buffer)
+                                                      .setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY);
             server.enqueue(response);
 
             String expectedPath;
             if (useLegacyApi)
             {
-                client.streamSSTableComponent(sidecarInstance,
-                                              "cycling",
-                                              "cyclist_name",
-                                              "2023.04.12",
-                                              "nb-1-big-TOC.txt",
-                                              null,
-                                              mockStreamConsumer);
-                expectedPath = ApiEndpointsV1.COMPONENTS_ROUTE
-                               .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                               .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
-                               .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt");
+                client.streamSSTableComponent(sidecarInstance, "cycling", "cyclist_name", "2023.04.12", "nb-1-big-TOC.txt", null, mockStreamConsumer);
+                expectedPath = ApiEndpointsV1.COMPONENTS_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                              .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                              .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
+                                                              .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt");
             }
             else
             {
 
-                ListSnapshotFilesResponse.FileInfo fileInfo = new ListSnapshotFilesResponse.FileInfo(2023,
-                                                                                                     server.getHostName(),
-                                                                                                     server.getPort(), 0,
-                                                                                                     "2023.04.12",
-                                                                                                     "cycling",
-                                                                                                     "cyclist_name-1234",
-                                                                                                     "nb-1-big-TOC.txt");
+                ListSnapshotFilesResponse.FileInfo fileInfo = new ListSnapshotFilesResponse.FileInfo(2023, server.getHostName(), server.getPort(), 0,
+                        "2023.04.12", "cycling", "cyclist_name-1234", "nb-1-big-TOC.txt");
                 client.streamSSTableComponent(sidecarInstance, fileInfo, null, mockStreamConsumer);
                 expectedPath = fileInfo.componentDownloadUrl();
             }
@@ -1224,7 +1137,7 @@ abstract class SidecarClientTest
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
+    @ValueSource(booleans = { true, false})
     void testStreamSSTableComponentWithRetries(boolean useLegacyApi) throws Exception
     {
         try (MockWebServer server = new MockWebServer())
@@ -1255,13 +1168,11 @@ abstract class SidecarClientTest
             };
 
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            MockResponse response =
-            new MockResponse().setResponseCode(PARTIAL_CONTENT.code())
-                              .setHeader(HttpHeaderNames.CONTENT_TYPE.toString(),
-                                         HttpHeaderValues.APPLICATION_OCTET_STREAM)
-                              .setHeader(HttpHeaderNames.ACCEPT_RANGES.toString(), "bytes")
-                              .setHeader(HttpHeaderNames.CONTENT_RANGE.toString(), "bytes 10-20/80")
-                              .setBody("TOC.txt\nSt");
+            MockResponse response = new MockResponse().setResponseCode(PARTIAL_CONTENT.code())
+                                                      .setHeader(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_OCTET_STREAM)
+                                                      .setHeader(HttpHeaderNames.ACCEPT_RANGES.toString(), "bytes")
+                                                      .setHeader(HttpHeaderNames.CONTENT_RANGE.toString(), "bytes 10-20/80")
+                                                      .setBody("TOC.txt\nSt");
             server.enqueue(new MockResponse().setResponseCode(INTERNAL_SERVER_ERROR.code())
                                              .setBody("{\"error\":\"some error\"}"));
             server.enqueue(new MockResponse().setResponseCode(INTERNAL_SERVER_ERROR.code())
@@ -1271,28 +1182,17 @@ abstract class SidecarClientTest
             String expectedPath;
             if (useLegacyApi)
             {
-                client.streamSSTableComponent(sidecarInstance,
-                                              "cycling",
-                                              "cyclist_name",
-                                              "2023.04.12",
-                                              "nb-1-big-TOC.txt",
-                                              HttpRange.of(10, 20),
-                                              mockStreamConsumer);
-                expectedPath = ApiEndpointsV1.COMPONENTS_ROUTE
-                               .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
-                               .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
-                               .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt");
+                client.streamSSTableComponent(sidecarInstance, "cycling", "cyclist_name", "2023.04.12", "nb-1-big-TOC.txt", HttpRange.of(10, 20),
+                        mockStreamConsumer);
+                expectedPath = ApiEndpointsV1.COMPONENTS_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                              .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                              .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, "2023.04.12")
+                                                              .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, "nb-1-big-TOC.txt");
             }
             else
             {
-                ListSnapshotFilesResponse.FileInfo fileInfo = new ListSnapshotFilesResponse.FileInfo(2023,
-                                                                                                     server.getHostName(),
-                                                                                                     server.getPort(), 0,
-                                                                                                     "2023.04.12",
-                                                                                                     "cycling",
-                                                                                                     "cyclist_name-1234",
-                                                                                                     "nb-1-big-TOC.txt");
+                ListSnapshotFilesResponse.FileInfo fileInfo = new ListSnapshotFilesResponse.FileInfo(2023, server.getHostName(), server.getPort(), 0,
+                        "2023.04.12", "cycling", "cyclist_name-1234", "nb-1-big-TOC.txt");
                 client.streamSSTableComponent(sidecarInstance, fileInfo, HttpRange.of(10, 20), mockStreamConsumer);
                 expectedPath = fileInfo.componentDownloadUrl();
             }
@@ -1306,10 +1206,11 @@ abstract class SidecarClientTest
             assertThat(request3.getHeader("range")).isEqualTo("bytes=10-20");
 
             byte[] bytes = receivedBytes.stream()
-                                        .collect(ByteArrayOutputStream::new,
-                                                 (outputStream, src) -> outputStream.write(src, 0, src.length),
-                                                 (outputStream, src) -> {
-                                                 })
+                                        .collect(ByteArrayOutputStream::new, (outputStream,
+                                                                              src) -> outputStream.write(src, 0, src.length),
+                                                (outputStream,
+                                                 src) -> {
+                                                })
                                         .toByteArray();
             assertThat(new String(bytes, StandardCharsets.UTF_8)).isEqualTo("TOC.txt\nSt");
         }
@@ -1321,23 +1222,22 @@ abstract class SidecarClientTest
         UUID jobId = UUID.randomUUID();
         String jobStatusAsString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"RUNNING\",\"operation\":\"test\"}";
 
-        MockResponse response = new MockResponse()
-                                .setResponseCode(OK.code())
-                                .setHeader("content-type", "application/json")
-                                .setBody(jobStatusAsString);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setHeader("content-type", "application/json")
+                                                  .setBody(jobStatusAsString);
         enqueue(response);
 
         for (MockWebServer server : servers)
         {
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            OperationalJobResponse result = client.operationalJobs(sidecarInstance, jobId).get(30, TimeUnit.SECONDS);
+            OperationalJobResponse result = client.operationalJobs(sidecarInstance, jobId)
+                                                  .get(30, TimeUnit.SECONDS);
             assertThat(result).isNotNull();
             assertThat(result.jobId()).isEqualTo(jobId);
             assertThat(result.status()).isEqualTo(OperationalJobStatus.RUNNING);
             assertThat(result.operation()).isEqualTo("test");
-            validateResponseServed(server,
-                                   ApiEndpointsV1.OPERATIONAL_JOB_ROUTE.replaceAll(OPERATIONAL_JOB_ID_PATH_PARAM, jobId.toString()),
-                                   req -> {});
+            validateResponseServed(server, ApiEndpointsV1.OPERATIONAL_JOB_ROUTE.replaceAll(OPERATIONAL_JOB_ID_PATH_PARAM, jobId.toString()), req -> {
+            });
         }
     }
 
@@ -1347,21 +1247,24 @@ abstract class SidecarClientTest
         UUID jobId = UUID.randomUUID();
         String listJobsString = "{\"jobs\":[{\"jobId\":\"" + jobId + "\",\"status\":\"RUNNING\",\"failureReason\":\"\",\"operation\":\"test\"}]}";
 
-        MockResponse response = new MockResponse()
-                                .setResponseCode(OK.code())
-                                .setHeader("content-type", "application/json")
-                                .setBody(listJobsString);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setHeader("content-type", "application/json")
+                                                  .setBody(listJobsString);
 
         enqueue(response);
 
         for (MockWebServer server : servers)
         {
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            ListOperationalJobsResponse result = client.listOperationalJobs(sidecarInstance).get(30, TimeUnit.SECONDS);
+            ListOperationalJobsResponse result = client.listOperationalJobs(sidecarInstance)
+                                                       .get(30, TimeUnit.SECONDS);
             assertThat(result).isNotNull();
             assertThat(result.jobs()).isNotNull();
-            assertThat(result.jobs().get(0).jobId()).isEqualTo(jobId);
-            validateResponseServed(server, ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE, req -> {});
+            assertThat(result.jobs()
+                             .get(0)
+                             .jobId()).isEqualTo(jobId);
+            validateResponseServed(server, ApiEndpointsV1.LIST_OPERATIONAL_JOBS_ROUTE, req -> {
+            });
         }
     }
 
@@ -1371,14 +1274,14 @@ abstract class SidecarClientTest
         UUID jobId = UUID.randomUUID();
         String nodeDecommissionString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"SUCCEEDED\",\"instance\":\"127.0.0.1\"}";
 
-        MockResponse response = new MockResponse()
-                                .setResponseCode(OK.code())
-                                .setHeader("content-type", "application/json")
-                                .setBody(nodeDecommissionString);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setHeader("content-type", "application/json")
+                                                  .setBody(nodeDecommissionString);
         enqueue(response);
 
         SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(servers.get(0));
-        OperationalJobResponse result = client.nodeDecommission(sidecarInstance).get(30, TimeUnit.SECONDS);
+        OperationalJobResponse result = client.nodeDecommission(sidecarInstance)
+                                              .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
         validateResponseServed(ApiEndpointsV1.NODE_DECOMMISSION_ROUTE);
@@ -1394,51 +1297,49 @@ abstract class SidecarClientTest
             server.enqueue(response);
         }
 
-        assertThatExceptionOfType(ExecutionException.class)
-        .isThrownBy(() -> client.schema("cycling").get(30, TimeUnit.SECONDS))
-        .withRootCauseInstanceOf(RetriesExhaustedException.class)
-        .withMessageContaining("Unable to complete request '/api/v1/keyspaces/cycling/schema' after 4 attempts");
+        assertThatExceptionOfType(ExecutionException.class).isThrownBy(() -> client.schema("cycling")
+                                                                                   .get(30, TimeUnit.SECONDS))
+                                                           .withRootCauseInstanceOf(RetriesExhaustedException.class)
+                                                           .withMessageContaining(
+                                                                   "Unable to complete request '/api/v1/keyspaces/cycling/schema' after 4 attempts");
     }
 
     @Test
     void testProvidingCustomRetryPolicy() throws ExecutionException, InterruptedException, TimeoutException
     {
         String nodeSettingsAsString = "{\"partitioner\":\"test-partitioner\", \"releaseVersion\": \"4.0.0\"}";
-        MockResponse response = new MockResponse().setResponseCode(ACCEPTED.code()).setBody(nodeSettingsAsString);
+        MockResponse response = new MockResponse().setResponseCode(ACCEPTED.code())
+                                                  .setBody(nodeSettingsAsString);
         enqueue(response);
 
-        RequestContext requestContext =
-        client.requestBuilder()
-              .request(new NodeSettingsRequest())
-              .retryPolicy(new RetryPolicy()
-              {
-                  @Override
-                  public void onResponse(CompletableFuture<HttpResponse> responseFuture,
-                                         Request request,
-                                         HttpResponse response,
-                                         Throwable throwable,
-                                         int attempts,
-                                         boolean canRetryOnADifferentHost,
-                                         RetryAction retryAction)
-                  {
-                      if (response != null && response.statusCode() == ACCEPTED.code())
-                      {
-                          responseFuture.complete(response);
-                      }
-                      else
-                      {
-                          client.defaultRetryPolicy().onResponse(responseFuture,
-                                                                 request,
-                                                                 response,
-                                                                 throwable,
-                                                                 attempts,
-                                                                 canRetryOnADifferentHost,
-                                                                 retryAction);
-                      }
-                  }
-              })
-              .build();
-        NodeSettings result = client.<NodeSettings>executeRequestAsync(requestContext).get(30, TimeUnit.SECONDS);
+        RequestContext requestContext = client.requestBuilder()
+                                              .request(new NodeSettingsRequest())
+                                              .retryPolicy(new RetryPolicy()
+                                              {
+                                                  @Override
+                                                  public void onResponse(CompletableFuture<HttpResponse> responseFuture,
+                                                                         Request request,
+                                                                         HttpResponse response,
+                                                                         Throwable throwable,
+                                                                         int attempts,
+                                                                         boolean canRetryOnADifferentHost,
+                                                                         RetryAction retryAction)
+                                                  {
+                                                      if (response != null && response.statusCode() == ACCEPTED.code())
+                                                      {
+                                                          responseFuture.complete(response);
+                                                      }
+                                                      else
+                                                      {
+                                                          client.defaultRetryPolicy()
+                                                                .onResponse(responseFuture, request, response, throwable, attempts, canRetryOnADifferentHost,
+                                                                        retryAction);
+                                                      }
+                                                  }
+                                              })
+                                              .build();
+        NodeSettings result = client.<NodeSettings>executeRequestAsync(requestContext)
+                                    .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.partitioner()).isEqualTo("test-partitioner");
         assertThat(result.releaseVersion()).isEqualTo("4.0.0");
@@ -1450,9 +1351,8 @@ abstract class SidecarClientTest
     void testAcceptCreateRestoreJobRequest() throws Exception
     {
         String jobIdStr = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
-        enqueue(new MockResponse()
-                .setResponseCode(OK.code())
-                .setBody("{\"jobId\":\"" + jobIdStr + "\",\"status\":\"CREATED\"}"));
+        enqueue(new MockResponse().setResponseCode(OK.code())
+                                  .setBody("{\"jobId\":\"" + jobIdStr + "\",\"status\":\"CREATED\"}"));
 
         UUID jobId = UUID.fromString(jobIdStr);
         long expireAt = System.currentTimeMillis() + 10000;
@@ -1460,9 +1360,7 @@ abstract class SidecarClientTest
         CreateRestoreJobRequestPayload requestPayload = CreateRestoreJobRequestPayload.builder(secrets, expireAt)
                                                                                       .jobId(jobId)
                                                                                       .build();
-        CreateRestoreJobResponsePayload responsePayload = client.createRestoreJob("cycling",
-                                                                                  "rank_by_year_and_name",
-                                                                                  requestPayload)
+        CreateRestoreJobResponsePayload responsePayload = client.createRestoreJob("cycling", "rank_by_year_and_name", requestPayload)
                                                                 .join();
 
         assertThat(responsePayload).isNotNull();
@@ -1471,25 +1369,22 @@ abstract class SidecarClientTest
 
         ObjectMapper mapper = new ObjectMapper();
         String expectedReqBodyString = mapper.writeValueAsString(requestPayload);
-        validateResponseServed(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE
-                               .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
-                               .replaceAll(TABLE_PATH_PARAM, "rank_by_year_and_name")
-                               .replaceAll(JOB_ID_PATH_PARAM, jobIdStr),
-                               recordedRequest -> {
-                                   String reqBodyString = recordedRequest.getBody()
-                                                                         .readString(Charset.defaultCharset());
-                                   assertThat(reqBodyString).isEqualTo(expectedReqBodyString);
-                               });
+        validateResponseServed(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                                      .replaceAll(TABLE_PATH_PARAM, "rank_by_year_and_name")
+                                                                      .replaceAll(JOB_ID_PATH_PARAM, jobIdStr),
+                recordedRequest -> {
+                    String reqBodyString = recordedRequest.getBody()
+                                                          .readString(Charset.defaultCharset());
+                    assertThat(reqBodyString).isEqualTo(expectedReqBodyString);
+                });
     }
 
     @Test
     void testCreateRestoreJobShouldNotRetryOnDifferentHostWithBadRequest() throws Exception
     {
         String jobIdStr = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
-        enqueue(new MockResponse()
-                .setResponseCode(BAD_REQUEST.code())
-                .setBody("{\"status\":\"Fail\"," +
-                         "\"message\":\"Error while decoding values, check your request body\"}"));
+        enqueue(new MockResponse().setResponseCode(BAD_REQUEST.code())
+                                  .setBody("{\"status\":\"Fail\"," + "\"message\":\"Error while decoding values, check your request body\"}"));
 
         UUID jobId = UUID.fromString(jobIdStr);
         long expireAt = System.currentTimeMillis() + 10000;
@@ -1497,54 +1392,55 @@ abstract class SidecarClientTest
         CreateRestoreJobRequestPayload requestPayload = CreateRestoreJobRequestPayload.builder(secrets, expireAt)
                                                                                       .jobId(jobId)
                                                                                       .build();
-        assertThatException().isThrownBy(() -> client.createRestoreJob("badkeyspace",
-                                                                       "bad_table",
-                                                                       requestPayload)
+        assertThatException().isThrownBy(() -> client.createRestoreJob("badkeyspace", "bad_table", requestPayload)
                                                      .join())
                              .withCauseInstanceOf(RetriesExhaustedException.class)
-                             .withMessageContaining("Unable to complete request '/api/v1/keyspaces/" +
-                                                    "badkeyspace/tables/bad_table/restore-jobs' after 1 attempt");
+                             .withMessageContaining(
+                                     "Unable to complete request '/api/v1/keyspaces/" + "badkeyspace/tables/bad_table/restore-jobs' after 1 attempt");
 
         ObjectMapper mapper = new ObjectMapper();
         String expectedReqBodyString = mapper.writeValueAsString(requestPayload);
-        validateResponseServed(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE
-                               .replaceAll(KEYSPACE_PATH_PARAM, "badkeyspace")
-                               .replaceAll(TABLE_PATH_PARAM, "bad_table")
-                               .replaceAll(JOB_ID_PATH_PARAM, jobIdStr),
-                               recordedRequest -> {
-                                   String reqBodyString = recordedRequest.getBody()
-                                                                         .readString(Charset.defaultCharset());
-                                   assertThat(reqBodyString).isEqualTo(expectedReqBodyString);
-                               });
+        validateResponseServed(ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "badkeyspace")
+                                                                      .replaceAll(TABLE_PATH_PARAM, "bad_table")
+                                                                      .replaceAll(JOB_ID_PATH_PARAM, jobIdStr),
+                recordedRequest -> {
+                    String reqBodyString = recordedRequest.getBody()
+                                                          .readString(Charset.defaultCharset());
+                    assertThat(reqBodyString).isEqualTo(expectedReqBodyString);
+                });
     }
 
     @Test
     public void testConnectedClientStats() throws Exception
     {
-        String connectedClientStatsResponseAsString = "{\"clientConnections\":[{\"address\":\"127.0.0.1\",\"port\":54628" +
-                                                      ",\"sslEnabled\":false,\"sslCipherSuite\":\"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256\"" +
-                                                      ",\"sslProtocol\":\"TLSv1.2\",\"protocolVersion\":\"5\",\"username\":\"anonymous\"" +
-                                                      ",\"requestCount\":39,\"driverName\":\"DataStax Java Driver\"" +
-                                                      ",\"driverVersion\":\"3.11.3\",\"keyspaceName\":\"test\"" +
-                                                      ",\"authenticationMode\":\"MutualTls\"" +
-                                                      ",\"authenticationMetadata\":{\"identity\":\"spiffe://test.cassandra.apache.org/unitTest/mtls\"}" +
-                                                      ",\"clientOptions\":{\"CQL_VERSION\":\"3.4.6\",\"DRIVER_NAME\":\"DataStax Python Driver\"" +
-                                                      ",\"DRIVER_VERSION\":\"3.25.0\"}}],\"totalConnectedClients\":1" +
-                                                      ",\"connectionsByUser\":{\"anonymous\":1}}";
+        String connectedClientStatsResponseAsString = "{\"clientConnections\":[{\"address\":\"127.0.0.1\",\"port\":54628"
+                + ",\"sslEnabled\":false,\"sslCipherSuite\":\"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256\""
+                + ",\"sslProtocol\":\"TLSv1.2\",\"protocolVersion\":\"5\",\"username\":\"anonymous\""
+                + ",\"requestCount\":39,\"driverName\":\"DataStax Java Driver\"" + ",\"driverVersion\":\"3.11.3\",\"keyspaceName\":\"test\""
+                + ",\"authenticationMode\":\"MutualTls\"" + ",\"authenticationMetadata\":{\"identity\":\"spiffe://test.cassandra.apache.org/unitTest/mtls\"}"
+                + ",\"clientOptions\":{\"CQL_VERSION\":\"3.4.6\",\"DRIVER_NAME\":\"DataStax Python Driver\""
+                + ",\"DRIVER_VERSION\":\"3.25.0\"}}],\"totalConnectedClients\":1" + ",\"connectionsByUser\":{\"anonymous\":1}}";
 
-        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(connectedClientStatsResponseAsString);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(connectedClientStatsResponseAsString);
         enqueue(response);
 
         for (MockWebServer server : servers)
         {
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            ConnectedClientStatsResponse result = client.connectedClientStats(sidecarInstance).get();
+            ConnectedClientStatsResponse result = client.connectedClientStats(sidecarInstance)
+                                                        .get();
 
             assertThat(result).isNotNull();
-            assertThat(result.clientConnections()).isNotNull().hasSize(1);
-            assertThat(result.totalConnectedClients()).isNotNull().isEqualTo(1);
-            assertThat(result.connectionsByUser()).isNotNull().containsKey("anonymous");
-            ClientConnectionEntry entry = result.clientConnections().iterator().next();
+            assertThat(result.clientConnections()).isNotNull()
+                                                  .hasSize(1);
+            assertThat(result.totalConnectedClients()).isNotNull()
+                                                      .isEqualTo(1);
+            assertThat(result.connectionsByUser()).isNotNull()
+                                                  .containsKey("anonymous");
+            ClientConnectionEntry entry = result.clientConnections()
+                                                .iterator()
+                                                .next();
             assertThat(entry.address()).isEqualTo("127.0.0.1");
             assertThat(entry.port()).isEqualTo(54628);
             assertThat(entry.sslEnabled()).isEqualTo(false);
@@ -1559,7 +1455,8 @@ abstract class SidecarClientTest
             assertThat(entry.authenticationMode()).isEqualTo("MutualTls");
             assertThat(entry.authenticationMetadata()).containsKey("identity");
             assertThat(entry.clientOptions()).containsKeys("CQL_VERSION", "DRIVER_NAME", "DRIVER_VERSION");
-            validateResponseServed(server, ApiEndpointsV1.CONNECTED_CLIENT_STATS_ROUTE, req -> {});
+            validateResponseServed(server, ApiEndpointsV1.CONNECTED_CLIENT_STATS_ROUTE, req -> {
+            });
         }
     }
 
@@ -1573,12 +1470,8 @@ abstract class SidecarClientTest
         long expectedTotalSize = 2048;
         long expectedSnapshotSize = 100;
 
-        TableStatsResponse tableStatsResponse = new TableStatsResponse(testKeyspace,
-                                                                       testTable,
-                                                                       expectedSstables,
-                                                                       expectedSize,
-                                                                       expectedTotalSize,
-                                                                       expectedSnapshotSize);
+        TableStatsResponse tableStatsResponse = new TableStatsResponse(testKeyspace, testTable, expectedSstables, expectedSize, expectedTotalSize,
+                expectedSnapshotSize);
         ObjectMapper mapper = new ObjectMapper();
         MockResponse response = new MockResponse().setResponseCode(OK.code())
                                                   .setBody(mapper.writeValueAsString(tableStatsResponse));
@@ -1587,27 +1480,26 @@ abstract class SidecarClientTest
         for (MockWebServer server : servers)
         {
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            TableStatsResponse result = client.tableStats(sidecarInstance, testKeyspace, testTable).get();
+            TableStatsResponse result = client.tableStats(sidecarInstance, testKeyspace, testTable)
+                                              .get();
 
             assertThat(result).isNotNull();
             assertThat(result.sstableCount()).isEqualTo(expectedSstables);
             assertThat(result.diskSpaceUsedBytes()).isEqualTo(expectedSize);
             assertThat(result.totalDiskSpaceUsedBytes()).isEqualTo(expectedTotalSize);
             assertThat(result.snapshotsSizeBytes()).isEqualTo(expectedSnapshotSize);
-            validateResponseServed(server,
-                                   ApiEndpointsV1.TABLE_STATS_ROUTE
-                                   .replaceAll(KEYSPACE_PATH_PARAM, testKeyspace)
-                                   .replaceAll(TABLE_PATH_PARAM, testTable),
-                                   req -> {});
+            validateResponseServed(server, ApiEndpointsV1.TABLE_STATS_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, testKeyspace)
+                                                                           .replaceAll(TABLE_PATH_PARAM, testTable),
+                    req -> {
+                    });
         }
     }
-
 
     @Test
     public void testListCdcSegments() throws ExecutionException, InterruptedException, JsonProcessingException
     {
         List<CdcSegmentInfo> segments = Arrays.asList(new CdcSegmentInfo("commit-log1", 100, 100, true, 1732148713725L),
-                                                      new CdcSegmentInfo("commit-log2", 100, 10, false, 1732148713725L));
+                new CdcSegmentInfo("commit-log2", 100, 10, false, 1732148713725L));
         ListCdcSegmentsResponse listSegmentsResponse = new ListCdcSegmentsResponse("localhost", 9043, segments);
         ObjectMapper mapper = new ObjectMapper();
 
@@ -1618,7 +1510,8 @@ abstract class SidecarClientTest
         enqueue(response);
 
         SidecarInstance instance = instances.get(0);
-        ListCdcSegmentsResponse result = client.listCdcSegments(instance).get();
+        ListCdcSegmentsResponse result = client.listCdcSegments(instance)
+                                               .get();
         assertThat(result).isNotNull();
         assertThat(result).isEqualTo(listSegmentsResponse);
         validateResponseServed(ApiEndpointsV1.LIST_CDC_SEGMENTS_ROUTE);
@@ -1630,8 +1523,7 @@ abstract class SidecarClientTest
         MockResponse response = new MockResponse();
         // mock reading the first 12 bytes, i.e. "Test Content" from a large blob (1024).
         response.setResponseCode(200)
-                .setHeader(HttpHeaderNames.CONTENT_TYPE.toString(),
-                           HttpHeaderValues.APPLICATION_OCTET_STREAM)
+                .setHeader(HttpHeaderNames.CONTENT_TYPE.toString(), HttpHeaderValues.APPLICATION_OCTET_STREAM)
                 .setHeader(HttpHeaderNames.ACCEPT_RANGES.toString(), "bytes")
                 .setHeader(HttpHeaderNames.CONTENT_RANGE.toString(), "bytes 0-11/1024")
                 .setBody("Test Content");
@@ -1683,7 +1575,8 @@ abstract class SidecarClientTest
 
         SidecarInstance instance = instances.get(0);
 
-        assertThatNoException().isThrownBy(() -> client.reportSchema(instance).get());
+        assertThatNoException().isThrownBy(() -> client.reportSchema(instance)
+                                                       .get());
     }
 
     @Test
@@ -1696,10 +1589,11 @@ abstract class SidecarClientTest
 
         SidecarInstance instance = instances.get(0);
 
-        assertThatThrownBy(() -> client.reportSchema(instance).get()).isExactlyInstanceOf(ExecutionException.class)
-                                                                     .hasCauseInstanceOf(RetriesExhaustedException.class)
-                                                                     .hasMessageContaining(Integer.toString(INTERNAL_SERVER_ERROR.code()))
-                                                                     .hasMessageContaining(INTERNAL_SERVER_ERROR.reasonPhrase());
+        assertThatThrownBy(() -> client.reportSchema(instance)
+                                       .get()).isExactlyInstanceOf(ExecutionException.class)
+                                              .hasCauseInstanceOf(RetriesExhaustedException.class)
+                                              .hasMessageContaining(Integer.toString(INTERNAL_SERVER_ERROR.code()))
+                                              .hasMessageContaining(INTERNAL_SERVER_ERROR.reasonPhrase());
     }
 
     @Test
@@ -1722,9 +1616,9 @@ abstract class SidecarClientTest
         ObjectMapper mapper = new ObjectMapper();
         response.setBody(mapper.writeValueAsString(expectedResponse));
         enqueue(response);
-        assertThat(client.allServicesConfig().get()).isEqualTo(expectedResponse);
-        validateResponseServed(ApiEndpointsV1.SERVICES_CONFIG_ROUTE,
-                               request -> assertThat(request.getMethod()).isEqualTo("GET"));
+        assertThat(client.allServicesConfig()
+                         .get()).isEqualTo(expectedResponse);
+        validateResponseServed(ApiEndpointsV1.SERVICES_CONFIG_ROUTE, request -> assertThat(request.getMethod()).isEqualTo("GET"));
     }
 
     @Test
@@ -1739,9 +1633,10 @@ abstract class SidecarClientTest
         ObjectMapper mapper = new ObjectMapper();
         response.setBody(mapper.writeValueAsString(putResponse));
         enqueue(response);
-        assertThat(client.updateCdcServiceConfig(Service.CDC, payload).get()).isEqualTo(putResponse);
+        assertThat(client.updateCdcServiceConfig(Service.CDC, payload)
+                         .get()).isEqualTo(putResponse);
         validateResponseServed(ApiEndpointsV1.SERVICE_CONFIG_ROUTE.replaceAll(ApiEndpointsV1.SERVICE_PARAM, "cdc"),
-                               request -> assertThat(request.getMethod()).isEqualTo("PUT"));
+                request -> assertThat(request.getMethod()).isEqualTo("PUT"));
     }
 
     @Test
@@ -1750,9 +1645,10 @@ abstract class SidecarClientTest
         MockResponse response = new MockResponse();
         response.setResponseCode(200);
         enqueue(response);
-        client.deleteCdcServiceConfig(Service.CDC).get();
+        client.deleteCdcServiceConfig(Service.CDC)
+              .get();
         validateResponseServed(ApiEndpointsV1.SERVICE_CONFIG_ROUTE.replaceAll(ApiEndpointsV1.SERVICE_PARAM, "cdc"),
-                               request -> assertThat(request.getMethod()).isEqualTo("DELETE"));
+                request -> assertThat(request.getMethod()).isEqualTo("DELETE"));
     }
 
     @Test
@@ -1762,33 +1658,37 @@ abstract class SidecarClientTest
         StreamStatsResponse mockResp = new StreamStatsResponse("NORMAL", stats);
         ObjectMapper mapper = new ObjectMapper();
         String expectedResponse = mapper.writeValueAsString(mockResp);
-        MockResponse response = new MockResponse()
-                                .setResponseCode(OK.code())
-                                .setBody(expectedResponse);
+        MockResponse response = new MockResponse().setResponseCode(OK.code())
+                                                  .setBody(expectedResponse);
         enqueue(response);
         for (MockWebServer server : servers)
         {
             SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
-            StreamStatsResponse result = client.streamsStats(sidecarInstance).get(30, TimeUnit.SECONDS);
+            StreamStatsResponse result = client.streamsStats(sidecarInstance)
+                                               .get(30, TimeUnit.SECONDS);
             assertThat(mapper.writeValueAsString(result)).isEqualTo(expectedResponse);
-            validateResponseServed(server, ApiEndpointsV1.STREAM_STATS_ROUTE, req -> {});
+            validateResponseServed(server, ApiEndpointsV1.STREAM_STATS_ROUTE, req -> {
+            });
         }
     }
 
     @Test
     void testNodeUpdateGossip() throws Exception
     {
-        MockResponse response = new MockResponse().setResponseCode(200).setBody("{\"status\":\"OK\"}");
+        MockResponse response = new MockResponse().setResponseCode(200)
+                                                  .setBody("{\"status\":\"OK\"}");
         enqueue(response);
 
         SidecarInstanceImpl sidecarInstance = instances.get(0);
-        HealthResponse result = client.nodeUpdateGossip(sidecarInstance, NodeCommandRequestPayload.State.STOP).get(30, TimeUnit.SECONDS);
+        HealthResponse result = client.nodeUpdateGossip(sidecarInstance, NodeCommandRequestPayload.State.STOP)
+                                      .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualToIgnoringCase("OK");
         assertThat(result.isOk()).isTrue();
 
         validateResponseServed(ApiEndpointsV1.GOSSIP_ROUTE, request -> {
-            String requestBody = request.getBody().readUtf8();
+            String requestBody = request.getBody()
+                                        .readUtf8();
             assertThat(requestBody).isEqualTo("{\"state\":\"stop\"}");
         });
     }
@@ -1796,17 +1696,20 @@ abstract class SidecarClientTest
     @Test
     void testNodeUpdateNative() throws Exception
     {
-        MockResponse response = new MockResponse().setResponseCode(200).setBody("{\"status\":\"OK\"}");
+        MockResponse response = new MockResponse().setResponseCode(200)
+                                                  .setBody("{\"status\":\"OK\"}");
         enqueue(response);
 
         SidecarInstanceImpl sidecarInstance = instances.get(0);
-        HealthResponse result = client.nodeUpdateNative(sidecarInstance, NodeCommandRequestPayload.State.STOP).get(30, TimeUnit.SECONDS);
+        HealthResponse result = client.nodeUpdateNative(sidecarInstance, NodeCommandRequestPayload.State.STOP)
+                                      .get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualToIgnoringCase("OK");
         assertThat(result.isOk()).isTrue();
 
         validateResponseServed(ApiEndpointsV1.CASSANDRA_NATIVE_ROUTE, request -> {
-            String requestBody = request.getBody().readUtf8();
+            String requestBody = request.getBody()
+                                        .readUtf8();
             assertThat(requestBody).isEqualTo("{\"state\":\"stop\"}");
         });
     }
@@ -1826,7 +1729,8 @@ abstract class SidecarClientTest
     }
 
     private void validateResponseServed(String expectedEndpointPath,
-                                        Consumer<RecordedRequest> serverReceivedRequestVerifier) throws InterruptedException
+                                        Consumer<RecordedRequest> serverReceivedRequestVerifier)
+            throws InterruptedException
     {
         for (MockWebServer server : servers)
         {
@@ -1838,8 +1742,10 @@ abstract class SidecarClientTest
         fail("The request was not served by any of the provided servers");
     }
 
-    private boolean validateResponseServed(MockWebServer server, String expectedEndpointPath, Consumer<RecordedRequest> serverReceivedRequestVerifier)
-    throws InterruptedException
+    private boolean validateResponseServed(MockWebServer server,
+                                           String expectedEndpointPath,
+                                           Consumer<RecordedRequest> serverReceivedRequestVerifier)
+            throws InterruptedException
     {
         if (server.getRequestCount() > 0)
         {
@@ -1854,7 +1760,8 @@ abstract class SidecarClientTest
 
     private InputStream resourceInputStream(String name)
     {
-        InputStream inputStream = getClass().getClassLoader().getResourceAsStream(name);
+        InputStream inputStream = getClass().getClassLoader()
+                                            .getResourceAsStream(name);
         assertThat(inputStream).isNotNull();
         return inputStream;
     }

@@ -97,7 +97,8 @@ public interface SidecarConfiguration
     /**
      * @return the configuration for vert.x
      */
-    @Nullable VertxConfiguration vertxConfiguration();
+    @Nullable
+    VertxConfiguration vertxConfiguration();
 
     /**
      * @return the configuration for Schema Reporting

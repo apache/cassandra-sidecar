@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.testing;
 
+import com.vdurmont.semver4j.Semver;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Constructor;
@@ -29,14 +30,10 @@ import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import com.google.common.annotations.VisibleForTesting;
-
-import com.vdurmont.semver4j.Semver;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.shared.Versions;
 import org.apache.cassandra.sidecar.testing.SharedClusterIntegrationTestBase;
-
+import com.google.common.annotations.VisibleForTesting;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -50,18 +47,20 @@ public class IsolatedDTestClassLoaderWrapper
      * Initialize dtest jar class loader
      *
      * @param testVersion version to dtest jar
-     * @param clazz       has to be a class in the cassandra-analytics-integration-framework package
+     * @param clazz has to be a class in the cassandra-analytics-integration-framework package
      */
-    public void initializeDTestJarClassLoader(TestVersion testVersion, Class<?> clazz)
+    public void initializeDTestJarClassLoader(TestVersion testVersion,
+                                              Class<?> clazz)
     {
-        ClassLoader parent = Thread.currentThread().getContextClassLoader();
+        ClassLoader parent = Thread.currentThread()
+                                   .getContextClassLoader();
         Semver version = new Semver(testVersion.version(), Semver.SemverType.LOOSE);
-        List<URL> urlList = new ArrayList<>(Arrays.asList(Versions.find().getLatest(version).classpath));
+        List<URL> urlList = new ArrayList<>(Arrays.asList(Versions.find()
+                                                                  .getLatest(version).classpath));
         URL classUrl = urlOfClass(clazz);
         urlList.add(classUrl);
-        dtestJarClassLoader =
-        AccessController.doPrivileged((PrivilegedAction<DTestJarClassLoader>) () ->
-                                                                              new DTestJarClassLoader(urlList.toArray(new URL[0]), parent));
+        dtestJarClassLoader = AccessController.doPrivileged(
+                (PrivilegedAction<DTestJarClassLoader>) () -> new DTestJarClassLoader(urlList.toArray(new URL[0]), parent));
     }
 
     public void closeDTestJarClassLoader()
@@ -119,8 +118,8 @@ public class IsolatedDTestClassLoaderWrapper
             {
                 Class<?> launcherClass = Class.forName("org.apache.cassandra.distributed.impl.CassandraCluster", true, dtestJarClassLoader);
                 Constructor<IClusterExtension<? extends IInstance>> ctor =
-                (Constructor<IClusterExtension<? extends IInstance>>) launcherClass.getDeclaredConstructor(String.class,
-                                                                                                           ClusterBuilderConfiguration.class);
+                                                                         (Constructor<IClusterExtension<? extends IInstance>>) launcherClass.getDeclaredConstructor(
+                                                                                 String.class, ClusterBuilderConfiguration.class);
                 return ctor.newInstance(versionString, builderConfiguration);
             }
             catch (ReflectiveOperationException e)
@@ -136,13 +135,16 @@ public class IsolatedDTestClassLoaderWrapper
     @VisibleForTesting
     public static class DTestJarClassLoader extends URLClassLoader
     {
-        DTestJarClassLoader(URL[] urls, ClassLoader parent)
+        DTestJarClassLoader(URL[] urls,
+                            ClassLoader parent)
         {
             super(urls, parent);
         }
 
         @Override
-        protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException
+        protected Class<?> loadClass(String name,
+                                     boolean resolve)
+                throws ClassNotFoundException
         {
             if (!"org.apache.cassandra.distributed.impl.CassandraCluster".equals(name))
             {
@@ -179,8 +181,11 @@ public class IsolatedDTestClassLoaderWrapper
     {
         URL classUrl = clazz.getResource(clazz.getSimpleName() + ".class");
         assertThat(classUrl).isNotNull();
-        String pathOfClassInJar = "!/" + clazz.getCanonicalName().replace(".", "/") + ".class";
-        String classDir = classUrl.getPath().replace(pathOfClassInJar, "");
+        String pathOfClassInJar = "!/" + clazz.getCanonicalName()
+                                              .replace(".", "/")
+                + ".class";
+        String classDir = classUrl.getPath()
+                                  .replace(pathOfClassInJar, "");
         try
         {
             return new URL(classDir);

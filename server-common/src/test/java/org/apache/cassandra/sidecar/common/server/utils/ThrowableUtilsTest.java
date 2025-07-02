@@ -44,40 +44,34 @@ class ThrowableUtilsTest
     @SuppressWarnings("Convert2MethodRef")
     void testThrowingSupplier()
     {
-        Supplier<Void> supplier = ThrowableUtils.supplier(() ->
-        {
+        Supplier<Void> supplier = ThrowableUtils.supplier(() -> {
             throw new CheckedException();
         });
 
-        assertThatThrownBy(() -> supplier.get())
-            .isInstanceOf(Exception.class)
-            .hasCauseInstanceOf(CheckedException.class);
+        assertThatThrownBy(() -> supplier.get()).isInstanceOf(Exception.class)
+                                                .hasCauseInstanceOf(CheckedException.class);
     }
 
     @Test
     void testThrowingConsumer()
     {
-        Consumer<Void> consumer = ThrowableUtils.consumer(object ->
-        {
+        Consumer<Void> consumer = ThrowableUtils.consumer(object -> {
             throw new CheckedException();
         });
 
-        assertThatThrownBy(() -> consumer.accept(null))
-            .isInstanceOf(Exception.class)
-            .hasCauseInstanceOf(CheckedException.class);
+        assertThatThrownBy(() -> consumer.accept(null)).isInstanceOf(Exception.class)
+                                                       .hasCauseInstanceOf(CheckedException.class);
     }
 
     @Test
     void testThrowingFunction()
     {
-        Function<Void, Void> supplier = ThrowableUtils.function(object ->
-        {
+        Function<Void, Void> supplier = ThrowableUtils.function(object -> {
             throw new CheckedException();
         });
 
-        assertThatThrownBy(() -> supplier.apply(null))
-            .isInstanceOf(Exception.class)
-            .hasCauseInstanceOf(CheckedException.class);
+        assertThatThrownBy(() -> supplier.apply(null)).isInstanceOf(Exception.class)
+                                                      .hasCauseInstanceOf(CheckedException.class);
     }
 
     @Test
@@ -113,17 +107,14 @@ class ThrowableUtilsTest
         Exception inner = new RuntimeException("inner exception");
         Exception testEx = new IllegalStateException(inner);
         Exception ex = new RuntimeException("outer exception", testEx);
-        assertThat(ThrowableUtils.getCause(ex, cause -> cause instanceof RuntimeException
-                                                        && cause.getMessage().equals("inner exception")))
-        .isSameAs(inner);
+        assertThat(ThrowableUtils.getCause(ex, cause -> cause instanceof RuntimeException && cause.getMessage()
+                                                                                                  .equals("inner exception"))).isSameAs(inner);
 
-        assertThat(ThrowableUtils.getCause(ex, cause -> cause instanceof RuntimeException
-                                                        && cause.getMessage().equals("outer exception")))
-        .isSameAs(ex);
+        assertThat(ThrowableUtils.getCause(ex, cause -> cause instanceof RuntimeException && cause.getMessage()
+                                                                                                  .equals("outer exception"))).isSameAs(ex);
 
-        assertThat(ThrowableUtils.getCause(ex, cause -> cause instanceof RuntimeException
-                                                        && cause.getMessage().equals("non-existing exception")))
-        .isNull();
+        assertThat(ThrowableUtils.getCause(ex, cause -> cause instanceof RuntimeException && cause.getMessage()
+                                                                                                  .equals("non-existing exception"))).isNull();
     }
 
     @Test
@@ -132,15 +123,13 @@ class ThrowableUtilsTest
         Callable<String> callable = () -> {
             throw new IOException("fail to perform I/O");
         };
-        assertThatThrownBy(() -> ThrowableUtils.propagate(callable))
-        .isExactlyInstanceOf(RuntimeException.class)
-        .hasCauseExactlyInstanceOf(IOException.class);
+        assertThatThrownBy(() -> ThrowableUtils.propagate(callable)).isExactlyInstanceOf(RuntimeException.class)
+                                                                    .hasCauseExactlyInstanceOf(IOException.class);
 
         ThrowingRunnable runnable = () -> {
             throw new IOException("fail to perform I/O");
         };
-        assertThatThrownBy(() -> ThrowableUtils.propagate(runnable))
-        .isExactlyInstanceOf(RuntimeException.class)
-        .hasCauseExactlyInstanceOf(IOException.class);
+        assertThatThrownBy(() -> ThrowableUtils.propagate(runnable)).isExactlyInstanceOf(RuntimeException.class)
+                                                                    .hasCauseExactlyInstanceOf(IOException.class);
     }
 }

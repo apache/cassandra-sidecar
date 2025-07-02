@@ -18,16 +18,13 @@
 
 package org.apache.cassandra.sidecar.common.server.utils;
 
-import java.util.concurrent.TimeUnit;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
-
+import java.util.concurrent.TimeUnit;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
- * Represents a duration used for Sidecar configuration. The bound is [0, Long.MAX_VALUE) in milliseconds.
- * If the user sets a different unit - we still validate that converted to milliseconds the quantity will not exceed
- * that upper bound.
+ * Represents a duration used for Sidecar configuration. The bound is [0, Long.MAX_VALUE) in milliseconds. If the user sets a different unit - we still validate
+ * that converted to milliseconds the quantity will not exceed that upper bound.
  */
 public class MillisecondBoundConfiguration extends DurationSpec
 {
@@ -52,7 +49,8 @@ public class MillisecondBoundConfiguration extends DurationSpec
         super(value);
     }
 
-    public MillisecondBoundConfiguration(long quantity, TimeUnit unit)
+    public MillisecondBoundConfiguration(long quantity,
+                                         TimeUnit unit)
     {
         super(quantity, unit);
     }

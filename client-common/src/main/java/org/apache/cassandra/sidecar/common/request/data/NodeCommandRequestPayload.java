@@ -27,7 +27,10 @@ import org.apache.cassandra.sidecar.common.utils.StringUtils;
 /**
  * Request payload for start/stop operations (gossip, native transport, etc.).
  *
- * <p>Valid JSON:</p>
+ * <p>
+ * Valid JSON:
+ * </p>
+ *
  * <pre>
  *   { "state": "start" }
  *   { "state": "stop"  }
@@ -53,13 +56,14 @@ public class NodeCommandRequestPayload
             if (s == null)
                 throw new IllegalArgumentException("Null state");
 
-            switch (s.trim().toLowerCase())
+            switch (s.trim()
+                     .toLowerCase())
             {
-                case "start":
+                case "start" :
                     return START;
-                case "stop":
+                case "stop" :
                     return STOP;
-                default:
+                default :
                     throw new IllegalArgumentException("Unknown state: " + s);
             }
         }
@@ -77,12 +81,9 @@ public class NodeCommandRequestPayload
      * @param state the desired operation, must be "start" or "stop"
      */
     @JsonCreator
-    public NodeCommandRequestPayload(
-    @JsonProperty(value = "state", required = true) String state
-    )
+    public NodeCommandRequestPayload(@JsonProperty(value = "state", required = true) String state)
     {
-        Preconditions.checkArgument(StringUtils.isNotEmpty(state),
-                                    "state must be provided and non-empty");
+        Preconditions.checkArgument(StringUtils.isNotEmpty(state), "state must be provided and non-empty");
         this.state = State.fromString(state);
     }
 

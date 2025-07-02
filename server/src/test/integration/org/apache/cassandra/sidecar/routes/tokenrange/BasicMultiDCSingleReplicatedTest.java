@@ -18,28 +18,25 @@
 
 package org.apache.cassandra.sidecar.routes.tokenrange;
 
-import java.util.Collections;
-
-import com.google.common.collect.ImmutableMap;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.Collections;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+import com.google.common.collect.ImmutableMap;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  * Test the token range replica mapping endpoint with the in-jvm dtest framework.
  *
- * Note: Some related test classes are broken down to have a single test case to parallelize test execution and
- * therefore limit the instance size required to run the tests from CircleCI as the in-jvm-dtests tests are memory bound
+ * Note: Some related test classes are broken down to have a single test case to parallelize test execution and therefore limit the instance size required to
+ * run the tests from CircleCI as the in-jvm-dtests tests are memory bound
  */
 @ExtendWith(VertxExtension.class)
 class BasicMultiDCSingleReplicatedTest extends BaseTokenRangeIntegrationTest
 {
     @CassandraIntegrationTest(nodesPerDc = 5, numDcs = 2, gossip = true)
-    void retrieveMappingSingleDCReplicatedRf3(VertxTestContext context)
-    throws Exception
+    void retrieveMappingSingleDCReplicatedRf3(VertxTestContext context) throws Exception
     {
         int replicationFactor = 3;
         createTestKeyspace(ImmutableMap.of("datacenter1", replicationFactor));

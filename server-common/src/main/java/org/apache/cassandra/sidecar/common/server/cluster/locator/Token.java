@@ -35,6 +35,7 @@ public final class Token implements Comparable<Token>
 
     /**
      * Create token from {@code BigInteger} value
+     *
      * @param value token value
      * @return token
      */
@@ -45,9 +46,9 @@ public final class Token implements Comparable<Token>
 
     /**
      * Create token from its string literal
+     *
      * @param valueStr token value
-     * @throws NumberFormatException {@code valueStr} is not a valid representation
-     *         of a BigInteger.
+     * @throws NumberFormatException {@code valueStr} is not a valid representation of a BigInteger.
      * @return token
      */
     public static Token from(String valueStr)
@@ -57,6 +58,7 @@ public final class Token implements Comparable<Token>
 
     /**
      * Create token from long value
+     *
      * @param value token value
      * @return token
      */

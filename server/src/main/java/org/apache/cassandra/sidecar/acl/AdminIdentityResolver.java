@@ -46,7 +46,8 @@ public class AdminIdentityResolver
 
     public boolean isAdmin(String identity)
     {
-        if (config.adminIdentities().contains(identity))
+        if (config.adminIdentities()
+                  .contains(identity))
         {
             return true;
         }

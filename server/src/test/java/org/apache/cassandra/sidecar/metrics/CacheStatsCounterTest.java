@@ -18,24 +18,21 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
-
-import com.google.common.testing.FakeTicker;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 import org.assertj.core.data.Offset;
-
+import com.google.common.testing.FakeTicker;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -97,8 +94,7 @@ class CacheStatsCounterTest
         assertThat(instance.hits.metric.getValue()).isEqualTo(10);
 
         // now let's fail a load to the cache
-        assertThatExceptionOfType(RuntimeException.class)
-        .isThrownBy(() -> cache.get("failMe", k -> {
+        assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> cache.get("failMe", k -> {
             throw new RuntimeException("failed you");
         }));
 

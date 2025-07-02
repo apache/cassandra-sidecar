@@ -20,12 +20,10 @@ package org.apache.cassandra.sidecar.acl.authorization;
 
 /**
  * Cassandra permissions allowed. These map to Cassandra permissions in
- * <a href="https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/auth/Permission.java">
- *     org.apache.cassandra.auth.Permission</a>
- * under the Cassandra codebase.
+ * <a href="https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/auth/Permission.java"> org.apache.cassandra.auth.Permission</a> under
+ * the Cassandra codebase.
  * <p>
- * Note: CassandraPermissions by default have no scope set in them, since these permissions can be used to create
- * Authorization across resource scopes.
+ * Note: CassandraPermissions by default have no scope set in them, since these permissions can be used to create Authorization across resource scopes.
  */
 public class CassandraPermissions
 {

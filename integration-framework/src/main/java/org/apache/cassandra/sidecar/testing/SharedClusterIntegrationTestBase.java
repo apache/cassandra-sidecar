@@ -37,11 +37,13 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,38 +111,38 @@ import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.CASSANDRA_INTE
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * This class provides an opinionated way to run integration tests. The {@link #setup()} method runs once at the
- * beginning of all the tests in the implementation, as well as the {@link #tearDown()} method. The tests will share
- * the same cluster throughout the lifetime of the tests, which means that implementers must be aware that any cluster
- * alteration will have an impact on subsequent test runs, so it is recommended that tests run in isolated
- * keyspaces/tables when required. Additionally, the state of the cluster should ideally remain the same for all
- * tests, so ideally tests should not alter the state of the cluster in a way that would affect other tests.
+ * This class provides an opinionated way to run integration tests. The {@link #setup()} method runs once at the beginning of all the tests in the
+ * implementation, as well as the {@link #tearDown()} method. The tests will share the same cluster throughout the lifetime of the tests, which means that
+ * implementers must be aware that any cluster alteration will have an impact on subsequent test runs, so it is recommended that tests run in isolated
+ * keyspaces/tables when required. Additionally, the state of the cluster should ideally remain the same for all tests, so ideally tests should not alter the
+ * state of the cluster in a way that would affect other tests.
  *
- * <p>The setup will run the following steps:
+ * <p>
+ * The setup will run the following steps:
  *
  * <ol>
- *     <li>Find the first version from the {@link TestVersionSupplier#testVersions()}
- *     <li>(Optional) Before cluster provisioning (implementer can supply)
- *     <li>Provision a cluster for the test using the version from the previous step (implementer must supply)
- *     <li>(Optional) After cluster provisioned (implementer can supply)
- *     <li>Initialize schemas required for the test (implementer must supply)
- *     <li>Start sidecar that talks to the provisioned cluster
- *     <li>(Optional) Run the before test start method (implementer can supply)
+ * <li>Find the first version from the {@link TestVersionSupplier#testVersions()}
+ * <li>(Optional) Before cluster provisioning (implementer can supply)
+ * <li>Provision a cluster for the test using the version from the previous step (implementer must supply)
+ * <li>(Optional) After cluster provisioned (implementer can supply)
+ * <li>Initialize schemas required for the test (implementer must supply)
+ * <li>Start sidecar that talks to the provisioned cluster
+ * <li>(Optional) Run the before test start method (implementer can supply)
  * </ol>
  *
- * <p>The above order guarantees that the cluster and Sidecar are both ready by the time the test
- * setup completes. Removing the need to wait for schema propagation from the cluster to Sidecar,
- * and removing the need to poll for schema changes to propagate. This helps in improving test
- * time.
+ * <p>
+ * The above order guarantees that the cluster and Sidecar are both ready by the time the test setup completes. Removing the need to wait for schema propagation
+ * from the cluster to Sidecar, and removing the need to poll for schema changes to propagate. This helps in improving test time.
  *
- * <p>For the teardown of the test the steps are the following:
+ * <p>
+ * For the teardown of the test the steps are the following:
  *
  * <ol>
- *     <li>(Optional) Before sidecar stops (implementer can supply)
- *     <li>Stop sidecar
- *     <li>(Optional) Before cluster shutdowns (implementer can supply)
- *     <li>Close cluster
- *     <li>(Optional) Before tear down ends (implementer can supply)
+ * <li>(Optional) Before sidecar stops (implementer can supply)
+ * <li>Stop sidecar
+ * <li>(Optional) Before cluster shutdowns (implementer can supply)
+ * <li>Close cluster
+ * <li>(Optional) Before tear down ends (implementer can supply)
  * </ol>
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -169,7 +171,8 @@ public abstract class SharedClusterIntegrationTestBase
     @BeforeAll
     protected void setup() throws Exception
     {
-        Optional<TestVersion> maybeTestVersion = TestVersionSupplier.testVersions().findFirst();
+        Optional<TestVersion> maybeTestVersion = TestVersionSupplier.testVersions()
+                                                                    .findFirst();
         assertThat(maybeTestVersion).isPresent();
         this.testVersion = maybeTestVersion.get();
         logger.info("Testing with version={}", testVersion);
@@ -188,8 +191,8 @@ public abstract class SharedClusterIntegrationTestBase
     }
 
     /**
-     * Provisions a cluster with the provided {@link TestVersion}. Up to {@link #MAX_CLUSTER_PROVISION_RETRIES}
-     * attempts will be made to provision a cluster when it fails to provision.
+     * Provisions a cluster with the provided {@link TestVersion}. Up to {@link #MAX_CLUSTER_PROVISION_RETRIES} attempts will be made to provision a cluster
+     * when it fails to provision.
      *
      * @param testVersion the version for the test
      * @return the provisioned cluster
@@ -204,9 +207,9 @@ public abstract class SharedClusterIntegrationTestBase
             }
             catch (RuntimeException runtimeException)
             {
-                boolean addressAlreadyInUse = ThrowableUtils.getCause(runtimeException, ex -> ex instanceof BindException &&
-                                                                                              ex.getMessage() != null &&
-                                                                                              ex.getMessage().contains("Address already in use")) != null;
+                boolean addressAlreadyInUse = ThrowableUtils.getCause(runtimeException,
+                        ex -> ex instanceof BindException && ex.getMessage() != null && ex.getMessage()
+                                                                                          .contains("Address already in use")) != null;
                 if (addressAlreadyInUse)
                 {
                     logger.warn("Failed to provision cluster after {} retries", retry, runtimeException);
@@ -241,12 +244,10 @@ public abstract class SharedClusterIntegrationTestBase
     }
 
     /**
-     * Returns the configuration for the test cluster. The default configuration for the cluster has 1
-     * node, 1 DC, 1 data directory per node, with the {@link org.apache.cassandra.distributed.api.Feature#GOSSIP},
-     * {@link org.apache.cassandra.distributed.api.Feature#JMX}, and
-     * {@link org.apache.cassandra.distributed.api.Feature#NATIVE_PROTOCOL} features enabled. It uses dynamic port
-     * allocation for the Cassandra service ports. This method can be overridden to provide a different configuration
-     * for the cluster.
+     * Returns the configuration for the test cluster. The default configuration for the cluster has 1 node, 1 DC, 1 data directory per node, with the
+     * {@link org.apache.cassandra.distributed.api.Feature#GOSSIP}, {@link org.apache.cassandra.distributed.api.Feature#JMX}, and
+     * {@link org.apache.cassandra.distributed.api.Feature#NATIVE_PROTOCOL} features enabled. It uses dynamic port allocation for the Cassandra service ports.
+     * This method can be overridden to provide a different configuration for the cluster.
      *
      * @return the configuration for the test cluster
      */
@@ -302,19 +303,21 @@ public abstract class SharedClusterIntegrationTestBase
     {
     }
 
-    protected void createTestKeyspace(QualifiedName name, Map<String, Integer> rf)
+    protected void createTestKeyspace(QualifiedName name,
+                                      Map<String, Integer> rf)
     {
         createTestKeyspace(name.maybeQuotedKeyspace(), rf);
     }
 
-    protected void createTestKeyspace(String keyspace, Map<String, Integer> rf)
+    protected void createTestKeyspace(String keyspace,
+                                      Map<String, Integer> rf)
     {
-        cluster.schemaChangeIgnoringStoppedInstances("CREATE KEYSPACE IF NOT EXISTS " + keyspace
-                                                     + " WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', " +
-                                                     generateRfString(rf) + " };");
+        cluster.schemaChangeIgnoringStoppedInstances(
+                "CREATE KEYSPACE IF NOT EXISTS " + keyspace + " WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', " + generateRfString(rf) + " };");
     }
 
-    protected void createTestTable(QualifiedName name, String createTableStatement)
+    protected void createTestTable(QualifiedName name,
+                                   String createTableStatement)
     {
         cluster.schemaChangeIgnoringStoppedInstances(String.format(createTableStatement, name));
     }
@@ -355,22 +358,25 @@ public abstract class SharedClusterIntegrationTestBase
     /**
      * Starts Sidecar configured to run with the provided {@link IInstance}s from the cluster.
      *
-     * @param instances    the Cassandra instances Sidecar will manage
+     * @param instances the Cassandra instances Sidecar will manage
      * @param customModule an optional custom module that overrides during injection
      * @return the started server
      * @throws InterruptedException when the server start operation is interrupted
      */
-    protected ServerWrapper startSidecarWithInstances(Iterable<? extends IInstance> instances, AbstractModule customModule) throws InterruptedException
+    protected ServerWrapper startSidecarWithInstances(Iterable<? extends IInstance> instances,
+                                                      AbstractModule customModule)
+            throws InterruptedException
     {
         VertxTestContext context = new VertxTestContext();
-        AbstractModule testModule = new IntegrationTestModule(instances, classLoaderWrapper, mtlsTestHelper,
-                                                              dnsResolver, configurationOverrides());
+        AbstractModule testModule = new IntegrationTestModule(instances, classLoaderWrapper, mtlsTestHelper, dnsResolver, configurationOverrides());
         Module module = testModule;
         if (customModule != null)
         {
-            module = Modules.override(testModule).with(customModule);
+            module = Modules.override(testModule)
+                            .with(customModule);
         }
-        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(module));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
+                                                        .with(module));
         Server sidecarServer = injector.getInstance(Server.class);
         sidecarServer.start()
                      .onSuccess(s -> context.completeNow())
@@ -380,20 +386,22 @@ public abstract class SharedClusterIntegrationTestBase
         return new ServerWrapper(injector, sidecarServer);
     }
 
-    protected void waitForSchemaReady(long timeout, TimeUnit timeUnit)
+    protected void waitForSchemaReady(long timeout,
+                                      TimeUnit timeUnit)
     {
         waitForSchemaReady(serverWrapper, timeout, timeUnit);
     }
 
-    protected void waitForSchemaReady(ServerWrapper serverWrapper, long timeout, TimeUnit timeUnit)
+    protected void waitForSchemaReady(ServerWrapper serverWrapper,
+                                      long timeout,
+                                      TimeUnit timeUnit)
     {
-        assertThat(serverWrapper)
-        .describedAs("Sidecar should be started")
-        .isNotNull();
+        assertThat(serverWrapper).describedAs("Sidecar should be started")
+                                 .isNotNull();
 
-        assertThat(Uninterruptibles.awaitUninterruptibly(serverWrapper.sidecarSchemaReadyLatch, timeout, timeUnit))
-        .describedAs("Sidecar schema is not initialized after " + timeout + ' ' + timeUnit)
-        .isTrue();
+        assertThat(Uninterruptibles.awaitUninterruptibly(serverWrapper.sidecarSchemaReadyLatch, timeout, timeUnit)).describedAs(
+                "Sidecar schema is not initialized after " + timeout + ' ' + timeUnit)
+                                                                                                                   .isTrue();
     }
 
     /**
@@ -413,7 +421,8 @@ public abstract class SharedClusterIntegrationTestBase
             return;
         }
         CountDownLatch closeLatch = new CountDownLatch(1);
-        s.close().onSuccess(res -> closeLatch.countDown());
+        s.close()
+         .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
         {
             logger.info("Close event received before timeout.");
@@ -444,8 +453,9 @@ public abstract class SharedClusterIntegrationTestBase
         // `catch (ShutdownException)` won't always work - compare the canonical names instead.
         catch (Throwable t)
         {
-            if (Objects.equals(t.getClass().getCanonicalName(),
-                               "org.apache.cassandra.distributed.shared.ShutdownException"))
+            if (Objects.equals(t.getClass()
+                                .getCanonicalName(),
+                    "org.apache.cassandra.distributed.shared.ShutdownException"))
             {
                 logger.debug("Encountered shutdown exception which closing the cluster", t);
             }
@@ -478,11 +488,12 @@ public abstract class SharedClusterIntegrationTestBase
     /**
      * Convenience method to query all data from the provided {@code table} at the specified consistency level.
      *
-     * @param table            the qualified Cassandra table name
+     * @param table the qualified Cassandra table name
      * @param consistencyLevel the consistency level to use for querying the data
      * @return all the data queried from the table
      */
-    protected Object[][] queryAllData(QualifiedName table, ConsistencyLevel consistencyLevel)
+    protected Object[][] queryAllData(QualifiedName table,
+                                      ConsistencyLevel consistencyLevel)
     {
         return cluster.getFirstRunningInstance()
                       .coordinator()
@@ -503,11 +514,12 @@ public abstract class SharedClusterIntegrationTestBase
     /**
      * Convenience method to query all data from the provided {@code table} at the specified consistency level.
      *
-     * @param table       the qualified Cassandra table name
+     * @param table the qualified Cassandra table name
      * @param consistency the consistency level to use for querying the data
      * @return all the data queried from the table
      */
-    protected ResultSet queryAllDataWithDriver(QualifiedName table, ConsistencyLevel consistency)
+    protected ResultSet queryAllDataWithDriver(QualifiedName table,
+                                               ConsistencyLevel consistency)
     {
         Cluster driverCluster = createDriverCluster(cluster.delegate());
         Session session = driverCluster.connect();
@@ -520,27 +532,32 @@ public abstract class SharedClusterIntegrationTestBase
 
     public static Cluster createDriverCluster(ICluster<? extends IInstance> dtest)
     {
-        dtest.stream().forEach((i) -> {
-            if (!i.config().has(Feature.NATIVE_PROTOCOL) || !i.config().has(Feature.GOSSIP))
-            {
-                throw new IllegalStateException("Java driver requires Feature.NATIVE_PROTOCOL and Feature.GOSSIP; " +
-                                                "but one or more is missing");
-            }
-        });
+        dtest.stream()
+             .forEach((i) -> {
+                 if (!i.config()
+                       .has(Feature.NATIVE_PROTOCOL)
+                         || !i.config()
+                              .has(Feature.GOSSIP))
+                 {
+                     throw new IllegalStateException("Java driver requires Feature.NATIVE_PROTOCOL and Feature.GOSSIP; " + "but one or more is missing");
+                 }
+             });
         Cluster.Builder builder = Cluster.builder()
                                          .withoutMetrics();
-        dtest.stream().forEach((i) -> {
-            InetSocketAddress address = new InetSocketAddress(i.broadcastAddress().getAddress(),
-                                                              i.config().getInt("native_transport_port"));
-            builder.addContactPointsWithPorts(address);
-        });
+        dtest.stream()
+             .forEach((i) -> {
+                 InetSocketAddress address = new InetSocketAddress(i.broadcastAddress()
+                                                                    .getAddress(),
+                         i.config()
+                          .getInt("native_transport_port"));
+                 builder.addContactPointsWithPorts(address);
+             });
 
         return builder.build();
     }
 
     /**
-     * Wraps the Sidecar server and keeps a reference to the injector to be able to dynamically retrieve
-     * objects for testing purposes
+     * Wraps the Sidecar server and keeps a reference to the injector to be able to dynamically retrieve objects for testing purposes
      */
     public static class ServerWrapper
     {
@@ -549,7 +566,8 @@ public abstract class SharedClusterIntegrationTestBase
         public volatile int serverPort;
         private final CountDownLatch sidecarSchemaReadyLatch = new CountDownLatch(1);
 
-        public ServerWrapper(Injector sidecarServerInjector, Server server)
+        public ServerWrapper(Injector sidecarServerInjector,
+                             Server server)
         {
             this.injector = sidecarServerInjector;
             this.server = server;
@@ -557,8 +575,8 @@ public abstract class SharedClusterIntegrationTestBase
             this.serverPort = server.actualPort();
 
             Vertx vertx = sidecarServerInjector.getInstance(Vertx.class);
-            vertx.eventBus().localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(),
-                                           msg -> sidecarSchemaReadyLatch.countDown());
+            vertx.eventBus()
+                 .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> sidecarSchemaReadyLatch.countDown());
         }
     }
 
@@ -593,8 +611,7 @@ public abstract class SharedClusterIntegrationTestBase
         public CQLSessionProvider cqlSessionProvider()
         {
             List<InetSocketAddress> contactPoints = buildContactPoints();
-            return new TemporaryCqlSessionProvider(contactPoints,
-                                                   SharedExecutorNettyOptions.INSTANCE);
+            return new TemporaryCqlSessionProvider(contactPoints, SharedExecutorNettyOptions.INSTANCE);
         }
 
         @Provides
@@ -613,18 +630,13 @@ public abstract class SharedClusterIntegrationTestBase
                                                    CQLSessionProvider cqlSessionProvider,
                                                    DnsResolver dnsResolver)
         {
-            JmxConfiguration jmxConfiguration = configuration.serviceConfiguration().jmxConfiguration();
-            List<InstanceMetadata> instanceMetadataList =
-            StreamSupport.stream(instances.spliterator(), false)
-                         .map(instance -> buildInstanceMetadata(vertx,
-                                                                instance,
-                                                                cassandraVersionProvider,
-                                                                sidecarVersionProvider.sidecarVersion(),
-                                                                jmxConfiguration,
-                                                                cqlSessionProvider,
-                                                                dnsResolver,
-                                                                wrapper))
-                         .collect(Collectors.toList());
+            JmxConfiguration jmxConfiguration = configuration.serviceConfiguration()
+                                                             .jmxConfiguration();
+            List<InstanceMetadata> instanceMetadataList = StreamSupport.stream(instances.spliterator(), false)
+                                                                       .map(instance -> buildInstanceMetadata(vertx, instance, cassandraVersionProvider,
+                                                                               sidecarVersionProvider.sidecarVersion(), jmxConfiguration, cqlSessionProvider,
+                                                                               dnsResolver, wrapper))
+                                                                       .collect(Collectors.toList());
             return new InstancesMetadataImpl(instanceMetadataList, dnsResolver);
         }
 
@@ -652,8 +664,10 @@ public abstract class SharedClusterIntegrationTestBase
         private List<InetSocketAddress> buildContactPoints()
         {
             return StreamSupport.stream(instances.spliterator(), false)
-                                .map(instance -> new InetSocketAddress(instance.config().broadcastAddress().getAddress(),
-                                                                       tryGetIntConfig(instance.config(), "native_transport_port", 9042)))
+                                .map(instance -> new InetSocketAddress(instance.config()
+                                                                               .broadcastAddress()
+                                                                               .getAddress(),
+                                        tryGetIntConfig(instance.config(), "native_transport_port", 9042)))
                                 .collect(Collectors.toList());
         }
 
@@ -668,23 +682,16 @@ public abstract class SharedClusterIntegrationTestBase
                                                                                                                             .build())
                                                                 .build();
 
-
             SslConfiguration sslConfiguration = null;
             if (mtlsTestHelper.isEnabled())
             {
                 LOGGER.info("Enabling test mTLS certificate/keystore.");
 
-                KeyStoreConfiguration truststoreConfiguration =
-                new KeyStoreConfigurationImpl(mtlsTestHelper.trustStorePath(),
-                                              mtlsTestHelper.trustStorePassword(),
-                                              mtlsTestHelper.trustStoreType(),
-                                              SecondBoundConfiguration.parse("60s"));
+                KeyStoreConfiguration truststoreConfiguration = new KeyStoreConfigurationImpl(mtlsTestHelper.trustStorePath(),
+                        mtlsTestHelper.trustStorePassword(), mtlsTestHelper.trustStoreType(), SecondBoundConfiguration.parse("60s"));
 
-                KeyStoreConfiguration keyStoreConfiguration =
-                new KeyStoreConfigurationImpl(mtlsTestHelper.serverKeyStorePath(),
-                                              mtlsTestHelper.serverKeyStorePassword(),
-                                              mtlsTestHelper.serverKeyStoreType(),
-                                              SecondBoundConfiguration.parse("60s"));
+                KeyStoreConfiguration keyStoreConfiguration = new KeyStoreConfigurationImpl(mtlsTestHelper.serverKeyStorePath(),
+                        mtlsTestHelper.serverKeyStorePassword(), mtlsTestHelper.serverKeyStoreType(), SecondBoundConfiguration.parse("60s"));
 
                 sslConfiguration = SslConfigurationImpl.builder()
                                                        .enabled(true)
@@ -694,12 +701,11 @@ public abstract class SharedClusterIntegrationTestBase
             }
             else
             {
-                LOGGER.info("Not enabling mTLS for testing purposes. Set '{}' to 'true' if you would " +
-                            "like mTLS enabled.", CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS);
+                LOGGER.info("Not enabling mTLS for testing purposes. Set '{}' to 'true' if you would " + "like mTLS enabled.",
+                        CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS);
             }
-            S3ClientConfiguration s3ClientConfig = new S3ClientConfigurationImpl("s3-client", 4, SecondBoundConfiguration.parse("60s"),
-                                                                                 5242880, DEFAULT_API_CALL_TIMEOUT,
-                                                                                 buildTestS3ProxyConfig());
+            S3ClientConfiguration s3ClientConfig = new S3ClientConfigurationImpl("s3-client", 4, SecondBoundConfiguration.parse("60s"), 5242880,
+                    DEFAULT_API_CALL_TIMEOUT, buildTestS3ProxyConfig());
 
             SidecarConfigurationImpl.Builder builder = SidecarConfigurationImpl.builder()
                                                                                .serviceConfiguration(conf)
@@ -742,7 +748,9 @@ public abstract class SharedClusterIntegrationTestBase
             };
         }
 
-        static int tryGetIntConfig(IInstanceConfig config, String configName, int defaultValue)
+        static int tryGetIntConfig(IInstanceConfig config,
+                                   String configName,
+                                   int defaultValue)
         {
             try
             {
@@ -754,7 +762,8 @@ public abstract class SharedClusterIntegrationTestBase
             }
         }
 
-        public static String cassandraInstanceHostname(IInstance cassandraInstance, DnsResolver dnsResolver)
+        public static String cassandraInstanceHostname(IInstance cassandraInstance,
+                                                       DnsResolver dnsResolver)
         {
             IInstanceConfig config = cassandraInstance.config();
             String ipAddress = JMXUtil.getJmxHost(config);
@@ -792,23 +801,14 @@ public abstract class SharedClusterIntegrationTestBase
             String[] dataDirectories = (String[]) config.get("data_file_directories");
             String stagingDir = stagingDir(dataDirectories);
 
-            JmxClient jmxClient = new JmxClientProxy(wrapper,
-                                                     JmxClient.builder()
-                                                              .host(ipAddress)
-                                                              .port(config.jmxPort())
-                                                              .connectionMaxRetries(jmxConfiguration.maxRetries())
-                                                              .connectionRetryDelay(jmxConfiguration.retryDelay()));
+            JmxClient jmxClient = new JmxClientProxy(wrapper, JmxClient.builder()
+                                                                       .host(ipAddress)
+                                                                       .port(config.jmxPort())
+                                                                       .connectionMaxRetries(jmxConfiguration.maxRetries())
+                                                                       .connectionRetryDelay(jmxConfiguration.retryDelay()));
             MetricRegistry metricRegistry = new MetricRegistry();
-            CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
-                                                                             config.num(),
-                                                                             versionProvider,
-                                                                             session,
-                                                                             jmxClient,
-                                                                             new DriverUtils(),
-                                                                             sidecarVersion,
-                                                                             ipAddress,
-                                                                             port,
-                                                                             new InstanceHealthMetrics(metricRegistry));
+            CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx, config.num(), versionProvider, session, jmxClient, new DriverUtils(),
+                    sidecarVersion, ipAddress, port, new InstanceHealthMetrics(metricRegistry));
             return InstanceMetadataImpl.builder()
                                        .id(config.num())
                                        .host(hostName)
@@ -827,11 +827,13 @@ public abstract class SharedClusterIntegrationTestBase
         private static String stagingDir(String[] dataDirectories)
         {
             // Use the parent of the first data directory as the staging directory
-            Path dataDirParentPath = Paths.get(dataDirectories[0]).getParent();
+            Path dataDirParentPath = Paths.get(dataDirectories[0])
+                                          .getParent();
             // If the cluster has not started yet, the node's root directory doesn't exist yet
             assertThat(dataDirParentPath).isNotNull();
             Path stagingPath = dataDirParentPath.resolve("staging");
-            return stagingPath.toFile().getAbsolutePath();
+            return stagingPath.toFile()
+                              .getAbsolutePath();
         }
     }
 
@@ -847,15 +849,16 @@ public abstract class SharedClusterIntegrationTestBase
     {
         private final IsolatedDTestClassLoaderWrapper wrapper;
 
-        protected JmxClientProxy(IsolatedDTestClassLoaderWrapper wrapper, Builder builder)
+        protected JmxClientProxy(IsolatedDTestClassLoaderWrapper wrapper,
+                                 Builder builder)
         {
             super(Objects.requireNonNull(builder, "builder must be provided"));
             this.wrapper = wrapper;
         }
 
         /**
-         * Connects to JMX by running inside the wrapped classloader. The connection to JMX must be established in the
-         * dtest classloader to be able to communicate to Cassandra's JMX.
+         * Connects to JMX by running inside the wrapped classloader. The connection to JMX must be established in the dtest classloader to be able to
+         * communicate to Cassandra's JMX.
          *
          * @param currentAttempt the current attempt to connect
          * @throws IOException if the underlying operation throws an IOException

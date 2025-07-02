@@ -18,12 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.restore;
 
-import java.util.Collections;
-import java.util.Set;
-import java.util.UUID;
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
@@ -32,6 +26,9 @@ import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Collections;
+import java.util.Set;
+import java.util.UUID;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
@@ -44,7 +41,8 @@ import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_QUALIFIED_TABLE_NAME;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -79,21 +77,22 @@ public class CreateRestoreJobHandler extends AbstractHandler<CreateRestoreJobReq
                                   SocketAddress remoteAddress,
                                   CreateRestoreJobRequestPayload request)
     {
-        validatePayload(request)
-        .compose(payload -> createRestoreJob(context, payload))
-        .onSuccess(createdJob -> {
-            logger.info("Successfully persisted a new job. job={} request={} remoteAddress={} instance={}",
-                        createdJob, request, remoteAddress, host);
-            context.response().setStatusCode(HttpResponseStatus.OK.code());
-            context.json(new CreateRestoreJobResponsePayload(createdJob.jobId, createdJob.status.name()));
-        })
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+        validatePayload(request).compose(payload -> createRestoreJob(context, payload))
+                                .onSuccess(createdJob -> {
+                                    logger.info("Successfully persisted a new job. job={} request={} remoteAddress={} instance={}", createdJob, request,
+                                            remoteAddress, host);
+                                    context.response()
+                                           .setStatusCode(HttpResponseStatus.OK.code());
+                                    context.json(new CreateRestoreJobResponsePayload(createdJob.jobId, createdJob.status.name()));
+                                })
+                                .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 
     @Override
     protected CreateRestoreJobRequestPayload extractParamsOrThrow(RoutingContext context)
     {
-        String bodyString = context.body().asString();
+        String bodyString = context.body()
+                                   .asString();
         if (bodyString == null || bodyString.equalsIgnoreCase("null")) // json encoder writes null as "null"
         {
             logger.warn("Bad request to create restore job. Received null payload.");
@@ -108,14 +107,11 @@ public class CreateRestoreJobHandler extends AbstractHandler<CreateRestoreJobReq
         {
             // do not log the payload as it contains the secrets
             logger.warn("Bad request to create restore job. Received invalid JSON payload.");
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                    "Invalid request payload",
-                                    decodeException);
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid request payload", decodeException);
         }
     }
 
-    private Future<CreateRestoreJobRequestPayload> validatePayload(CreateRestoreJobRequestPayload
-                                                                   createRestoreJobRequestPayload)
+    private Future<CreateRestoreJobRequestPayload> validatePayload(CreateRestoreJobRequestPayload createRestoreJobRequestPayload)
     {
         UUID jobId = createRestoreJobRequestPayload.jobId();
         if (jobId == null)
@@ -123,23 +119,25 @@ public class CreateRestoreJobHandler extends AbstractHandler<CreateRestoreJobReq
             return Future.succeededFuture(createRestoreJobRequestPayload);
         }
 
-        return executorPools.service().executeBlocking(() -> {
-            if (restoreJobDatabaseAccessor.exists(jobId))
-            {
-                logger.info("Restore job already exist. jobId={}", jobId);
-                throw wrapHttpException(HttpResponseStatus.CONFLICT,
-                                        String.format("Job id %s already exists", jobId));
-            }
+        return executorPools.service()
+                            .executeBlocking(() -> {
+                                if (restoreJobDatabaseAccessor.exists(jobId))
+                                {
+                                    logger.info("Restore job already exist. jobId={}", jobId);
+                                    throw wrapHttpException(HttpResponseStatus.CONFLICT, String.format("Job id %s already exists", jobId));
+                                }
 
-            return createRestoreJobRequestPayload;
-        });
+                                return createRestoreJobRequestPayload;
+                            });
     }
 
-    private Future<RestoreJob> createRestoreJob(RoutingContext context, CreateRestoreJobRequestPayload payload)
+    private Future<RestoreJob> createRestoreJob(RoutingContext context,
+                                                CreateRestoreJobRequestPayload payload)
     {
         return RoutingContextUtils.getAsFuture(context, SC_QUALIFIED_TABLE_NAME)
-                                  .compose(tableName -> executorPools.service().executeBlocking(() -> {
-                                      return restoreJobDatabaseAccessor.create(payload, tableName);
-                                  }));
+                                  .compose(tableName -> executorPools.service()
+                                                                     .executeBlocking(() -> {
+                                                                         return restoreJobDatabaseAccessor.create(payload, tableName);
+                                                                     }));
     }
 }

@@ -42,9 +42,8 @@ public class TableToDataPlatformInstanceConverter extends TableToAspectConverter
     {
         String urn = identifiers.urnDataset(table);
 
-        DataPlatformInstance aspect = new DataPlatformInstance()
-                .setPlatform(new Urn(identifiers.urnDataPlatform()))
-                .setInstance(new Urn(identifiers.urnDataPlatformInstance()));
+        DataPlatformInstance aspect = new DataPlatformInstance().setPlatform(new Urn(identifiers.urnDataPlatform()))
+                                                                .setInstance(new Urn(identifiers.urnDataPlatformInstance()));
 
         return wrap(urn, aspect);
     }

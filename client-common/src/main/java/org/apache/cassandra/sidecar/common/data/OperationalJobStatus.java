@@ -19,8 +19,7 @@
 package org.apache.cassandra.sidecar.common.data;
 
 /**
- * Encapsulates the states of the job lifecycle.
- * Operational jobs are the ones running on Cassandra, e.g. decommission, etc.
+ * Encapsulates the states of the job lifecycle. Operational jobs are the ones running on Cassandra, e.g. decommission, etc.
  */
 public enum OperationalJobStatus
 {

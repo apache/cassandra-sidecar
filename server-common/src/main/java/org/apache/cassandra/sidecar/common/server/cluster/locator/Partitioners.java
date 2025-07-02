@@ -26,8 +26,10 @@ import java.math.BigInteger;
 public class Partitioners
 {
     private static final String FULL_PACKAGE_NAME = "org.apache.cassandra.dht.";
-    private static final String RANDOM_PARTITIONER_NAME = RandomPartitioner.class.getSimpleName().toLowerCase();
-    private static final String MURMUR3_PARTITIONER_NAME = Murmur3Partitioner.class.getSimpleName().toLowerCase();
+    private static final String RANDOM_PARTITIONER_NAME = RandomPartitioner.class.getSimpleName()
+                                                                                 .toLowerCase();
+    private static final String MURMUR3_PARTITIONER_NAME = Murmur3Partitioner.class.getSimpleName()
+                                                                                   .toLowerCase();
 
     private Partitioners()
     {
@@ -39,6 +41,7 @@ public class Partitioners
 
     /**
      * Return a {@link Partitioner} instance based on the class name
+     *
      * @param className class name of the partitioner
      * @return partitioner instance
      * @throws IllegalArgumentException when the partitioner is unsupported
@@ -73,7 +76,8 @@ public class Partitioners
         private static final RandomPartitioner INSTANCE = new RandomPartitioner();
 
         private static final Token MIN = Token.from(BigInteger.valueOf(-1));
-        private static final Token MAX = Token.from(BigInteger.valueOf(2).pow(127));
+        private static final Token MAX = Token.from(BigInteger.valueOf(2)
+                                                              .pow(127));
 
         @Override
         public Token minimumToken()

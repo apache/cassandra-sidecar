@@ -42,8 +42,7 @@ public class TableToSubTypesConverter extends TableToAspectConverter<SubTypes>
     {
         String urn = identifiers.urnDataset(table);
 
-        SubTypes aspect = new SubTypes()
-                .setTypeNames(new StringArray(TABLE));
+        SubTypes aspect = new SubTypes().setTypeNames(new StringArray(TABLE));
 
         return wrap(urn, aspect);
     }

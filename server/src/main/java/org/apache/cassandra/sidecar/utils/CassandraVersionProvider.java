@@ -20,11 +20,9 @@ package org.apache.cassandra.sidecar.utils;
 
 import java.util.ArrayList;
 import java.util.List;
-import javax.annotation.concurrent.NotThreadSafe;
-
 import org.apache.cassandra.sidecar.common.server.ICassandraFactory;
 import org.jetbrains.annotations.VisibleForTesting;
-
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * Manages multiple Cassandra versions
@@ -45,9 +43,8 @@ public class CassandraVersionProvider
     }
 
     /**
-     * For the provided CassandraVersion, return a new ICassandraFactory instance
-     * that meets the minimum version requirements
-     * That factory can be used to create an ICassandraAdapter
+     * For the provided CassandraVersion, return a new ICassandraFactory instance that meets the minimum version requirements That factory can be used to create
+     * an ICassandraAdapter
      *
      * @param requestedVersion the requested Cassandra version
      * @return the factory for the requested Cassandra version
@@ -62,7 +59,8 @@ public class CassandraVersionProvider
             SimpleCassandraVersion nextVersion = SimpleCassandraVersion.create(factory);
 
             // skip if we can rule this out early
-            if (nextVersion.isGreaterThan(requestedVersion)) continue;
+            if (nextVersion.isGreaterThan(requestedVersion))
+                continue;
 
             if (requestedVersion.isGreaterThan(currentMinVersion))
             {
@@ -77,8 +75,7 @@ public class CassandraVersionProvider
      *
      * @param requestedVersion the version string to parse
      * @return the Cassandra Factory implementation for the input {@code requestedVersion}
-     * @throws IllegalArgumentException if the provided string does not
-     *                                  represent a version
+     * @throws IllegalArgumentException if the provided string does not represent a version
      */
     public ICassandraFactory cassandra(String requestedVersion)
     {

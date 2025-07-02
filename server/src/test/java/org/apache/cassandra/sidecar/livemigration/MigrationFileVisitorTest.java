@@ -26,10 +26,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.util.Collections;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
 import static org.assertj.core.api.Assertions.assertThatIOException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -48,16 +46,14 @@ class MigrationFileVisitorTest
         Path excludedDir2Path = tempDir.resolve("test_dir2");
         Files.createDirectories(excludedDir2Path);
 
-        PathMatcher pathMatcher = FileSystems.getDefault().getPathMatcher("glob:" + excludedDirPath);
-        MigrationFileVisitor fileVisitor = new MigrationFileVisitor(homeDir,
-                                                                    Collections.emptyList(),
-                                                                    Collections.singletonList(pathMatcher));
+        PathMatcher pathMatcher = FileSystems.getDefault()
+                                             .getPathMatcher("glob:" + excludedDirPath);
+        MigrationFileVisitor fileVisitor = new MigrationFileVisitor(homeDir, Collections.emptyList(), Collections.singletonList(pathMatcher));
 
         // It should continue if failed to visit an excluded directory
         assertThat(fileVisitor.visitFileFailed(excludedDirPath, new IOException())).isEqualTo(FileVisitResult.CONTINUE);
         assertThatIOException().isThrownBy(() -> fileVisitor.visitFileFailed(excludedDir2Path, new IOException()));
     }
-
 
     @Test
     public void testVisitFileFailedForFile() throws IOException
@@ -69,14 +65,12 @@ class MigrationFileVisitorTest
         Path excludedFile2Path = tempDir.resolve("test_file2");
         Files.write(excludedFile2Path, "test string".getBytes(StandardCharsets.UTF_8));
 
-        PathMatcher pathMatcher = FileSystems.getDefault().getPathMatcher("glob:" + excludedFilePath);
-        MigrationFileVisitor fileVisitor = new MigrationFileVisitor(homeDir,
-                                                                    Collections.singletonList(pathMatcher),
-                                                                    Collections.emptyList());
+        PathMatcher pathMatcher = FileSystems.getDefault()
+                                             .getPathMatcher("glob:" + excludedFilePath);
+        MigrationFileVisitor fileVisitor = new MigrationFileVisitor(homeDir, Collections.singletonList(pathMatcher), Collections.emptyList());
 
         // It should continue if failed to visit an excluded file
-        assertThat(fileVisitor.visitFileFailed(excludedFilePath, new IOException()))
-        .isEqualTo(FileVisitResult.CONTINUE);
+        assertThat(fileVisitor.visitFileFailed(excludedFilePath, new IOException())).isEqualTo(FileVisitResult.CONTINUE);
 
         assertThatIOException().isThrownBy(() -> fileVisitor.visitFileFailed(excludedFile2Path, new IOException()));
     }

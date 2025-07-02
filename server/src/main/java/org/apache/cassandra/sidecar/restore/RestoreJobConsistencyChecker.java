@@ -25,10 +25,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
+
 import org.apache.commons.lang3.tuple.Pair;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,22 +91,23 @@ public class RestoreJobConsistencyChecker
         this.restoreJobDiscoverer = restoreJobDiscoverer;
         this.rangeDatabaseAccessor = rangeDatabaseAccessor;
         this.taskExecutorPool = executorPools.internal();
-        this.restoreMetrics = sidecarMetrics.server().restore();
+        this.restoreMetrics = sidecarMetrics.server()
+                                            .restore();
     }
 
-    public Future<RestoreJobProgress> check(RestoreJob restoreJob, RestoreJobProgressFetchPolicy fetchPolicy)
+    public Future<RestoreJobProgress> check(RestoreJob restoreJob,
+                                            RestoreJobProgressFetchPolicy fetchPolicy)
     {
         Preconditions.checkArgument(restoreJob.consistencyLevel != null, "Consistency level of the job must present");
-        Preconditions.checkArgument(!restoreJob.consistencyLevel.isLocalDcOnly
-                                    || StringUtils.isNotEmpty(restoreJob.localDatacenter),
-                                    "When using local consistency level, localDatacenter must present");
+        Preconditions.checkArgument(!restoreJob.consistencyLevel.isLocalDcOnly || StringUtils.isNotEmpty(restoreJob.localDatacenter),
+                "When using local consistency level, localDatacenter must present");
         RestoreJobProgressCollector collector = RestoreJobProgressCollectors.create(restoreJob, fetchPolicy);
         RestoreRangeStatus successCriteria = restoreJob.expectedNextRangeStatus();
         ConsistencyVerifier verifier = ConsistencyVerifiers.forConsistencyLevel(restoreJob.consistencyLevel, restoreJob.localDatacenter);
         LOGGER.info("Checking restore job progress. jobId={} fetchPolicy={} successCriteria={}", restoreJob.jobId, fetchPolicy, successCriteria);
-        Future<RestoreJobProgress> future = ringTopologyRefresher
-                                            .replicaByTokenRangeAsync(restoreJob)
-                                            .compose(topology -> findRangesAndConclude(restoreJob, successCriteria, topology, verifier, collector));
+        Future<RestoreJobProgress> future = ringTopologyRefresher.replicaByTokenRangeAsync(restoreJob)
+                                                                 .compose(topology -> findRangesAndConclude(restoreJob, successCriteria, topology, verifier,
+                                                                         collector));
         return StopWatch.measureTimeTaken(future, durationNanos -> restoreMetrics.consistencyCheckTime.metric.update(durationNanos, TimeUnit.NANOSECONDS));
     }
 
@@ -113,38 +117,38 @@ public class RestoreJobConsistencyChecker
                                                              ConsistencyVerifier verifier,
                                                              RestoreJobProgressCollector collector)
     {
-        return taskExecutorPool
-               .executeBlocking(() -> {
-                   short bucketId = 0; // todo: replace with looping through all bucketIds
-                   return rangeDatabaseAccessor.findAll(restoreJob.jobId, bucketId);
-               })
-               .map(ranges -> {
-                   if (shouldForceRestoreJobDiscoverRun(restoreJob, ranges))
-                   {
-                       // schedule the adhoc restore job discovery in a background thread.
-                       taskExecutorPool.runBlocking(restoreJobDiscoverer::tryExecuteDiscovery, false);
-                       return RestoreJobProgress.pending(restoreJob);
-                   }
-                   concludeRanges(ranges, topology, verifier, successCriteria, collector);
-                   return collector.toRestoreJobProgress();
-               });
+        return taskExecutorPool.executeBlocking(() -> {
+            short bucketId = 0; // todo: replace with looping through all bucketIds
+            return rangeDatabaseAccessor.findAll(restoreJob.jobId, bucketId);
+        })
+                               .map(ranges -> {
+                                   if (shouldForceRestoreJobDiscoverRun(restoreJob, ranges))
+                                   {
+                                       // schedule the adhoc restore job discovery in a background thread.
+                                       taskExecutorPool.runBlocking(restoreJobDiscoverer::tryExecuteDiscovery, false);
+                                       return RestoreJobProgress.pending(restoreJob);
+                                   }
+                                   concludeRanges(ranges, topology, verifier, successCriteria, collector);
+                                   return collector.toRestoreJobProgress();
+                               });
     }
 
-    private boolean shouldForceRestoreJobDiscoverRun(RestoreJob restoreJob, List<RestoreRange> ranges)
+    private boolean shouldForceRestoreJobDiscoverRun(RestoreJob restoreJob,
+                                                     List<RestoreRange> ranges)
     {
         long foundSliceCount = sliceCountFromRanges(ranges);
         if (foundSliceCount < restoreJob.sliceCount)
         {
-            LOGGER.warn("Not all restore ranges are found. Mark the progress as pending and force restore job discover run. " +
-                        "jobId={} expectedSliceCount={} foundSliceCount={}", restoreJob.jobId, restoreJob.sliceCount, foundSliceCount);
+            LOGGER.warn("Not all restore ranges are found. Mark the progress as pending and force restore job discover run. "
+                    + "jobId={} expectedSliceCount={} foundSliceCount={}", restoreJob.jobId, restoreJob.sliceCount, foundSliceCount);
             return true;
         }
 
         if (restoreJob.status == RestoreJobStatus.IMPORT_READY && firstTimeSinceImportReady)
         {
             firstTimeSinceImportReady = false;
-            LOGGER.info("First time checking consistency of the restore job after import_ready. " +
-                        "Mark the progress as pending and force restore job discover run. jobId={}", restoreJob.jobId);
+            LOGGER.info("First time checking consistency of the restore job after import_ready. "
+                    + "Mark the progress as pending and force restore job discover run. jobId={}", restoreJob.jobId);
             return true;
         }
         return false;
@@ -168,8 +172,10 @@ public class RestoreJobConsistencyChecker
             }
 
             Range<Token> tokenRange = entry.getKey();
-            Map<String, RestoreRangeStatus> status = entry.getValue().getLeft();
-            RestoreRange relevantRestoreRange = entry.getValue().getRight();
+            Map<String, RestoreRangeStatus> status = entry.getValue()
+                                                          .getLeft();
+            RestoreRange relevantRestoreRange = entry.getValue()
+                                                     .getRight();
             ConsistencyVerificationResult res = concludeOneRange(replicasPerRange, verifier, successCriteria, tokenRange, status);
             collector.collect(relevantRestoreRange, res);
         }
@@ -184,7 +190,8 @@ public class RestoreJobConsistencyChecker
             TokenRange tokenRange = new TokenRange(Token.from(replicaInfo.start()), Token.from(replicaInfo.end()));
             Map<String, List<String>> replicasByDc = replicaInfo.replicasByDatacenter();
             Map<String, Set<String>> mapping = new HashMap<>(replicasByDc.size());
-            replicasByDc.forEach((dc, instances) -> mapping.put(dc, new HashSet<>(instances)));
+            replicasByDc.forEach((dc,
+                                  instances) -> mapping.put(dc, new HashSet<>(instances)));
             InstanceSetByDc instanceSetByDc = new InstanceSetByDc(mapping);
             replicasPerRange.put(tokenRange.range, instanceSetByDc);
         }
@@ -210,7 +217,8 @@ public class RestoreJobConsistencyChecker
                 // If subrange map is non-empty, i.e. RestoreRanges has overlapping, the overlapping token range should belong to the same RestoreSlice.
                 // Because RestoreRange is derived from RestoreSlice and RestoreSlices do not overlap.
                 RangeMap<Token, Pair<Map<String, RestoreRangeStatus>, RestoreRange>> updated = TreeRangeMap.create();
-                map.forEach((key, value) -> {
+                map.forEach((key,
+                             value) -> {
                     Map<String, RestoreRangeStatus> statusMap = new HashMap<>(value.getKey());
                     statusMap.putAll(restoreRange.statusByReplica());
                     updated.put(key, Pair.of(statusMap, restoreRange));
@@ -219,14 +227,15 @@ public class RestoreJobConsistencyChecker
             }
         }
         Map<Range<Token>, Pair<Map<String, RestoreRangeStatus>, RestoreRange>> result = rangeMap.asMapOfRanges();
-        result.entrySet().removeIf(e -> e.getValue().getValue() == null);
+        result.entrySet()
+              .removeIf(e -> e.getValue()
+                              .getValue() == null);
         return result;
     }
 
     /**
-     * Examine a range and all its replica should be in the expected status, i.e. {@param successCriteria}.
-     * If enough replicas are in the expected status, the conclusion can be made that the range has satisfied.
-     * If enough replicas are {@link RestoreRangeStatus#FAILED}, it concludes that the range has failed.
+     * Examine a range and all its replica should be in the expected status, i.e. {@param successCriteria}. If enough replicas are in the expected status, the
+     * conclusion can be made that the range has satisfied. If enough replicas are {@link RestoreRangeStatus#FAILED}, it concludes that the range has failed.
      * Otherwise, no conclusion is made and the range is pending.
      *
      * @param replicasByRange replica set of each token range
@@ -255,11 +264,11 @@ public class RestoreJobConsistencyChecker
         ConsistencyVerificationResult result = verifier.verify(succeeded, failed, replicaSet);
         switch (result)
         {
-            case FAILED:
+            case FAILED :
                 return ConsistencyVerificationResult.FAILED;
-            case PENDING:
+            case PENDING :
                 return ConsistencyVerificationResult.PENDING;
-            default:
+            default :
                 return ConsistencyVerificationResult.SATISFIED;
         }
     }
@@ -273,19 +282,24 @@ public class RestoreJobConsistencyChecker
     }
 
     /**
-     * Find the replica set for the token range. Returns null if no complete match can be found or topology has changed.
-     * The input tokenRange should be fully enclosed by one of the range in the replicasByRange
+     * Find the replica set for the token range. Returns null if no complete match can be found or topology has changed. The input tokenRange should be fully
+     * enclosed by one of the range in the replicasByRange
      */
     @SuppressWarnings("UnstableApiUsage")
-    private static @Nullable InstanceSetByDc replicaSetForRange(Range<Token> tokenRange, RangeMap<Token, InstanceSetByDc> replicasByRange)
+    private static @Nullable InstanceSetByDc replicaSetForRange(Range<Token> tokenRange,
+                                                                RangeMap<Token, InstanceSetByDc> replicasByRange)
     {
-        Map<Range<Token>, InstanceSetByDc> subRange = replicasByRange.subRangeMap(tokenRange).asMapOfRanges();
+        Map<Range<Token>, InstanceSetByDc> subRange = replicasByRange.subRangeMap(tokenRange)
+                                                                     .asMapOfRanges();
         if (subRange.size() == 1)
         {
             // finding one range does not necessarily mean the found range fully encloses the token range
             // subRangeMap could contain the partially overlapping range
-            Map.Entry<Range<Token>, InstanceSetByDc> foundEntry = subRange.entrySet().iterator().next();
-            if (foundEntry.getKey().encloses(tokenRange))
+            Map.Entry<Range<Token>, InstanceSetByDc> foundEntry = subRange.entrySet()
+                                                                          .iterator()
+                                                                          .next();
+            if (foundEntry.getKey()
+                          .encloses(tokenRange))
             {
                 return foundEntry.getValue();
             }
@@ -304,7 +318,10 @@ public class RestoreJobConsistencyChecker
 
     private static long sliceCountFromRanges(List<RestoreRange> ranges)
     {
-        return ranges.stream().map(RestoreRange::sliceId).distinct().count();
+        return ranges.stream()
+                     .map(RestoreRange::sliceId)
+                     .distinct()
+                     .count();
     }
 
     @VisibleForTesting
@@ -317,7 +334,8 @@ public class RestoreJobConsistencyChecker
     }
 
     @VisibleForTesting
-    static InstanceSetByDc replicaSetForRangeUnsafe(RestoreRange range, TokenRangeReplicasResponse topology)
+    static InstanceSetByDc replicaSetForRangeUnsafe(RestoreRange range,
+                                                    TokenRangeReplicasResponse topology)
     {
         return replicaSetForRange(range.tokenRange().range, populateReplicas(topology));
     }

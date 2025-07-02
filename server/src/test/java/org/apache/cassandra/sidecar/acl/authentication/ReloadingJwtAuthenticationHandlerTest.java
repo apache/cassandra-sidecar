@@ -42,15 +42,14 @@ class ReloadingJwtAuthenticationHandlerTest
     void testDelegateHandlerNotSet()
     {
         Vertx mockVertx = mock(Vertx.class);
-        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("enabled", "true",
-                                                                                    "site", "www.apache.org",
-                                                                                    "client_id", "id"));
+        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("enabled", "true", "site", "www.apache.org", "client_id", "id"));
         JwtRoleProcessor mockRoleProcessor = mock(JwtRoleProcessor.class);
         when(mockRoleProcessor.processRoles(any())).thenReturn(List.of("test_role"));
         PeriodicTaskExecutor mockTaskExecutor = mock(PeriodicTaskExecutor.class);
-        doNothing().when(mockTaskExecutor).schedule(any());
-        ReloadingJwtAuthenticationHandler reloadingJwtAuthenticationHandler
-        = new ReloadingJwtAuthenticationHandler(mockVertx, parameterExtractor, mockRoleProcessor, mockTaskExecutor);
+        doNothing().when(mockTaskExecutor)
+                   .schedule(any());
+        ReloadingJwtAuthenticationHandler reloadingJwtAuthenticationHandler = new ReloadingJwtAuthenticationHandler(mockVertx, parameterExtractor,
+                mockRoleProcessor, mockTaskExecutor);
         RoutingContext mockCtx = mock(RoutingContext.class);
         reloadingJwtAuthenticationHandler.authenticate(mockCtx, result -> {
             assertThat(result.failed()).isTrue();
@@ -62,13 +61,11 @@ class ReloadingJwtAuthenticationHandlerTest
     void testDelegateHandlerNotCreatedWhenJWTDisabled()
     {
         Vertx mockVertx = mock(Vertx.class);
-        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("enabled", "false",
-                                                                                    "site", "www.apache.org",
-                                                                                    "client_id", "id"));
+        JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("enabled", "false", "site", "www.apache.org", "client_id", "id"));
         JwtRoleProcessor mockRoleProcessor = mock(JwtRoleProcessor.class);
         PeriodicTaskExecutor mockTaskExecutor = mock(PeriodicTaskExecutor.class);
-        ReloadingJwtAuthenticationHandler reloadingJwtAuthenticationHandler
-        = new ReloadingJwtAuthenticationHandler(mockVertx, parameterExtractor, mockRoleProcessor, mockTaskExecutor);
+        ReloadingJwtAuthenticationHandler reloadingJwtAuthenticationHandler = new ReloadingJwtAuthenticationHandler(mockVertx, parameterExtractor,
+                mockRoleProcessor, mockTaskExecutor);
         RoutingContext mockCtx = mock(RoutingContext.class);
         reloadingJwtAuthenticationHandler.authenticate(mockCtx, result -> {
             assertThat(result.failed()).isTrue();

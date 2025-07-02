@@ -30,13 +30,16 @@ public class QualifiedName
     private final String maybeQuotedKeyspace;
     private final String maybeQuotedTable;
 
-    public QualifiedName(String keyspace, String table)
+    public QualifiedName(String keyspace,
+                         String table)
     {
         this(keyspace, table, false, false);
     }
 
-    public QualifiedName(String keyspace, String table,
-                         boolean quoteKeyspace, boolean quoteTable)
+    public QualifiedName(String keyspace,
+                         String table,
+                         boolean quoteKeyspace,
+                         boolean quoteTable)
     {
         this.keyspace = keyspace;
         this.table = table;

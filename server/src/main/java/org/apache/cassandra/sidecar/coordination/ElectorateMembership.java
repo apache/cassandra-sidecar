@@ -19,8 +19,7 @@
 package org.apache.cassandra.sidecar.coordination;
 
 /**
- * An interface that defines if the local Sidecar instance should participate during the choosing of a single
- * instance executor process.
+ * An interface that defines if the local Sidecar instance should participate during the choosing of a single instance executor process.
  */
 public interface ElectorateMembership
 {

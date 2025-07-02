@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,10 +98,14 @@ public class RestoreProcessor implements PeriodicTask
         this.sidecarSchema = sidecarSchema;
         this.processMaxConcurrency = new ConcurrencyLimiter(() -> config.restoreJobConfiguration()
                                                                         .processMaxConcurrency());
-        this.requiredUsableSpacePercentage
-        = config.serviceConfiguration().sstableUploadConfiguration().minimumSpacePercentageRequired() / 100.0;
-        this.slowTaskThreshold = config.restoreJobConfiguration().slowTaskThreshold();
-        this.slowTaskReportDelay = config.restoreJobConfiguration().slowTaskReportDelay();
+        this.requiredUsableSpacePercentage = config.serviceConfiguration()
+                                                   .sstableUploadConfiguration()
+                                                   .minimumSpacePercentageRequired()
+                / 100.0;
+        this.slowTaskThreshold = config.restoreJobConfiguration()
+                                       .slowTaskThreshold();
+        this.slowTaskReportDelay = config.restoreJobConfiguration()
+                                         .slowTaskReportDelay();
         this.importer = importer;
         this.rangeDatabaseAccessor = rangeDatabaseAccessor;
         this.restoreJobUtil = restoreJobUtil;
@@ -109,8 +114,7 @@ public class RestoreProcessor implements PeriodicTask
     }
 
     /**
-     * Enqueue a {@link RestoreRange} to be processed in the future.
-     * If the processor has been closed, it won't accept more submissions.
+     * Enqueue a {@link RestoreRange} to be processed in the future. If the processor has been closed, it won't accept more submissions.
      */
     void submit(RestoreRange range)
     {
@@ -159,7 +163,7 @@ public class RestoreProcessor implements PeriodicTask
     public void execute(Promise<Void> promise)
     {
         while (workQueue.peek() != null // exit early when no pending slice and avoid acquire permits
-               && processMaxConcurrency.tryAcquire())
+                && processMaxConcurrency.tryAcquire())
         {
             RestoreRange range = workQueue.poll();
             if (range == null) // It should never happen because it peeks before polling. It is only to make IDE happy
@@ -179,18 +183,13 @@ public class RestoreProcessor implements PeriodicTask
 
             // capture the new queue length after polling
             workQueue.captureImportQueueLength();
-            RestoreRangeHandler task = range.toAsyncTask(s3ClientPool, pool, importer,
-                                                         requiredUsableSpacePercentage,
-                                                         rangeDatabaseAccessor,
-                                                         restoreJobUtil,
-                                                         localTokenRangesProvider,
-                                                         metrics);
+            RestoreRangeHandler task = range.toAsyncTask(s3ClientPool, pool, importer, requiredUsableSpacePercentage, rangeDatabaseAccessor, restoreJobUtil,
+                    localTokenRangesProvider, metrics);
 
             activeTasks.put(task, slowTaskThreshold.toSeconds());
             pool.executeBlocking(task, false) // unordered; run in parallel
                 // wrap success/failure handling in compose to catch any exception thrown
-                .compose(taskSuccessHandler(task),
-                         taskFailureHandler(range))
+                .compose(taskSuccessHandler(task), taskFailureHandler(range))
                 // release counter
                 .onComplete(ignored -> {
                     processMaxConcurrency.releasePermit();
@@ -227,16 +226,17 @@ public class RestoreProcessor implements PeriodicTask
 
             // Read the current map and update the existing entries if needed.
             // We do not want to put new entry to the map in this method.
-            activeTasks.computeIfPresent(t, (task, timeToReport) -> {
+            activeTasks.computeIfPresent(t, (task,
+                                             timeToReport) -> {
                 if (elapsedInSeconds > timeToReport)
                 {
-                    LOGGER.warn("Long-running restore slice task detected. " +
-                                "elapsedSeconds={} thresholdSeconds={} sliceKey={} jobId={} status={}",
-                                elapsedInSeconds,
-                                slowTaskThreshold.toSeconds(),
-                                task.range().sliceKey(),
-                                task.range().jobId(),
-                                task.range().job().status);
+                    LOGGER.warn("Long-running restore slice task detected. " + "elapsedSeconds={} thresholdSeconds={} sliceKey={} jobId={} status={}",
+                            elapsedInSeconds, slowTaskThreshold.toSeconds(), task.range()
+                                                                                 .sliceKey(),
+                            task.range()
+                                .jobId(),
+                            task.range()
+                                .job().status);
                     task.range()
                         .owner()
                         .metrics()
@@ -252,7 +252,9 @@ public class RestoreProcessor implements PeriodicTask
     private Function<RestoreRange, Future<Void>> taskSuccessHandler(RestoreRangeHandler task)
     {
         return range -> {
-            InstanceRestoreMetrics restoreMetrics = range.owner().metrics().restore();
+            InstanceRestoreMetrics restoreMetrics = range.owner()
+                                                         .metrics()
+                                                         .restore();
             if (range.hasImported())
             {
                 restoreMetrics.sliceCompletionTime.metric.update(System.nanoTime() - range.sliceCompressedSize(), TimeUnit.NANOSECONDS);
@@ -268,8 +270,7 @@ public class RestoreProcessor implements PeriodicTask
             }
             else // log a warning and retry. It should not reach here.
             {
-                LOGGER.warn("Unexpected state of slice. It is neither staged nor imported. sliceKey={}",
-                            range.sliceKey());
+                LOGGER.warn("Unexpected state of slice. It is neither staged nor imported. sliceKey={}", range.sliceKey());
                 if (range.hasStaged())
                 {
                     workQueue.offerStaged(range);
@@ -308,7 +309,8 @@ public class RestoreProcessor implements PeriodicTask
             {
                 LOGGER.error("Slice failed with unrecoverable failure. sliceKey={}", range.sliceKey(), cause);
                 range.fail(RestoreJobExceptions.toFatal(cause));
-                if (range.job().isManagedBySidecar())
+                if (range.job()
+                         .isManagedBySidecar())
                 {
                     rangeDatabaseAccessor.updateStatus(range);
                 }
@@ -346,15 +348,11 @@ public class RestoreProcessor implements PeriodicTask
     /**
      * A facade that encapsulates the queuing of restore ranges of 2 phases, newly created and staged, as well as related metrics aggregation.
      * <ul>
-     * <li>
-     * When the restore job is managed by Spark/external controller, restore ranges are only enqueued in the restoreRanges queue, as the job
-     * has only 1 phase. The stagedRestoreRanges queue is not used at all.
-     * </li>
-     * <li>
-     * When the restore job is managed by Sidecar, there are 2 phases in the import/restore procedure. The newly created restore ranges are
-     * enqueued in the restoreRanges queue first, once the slices/objects have been downloaded, the restore ranges are enqueued into the
-     * stagedRestoreRanges queue. When it is ready to import, RestoreProcessor polls restore ranges from the staged queue and import.
-     * </li>
+     * <li>When the restore job is managed by Spark/external controller, restore ranges are only enqueued in the restoreRanges queue, as the job has only 1
+     * phase. The stagedRestoreRanges queue is not used at all.</li>
+     * <li>When the restore job is managed by Sidecar, there are 2 phases in the import/restore procedure. The newly created restore ranges are enqueued in the
+     * restoreRanges queue first, once the slices/objects have been downloaded, the restore ranges are enqueued into the stagedRestoreRanges queue. When it is
+     * ready to import, RestoreProcessor polls restore ranges from the staged queue and import.</li>
      * </ul>
      */
     private class WorkQueue
@@ -406,8 +404,8 @@ public class RestoreProcessor implements PeriodicTask
             for (RestoreRange range : restoreRanges)
             {
                 range.cancel();
-                LOGGER.debug("Cancelled restore ranges on closing. jobId={} sliceId={} startToken={} endToken={}",
-                             range.jobId(), range.sliceId(), range.startToken(), range.endToken());
+                LOGGER.debug("Cancelled restore ranges on closing. jobId={} sliceId={} startToken={} endToken={}", range.jobId(), range.sliceId(),
+                        range.startToken(), range.endToken());
             }
             restoreRanges.clear();
             pendingRangesPerInstance.clear();
@@ -421,42 +419,50 @@ public class RestoreProcessor implements PeriodicTask
 
         void captureImportQueueLength()
         {
-            activeRangesPerInstance.forEach((instanceId, counter) ->
-                                            instanceRestoreMetrics(instanceId).sliceImportQueueLength.metric.setValue(counter.get()));
+            activeRangesPerInstance.forEach((instanceId,
+                                             counter) -> instanceRestoreMetrics(instanceId).sliceImportQueueLength.metric.setValue(counter.get()));
         }
 
         void capturePendingSliceCount()
         {
-            pendingRangesPerInstance.forEach((instanceId, counter) ->
-                                             instanceRestoreMetrics(instanceId).pendingSliceCount.metric.setValue(counter.get()));
+            pendingRangesPerInstance.forEach((instanceId,
+                                              counter) -> instanceRestoreMetrics(instanceId).pendingSliceCount.metric.setValue(counter.get()));
         }
 
-        private void increment(Map<Integer, AtomicInteger> map, RestoreRange range)
+        private void increment(Map<Integer, AtomicInteger> map,
+                               RestoreRange range)
         {
-            map.compute(range.owner().id(), (key, counter) -> {
-                if (counter == null)
-                {
-                    counter = new AtomicInteger();
-                }
-                counter.incrementAndGet();
-                return counter;
-            });
+            map.compute(range.owner()
+                             .id(),
+                    (key,
+                     counter) -> {
+                        if (counter == null)
+                        {
+                            counter = new AtomicInteger();
+                        }
+                        counter.incrementAndGet();
+                        return counter;
+                    });
         }
 
-        private void decrementIfPresent(Map<Integer, AtomicInteger> map, RestoreRange range)
+        private void decrementIfPresent(Map<Integer, AtomicInteger> map,
+                                        RestoreRange range)
         {
-            map.computeIfPresent(range.owner().id(), (key, counter) -> {
-                if (counter.get() < 0) // The condition is not expected. Log it if it happens
-                {
-                    // create an IllegalStateException to capture stacktrace
-                    LOGGER.warn("Slice counter dropped below 0. sliceKey={}",
-                                range.sliceKey(), new IllegalStateException("Unexpected slice counter state"));
-                    counter.set(0); // repair anomaly
-                    return counter;
-                }
-                counter.decrementAndGet();
-                return counter;
-            });
+            map.computeIfPresent(range.owner()
+                                      .id(),
+                    (key,
+                     counter) -> {
+                        if (counter.get() < 0) // The condition is not expected. Log it if it happens
+                        {
+                            // create an IllegalStateException to capture stacktrace
+                            LOGGER.warn("Slice counter dropped below 0. sliceKey={}", range.sliceKey(),
+                                    new IllegalStateException("Unexpected slice counter state"));
+                            counter.set(0); // repair anomaly
+                            return counter;
+                        }
+                        counter.decrementAndGet();
+                        return counter;
+                    });
         }
 
         private RestoreRange peek()
@@ -482,7 +488,8 @@ public class RestoreProcessor implements PeriodicTask
 
         private InstanceRestoreMetrics instanceRestoreMetrics(int instanceId)
         {
-            return metrics.instance(instanceId).restore();
+            return metrics.instance(instanceId)
+                          .restore();
         }
 
         @VisibleForTesting
@@ -494,7 +501,10 @@ public class RestoreProcessor implements PeriodicTask
         @VisibleForTesting
         int activeRangesCount()
         {
-            return activeRangesPerInstance.values().stream().mapToInt(AtomicInteger::get).sum();
+            return activeRangesPerInstance.values()
+                                          .stream()
+                                          .mapToInt(AtomicInteger::get)
+                                          .sum();
         }
     }
 }

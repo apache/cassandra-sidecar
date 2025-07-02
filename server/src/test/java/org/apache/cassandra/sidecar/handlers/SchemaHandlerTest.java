@@ -31,6 +31,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,7 +99,8 @@ class SchemaHandlerTest
     void after() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -116,8 +118,7 @@ class SchemaHandlerTest
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   JsonObject jsonObject = response.bodyAsJsonObject();
                   assertThat(jsonObject.getString("keyspace")).isNull();
-                  assertThat(jsonObject.getString("schema"))
-                  .isEqualTo("FULL SCHEMA");
+                  assertThat(jsonObject.getString("schema")).isEqualTo("FULL SCHEMA");
                   context.completeNow();
               })));
     }
@@ -133,8 +134,7 @@ class SchemaHandlerTest
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   JsonObject jsonObject = response.bodyAsJsonObject();
                   assertThat(jsonObject.getString("keyspace")).isEqualTo("testKeyspace");
-                  assertThat(jsonObject.getString("schema"))
-                  .isEqualTo(testKeyspaceSchema);
+                  assertThat(jsonObject.getString("schema")).isEqualTo(testKeyspaceSchema);
                   context.completeNow();
               })));
     }
@@ -165,8 +165,7 @@ class SchemaHandlerTest
             Files.createDirectory(Paths.get(instanceDir.getCanonicalPath(), "sstable-staging"));
             when(instanceMetadata.host()).thenReturn(host);
             when(instanceMetadata.port()).thenReturn(9042);
-            when(instanceMetadata.dataDirs())
-            .thenReturn(Collections.singletonList(instanceDir.getCanonicalPath() + "/data"));
+            when(instanceMetadata.dataDirs()).thenReturn(Collections.singletonList(instanceDir.getCanonicalPath() + "/data"));
             when(instanceMetadata.stagingDir()).thenReturn(instanceDir.getCanonicalPath() + "/sstable-staging");
             when(instanceMetadata.id()).thenReturn(instanceId);
             CassandraAdapterDelegate mockCassandraAdapterDelegate = mock(CassandraAdapterDelegate.class);

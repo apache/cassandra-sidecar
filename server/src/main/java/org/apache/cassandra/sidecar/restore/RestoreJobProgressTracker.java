@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +57,9 @@ public class RestoreJobProgressTracker
     private final RestoreProcessor processor;
     private final AtomicReference<RestoreJobFatalException> failureRef = new AtomicReference<>();
 
-    public RestoreJobProgressTracker(RestoreJob restoreJob, RestoreProcessor restoreProcessor, InstanceMetadata instanceMetadata)
+    public RestoreJobProgressTracker(RestoreJob restoreJob,
+                                     RestoreProcessor restoreProcessor,
+                                     InstanceMetadata instanceMetadata)
     {
         this.restoreJob = restoreJob;
         this.processor = restoreProcessor;
@@ -65,6 +68,7 @@ public class RestoreJobProgressTracker
 
     /**
      * Submit a restore range to be processed in the background
+     *
      * @param range range of restore data to be processed
      * @return status of the submitted slice
      * @throws RestoreJobFatalException any of the ranges encounters a fatal failure
@@ -98,6 +102,7 @@ public class RestoreJobProgressTracker
 
     /**
      * Discard all the {@link RestoreRange} that overlap with the {@param otherRanges}
+     *
      * @param otherRanges token ranges to find the overlapping {@link RestoreRange} and discard
      * @return set of overlapping {@link RestoreRange}
      */
@@ -107,15 +112,16 @@ public class RestoreJobProgressTracker
         RangeSet<Token> rangeSet = TreeRangeSet.create();
         otherRanges.forEach(r -> rangeSet.add(r.range));
         Set<RestoreRange> overlapping = new HashSet<>();
-        ranges.keySet().removeIf(restoreRange -> {
-            if (rangeSet.intersects(restoreRange.tokenRange().range))
-            {
-                overlapping.add(restoreRange);
-                processor.discardAndRemove(restoreRange);
-                return true;
-            }
-            return false;
-        });
+        ranges.keySet()
+              .removeIf(restoreRange -> {
+                  if (rangeSet.intersects(restoreRange.tokenRange().range))
+                  {
+                      overlapping.add(restoreRange);
+                      processor.discardAndRemove(restoreRange);
+                      return true;
+                  }
+                  return false;
+              });
         return overlapping;
     }
 
@@ -141,8 +147,7 @@ public class RestoreJobProgressTracker
         boolean applied = failureRef.compareAndSet(null, exception);
         if (!applied)
         {
-            LOGGER.debug("The restore job is already failed. Ignoring the exception. jobId={}",
-                         restoreJob.jobId, exception);
+            LOGGER.debug("The restore job is already failed. Ignoring the exception. jobId={}", restoreJob.jobId, exception);
             return;
         }
         cleanupInternal();
@@ -165,18 +170,17 @@ public class RestoreJobProgressTracker
     }
 
     /**
-     * Internal method to clean up the {@link RestoreSlice}.
-     * It validates the slices and log warnings if they are not in a final state,
-     * i.e. {@link Status#PENDING} and no {@link #failureRef}
+     * Internal method to clean up the {@link RestoreSlice}. It validates the slices and log warnings if they are not in a final state, i.e.
+     * {@link Status#PENDING} and no {@link #failureRef}
      */
     void cleanupInternal()
     {
-        ranges.forEach((range, status) -> {
+        ranges.forEach((range,
+                        status) -> {
             if (!isFailed() && status != Status.COMPLETED)
             {
-                LOGGER.warn("Clean up pending restore slice when the job has not failed. " +
-                            "jobId={}, sliceId={}, startToken={}, endToken={}",
-                            restoreJob.jobId, range.sliceId(), range.startToken(), range.endToken());
+                LOGGER.warn("Clean up pending restore slice when the job has not failed. " + "jobId={}, sliceId={}, startToken={}, endToken={}",
+                        restoreJob.jobId, range.sliceId(), range.startToken(), range.endToken());
             }
             range.cancel();
         });
@@ -194,7 +198,8 @@ public class RestoreJobProgressTracker
         {
             try
             {
-                StorageOperations operations = instanceMetadata.delegate().storageOperations();
+                StorageOperations operations = instanceMetadata.delegate()
+                                                               .storageOperations();
                 operations.outOfRangeDataCleanup(restoreJob.keyspaceName, restoreJob.tableName);
             }
             catch (Throwable cause)
@@ -215,9 +220,7 @@ public class RestoreJobProgressTracker
      */
     public enum Status
     {
-        CREATED,
-        PENDING,
-        COMPLETED,
+        CREATED, PENDING, COMPLETED,
 
         // only used for sidecar-managed jobs
         FAILED,

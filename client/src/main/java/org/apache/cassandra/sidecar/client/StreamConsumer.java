@@ -18,15 +18,14 @@
 
 package org.apache.cassandra.sidecar.client;
 
-
 /**
  * Represents a consumer for a stream, when using streaming for the Sidecar {@link HttpClient}.
  */
 public interface StreamConsumer
 {
     /**
-     * Called when the {@link StreamBuffer} is ready to be consumed. This method can be called multiple times as
-     * data arrives and the {@link StreamBuffer} can be consumed.
+     * Called when the {@link StreamBuffer} is ready to be consumed. This method can be called multiple times as data arrives and the {@link StreamBuffer} can
+     * be consumed.
      *
      * @param buffer the StreamBuffer that wraps the received data
      */

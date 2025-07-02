@@ -26,8 +26,8 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 /**
- * Manages dedicated worker pools to schedule and execute _blocking_ tasks to avoid blocking netty eventloop.
- * It is a facade to handle one-off and periodic blocking execution.
+ * Manages dedicated worker pools to schedule and execute _blocking_ tasks to avoid blocking netty eventloop. It is a facade to handle one-off and periodic
+ * blocking execution.
  */
 @Singleton
 public class ExecutorPools
@@ -38,23 +38,23 @@ public class ExecutorPools
     // they are not expected to complete immediately and can be queued if all the threads are busy
     private final TaskExecutorPool internalTaskExecutors;
 
-    public ExecutorPools(Vertx vertx, ServiceConfiguration configuration)
+    public ExecutorPools(Vertx vertx,
+                         ServiceConfiguration configuration)
     {
         this(vertx, configuration, null);
     }
 
     @Inject
-    public ExecutorPools(Vertx vertx, ServiceConfiguration configuration, SidecarMetrics metrics)
+    public ExecutorPools(Vertx vertx,
+                         ServiceConfiguration configuration,
+                         SidecarMetrics metrics)
     {
-        this.taskExecutors
-        = new TaskExecutorPool.ServiceTaskExecutorPool(vertx, configuration.serverWorkerPoolConfiguration(), metrics);
-        this.internalTaskExecutors
-        = new TaskExecutorPool.InternalTaskExecutorPool(vertx, configuration.serverInternalWorkerPoolConfiguration(), metrics);
+        this.taskExecutors = new TaskExecutorPool.ServiceTaskExecutorPool(vertx, configuration.serverWorkerPoolConfiguration(), metrics);
+        this.internalTaskExecutors = new TaskExecutorPool.InternalTaskExecutorPool(vertx, configuration.serverInternalWorkerPoolConfiguration(), metrics);
     }
 
     /**
-     * @return the executor pool to run blocking code for client facing http requests.
-     * The blocking code should not block the thread for too long.
+     * @return the executor pool to run blocking code for client facing http requests. The blocking code should not block the thread for too long.
      */
     public TaskExecutorPool service()
     {
@@ -62,9 +62,8 @@ public class ExecutorPools
     }
 
     /**
-     * @return the executor pool to run blocking code for internal.
-     * Unlike the pool {@link #service()}, the blocking code can block the thread for a longer duration.
-     * Tasks submitted to this pool can be queued if all threads are busy.
+     * @return the executor pool to run blocking code for internal. Unlike the pool {@link #service()}, the blocking code can block the thread for a longer
+     *         duration. Tasks submitted to this pool can be queued if all threads are busy.
      */
     public TaskExecutorPool internal()
     {
@@ -73,7 +72,7 @@ public class ExecutorPools
 
     public Future<Void> close()
     {
-        return taskExecutors.closeInternal().onComplete(v -> internalTaskExecutors.closeInternal());
+        return taskExecutors.closeInternal()
+                            .onComplete(v -> internalTaskExecutors.closeInternal());
     }
 }
-

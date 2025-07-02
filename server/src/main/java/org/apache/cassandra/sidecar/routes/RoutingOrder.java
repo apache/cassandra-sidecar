@@ -19,21 +19,13 @@
 package org.apache.cassandra.sidecar.routes;
 
 /**
- * Control the routing order when the precise ordering is desired.
- * For example, the auth handler should be evaluated the first, regardless of the declaration order.
- * The route order can be specified via {@linkplain io.vertx.ext.web.Route#order(int)}.
- * Note that routes can be specified with the same order value. In such case, the effective order is
- * determined by the declaration order in the code. See {@code org.apache.cassandra.sidecar.routes.VertxRoutingTest}
+ * Control the routing order when the precise ordering is desired. For example, the auth handler should be evaluated the first, regardless of the declaration
+ * order. The route order can be specified via {@linkplain io.vertx.ext.web.Route#order(int)}. Note that routes can be specified with the same order value. In
+ * such case, the effective order is determined by the declaration order in the code. See {@code org.apache.cassandra.sidecar.routes.VertxRoutingTest}
  */
 public enum RoutingOrder
 {
-    HIGHEST(Integer.MIN_VALUE),
-    HIGHER(-2),
-    HIGH(-1),
-    DEFAULT(0),
-    LOW(1),
-    LOWEST(Integer.MAX_VALUE),
-    ;
+    HIGHEST(Integer.MIN_VALUE), HIGHER(-2), HIGH(-1), DEFAULT(0), LOW(1), LOWEST(Integer.MAX_VALUE),;
 
     public final int order;
 

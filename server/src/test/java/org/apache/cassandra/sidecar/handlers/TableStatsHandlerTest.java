@@ -26,6 +26,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,7 +82,7 @@ public class TableStatsHandlerTest
     void before() throws InterruptedException
     {
         Module testOverride = Modules.override(new TestModule())
-                                      .with(new TableStatsTestModule());
+                                     .with(new TableStatsTestModule());
         Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(testOverride));
         server = injector.getInstance(Server.class);
@@ -97,7 +98,8 @@ public class TableStatsHandlerTest
     void after() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -161,15 +163,14 @@ public class TableStatsHandlerTest
               }));
     }
 
-
     static class TableStatsTestModule extends AbstractModule
     {
         @Provides
         @Singleton
         public InstancesMetadata instanceConfig()
         {
-            TableStatsResponse response = new TableStatsResponse(KEYSPACE, TABLE, EXPECTED_SSTABLES, EXPECTED_SIZE,
-                                                                 EXPECTED_TOTAL_SIZE, EXPECTED_SNAPSHOT_SIZE);
+            TableStatsResponse response =
+                                        new TableStatsResponse(KEYSPACE, TABLE, EXPECTED_SSTABLES, EXPECTED_SIZE, EXPECTED_TOTAL_SIZE, EXPECTED_SNAPSHOT_SIZE);
             final int instanceId = 100;
             final String host = "127.0.0.1";
             final InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);

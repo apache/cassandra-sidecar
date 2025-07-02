@@ -65,14 +65,14 @@ public enum RestoreRangeStatus
 
     /**
      * Advance the status with validation
+     *
      * @param targetStatus target status to advance to
      * @return new status
      */
     public RestoreRangeStatus advanceTo(RestoreRangeStatus targetStatus)
     {
         Preconditions.checkArgument(validTargetStatusSet.contains(targetStatus),
-                                    name() + " status can only advance to one of the follow statuses: " +
-                                    validTargetStatusSet);
+                name() + " status can only advance to one of the follow statuses: " + validTargetStatusSet);
         return targetStatus;
     }
 }

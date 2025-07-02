@@ -40,7 +40,8 @@ class SimpleCassandraVersionProviderTest
         builder = new CassandraVersionProvider.Builder();
         provider = builder.add(new V30())
                           .add(new V40())
-                          .add(new V41()).build();
+                          .add(new V41())
+                          .build();
     }
 
     @Test
@@ -77,7 +78,8 @@ class SimpleCassandraVersionProviderTest
         builder = new CassandraVersionProvider.Builder();
         provider = builder.add(new V40())
                           .add(new V41())
-                          .add(new V30()).build();
+                          .add(new V30())
+                          .build();
 
         ICassandraFactory cassandra = provider.cassandra(SimpleCassandraVersion.create("4.0.0"));
         assertThat(cassandra).hasSameClassAs(new V40());

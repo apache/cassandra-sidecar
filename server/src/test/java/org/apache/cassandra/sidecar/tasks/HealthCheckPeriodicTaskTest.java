@@ -18,22 +18,16 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -47,7 +41,10 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.mockito.stubbing.Answer;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doAnswer;
@@ -84,21 +81,23 @@ class HealthCheckPeriodicTaskTest
         InstanceMetadataFetcher mockInstanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
         metrics = new SidecarMetricsImpl(mockRegistryFactory, mockInstanceMetadataFetcher);
         ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
-        healthCheck = new HealthCheckPeriodicTask(mockConfiguration, mockInstancesMetadata,
-                                                  executorPools, metrics);
+        healthCheck = new HealthCheckPeriodicTask(mockConfiguration, mockInstancesMetadata, executorPools, metrics);
     }
 
     @AfterEach
     void cleanup()
     {
-        registry().removeMatching((name, metric) -> true);
+        registry().removeMatching((name,
+                                   metric) -> true);
     }
 
     @Test
     void testConfiguration()
     {
-        assertThat(healthCheck.initialDelay().to(TimeUnit.MILLISECONDS)).isEqualTo(10);
-        assertThat(healthCheck.delay().to(TimeUnit.MILLISECONDS)).isEqualTo(1000);
+        assertThat(healthCheck.initialDelay()
+                              .to(TimeUnit.MILLISECONDS)).isEqualTo(10);
+        assertThat(healthCheck.delay()
+                              .to(TimeUnit.MILLISECONDS)).isEqualTo(1000);
         assertThat(healthCheck.name()).isEqualTo("Health Check");
     }
 
@@ -111,11 +110,14 @@ class HealthCheckPeriodicTaskTest
         when(mockInstancesMetadata.instances()).thenReturn(mockInstanceMetadata);
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
-        promise.future().onComplete(context.succeeding(v -> {
-            assertThat(metrics.server().health().cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
-            assertThat(metrics.server().health().cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
-            context.completeNow();
-        }));
+        promise.future()
+               .onComplete(context.succeeding(v -> {
+                   assertThat(metrics.server()
+                                     .health().cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
+                   assertThat(metrics.server()
+                                     .health().cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
+                   context.completeNow();
+               }));
     }
 
     @Test
@@ -125,16 +127,18 @@ class HealthCheckPeriodicTaskTest
         int expectedUpInstances = 5;
         int expectedDownInstances = 0;
         Checkpoint healthCheckCheckPoint = context.checkpoint(numberOfInstances);
-        List<InstanceMetadata> mockInstanceMetadata =
-        buildMockInstanceMetadata(healthCheckCheckPoint, numberOfInstances);
+        List<InstanceMetadata> mockInstanceMetadata = buildMockInstanceMetadata(healthCheckCheckPoint, numberOfInstances);
         when(mockInstancesMetadata.instances()).thenReturn(mockInstanceMetadata);
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
-        promise.future().onComplete(context.succeeding(v -> {
-            assertThat(metrics.server().health().cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
-            assertThat(metrics.server().health().cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
-            context.completeNow();
-        }));
+        promise.future()
+               .onComplete(context.succeeding(v -> {
+                   assertThat(metrics.server()
+                                     .health().cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
+                   assertThat(metrics.server()
+                                     .health().cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
+                   context.completeNow();
+               }));
     }
 
     @Test
@@ -144,19 +148,21 @@ class HealthCheckPeriodicTaskTest
         int expectedUpInstances = 4;
         int expectedDownInstances = 1;
         Checkpoint healthCheckCheckPoint = context.checkpoint(numberOfInstances);
-        List<InstanceMetadata> mockInstanceMetadata =
-        buildMockInstanceMetadata(healthCheckCheckPoint, numberOfInstances);
+        List<InstanceMetadata> mockInstanceMetadata = buildMockInstanceMetadata(healthCheckCheckPoint, numberOfInstances);
         InstanceMetadata mockInstance = mock(InstanceMetadata.class);
         when(mockInstance.delegate()).thenThrow(new RuntimeException());
         mockInstanceMetadata.set(3, mockInstance);
         when(mockInstancesMetadata.instances()).thenReturn(mockInstanceMetadata);
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
-        promise.future().onComplete(context.failing(v -> {
-            assertThat(metrics.server().health().cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
-            assertThat(metrics.server().health().cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
-            context.completeNow();
-        }));
+        promise.future()
+               .onComplete(context.failing(v -> {
+                   assertThat(metrics.server()
+                                     .health().cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
+                   assertThat(metrics.server()
+                                     .health().cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
+                   context.completeNow();
+               }));
     }
 
     @Test
@@ -166,24 +172,28 @@ class HealthCheckPeriodicTaskTest
         int expectedUpInstances = 4;
         int expectedDownInstances = 1;
         Checkpoint healthCheckCheckPoint = context.checkpoint(numberOfInstances);
-        List<InstanceMetadata> mockInstanceMetadata =
-        buildMockInstanceMetadata(healthCheckCheckPoint, numberOfInstances);
+        List<InstanceMetadata> mockInstanceMetadata = buildMockInstanceMetadata(healthCheckCheckPoint, numberOfInstances);
         InstanceMetadata mockInstance = mock(InstanceMetadata.class);
         CassandraAdapterDelegate mockDelegate = mock(CassandraAdapterDelegate.class);
         when(mockInstance.delegate()).thenReturn(mockDelegate);
-        doThrow(new RuntimeException()).when(mockDelegate).healthCheck();
+        doThrow(new RuntimeException()).when(mockDelegate)
+                                       .healthCheck();
         mockInstanceMetadata.set(3, mockInstance);
         when(mockInstancesMetadata.instances()).thenReturn(mockInstanceMetadata);
         Promise<Void> promise = Promise.promise();
         healthCheck.execute(promise);
-        promise.future().onComplete(context.failing(v -> {
-            assertThat(metrics.server().health().cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
-            assertThat(metrics.server().health().cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
-            context.completeNow();
-        }));
+        promise.future()
+               .onComplete(context.failing(v -> {
+                   assertThat(metrics.server()
+                                     .health().cassandraInstancesUp.metric.getValue()).isEqualTo(expectedUpInstances);
+                   assertThat(metrics.server()
+                                     .health().cassandraInstancesDown.metric.getValue()).isEqualTo(expectedDownInstances);
+                   context.completeNow();
+               }));
     }
 
-    private List<InstanceMetadata> buildMockInstanceMetadata(Checkpoint healthCheckCheckPoint, int numberOfInstances)
+    private List<InstanceMetadata> buildMockInstanceMetadata(Checkpoint healthCheckCheckPoint,
+                                                             int numberOfInstances)
     {
         return IntStream.range(0, numberOfInstances)
                         .mapToObj(i -> {
@@ -193,7 +203,8 @@ class HealthCheckPeriodicTaskTest
                             doAnswer((Answer<Void>) invocation -> {
                                 healthCheckCheckPoint.flag();
                                 return null;
-                            }).when(mockDelegate).healthCheck();
+                            }).when(mockDelegate)
+                              .healthCheck();
                             when(mockInstanceMetadata.delegate()).thenReturn(mockDelegate);
                             return mockInstanceMetadata;
                         })

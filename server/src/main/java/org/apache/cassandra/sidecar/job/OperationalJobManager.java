@@ -18,15 +18,14 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import com.google.inject.Singleton;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import javax.inject.Inject;
-
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
+import javax.inject.Inject;
 
 /**
  * An abstraction of the management and tracking of long-running jobs running on the sidecar.
@@ -44,7 +43,8 @@ public class OperationalJobManager
      * @param jobTracker the tracker for the operational jobs
      */
     @Inject
-    public OperationalJobManager(OperationalJobTracker jobTracker, ExecutorPools executorPools)
+    public OperationalJobManager(OperationalJobTracker jobTracker,
+                                 ExecutorPools executorPools)
     {
         this.jobTracker = jobTracker;
         this.internalExecutorPool = executorPools.internal();
@@ -57,9 +57,11 @@ public class OperationalJobManager
      */
     public List<OperationalJob> allInflightJobs()
     {
-        return jobTracker.jobsView().values()
+        return jobTracker.jobsView()
+                         .values()
                          .stream()
-                         .filter(j -> !j.asyncResult().isComplete())
+                         .filter(j -> !j.asyncResult()
+                                        .isComplete())
                          .collect(Collectors.toList());
     }
 
@@ -75,9 +77,8 @@ public class OperationalJobManager
     }
 
     /**
-     * Try to submit the job to execute asynchronously, if it is not currently being
-     * tracked and not running. The job is triggered on a separate internal thread-pool.
-     * The job execution failure behavior is tracked within the {@link OperationalJob}.
+     * Try to submit the job to execute asynchronously, if it is not currently being tracked and not running. The job is triggered on a separate internal
+     * thread-pool. The job execution failure behavior is tracked within the {@link OperationalJob}.
      *
      * @param job OperationalJob instance to submit
      * @throws OperationalJobConflictException when the same operational job is already running on Cassandra
@@ -94,8 +95,9 @@ public class OperationalJobManager
     }
 
     /**
-     * Checks the job tracker for existing inflight jobs with the same operation before checking downstream for
-     * corresponding running job on the Cassandra node as a conflict of the job being submitted.
+     * Checks the job tracker for existing inflight jobs with the same operation before checking downstream for corresponding running job on the Cassandra node
+     * as a conflict of the job being submitted.
+     *
      * @param job instance of the job to check conflicts for
      * @throws OperationalJobConflictException when a conflicting inflight job is found
      */
@@ -103,7 +105,9 @@ public class OperationalJobManager
     {
         // If there are no tracked running jobs for same operation, then we confirm downstream
         // Downstream check is done in most cases - by design
-        if (!jobTracker.inflightJobsByOperation(job.name()).isEmpty() || job.isRunningOnCassandra())
+        if (!jobTracker.inflightJobsByOperation(job.name())
+                       .isEmpty()
+                || job.isRunningOnCassandra())
         {
             throw new OperationalJobConflictException("The same operational job is already running on Cassandra. operationName='" + job.name() + '\'');
         }

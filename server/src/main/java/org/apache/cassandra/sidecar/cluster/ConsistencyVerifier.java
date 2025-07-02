@@ -17,7 +17,6 @@
 package org.apache.cassandra.sidecar.cluster;
 
 import java.util.Set;
-
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
 import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.jetbrains.annotations.NotNull;
@@ -31,10 +30,11 @@ public interface ConsistencyVerifier
      * Verify the current progress and conclude a result
      *
      * @param succeeded current instances succeed
-     * @param failed    current instances fail
-     * @param all       all participant instances considering the replication strategy;
-     *                  instances are grouped by dc
+     * @param failed current instances fail
+     * @param all all participant instances considering the replication strategy; instances are grouped by dc
      * @return result
      */
-    ConsistencyVerificationResult verify(@NotNull Set<String> succeeded, @NotNull Set<String> failed, @NotNull InstanceSetByDc all);
+    ConsistencyVerificationResult verify(@NotNull Set<String> succeeded,
+                                         @NotNull Set<String> failed,
+                                         @NotNull InstanceSetByDc all);
 }

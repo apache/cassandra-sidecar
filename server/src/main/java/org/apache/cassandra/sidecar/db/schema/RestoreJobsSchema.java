@@ -26,9 +26,8 @@ import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly
 import org.jetbrains.annotations.NotNull;
 
 /**
- * {@link RestoreJobsSchema} holds all prepared statements needed for talking to Cassandra for various actions related
- * to {@link org.apache.cassandra.sidecar.db.RestoreJob} like inserting a restore job, updating a restore job,
- * finding restore jobs and more
+ * {@link RestoreJobsSchema} holds all prepared statements needed for talking to Cassandra for various actions related to
+ * {@link org.apache.cassandra.sidecar.db.RestoreJob} like inserting a restore job, updating a restore job, finding restore jobs and more
  */
 public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLeaseholderOnly
 {
@@ -47,7 +46,8 @@ public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLe
     private PreparedStatement selectJob;
     private PreparedStatement findAllByCreatedAt;
 
-    public RestoreJobsSchema(SchemaKeyspaceConfiguration keyspaceConfig, SecondBoundConfiguration tableTtl)
+    public RestoreJobsSchema(SchemaKeyspaceConfiguration keyspaceConfig,
+                             SecondBoundConfiguration tableTtl)
     {
         this.keyspaceConfig = keyspaceConfig;
         this.tableTtl = tableTtl;
@@ -81,23 +81,12 @@ public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLe
     @Override
     protected String createSchemaStatement()
     {
-        return String.format("CREATE TABLE IF NOT EXISTS %s.%s (" +
-                             "  created_at date," +
-                             "  job_id timeuuid," +
-                             "  keyspace_name text," +
-                             "  table_name text," +
-                             "  job_agent text," +
-                             "  status text," +
-                             "  blob_secrets blob," +
-                             "  import_options blob," +
-                             "  expire_at timestamp," +
-                             "  slice_count bigint," +
-                             "  bucket_count smallint," +
-                             "  consistency_level text," +
-                             "  local_datacenter text," +
-                             "  PRIMARY KEY (created_at, job_id)" +
-                             ") WITH default_time_to_live = %s",
-                             keyspaceConfig.keyspace(), RESTORE_JOB_TABLE_NAME, tableTtl.toSeconds());
+        return String.format(
+                "CREATE TABLE IF NOT EXISTS %s.%s (" + "  created_at date," + "  job_id timeuuid," + "  keyspace_name text," + "  table_name text,"
+                        + "  job_agent text," + "  status text," + "  blob_secrets blob," + "  import_options blob," + "  expire_at timestamp,"
+                        + "  slice_count bigint," + "  bucket_count smallint," + "  consistency_level text," + "  local_datacenter text,"
+                        + "  PRIMARY KEY (created_at, job_id)" + ") WITH default_time_to_live = %s",
+                keyspaceConfig.keyspace(), RESTORE_JOB_TABLE_NAME, tableTtl.toSeconds());
     }
 
     public PreparedStatement insertJob()
@@ -144,104 +133,53 @@ public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLe
     {
         static String insertJob(SchemaKeyspaceConfiguration config)
         {
-            return withTable("INSERT INTO %s.%s (" +
-                             "  created_at," +
-                             "  job_id," +
-                             "  keyspace_name," +
-                             "  table_name," +
-                             "  job_agent," +
-                             "  status," +
-                             "  blob_secrets," +
-                             "  import_options," +
-                             "  consistency_level," +
-                             "  local_datacenter," +
-                             "  expire_at" +
-                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
+            return withTable("INSERT INTO %s.%s (" + "  created_at," + "  job_id," + "  keyspace_name," + "  table_name," + "  job_agent," + "  status,"
+                    + "  blob_secrets," + "  import_options," + "  consistency_level," + "  local_datacenter," + "  expire_at"
+                    + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
         }
 
         static String updateBlobSecrets(SchemaKeyspaceConfiguration config)
         {
-            return withTable("INSERT INTO %s.%s (" +
-                             "  created_at," +
-                             "  job_id," +
-                             "  blob_secrets" +
-                             ") VALUES (?, ? ,?)", config);
+            return withTable("INSERT INTO %s.%s (" + "  created_at," + "  job_id," + "  blob_secrets" + ") VALUES (?, ? ,?)", config);
         }
 
         static String updateStatus(SchemaKeyspaceConfiguration config)
         {
-            return withTable("INSERT INTO %s.%s (" +
-                             "  created_at," +
-                             "  job_id," +
-                             "  status" +
-                             ") VALUES (?, ?, ?)", config);
+            return withTable("INSERT INTO %s.%s (" + "  created_at," + "  job_id," + "  status" + ") VALUES (?, ?, ?)", config);
         }
 
         static String updateJobAgent(SchemaKeyspaceConfiguration config)
         {
-            return withTable("INSERT INTO %s.%s (" +
-                             "  created_at," +
-                             "  job_id," +
-                             "  job_agent" +
-                             ") VALUES (?, ?, ?)", config);
+            return withTable("INSERT INTO %s.%s (" + "  created_at," + "  job_id," + "  job_agent" + ") VALUES (?, ?, ?)", config);
         }
-
 
         static String updateExpireAt(SchemaKeyspaceConfiguration config)
         {
-            return withTable("INSERT INTO %s.%s (" +
-                             "  created_at," +
-                             "  job_id," +
-                             "  expire_at" +
-                             ") VALUES (?, ?, ?)", config);
+            return withTable("INSERT INTO %s.%s (" + "  created_at," + "  job_id," + "  expire_at" + ") VALUES (?, ?, ?)", config);
         }
 
         static String updateSliceCount(SchemaKeyspaceConfiguration config)
         {
-            return withTable("INSERT INTO %s.%s (" +
-                             "  created_at," +
-                             "  job_id," +
-                             "  slice_count" +
-                             ") VALUES (?, ?, ?)", config);
+            return withTable("INSERT INTO %s.%s (" + "  created_at," + "  job_id," + "  slice_count" + ") VALUES (?, ?, ?)", config);
         }
 
         static String selectJob(SchemaKeyspaceConfiguration config)
         {
-            return withTable("SELECT created_at, " +
-                             "job_id, " +
-                             "keyspace_name, " +
-                             "table_name, " +
-                             "job_agent, " +
-                             "status, " +
-                             "blob_secrets, " +
-                             "import_options, " +
-                             "consistency_level, " +
-                             "local_datacenter, " +
-                             "expire_at, " +
-                             "slice_count " +
-                             "FROM %s.%s " +
-                             "WHERE created_at = ? AND job_id = ?", config);
+            return withTable("SELECT created_at, " + "job_id, " + "keyspace_name, " + "table_name, " + "job_agent, " + "status, " + "blob_secrets, "
+                    + "import_options, " + "consistency_level, " + "local_datacenter, " + "expire_at, " + "slice_count " + "FROM %s.%s "
+                    + "WHERE created_at = ? AND job_id = ?", config);
         }
 
         static String findAllByCreatedAt(SchemaKeyspaceConfiguration config)
         {
-            return withTable("SELECT created_at, " +
-                             "job_id, " +
-                             "keyspace_name, " +
-                             "table_name, " +
-                             "job_agent, " +
-                             "status, " +
-                             "blob_secrets, " +
-                             "import_options, " +
-                             "consistency_level, " +
-                             "local_datacenter, " +
-                             "expire_at, " +
-                             "slice_count " +
-                             "FROM %s.%s " +
-                             "WHERE created_at = ?", config);
+            return withTable(
+                    "SELECT created_at, " + "job_id, " + "keyspace_name, " + "table_name, " + "job_agent, " + "status, " + "blob_secrets, " + "import_options, "
+                            + "consistency_level, " + "local_datacenter, " + "expire_at, " + "slice_count " + "FROM %s.%s " + "WHERE created_at = ?",
+                    config);
         }
 
-        private static String withTable(String format, SchemaKeyspaceConfiguration config)
+        private static String withTable(String format,
+                                        SchemaKeyspaceConfiguration config)
         {
             return String.format(format, config.keyspace(), RESTORE_JOB_TABLE_NAME);
         }

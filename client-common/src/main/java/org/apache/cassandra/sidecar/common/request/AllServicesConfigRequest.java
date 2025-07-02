@@ -22,8 +22,7 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload;
 
 /**
- * Represents a request for getting configurations for services from "configs" table inside
- * sidecar internal keyspace.
+ * Represents a request for getting configurations for services from "configs" table inside sidecar internal keyspace.
  */
 public class AllServicesConfigRequest extends JsonRequest<AllServicesConfigPayload>
 {

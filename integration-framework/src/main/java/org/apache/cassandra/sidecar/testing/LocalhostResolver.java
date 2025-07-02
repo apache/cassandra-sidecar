@@ -21,20 +21,16 @@ package org.apache.cassandra.sidecar.testing;
 import java.net.UnknownHostException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolvers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolvers;
-
-
 /**
- * A {@link DnsResolver} instance used for tests that provides fast DNS resolution, to avoid blocking
- * DNS resolution at the JDK/OS-level.
+ * A {@link DnsResolver} instance used for tests that provides fast DNS resolution, to avoid blocking DNS resolution at the JDK/OS-level.
  *
- * <p><b>NOTE:</b> The resolver assumes that the addresses are of the form 127.0.0.x, which is what is currently
- * configured for integration tests.
+ * <p>
+ * <b>NOTE:</b> The resolver assumes that the addresses are of the form 127.0.0.x, which is what is currently configured for integration tests.
  */
 public class LocalhostResolver implements DnsResolver
 {
@@ -53,8 +49,7 @@ public class LocalhostResolver implements DnsResolver
     }
 
     /**
-     * Returns the resolved IP address from the hostname. If the {@code hostname} pattern is not matched,
-     * delegate the resolution to the delegate resolver.
+     * Returns the resolved IP address from the hostname. If the {@code hostname} pattern is not matched, delegate the resolution to the delegate resolver.
      *
      * <pre>
      * resolver.resolve("localhost") = "127.0.0.1"
@@ -80,8 +75,8 @@ public class LocalhostResolver implements DnsResolver
     }
 
     /**
-     * Returns the resolved hostname from the given {@code address}. When an invalid IP address is provided,
-     * delegates {@code address} resolution to the delegate.
+     * Returns the resolved hostname from the given {@code address}. When an invalid IP address is provided, delegates {@code address} resolution to the
+     * delegate.
      *
      * <pre>
      * resolver.reverseResolve("127.0.0.1") = "localhost"

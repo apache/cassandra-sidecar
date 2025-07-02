@@ -28,8 +28,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
- * Holder class for the {@link StreamSSTableComponentHandler}
- * request parameters
+ * Holder class for the {@link StreamSSTableComponentHandler} request parameters
  */
 public class StreamSSTableComponentRequestParam
 {
@@ -44,13 +43,16 @@ public class StreamSSTableComponentRequestParam
     /**
      * Constructor for the holder class
      *
-     * @param keyspace      the keyspace in Cassandra
-     * @param tableName     the table name in Cassandra
-     * @param snapshotName  the name of the snapshot
+     * @param keyspace the keyspace in Cassandra
+     * @param tableName the table name in Cassandra
+     * @param snapshotName the name of the snapshot
      * @param componentName the name of the SSTable component
      */
     @VisibleForTesting
-    public StreamSSTableComponentRequestParam(String keyspace, String tableName, String snapshotName, String componentName)
+    public StreamSSTableComponentRequestParam(String keyspace,
+                                              String tableName,
+                                              String snapshotName,
+                                              String componentName)
     {
         this(new QualifiedTableName(keyspace, tableName, true), snapshotName, null, componentName, null, 0);
     }
@@ -59,10 +61,10 @@ public class StreamSSTableComponentRequestParam
      * Constructor for the holder class
      *
      * @param qualifiedTableName the qualified table name in Cassandra
-     * @param snapshotName       the name of the snapshot
+     * @param snapshotName the name of the snapshot
      * @param secondaryIndexName the name of the secondary index for the SSTable component
-     * @param componentName      the name of the SSTable component
-     * @param tableId            the UUID for the Cassandra table
+     * @param componentName the name of the SSTable component
+     * @param tableId the UUID for the Cassandra table
      * @param dataDirectoryIndex the index of the Cassandra data directory where the component resides
      */
     public StreamSSTableComponentRequestParam(QualifiedTableName qualifiedTableName,
@@ -109,17 +111,13 @@ public class StreamSSTableComponentRequestParam
      */
     public String toString()
     {
-        return "StreamSSTableComponentRequest{" +
-               "keyspace='" + keyspace() + '\'' +
-               ", tableName='" + tableName() + '\'' +
-               ", snapshot='" + snapshotName + '\'' +
-               ", secondaryIndexName='" + secondaryIndexName() + '\'' +
-               ", componentName='" + componentName() + '\'' +
-               ", dataDirectoryIndex='" + dataDirectoryIndex + '\'' +
-               '}';
+        return "StreamSSTableComponentRequest{" + "keyspace='" + keyspace() + '\'' + ", tableName='" + tableName() + '\'' + ", snapshot='" + snapshotName + '\''
+                + ", secondaryIndexName='" + secondaryIndexName() + '\'' + ", componentName='" + componentName() + '\'' + ", dataDirectoryIndex='"
+                + dataDirectoryIndex + '\'' + '}';
     }
 
-    public static StreamSSTableComponentRequestParam from(QualifiedTableName qualifiedTableName, RoutingContext context)
+    public static StreamSSTableComponentRequestParam from(QualifiedTableName qualifiedTableName,
+                                                          RoutingContext context)
     {
         String snapshotName = context.pathParam("snapshot");
         String secondaryIndexName = context.pathParam("index");
@@ -127,12 +125,7 @@ public class StreamSSTableComponentRequestParam
         String tableId = maybeGetTableId(context.pathParam("table"));
         int dataDirectoryIndex = RequestUtils.parseIntegerQueryParam(context.request(), "dataDirectoryIndex", 0);
 
-        return new StreamSSTableComponentRequestParam(qualifiedTableName,
-                                                      snapshotName,
-                                                      secondaryIndexName,
-                                                      componentName,
-                                                      tableId,
-                                                      dataDirectoryIndex);
+        return new StreamSSTableComponentRequestParam(qualifiedTableName, snapshotName, secondaryIndexName, componentName, tableId, dataDirectoryIndex);
     }
 
     static String maybeGetTableId(String table)

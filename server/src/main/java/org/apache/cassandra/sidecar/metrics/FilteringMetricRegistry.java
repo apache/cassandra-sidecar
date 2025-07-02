@@ -18,12 +18,6 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
-
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
@@ -32,6 +26,11 @@ import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.NoopMetricRegistry;
 import com.codahale.metrics.Timer;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 /**
  * Allows filtering of metrics based on configured allow list. Metrics are filtered out before registering them.
@@ -58,7 +57,8 @@ public class FilteringMetricRegistry extends MetricRegistry
     }
 
     @Override
-    public Counter counter(String name, MetricSupplier<Counter> supplier)
+    public Counter counter(String name,
+                           MetricSupplier<Counter> supplier)
     {
         if (isAllowed.test(name))
         {
@@ -78,7 +78,8 @@ public class FilteringMetricRegistry extends MetricRegistry
     }
 
     @Override
-    public Histogram histogram(String name, MetricSupplier<Histogram> supplier)
+    public Histogram histogram(String name,
+                               MetricSupplier<Histogram> supplier)
     {
         if (isAllowed.test(name))
         {
@@ -98,7 +99,8 @@ public class FilteringMetricRegistry extends MetricRegistry
     }
 
     @Override
-    public Meter meter(String name, MetricSupplier<Meter> supplier)
+    public Meter meter(String name,
+                       MetricSupplier<Meter> supplier)
     {
         if (isAllowed.test(name))
         {
@@ -118,7 +120,8 @@ public class FilteringMetricRegistry extends MetricRegistry
     }
 
     @Override
-    public Timer timer(String name, MetricSupplier<Timer> supplier)
+    public Timer timer(String name,
+                       MetricSupplier<Timer> supplier)
     {
         if (isAllowed.test(name))
         {
@@ -128,7 +131,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     }
 
     @Override
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({ "rawtypes", "unchecked"})
     public <T extends Gauge> T gauge(String name)
     {
         if (isAllowed.test(name))
@@ -139,8 +142,9 @@ public class FilteringMetricRegistry extends MetricRegistry
     }
 
     @Override
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    public <T extends Gauge> T gauge(String name, MetricSupplier<T> supplier)
+    @SuppressWarnings({ "rawtypes", "unchecked"})
+    public <T extends Gauge> T gauge(String name,
+                                     MetricSupplier<T> supplier)
     {
         if (isAllowed.test(name))
         {
@@ -150,8 +154,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     }
 
     /**
-     * @return all the metrics including the allowed and disallowed metrics. This is to prevent re-registering of
-     * excluded metrics
+     * @return all the metrics including the allowed and disallowed metrics. This is to prevent re-registering of excluded metrics
      */
     @Override
     public Map<String, Metric> getMetrics()
@@ -163,8 +166,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     }
 
     /**
-     * @return metrics registered with {@code super.register()}. This will be useful for testing purposes to check
-     * what metrics are actually captured
+     * @return metrics registered with {@code super.register()}. This will be useful for testing purposes to check what metrics are actually captured
      */
     public Map<String, Metric> getIncludedMetrics()
     {
@@ -172,11 +174,12 @@ public class FilteringMetricRegistry extends MetricRegistry
     }
 
     /**
-     * Metric specific retrieve methods such as {@code counter(name)} retrieve a noop instance if metric is filtered.
-     * Prefer calling those over register method, register method returns an unregistered metric if the metric is
-     * filtered. In some cases Noop metric instance has a performance advantage.
+     * Metric specific retrieve methods such as {@code counter(name)} retrieve a noop instance if metric is filtered. Prefer calling those over register method,
+     * register method returns an unregistered metric if the metric is filtered. In some cases Noop metric instance has a performance advantage.
      */
-    public <T extends Metric> T register(String name, T metric) throws IllegalArgumentException
+    public <T extends Metric> T register(String name,
+                                         T metric)
+            throws IllegalArgumentException
     {
         if (metric == null)
         {
@@ -193,7 +196,8 @@ public class FilteringMetricRegistry extends MetricRegistry
         return (T) typeChecked(excludedMetrics.computeIfAbsent(name, key -> metric), metric.getClass());
     }
 
-    private <T extends Metric> T typeChecked(Metric metric, Class<T> type)
+    private <T extends Metric> T typeChecked(Metric metric,
+                                             Class<T> type)
     {
         if (type.isInstance(metric))
         {
@@ -203,8 +207,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     }
 
     /**
-     * {@link CachedPredicate} remembers results of the {@link Predicate} it maintains. This is to avoid
-     * redundant calls to delegate predicate.
+     * {@link CachedPredicate} remembers results of the {@link Predicate} it maintains. This is to avoid redundant calls to delegate predicate.
      */
     static class CachedPredicate implements Predicate<String>
     {

@@ -22,13 +22,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.mockito.Mockito;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.CDC_RAW_DIR_PLACEHOLDER;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.COMMITLOG_DIR_PLACEHOLDER;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.DATA_FILE_DIR_PLACEHOLDER;
@@ -58,15 +55,12 @@ class LiveMigrationPlaceholderUtilTest
     @Test
     public void testReplacePlaceholder()
     {
-        assertThat(replacePlaceholder("/no/placeholder/dir", Collections.singleton("DATA_DIR"), "data_dir"))
-        .isEqualTo("/no/placeholder/dir");
+        assertThat(replacePlaceholder("/no/placeholder/dir", Collections.singleton("DATA_DIR"), "data_dir")).isEqualTo("/no/placeholder/dir");
 
-        assertThat(replacePlaceholder("${DATA_DIR}/ks1", Collections.singleton("DATA_DIR"), "/data_dir"))
-        .isEqualTo("/data_dir/ks1");
+        assertThat(replacePlaceholder("${DATA_DIR}/ks1", Collections.singleton("DATA_DIR"), "/data_dir")).isEqualTo("/data_dir/ks1");
 
         // replacement of placeholder happens if and only if the placeholder given is found.
-        assertThat(replacePlaceholder("${HINTS_DIR}/ks1", Collections.singleton("DATA_DIR"), "/data_dir"))
-        .isNull();
+        assertThat(replacePlaceholder("${HINTS_DIR}/ks1", Collections.singleton("DATA_DIR"), "/data_dir")).isNull();
     }
 
     @Test
@@ -87,7 +81,6 @@ class LiveMigrationPlaceholderUtilTest
         assertThat(hasAnyPlaceholder("${DATA_FILE_DIR}/ks/t1", Collections.singleton("HINTS_DIR"))).isFalse();
         assertThat(hasAnyPlaceholder("glob:${DATA_FILE_DIR}/ks/t1", Collections.singleton("HINTS_DIR"))).isFalse();
 
-
         assertThat(hasAnyPlaceholder("${HINTS_DIR}/ks/t1", Collections.singleton("HINTS_DIR"))).isTrue();
         assertThat(hasAnyPlaceholder("glob:${HINTS_DIR}/ks/t1", Collections.singleton("HINTS_DIR"))).isTrue();
 
@@ -101,7 +94,8 @@ class LiveMigrationPlaceholderUtilTest
     @Test
     public void testReplacePlaceholderUsingInstanceMetadata()
     {
-        String cassandraHomeDir = tempDir.resolve("testReplacePlaceholderUsingInstanceMetadata").toString();
+        String cassandraHomeDir = tempDir.resolve("testReplacePlaceholderUsingInstanceMetadata")
+                                         .toString();
         InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
         List<String> dataDirs = new ArrayList<>(2);
         String dataDir2 = DATA_DIR + "2";
@@ -109,47 +103,53 @@ class LiveMigrationPlaceholderUtilTest
         dataDirs.add(cassandraHomeDir + "/" + dataDir2);
         when(instanceMetadata.dataDirs()).thenReturn(dataDirs);
 
-        assertThat(replacePlaceholder("glob:${" + HINTS_DIR_PLACEHOLDER + "}", instanceMetadata))
-        .hasSize(1)
-        .contains("glob:" + instanceMetadata.hintsDir());
+        assertThat(replacePlaceholder("glob:${" + HINTS_DIR_PLACEHOLDER + "}", instanceMetadata)).hasSize(1)
+                                                                                                 .contains("glob:" + instanceMetadata.hintsDir());
 
-        assertThat(replacePlaceholder("regex:${" + COMMITLOG_DIR_PLACEHOLDER + "}/Commitlog-7-1.log", instanceMetadata))
-        .hasSize(1)
-        .contains("regex:" + instanceMetadata.commitlogDir() + "/Commitlog-7-1.log");
+        assertThat(replacePlaceholder("regex:${" + COMMITLOG_DIR_PLACEHOLDER + "}/Commitlog-7-1.log", instanceMetadata)).hasSize(1)
+                                                                                                                        .contains("regex:"
+                                                                                                                                + instanceMetadata.commitlogDir()
+                                                                                                                                + "/Commitlog-7-1.log");
 
-        assertThat(replacePlaceholder("glob:${" + SAVED_CACHES_DIR_PLACEHOLDER + "}/cache.bin", instanceMetadata))
-        .hasSize(1)
-        .contains("glob:" + instanceMetadata.savedCachesDir() + "/cache.bin");
+        assertThat(replacePlaceholder("glob:${" + SAVED_CACHES_DIR_PLACEHOLDER + "}/cache.bin", instanceMetadata)).hasSize(1)
+                                                                                                                  .contains("glob:"
+                                                                                                                          + instanceMetadata.savedCachesDir()
+                                                                                                                          + "/cache.bin");
 
-        assertThat(replacePlaceholder("glob:${" + DATA_FILE_DIR_PLACEHOLDER + "}/*/*/snapshots", instanceMetadata))
-        .hasSize(2)
-        .contains("glob:" + instanceMetadata.dataDirs().get(0) + "/*/*/snapshots")
-        .contains("glob:" + instanceMetadata.dataDirs().get(1) + "/*/*/snapshots");
+        assertThat(replacePlaceholder("glob:${" + DATA_FILE_DIR_PLACEHOLDER + "}/*/*/snapshots", instanceMetadata)).hasSize(2)
+                                                                                                                   .contains("glob:"
+                                                                                                                           + instanceMetadata.dataDirs()
+                                                                                                                                             .get(0)
+                                                                                                                           + "/*/*/snapshots")
+                                                                                                                   .contains("glob:"
+                                                                                                                           + instanceMetadata.dataDirs()
+                                                                                                                                             .get(1)
+                                                                                                                           + "/*/*/snapshots");
 
-        assertThat(replacePlaceholder("glob:${" + DATA_FILE_DIR_PLACEHOLDER + "_0}/ks1/*", instanceMetadata))
-        .hasSize(1)
-        .contains("glob:" + instanceMetadata.dataDirs().get(0) + "/ks1/*");
+        assertThat(replacePlaceholder("glob:${" + DATA_FILE_DIR_PLACEHOLDER + "_0}/ks1/*", instanceMetadata)).hasSize(1)
+                                                                                                             .contains("glob:" + instanceMetadata.dataDirs()
+                                                                                                                                                 .get(0)
+                                                                                                                     + "/ks1/*");
 
-        assertThat(replacePlaceholder("glob:${" + DATA_FILE_DIR_PLACEHOLDER + "_1}/k*/*", instanceMetadata))
-        .hasSize(1)
-        .contains("glob:" + instanceMetadata.dataDirs().get(1) + "/k*/*");
+        assertThat(replacePlaceholder("glob:${" + DATA_FILE_DIR_PLACEHOLDER + "_1}/k*/*", instanceMetadata)).hasSize(1)
+                                                                                                            .contains("glob:" + instanceMetadata.dataDirs()
+                                                                                                                                                .get(1)
+                                                                                                                    + "/k*/*");
 
-        assertThat(replacePlaceholder("glob:${" + CDC_RAW_DIR_PLACEHOLDER + "}/**", instanceMetadata))
-        .hasSize(1)
-        .contains("glob:" + instanceMetadata.cdcDir() + "/**");
+        assertThat(replacePlaceholder("glob:${" + CDC_RAW_DIR_PLACEHOLDER + "}/**", instanceMetadata)).hasSize(1)
+                                                                                                      .contains("glob:" + instanceMetadata.cdcDir() + "/**");
 
-        assertThat(replacePlaceholder("glob:${" + LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER + "}/", instanceMetadata))
-        .hasSize(1)
-        .contains("glob:" + instanceMetadata.localSystemDataFileDir() + "/");
+        assertThat(replacePlaceholder("glob:${" + LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER + "}/", instanceMetadata)).hasSize(1)
+                                                                                                                   .contains("glob:"
+                                                                                                                           + instanceMetadata.localSystemDataFileDir()
+                                                                                                                           + "/");
 
         // Trying to replace text not having any placeholder
-        assertThat(replacePlaceholder("glob:/home/usr/data/*", instanceMetadata))
-        .hasSize(1)
-        .contains("glob:/home/usr/data/*");
+        assertThat(replacePlaceholder("glob:/home/usr/data/*", instanceMetadata)).hasSize(1)
+                                                                                 .contains("glob:/home/usr/data/*");
 
-        //Unknown placeholder
-        assertThatIllegalArgumentException()
-        .isThrownBy(() -> replacePlaceholder("glob:${UNKNOWN_PLACE_HOLDER}/0", instanceMetadata));
+        // Unknown placeholder
+        assertThatIllegalArgumentException().isThrownBy(() -> replacePlaceholder("glob:${UNKNOWN_PLACE_HOLDER}/0", instanceMetadata));
     }
 
     InstanceMetadata getInstanceMetadata(String cassandraHomeDir)

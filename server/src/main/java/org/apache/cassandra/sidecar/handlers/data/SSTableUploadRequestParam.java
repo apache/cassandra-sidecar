@@ -32,8 +32,8 @@ public class SSTableUploadRequestParam extends SSTableUploads
      * Constructs an SSTableUploadRequest
      *
      * @param qualifiedTableName the qualified table name in Cassandra
-     * @param uploadId           an identifier for the upload
-     * @param component          SSTable component being uploaded
+     * @param uploadId an identifier for the upload
+     * @param component SSTable component being uploaded
      */
     public SSTableUploadRequestParam(QualifiedTableName qualifiedTableName,
                                      String uploadId,
@@ -56,25 +56,20 @@ public class SSTableUploadRequestParam extends SSTableUploads
      */
     public String toString()
     {
-        return "SSTableUploadRequest{" +
-               "uploadId='" + uploadId() + '\'' +
-               ", keyspace='" + keyspace() + '\'' +
-               ", tableName='" + table() + '\'' +
-               ", component='" + component + '\'' +
-               '}';
+        return "SSTableUploadRequest{" + "uploadId='" + uploadId() + '\'' + ", keyspace='" + keyspace() + '\'' + ", tableName='" + table() + '\''
+                + ", component='" + component + '\'' + '}';
     }
 
     /**
      * Returns a new instance of the {@link SSTableUploadRequestParam} built from the {@link RoutingContext context}.
      *
      * @param qualifiedTableName the qualified table name in Cassandra
-     * @param context            context from handler
+     * @param context context from handler
      * @return SSTableUploadRequest created from params
      */
-    public static SSTableUploadRequestParam from(QualifiedTableName qualifiedTableName, RoutingContext context)
+    public static SSTableUploadRequestParam from(QualifiedTableName qualifiedTableName,
+                                                 RoutingContext context)
     {
-        return new SSTableUploadRequestParam(qualifiedTableName,
-                                             context.pathParam("uploadId"),
-                                             context.pathParam("component"));
+        return new SSTableUploadRequestParam(qualifiedTableName, context.pathParam("uploadId"), context.pathParam("component"));
     }
 }

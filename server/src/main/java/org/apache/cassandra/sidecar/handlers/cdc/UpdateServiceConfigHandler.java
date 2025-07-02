@@ -44,7 +44,8 @@ public class UpdateServiceConfigHandler implements Handler<RoutingContext>, Acce
     private final ServiceConfigValidator serviceConfigValidator;
 
     @Inject
-    public UpdateServiceConfigHandler(ConfigAccessorFactory configAccessorFactory, ServiceConfigValidator serviceConfigValidator)
+    public UpdateServiceConfigHandler(ConfigAccessorFactory configAccessorFactory,
+                                      ServiceConfigValidator serviceConfigValidator)
     {
         this.configAccessorFactory = configAccessorFactory;
         this.serviceConfigValidator = serviceConfigValidator;
@@ -62,7 +63,8 @@ public class UpdateServiceConfigHandler implements Handler<RoutingContext>, Acce
         String serviceName = context.pathParam(ConfigPayloadParams.SERVICE);
         Service service = serviceConfigValidator.validateAndGet(serviceName);
 
-        JsonObject payload = context.body().asJsonObject();
+        JsonObject payload = context.body()
+                                    .asJsonObject();
         serviceConfigValidator.validatePayload(payload);
         serviceConfigValidator.validateConfig(payload);
 

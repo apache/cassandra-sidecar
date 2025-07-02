@@ -23,10 +23,6 @@ import java.net.InetSocketAddress;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
@@ -36,10 +32,11 @@ import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.utils.StringUtils;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Provides common functionality for {@link ElectorateMembership} implementations
- * that rely on token zero replication of a keyspace to determine eligibility.
+ * Provides common functionality for {@link ElectorateMembership} implementations that rely on token zero replication of a keyspace to determine eligibility.
  */
 public abstract class AbstractTokenZeroOfKeyspaceElectorateMembership implements ElectorateMembership
 {
@@ -94,7 +91,8 @@ public abstract class AbstractTokenZeroOfKeyspaceElectorateMembership implements
         {
             try
             {
-                InetSocketAddress address = instance.delegate().localStorageBroadcastAddress();
+                InetSocketAddress address = instance.delegate()
+                                                    .localStorageBroadcastAddress();
                 result.add(StringUtils.cassandraFormattedHostAndPort(address));
             }
             catch (CassandraUnavailableException exception)
@@ -107,12 +105,12 @@ public abstract class AbstractTokenZeroOfKeyspaceElectorateMembership implements
     }
 
     /**
-     * @param tokenRangeReplicas         the token range replicas for a keyspace
+     * @param tokenRangeReplicas the token range replicas for a keyspace
      * @param localInstancesHostAndPorts local instance(s) IP(s) and port(s)
-     * @return {@code true} if any of the local instances is a replica of token zero for a single keyspace,
-     * {@code false} otherwise
+     * @return {@code true} if any of the local instances is a replica of token zero for a single keyspace, {@code false} otherwise
      */
-    protected boolean anyInstanceOwnsTokenZero(TokenRangeReplicasResponse tokenRangeReplicas, Set<String> localInstancesHostAndPorts)
+    protected boolean anyInstanceOwnsTokenZero(TokenRangeReplicasResponse tokenRangeReplicas,
+                                               Set<String> localInstancesHostAndPorts)
     {
         return tokenRangeReplicas.readReplicas()
                                  .stream()
@@ -121,7 +119,8 @@ public abstract class AbstractTokenZeroOfKeyspaceElectorateMembership implements
                                  // and then see if any of the replicas matches the
                                  // local instance's host and port
                                  .anyMatch(replicaInfo -> {
-                                     for (List<String> replicas : replicaInfo.replicasByDatacenter().values())
+                                     for (List<String> replicas : replicaInfo.replicasByDatacenter()
+                                                                             .values())
                                      {
                                          for (String replica : replicas)
                                          {

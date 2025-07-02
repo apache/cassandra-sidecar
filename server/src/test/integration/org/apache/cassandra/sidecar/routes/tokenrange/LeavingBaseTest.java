@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.routes.tokenrange;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.junit5.VertxTestContext;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -29,19 +31,14 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Range;
-import com.google.common.collect.Sets;
-
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.distributed.shared.ClusterUtils;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
-
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Range;
+import com.google.common.collect.Sets;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -55,7 +52,7 @@ class LeavingBaseTest extends BaseTokenRangeIntegrationTest
                                 CountDownLatch transientStateEnd,
                                 UpgradeableCluster cluster,
                                 Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings)
-    throws Exception
+            throws Exception
     {
         try
         {
@@ -79,8 +76,11 @@ class LeavingBaseTest extends BaseTokenRangeIntegrationTest
             for (int i = 0; i < leavingNodesPerDC * annotation.numDcs(); i++)
             {
                 IUpgradeableInstance node = cluster.get(cluster.size() - i);
-                startAsync("Decommission node" + node.config().num(),
-                           () -> node.nodetoolResult("decommission").asserts().success());
+                startAsync("Decommission node" + node.config()
+                                                     .num(),
+                        () -> node.nodetoolResult("decommission")
+                                  .asserts()
+                                  .success());
                 leavingNodes.add(node);
             }
 
@@ -95,17 +95,11 @@ class LeavingBaseTest extends BaseTokenRangeIntegrationTest
             retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
                 assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                 TokenRangeReplicasResponse mappingResponse = response.bodyAsJson(TokenRangeReplicasResponse.class);
-                assertMappingResponseOK(mappingResponse,
-                                        DEFAULT_RF,
-                                        dcReplication);
+                assertMappingResponseOK(mappingResponse, DEFAULT_RF, dcReplication);
 
                 int initialNodeCount = annotation.nodesPerDc() * annotation.numDcs();
-                validateNodeStates(mappingResponse,
-                                   dcReplication,
-                                   nodeNumber ->
-                                   nodeNumber <= (initialNodeCount - (leavingNodesPerDC * annotation.numDcs())) ?
-                                   "Normal" :
-                                   "Leaving");
+                validateNodeStates(mappingResponse, dcReplication,
+                        nodeNumber -> nodeNumber <= (initialNodeCount - (leavingNodesPerDC * annotation.numDcs())) ? "Normal" : "Leaving");
                 validateTokenRanges(mappingResponse, generateExpectedRanges());
                 validateReplicaMapping(mappingResponse, leavingNodes, expectedRangeMappings);
 
@@ -125,12 +119,15 @@ class LeavingBaseTest extends BaseTokenRangeIntegrationTest
                                         List<IUpgradeableInstance> leavingNodes,
                                         Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings)
     {
-        List<String> transientNodeAddresses = leavingNodes.stream().map(i -> {
-            InetSocketAddress address = i.config().broadcastAddress();
-            return address.getAddress().getHostAddress() +
-                   ":" +
-                   address.getPort();
-        }).collect(Collectors.toList());
+        List<String> transientNodeAddresses = leavingNodes.stream()
+                                                          .map(i -> {
+                                                              InetSocketAddress address = i.config()
+                                                                                           .broadcastAddress();
+                                                              return address.getAddress()
+                                                                            .getHostAddress()
+                                                                      + ":" + address.getPort();
+                                                          })
+                                                          .collect(Collectors.toList());
 
         Set<String> writeReplicaInstances = instancesFromReplicaSet(mappingResponse.writeReplicas());
         Set<String> readReplicaInstances = instancesFromReplicaSet(mappingResponse.readReplicas());

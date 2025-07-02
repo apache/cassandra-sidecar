@@ -24,13 +24,11 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
-
 import static org.apache.cassandra.sidecar.handlers.AbstractHandler.extractHostAddressWithoutPort;
 
-
 /**
- * Handler for enabling or disabling live-migration APIs. It helps to enable Live Migration APIs for
- * either source/destination specified in {@link LiveMigrationConfiguration#migrationMap()}.
+ * Handler for enabling or disabling live-migration APIs. It helps to enable Live Migration APIs for either source/destination specified in
+ * {@link LiveMigrationConfiguration#migrationMap()}.
  */
 public class LiveMigrationApiEnableDisableHandler
 {

@@ -19,17 +19,19 @@
 package org.apache.cassandra.sidecar.exceptions;
 
 /**
- * Exception thrown when {@link org.apache.cassandra.sidecar.db.schema.TableSchema} does not exist.
- * For instance, the connected Cassandra no longer has such table
+ * Exception thrown when {@link org.apache.cassandra.sidecar.db.schema.TableSchema} does not exist. For instance, the connected Cassandra no longer has such
+ * table
  */
 public class SchemaUnavailableException extends RuntimeException
 {
-    public SchemaUnavailableException(String keyspace, String table)
+    public SchemaUnavailableException(String keyspace,
+                                      String table)
     {
         super(makeErrorMessage(keyspace, table));
     }
 
-    private static String makeErrorMessage(String keyspace, String table)
+    private static String makeErrorMessage(String keyspace,
+                                           String table)
     {
         return "Table " + keyspace + '.' + table + " does not exist";
     }

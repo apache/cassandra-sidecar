@@ -18,9 +18,6 @@
 
 package org.apache.cassandra.sidecar.modules;
 
-import java.util.Collections;
-import java.util.Map;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -36,6 +33,8 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
+import java.util.Collections;
+import java.util.Map;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.config.FileSystemOptionsConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -53,12 +52,12 @@ import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.SettableVertxRoute;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
-
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.API_V1_ALL_ROUTES;
 
 /**
  * Provides the glue code for API definition and the related, i.e. Vertx, handlers, etc.
- * <p>Note that feature-specific routes are defined in the corresponding modules, e.g. {@link HealthCheckModule}
+ * <p>
+ * Note that feature-specific routes are defined in the corresponding modules, e.g. {@link HealthCheckModule}
  */
 public class ApiModule extends AbstractModule
 {
@@ -70,43 +69,49 @@ public class ApiModule extends AbstractModule
 
     @Provides
     @Singleton
-    Router vertxRouter(Vertx vertx, MultiBindingTypeResolver<VertxRoute> resolver)
+    Router vertxRouter(Vertx vertx,
+                       MultiBindingTypeResolver<VertxRoute> resolver)
     {
         Router router = Router.router(vertx);
-        resolver.resolve().forEach((routeClassKey, route) -> {
-            try
-            {
-                if (RouteClassKey.class.isAssignableFrom(routeClassKey))
-                {
-                    //noinspection unchecked
-                    Class<? extends RouteClassKey> key = (Class<? extends RouteClassKey>) routeClassKey;
-                    SettableVertxRoute settableVertxRoute = (SettableVertxRoute) route;
-                    settableVertxRoute.setRouteClassKey(key);
-                }
-                route.mountTo(router);
-            }
-            catch (Throwable cause)
-            {
-                throw new RuntimeException("Failed to mount route: " + routeClassKey.getSimpleName(), cause);
-            }
-        });
+        resolver.resolve()
+                .forEach((routeClassKey,
+                          route) -> {
+                    try
+                    {
+                        if (RouteClassKey.class.isAssignableFrom(routeClassKey))
+                        {
+                            // noinspection unchecked
+                            Class<? extends RouteClassKey> key = (Class<? extends RouteClassKey>) routeClassKey;
+                            SettableVertxRoute settableVertxRoute = (SettableVertxRoute) route;
+                            settableVertxRoute.setRouteClassKey(key);
+                        }
+                        route.mountTo(router);
+                    }
+                    catch (Throwable cause)
+                    {
+                        throw new RuntimeException("Failed to mount route: " + routeClassKey.getSimpleName(), cause);
+                    }
+                });
         return router;
     }
 
     @Provides
     @Singleton
-    Vertx vertx(SidecarConfiguration sidecarConfiguration, MetricRegistryFactory metricRegistryFactory)
+    Vertx vertx(SidecarConfiguration sidecarConfiguration,
+                MetricRegistryFactory metricRegistryFactory)
     {
-        VertxMetricsConfiguration metricsConfig = sidecarConfiguration.metricsConfiguration().vertxConfiguration();
-        Match serverRouteMatch = new Match().setValue(API_V1_ALL_ROUTES).setType(MatchType.REGEX);
-        DropwizardMetricsOptions dropwizardMetricsOptions
-        = new DropwizardMetricsOptions().setEnabled(metricsConfig.enabled())
-                                        .setJmxEnabled(metricsConfig.exposeViaJMX())
-                                        .setJmxDomain(metricsConfig.jmxDomainName())
-                                        .setMetricRegistry(metricRegistryFactory.getOrCreate())
-                                        // Monitor all V1 endpoints.
-                                        // Additional filtering is done by configuring yaml fields 'metrics.include|exclude'
-                                        .addMonitoredHttpServerRoute(serverRouteMatch);
+        VertxMetricsConfiguration metricsConfig = sidecarConfiguration.metricsConfiguration()
+                                                                      .vertxConfiguration();
+        Match serverRouteMatch = new Match().setValue(API_V1_ALL_ROUTES)
+                                            .setType(MatchType.REGEX);
+        DropwizardMetricsOptions dropwizardMetricsOptions = new DropwizardMetricsOptions().setEnabled(metricsConfig.enabled())
+                                                                                          .setJmxEnabled(metricsConfig.exposeViaJMX())
+                                                                                          .setJmxDomain(metricsConfig.jmxDomainName())
+                                                                                          .setMetricRegistry(metricRegistryFactory.getOrCreate())
+                                                                                          // Monitor all V1 endpoints.
+                                                                                          // Additional filtering is done by configuring yaml fields
+                                                                                          // 'metrics.include|exclude'
+                                                                                          .addMonitoredHttpServerRoute(serverRouteMatch);
 
         VertxOptions vertxOptions = new VertxOptions().setMetricsOptions(dropwizardMetricsOptions);
         VertxConfiguration vertxConfiguration = sidecarConfiguration.vertxConfiguration();
@@ -114,10 +119,9 @@ public class ApiModule extends AbstractModule
 
         if (fsOptions != null)
         {
-            vertxOptions.setFileSystemOptions(new FileSystemOptions()
-                                              .setClassPathResolvingEnabled(fsOptions.classpathResolvingEnabled())
-                                              .setFileCacheDir(fsOptions.fileCacheDir())
-                                              .setFileCachingEnabled(fsOptions.fileCachingEnabled()));
+            vertxOptions.setFileSystemOptions(new FileSystemOptions().setClassPathResolvingEnabled(fsOptions.classpathResolvingEnabled())
+                                                                     .setFileCacheDir(fsOptions.fileCacheDir())
+                                                                     .setFileCachingEnabled(fsOptions.fileCachingEnabled()));
         }
 
         return Vertx.vertx(vertxOptions);
@@ -146,8 +150,10 @@ public class ApiModule extends AbstractModule
             router.route()
                   .order(RoutingOrder.HIGHEST.order)
                   .handler(loggerHandler)
-                  .handler(TimeoutHandler.create(sidecarConfiguration.serviceConfiguration().requestTimeout().toMillis(),
-                                                 HttpResponseStatus.REQUEST_TIMEOUT.code()));
+                  .handler(TimeoutHandler.create(sidecarConfiguration.serviceConfiguration()
+                                                                     .requestTimeout()
+                                                                     .toMillis(),
+                          HttpResponseStatus.REQUEST_TIMEOUT.code()));
         });
     }
 

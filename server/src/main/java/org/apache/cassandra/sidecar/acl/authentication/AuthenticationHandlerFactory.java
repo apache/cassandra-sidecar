@@ -18,10 +18,9 @@
 
 package org.apache.cassandra.sidecar.acl.authentication;
 
-import java.util.Map;
-
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerInternal;
+import java.util.Map;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
@@ -31,18 +30,18 @@ import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 public interface AuthenticationHandlerFactory
 {
     /**
-     * Creates instances of {@link AuthenticationHandlerInternal}. ChainAuthHandlerImpl in Vertx supports only
-     * implementations of AuthenticationHandlerInternal. When ChainAuthHandlerImpl is fixed to handle generic
-     * AuthenticationHandler implementations, we can update this method to return
-     * implementations of AuthenticationHandler.
+     * Creates instances of {@link AuthenticationHandlerInternal}. ChainAuthHandlerImpl in Vertx supports only implementations of AuthenticationHandlerInternal.
+     * When ChainAuthHandlerImpl is fixed to handle generic AuthenticationHandler implementations, we can update this method to return implementations of
+     * AuthenticationHandler.
      *
-     * @param vertx                         instance of Vertx
-     * @param accessControlConfiguration    Configuration for creating authentication handler
-     * @param parameters                    Parameters for creating {@link AuthenticationHandlerInternal} implementation
+     * @param vertx instance of Vertx
+     * @param accessControlConfiguration Configuration for creating authentication handler
+     * @param parameters Parameters for creating {@link AuthenticationHandlerInternal} implementation
      * @return a newly created instance of {@link AuthenticationHandlerInternal}.
      * @throws ConfigurationException if handler cannot be created
      */
     AuthenticationHandlerInternal create(Vertx vertx,
                                          AccessControlConfiguration accessControlConfiguration,
-                                         Map<String, String> parameters) throws ConfigurationException;
+                                         Map<String, String> parameters)
+            throws ConfigurationException;
 }

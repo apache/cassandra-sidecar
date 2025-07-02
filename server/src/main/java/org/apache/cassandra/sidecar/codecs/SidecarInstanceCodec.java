@@ -26,19 +26,22 @@ import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
 
 /**
  * Codecs for Sidecar instances
+ *
  * @param <T> a type implementing {@link SidecarInstance}
  */
 public class SidecarInstanceCodec<T extends SidecarInstance> implements MessageCodec<T, SidecarInstance>
 {
     @Override
-    public void encodeToWire(Buffer buf, T instance)
+    public void encodeToWire(Buffer buf,
+                             T instance)
     {
         buf.appendInt(instance.port());
         CodecManager.STRING_MESSAGE_CODEC.encodeToWire(buf, instance.hostname());
     }
 
     @Override
-    public SidecarInstance decodeFromWire(int pos, Buffer buf)
+    public SidecarInstance decodeFromWire(int pos,
+                                          Buffer buf)
     {
         int port = buf.getInt(pos);
         pos += 4; // advance 4 bytes after reading int

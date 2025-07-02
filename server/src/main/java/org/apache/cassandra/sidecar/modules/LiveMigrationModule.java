@@ -43,7 +43,6 @@ public class LiveMigrationModule extends AbstractModule
         bind(LiveMigrationMap.class).to(LiveMigrationMapSidecarConfigImpl.class);
     }
 
-
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationFileStreamHandlerRouteKey.class)
     VertxRoute downloadFileRoute(RouteBuilder.Factory factory,

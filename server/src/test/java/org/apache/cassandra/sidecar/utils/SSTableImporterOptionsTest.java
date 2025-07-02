@@ -38,38 +38,34 @@ class SSTableImporterOptionsTest
     @Test
     void testImportOptionsBuilderFailsWhenRequiredOptionsAreMissing()
     {
-        assertThatNullPointerException()
-        .isThrownBy(() -> new SSTableImporter.ImportOptions.Builder().build())
-        .withMessage("host is required");
+        assertThatNullPointerException().isThrownBy(() -> new SSTableImporter.ImportOptions.Builder().build())
+                                        .withMessage("host is required");
 
-        assertThatNullPointerException()
-        .isThrownBy(() -> new SSTableImporter.ImportOptions.Builder().host("localhost").build())
-        .withMessage("keyspace is required");
+        assertThatNullPointerException().isThrownBy(() -> new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                                     .build())
+                                        .withMessage("keyspace is required");
 
-        assertThatNullPointerException()
-        .isThrownBy(() -> new SSTableImporter.ImportOptions.Builder().host("localhost")
-                                                                     .keyspace("ks")
-                                                                     .build())
-        .withMessage("tableName is required");
+        assertThatNullPointerException().isThrownBy(() -> new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                                     .keyspace("ks")
+                                                                                                     .build())
+                                        .withMessage("tableName is required");
 
-        assertThatNullPointerException()
-        .isThrownBy(() -> new SSTableImporter.ImportOptions.Builder().host("localhost")
-                                                                     .keyspace("ks")
-                                                                     .tableName("tbl")
-                                                                     .build())
-        .withMessage("directory is required");
+        assertThatNullPointerException().isThrownBy(() -> new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                                     .keyspace("ks")
+                                                                                                     .tableName("tbl")
+                                                                                                     .build())
+                                        .withMessage("directory is required");
     }
 
     @Test
     void testImportOptionsBuilderSucceeds()
     {
-        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions
-                                                    .Builder().host("localhost")
-                                                              .keyspace("ks")
-                                                              .tableName("tbl")
-                                                              .directory("/path/to/sstables")
-                                                              .uploadId("0000-0000")
-                                                              .build();
+        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                           .keyspace("ks")
+                                                                                           .tableName("tbl")
+                                                                                           .directory("/path/to/sstables")
+                                                                                           .uploadId("0000-0000")
+                                                                                           .build();
         assertThat(options.host).isEqualTo("localhost");
         assertThat(options.keyspace).isEqualTo("ks");
         assertThat(options.tableName).isEqualTo("tbl");
@@ -86,14 +82,13 @@ class SSTableImporterOptionsTest
     @Test
     void testImportOptionsResetLevel()
     {
-        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions
-                                                    .Builder().host("localhost")
-                                                              .keyspace("ks")
-                                                              .tableName("tbl")
-                                                              .directory("/path/to/sstables")
-                                                              .uploadId("0000-0000")
-                                                              .resetLevel(false)
-                                                              .build();
+        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                           .keyspace("ks")
+                                                                                           .tableName("tbl")
+                                                                                           .directory("/path/to/sstables")
+                                                                                           .uploadId("0000-0000")
+                                                                                           .resetLevel(false)
+                                                                                           .build();
         assertThat(options.host).isEqualTo("localhost");
         assertThat(options.keyspace).isEqualTo("ks");
         assertThat(options.tableName).isEqualTo("tbl");
@@ -104,14 +99,13 @@ class SSTableImporterOptionsTest
     @Test
     void testImportOptionsClearRepaired()
     {
-        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions
-                                                    .Builder().host("localhost")
-                                                              .keyspace("ks")
-                                                              .tableName("tbl")
-                                                              .directory("/path/to/sstables")
-                                                              .uploadId("0000-0000")
-                                                              .clearRepaired(false)
-                                                              .build();
+        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                           .keyspace("ks")
+                                                                                           .tableName("tbl")
+                                                                                           .directory("/path/to/sstables")
+                                                                                           .uploadId("0000-0000")
+                                                                                           .clearRepaired(false)
+                                                                                           .build();
         assertThat(options.host).isEqualTo("localhost");
         assertThat(options.keyspace).isEqualTo("ks");
         assertThat(options.tableName).isEqualTo("tbl");
@@ -122,14 +116,13 @@ class SSTableImporterOptionsTest
     @Test
     void testImportOptionsVerifySSTables()
     {
-        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions
-                                                    .Builder().host("localhost")
-                                                              .keyspace("ks")
-                                                              .tableName("tbl")
-                                                              .directory("/path/to/sstables")
-                                                              .uploadId("0000-0000")
-                                                              .verifySSTables(false)
-                                                              .build();
+        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                           .keyspace("ks")
+                                                                                           .tableName("tbl")
+                                                                                           .directory("/path/to/sstables")
+                                                                                           .uploadId("0000-0000")
+                                                                                           .verifySSTables(false)
+                                                                                           .build();
         assertThat(options.host).isEqualTo("localhost");
         assertThat(options.keyspace).isEqualTo("ks");
         assertThat(options.tableName).isEqualTo("tbl");
@@ -140,14 +133,13 @@ class SSTableImporterOptionsTest
     @Test
     void testImportOptionsVerifyTokens()
     {
-        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions
-                                                    .Builder().host("localhost")
-                                                              .keyspace("ks")
-                                                              .tableName("tbl")
-                                                              .directory("/path/to/sstables")
-                                                              .uploadId("0000-0000")
-                                                              .verifyTokens(false)
-                                                              .build();
+        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                           .keyspace("ks")
+                                                                                           .tableName("tbl")
+                                                                                           .directory("/path/to/sstables")
+                                                                                           .uploadId("0000-0000")
+                                                                                           .verifyTokens(false)
+                                                                                           .build();
         assertThat(options.host).isEqualTo("localhost");
         assertThat(options.keyspace).isEqualTo("ks");
         assertThat(options.tableName).isEqualTo("tbl");
@@ -158,14 +150,13 @@ class SSTableImporterOptionsTest
     @Test
     void testImportOptionsInvalidateCaches()
     {
-        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions
-                                                    .Builder().host("localhost")
-                                                              .keyspace("ks")
-                                                              .tableName("tbl")
-                                                              .directory("/path/to/sstables")
-                                                              .uploadId("0000-0000")
-                                                              .invalidateCaches(false)
-                                                              .build();
+        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                           .keyspace("ks")
+                                                                                           .tableName("tbl")
+                                                                                           .directory("/path/to/sstables")
+                                                                                           .uploadId("0000-0000")
+                                                                                           .invalidateCaches(false)
+                                                                                           .build();
         assertThat(options.host).isEqualTo("localhost");
         assertThat(options.keyspace).isEqualTo("ks");
         assertThat(options.tableName).isEqualTo("tbl");
@@ -176,14 +167,13 @@ class SSTableImporterOptionsTest
     @Test
     void testImportOptionsExtendedVerify()
     {
-        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions
-                                                    .Builder().host("localhost")
-                                                              .keyspace("ks")
-                                                              .tableName("tbl")
-                                                              .directory("/path/to/sstables")
-                                                              .uploadId("0000-0000")
-                                                              .extendedVerify(false)
-                                                              .build();
+        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                           .keyspace("ks")
+                                                                                           .tableName("tbl")
+                                                                                           .directory("/path/to/sstables")
+                                                                                           .uploadId("0000-0000")
+                                                                                           .extendedVerify(false)
+                                                                                           .build();
         assertThat(options.host).isEqualTo("localhost");
         assertThat(options.keyspace).isEqualTo("ks");
         assertThat(options.tableName).isEqualTo("tbl");
@@ -194,14 +184,13 @@ class SSTableImporterOptionsTest
     @Test
     void testImportOptionsCopyData()
     {
-        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions
-                                                    .Builder().host("localhost")
-                                                              .keyspace("ks")
-                                                              .tableName("tbl")
-                                                              .directory("/path/to/sstables")
-                                                              .uploadId("0000-0000")
-                                                              .copyData(true)
-                                                              .build();
+        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                           .keyspace("ks")
+                                                                                           .tableName("tbl")
+                                                                                           .directory("/path/to/sstables")
+                                                                                           .uploadId("0000-0000")
+                                                                                           .copyData(true)
+                                                                                           .build();
         assertThat(options.host).isEqualTo("localhost");
         assertThat(options.keyspace).isEqualTo("ks");
         assertThat(options.tableName).isEqualTo("tbl");

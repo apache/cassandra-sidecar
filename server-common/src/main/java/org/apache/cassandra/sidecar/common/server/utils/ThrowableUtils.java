@@ -25,8 +25,8 @@ import org.apache.cassandra.sidecar.common.server.ThrowingRunnable;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Collection of utility methods for understanding {@link Throwable} thrown better;
- * also enables more fluent handling of checked exceptions in lambda expressions
+ * Collection of utility methods for understanding {@link Throwable} thrown better; also enables more fluent handling of checked exceptions in lambda
+ * expressions
  */
 public final class ThrowableUtils
 {
@@ -80,8 +80,7 @@ public final class ThrowableUtils
     @NotNull
     public static <T> java.util.function.Supplier<T> supplier(@NotNull final Supplier<T> supplier)
     {
-        return () ->
-        {
+        return () -> {
             try
             {
                 return supplier.get();
@@ -99,8 +98,7 @@ public final class ThrowableUtils
     @NotNull
     public static <T> java.util.function.Consumer<T> consumer(@NotNull final Consumer<T> consumer)
     {
-        return object ->
-        {
+        return object -> {
             try
             {
                 consumer.accept(object);
@@ -118,8 +116,7 @@ public final class ThrowableUtils
     @NotNull
     public static <T, R> java.util.function.Function<T, R> function(@NotNull final Function<T, R> function)
     {
-        return object ->
-        {
+        return object -> {
             try
             {
                 return function.apply(object);
@@ -162,30 +159,30 @@ public final class ThrowableUtils
     }
 
     /**
-     * Get the first throwable in the exception chain that matches with the expected throwable class.
-     * When there is circular exception reference, it tries to visit all exceptions in the chain at least once
-     * to make sure whether the exception to find exists or not. If still not found, null is returned.
+     * Get the first throwable in the exception chain that matches with the expected throwable class. When there is circular exception reference, it tries to
+     * visit all exceptions in the chain at least once to make sure whether the exception to find exists or not. If still not found, null is returned.
      *
      * @param <T> type of the exception to look up
      * @param throwable the top most exception to check
      * @param expectedCauseKlass expected cause class
      * @return the cause that matches with the cause class or null
      */
-    public static <T extends Throwable> T getCause(Throwable throwable, Class<T> expectedCauseKlass)
+    public static <T extends Throwable> T getCause(Throwable throwable,
+                                                   Class<T> expectedCauseKlass)
     {
         return expectedCauseKlass.cast(getCause(throwable, expectedCauseKlass::isInstance));
     }
 
     /**
-     * Get the first throwable in the exception chain that satisfies the predicate.
-     * When there is circular exception reference, it tries to visit all exceptions in the chain at least once
-     * to make sure whether the exception to find exists or not. If still not found, null is returned.
+     * Get the first throwable in the exception chain that satisfies the predicate. When there is circular exception reference, it tries to visit all exceptions
+     * in the chain at least once to make sure whether the exception to find exists or not. If still not found, null is returned.
      *
      * @param throwable the top most exception to check
      * @param predicate predicate
      * @return the cause that satisfies the predicate or null
      */
-    public static Throwable getCause(Throwable throwable, Predicate<Throwable> predicate)
+    public static Throwable getCause(Throwable throwable,
+                                     Predicate<Throwable> predicate)
     {
         if (throwable == null)
         {
@@ -222,7 +219,8 @@ public final class ThrowableUtils
         return null;
     }
 
-    private static Throwable getCause(Throwable throwable, int depth)
+    private static Throwable getCause(Throwable throwable,
+                                      int depth)
     {
         Throwable t = throwable;
         while (depth-- > 0 && t != null)

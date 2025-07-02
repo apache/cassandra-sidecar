@@ -24,7 +24,8 @@ package org.apache.cassandra.sidecar.client;
 class SidecarInstanceImplTest extends SidecarInstanceTest
 {
     @Override
-    protected SidecarInstance newInstance(String hostname, int port)
+    protected SidecarInstance newInstance(String hostname,
+                                          int port)
     {
         return new SidecarInstanceImpl(hostname, port);
     }

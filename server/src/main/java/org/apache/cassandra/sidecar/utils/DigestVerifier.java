@@ -23,9 +23,9 @@ import io.vertx.core.Future;
 /**
  * Interface to verify integrity of SSTables uploaded.
  * <p>
- * Note: If digest calculations of multiple files are happening at the same time, we would want to limit concurrent
- * digest calculations. Since {@link DigestVerifier} is currently used only by upload handler, we are not
- * introducing another limit here. Concurrent uploads limit should limit concurrent digest calculations as well.
+ * Note: If digest calculations of multiple files are happening at the same time, we would want to limit concurrent digest calculations. Since
+ * {@link DigestVerifier} is currently used only by upload handler, we are not introducing another limit here. Concurrent uploads limit should limit concurrent
+ * digest calculations as well.
  */
 public interface DigestVerifier
 {

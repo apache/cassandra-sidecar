@@ -74,13 +74,13 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
     /**
      * Constructs a handler with the provided params.
      *
-     * @param vertx                 the vertx instance
-     * @param serviceConfiguration  configuration object holding config details of Sidecar
-     * @param metadataFetcher       the interface to retrieve metadata
-     * @param uploader              a class that uploads the components
-     * @param uploadPathBuilder     a class that provides SSTableUploads directories
-     * @param executorPools         executor pools for blocking executions
-     * @param validator             a validator instance to validate Cassandra-specific input
+     * @param vertx the vertx instance
+     * @param serviceConfiguration configuration object holding config details of Sidecar
+     * @param metadataFetcher the interface to retrieve metadata
+     * @param uploader a class that uploads the components
+     * @param uploadPathBuilder a class that provides SSTableUploads directories
+     * @param executorPools executor pools for blocking executions
+     * @param validator a validator instance to validate Cassandra-specific input
      * @param digestVerifierFactory a factory of checksum verifiers
      */
     @Inject
@@ -124,9 +124,10 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
         // accept the upload.
         httpRequest.pause();
 
-        InstanceMetrics instanceMetrics = metadataFetcher.instance(host).metrics();
-        UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics
-        = instanceMetrics.uploadSSTable().forComponent(parseSSTableComponent(request.component()));
+        InstanceMetrics instanceMetrics = metadataFetcher.instance(host)
+                                                         .metrics();
+        UploadSSTableMetrics.UploadSSTableComponentMetrics componentMetrics = instanceMetrics.uploadSSTable()
+                                                                                             .forComponent(parseSSTableComponent(request.component()));
 
         long startTimeInNanos = System.nanoTime();
         if (!limiter.tryAcquire())
@@ -139,35 +140,34 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
         // to make sure that permit is always released
         context.addEndHandler(v -> limiter.releasePermit());
 
-        validateKeyspaceAndTable(host, request)
-        .compose(validRequest -> uploadPathBuilder.resolveStagingDirectory(host))
-        .compose(uploadDir -> ensureSufficientSpaceAvailable(uploadDir,
-                                                             instanceMetrics.resource()))
-        .compose(v -> uploadPathBuilder.build(host, request))
-        .compose(uploadDirectory -> {
-            DigestVerifier digestVerifier = digestVerifierFactory.verifier(httpRequest.headers());
-            return uploader.uploadComponent(httpRequest,
-                                            uploadDirectory,
-                                            request.component(),
-                                            digestVerifier,
-                                            configuration.filePermissions());
-        })
-        .compose(fs::props)
-        .onSuccess(fileProps -> {
-            long serviceTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeInNanos);
-            logger.info("Successfully uploaded SSTable component for request={}, remoteAddress={}, " +
-                        "instance={}, sizeInBytes={}, serviceTimeMillis={}",
-                        request, remoteAddress, host, fileProps.size(), serviceTimeMillis);
-            componentMetrics.bytesUploadedRate.metric.mark(fileProps.size());
-            instanceMetrics.uploadSSTable().totalBytesUploadedRate.metric.mark(fileProps.size());
+        validateKeyspaceAndTable(host, request).compose(validRequest -> uploadPathBuilder.resolveStagingDirectory(host))
+                                               .compose(uploadDir -> ensureSufficientSpaceAvailable(uploadDir, instanceMetrics.resource()))
+                                               .compose(v -> uploadPathBuilder.build(host, request))
+                                               .compose(uploadDirectory -> {
+                                                   DigestVerifier digestVerifier = digestVerifierFactory.verifier(httpRequest.headers());
+                                                   return uploader.uploadComponent(httpRequest, uploadDirectory, request.component(), digestVerifier,
+                                                           configuration.filePermissions());
+                                               })
+                                               .compose(fs::props)
+                                               .onSuccess(fileProps -> {
+                                                   long serviceTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeInNanos);
+                                                   logger.info(
+                                                           "Successfully uploaded SSTable component for request={}, remoteAddress={}, "
+                                                                   + "instance={}, sizeInBytes={}, serviceTimeMillis={}",
+                                                           request, remoteAddress, host, fileProps.size(), serviceTimeMillis);
+                                                   componentMetrics.bytesUploadedRate.metric.mark(fileProps.size());
+                                                   instanceMetrics.uploadSSTable().totalBytesUploadedRate.metric.mark(fileProps.size());
 
-            context.json(new SSTableUploadResponse(request.uploadId(), fileProps.size(), serviceTimeMillis));
-        })
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+                                                   context.json(new SSTableUploadResponse(request.uploadId(), fileProps.size(), serviceTimeMillis));
+                                               })
+                                               .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 
     @Override
-    protected void processFailure(Throwable cause, RoutingContext context, String host, SocketAddress remoteAddress,
+    protected void processFailure(Throwable cause,
+                                  RoutingContext context,
+                                  String host,
+                                  SocketAddress remoteAddress,
                                   SSTableUploadRequestParam request)
     {
         if (cause instanceof IllegalArgumentException)
@@ -192,7 +192,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
     /**
      * Ensure that keyspace and table name are valid in the cluster.
      *
-     * @param host    the Cassandra instance host
+     * @param host the Cassandra instance host
      * @param request the upload request
      * @return {@link Future} containing a valid {@link SSTableUploadRequestParam request}
      */
@@ -200,7 +200,8 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
                                                                        SSTableUploadRequestParam request)
     {
         TaskExecutorPool pool = executorPools.service();
-        return pool.executeBlocking(() -> metadataFetcher.delegate(host).metadata())
+        return pool.executeBlocking(() -> metadataFetcher.delegate(host)
+                                                         .metadata())
                    .compose(metadata -> {
                        KeyspaceMetadata keyspaceMetadata = MetadataUtils.keyspace(metadata, request.keyspace());
                        if (keyspaceMetadata == null)
@@ -212,8 +213,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
 
                        if (MetadataUtils.table(keyspaceMetadata, request.table()) == null)
                        {
-                           String message = String.format("Invalid table name '%s' supplied for keyspace '%s'",
-                                                          request.table(), request.keyspace());
+                           String message = String.format("Invalid table name '%s' supplied for keyspace '%s'", request.table(), request.keyspace());
                            logger.error(message);
                            return Future.failedFuture(wrapHttpException(HttpResponseStatus.BAD_REQUEST, message));
                        }
@@ -222,8 +222,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
     }
 
     /**
-     * Ensures there is sufficient space available as per configured in the
-     * {@link SSTableUploadConfiguration#minimumSpacePercentageRequired()}.
+     * Ensures there is sufficient space available as per configured in the {@link SSTableUploadConfiguration#minimumSpacePercentageRequired()}.
      *
      * @param uploadDirectory the directory where the SSTables are uploaded
      * @return a succeeded future if there is sufficient space available, or failed future otherwise
@@ -244,19 +243,15 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
                      resourceMetrics.usableStagingSpace.metric.setValue(usableSpace);
 
                      // using double for higher precision
-                     double spacePercentAvailable = (usableSpace > 0L && totalSpace > 0L)
-                                                    ? ((double) usableSpace / (double) totalSpace) * 100D
-                                                    : 0D;
+                     double spacePercentAvailable = (usableSpace > 0L && totalSpace > 0L) ? ((double) usableSpace / (double) totalSpace) * 100D : 0D;
                      return Future.succeededFuture(spacePercentAvailable);
                  })
                  .compose(availableDiskSpacePercentage -> {
                      if (availableDiskSpacePercentage < minimumPercentageRequired)
                      {
-                         logger.warn("Insufficient space available for upload in stagingDir={}, available={}%, " +
-                                     "required={}%", uploadDirectory,
-                                     availableDiskSpacePercentage, minimumPercentageRequired);
-                         return Future.failedFuture(wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE,
-                                                                      "Insufficient space available for upload"));
+                         logger.warn("Insufficient space available for upload in stagingDir={}, available={}%, " + "required={}%", uploadDirectory,
+                                 availableDiskSpacePercentage, minimumPercentageRequired);
+                         return Future.failedFuture(wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE, "Insufficient space available for upload"));
                      }
                      return Future.succeededFuture(uploadDirectory);
                  });

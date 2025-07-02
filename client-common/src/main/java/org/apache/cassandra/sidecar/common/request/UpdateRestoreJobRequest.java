@@ -35,11 +35,13 @@ public class UpdateRestoreJobRequest extends Request
      * Constructs a Sidecar request with the given parameters.
      *
      * @param keyspace name of the keyspace in the cluster
-     * @param table    name of the table in the cluster
-     * @param jobId    a unique identifier for the job
-     * @param requestPayload  request payload
+     * @param table name of the table in the cluster
+     * @param jobId a unique identifier for the job
+     * @param requestPayload request payload
      */
-    public UpdateRestoreJobRequest(String keyspace, String table, UUID jobId,
+    public UpdateRestoreJobRequest(String keyspace,
+                                   String table,
+                                   UUID jobId,
                                    UpdateRestoreJobRequestPayload requestPayload)
     {
         super(requestURI(keyspace, table, jobId));
@@ -58,11 +60,12 @@ public class UpdateRestoreJobRequest extends Request
         return requestPayload;
     }
 
-    static String requestURI(String keyspace, String table, UUID jobId)
+    static String requestURI(String keyspace,
+                             String table,
+                             UUID jobId)
     {
-        return ApiEndpointsV1.RESTORE_JOB_ROUTE
-               .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
-               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table)
-               .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, jobId.toString());
+        return ApiEndpointsV1.RESTORE_JOB_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
+                                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table)
+                                               .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, jobId.toString());
     }
 }

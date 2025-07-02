@@ -24,9 +24,8 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
 /**
- * {@link CdcConfigAccessor} is an accessor class for updating CDC configurations into
- * "configs" table in sidecar keyspace. All the cdc configurations required for CDC feature are
- * stored in this table using this class.
+ * {@link CdcConfigAccessor} is an accessor class for updating CDC configurations into "configs" table in sidecar keyspace. All the cdc configurations required
+ * for CDC feature are stored in this table using this class.
  */
 @Singleton
 public class CdcConfigAccessor extends ConfigAccessorImpl

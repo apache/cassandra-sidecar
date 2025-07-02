@@ -18,11 +18,6 @@
 
 package org.apache.cassandra.sidecar.modules;
 
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -30,6 +25,7 @@ import com.google.inject.multibindings.ProvidesIntoMap;
 import io.vertx.core.Vertx;
 import io.vertx.ext.auth.authorization.AuthorizationProvider;
 import io.vertx.ext.web.handler.ChainAuthHandler;
+import java.util.List;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.acl.authentication.AuthenticationHandlerFactory;
@@ -57,6 +53,8 @@ import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
 import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Provides authentication and authorization (role-based) capability
@@ -64,14 +62,14 @@ import org.apache.cassandra.sidecar.routes.VertxRoute;
 public class AuthModule extends AbstractModule
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthModule.class);
-    
+
     @ProvidesIntoMap
     @KeyClassMapKey(TableSchemaMapKeys.SystemAuthSchemaKey.class)
     TableSchema systemAuthSchema() // Note that it returns TableSchema, not CassandraSystemTableSchema, in order to locate the same mapBinder
     {
         return new SystemAuthSchema();
     }
-    
+
     @ProvidesIntoMap
     @KeyClassMapKey(TableSchemaMapKeys.SidecarRolePermissionsSchemaKey.class)
     TableSchema sidecarRolePermissionSchema(SidecarConfiguration sidecarConfiguration)
@@ -86,10 +84,8 @@ public class AuthModule extends AbstractModule
                                                             AdminIdentityResolver adminIdentityResolver,
                                                             AuthorizationParameterValidateHandler authorizationParameterValidateHandler)
     {
-        return new RouteBuilder.Factory(sidecarConfiguration.accessControlConfiguration(),
-                                        authorizationProvider,
-                                        adminIdentityResolver,
-                                        authorizationParameterValidateHandler);
+        return new RouteBuilder.Factory(sidecarConfiguration.accessControlConfiguration(), authorizationProvider, adminIdentityResolver,
+                authorizationParameterValidateHandler);
     }
 
     @Provides
@@ -114,7 +110,8 @@ public class AuthModule extends AbstractModule
     @KeyClassMapKey(VertxRouteMapKeys.GlobalChainAuthHandlerKey.class)
     VertxRoute chainAuthHandler(Vertx vertx,
                                 SidecarConfiguration sidecarConfiguration,
-                                AuthenticationHandlerFactoryRegistry registry) throws ConfigurationException
+                                AuthenticationHandlerFactoryRegistry registry)
+            throws ConfigurationException
     {
         AccessControlConfiguration accessControlConfiguration = sidecarConfiguration.accessControlConfiguration();
         if (!accessControlConfiguration.enabled())
@@ -138,8 +135,7 @@ public class AuthModule extends AbstractModule
 
             if (factory == null)
             {
-                throw new RuntimeException(String.format("Implementation for class %s has not been registered",
-                                                         config.className()));
+                throw new RuntimeException(String.format("Implementation for class %s has not been registered", config.className()));
             }
             chainAuthHandler.add(factory.create(vertx, accessControlConfiguration, config.namedParameters()));
         }
@@ -174,11 +170,13 @@ public class AuthModule extends AbstractModule
             throw new ConfigurationException("Access control is enabled, but authorizer not set");
         }
 
-        if (config.className().equalsIgnoreCase(AllowAllAuthorizationProvider.class.getName()))
+        if (config.className()
+                  .equalsIgnoreCase(AllowAllAuthorizationProvider.class.getName()))
         {
             return new AllowAllAuthorizationProvider();
         }
-        if (config.className().equalsIgnoreCase(RoleBasedAuthorizationProvider.class.getName()))
+        if (config.className()
+                  .equalsIgnoreCase(RoleBasedAuthorizationProvider.class.getName()))
         {
             return new RoleBasedAuthorizationProvider(roleAuthorizationsCache);
         }

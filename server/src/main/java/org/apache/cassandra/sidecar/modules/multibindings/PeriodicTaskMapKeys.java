@@ -23,15 +23,37 @@ package org.apache.cassandra.sidecar.modules.multibindings;
  */
 public interface PeriodicTaskMapKeys
 {
-    interface ClusterLeaseClaimTaskKey extends ClassKey {}
-    interface HealthCheckPeriodicTaskKey extends ClassKey {}
-    interface KeyStoreCheckPeriodicTaskKey extends ClassKey {}
-    interface ClientKeyStoreCheckPeriodicTaskKey extends ClassKey {}
-    interface RestoreJobDiscovererKey extends ClassKey {}
-    interface RestoreProcessorKey extends ClassKey {}
-    interface RingTopologyRefresherKey extends ClassKey {}
-    interface SchemaReportingTaskKey extends ClassKey {}
-    interface SidecarPeerHealthMonitorTaskKey extends ClassKey {}
-    interface SidecarSchemaInitializerTaskKey extends ClassKey {}
-    interface CdcRawDirectorySpaceCleanerTaskKey extends ClassKey {}
+    interface ClusterLeaseClaimTaskKey extends ClassKey
+    {
+    }
+    interface HealthCheckPeriodicTaskKey extends ClassKey
+    {
+    }
+    interface KeyStoreCheckPeriodicTaskKey extends ClassKey
+    {
+    }
+    interface ClientKeyStoreCheckPeriodicTaskKey extends ClassKey
+    {
+    }
+    interface RestoreJobDiscovererKey extends ClassKey
+    {
+    }
+    interface RestoreProcessorKey extends ClassKey
+    {
+    }
+    interface RingTopologyRefresherKey extends ClassKey
+    {
+    }
+    interface SchemaReportingTaskKey extends ClassKey
+    {
+    }
+    interface SidecarPeerHealthMonitorTaskKey extends ClassKey
+    {
+    }
+    interface SidecarSchemaInitializerTaskKey extends ClassKey
+    {
+    }
+    interface CdcRawDirectorySpaceCleanerTaskKey extends ClassKey
+    {
+    }
 }

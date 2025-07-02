@@ -17,15 +17,14 @@
  */
 package org.apache.cassandra.sidecar.common.request.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * A class representing a response for the GetServicesConfig api "/api/v1/services" which contains
- * configurations for all the services in the "configs" table.
+ * A class representing a response for the GetServicesConfig api "/api/v1/services" which contains configurations for all the services in the "configs" table.
  */
 public class AllServicesConfigPayload
 {
@@ -46,8 +45,10 @@ public class AllServicesConfigPayload
     @Override
     public boolean equals(Object o)
     {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         AllServicesConfigPayload that = (AllServicesConfigPayload) o;
         return Objects.equals(services, that.services);
     }
@@ -59,8 +60,7 @@ public class AllServicesConfigPayload
     }
 
     /**
-     * POJO class that represent config for a given service in "configs" table in sidecar
-     * internal keyspace
+     * POJO class that represent config for a given service in "configs" table in sidecar internal keyspace
      */
     public static class Service
     {
@@ -90,8 +90,10 @@ public class AllServicesConfigPayload
         @Override
         public boolean equals(Object o)
         {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
             Service service1 = (Service) o;
             return Objects.equals(service, service1.service) && Objects.equals(config, service1.config);
         }

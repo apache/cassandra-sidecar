@@ -45,7 +45,8 @@ class RestoreJobProgressCollectAllTest extends BaseRestoreJobProgressCollectorTe
     {
         int succeededRanges = 10;
         createRangesAndCollect(succeededRanges, ConsistencyVerificationResult.SATISFIED);
-        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
+        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress()
+                                                             .toResponsePayload();
         assertThat(payload.message()).isEqualTo("All ranges have succeeded. Current job status: CREATED");
         assertJobSummary(payload.summary());
         assertThat(payload.failedRanges()).isNull();
@@ -59,7 +60,8 @@ class RestoreJobProgressCollectAllTest extends BaseRestoreJobProgressCollectorTe
     {
         int failedRanges = 10;
         createRangesAndCollect(failedRanges, ConsistencyVerificationResult.FAILED);
-        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
+        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress()
+                                                             .toResponsePayload();
         assertThat(payload.message()).isEqualTo("One or more ranges have failed. Current job status: CREATED");
         assertJobSummary(payload.summary());
         assertThat(payload.failedRanges()).hasSize(failedRanges);
@@ -73,7 +75,8 @@ class RestoreJobProgressCollectAllTest extends BaseRestoreJobProgressCollectorTe
     {
         int pendingRanges = 10;
         createRangesAndCollect(pendingRanges, ConsistencyVerificationResult.PENDING);
-        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
+        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress()
+                                                             .toResponsePayload();
         assertThat(payload.message()).isEqualTo("One or more ranges are in progress. None of the ranges fail. Current job status: CREATED");
         assertJobSummary(payload.summary());
         assertThat(payload.failedRanges()).isNull();
@@ -91,7 +94,8 @@ class RestoreJobProgressCollectAllTest extends BaseRestoreJobProgressCollectorTe
         createRangesAndCollect(pendingRanges, ConsistencyVerificationResult.PENDING);
         createRangesAndCollect(failedRanges, ConsistencyVerificationResult.FAILED);
         createRangesAndCollect(satisfiedRanges, ConsistencyVerificationResult.SATISFIED);
-        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
+        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress()
+                                                             .toResponsePayload();
         assertThat(payload.message()).isEqualTo("One or more ranges have failed. Current job status: CREATED");
         assertJobSummary(payload.summary());
         assertThat(payload.failedRanges()).hasSize(failedRanges);
@@ -107,7 +111,8 @@ class RestoreJobProgressCollectAllTest extends BaseRestoreJobProgressCollectorTe
         int satisfiedRanges = 2;
         createRangesAndCollect(pendingRanges, ConsistencyVerificationResult.PENDING);
         createRangesAndCollect(satisfiedRanges, ConsistencyVerificationResult.SATISFIED);
-        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
+        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress()
+                                                             .toResponsePayload();
         assertThat(payload.message()).isEqualTo("One or more ranges are in progress. None of the ranges fail. Current job status: CREATED");
         assertJobSummary(payload.summary());
         assertThat(payload.failedRanges()).isNull();

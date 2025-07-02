@@ -49,16 +49,18 @@ public class SidecarSchemaModule extends AbstractModule
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
         // register table schema when enabled
-        resolver.resolve().values().forEach(tableSchema -> {
-            try
-            {
-                sidecarInternalKeyspace.registerTableSchema(tableSchema);
-            }
-            catch (Throwable cause)
-            {
-                throw new RuntimeException("Failed to register table schema: " + tableSchema, cause);
-            }
-        });
+        resolver.resolve()
+                .values()
+                .forEach(tableSchema -> {
+                    try
+                    {
+                        sidecarInternalKeyspace.registerTableSchema(tableSchema);
+                    }
+                    catch (Throwable cause)
+                    {
+                        throw new RuntimeException("Failed to register table schema: " + tableSchema, cause);
+                    }
+                });
         return new SidecarSchema(vertx, configuration, sidecarInternalKeyspace);
     }
 
@@ -70,10 +72,8 @@ public class SidecarSchemaModule extends AbstractModule
                                           SidecarSchema sidecarSchema,
                                           ClusterLease clusterLease)
     {
-        return new SidecarSchemaInitializer(configuration,
-                                            cqlSessionProvider,
-                                            sidecarSchema.sidecarInternalKeyspace(),
-                                            sidecarMetrics.server().schema(),
-                                            clusterLease);
+        return new SidecarSchemaInitializer(configuration, cqlSessionProvider, sidecarSchema.sidecarInternalKeyspace(), sidecarMetrics.server()
+                                                                                                                                      .schema(),
+                clusterLease);
     }
 }

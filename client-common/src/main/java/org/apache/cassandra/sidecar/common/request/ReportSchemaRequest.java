@@ -23,8 +23,7 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 
 /**
- * A request to trigger an immediate, synchronous schema conversion
- * and report regardless of the periodic task schedule or status
+ * A request to trigger an immediate, synchronous schema conversion and report regardless of the periodic task schedule or status
  */
 public class ReportSchemaRequest extends JsonRequest<HealthResponse>
 {

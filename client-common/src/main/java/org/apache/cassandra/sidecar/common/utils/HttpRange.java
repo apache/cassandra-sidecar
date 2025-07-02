@@ -21,15 +21,12 @@ package org.apache.cassandra.sidecar.common.utils;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.cassandra.sidecar.common.exceptions.RangeException;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Accepted Range formats are start-end, start-, -suffix_length
- * start-end (start = start index of the range, end = end index of the range, both inclusive)
- * start- (start = start index of the range, end = end of file)
- * -suffix-length (Requested length from end of file. The length should be positive)
+ * Accepted Range formats are start-end, start-, -suffix_length start-end (start = start index of the range, end = end index of the range, both inclusive)
+ * start- (start = start index of the range, end = end of file) -suffix-length (Requested length from end of file. The length should be positive)
  */
 public class HttpRange
 {
@@ -42,12 +39,11 @@ public class HttpRange
     private final long length;
 
     // An initialized range is always valid; invalid params fail range initialization.
-    private HttpRange(final long start, final long end)
+    private HttpRange(final long start,
+                      final long end)
     {
-        Preconditions.checkArgument(start >= 0,
-                                    () -> String.format("Range start can not be negative. range=[%s, %s]", start, end));
-        Preconditions.checkArgument(end >= start,
-                                    () -> String.format("Range does not satisfy boundary requirements. range=[%s, %s]", start, end));
+        Preconditions.checkArgument(start >= 0, () -> String.format("Range start can not be negative. range=[%s, %s]", start, end));
+        Preconditions.checkArgument(end >= start, () -> String.format("Range does not satisfy boundary requirements. range=[%s, %s]", start, end));
         this.start = start;
         this.end = end;
         long len = end - start + 1; // Assign long max if overflows
@@ -57,11 +53,12 @@ public class HttpRange
     /**
      * Accepted RangeHeader formats are bytes=start-end, bytes=start-, bytes=-suffix_length
      *
-     * @param header   the header string to be parsed
+     * @param header the header string to be parsed
      * @param fileSize the size of the file
      * @return the parsed HTTP range header
      */
-    public static HttpRange parseHeader(final String header, final long fileSize)
+    public static HttpRange parseHeader(final String header,
+                                        final long fileSize)
     {
         if (header == null)
         {
@@ -70,18 +67,19 @@ public class HttpRange
         return HttpRange.parse(header, fileSize);
     }
 
-    public static HttpRange of(final long start, final long end)
+    public static HttpRange of(final long start,
+                               final long end)
     {
         return new HttpRange(start, end);
     }
 
     /**
-     * Accepted string formats "bytes=1453-3563", "bytes=-22344", "bytes=5346-"
-     * Sample invalid string formats "bytes=8-3", "bytes=-", "bytes=-0", "bytes=a-b"
+     * Accepted string formats "bytes=1453-3563", "bytes=-22344", "bytes=5346-" Sample invalid string formats "bytes=8-3", "bytes=-", "bytes=-0", "bytes=a-b"
      *
      * @param fileSize - passed in to convert partial range into absolute range
      */
-    private static HttpRange parse(@NotNull String rangeHeader, final long fileSize)
+    private static HttpRange parse(@NotNull String rangeHeader,
+                                   final long fileSize)
     {
         Matcher m = RANGE_HEADER.matcher(rangeHeader);
         if (!m.matches())
@@ -113,7 +111,8 @@ public class HttpRange
 
     // return -1 for empty string; return long value otherwise.
     // throws IllegalArgumentException for invalid value string
-    private static long parseLong(String valStr, String rangeHeader)
+    private static long parseLong(String valStr,
+                                  String rangeHeader)
     {
         if (valStr == null || valStr.isEmpty())
             return BOUND_ABSENT;
@@ -130,9 +129,8 @@ public class HttpRange
 
     private static IllegalArgumentException invalidRangeHeaderException(String rangeHeader)
     {
-        return new IllegalArgumentException("Invalid range header: " + rangeHeader + ". " +
-                                            "Supported Range formats are bytes=<start>-<end>, " +
-                                            "bytes=<start>-, bytes=-<suffix-length>");
+        return new IllegalArgumentException(
+                "Invalid range header: " + rangeHeader + ". " + "Supported Range formats are bytes=<start>-<end>, " + "bytes=<start>-, bytes=-<suffix-length>");
     }
 
     public long start()
@@ -174,9 +172,7 @@ public class HttpRange
             return false;
         }
         HttpRange range = (HttpRange) o;
-        return start == range.start &&
-               end == range.end &&
-               length == range.length;
+        return start == range.start && end == range.end && length == range.length;
     }
 
     @Override

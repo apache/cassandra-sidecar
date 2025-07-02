@@ -32,16 +32,18 @@ import java.util.concurrent.ThreadLocalRandom;
 public class TestFileUtils
 {
     /**
-     * Writes random data to a file with name {@code filename} under the specified {@code directory} with
-     * the specified size in bytes.
+     * Writes random data to a file with name {@code filename} under the specified {@code directory} with the specified size in bytes.
      *
-     * @param directory   the directory where to
-     * @param fileName    the name of the desired file to create
+     * @param directory the directory where to
+     * @param fileName the name of the desired file to create
      * @param sizeInBytes the size of the files in bytes
      * @return the path of the file that was recently created
      * @throws IOException when file creation or writing to the file fails
      */
-    public static Path prepareTestFile(Path directory, String fileName, long sizeInBytes) throws IOException
+    public static Path prepareTestFile(Path directory,
+                                       String fileName,
+                                       long sizeInBytes)
+            throws IOException
     {
         Path filePath = directory.resolve(fileName);
         Files.deleteIfExists(filePath);
@@ -52,7 +54,8 @@ public class TestFileUtils
             int written = 0;
             while (written < sizeInBytes)
             {
-                ThreadLocalRandom.current().nextBytes(buffer);
+                ThreadLocalRandom.current()
+                                 .nextBytes(buffer);
                 int toWrite = (int) Math.min(buffer.length, sizeInBytes - written);
                 outputStream.write(buffer, 0, toWrite);
                 written += toWrite;
@@ -62,15 +65,17 @@ public class TestFileUtils
     }
 
     /**
-     * Creates a file with given {@code content}. File path can be specified as sequence of Strings just like
-     * {@link Paths#get(String, String...)}.
+     * Creates a file with given {@code content}. File path can be specified as sequence of Strings just like {@link Paths#get(String, String...)}.
      *
      * @param content contents of file
-     * @param first   the path string or initial part of the path string
-     * @param more    additional strings to be joined to form the path string
+     * @param first the path string or initial part of the path string
+     * @param more additional strings to be joined to form the path string
      * @throws IOException when cannot create file
      */
-    public static void createFile(String content, String first, String... more) throws IOException
+    public static void createFile(String content,
+                                  String first,
+                                  String... more)
+            throws IOException
     {
         Path file = Paths.get(first, more);
         Path parent = file.getParent();
@@ -83,14 +88,15 @@ public class TestFileUtils
     }
 
     /**
-     * Creates directory. Directory path can be specified as sequence of Strings
-     * just like {@link Paths#get(String, String...)}.
+     * Creates directory. Directory path can be specified as sequence of Strings just like {@link Paths#get(String, String...)}.
      *
      * @param first the path string or initial part of the path string
-     * @param more  additional strings to be joined to form the path string
+     * @param more additional strings to be joined to form the path string
      * @throws IOException when cannot create directory
      */
-    public static void createDirectory(String first, String... more) throws IOException
+    public static void createDirectory(String first,
+                                       String... more)
+            throws IOException
     {
         Path dir = Paths.get(first, more);
         Files.createDirectories(dir);

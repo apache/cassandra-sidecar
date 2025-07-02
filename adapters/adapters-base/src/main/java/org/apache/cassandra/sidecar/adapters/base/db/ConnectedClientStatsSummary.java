@@ -18,11 +18,10 @@
 
 package org.apache.cassandra.sidecar.adapters.base.db;
 
+import com.datastax.driver.core.ResultSet;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-
-import com.datastax.driver.core.ResultSet;
 import org.apache.cassandra.sidecar.db.DataObjectMappingException;
 import org.jetbrains.annotations.NotNull;
 
@@ -38,19 +37,20 @@ public class ConnectedClientStatsSummary
     {
 
         Map<String, Long> resultMap = StreamSupport.stream(resultSet.spliterator(), false)
-                                                             .collect(Collectors.toMap(r -> r.getString("username"),
-                                                                         r -> r.getLong("connection_count")));
-        int totalConnections = resultMap.values().stream().mapToInt(Math::toIntExact).sum();
+                                                   .collect(Collectors.toMap(r -> r.getString("username"), r -> r.getLong("connection_count")));
+        int totalConnections = resultMap.values()
+                                        .stream()
+                                        .mapToInt(Math::toIntExact)
+                                        .sum();
 
         return new ConnectedClientStatsSummary(resultMap, totalConnections);
     }
 
-    public ConnectedClientStatsSummary(Map<String, Long> connectionsByUser, int totalConnections)
+    public ConnectedClientStatsSummary(Map<String, Long> connectionsByUser,
+                                       int totalConnections)
     {
         this.totalConnectedClients = totalConnections;
         this.connectionsByUser = connectionsByUser;
     }
 
-
 }
-

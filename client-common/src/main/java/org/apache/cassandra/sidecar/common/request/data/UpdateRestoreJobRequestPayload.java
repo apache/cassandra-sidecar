@@ -79,7 +79,8 @@ public class UpdateRestoreJobRequestPayload
     /**
      * @return arbitrary text a job can put, which can be used to identity itself during Http request
      */
-    @Nullable @JsonProperty(JOB_AGENT)
+    @Nullable
+    @JsonProperty(JOB_AGENT)
     public String jobAgent()
     {
         return jobAgent;
@@ -88,7 +89,8 @@ public class UpdateRestoreJobRequestPayload
     /**
      * @return secrets to be used by restore job to download data
      */
-    @Nullable @JsonProperty(JOB_SECRETS)
+    @Nullable
+    @JsonProperty(JOB_SECRETS)
     public RestoreJobSecrets secrets()
     {
         return secrets;
@@ -97,7 +99,8 @@ public class UpdateRestoreJobRequestPayload
     /**
      * @return status of the restore job
      */
-    @Nullable @JsonProperty(JOB_STATUS)
+    @Nullable
+    @JsonProperty(JOB_STATUS)
     public RestoreJobStatus status()
     {
         return status;
@@ -106,7 +109,8 @@ public class UpdateRestoreJobRequestPayload
     /**
      * @return timestamp the job expires, i.e. fail the restore job if it is not in a final {@link RestoreJobStatus} yet
      */
-    @Nullable @JsonProperty(JOB_EXPIRE_AT)
+    @Nullable
+    @JsonProperty(JOB_EXPIRE_AT)
     public Long expireAtInMillis()
     {
         return expireAtInMillis;
@@ -115,7 +119,8 @@ public class UpdateRestoreJobRequestPayload
     /**
      * @return number of total slices (s3 objects) produced. The field is only present when the restore job is managed by Sidecar
      */
-    @Nullable @JsonProperty(JOB_SLICE_COUNT)
+    @Nullable
+    @JsonProperty(JOB_SLICE_COUNT)
     public Long sliceCount()
     {
         return sliceCount;
@@ -123,13 +128,12 @@ public class UpdateRestoreJobRequestPayload
 
     /**
      * Convert the expireAtInMillis timestamp as {@link Date}
+     *
      * @return date or null
      */
     public Date expireAtAsDate()
     {
-        return expireAtInMillis == null
-               ? null
-               : new Date(expireAtInMillis);
+        return expireAtInMillis == null ? null : new Date(expireAtInMillis);
     }
 
     @JsonIgnore
@@ -143,12 +147,8 @@ public class UpdateRestoreJobRequestPayload
      */
     public String toString()
     {
-        return "UpdateRestoreJobRequest{" +
-               JOB_AGENT + "='" + jobAgent + "', " +
-               JOB_STATUS + "='" + status + "', " +
-               JOB_SECRETS + "='" + secrets + "', " +
-               JOB_EXPIRE_AT + "='" + expireAtInMillis + "', " +
-               JOB_SLICE_COUNT + "='" + sliceCount + "'}";
+        return "UpdateRestoreJobRequest{" + JOB_AGENT + "='" + jobAgent + "', " + JOB_STATUS + "='" + status + "', " + JOB_SECRETS + "='" + secrets + "', "
+                + JOB_EXPIRE_AT + "='" + expireAtInMillis + "', " + JOB_SLICE_COUNT + "='" + sliceCount + "'}";
     }
 
     /**

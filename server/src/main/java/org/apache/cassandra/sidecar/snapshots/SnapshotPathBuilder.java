@@ -57,10 +57,10 @@ public class SnapshotPathBuilder extends BaseFileSystem
      * Creates a new SnapshotPathBuilder for snapshots of an instance with the given {@code vertx} instance and
      * {@code instancesMetadata Cassandra configuration}.
      *
-     * @param vertx           the vertx instance
+     * @param vertx the vertx instance
      * @param instancesMetadata the configuration for Cassandra
-     * @param validator       a validator instance to validate Cassandra-specific input
-     * @param executorPools   executor pools for blocking executions
+     * @param validator a validator instance to validate Cassandra-specific input
+     * @param executorPools executor pools for blocking executions
      */
     @Inject
     public SnapshotPathBuilder(Vertx vertx,
@@ -72,42 +72,42 @@ public class SnapshotPathBuilder extends BaseFileSystem
     }
 
     /**
-     * Returns a Future with a stream of {@link SnapshotFile}s from the list of table data directories for a given
-     * {@code snapshotName}. Secondary index files will be included when {@code includeSecondaryIndexFiles} is
-     * set to {@code true}.
+     * Returns a Future with a stream of {@link SnapshotFile}s from the list of table data directories for a given {@code snapshotName}. Secondary index files
+     * will be included when {@code includeSecondaryIndexFiles} is set to {@code true}.
      *
-     * @param tableDataDirectoryList     the list of table data directory files
-     * @param snapshotName               the name of the snapshot
+     * @param tableDataDirectoryList the list of table data directory files
+     * @param snapshotName the name of the snapshot
      * @param includeSecondaryIndexFiles whether to include secondary index files
-     * @return a {@link Future} with a stream of {@link SnapshotFile}s from the list of table data directories for
-     * a given {@code snapshotName}
+     * @return a {@link Future} with a stream of {@link SnapshotFile}s from the list of table data directories for a given {@code snapshotName}
      */
     public Future<Stream<SnapshotFile>> streamSnapshotFiles(List<String> tableDataDirectoryList,
                                                             String snapshotName,
                                                             boolean includeSecondaryIndexFiles)
     {
-        return executorPools.internal().executeBlocking(() -> {
-            return IntStream.range(0, tableDataDirectoryList.size())
-                            // Get the index and resolved snapshot directory
-                            .mapToObj(dataDirIndex -> {
-                                String dataDir = tableDataDirectoryList.get(dataDirIndex);
-                                Path snapshotDir = Paths.get(dataDir)
-                                                        .resolve(SNAPSHOTS_DIR_NAME)
-                                                        .resolve(snapshotName);
-                                return pair(dataDirIndex, snapshotDir);
-                            })
-                            // The snapshot directory might not exist on every data directory.
-                            // For example, if there was only one row inserted in a table,
-                            // and we have 4 data directories, only a single data directory
-                            // will have SSTables, and only that data directory will create the
-                            // snapshot directory.
-                            .filter(entry -> Files.exists(entry.getValue()) && Files.isDirectory(entry.getValue()))
-                            // List all the files in the directory
-                            .flatMap(entry -> listSnapshotDir(entry.getKey(), entry.getValue(), includeSecondaryIndexFiles));
-        });
+        return executorPools.internal()
+                            .executeBlocking(() -> {
+                                return IntStream.range(0, tableDataDirectoryList.size())
+                                                // Get the index and resolved snapshot directory
+                                                .mapToObj(dataDirIndex -> {
+                                                    String dataDir = tableDataDirectoryList.get(dataDirIndex);
+                                                    Path snapshotDir = Paths.get(dataDir)
+                                                                            .resolve(SNAPSHOTS_DIR_NAME)
+                                                                            .resolve(snapshotName);
+                                                    return pair(dataDirIndex, snapshotDir);
+                                                })
+                                                // The snapshot directory might not exist on every data directory.
+                                                // For example, if there was only one row inserted in a table,
+                                                // and we have 4 data directories, only a single data directory
+                                                // will have SSTables, and only that data directory will create the
+                                                // snapshot directory.
+                                                .filter(entry -> Files.exists(entry.getValue()) && Files.isDirectory(entry.getValue()))
+                                                // List all the files in the directory
+                                                .flatMap(entry -> listSnapshotDir(entry.getKey(), entry.getValue(), includeSecondaryIndexFiles));
+                            });
     }
 
-    protected Stream<SnapshotFile> listSnapshotDir(int dataDirectoryIndex, Path snapshotDir,
+    protected Stream<SnapshotFile> listSnapshotDir(int dataDirectoryIndex,
+                                                   Path snapshotDir,
                                                    boolean includeSecondaryIndexFiles)
     {
         String tableId = tableId(snapshotDir);
@@ -127,7 +127,8 @@ public class SnapshotPathBuilder extends BaseFileSystem
                                     return null;
                                 }
 
-                                String snapshotFileName = snapshotFile.subpath(snapshotDirNameCount, snapshotFile.getNameCount()).toString();
+                                String snapshotFileName = snapshotFile.subpath(snapshotDirNameCount, snapshotFile.getNameCount())
+                                                                      .toString();
                                 return new SnapshotFile(snapshotFileName, attrs.size(), dataDirectoryIndex, tableId);
                             }
                             catch (IOException e)
@@ -144,8 +145,7 @@ public class SnapshotPathBuilder extends BaseFileSystem
     }
 
     /**
-     * Validates that the component name is either {@code *.db} or a {@code *-TOC.txt}
-     * which are the only required components to read SSTables.
+     * Validates that the component name is either {@code *.db} or a {@code *-TOC.txt} which are the only required components to read SSTables.
      *
      * @param request the request to stream the SSTable component
      */
@@ -172,26 +172,28 @@ public class SnapshotPathBuilder extends BaseFileSystem
 
     /**
      * @param dataDirectory the path to the data directory where the component lives
-     * @param request       the {@link StreamSSTableComponentRequestParam}
+     * @param request the {@link StreamSSTableComponentRequestParam}
      * @return the path to the component found in the {@code dataDirectory}
      */
     public String resolveComponentPathFromDataDirectory(String dataDirectory,
                                                         StreamSSTableComponentRequestParam request)
     {
         validate(request);
-        StringBuilder sb = new StringBuilder(StringUtils.removeEnd(dataDirectory, File.separator))
-                           .append(File.separator).append(request.keyspace())
-                           .append(File.separator).append(request.tableName());
+        StringBuilder sb = new StringBuilder(StringUtils.removeEnd(dataDirectory, File.separator)).append(File.separator)
+                                                                                                  .append(request.keyspace())
+                                                                                                  .append(File.separator)
+                                                                                                  .append(request.tableName());
         if (request.tableId() != null)
         {
-            sb.append("-").append(request.tableId());
+            sb.append("-")
+              .append(request.tableId());
         }
         return appendSnapshot(sb, request);
     }
 
     /**
      * @param tableDirectory the path to the table directory where the component lives
-     * @param request        the {@link StreamSSTableComponentRequestParam}
+     * @param request the {@link StreamSSTableComponentRequestParam}
      * @return the path to the component found in the {@code tableDirectory}
      */
     public String resolveComponentPathFromTableDirectory(String tableDirectory,
@@ -224,7 +226,8 @@ public class SnapshotPathBuilder extends BaseFileSystem
      */
     protected String tableId(@NotNull Path snapshotDir)
     {
-        Path fileName = snapshotDir.getName(snapshotDir.getNameCount() - 3).getFileName();
+        Path fileName = snapshotDir.getName(snapshotDir.getNameCount() - 3)
+                                   .getFileName();
         if (fileName == null)
         {
             return null;
@@ -239,15 +242,21 @@ public class SnapshotPathBuilder extends BaseFileSystem
         return null;
     }
 
-    protected String appendSnapshot(StringBuilder sb, StreamSSTableComponentRequestParam request)
+    protected String appendSnapshot(StringBuilder sb,
+                                    StreamSSTableComponentRequestParam request)
     {
-        sb.append(File.separator).append(SNAPSHOTS_DIR_NAME)
-          .append(File.separator).append(request.snapshotName());
+        sb.append(File.separator)
+          .append(SNAPSHOTS_DIR_NAME)
+          .append(File.separator)
+          .append(request.snapshotName());
         if (request.secondaryIndexName() != null)
         {
-            sb.append(File.separator).append(request.secondaryIndexName());
+            sb.append(File.separator)
+              .append(request.secondaryIndexName());
         }
-        return sb.append(File.separator).append(request.componentName()).toString();
+        return sb.append(File.separator)
+                 .append(request.componentName())
+                 .toString();
     }
 
     /**
@@ -262,13 +271,20 @@ public class SnapshotPathBuilder extends BaseFileSystem
         private final int hashCode;
 
         @VisibleForTesting
-        SnapshotFile(Path path, long size, int dataDirectoryIndex, String tableId)
+        SnapshotFile(Path path,
+                     long size,
+                     int dataDirectoryIndex,
+                     String tableId)
         {
-            this(Objects.requireNonNull(path.getFileName(), "path.getFileName() cannot be null").toString(),
-                 size, dataDirectoryIndex, tableId);
+            this(Objects.requireNonNull(path.getFileName(), "path.getFileName() cannot be null")
+                        .toString(),
+                    size, dataDirectoryIndex, tableId);
         }
 
-        public SnapshotFile(String name, long size, int dataDirectoryIndex, String tableId)
+        public SnapshotFile(String name,
+                            long size,
+                            int dataDirectoryIndex,
+                            String tableId)
         {
             this.name = name;
             this.size = size;
@@ -280,24 +296,20 @@ public class SnapshotPathBuilder extends BaseFileSystem
         @Override
         public String toString()
         {
-            return "SnapshotFile{" +
-                   "name='" + name + '\'' +
-                   ", size=" + size +
-                   ", dataDirectoryIndex=" + dataDirectoryIndex +
-                   ", tableId='" + tableId + '\'' +
-                   '}';
+            return "SnapshotFile{" + "name='" + name + '\'' + ", size=" + size + ", dataDirectoryIndex=" + dataDirectoryIndex + ", tableId='" + tableId + '\''
+                    + '}';
         }
 
         @Override
         public boolean equals(Object object)
         {
-            if (this == object) return true;
-            if (object == null || getClass() != object.getClass()) return false;
+            if (this == object)
+                return true;
+            if (object == null || getClass() != object.getClass())
+                return false;
             SnapshotFile that = (SnapshotFile) object;
-            return size == that.size
-                   && dataDirectoryIndex == that.dataDirectoryIndex
-                   && Objects.equals(name, that.name)
-                   && Objects.equals(tableId, that.tableId);
+            return size == that.size && dataDirectoryIndex == that.dataDirectoryIndex && Objects.equals(name, that.name)
+                    && Objects.equals(tableId, that.tableId);
         }
 
         @Override
@@ -307,7 +319,8 @@ public class SnapshotPathBuilder extends BaseFileSystem
         }
     }
 
-    private static <K, V> AbstractMap.SimpleEntry<K, V> pair(K key, V value)
+    private static <K, V> AbstractMap.SimpleEntry<K, V> pair(K key,
+                                                             V value)
     {
         return new AbstractMap.SimpleEntry<>(key, value);
     }

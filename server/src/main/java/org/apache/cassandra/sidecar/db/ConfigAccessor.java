@@ -21,13 +21,13 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * CDC configs are stored inside "configs" table of sidecar keyspace. This is an interface for
- * database accessor of "configs" table
+ * CDC configs are stored inside "configs" table of sidecar keyspace. This is an interface for database accessor of "configs" table
  */
 public interface ConfigAccessor
 {
     /**
      * Gets the configs of a service
+     *
      * @return returns configs for the current service
      */
     ServiceConfig getConfig();

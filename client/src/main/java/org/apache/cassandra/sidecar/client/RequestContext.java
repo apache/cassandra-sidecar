@@ -63,8 +63,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The context for a given request that include the {@link InstanceSelectionPolicy}, the {@link RetryPolicy}, and
- * the {@link Request}
+ * The context for a given request that include the {@link InstanceSelectionPolicy}, the {@link RetryPolicy}, and the {@link Request}
  */
 public class RequestContext
 {
@@ -74,10 +73,8 @@ public class RequestContext
      * @deprecated in favor of {@link #CASSANDRA_NATIVE_HEALTH_REQUEST}
      */
     @Deprecated
-    protected static final CassandraNativeHealthRequest CASSANDRA_HEALTH_REQUEST =
-    new CassandraNativeHealthRequest(true /* useDeprecatedHealthEndpoint */);
-    protected static final CassandraNativeHealthRequest CASSANDRA_NATIVE_HEALTH_REQUEST =
-    new CassandraNativeHealthRequest();
+    protected static final CassandraNativeHealthRequest CASSANDRA_HEALTH_REQUEST = new CassandraNativeHealthRequest(true /* useDeprecatedHealthEndpoint */);
+    protected static final CassandraNativeHealthRequest CASSANDRA_NATIVE_HEALTH_REQUEST = new CassandraNativeHealthRequest();
     protected static final CassandraJmxHealthRequest CASSANDRA_JMX_HEALTH_REQUEST = new CassandraJmxHealthRequest();
     protected static final SchemaRequest FULL_SCHEMA_REQUEST = new SchemaRequest();
     protected static final TimeSkewRequest TIME_SKEW_REQUEST = new TimeSkewRequest();
@@ -89,8 +86,7 @@ public class RequestContext
 
     protected static final StreamStatsRequest STREAM_STATS_REQUEST = new StreamStatsRequest();
     protected static final RetryPolicy DEFAULT_NO_RETRY_POLICY = new NoRetryPolicy();
-    protected static final RetryPolicy DEFAULT_EXPONENTIAL_BACKOFF_RETRY_POLICY =
-    new ExponentialBackoffRetryPolicy(10, 500L, 60_000L);
+    protected static final RetryPolicy DEFAULT_EXPONENTIAL_BACKOFF_RETRY_POLICY = new ExponentialBackoffRetryPolicy(10, 500L, 60_000L);
 
     private final InstanceSelectionPolicy instanceSelectionPolicy;
     private final Request request;
@@ -173,8 +169,8 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code instanceSelectionPolicy} to the {@link SingleInstanceSelectionPolicy} for the provided
-         * {@code sidecarInstance} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code instanceSelectionPolicy} to the {@link SingleInstanceSelectionPolicy} for the provided {@code sidecarInstance} and returns a
+         * reference to this Builder enabling method chaining.
          *
          * @param sidecarInstance the Sidecar instance where the request will be performed
          * @return a reference to this Builder
@@ -209,8 +205,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link SidecarHealthRequest}
-         * and returns a reference to this Builder enabling method chaining
+         * Sets the {@code request} to be a {@link SidecarHealthRequest} and returns a reference to this Builder enabling method chaining
          *
          * @return a reference to this Builder
          */
@@ -220,9 +215,8 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link CassandraNativeHealthRequest}
-         * with the {@code useDeprecatedHealthEndpoint} parameter set to {@code true}
-         * and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link CassandraNativeHealthRequest} with the {@code useDeprecatedHealthEndpoint} parameter set to {@code true} and
+         * returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          * @deprecated in favor of {@link #cassandraNativeHealthRequest()}
@@ -234,8 +228,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link CassandraNativeHealthRequest}
-         * and returns a reference to this Builder enabling method chaining
+         * Sets the {@code request} to be a {@link CassandraNativeHealthRequest} and returns a reference to this Builder enabling method chaining
          *
          * @return a reference to this Builder
          */
@@ -245,8 +238,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link CassandraJmxHealthRequest}
-         * and returns a reference to this Builder enabling method chaining
+         * Sets the {@code request} to be a {@link CassandraJmxHealthRequest} and returns a reference to this Builder enabling method chaining
          *
          * @return a reference to this Builder
          */
@@ -256,8 +248,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link SchemaRequest} for the full schema and returns a reference to
-         * this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link SchemaRequest} for the full schema and returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          */
@@ -267,8 +258,8 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link SchemaRequest} for the specified {@code keyspace} and returns a
-         * reference to this Builder enabling method chaining
+         * Sets the {@code request} to be a {@link SchemaRequest} for the specified {@code keyspace} and returns a reference to this Builder enabling method
+         * chaining
          *
          * @param keyspace the keyspace in Cassandra
          * @return a reference to this Builder
@@ -279,8 +270,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link TimeSkewRequest} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code request} to be a {@link TimeSkewRequest} and returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          */
@@ -290,8 +280,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link TokenRangeReplicasRequest} and returns a reference to this Builder
-         * enabling method chaining.
+         * Sets the {@code request} to be a {@link TokenRangeReplicasRequest} and returns a reference to this Builder enabling method chaining.
          *
          * @param keyspace the keyspace in Cassandra
          * @return a reference to this Builder
@@ -302,8 +291,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link NodeSettingsRequest} and returns a reference to this Builder
-         * enabling method chaining.
+         * Sets the {@code request} to be a {@link NodeSettingsRequest} and returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          */
@@ -313,8 +301,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link RingRequest} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code request} to be a {@link RingRequest} and returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          */
@@ -324,8 +311,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link RingRequest} for the given {@code keyspace} and returns a reference
-         * to this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link RingRequest} for the given {@code keyspace} and returns a reference to this Builder enabling method chaining.
          *
          * @param keyspace the keyspace in Cassandra
          * @return a reference to this Builder
@@ -336,8 +322,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link GossipInfoRequest} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code request} to be a {@link GossipInfoRequest} and returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          */
@@ -347,8 +332,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link GossipHealthRequest} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code request} to be a {@link GossipHealthRequest} and returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          */
@@ -358,15 +342,14 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link SSTableComponentRequest} for the given {@code keyspace},
-         * {@code tableName}, {@code snapshotName}, {@code componentName}, requesting the specified {@code range} and
-         * returns a reference to this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link SSTableComponentRequest} for the given {@code keyspace}, {@code tableName}, {@code snapshotName},
+         * {@code componentName}, requesting the specified {@code range} and returns a reference to this Builder enabling method chaining.
          *
-         * @param keyspace      the keyspace in Cassandra
-         * @param tableName     the table name in Cassandra
-         * @param snapshotName  the name of the snapshot
+         * @param keyspace the keyspace in Cassandra
+         * @param tableName the table name in Cassandra
+         * @param snapshotName the name of the snapshot
          * @param componentName the name of the SSTable component
-         * @param range         the HTTP range for the request
+         * @param range the HTTP range for the request
          * @return a reference to this Builder
          */
         public Builder ssTableComponentRequest(String keyspace,
@@ -379,84 +362,92 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link SSTableComponentRequest} for the requested {@code fileInfo}
-         * requesting the specified {@code range} and  returns a reference to this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link SSTableComponentRequest} for the requested {@code fileInfo} requesting the specified {@code range} and
+         * returns a reference to this Builder enabling method chaining.
          *
          * @param fileInfo contains information about the file to stream
-         * @param range    the HTTP range for the request
+         * @param range the HTTP range for the request
          * @return a reference to this Builder
          */
-        public Builder ssTableComponentRequest(ListSnapshotFilesResponse.FileInfo fileInfo, HttpRange range)
+        public Builder ssTableComponentRequest(ListSnapshotFilesResponse.FileInfo fileInfo,
+                                               HttpRange range)
         {
             return request(new SSTableComponentRequest(fileInfo, range));
         }
 
         /**
-         * Sets the {@code request} to be a {@link ListSnapshotFilesRequest} for the given {@code keyspace},
-         * {@code tableName}, and {@code snapshotName} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link ListSnapshotFilesRequest} for the given {@code keyspace}, {@code tableName}, and {@code snapshotName} and
+         * returns a reference to this Builder enabling method chaining.
          *
-         * @param keyspace     the keyspace in Cassandra
-         * @param tableName    the table name in Cassandra
+         * @param keyspace the keyspace in Cassandra
+         * @param tableName the table name in Cassandra
          * @param snapshotName the name of the snapshot
          * @return a reference to this Builder
          */
-        public Builder listSnapshotFilesRequest(String keyspace, String tableName, String snapshotName)
+        public Builder listSnapshotFilesRequest(String keyspace,
+                                                String tableName,
+                                                String snapshotName)
         {
             return listSnapshotFilesRequest(keyspace, tableName, snapshotName, false);
         }
 
         /**
-         * Sets the {@code request} to be a {@link CreateSnapshotRequest} for the given {@code keyspace},
-         * {@code tableName}, and {@code snapshotName} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link CreateSnapshotRequest} for the given {@code keyspace}, {@code tableName}, and {@code snapshotName} and
+         * returns a reference to this Builder enabling method chaining.
          *
-         * @param keyspace     the keyspace in Cassandra
-         * @param tableName    the table name in Cassandra
+         * @param keyspace the keyspace in Cassandra
+         * @param tableName the table name in Cassandra
          * @param snapshotName the name of the snapshot
-         * @param snapshotTTL  an optional time to live option for the snapshot (available since Cassandra 4.1+)
-         *                     The TTL option must specify the units, for example 2d represents a TTL for 2 days;
-         *                     1h represents a TTL of 1 hour, etc. Valid units are {@code d}, {@code h}, {@code s},
-         *                     {@code ms}, {@code us}, {@code µs}, {@code ns}, and {@code m}.
+         * @param snapshotTTL an optional time to live option for the snapshot (available since Cassandra 4.1+) The TTL option must specify the units, for
+         *            example 2d represents a TTL for 2 days; 1h represents a TTL of 1 hour, etc. Valid units are {@code d}, {@code h}, {@code s}, {@code ms},
+         *            {@code us}, {@code µs}, {@code ns}, and {@code m}.
          * @return a reference to this Builder
          */
-        public Builder createSnapshotRequest(String keyspace, String tableName, String snapshotName,
+        public Builder createSnapshotRequest(String keyspace,
+                                             String tableName,
+                                             String snapshotName,
                                              @Nullable String snapshotTTL)
         {
             return request(new CreateSnapshotRequest(keyspace, tableName, snapshotName, snapshotTTL));
         }
 
         /**
-         * Sets the {@code request} to be a {@link ListSnapshotFilesRequest} for the given {@code keyspace},
-         * {@code tableName}, and {@code snapshotName} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link ListSnapshotFilesRequest} for the given {@code keyspace}, {@code tableName}, and {@code snapshotName} and
+         * returns a reference to this Builder enabling method chaining.
          *
-         * @param keyspace                   the keyspace in Cassandra
-         * @param tableName                  the table name in Cassandra
-         * @param snapshotName               the name of the snapshot
+         * @param keyspace the keyspace in Cassandra
+         * @param tableName the table name in Cassandra
+         * @param snapshotName the name of the snapshot
          * @param includeSecondaryIndexFiles whether to include secondary index files
          * @return a reference to this Builder
          */
-        public Builder listSnapshotFilesRequest(String keyspace, String tableName, String snapshotName,
+        public Builder listSnapshotFilesRequest(String keyspace,
+                                                String tableName,
+                                                String snapshotName,
                                                 boolean includeSecondaryIndexFiles)
         {
             return request(new ListSnapshotFilesRequest(keyspace, tableName, snapshotName, includeSecondaryIndexFiles));
         }
 
         /**
-         * Sets the {@code request} to be a {@link ClearSnapshotRequest} for the given {@code keyspace},
-         * {@code tableName}, and {@code snapshotName} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link ClearSnapshotRequest} for the given {@code keyspace}, {@code tableName}, and {@code snapshotName} and returns
+         * a reference to this Builder enabling method chaining.
          *
-         * @param keyspace     the keyspace in Cassandra
-         * @param tableName    the table name in Cassandra
+         * @param keyspace the keyspace in Cassandra
+         * @param tableName the table name in Cassandra
          * @param snapshotName the name of the snapshot
          * @return a reference to this Builder
          */
-        public Builder clearSnapshotRequest(String keyspace, String tableName, String snapshotName)
+        public Builder clearSnapshotRequest(String keyspace,
+                                            String tableName,
+                                            String snapshotName)
         {
             return request(new ClearSnapshotRequest(keyspace, tableName, snapshotName));
         }
 
         /**
-         * Sets the {@code request} to be a {@link CleanSSTableUploadSessionRequest} for the given {@code uploadId}
-         * and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link CleanSSTableUploadSessionRequest} for the given {@code uploadId} and returns a reference to this Builder
+         * enabling method chaining.
          *
          * @param uploadId the unique identifier for the upload
          * @return a reference to this Builder
@@ -467,37 +458,41 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link ImportSSTableRequest} for the given {@code keyspace},
-         * {@code tableName}, {@code uploadId}, and selected {@link ImportSSTableRequest.ImportOptions importOptions}
-         * and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link ImportSSTableRequest} for the given {@code keyspace}, {@code tableName}, {@code uploadId}, and selected
+         * {@link ImportSSTableRequest.ImportOptions importOptions} and returns a reference to this Builder enabling method chaining.
          *
-         * @param keyspace      the keyspace in Cassandra
-         * @param tableName     the table name in Cassandra
-         * @param uploadId      an identifier for the upload
+         * @param keyspace the keyspace in Cassandra
+         * @param tableName the table name in Cassandra
+         * @param uploadId an identifier for the upload
          * @param importOptions additional options for the import process
          * @return a reference to this Builder
          */
-        public Builder importSSTableRequest(String keyspace, String tableName, String uploadId,
+        public Builder importSSTableRequest(String keyspace,
+                                            String tableName,
+                                            String uploadId,
                                             ImportSSTableRequest.ImportOptions importOptions)
         {
             return request(new ImportSSTableRequest(keyspace, tableName, uploadId, importOptions));
         }
 
         /**
-         * Sets the {@code} request to be a {@link UploadSSTableRequest} for the given {@code keyspace},
-         * {@code tableName}, {@code uploadId}, {@code component}, and returns a
-         * reference to this Builder enabling method chaining.
+         * Sets the {@code} request to be a {@link UploadSSTableRequest} for the given {@code keyspace}, {@code tableName}, {@code uploadId}, {@code component},
+         * and returns a reference to this Builder enabling method chaining.
          *
-         * @param keyspace  the keyspace in Cassandra
+         * @param keyspace the keyspace in Cassandra
          * @param tableName the table name in Cassandra
-         * @param uploadId  an identifier for the upload
+         * @param uploadId an identifier for the upload
          * @param component SSTable component being uploaded
-         * @param digest    digest value to check integrity of SSTable component uploaded
-         * @param filename  the path to the file to be uploaded
+         * @param digest digest value to check integrity of SSTable component uploaded
+         * @param filename the path to the file to be uploaded
          * @return a reference to this Builder
          */
-        public Builder uploadSSTableRequest(String keyspace, String tableName, String uploadId, String component,
-                                            Digest digest, String filename)
+        public Builder uploadSSTableRequest(String keyspace,
+                                            String tableName,
+                                            String uploadId,
+                                            String component,
+                                            Digest digest,
+                                            String filename)
         {
             return request(new UploadSSTableRequest(keyspace, tableName, uploadId, component, digest, filename));
         }
@@ -513,8 +508,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link ConnectedClientStatsRequest} and returns a reference to this Builder
-         * enabling method chaining.
+         * Sets the {@code request} to be a {@link ConnectedClientStatsRequest} and returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          */
@@ -524,19 +518,18 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link TableStatsRequest} and returns a reference to this Builder
-         * enabling method chaining.
+         * Sets the {@code request} to be a {@link TableStatsRequest} and returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          */
-        public Builder tableStatsRequest(String keyspace, String table)
+        public Builder tableStatsRequest(String keyspace,
+                                         String table)
         {
             return request(new TableStatsRequest(keyspace, table));
         }
 
         /**
-         * Sets the {@code request} to be a {@link OperationalJobRequest} and returns a reference to this Builder
-         * enabling method chaining.
+         * Sets the {@code request} to be a {@link OperationalJobRequest} and returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          */
@@ -546,8 +539,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link ListOperationalJobsRequest} and returns a reference to this Builder
-         * enabling method chaining.
+         * Sets the {@code request} to be a {@link ListOperationalJobsRequest} and returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          */
@@ -557,8 +549,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link NodeDecommissionRequest} and returns a reference to this Builder
-         * enabling method chaining.
+         * Sets the {@code request} to be a {@link NodeDecommissionRequest} and returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          */
@@ -568,10 +559,10 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link GossipUpdateRequest} for the
-         * given {@link NodeCommandRequestPayload.State state}, and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link GossipUpdateRequest} for the given {@link NodeCommandRequestPayload.State state}, and returns a reference to
+         * this Builder enabling method chaining.
          *
-         * @param state  the desired state for gossip
+         * @param state the desired state for gossip
          * @return a reference to this Builder
          */
         public Builder nodeGossipUpdateRequest(@NotNull NodeCommandRequestPayload.State state)
@@ -580,10 +571,10 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link NativeUpdateRequest} for the
-         * given {@link NodeCommandRequestPayload.State state}, and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code request} to be a {@link NativeUpdateRequest} for the given {@link NodeCommandRequestPayload.State state}, and returns a reference to
+         * this Builder enabling method chaining.
          *
-         * @param state  the desired state for native transport
+         * @param state the desired state for native transport
          * @return a reference to this Builder
          */
         public Builder nodeNativeUpdateRequest(@NotNull NodeCommandRequestPayload.State state)
@@ -592,8 +583,7 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code request} to be a {@link StreamStatsRequest} and returns a reference to this Builder
-         * enabling method chaining.
+         * Sets the {@code request} to be a {@link StreamStatsRequest} and returns a reference to this Builder enabling method chaining.
          *
          * @return a reference to this Builder
          */
@@ -613,10 +603,9 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code retryPolicy} to be an
-         * {@link org.apache.cassandra.sidecar.client.retry.ExponentialBackoffRetryPolicy} configured with
-         * {@code 10} {@code maxRetries}, {@code 500} {@code retryDelayMillis}, and {@code 60,000}
-         * {@code maxRetryDelayMillis}; and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code retryPolicy} to be an {@link org.apache.cassandra.sidecar.client.retry.ExponentialBackoffRetryPolicy} configured with {@code 10}
+         * {@code maxRetries}, {@code 500} {@code retryDelayMillis}, and {@code 60,000} {@code maxRetryDelayMillis}; and returns a reference to this Builder
+         * enabling method chaining.
          *
          * @return a reference to this Builder
          */
@@ -626,17 +615,17 @@ public class RequestContext
         }
 
         /**
-         * Sets the {@code retryPolicy} to be an
-         * {@link org.apache.cassandra.sidecar.client.retry.ExponentialBackoffRetryPolicy} configured with the provided
-         * {@code maxRetries}, {@code retryDelayMillis}, and {@code maxRetryDelayMillis}; and returns a reference to
-         * this Builder enabling method chaining.
+         * Sets the {@code retryPolicy} to be an {@link org.apache.cassandra.sidecar.client.retry.ExponentialBackoffRetryPolicy} configured with the provided
+         * {@code maxRetries}, {@code retryDelayMillis}, and {@code maxRetryDelayMillis}; and returns a reference to this Builder enabling method chaining.
          *
-         * @param maxRetries          the maximum number of retries
-         * @param retryDelayMillis    the delay between retries in milliseconds
+         * @param maxRetries the maximum number of retries
+         * @param retryDelayMillis the delay between retries in milliseconds
          * @param maxRetryDelayMillis the maximum retry delay in milliseconds
          * @return a reference to this Builder
          */
-        public Builder exponentialBackoffRetryPolicy(int maxRetries, long retryDelayMillis, long maxRetryDelayMillis)
+        public Builder exponentialBackoffRetryPolicy(int maxRetries,
+                                                     long retryDelayMillis,
+                                                     long maxRetryDelayMillis)
         {
             return retryPolicy(new ExponentialBackoffRetryPolicy(maxRetries, retryDelayMillis, maxRetryDelayMillis));
         }
@@ -644,11 +633,12 @@ public class RequestContext
         /**
          * Adds a custom header for the request and returns a reference to this Builder enabling method chaining.
          *
-         * @param name  the header name
+         * @param name the header name
          * @param value the header value
          * @return a reference to this Builder
          */
-        public Builder addCustomHeader(String name, String value)
+        public Builder addCustomHeader(String name,
+                                       String value)
         {
             customHeaders.put(name, value);
             return this;

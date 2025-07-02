@@ -18,15 +18,13 @@
 
 package org.apache.cassandra.sidecar.metrics.server;
 
-import java.util.Objects;
-import java.util.function.Function;
-
 import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricRegistry;
+import java.util.Objects;
+import java.util.function.Function;
 import org.apache.cassandra.sidecar.metrics.DeltaGauge;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
-
 import static org.apache.cassandra.sidecar.metrics.server.ServerMetrics.SERVER_PREFIX;
 
 /**
@@ -58,7 +56,8 @@ public class CdcMetrics
         this.criticalCdcRawSpace = createMetric("CriticalSpace", name -> metricRegistry.gauge(name, DeltaGauge::new));
     }
 
-    private <T extends Metric> NamedMetric<T> createMetric(String simpleName, Function<String, T> metricCreator)
+    private <T extends Metric> NamedMetric<T> createMetric(String simpleName,
+                                                           Function<String, T> metricCreator)
     {
         return NamedMetric.builder(metricCreator)
                           .withDomain(DOMAIN)

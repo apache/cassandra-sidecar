@@ -17,23 +17,20 @@
  */
 package org.apache.cassandra.sidecar.db;
 
-import java.util.Map;
-
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
+import java.util.Map;
 import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
-
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -47,7 +44,8 @@ class ConfigAccessorImplTest
     {
         Map<String, String> configs = Map.of("k1", "v1", "k2", "v2");
         ConfigAccessorImpl configAccessor = getConfigAccessor(service, configs, false);
-        Map<String, String> configsFromCassandra = configAccessor.getConfig().getConfigs();
+        Map<String, String> configsFromCassandra = configAccessor.getConfig()
+                                                                 .getConfigs();
         Assertions.assertEquals(configs, configsFromCassandra);
     }
 
@@ -57,7 +55,8 @@ class ConfigAccessorImplTest
     {
         Map<String, String> configs = Map.of();
         ConfigAccessorImpl configAccessor = getConfigAccessor(service, configs, false);
-        Map<String, String> configsFromCassandra = configAccessor.getConfig().getConfigs();
+        Map<String, String> configsFromCassandra = configAccessor.getConfig()
+                                                                 .getConfigs();
         Assertions.assertEquals(configs, configsFromCassandra);
     }
 
@@ -67,7 +66,8 @@ class ConfigAccessorImplTest
     {
         Map<String, String> configs = Map.of();
         ConfigAccessorImpl configAccessor = getConfigAccessor(service, configs, true);
-        Map<String, String> configsFromCassandra = configAccessor.getConfig().getConfigs();
+        Map<String, String> configsFromCassandra = configAccessor.getConfig()
+                                                                 .getConfigs();
         Assertions.assertEquals(configs, configsFromCassandra);
     }
 
@@ -77,7 +77,8 @@ class ConfigAccessorImplTest
     {
         Map<String, String> configs = Map.of("k1", "v1", "k2", "v2");
         ConfigAccessorImpl configAccessor = getConfigAccessor(service, configs, false);
-        Map<String, String> configsFromCassandra = configAccessor.storeConfig(configs).getConfigs();
+        Map<String, String> configsFromCassandra = configAccessor.storeConfig(configs)
+                                                                 .getConfigs();
         Assertions.assertEquals(configs, configsFromCassandra);
     }
 
@@ -90,7 +91,9 @@ class ConfigAccessorImplTest
         configAccessor.deleteConfig();
     }
 
-    private ConfigAccessorImpl getConfigAccessor(Service service, Map<String, String> configs, boolean noRowsExist)
+    private ConfigAccessorImpl getConfigAccessor(Service service,
+                                                 Map<String, String> configs,
+                                                 boolean noRowsExist)
     {
         ConfigsSchema mockConfigsSchema = getMockConfigsSchema();
         SidecarSchema mockSidecarSchema = mock(SidecarSchema.class);
@@ -115,7 +118,8 @@ class ConfigAccessorImplTest
         return mockConfigsSchema;
     }
 
-    CQLSessionProvider getMockCQLSessionProvider(Map<String, String> configs, boolean noRowsExist)
+    CQLSessionProvider getMockCQLSessionProvider(Map<String, String> configs,
+                                                 boolean noRowsExist)
     {
         ResultSet resultSet = mock(ResultSet.class);
         if (noRowsExist)

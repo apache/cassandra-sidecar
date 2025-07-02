@@ -18,18 +18,6 @@
 
 package org.apache.cassandra.sidecar;
 
-import java.nio.file.Path;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
@@ -39,9 +27,18 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
+import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
@@ -74,7 +71,8 @@ public abstract class AbstractHealthServiceTest
     void setUp() throws InterruptedException
     {
         testModule = testModule();
-        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(testModule));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
+                                                        .with(testModule));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 
@@ -90,7 +88,8 @@ public abstract class AbstractHealthServiceTest
     void tearDown() throws InterruptedException
     {
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else
@@ -106,8 +105,7 @@ public abstract class AbstractHealthServiceTest
         client.get(server.actualPort(), "localhost", "/api/v1/__health")
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
-              .send(testContext.succeeding(response -> testContext.verify(() ->
-              {
+              .send(testContext.succeeding(response -> testContext.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
                   testContext.completeNow();
@@ -139,8 +137,7 @@ public abstract class AbstractHealthServiceTest
         client.get(server.actualPort(), "localhost", "/api/v1/cassandra/__health")
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
-              .send(testContext.succeeding(response -> testContext.verify(() ->
-              {
+              .send(testContext.succeeding(response -> testContext.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
                   testContext.completeNow();
@@ -157,8 +154,7 @@ public abstract class AbstractHealthServiceTest
         client.get(server.actualPort(), "localhost", "/api/v1/cassandra/__health?instanceId=2")
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
-              .send(testContext.succeeding(response -> testContext.verify(() ->
-              {
+              .send(testContext.succeeding(response -> testContext.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(SERVICE_UNAVAILABLE.code());
                   assertThat(response.body()).isEqualTo("{\"status\":\"NOT_OK\"}");
                   testContext.completeNow();
@@ -175,11 +171,9 @@ public abstract class AbstractHealthServiceTest
         client.get(server.actualPort(), "localhost", "/api/v1/cassandra/__health?instanceId=400")
               .as(BodyCodec.string())
               .ssl(isSslEnabled())
-              .send(testContext.succeeding(response -> testContext.verify(() ->
-              {
+              .send(testContext.succeeding(response -> testContext.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
-                  assertThat(response.body())
-                  .isEqualTo("{\"status\":\"Not Found\",\"code\":404,\"message\":\"Instance id '400' not found\"}");
+                  assertThat(response.body()).isEqualTo("{\"status\":\"Not Found\",\"code\":404,\"message\":\"Instance id '400' not found\"}");
                   testContext.completeNow();
               })));
     }

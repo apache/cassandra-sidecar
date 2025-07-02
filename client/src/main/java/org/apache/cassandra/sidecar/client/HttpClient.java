@@ -31,24 +31,24 @@ public interface HttpClient extends AutoCloseable
     HttpClientConfig config();
 
     /**
-     * Returns an {@link HttpResponse} {@link CompletableFuture} for the {@code request} on the
-     * provided {@code sidecarInstance}.
+     * Returns an {@link HttpResponse} {@link CompletableFuture} for the {@code request} on the provided {@code sidecarInstance}.
      *
      * @param sidecarInstance the Sidecar instance
-     * @param requestContext  the request context
+     * @param requestContext the request context
      * @return an {@link HttpResponse} {@link CompletableFuture} for the request on the provided instance
      */
-    CompletableFuture<HttpResponse> execute(SidecarInstance sidecarInstance, RequestContext requestContext);
+    CompletableFuture<HttpResponse> execute(SidecarInstance sidecarInstance,
+                                            RequestContext requestContext);
 
     /**
-     * Consumes a stream for the {@code request} using the {@code streamConsumer} object on the provided
-     * {@code sidecarInstance}.
+     * Consumes a stream for the {@code request} using the {@code streamConsumer} object on the provided {@code sidecarInstance}.
      *
      * @param sidecarInstance the Sidecar instance
-     * @param requestContext  the request context
-     * @param streamConsumer  the object that consumes the stream
+     * @param requestContext the request context
+     * @param streamConsumer the object that consumes the stream
      * @return an {@link HttpResponse} {@link CompletableFuture} for the request on the provided instance
      */
-    CompletableFuture<HttpResponse> stream(SidecarInstance sidecarInstance, RequestContext requestContext,
+    CompletableFuture<HttpResponse> stream(SidecarInstance sidecarInstance,
+                                           RequestContext requestContext,
                                            StreamConsumer streamConsumer);
 }

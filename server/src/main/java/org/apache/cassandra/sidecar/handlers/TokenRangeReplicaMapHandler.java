@@ -46,10 +46,9 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Handler which provides token range to read and write replica mapping
  *
- * <p>This handler provides token range replicas along with the state of the replicas. For the purpose
- * of identifying the state of a newly joining node to replace a dead node from a newly joining node,
- * a new state 'Replacing' has been added.
- * It is represented by
+ * <p>
+ * This handler provides token range replicas along with the state of the replicas. For the purpose of identifying the state of a newly joining node to replace
+ * a dead node from a newly joining node, a new state 'Replacing' has been added. It is represented by
  * {@code org.apache.cassandra.sidecar.adapters.base.TokenRangeReplicaProvider.StateWithReplacement}
  */
 @Singleton
@@ -107,8 +106,7 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<Name> implement
                                   SocketAddress remoteAddress,
                                   Name keyspace)
     {
-        if (cause instanceof AssertionError &&
-            StringUtils.contains(cause.getMessage(), "Unknown keyspace"))
+        if (cause instanceof AssertionError && StringUtils.contains(cause.getMessage(), "Unknown keyspace"))
         {
             context.fail(HttpExceptions.wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
             return;

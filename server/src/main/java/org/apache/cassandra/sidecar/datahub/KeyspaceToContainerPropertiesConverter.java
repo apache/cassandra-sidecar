@@ -40,9 +40,9 @@ public class KeyspaceToContainerPropertiesConverter extends KeyspaceToAspectConv
     {
         String urn = identifiers.urnContainer(keyspace);
 
-        ContainerProperties aspect = new ContainerProperties()
-                .setName(keyspace.getName())
-                .setDescription(null, SetMode.REMOVE_IF_NULL);  // Keyspace-level comments are not supported by Cassandra
+        ContainerProperties aspect = new ContainerProperties().setName(keyspace.getName())
+                                                              .setDescription(null, SetMode.REMOVE_IF_NULL); // Keyspace-level comments are not supported by
+                                                                                                             // Cassandra
 
         return wrap(urn, aspect);
     }

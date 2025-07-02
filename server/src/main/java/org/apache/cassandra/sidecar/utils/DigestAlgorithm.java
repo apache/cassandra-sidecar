@@ -32,7 +32,9 @@ public interface DigestAlgorithm extends Closeable
      * @param off the start offset in buf
      * @param len the number of bytes to hash
      */
-    void update(byte[] buf, int off, int len);
+    void update(byte[] buf,
+                int off,
+                int len);
 
     /**
      * @return String value of the digest

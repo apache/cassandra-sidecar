@@ -19,9 +19,7 @@
 package org.apache.cassandra.sidecar.client;
 
 import java.io.InputStream;
-
 import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -53,58 +51,67 @@ class HttpClientConfigTest
     @Test
     void testBuilderTimeout()
     {
-        HttpClientConfig config = new HttpClientConfig.Builder<>().timeoutMillis(5_000).build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().timeoutMillis(5_000)
+                                                                  .build();
         assertThat(config.timeoutMillis()).isEqualTo(5_000);
     }
 
     @Test
     void testBuilderSsl()
     {
-        HttpClientConfig config = new HttpClientConfig.Builder<>().ssl(true).build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().ssl(true)
+                                                                  .build();
         assertThat(config.ssl()).isTrue();
-        config = new HttpClientConfig.Builder<>().ssl(false).build();
+        config = new HttpClientConfig.Builder<>().ssl(false)
+                                                 .build();
         assertThat(config.ssl()).isFalse();
     }
 
     @Test
     void testMaxPoolSize()
     {
-        HttpClientConfig config = new HttpClientConfig.Builder<>().maxPoolSize(120).build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().maxPoolSize(120)
+                                                                  .build();
         assertThat(config.maxPoolSize()).isEqualTo(120);
     }
 
     @Test
     void testUserAgent()
     {
-        HttpClientConfig config = new HttpClientConfig.Builder<>().userAgent("test-user-agent/5.0.0").build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().userAgent("test-user-agent/5.0.0")
+                                                                  .build();
         assertThat(config.userAgent()).isEqualTo("test-user-agent/5.0.0");
     }
 
     @Test
     void testIdleTimeoutMillis()
     {
-        HttpClientConfig config = new HttpClientConfig.Builder<>().idleTimeoutMillis(5_555).build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().idleTimeoutMillis(5_555)
+                                                                  .build();
         assertThat(config.idleTimeoutMillis()).isEqualTo(5_555);
     }
 
     @Test
     void testMaxChunkSize()
     {
-        HttpClientConfig config = new HttpClientConfig.Builder<>().maxChunkSize(7_250).build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().maxChunkSize(7_250)
+                                                                  .build();
         assertThat(config.maxChunkSize()).isEqualTo(7_250);
     }
 
     @Test
     void testReceiveBufferSize()
     {
-        HttpClientConfig config = new HttpClientConfig.Builder<>().receiveBufferSize(250).build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().receiveBufferSize(250)
+                                                                  .build();
         assertThat(config.receiveBufferSize()).isEqualTo(250);
     }
 
     @Test
     void testReadBufferSize()
     {
-        HttpClientConfig config = new HttpClientConfig.Builder<>().readBufferSize(188).build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().readBufferSize(188)
+                                                                  .build();
         assertThat(config.sendReadBufferSize()).isEqualTo(188);
     }
 
@@ -112,21 +119,24 @@ class HttpClientConfigTest
     void testTrustStoreInputStream()
     {
         InputStream mockInputStream = mock(InputStream.class);
-        HttpClientConfig config = new HttpClientConfig.Builder<>().trustStoreInputStream(mockInputStream).build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().trustStoreInputStream(mockInputStream)
+                                                                  .build();
         assertThat(config.trustStoreInputStream()).isEqualTo(mockInputStream);
     }
 
     @Test
     void testTrustStorePassword()
     {
-        HttpClientConfig config = new HttpClientConfig.Builder<>().trustStorePassword("do-not-use-password").build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().trustStorePassword("do-not-use-password")
+                                                                  .build();
         assertThat(config.trustStorePassword()).isEqualTo("do-not-use-password");
     }
 
     @Test
     void testTrustStoreType()
     {
-        HttpClientConfig config = new HttpClientConfig.Builder<>().trustStoreType("CUSTOM_TYPE").build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().trustStoreType("CUSTOM_TYPE")
+                                                                  .build();
         assertThat(config.trustStoreType()).isEqualTo("CUSTOM_TYPE");
     }
 
@@ -134,21 +144,24 @@ class HttpClientConfigTest
     void testKeystoreInputStream()
     {
         InputStream mockInputStream = mock(InputStream.class);
-        HttpClientConfig config = new HttpClientConfig.Builder<>().keyStoreInputStream(mockInputStream).build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().keyStoreInputStream(mockInputStream)
+                                                                  .build();
         assertThat(config.keyStoreInputStream()).isEqualTo(mockInputStream);
     }
 
     @Test
     void testKeystorePassword()
     {
-        HttpClientConfig config = new HttpClientConfig.Builder<>().keyStorePassword("do-not-use-password").build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().keyStorePassword("do-not-use-password")
+                                                                  .build();
         assertThat(config.keyStorePassword()).isEqualTo("do-not-use-password");
     }
 
     @Test
     void testKeystoreType()
     {
-        HttpClientConfig config = new HttpClientConfig.Builder<>().keyStoreType("CUSTOM_TYPE").build();
+        HttpClientConfig config = new HttpClientConfig.Builder<>().keyStoreType("CUSTOM_TYPE")
+                                                                  .build();
         assertThat(config.keyStoreType()).isEqualTo("CUSTOM_TYPE");
     }
 }

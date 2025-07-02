@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.adapters.base.data;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+
 import javax.management.openmbean.CompositeData;
 
 import static org.apache.cassandra.sidecar.adapters.base.data.CompositeDataUtil.extractValue;
@@ -35,7 +36,7 @@ public class SessionInfo
     public final String connecting;
     /** Immutable collection of receiving summaries */
     public final List<StreamSummary> receivingSummaries;
-    /** Immutable collection of sending summaries*/
+    /** Immutable collection of sending summaries */
     public final List<StreamSummary> sendingSummaries;
     /** Current session state */
     public final String state;
@@ -128,7 +129,7 @@ public class SessionInfo
 
     private long totalFilesCompleted(List<ProgressInfo> files)
     {
-                return files.stream()
+        return files.stream()
                     .filter(ProgressInfo::isCompleted)
                     .count();
     }
@@ -143,12 +144,16 @@ public class SessionInfo
 
     private List<StreamSummary> parseSummaries(CompositeData[] summaries)
     {
-        return Arrays.stream(summaries).map(StreamSummary::new).collect(Collectors.toList());
+        return Arrays.stream(summaries)
+                     .map(StreamSummary::new)
+                     .collect(Collectors.toList());
     }
 
     private List<ProgressInfo> parseFiles(CompositeData[] files)
     {
-        return Arrays.stream(files).map(ProgressInfo::new).collect(Collectors.toList());
+        return Arrays.stream(files)
+                     .map(ProgressInfo::new)
+                     .collect(Collectors.toList());
     }
 
     private long totalFiles(List<StreamSummary> summaries)

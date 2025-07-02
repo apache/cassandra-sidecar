@@ -42,8 +42,7 @@ public class KeyspaceToSubTypesConverter extends KeyspaceToAspectConverter<SubTy
     {
         String urn = identifiers.urnContainer(keyspace);
 
-        SubTypes aspect = new SubTypes()
-                .setTypeNames(new StringArray(KEYSPACE));
+        SubTypes aspect = new SubTypes().setTypeNames(new StringArray(KEYSPACE));
 
         return wrap(urn, aspect);
     }

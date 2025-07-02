@@ -20,18 +20,17 @@ package org.apache.cassandra.sidecar.common.request;
 import java.util.Locale;
 
 /**
- * "configs" table inside internal sidecar keyspace stores configs for Kafka and CDC. ServiceConfig identifies
- * the service of the configs.
+ * "configs" table inside internal sidecar keyspace stores configs for Kafka and CDC. ServiceConfig identifies the service of the configs.
  */
 public enum Service
 {
-    KAFKA,
-    CDC;
+    KAFKA, CDC;
     public final String serviceName;
 
     Service()
     {
-        this.serviceName = this.toString().toLowerCase(Locale.ENGLISH);
+        this.serviceName = this.toString()
+                               .toLowerCase(Locale.ENGLISH);
     }
 
     public static Service withName(String serviceName)

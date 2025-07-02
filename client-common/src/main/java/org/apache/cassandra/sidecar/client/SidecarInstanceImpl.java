@@ -32,14 +32,14 @@ public class SidecarInstanceImpl implements SidecarInstance
      * Constructs a new Sidecar instance with the given {@code port} and {@code hostname}
      *
      * @param hostname the host name where Sidecar is running
-     * @param port     the port where Sidecar is running
+     * @param port the port where Sidecar is running
      */
-    public SidecarInstanceImpl(String hostname, int port)
+    public SidecarInstanceImpl(String hostname,
+                               int port)
     {
         if (port < 1 || port > 65535)
         {
-            throw new IllegalArgumentException(String.format("Invalid port number for the Sidecar service: %d",
-                                                             port));
+            throw new IllegalArgumentException(String.format("Invalid port number for the Sidecar service: %d", port));
         }
         this.port = port;
         this.hostname = Objects.requireNonNull(hostname, "The Sidecar hostname must be non-null");
@@ -96,9 +96,6 @@ public class SidecarInstanceImpl implements SidecarInstance
     @Override
     public String toString()
     {
-        return "SidecarInstanceImpl{" +
-               "port=" + port +
-               ", hostname='" + hostname + '\'' +
-               '}';
+        return "SidecarInstanceImpl{" + "port=" + port + ", hostname='" + hostname + '\'' + '}';
     }
 }

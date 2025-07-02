@@ -18,15 +18,13 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
-import java.util.Objects;
-
 import com.google.inject.Singleton;
+import java.util.Objects;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
- * Holds information about whether this Sidecar instance has claimed the lease, it has not, or it's unable
- * to determinate if the lease has been claimed.
+ * Holds information about whether this Sidecar instance has claimed the lease, it has not, or it's unable to determinate if the lease has been claimed.
  */
 @Singleton
 public class ClusterLease
@@ -97,12 +95,12 @@ public class ClusterLease
         {
             switch (this)
             {
-                case CLAIMED:
+                case CLAIMED :
                     return ScheduleDecision.EXECUTE;
-                case LOST:
+                case LOST :
                     return ScheduleDecision.SKIP;
-                case INDETERMINATE:
-                default:
+                case INDETERMINATE :
+                default :
                     // When the process is unable to determine whether it is the leaseholder, we want
                     // the task to be rescheduled for a shorter period of time. Assume you have a PeriodicTask that
                     // runs every day. If it happens to run during a period of time when there's no

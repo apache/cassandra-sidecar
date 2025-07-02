@@ -18,18 +18,15 @@
 
 package org.apache.cassandra.sidecar.metrics.instance;
 
-import java.util.Objects;
-
 import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
+import java.util.Objects;
 import org.apache.cassandra.sidecar.metrics.DeltaGauge;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
-
 import static org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics.INSTANCE_PREFIX;
 
 /**
- * {@link InstanceResourceMetrics} contains metrics to track resource usage of a Cassandra instance maintained
- * by Sidecar.
+ * {@link InstanceResourceMetrics} contains metrics to track resource usage of a Cassandra instance maintained by Sidecar.
  */
 public class InstanceResourceMetrics
 {
@@ -42,15 +39,13 @@ public class InstanceResourceMetrics
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        insufficientStagingSpace
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(DOMAIN)
-                     .withName("InsufficientStagingSpace")
-                     .build();
-        usableStagingSpace
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
-                     .withDomain(DOMAIN)
-                     .withName("UsableStagingSpace")
-                     .build();
+        insufficientStagingSpace = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
+                                              .withDomain(DOMAIN)
+                                              .withName("InsufficientStagingSpace")
+                                              .build();
+        usableStagingSpace = NamedMetric.builder(name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)))
+                                        .withDomain(DOMAIN)
+                                        .withName("UsableStagingSpace")
+                                        .build();
     }
 }

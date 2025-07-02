@@ -26,12 +26,10 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Explores single directory of a Cassandra Instance.
@@ -56,8 +54,7 @@ public class DirVisitor
     }
 
     /**
-     * Returns list of files and directories (urls) that can be downloaded by destination which is trying
-     * to clone current instance.
+     * Returns list of files and directories (urls) that can be downloaded by destination which is trying to clone current instance.
      *
      * @return List of {@link InstanceFileInfo} for each file and directory considered for Live Migration.
      * @throws IOException - when cannot access files of a data home directory
@@ -78,12 +75,11 @@ public class DirVisitor
     private InstanceFileInfo toInstanceFileInfo(@NotNull Path path) throws IOException
     {
         BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
-        long lastModifiedTime = attrs.lastModifiedTime().toMillis();
+        long lastModifiedTime = attrs.lastModifiedTime()
+                                     .toMillis();
         String fileUrl = buildInstanceFileUrl(path);
         boolean isDirectory = attrs.isDirectory();
-        InstanceFileInfo.FileType fileType = isDirectory
-                                             ? InstanceFileInfo.FileType.DIRECTORY
-                                             : InstanceFileInfo.FileType.FILE;
+        InstanceFileInfo.FileType fileType = isDirectory ? InstanceFileInfo.FileType.DIRECTORY : InstanceFileInfo.FileType.FILE;
         // 'size' doesn't have any significance for directories. Hence, setting it to -1 explicitly.
         long size = isDirectory ? -1 : attrs.size();
 
@@ -98,7 +94,8 @@ public class DirVisitor
      */
     private String buildInstanceFileUrl(@NotNull Path path)
     {
-        String relativePath = homeDirPath.relativize(path).toString();
+        String relativePath = homeDirPath.relativize(path)
+                                         .toString();
         return pathPrefix + "/" + relativePath;
     }
 }

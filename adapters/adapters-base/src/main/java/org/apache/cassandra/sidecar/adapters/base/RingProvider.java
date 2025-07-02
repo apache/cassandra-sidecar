@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.net.HostAndPort;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +58,8 @@ public class RingProvider
     protected final JmxClient jmxClient;
     private final DnsResolver dnsResolver;
 
-    public RingProvider(JmxClient jmxClient, DnsResolver dnsResolver)
+    public RingProvider(JmxClient jmxClient,
+                        DnsResolver dnsResolver)
     {
         this.jmxClient = jmxClient;
         this.dnsResolver = dnsResolver;
@@ -104,19 +106,18 @@ public class RingProvider
             String token = entry.getKey();
             HostAndPort hap = resolve(endpoint, dnsResolver);
             Float owns = ownerships.get(endpoint);
-            RingEntry ringEntry = new RingEntry.Builder()
-                                  .datacenter(epSnitchInfo.getDatacenter(endpoint))
-                                  .rack(queryRack(epSnitchInfo, endpoint))
-                                  .status(status.of(endpoint))
-                                  .state(state.of(endpoint))
-                                  .load(loadMap.getOrDefault(endpoint, UNKNOWN_SHORT))
-                                  .owns(formatOwns(showEffectiveOwnership, ownsFormat, owns))
-                                  .token(token)
-                                  .address(hap.getHost())
-                                  .port(hap.getPort())
-                                  .fqdn(dnsResolver.reverseResolve(hap.getHost()))
-                                  .hostId(endpointsToHostIds.getOrDefault(endpoint, UNKNOWN))
-                                  .build();
+            RingEntry ringEntry = new RingEntry.Builder().datacenter(epSnitchInfo.getDatacenter(endpoint))
+                                                         .rack(queryRack(epSnitchInfo, endpoint))
+                                                         .status(status.of(endpoint))
+                                                         .state(state.of(endpoint))
+                                                         .load(loadMap.getOrDefault(endpoint, UNKNOWN_SHORT))
+                                                         .owns(formatOwns(showEffectiveOwnership, ownsFormat, owns))
+                                                         .token(token)
+                                                         .address(hap.getHost())
+                                                         .port(hap.getPort())
+                                                         .fqdn(dnsResolver.reverseResolve(hap.getHost()))
+                                                         .hostId(endpointsToHostIds.getOrDefault(endpoint, UNKNOWN))
+                                                         .build();
             response.add(ringEntry);
         }
 
@@ -130,8 +131,7 @@ public class RingProvider
 
     protected StorageJmxOperations initializeStorageOps()
     {
-        return new GossipDependentStorageJmxOperations(jmxClient.proxy(StorageJmxOperations.class,
-                                                                       STORAGE_SERVICE_OBJ_NAME));
+        return new GossipDependentStorageJmxOperations(jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME));
     }
 
     /**
@@ -141,14 +141,18 @@ public class RingProvider
      * @throws UnknownHostException when endpoint cannot be resolved
      */
     @SuppressWarnings("UnstableApiUsage")
-    private static HostAndPort resolve(String endpoint, DnsResolver resolver) throws UnknownHostException
+    private static HostAndPort resolve(String endpoint,
+                                       DnsResolver resolver)
+            throws UnknownHostException
     {
         HostAndPort hap = HostAndPort.fromString(endpoint);
         String address = resolver.resolve(hap.getHost());
         return HostAndPort.fromParts(address, hap.getPortOrDefault(-1));
     }
 
-    private static String formatOwns(boolean showEffectiveOwnership, DecimalFormat ownsFormat, Float owns)
+    private static String formatOwns(boolean showEffectiveOwnership,
+                                     DecimalFormat ownsFormat,
+                                     Float owns)
     {
         if (showEffectiveOwnership && owns != null)
             return ownsFormat.format(owns);
@@ -163,7 +167,8 @@ public class RingProvider
         private final Set<String> liveNodes;
         private final Set<String> deadNodes;
 
-        Status(List<String> liveNodes, List<String> deadNodes)
+        Status(List<String> liveNodes,
+               List<String> deadNodes)
         {
             this.liveNodes = new HashSet<>(liveNodes);
             this.deadNodes = new HashSet<>(deadNodes);
@@ -188,7 +193,9 @@ public class RingProvider
         private final Set<String> leavingNodes;
         private final Set<String> movingNodes;
 
-        State(List<String> joiningNodes, List<String> leavingNodes, List<String> movingNodes)
+        State(List<String> joiningNodes,
+              List<String> leavingNodes,
+              List<String> movingNodes)
         {
             this.joiningNodes = new HashSet<>(joiningNodes);
             this.leavingNodes = new HashSet<>(leavingNodes);
@@ -207,7 +214,8 @@ public class RingProvider
         }
     }
 
-    private static String queryRack(EndpointSnitchJmxOperations epSnitchInfo, String endpoint)
+    private static String queryRack(EndpointSnitchJmxOperations epSnitchInfo,
+                                    String endpoint)
     {
         try
         {

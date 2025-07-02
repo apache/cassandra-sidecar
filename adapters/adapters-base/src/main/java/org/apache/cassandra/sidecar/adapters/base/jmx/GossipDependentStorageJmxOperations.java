@@ -23,11 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
-
+import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
 
 /**
  * A wrapper class for {@link StorageJmxOperations} that ensures gossip is enabled during initialization.
@@ -105,13 +103,17 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
     }
 
     @Override
-    public void takeSnapshot(String tag, Map<String, String> options, String... entities) throws IOException
+    public void takeSnapshot(String tag,
+                             Map<String, String> options,
+                             String... entities)
+            throws IOException
     {
         delegate.takeSnapshot(tag, options, entities);
     }
 
     @Override
-    public void clearSnapshot(String tag, String... keyspaceNames)
+    public void clearSnapshot(String tag,
+                              String... keyspaceNames)
     {
         delegate.clearSnapshot(tag, keyspaceNames);
     }
@@ -141,7 +143,10 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
     }
 
     @Override
-    public int forceKeyspaceCleanup(int jobs, String keyspaceName, String... tables) throws IOException, ExecutionException, InterruptedException
+    public int forceKeyspaceCleanup(int jobs,
+                                    String keyspaceName,
+                                    String... tables)
+            throws IOException, ExecutionException, InterruptedException
     {
         return delegate.forceKeyspaceCleanup(jobs, keyspaceName, tables);
     }

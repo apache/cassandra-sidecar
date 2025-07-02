@@ -317,11 +317,10 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
 
     public static SidecarConfigurationImpl readYamlConfiguration(Path yamlConfigurationPath) throws IOException
     {
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
-                              .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
-                              .configure(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS, true)
-                              .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                              .registerModule(resolveYamlTypeMappings());
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory()).configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
+                                                                 .configure(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS, true)
+                                                                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                                                                 .registerModule(resolveYamlTypeMappings());
 
         return mapper.readValue(yamlConfigurationPath.toFile(), SidecarConfigurationImpl.class);
     }
@@ -329,28 +328,31 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     @VisibleForTesting
     public static SidecarConfigurationImpl fromYamlString(String yaml) throws IOException
     {
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
-                              .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
-                              .configure(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS, true)
-                              .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                              .registerModule(resolveYamlTypeMappings());
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory()).configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
+                                                                 .configure(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS, true)
+                                                                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                                                                 .registerModule(resolveYamlTypeMappings());
 
         return mapper.readValue(yaml, SidecarConfigurationImpl.class);
     }
 
     private static SimpleModule resolveYamlTypeMappings() throws IOException
     {
-        String packageName = SidecarConfigurationImpl.class.getPackage().getName();
-        String outerPackageName = SidecarConfiguration.class.getPackage().getName();
+        String packageName = SidecarConfigurationImpl.class.getPackage()
+                                                           .getName();
+        String outerPackageName = SidecarConfiguration.class.getPackage()
+                                                            .getName();
         SimpleModule module = new SimpleModule();
         ClassPath path = ClassPath.from(ClassLoader.getSystemClassLoader());
         Set<Class> declared = path.getTopLevelClasses(outerPackageName)
                                   .stream()
-                                  .filter(c -> c.getName().endsWith("Configuration"))
+                                  .filter(c -> c.getName()
+                                                .endsWith("Configuration"))
                                   .map(ClassPath.ClassInfo::load)
                                   .collect(Collectors.toSet());
         Set<Class> implemented = new HashSet<>();
-        ClassPath.from(ClassLoader.getSystemClassLoader()).getTopLevelClasses(packageName)
+        ClassPath.from(ClassLoader.getSystemClassLoader())
+                 .getTopLevelClasses(packageName)
                  .stream()
                  .map(ClassPath.ClassInfo::load)
                  .forEach(clazz -> {
@@ -360,19 +362,22 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
                      }
                      // find the configuration interface it implements
                      // note: it assumes that the concrete implementation implement one and only one
-                     //       configuration interface, and the name of the configuration interface ends
-                     //       with "Configuration"
+                     // configuration interface, and the name of the configuration interface ends
+                     // with "Configuration"
                      Class[] interfaces = clazz.getInterfaces();
                      Class configurationInterface = null;
                      for (Class c : interfaces)
                      {
-                         if (c.getPackage().getName().equals(outerPackageName) && c.getName().endsWith("Configuration"))
+                         if (c.getPackage()
+                              .getName()
+                              .equals(outerPackageName)
+                                 && c.getName()
+                                     .endsWith("Configuration"))
                          {
                              configurationInterface = c;
                              if (!implemented.add(configurationInterface))
                              {
-                                 throw new IllegalStateException("Multiple implementations found for " +
-                                                                 "configuration interface: " + configurationInterface);
+                                 throw new IllegalStateException("Multiple implementations found for " + "configuration interface: " + configurationInterface);
                              }
                              break;
                          }
@@ -412,10 +417,8 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         private ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl();
         private SslConfiguration sslConfiguration = null;
         private AccessControlConfiguration accessControlConfiguration = new AccessControlConfigurationImpl();
-        private PeriodicTaskConfiguration healthCheckConfiguration
-        = new PeriodicTaskConfigurationImpl(true,
-                                            MillisecondBoundConfiguration.ZERO,
-                                            MillisecondBoundConfiguration.parse("30s"));
+        private PeriodicTaskConfiguration healthCheckConfiguration = new PeriodicTaskConfigurationImpl(true, MillisecondBoundConfiguration.ZERO,
+                MillisecondBoundConfiguration.parse("30s"));
         private SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration = new SidecarPeerHealthConfigurationImpl();
         private SidecarClientConfiguration sidecarClientConfiguration = new SidecarClientConfigurationImpl();
         private MetricsConfiguration metricsConfiguration = new MetricsConfigurationImpl();
@@ -537,8 +540,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         }
 
         /**
-         * Sets the {@code driverConfiguration} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code driverConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param driverConfiguration the {@code driverConfiguration} to set
          * @return a reference to this Builder
@@ -549,8 +551,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         }
 
         /**
-         * Sets the {@code cassandraInputValidationConfiguration} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code cassandraInputValidationConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param configuration the {@code cassandraInputValidationConfiguration} to set
          * @return a reference to this Builder
@@ -561,8 +562,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         }
 
         /**
-         * Sets the {@code restoreJobConfiguration} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code restoreJobConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param configuration the {@code restoreJobConfiguration} to set
          * @return a reference to this Builder
@@ -573,8 +573,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         }
 
         /**
-         * Sets the {@code s3ClientConfiguration} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code s3ClientConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param configuration the {@code s3ClientConfiguration} to set
          * @return a reference to this Builder
@@ -585,8 +584,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         }
 
         /**
-         * Sets the {@code vertxConfiguration} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code vertxConfiguration} and returns a reference to this Builder enabling method chaining.
          *
          * @param configuration the {@code vertxConfiguration} to set
          * @return a reference to this Builder
@@ -608,8 +606,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         }
 
         /**
-         * Sets the {@code liveMigrationConfiguration} and returns a reference to this Builder enabling method
-         * chaining
+         * Sets the {@code liveMigrationConfiguration} and returns a reference to this Builder enabling method chaining
          *
          * @param liveMigrationConfiguration the {@code liveMigrationConfiguration} to set
          * @return a reference to this Builder
@@ -622,8 +619,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         /**
          * Returns a {@code SidecarConfigurationImpl} built from the parameters previously set.
          *
-         * @return a {@code SidecarConfigurationImpl} built with parameters of this
-         * {@code SidecarConfigurationImpl.Builder}
+         * @return a {@code SidecarConfigurationImpl} built with parameters of this {@code SidecarConfigurationImpl.Builder}
          */
         @Override
         public SidecarConfigurationImpl build()

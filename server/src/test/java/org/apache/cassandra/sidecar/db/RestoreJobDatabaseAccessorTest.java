@@ -34,9 +34,8 @@ class RestoreJobDatabaseAccessorTest
         for (int i = 0; i <= 10; i++)
         {
             LocalDate pastDate = RestoreJobDatabaseAccessor.dateInPast(now, i);
-            assertThat(pastDate.getDaysSinceEpoch())
-            .describedAs(i + " days in the past")
-            .isEqualTo(nowLocalDate.getDaysSinceEpoch() - i);
+            assertThat(pastDate.getDaysSinceEpoch()).describedAs(i + " days in the past")
+                                                    .isEqualTo(nowLocalDate.getDaysSinceEpoch() - i);
         }
     }
 }

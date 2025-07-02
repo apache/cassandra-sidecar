@@ -111,35 +111,37 @@ public class SidecarClientProvider implements Provider<SidecarClient>
 
     private SidecarClient initializeSidecarClient(SidecarClientConfiguration clientConfig)
     {
-        HttpClientConfig httpClientConfig = new HttpClientConfig.Builder<>()
-                                            .ssl(webClientOptions.isSsl())
-                                            .timeoutMillis(clientConfig.requestTimeout().toMillis())
-                                            .idleTimeoutMillis(clientConfig.requestIdleTimeout().toIntMillis())
-                                            .userAgent("cassandra-sidecar/" + sidecarVersionProvider.sidecarVersion())
-                                            .build();
+        HttpClientConfig httpClientConfig = new HttpClientConfig.Builder<>().ssl(webClientOptions.isSsl())
+                                                                            .timeoutMillis(clientConfig.requestTimeout()
+                                                                                                       .toMillis())
+                                                                            .idleTimeoutMillis(clientConfig.requestIdleTimeout()
+                                                                                                           .toIntMillis())
+                                                                            .userAgent("cassandra-sidecar/" + sidecarVersionProvider.sidecarVersion())
+                                                                            .build();
 
         VertxHttpClient vertxHttpClient = new VertxHttpClient(vertx, webClient, httpClientConfig);
-        RetryPolicy defaultRetryPolicy = new ExponentialBackoffRetryPolicy(clientConfig.maxRetries(),
-                                                                           clientConfig.retryDelay().toMillis(),
-                                                                           clientConfig.maxRetryDelay().toMillis());
+        RetryPolicy defaultRetryPolicy = new ExponentialBackoffRetryPolicy(clientConfig.maxRetries(), clientConfig.retryDelay()
+                                                                                                                  .toMillis(),
+                clientConfig.maxRetryDelay()
+                            .toMillis());
         VertxRequestExecutor requestExecutor = new SidecarClientVertxRequestExecutor(vertxHttpClient);
 
         SidecarClientConfig config = SidecarClientConfigImpl.builder()
-                                                            .retryDelayMillis(clientConfig.retryDelay().toMillis())
-                                                            .maxRetryDelayMillis(clientConfig.maxRetryDelay().toMillis())
+                                                            .retryDelayMillis(clientConfig.retryDelay()
+                                                                                          .toMillis())
+                                                            .maxRetryDelayMillis(clientConfig.maxRetryDelay()
+                                                                                             .toMillis())
                                                             .maxRetries(clientConfig.maxRetries())
                                                             .build();
-        return new SidecarClient(sidecarInstancesProvider,
-                                 requestExecutor,
-                                 config,
-                                 defaultRetryPolicy);
+        return new SidecarClient(sidecarInstancesProvider, requestExecutor, config, defaultRetryPolicy);
     }
 
     static WebClientOptions webClientOptions(SidecarClientConfiguration clientConfig)
     {
         WebClientOptions options = new WebClientOptions();
         options.getPoolOptions()
-               .setCleanerPeriod(clientConfig.connectionPoolCleanerPeriod().toIntMillis())
+               .setCleanerPeriod(clientConfig.connectionPoolCleanerPeriod()
+                                             .toIntMillis())
                .setEventLoopSize(clientConfig.connectionPoolEventLoopSize())
                .setHttp1MaxSize(clientConfig.connectionPoolMaxSize())
                .setMaxWaitQueueSize(clientConfig.connectionPoolMaxWaitQueueSize());
@@ -149,7 +151,8 @@ public class SidecarClientProvider implements Provider<SidecarClient>
         {
             options.setSsl(true);
 
-            if (!ssl.secureTransportProtocols().isEmpty())
+            if (!ssl.secureTransportProtocols()
+                    .isEmpty())
             {
                 // Use LinkedHashSet to preserve input order
                 options.setEnabledSecureTransportProtocols(new LinkedHashSet<>(ssl.secureTransportProtocols()));
@@ -175,10 +178,14 @@ public class SidecarClientProvider implements Provider<SidecarClient>
         return options;
     }
 
-    static void configureSSLOptions(SSLOptions options, SslConfiguration ssl, long timestamp)
+    static void configureSSLOptions(SSLOptions options,
+                                    SslConfiguration ssl,
+                                    long timestamp)
     {
-        options.setSslHandshakeTimeout(ssl.handshakeTimeout().quantity())
-               .setSslHandshakeTimeoutUnit(ssl.handshakeTimeout().unit());
+        options.setSslHandshakeTimeout(ssl.handshakeTimeout()
+                                          .quantity())
+               .setSslHandshakeTimeoutUnit(ssl.handshakeTimeout()
+                                              .unit());
 
         if (ssl.isKeystoreConfigured())
         {

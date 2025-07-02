@@ -85,10 +85,12 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
     @Override
     protected int[] getInstancesToManage(int clusterSize)
     {
-        return new int[] { MANAGED_CASSANDRA_NODE_NUM };
+        return new int[] { MANAGED_CASSANDRA_NODE_NUM};
     }
 
-    private void test(CountDownLatch transientStateStart, UpgradeableCluster cluster, int leavingNodeNum)
+    private void test(CountDownLatch transientStateStart,
+                      UpgradeableCluster cluster,
+                      int leavingNodeNum)
     {
         // prepare schema
         waitForSchemaReady(30, TimeUnit.SECONDS);
@@ -101,13 +103,14 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
 
         // create slice
         short bucketId = 0;
-        CreateSliceRequestPayload slicePayload = new CreateSliceRequestPayload("sliceId", bucketId, "bucket", "key",
-                                                                               "checksum", BigInteger.valueOf(1001L), BigInteger.valueOf(1600L),
-                                                                               100L, 100L);
+        CreateSliceRequestPayload slicePayload = new CreateSliceRequestPayload("sliceId", bucketId, "bucket", "key", "checksum", BigInteger.valueOf(1001L),
+                BigInteger.valueOf(1600L), 100L, 100L);
         testClient.createRestoreSlice(tableName, jobId, slicePayload);
 
         // STAGE_READY is required in order to discover slices; update the restore job status
-        testClient.updateRestoreJob(tableName, jobId, UpdateRestoreJobRequestPayload.builder().withStatus(RestoreJobStatus.STAGE_READY).build());
+        testClient.updateRestoreJob(tableName, jobId, UpdateRestoreJobRequestPayload.builder()
+                                                                                    .withStatus(RestoreJobStatus.STAGE_READY)
+                                                                                    .build());
 
         // first discovery run
         RestoreJobDiscoverer restoreJobDiscoverer = injector.getInstance(RestoreJobDiscoverer.class);
@@ -115,26 +118,25 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
 
         RingTopologyRefresher ringTopologyRefresher = injector.getInstance(RingTopologyRefresher.class);
         Map<Integer, Set<TokenRange>> localTokenRanges = ringTopologyRefresher.localTokenRanges(tableName.keyspace(), true);
-        assertThat(localTokenRanges)
-        .hasSize(1)
-        .containsEntry(MANAGED_CASSANDRA_NODE_NUM,
-                       ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
-                                       new TokenRange(0, 1000),
-                                       new TokenRange(2000, Long.MAX_VALUE)));
+        assertThat(localTokenRanges).hasSize(1)
+                                    .containsEntry(MANAGED_CASSANDRA_NODE_NUM,
+                                            ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0), new TokenRange(0, 1000), new TokenRange(2000, Long.MAX_VALUE)));
 
         // assert that no restore ranges are create
         RestoreRangeDatabaseAccessor rangeDatabaseAccessor = injector.getInstance(RestoreRangeDatabaseAccessor.class);
         List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
-        assertThat(ranges)
-        .describedAs("No RestoreRange is created because no slice overlaps with local token ranges")
-        .isEmpty();
+        assertThat(ranges).describedAs("No RestoreRange is created because no slice overlaps with local token ranges")
+                          .isEmpty();
 
         // start move in the background
         IUpgradeableInstance seed = cluster.get(1);
         IUpgradeableInstance node = cluster.get(leavingNodeNum);
-        startAsync("Decommission node" + node.config().num(),
-                   // testing keyspace has RF == 2. Using --force does not hurt fault tolerance.
-                   () -> node.nodetoolResult("decommission", "--force").asserts().success());
+        startAsync("Decommission node" + node.config()
+                                             .num(),
+                // testing keyspace has RF == 2. Using --force does not hurt fault tolerance.
+                () -> node.nodetoolResult("decommission", "--force")
+                          .asserts()
+                          .success());
 
         // Wait until nodes have reached expected state
         awaitLatchOrThrow(transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
@@ -143,20 +145,26 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
         // Fetch the local token ranges again;
         // RingTopologyRefresher should detect the topology change and notify RestoreJobDiscover via #onRingTopologyChanged
         localTokenRanges = ringTopologyRefresher.localTokenRanges(tableName.keyspace(), true);
-        assertThat(localTokenRanges)
-        .hasSize(1)
-        .containsEntry(MANAGED_CASSANDRA_NODE_NUM,
-                       ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
-                                       new TokenRange(0, 1000),
-                                       new TokenRange(1000, 2000), // gained due to node leaving; now it own the entire ring effectively.
-                                       new TokenRange(2000, Long.MAX_VALUE)));
+        assertThat(localTokenRanges).hasSize(1)
+                                    .containsEntry(MANAGED_CASSANDRA_NODE_NUM,
+                                            ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0), new TokenRange(0, 1000), new TokenRange(1000, 2000), // gained
+                                                                                                                                                    // due to
+                                                                                                                                                    // node
+                                                                                                                                                    // leaving;
+                                                                                                                                                    // now it
+                                                                                                                                                    // own the
+                                                                                                                                                    // entire
+                                                                                                                                                    // ring
+                                                                                                                                                    // effectively.
+                                                    new TokenRange(2000, Long.MAX_VALUE)));
 
         // Using loopAssert because #onRingTopologyChanged runs in another thread. It takes some time to reflect the RestoreRange update
         loopAssert(10, 500, () -> {
             List<RestoreRange> restoreRanges = rangeDatabaseAccessor.findAll(jobId, bucketId);
             assertThat(restoreRanges)
-            .describedAs("A restore range should be created. After the topology change, now the slice is partially owned by the local node")
-            .hasSize(1);
+                                     .describedAs(
+                                             "A restore range should be created. After the topology change, now the slice is partially owned by the local node")
+                                     .hasSize(1);
             assertRestoreRange(restoreRanges.get(0), 1000L, 1600L);
         });
     }
@@ -167,11 +175,14 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
         return MANAGED_CASSANDRA_NODE_IP;
     }
 
-    private static UpgradeableCluster startCluster(TokenSupplier tokenSupplier, ConfigurableCassandraTestContext cassandraTestContext, int leavingNodeNum)
+    private static UpgradeableCluster startCluster(TokenSupplier tokenSupplier,
+                                                   ConfigurableCassandraTestContext cassandraTestContext,
+                                                   int leavingNodeNum)
     {
         BBHelperLeavingNode.reset();
         return cassandraTestContext.configureAndStartCluster(builder -> {
-            builder.withInstanceInitializer((cl, num) -> BBHelperLeavingNode.install(cl, num, leavingNodeNum));
+            builder.withInstanceInitializer((cl,
+                                             num) -> BBHelperLeavingNode.install(cl, num, leavingNodeNum));
             builder.withTokenSupplier(tokenSupplier);
         });
     }

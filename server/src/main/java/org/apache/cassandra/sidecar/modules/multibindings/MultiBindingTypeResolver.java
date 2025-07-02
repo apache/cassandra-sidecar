@@ -19,12 +19,12 @@
 package org.apache.cassandra.sidecar.modules.multibindings;
 
 import java.util.Map;
-
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Resolves the types contained in map bindings created from {@link com.google.inject.multibindings.MapBinder}
- * Note that the key type of the map is {@code Class<? extends ClassKey>} in order to permit flexible extension
+ * Resolves the types contained in map bindings created from {@link com.google.inject.multibindings.MapBinder} Note that the key type of the map is
+ * {@code Class<? extends ClassKey>} in order to permit flexible extension
+ *
  * @param <V> map binding value type
  */
 public interface MultiBindingTypeResolver<V>

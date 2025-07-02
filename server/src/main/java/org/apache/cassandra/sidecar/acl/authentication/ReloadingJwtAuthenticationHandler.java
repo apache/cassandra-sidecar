@@ -49,12 +49,11 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLES_ATTRI
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * {@link ReloadingJwtAuthenticationHandler} validates JWT token of a user. It handles periodically calling
- * {@link OpenIDConnectAuth} discover to fetch latest configuration and handles reloading {@link OAuth2AuthHandlerImpl}.
- * It can be chained with other {@link io.vertx.ext.web.handler.AuthenticationHandler} implementations.
+ * {@link ReloadingJwtAuthenticationHandler} validates JWT token of a user. It handles periodically calling {@link OpenIDConnectAuth} discover to fetch latest
+ * configuration and handles reloading {@link OAuth2AuthHandlerImpl}. It can be chained with other {@link io.vertx.ext.web.handler.AuthenticationHandler}
+ * implementations.
  */
-public class ReloadingJwtAuthenticationHandler
-extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenticationProvider>
+public class ReloadingJwtAuthenticationHandler extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenticationProvider>
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReloadingJwtAuthenticationHandler.class);
 
@@ -77,13 +76,13 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     }
 
     @Override
-    public void authenticate(RoutingContext context, Handler<AsyncResult<User>> handler)
+    public void authenticate(RoutingContext context,
+                             Handler<AsyncResult<User>> handler)
     {
         OAuth2AuthHandlerImpl oAuth2AuthHandler = delegateHandler.get();
         if (oAuth2AuthHandler == null)
         {
-            handler.handle(Future.failedFuture(wrapHttpException(SERVICE_UNAVAILABLE,
-                                                                 "JWT authentication handler unavailable")));
+            handler.handle(Future.failedFuture(wrapHttpException(SERVICE_UNAVAILABLE, "JWT authentication handler unavailable")));
             return;
         }
 
@@ -95,19 +94,22 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
             }
 
             User user = authN.result();
-            JsonObject decodedToken = user.attributes().containsKey("accessToken")
-                                      ? user.attributes().getJsonObject("accessToken")
-                                      : user.attributes().getJsonObject("idToken");
+            JsonObject decodedToken = user.attributes()
+                                          .containsKey("accessToken")
+                                                  ? user.attributes()
+                                                        .getJsonObject("accessToken")
+                                                  : user.attributes()
+                                                        .getJsonObject("idToken");
 
             if (decodedToken == null)
             {
-                handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED,
-                                                                     "Could not process decoded JWT token")));
+                handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, "Could not process decoded JWT token")));
                 return;
             }
 
             List<String> roles = extractCassandraRoles(decodedToken);
-            String roleIntended = context.request().getHeader(AUTH_ROLE);
+            String roleIntended = context.request()
+                                         .getHeader(AUTH_ROLE);
 
             if (isNotEmpty(roleIntended) && !roles.contains(roleIntended))
             {
@@ -117,15 +119,15 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
             }
 
             List<String> rolesToAdd = isNotEmpty(roleIntended) ? List.of(roleIntended) : roles;
-            user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
+            user.attributes()
+                .put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
             handler.handle(Future.succeededFuture(user));
         });
     }
 
     /**
-     * {@link NoOpAuthenticationProvider} is used in {@link ReloadingJwtAuthenticationHandler}.
-     * {@link ReloadingJwtAuthenticationHandler} delegates authenticating user to delegate handler.
-     * Hence it uses no op authentication provider
+     * {@link NoOpAuthenticationProvider} is used in {@link ReloadingJwtAuthenticationHandler}. {@link ReloadingJwtAuthenticationHandler} delegates
+     * authenticating user to delegate handler. Hence it uses no op authentication provider
      */
     protected static class NoOpAuthenticationProvider implements AuthenticationProvider
     {
@@ -136,7 +138,8 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         }
 
         @Override
-        public void authenticate(JsonObject credentials, Handler<AsyncResult<User>> resultHandler)
+        public void authenticate(JsonObject credentials,
+                                 Handler<AsyncResult<User>> resultHandler)
         {
             resultHandler.handle(Future.succeededFuture());
         }
@@ -156,13 +159,11 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     }
 
     /**
-     * Periodic task to generate {@link OAuth2AuthHandlerImpl} with refreshed configuration from
-     * {@link OpenIDConnectAuth} discover.
+     * Periodic task to generate {@link OAuth2AuthHandlerImpl} with refreshed configuration from {@link OpenIDConnectAuth} discover.
      */
     private class OAuth2AuthHandlerGenerateTask implements PeriodicTask
     {
-        private final String taskName
-        = String.format("OAuth2AuthHandlerGenerateTask_%s_%s", jwtParameters.site(), jwtParameters.clientId());
+        private final String taskName = String.format("OAuth2AuthHandlerGenerateTask_%s_%s", jwtParameters.site(), jwtParameters.clientId());
 
         @Override
         public DurationSpec delay()
@@ -192,7 +193,8 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
             OpenIDConnectAuth.discover(vertx, options)
                              .onSuccess(oAuthProvider -> {
                                  OAuth2AuthHandlerImpl handler = new OAuth2AuthHandlerImpl(vertx, oAuthProvider, null);
-                                 if (!jwtParameters.scopes().isEmpty())
+                                 if (!jwtParameters.scopes()
+                                                   .isEmpty())
                                  {
                                      handler.withScopes(jwtParameters.scopes());
                                  }

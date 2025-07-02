@@ -34,7 +34,8 @@ public class TelemetryModule extends AbstractModule
 {
     @Provides
     @Singleton
-    SidecarMetrics metrics(MetricRegistryFactory registryFactory, InstanceMetadataFetcher metadataFetcher)
+    SidecarMetrics metrics(MetricRegistryFactory registryFactory,
+                           InstanceMetadataFetcher metadataFetcher)
     {
         return new SidecarMetricsImpl(registryFactory, metadataFetcher);
     }

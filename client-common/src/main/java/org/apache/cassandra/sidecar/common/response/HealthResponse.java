@@ -18,15 +18,13 @@
 
 package org.apache.cassandra.sidecar.common.response;
 
-import java.util.Objects;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A class representing a response for a health request
- * (either {@code SidecarHealthRequest} or {@code CassandraHealthRequest})
+ * A class representing a response for a health request (either {@code SidecarHealthRequest} or {@code CassandraHealthRequest})
  */
 public class HealthResponse
 {
@@ -40,7 +38,8 @@ public class HealthResponse
      */
     public HealthResponse(@NotNull @JsonProperty("status") String status)
     {
-        this.status = Objects.requireNonNull(status, "status must not be null").toUpperCase();
+        this.status = Objects.requireNonNull(status, "status must not be null")
+                             .toUpperCase();
     }
 
     /**

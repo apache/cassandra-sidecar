@@ -47,20 +47,14 @@ public class TableToBrowsePathsV2Converter extends TableToAspectConverter<Browse
 
         String container = identifiers.urnContainer(table.getKeyspace());
 
-        BrowsePathsV2 aspect = new BrowsePathsV2()
-                .setPath(new BrowsePathEntryArray(
-                new BrowsePathEntry()
-                        .setId(identifiers.environment())
-                        .setUrn(null, SetMode.REMOVE_IF_NULL),
-                new BrowsePathEntry()
-                        .setId(identifiers.application())
-                        .setUrn(null, SetMode.REMOVE_IF_NULL),
-                new BrowsePathEntry()
-                        .setId(identifiers.cluster())
-                        .setUrn(null, SetMode.REMOVE_IF_NULL),
-                new BrowsePathEntry()
-                        .setId(container)
-                        .setUrn(new Urn(container))));
+        BrowsePathsV2 aspect = new BrowsePathsV2().setPath(new BrowsePathEntryArray(new BrowsePathEntry().setId(identifiers.environment())
+                                                                                                         .setUrn(null, SetMode.REMOVE_IF_NULL),
+                new BrowsePathEntry().setId(identifiers.application())
+                                     .setUrn(null, SetMode.REMOVE_IF_NULL),
+                new BrowsePathEntry().setId(identifiers.cluster())
+                                     .setUrn(null, SetMode.REMOVE_IF_NULL),
+                new BrowsePathEntry().setId(container)
+                                     .setUrn(new Urn(container))));
 
         return wrap(urn, aspect);
     }

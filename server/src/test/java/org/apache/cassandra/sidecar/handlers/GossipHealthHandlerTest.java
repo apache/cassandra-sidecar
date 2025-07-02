@@ -18,23 +18,20 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 /**
- * Failure tests for {@link GossipHealthHandler}
- * Success cases are already covered by corresponding in-jvm test
+ * Failure tests for {@link GossipHealthHandler} Success cases are already covered by corresponding in-jvm test
  */
 @ExtendWith(VertxExtension.class)
 public class GossipHealthHandlerTest extends CommonTest
@@ -44,7 +41,8 @@ public class GossipHealthHandlerTest extends CommonTest
     @Test
     void testFailure(VertxTestContext context)
     {
-        doThrow(new RuntimeException()).when(storageOperations).isGossipRunning();
+        doThrow(new RuntimeException()).when(storageOperations)
+                                       .isGossipRunning();
 
         WebClient client = WebClient.create(vertx);
         client.get(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/gossip/__health")

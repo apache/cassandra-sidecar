@@ -22,9 +22,8 @@ import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.mtls.CertificateValidator;
 
 /**
- * {@link AllowAllCertificateValidator} can be used when certificate specific details are not required to be
- * validated. Use {@link CertificateValidatorImpl} if specific details like CN, issuer organization
- * are to be verified.
+ * {@link AllowAllCertificateValidator} can be used when certificate specific details are not required to be validated. Use {@link CertificateValidatorImpl} if
+ * specific details like CN, issuer organization are to be verified.
  */
 public class AllowAllCertificateValidator implements CertificateValidator
 {

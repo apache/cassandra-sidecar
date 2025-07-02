@@ -63,8 +63,11 @@ public class SidecarLoggerHandler implements LoggerHandler
         context.addBodyEndHandler(v -> {
             if (context.statusCode() >= 500 && context.failure() != null)
             {
-                LOGGER.error("Server error code={}, path={}, params={}", context.statusCode(),
-                             context.request().path(), toJson(context.request().params()), context.failure());
+                LOGGER.error("Server error code={}, path={}, params={}", context.statusCode(), context.request()
+                                                                                                      .path(),
+                        toJson(context.request()
+                                      .params()),
+                        context.failure());
             }
         });
         loggerHandler.handle(context);
@@ -99,7 +102,8 @@ public class SidecarLoggerHandler implements LoggerHandler
 
     private Object toJson(MultiMap params)
     {
-        if (params == null) return "";
+        if (params == null)
+            return "";
         return Json.encode(params.entries());
     }
 }

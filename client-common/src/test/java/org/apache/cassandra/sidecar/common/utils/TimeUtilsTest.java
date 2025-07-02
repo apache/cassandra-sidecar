@@ -35,15 +35,13 @@ public class TimeUtilsTest
     @Test
     public void testRandomDurationWithMinimumAboveMaximum()
     {
-        assertThrows(IllegalArgumentException.class,
-                     () -> TimeUtils.randomDuration(Duration.ofSeconds(2L), Duration.ofSeconds(1L)));
+        assertThrows(IllegalArgumentException.class, () -> TimeUtils.randomDuration(Duration.ofSeconds(2L), Duration.ofSeconds(1L)));
     }
 
     @Test
     public void testRandomDurationWithMinimumEqualToMaximum()
     {
-        assertEquals(Duration.ofSeconds(1L),
-                     TimeUtils.randomDuration(Duration.ofSeconds(1L), Duration.ofSeconds(1L)));
+        assertEquals(Duration.ofSeconds(1L), TimeUtils.randomDuration(Duration.ofSeconds(1L), Duration.ofSeconds(1L)));
     }
 
     @Test

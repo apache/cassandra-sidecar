@@ -23,8 +23,7 @@ import org.apache.cassandra.sidecar.common.utils.StringUtils;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Consistency config to group the related values, i.e. consistency level and local datacenter name.
- * Note that both fields are nullable
+ * Consistency config to group the related values, i.e. consistency level and local datacenter name. Note that both fields are nullable
  */
 public class ConsistencyConfig
 {
@@ -40,15 +39,17 @@ public class ConsistencyConfig
      * @param localDatacenter nullable string; required to be not empty when the resolved consistency level is localDcOnly
      * @return {@link ConsistencyConfig} instance
      */
-    public static ConsistencyConfig parseString(@Nullable String consistencyLevelString, @Nullable String localDatacenter)
+    public static ConsistencyConfig parseString(@Nullable String consistencyLevelString,
+                                                @Nullable String localDatacenter)
     {
         return new ConsistencyConfig(ConsistencyLevel.fromString(consistencyLevelString), localDatacenter);
     }
 
-    private ConsistencyConfig(@Nullable ConsistencyLevel consistencyLevel, @Nullable String localDatacenter)
+    private ConsistencyConfig(@Nullable ConsistencyLevel consistencyLevel,
+                              @Nullable String localDatacenter)
     {
         Preconditions.checkArgument(consistencyLevel == null || !consistencyLevel.isLocalDcOnly || StringUtils.isNotEmpty(localDatacenter),
-                                    "localDatacenter cannot be empty for consistency level: " + consistencyLevel);
+                "localDatacenter cannot be empty for consistency level: " + consistencyLevel);
 
         this.consistencyLevel = consistencyLevel;
         this.localDatacenter = localDatacenter;

@@ -80,14 +80,11 @@ class UpdateRestoreJobRequestPayloadTest
     void testJsonSerializationShouldIgnoreUnwantedFields() throws JsonProcessingException
     {
         RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
-        UpdateRestoreJobRequestPayload payload = new UpdateRestoreJobRequestPayload(null, secrets
-                                                                                    , null, null, null);
+        UpdateRestoreJobRequestPayload payload = new UpdateRestoreJobRequestPayload(null, secrets, null, null, null);
         String json = mapper.writeValueAsString(payload);
         assertThat(json).contains(RestoreJobConstants.JOB_SECRETS)
-                        .doesNotContain(RestoreJobConstants.JOB_AGENT,
-                                        RestoreJobConstants.JOB_EXPIRE_AT,
-                                        RestoreJobConstants.JOB_STATUS,
-                                        RestoreJobConstants.JOB_SLICE_COUNT)
+                        .doesNotContain(RestoreJobConstants.JOB_AGENT, RestoreJobConstants.JOB_EXPIRE_AT, RestoreJobConstants.JOB_STATUS,
+                                RestoreJobConstants.JOB_SLICE_COUNT)
                         .doesNotContain("empty"); // ignored by @JsonIgnore
     }
 }

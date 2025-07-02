@@ -31,8 +31,8 @@ public enum RestoreJobProgressFetchPolicy
     FIRST_FAILED,
 
     /**
-     * Gathers all failed and pending/unsatisfied slices/ranges. The policy is used to retrieve the slices/ranges
-     * failed to import with the specified consistency level _when a job has failed_
+     * Gathers all failed and pending/unsatisfied slices/ranges. The policy is used to retrieve the slices/ranges failed to import with the specified
+     * consistency level _when a job has failed_
      * <p>
      * A pending/unsatisfied range means sidecar instances are still working on importing
      *
@@ -40,8 +40,7 @@ public enum RestoreJobProgressFetchPolicy
     ALL_FAILED_AND_PENDING,
 
     /**
-     * Gather the progress of every slice/range in the job.
-     * The fetch policy is mostly used for debugging.
+     * Gather the progress of every slice/range in the job. The fetch policy is mostly used for debugging.
      */
     ALL;
 

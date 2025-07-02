@@ -45,13 +45,12 @@ public class SidecarSchema
                          SidecarConfiguration config,
                          SidecarInternalKeyspace sidecarInternalKeyspace)
     {
-        this.schemaKeyspaceConfiguration = config.serviceConfiguration().schemaKeyspaceConfiguration();
+        this.schemaKeyspaceConfiguration = config.serviceConfiguration()
+                                                 .schemaKeyspaceConfiguration();
         this.sidecarInternalKeyspace = sidecarInternalKeyspace;
         if (this.schemaKeyspaceConfiguration.isEnabled())
         {
-            EventBusUtils.onceLocalConsumer(vertx.eventBus(),
-                                            ON_SIDECAR_SCHEMA_INITIALIZED.address(),
-                                            ignored -> isInitialized.set(true));
+            EventBusUtils.onceLocalConsumer(vertx.eventBus(), ON_SIDECAR_SCHEMA_INITIALIZED.address(), ignored -> isInitialized.set(true));
         }
         else
         {

@@ -18,16 +18,11 @@
 
 package org.apache.cassandra.sidecar.job;
 
-import java.util.UUID;
-
-import com.google.common.util.concurrent.Uninterruptibles;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import java.util.UUID;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
@@ -37,7 +32,9 @@ import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
-
+import com.google.common.util.concurrent.Uninterruptibles;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -55,7 +52,8 @@ class OperationalJobTest
         return createOperationalJob(UUIDs.timeBased(), jobStatus);
     }
 
-    public static OperationalJob createOperationalJob(UUID jobId, OperationalJobStatus jobStatus)
+    public static OperationalJob createOperationalJob(UUID jobId,
+                                                      OperationalJobStatus jobStatus)
     {
         return new OperationalJob(jobId)
         {
@@ -84,12 +82,15 @@ class OperationalJobTest
         };
     }
 
-    public static OperationalJob createOperationalJob(UUID jobId, DurationSpec jobDuration)
+    public static OperationalJob createOperationalJob(UUID jobId,
+                                                      DurationSpec jobDuration)
     {
         return createOperationalJob(jobId, jobDuration, null);
     }
 
-    public static OperationalJob createOperationalJob(UUID jobId, DurationSpec jobDuration, OperationalJobException jobFailure)
+    public static OperationalJob createOperationalJob(UUID jobId,
+                                                      DurationSpec jobDuration,
+                                                      OperationalJobException jobFailure)
     {
         return new OperationalJob(jobId)
         {
@@ -124,7 +125,10 @@ class OperationalJobTest
     @AfterEach
     void cleanup()
     {
-        TestResourceReaper.create().with(vertx).with(executorPools).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(executorPools)
+                          .close();
     }
 
     @Test
@@ -135,7 +139,8 @@ class OperationalJobTest
         job.execute(p);
         Future<Void> future = p.future();
         assertThat(future.succeeded()).isTrue();
-        assertThat(job.asyncResult().succeeded()).isTrue();
+        assertThat(job.asyncResult()
+                      .succeeded()).isTrue();
         assertThat(job.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
     }
 
@@ -163,14 +168,14 @@ class OperationalJobTest
 
         Future<Void> future = p.future();
         assertThat(future.failed()).isTrue();
-        assertThat(future.cause())
-        .isExactlyInstanceOf(OperationalJobException.class)
-        .hasMessage(msg);
+        assertThat(future.cause()).isExactlyInstanceOf(OperationalJobException.class)
+                                  .hasMessage(msg);
         assertThat(failingJob.status()).isEqualTo(OperationalJobStatus.FAILED);
-        assertThat(failingJob.asyncResult().failed()).isTrue();
-        assertThat(failingJob.asyncResult().cause())
-        .isExactlyInstanceOf(OperationalJobException.class)
-        .hasMessage(msg);
+        assertThat(failingJob.asyncResult()
+                             .failed()).isTrue();
+        assertThat(failingJob.asyncResult()
+                             .cause()).isExactlyInstanceOf(OperationalJobException.class)
+                                      .hasMessage(msg);
     }
 
     @Test

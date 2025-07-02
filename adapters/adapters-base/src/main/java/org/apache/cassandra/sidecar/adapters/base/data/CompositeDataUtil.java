@@ -29,12 +29,14 @@ public class CompositeDataUtil
 
     /**
      * Generic helper to extract attribute of a specific type from the CompositeData type.
+     *
      * @param data data being parsed
      * @param key attribute being extracted
      * @return attribute value
      * @param <T> return type
      */
-    public static <T> T extractValue(CompositeData data, String key)
+    public static <T> T extractValue(CompositeData data,
+                                     String key)
     {
         Object value = data.get(key);
         if (value == null)

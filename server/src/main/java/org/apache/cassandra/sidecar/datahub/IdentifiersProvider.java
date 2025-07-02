@@ -19,21 +19,19 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
+import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.TableMetadata;
 import java.nio.charset.Charset;
 import java.util.UUID;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.TableMetadata;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 /**
- * An abstract class that has to be extended and instantiated for every Cassandra
- * cluster that needs its schema converted into a DataHub-compliant format
+ * An abstract class that has to be extended and instantiated for every Cassandra cluster that needs its schema converted into a DataHub-compliant format
  */
 public abstract class IdentifiersProvider
 {
@@ -43,26 +41,28 @@ public abstract class IdentifiersProvider
     protected static final String DATA_PLATFORM_INSTANCE = "dataPlatformInstance";
     protected static final String CONTAINER = "container";
     protected static final String DATASET = "dataset";
-    protected static final String PROD = "PROD";  // DataHub requires this to be {@code PROD}
+    protected static final String PROD = "PROD"; // DataHub requires this to be {@code PROD}
 
     protected static final ToStringStyle STYLE = new ToStringStyle()
-    {{
-        setUseShortClassName(false);
-        setUseClassName(true);
-        setUseIdentityHashCode(false);
-        setUseFieldNames(false);
-        setContentStart("(");
-        setFieldSeparatorAtStart(false);
-        setFieldSeparator(",");
-        setFieldSeparatorAtEnd(false);
-        setContentEnd(")");
-        setDefaultFullDetail(true);
-        setArrayContentDetail(true);
-        setArrayStart("(");
-        setArraySeparator(",");
-        setArrayEnd(")");
-        setNullText("null");
-    }};
+    {
+        {
+            setUseShortClassName(false);
+            setUseClassName(true);
+            setUseIdentityHashCode(false);
+            setUseFieldNames(false);
+            setContentStart("(");
+            setFieldSeparatorAtStart(false);
+            setFieldSeparator(",");
+            setFieldSeparatorAtEnd(false);
+            setContentEnd(")");
+            setDefaultFullDetail(true);
+            setArrayContentDetail(true);
+            setArrayStart("(");
+            setArraySeparator(",");
+            setArrayEnd(")");
+            setNullText("null");
+        }
+    };
 
     /**
      * A public getter method that returns the name of Cassandra Organization
@@ -124,9 +124,9 @@ public abstract class IdentifiersProvider
     @NotNull
     public UUID identifier()
     {
-        return UUID.nameUUIDFromBytes((environment() + MetadataToAspectConverter.DELIMITER
-                                     + application() + MetadataToAspectConverter.DELIMITER
-                                     + cluster()).getBytes(Charset.defaultCharset()));
+        return UUID.nameUUIDFromBytes(
+                (environment() + MetadataToAspectConverter.DELIMITER + application() + MetadataToAspectConverter.DELIMITER + cluster()).getBytes(
+                        Charset.defaultCharset()));
     };
 
     /**
@@ -137,11 +137,7 @@ public abstract class IdentifiersProvider
     @NotNull
     public String urnDataPlatform()
     {
-        return String.format("%s:%s:%s:%s",
-                URN,
-                LI,
-                DATA_PLATFORM,
-                platform());
+        return String.format("%s:%s:%s:%s", URN, LI, DATA_PLATFORM, platform());
     }
 
     /**
@@ -152,12 +148,7 @@ public abstract class IdentifiersProvider
     @NotNull
     public String urnDataPlatformInstance()
     {
-        return String.format("%s:%s:%s:(%s,%s)",
-                URN,
-                LI,
-                DATA_PLATFORM_INSTANCE,
-                urnDataPlatform(),
-                identifier());
+        return String.format("%s:%s:%s:(%s,%s)", URN, LI, DATA_PLATFORM_INSTANCE, urnDataPlatform(), identifier());
     }
 
     /**
@@ -169,12 +160,7 @@ public abstract class IdentifiersProvider
     @NotNull
     public String urnContainer(@NotNull KeyspaceMetadata keyspace)
     {
-        return String.format("%s:%s:%s:%s_%s",
-                URN,
-                LI,
-                CONTAINER,
-                identifier(),
-                keyspace.getName());
+        return String.format("%s:%s:%s:%s_%s", URN, LI, CONTAINER, identifier(), keyspace.getName());
     }
 
     /**
@@ -186,15 +172,9 @@ public abstract class IdentifiersProvider
     @NotNull
     public String urnDataset(@NotNull TableMetadata table)
     {
-        return String.format("%s:%s:%s:(%s,%s.%s.%s,%s)",
-                URN,
-                LI,
-                DATASET,
-                urnDataPlatform(),
-                identifier(),
-                table.getKeyspace().getName(),
-                table.getName(),
-                PROD);
+        return String.format("%s:%s:%s:(%s,%s.%s.%s,%s)", URN, LI, DATASET, urnDataPlatform(), identifier(), table.getKeyspace()
+                                                                                                                  .getName(),
+                table.getName(), PROD);
     }
 
     /**
@@ -205,14 +185,13 @@ public abstract class IdentifiersProvider
     @Override
     public int hashCode()
     {
-        return new HashCodeBuilder()
-                .append(this.organization())
-                .append(this.platform())
-                .append(this.environment())
-                .append(this.application())
-                .append(this.cluster())
-                .append(this.identifier())
-                .toHashCode();
+        return new HashCodeBuilder().append(this.organization())
+                                    .append(this.platform())
+                                    .append(this.environment())
+                                    .append(this.application())
+                                    .append(this.cluster())
+                                    .append(this.identifier())
+                                    .toHashCode();
     }
 
     /**
@@ -227,14 +206,13 @@ public abstract class IdentifiersProvider
         if (other instanceof IdentifiersProvider)
         {
             IdentifiersProvider that = (IdentifiersProvider) other;
-            return new EqualsBuilder()
-                    .append(this.organization(), that.organization())
-                    .append(this.platform(),     that.platform())
-                    .append(this.environment(),  that.environment())
-                    .append(this.application(),  that.application())
-                    .append(this.cluster(),      that.cluster())
-                    .append(this.identifier(),   that.identifier())
-                    .isEquals();
+            return new EqualsBuilder().append(this.organization(), that.organization())
+                                      .append(this.platform(), that.platform())
+                                      .append(this.environment(), that.environment())
+                                      .append(this.application(), that.application())
+                                      .append(this.cluster(), that.cluster())
+                                      .append(this.identifier(), that.identifier())
+                                      .isEquals();
         }
         else
         {
@@ -251,15 +229,14 @@ public abstract class IdentifiersProvider
     @NotNull
     public String toString()
     {
-        return new ToStringBuilder(this, STYLE)
-                .append(this.organization())
-                .append(this.platform())
-                .append(this.environment())
-                .append(this.application())
-                .append(this.cluster())
-                .append(this.identifier())
-                .toString()
-                .replaceAll("\\s", "");
+        return new ToStringBuilder(this, STYLE).append(this.organization())
+                                               .append(this.platform())
+                                               .append(this.environment())
+                                               .append(this.application())
+                                               .append(this.cluster())
+                                               .append(this.identifier())
+                                               .toString()
+                                               .replaceAll("\\s", "");
 
         // Use of a custom {@link ToStringStyle} implementation prevents the hash code from being
         // included into the {@link String} representation; which, in conjunction with the removal

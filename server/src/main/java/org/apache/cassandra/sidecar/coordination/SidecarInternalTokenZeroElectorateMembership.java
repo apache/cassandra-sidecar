@@ -23,9 +23,8 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 /**
- * An implementation of {@link ElectorateMembership} where the current Sidecar will
- * be determined to be part of the electorate iff one of the Cassandra instances it
- * manages owns token {@code 0} for the {@code sidecar_internal} keyspace.
+ * An implementation of {@link ElectorateMembership} where the current Sidecar will be determined to be part of the electorate iff one of the Cassandra
+ * instances it manages owns token {@code 0} for the {@code sidecar_internal} keyspace.
  */
 public class SidecarInternalTokenZeroElectorateMembership extends AbstractTokenZeroOfKeyspaceElectorateMembership
 {
@@ -35,7 +34,8 @@ public class SidecarInternalTokenZeroElectorateMembership extends AbstractTokenZ
                                                         SidecarConfiguration sidecarConfiguration)
     {
         super(instanceMetadataFetcher);
-        configuration = sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration();
+        configuration = sidecarConfiguration.serviceConfiguration()
+                                            .schemaKeyspaceConfiguration();
     }
 
     @Override

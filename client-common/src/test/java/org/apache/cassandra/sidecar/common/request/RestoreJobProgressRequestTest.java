@@ -31,13 +31,9 @@ class RestoreJobProgressRequestTest
     void testBuildRequestURI()
     {
         UUID jobId = UUID.randomUUID();
-        RestoreJobProgressRequestParams params = new RestoreJobProgressRequestParams("cycling",
-                                                                                     "rank_by_year_and_name",
-                                                                                     jobId,
-                                                                                     RestoreJobProgressFetchPolicy.FIRST_FAILED);
+        RestoreJobProgressRequestParams params = new RestoreJobProgressRequestParams("cycling", "rank_by_year_and_name", jobId,
+                RestoreJobProgressFetchPolicy.FIRST_FAILED);
         String uri = RestoreJobProgressRequest.requestURI(params);
-        assertThat(uri).isEqualTo("/api/v1/keyspaces/cycling/tables/rank_by_year_and_name" +
-                                  "/restore-jobs/" + jobId +
-                                  "/progress?fetch-policy=first_failed");
+        assertThat(uri).isEqualTo("/api/v1/keyspaces/cycling/tables/rank_by_year_and_name" + "/restore-jobs/" + jobId + "/progress?fetch-policy=first_failed");
     }
 }

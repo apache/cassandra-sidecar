@@ -44,14 +44,12 @@ public class ThrottleConfigurationImpl implements ThrottleConfiguration
 
     public ThrottleConfigurationImpl()
     {
-        this(DEFAULT_STREAM_REQUESTS_PER_SEC,
-             DEFAULT_TIMEOUT);
+        this(DEFAULT_STREAM_REQUESTS_PER_SEC, DEFAULT_TIMEOUT);
     }
 
     public ThrottleConfigurationImpl(long rateLimitStreamRequestsPerSecond)
     {
-        this(rateLimitStreamRequestsPerSecond,
-             DEFAULT_TIMEOUT);
+        this(rateLimitStreamRequestsPerSecond, DEFAULT_TIMEOUT);
     }
 
     public ThrottleConfigurationImpl(long rateLimitStreamRequestsPerSecond,

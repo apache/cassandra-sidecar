@@ -28,8 +28,8 @@ import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
  */
 public class SSTableSnapshotConfigurationImpl implements SSTableSnapshotConfiguration
 {
-    protected static final CacheConfiguration DEFAULT_SNAPSHOT_LIST_CACHE_CONFIGURATION =
-    new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("2h"), 10_000);
+    protected static final CacheConfiguration DEFAULT_SNAPSHOT_LIST_CACHE_CONFIGURATION = new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("2h"),
+            10_000);
 
     @JsonProperty(value = "snapshot_list_cache")
     protected CacheConfiguration snapshotListCacheConfiguration;

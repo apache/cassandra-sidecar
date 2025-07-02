@@ -57,22 +57,15 @@ public class SchemaReportingConfigurationImpl extends PeriodicTaskConfigurationI
      */
     public SchemaReportingConfigurationImpl()
     {
-        this(DEFAULT_ENABLED,
-             DEFAULT_INITIAL_DELAY,
-             DEFAULT_EXECUTE_INTERVAL,
-             DEFAULT_ENDPOINT,
-             DEFAULT_METHOD,
-             DEFAULT_MAX_RETRIES,
-             DEFAULT_RETRY_DELAY);
+        this(DEFAULT_ENABLED, DEFAULT_INITIAL_DELAY, DEFAULT_EXECUTE_INTERVAL, DEFAULT_ENDPOINT, DEFAULT_METHOD, DEFAULT_MAX_RETRIES, DEFAULT_RETRY_DELAY);
     }
 
     /**
      * Constructs an instance of {@link SchemaReportingConfigurationImpl} with custom settings
      *
      * @param enabled whether to report cluster schemata; {@code false} by default
-     * @param initialDelay maximum delay before the initial schema report used to prevent the thundering herd problem
-     *                     (the actual delay will be randomized for each execution, but will not exceed this value);
-     *                     6 hours by default
+     * @param initialDelay maximum delay before the initial schema report used to prevent the thundering herd problem (the actual delay will be randomized for
+     *            each execution, but will not exceed this value); 6 hours by default
      * @param executeInterval exact interval between two consecutive reports of the same schema; 12 hours by default
      * @param endpoint endpoint address for schema reporting; empty by default
      * @param method HTTP verb to use when reporting schemata; {@code PUT} by default
@@ -87,9 +80,7 @@ public class SchemaReportingConfigurationImpl extends PeriodicTaskConfigurationI
                                             int maxRetries,
                                             @NotNull MillisecondBoundConfiguration retryDelay)
     {
-        super(enabled,
-              initialDelay,
-              executeInterval);
+        super(enabled, initialDelay, executeInterval);
 
         this.endpoint = endpoint;
         this.method = method;

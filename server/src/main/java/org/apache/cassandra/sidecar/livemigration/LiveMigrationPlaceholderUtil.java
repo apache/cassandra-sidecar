@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,17 +44,17 @@ public class LiveMigrationPlaceholderUtil
     private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{(\\w+)}.*");
 
     /**
-     * Replaces a placeholder with a value specified in given input. There can be more than one placeholder
-     * pointing to singe value.
+     * Replaces a placeholder with a value specified in given input. There can be more than one placeholder pointing to singe value.
      *
-     * @param input        input string having placeholder to replace
+     * @param input input string having placeholder to replace
      * @param placeholders set of placeholders to search for
-     * @param value        value with which placeholder will be replaced
-     * @return input unchanged if no placeholder is found and input with placeholder replaced if placeholder is in given
-     * placeholders, otherwise null.
+     * @param value value with which placeholder will be replaced
+     * @return input unchanged if no placeholder is found and input with placeholder replaced if placeholder is in given placeholders, otherwise null.
      */
     @Nullable
-    public static String replacePlaceholder(String input, Set<String> placeholders, String value)
+    public static String replacePlaceholder(String input,
+                                            Set<String> placeholders,
+                                            String value)
     {
         String placeholder = getPlaceholder(input);
 
@@ -74,12 +73,12 @@ public class LiveMigrationPlaceholderUtil
     /**
      * Replaces placeholder present in given {@code input} with directory based on instance metadata.
      *
-     * @param input            Input string to replace placeholder
+     * @param input Input string to replace placeholder
      * @param instanceMetadata Metadata of instance to pick the directory for placeholder in input
-     * @return input after replacing placeholder with corresponding directories. If input does not
-     * have a placeholder, then input returned as Set.
+     * @return input after replacing placeholder with corresponding directories. If input does not have a placeholder, then input returned as Set.
      */
-    public static Set<String> replacePlaceholder(String input, InstanceMetadata instanceMetadata)
+    public static Set<String> replacePlaceholder(String input,
+                                                 InstanceMetadata instanceMetadata)
     {
         if (!hasAnyPlaceholder(input))
         {
@@ -102,14 +101,15 @@ public class LiveMigrationPlaceholderUtil
         return output;
     }
 
-    private static String replacePlaceholder(String input, String placeholder, String value)
+    private static String replacePlaceholder(String input,
+                                             String placeholder,
+                                             String value)
     {
         return input.replace("${" + placeholder + "}", value);
     }
 
     /**
-     * Checks whether given input has any placeholder init.
-     * Placeholders can be specified using {@link #PLACEHOLDER_PATTERN} pattern.
+     * Checks whether given input has any placeholder init. Placeholders can be specified using {@link #PLACEHOLDER_PATTERN} pattern.
      *
      * @param input input string to test
      * @return true if the given input contains a placeholder, otherwise false
@@ -121,14 +121,15 @@ public class LiveMigrationPlaceholderUtil
     }
 
     /**
-     * Checks whether given input has any of the placeholders specified in {@code knownPlaceHolders}.
-     * Placeholders can be specified using {@link #PLACEHOLDER_PATTERN} pattern.
+     * Checks whether given input has any of the placeholders specified in {@code knownPlaceHolders}. Placeholders can be specified using
+     * {@link #PLACEHOLDER_PATTERN} pattern.
      *
-     * @param input             input string to test
+     * @param input input string to test
      * @param knownPlaceHolders set of placeholders {@code input} is expected to have.
      * @return true if given input contains any one of the knownPlaceHolders, otherwise false
      */
-    public static boolean hasAnyPlaceholder(String input, Set<String> knownPlaceHolders)
+    public static boolean hasAnyPlaceholder(String input,
+                                            Set<String> knownPlaceHolders)
     {
         String placeholder = getPlaceholder(input);
         return placeholder != null && knownPlaceHolders.contains(placeholder);

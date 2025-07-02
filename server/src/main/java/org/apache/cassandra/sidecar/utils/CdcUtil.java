@@ -73,7 +73,9 @@ public final class CdcUtil
         return indexFileName.replace(IDX_FILE_EXTENSION, LOG_FILE_EXTENSION);
     }
 
-    public static CdcIndex parseIndexFile(File indexFile, long segmentFileLength) throws IOException
+    public static CdcIndex parseIndexFile(File indexFile,
+                                          long segmentFileLength)
+            throws IOException
     {
         List<String> lines = null;
         // For an index file, if it exists, it should have non-empty content.
@@ -134,7 +136,8 @@ public final class CdcUtil
         public final long latestFlushPosition;
         public final boolean isCompleted;
 
-        public CdcIndex(long latestFlushPosition, boolean isCompleted)
+        public CdcIndex(long latestFlushPosition,
+                        boolean isCompleted)
         {
             this.latestFlushPosition = latestFlushPosition;
             this.isCompleted = isCompleted;
@@ -149,7 +152,8 @@ public final class CdcUtil
      */
     public static boolean isValid(String fileName)
     {
-        return SEGMENT_PATTERN.matcher(fileName).matches();
+        return SEGMENT_PATTERN.matcher(fileName)
+                              .matches();
     }
 
     public static boolean isLogFile(String fileName)
@@ -163,7 +167,8 @@ public final class CdcUtil
      */
     public static boolean isValidIdxFile(String idxFileName)
     {
-        return IDX_FILE_PATTERN.matcher(idxFileName).matches();
+        return IDX_FILE_PATTERN.matcher(idxFileName)
+                               .matches();
     }
 
     public static boolean isIndexFile(String fileName)

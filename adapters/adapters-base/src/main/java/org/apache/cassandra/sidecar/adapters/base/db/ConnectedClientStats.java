@@ -18,9 +18,8 @@
 
 package org.apache.cassandra.sidecar.adapters.base.db;
 
-import java.util.Map;
-
 import com.datastax.driver.core.Row;
+import java.util.Map;
 import org.apache.cassandra.sidecar.db.DataObjectMappingException;
 import org.jetbrains.annotations.NotNull;
 
@@ -53,7 +52,8 @@ public class ConnectedClientStats
 
     public ConnectedClientStats(@NotNull Row row)
     {
-        this.address = row.getInet("address").getHostAddress();
+        this.address = row.getInet("address")
+                          .getHostAddress();
         this.port = row.getInt("port");
         this.hostname = row.getString("hostname");
         this.username = row.getString("username");
@@ -71,14 +71,18 @@ public class ConnectedClientStats
         this.clientOptions = getMapFieldIfExists(row, "client_options");
     }
 
-    public String getStringFieldIfExists(@NotNull Row row, String fieldName)
+    public String getStringFieldIfExists(@NotNull Row row,
+                                         String fieldName)
     {
-        return (row.getColumnDefinitions().contains(fieldName)) ? row.getString(fieldName) : null;
+        return (row.getColumnDefinitions()
+                   .contains(fieldName)) ? row.getString(fieldName) : null;
     }
 
-    public Map<String, String> getMapFieldIfExists(@NotNull Row row, String fieldName)
+    public Map<String, String> getMapFieldIfExists(@NotNull Row row,
+                                                   String fieldName)
     {
-        if (row.getColumnDefinitions().contains(fieldName))
+        if (row.getColumnDefinitions()
+               .contains(fieldName))
         {
             return row.getMap(fieldName, String.class, String.class);
         }

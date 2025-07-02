@@ -23,8 +23,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * Indicates the minimum version requires for this Cassandra implementation
- * The minimum version will be used to select the right Cassandra adapter
+ * Indicates the minimum version requires for this Cassandra implementation The minimum version will be used to select the right Cassandra adapter
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited

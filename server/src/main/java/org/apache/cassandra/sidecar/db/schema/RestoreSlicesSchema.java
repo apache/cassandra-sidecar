@@ -26,9 +26,8 @@ import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly
 import org.jetbrains.annotations.NotNull;
 
 /**
- * {@link RestoreSlicesSchema} holds all prepared statements needed for talking to Cassandra for various actions
- * related to {@link org.apache.cassandra.sidecar.db.RestoreSlice} like inserting a new restore slice,
- * updating status of a slice, finding restore slices and more
+ * {@link RestoreSlicesSchema} holds all prepared statements needed for talking to Cassandra for various actions related to
+ * {@link org.apache.cassandra.sidecar.db.RestoreSlice} like inserting a new restore slice, updating status of a slice, finding restore slices and more
  */
 public class RestoreSlicesSchema extends TableSchema implements ExecuteOnClusterLeaseholderOnly
 {
@@ -41,7 +40,8 @@ public class RestoreSlicesSchema extends TableSchema implements ExecuteOnCluster
     private PreparedStatement insertSlice;
     private PreparedStatement findAllByTokenRange;
 
-    public RestoreSlicesSchema(SchemaKeyspaceConfiguration keyspaceConfig, SecondBoundConfiguration tableTtl)
+    public RestoreSlicesSchema(SchemaKeyspaceConfiguration keyspaceConfig,
+                               SecondBoundConfiguration tableTtl)
     {
         this.keyspaceConfig = keyspaceConfig;
         this.tableTtl = tableTtl;
@@ -69,20 +69,11 @@ public class RestoreSlicesSchema extends TableSchema implements ExecuteOnCluster
     @Override
     protected String createSchemaStatement()
     {
-        return String.format("CREATE TABLE IF NOT EXISTS %s.%s (" +
-                             "  job_id timeuuid," +
-                             "  bucket_id smallint," +
-                             "  slice_id text," +
-                             "  bucket text," +
-                             "  key text," +
-                             "  checksum text," +
-                             "  start_token varint," +
-                             "  end_token varint," +
-                             "  compressed_size bigint," +
-                             "  uncompressed_size bigint," +
-                             "  PRIMARY KEY ((job_id, bucket_id), start_token, end_token, slice_id)" +
-                             ") WITH default_time_to_live = %s",
-                             keyspaceConfig.keyspace(), RESTORE_SLICE_TABLE_NAME, tableTtl.toSeconds());
+        return String.format(
+                "CREATE TABLE IF NOT EXISTS %s.%s (" + "  job_id timeuuid," + "  bucket_id smallint," + "  slice_id text," + "  bucket text," + "  key text,"
+                        + "  checksum text," + "  start_token varint," + "  end_token varint," + "  compressed_size bigint," + "  uncompressed_size bigint,"
+                        + "  PRIMARY KEY ((job_id, bucket_id), start_token, end_token, slice_id)" + ") WITH default_time_to_live = %s",
+                keyspaceConfig.keyspace(), RESTORE_SLICE_TABLE_NAME, tableTtl.toSeconds());
     }
 
     public PreparedStatement insertSlice()
@@ -99,18 +90,8 @@ public class RestoreSlicesSchema extends TableSchema implements ExecuteOnCluster
     {
         static String insertSlice(SchemaKeyspaceConfiguration config)
         {
-            return withTable("INSERT INTO %s.%s (" +
-                             "  job_id," +
-                             "  bucket_id," +
-                             "  slice_id," +
-                             "  bucket," +
-                             "  key," +
-                             "  checksum," +
-                             "  start_token," +
-                             "  end_token," +
-                             "  compressed_size," +
-                             "  uncompressed_size" +
-                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
+            return withTable("INSERT INTO %s.%s (" + "  job_id," + "  bucket_id," + "  slice_id," + "  bucket," + "  key," + "  checksum," + "  start_token,"
+                    + "  end_token," + "  compressed_size," + "  uncompressed_size" + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
         }
 
         // ALLOW FILTERING within the same partition should have minimum impact on read performance.
@@ -118,14 +99,12 @@ public class RestoreSlicesSchema extends TableSchema implements ExecuteOnCluster
         // the range (start_token, end_token] to intersect, `start_token < T2 AND end_token > T1`
         static String findAllByTokenRange(SchemaKeyspaceConfiguration config)
         {
-            return withTable("SELECT job_id, bucket_id, slice_id, bucket, key, checksum, " +
-                             "start_token, end_token, compressed_size, uncompressed_size " +
-                             "FROM %s.%s " +
-                             "WHERE job_id = ? AND bucket_id = ? AND " +
-                             "end_token > ? AND start_token < ? ALLOW FILTERING", config);
+            return withTable("SELECT job_id, bucket_id, slice_id, bucket, key, checksum, " + "start_token, end_token, compressed_size, uncompressed_size "
+                    + "FROM %s.%s " + "WHERE job_id = ? AND bucket_id = ? AND " + "end_token > ? AND start_token < ? ALLOW FILTERING", config);
         }
 
-        private static String withTable(String format, SchemaKeyspaceConfiguration config)
+        private static String withTable(String format,
+                                        SchemaKeyspaceConfiguration config)
         {
             return String.format(format, config.keyspace(), RESTORE_SLICE_TABLE_NAME);
         }

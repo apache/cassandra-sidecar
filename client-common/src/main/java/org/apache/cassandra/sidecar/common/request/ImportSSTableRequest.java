@@ -18,11 +18,10 @@
 
 package org.apache.cassandra.sidecar.common.request;
 
+import io.netty.handler.codec.http.HttpMethod;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.response.SSTableImportResponse;
 
@@ -34,12 +33,15 @@ public class ImportSSTableRequest extends JsonRequest<SSTableImportResponse>
     /**
      * Constructs a decodable request with the provided {@code requestURI}
      *
-     * @param keyspace      the keyspace in Cassandra
-     * @param tableName     the table name in Cassandra
-     * @param uploadId      an identifier for the upload
+     * @param keyspace the keyspace in Cassandra
+     * @param tableName the table name in Cassandra
+     * @param uploadId an identifier for the upload
      * @param importOptions additional options for the import process
      */
-    public ImportSSTableRequest(String keyspace, String tableName, String uploadId, ImportOptions importOptions)
+    public ImportSSTableRequest(String keyspace,
+                                String tableName,
+                                String uploadId,
+                                ImportOptions importOptions)
     {
         super(requestURI(keyspace, tableName, uploadId, importOptions));
     }
@@ -155,12 +157,14 @@ public class ImportSSTableRequest extends JsonRequest<SSTableImportResponse>
         }
     }
 
-    static String requestURI(String keyspace, String tableName, String uploadId, ImportOptions importOptions)
+    static String requestURI(String keyspace,
+                             String tableName,
+                             String uploadId,
+                             ImportOptions importOptions)
     {
-        String requestUri = ApiEndpointsV1.SSTABLE_IMPORT_ROUTE
-                            .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, uploadId)
-                            .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
-                            .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName);
+        String requestUri = ApiEndpointsV1.SSTABLE_IMPORT_ROUTE.replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, uploadId)
+                                                               .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
+                                                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName);
 
         List<String> options = selectedOptions(importOptions);
 

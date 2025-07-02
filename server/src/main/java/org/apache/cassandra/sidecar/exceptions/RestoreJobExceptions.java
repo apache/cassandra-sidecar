@@ -27,11 +27,13 @@ import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
  */
 public class RestoreJobExceptions
 {
-    private RestoreJobExceptions() {}
+    private RestoreJobExceptions()
+    {
+    }
 
     /**
-     * Create a {@link RestoreJobException} with cause.
-     * If the cause is already a {@link RestoreJobException}, the retryable property is preserved.
+     * Create a {@link RestoreJobException} with cause. If the cause is already a {@link RestoreJobException}, the retryable property is preserved.
+     *
      * @param cause
      * @return a new {@link RestoreJobException}
      */
@@ -41,27 +43,24 @@ public class RestoreJobExceptions
     }
 
     /**
-     * Create a {@link RestoreJobException} with message and cause.
-     * If the cause is already a {@link RestoreJobException}, the retryable property is preserved.
+     * Create a {@link RestoreJobException} with message and cause. If the cause is already a {@link RestoreJobException}, the retryable property is preserved.
+     *
      * @param message
      * @param cause
      * @return a new {@link RestoreJobException}
      */
-    public static RestoreJobException propagate(@Nullable String message, Throwable cause)
+    public static RestoreJobException propagate(@Nullable String message,
+                                                Throwable cause)
     {
         String concatMessage = message;
         if (cause.getMessage() != null)
         {
-            concatMessage = concatMessage == null
-                            ? cause.getMessage()
-                            : concatMessage + ':' + cause.getMessage();
+            concatMessage = concatMessage == null ? cause.getMessage() : concatMessage + ':' + cause.getMessage();
         }
         if (cause instanceof RestoreJobException)
         {
             RestoreJobException ex = (RestoreJobException) cause;
-            return ex.retryable()
-                   ? new RestoreJobException(concatMessage, cause)
-                   : new RestoreJobFatalException(concatMessage, cause);
+            return ex.retryable() ? new RestoreJobException(concatMessage, cause) : new RestoreJobFatalException(concatMessage, cause);
         }
 
         return new RestoreJobException(concatMessage, cause);
@@ -75,22 +74,32 @@ public class RestoreJobExceptions
         return new RestoreJobFatalException(cause.getMessage(), cause);
     }
 
-    public static RestoreJobException of(String title, RestoreRange range, Throwable cause)
+    public static RestoreJobException of(String title,
+                                         RestoreRange range,
+                                         Throwable cause)
     {
         return new RestoreJobException(title + ". " + range.shortDescription(), cause);
     }
 
-    public static RestoreJobException of(String title, RestoreRange range, AwsErrorDetails awsErrorDetails, Throwable cause)
+    public static RestoreJobException of(String title,
+                                         RestoreRange range,
+                                         AwsErrorDetails awsErrorDetails,
+                                         Throwable cause)
     {
         return new RestoreJobException(title + ". " + range.shortDescription() + toString(awsErrorDetails), cause);
     }
 
-    public static RestoreJobFatalException ofFatal(String title, RestoreRange range, Throwable cause)
+    public static RestoreJobFatalException ofFatal(String title,
+                                                   RestoreRange range,
+                                                   Throwable cause)
     {
         return new RestoreJobFatalException(title + ". " + range.shortDescription(), cause);
     }
 
-    public static RestoreJobFatalException ofFatal(String title, RestoreRange range, AwsErrorDetails awsErrorDetails, Throwable cause)
+    public static RestoreJobFatalException ofFatal(String title,
+                                                   RestoreRange range,
+                                                   AwsErrorDetails awsErrorDetails,
+                                                   Throwable cause)
     {
         return new RestoreJobFatalException(title + ". " + range.shortDescription() + toString(awsErrorDetails), cause);
     }

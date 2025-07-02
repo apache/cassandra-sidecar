@@ -68,15 +68,15 @@ public class SidecarLeaseSchema extends TableSchema
     public void prepareStatements(@NotNull Session session)
     {
         // TODO: revisit decision to make TTL a bind parameter instead of burning into the prepared statement
-        //       which means it cannot be changed dynamically during the lifetime of the Sidecar process.
+        // which means it cannot be changed dynamically during the lifetime of the Sidecar process.
         claimLease = prepare(claimLease, session,
-                             String.format("INSERT INTO %s.%s (name,owner) VALUES ('cluster_lease_holder',?) " +
-                                           "IF NOT EXISTS USING TTL %d",
-                                           keyspaceName(), tableName(), keyspaceConfig.leaseSchemaTTL().toSeconds()));
+                String.format("INSERT INTO %s.%s (name,owner) VALUES ('cluster_lease_holder',?) " + "IF NOT EXISTS USING TTL %d", keyspaceName(), tableName(),
+                        keyspaceConfig.leaseSchemaTTL()
+                                      .toSeconds()));
         extendLease = prepare(extendLease, session,
-                              String.format("UPDATE %s.%s USING TTL %d SET owner = ? " +
-                                            "WHERE name = 'cluster_lease_holder' IF owner = ?",
-                                            keyspaceName(), tableName(), keyspaceConfig.leaseSchemaTTL().toSeconds()));
+                String.format("UPDATE %s.%s USING TTL %d SET owner = ? " + "WHERE name = 'cluster_lease_holder' IF owner = ?", keyspaceName(), tableName(),
+                        keyspaceConfig.leaseSchemaTTL()
+                                      .toSeconds()));
     }
 
     /**
@@ -86,11 +86,8 @@ public class SidecarLeaseSchema extends TableSchema
     @VisibleForTesting
     public String createSchemaStatement()
     {
-        return String.format("CREATE TABLE IF NOT EXISTS %s.%s ("
-                             + "name text PRIMARY KEY,"
-                             + "owner text) "
-                             + "WITH gc_grace_seconds = 86400",
-                             keyspaceName(), tableName());
+        return String.format("CREATE TABLE IF NOT EXISTS %s.%s (" + "name text PRIMARY KEY," + "owner text) " + "WITH gc_grace_seconds = 86400", keyspaceName(),
+                tableName());
     }
 
     public PreparedStatement claimLeaseStatement()

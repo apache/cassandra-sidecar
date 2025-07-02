@@ -25,14 +25,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Local implementation of InstancesMetadata.
@@ -49,12 +47,14 @@ public class InstancesMetadataImpl implements InstancesMetadata
     private final Map<String, InstanceMetadata> hostNameToInstanceMetadata;
     private volatile Map<String, InstanceMetadata> ipToInstanceMetadata;
 
-    public InstancesMetadataImpl(InstanceMetadata instanceMetadata, DnsResolver dnsResolver)
+    public InstancesMetadataImpl(InstanceMetadata instanceMetadata,
+                                 DnsResolver dnsResolver)
     {
         this(Collections.singletonList(instanceMetadata), dnsResolver);
     }
 
-    public InstancesMetadataImpl(List<InstanceMetadata> instanceMetadataList, DnsResolver dnsResolver)
+    public InstancesMetadataImpl(List<InstanceMetadata> instanceMetadataList,
+                                 DnsResolver dnsResolver)
     {
         this.dnsResolver = dnsResolver;
         this.instanceMetadataList = instanceMetadataList;
@@ -142,7 +142,7 @@ public class InstancesMetadataImpl implements InstancesMetadata
         long now = System.currentTimeMillis();
         long lastValue = lastUpdateTimestamp.get();
         if (now - lastValue <= ONE_SECOND // update at most once a second
-            || !lastUpdateTimestamp.compareAndSet(lastValue, now)) // another thread has updated the timestamp. let it update the map
+                || !lastUpdateTimestamp.compareAndSet(lastValue, now)) // another thread has updated the timestamp. let it update the map
         {
             return;
         }
@@ -158,8 +158,7 @@ public class InstancesMetadataImpl implements InstancesMetadata
             catch (UnknownHostException uhe)
             {
                 // log a warning and continue; Do not update the ipAddress for this instance
-                LOGGER.warn("Failed to resolve IP address from host. Going to use the existing IP address. host={}",
-                            instanceMetadata.host(), uhe);
+                LOGGER.warn("Failed to resolve IP address from host. Going to use the existing IP address. host={}", instanceMetadata.host(), uhe);
             }
             if (ipAddress != null)
             {

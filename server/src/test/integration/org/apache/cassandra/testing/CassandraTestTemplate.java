@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.testing;
 
+import com.vdurmont.semver4j.Semver;
 import java.lang.reflect.AnnotatedElement;
 import java.net.BindException;
 import java.nio.file.Files;
@@ -29,7 +30,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
+import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.Feature;
+import org.apache.cassandra.distributed.api.TokenSupplier;
+import org.apache.cassandra.distributed.impl.AbstractCluster;
+import org.apache.cassandra.distributed.shared.Versions;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
+import org.apache.cassandra.testing.utils.tls.CertificateBundle;
+import org.apache.cassandra.utils.Throwables;
+import software.amazon.awssdk.utils.ImmutableMap;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
@@ -42,28 +52,13 @@ import org.junit.jupiter.api.extension.TestTemplateInvocationContextProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.vdurmont.semver4j.Semver;
-import org.apache.cassandra.distributed.UpgradeableCluster;
-import org.apache.cassandra.distributed.api.Feature;
-import org.apache.cassandra.distributed.api.TokenSupplier;
-import org.apache.cassandra.distributed.impl.AbstractCluster;
-import org.apache.cassandra.distributed.shared.Versions;
-import org.apache.cassandra.sidecar.common.utils.Preconditions;
-import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
-import org.apache.cassandra.testing.utils.tls.CertificateBundle;
-import org.apache.cassandra.utils.Throwables;
-import software.amazon.awssdk.utils.ImmutableMap;
-
-
 /**
- * Creates a test per version of Cassandra we are testing
- * Tests must be marked with {@link CassandraIntegrationTest}
+ * Creates a test per version of Cassandra we are testing Tests must be marked with {@link CassandraIntegrationTest}
  * <p>
- * This is a mix of parameterized tests + a custom extension.  we need to be able to provide the test context
- * to each test (like an extension) but also need to create multiple tests (like parameterized tests).  Unfortunately
- * the two don't play well with each other.  You can't get access to the parameters from the extension.
- * This test template allows us full control of the test lifecycle and lets us tightly couple the context to each test
- * we generate, since the same test can be run for multiple versions of C*.
+ * This is a mix of parameterized tests + a custom extension. we need to be able to provide the test context to each test (like an extension) but also need to
+ * create multiple tests (like parameterized tests). Unfortunately the two don't play well with each other. You can't get access to the parameters from the
+ * extension. This test template allows us full control of the test lifecycle and lets us tightly couple the context to each test we generate, since the same
+ * test can be run for multiple versions of C*.
  */
 public class CassandraTestTemplate implements TestTemplateInvocationContextProvider
 {
@@ -89,7 +84,10 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
             return TestVersionSupplier.testVersions()
                                       .map(v -> invocationContext(v, context));
         }
-        return Stream.of(invocationContext(TestVersionSupplier.testVersions().findFirst().get(), context));
+        return Stream.of(invocationContext(TestVersionSupplier.testVersions()
+                                                              .findFirst()
+                                                              .get(),
+                context));
     }
 
     /**
@@ -97,10 +95,10 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
      *
      * @param version a version for the test
      * @param context the <em>context</em> in which the current test or container is being executed.
-     * @return the <em>context</em> of a single invocation of a
-     * {@linkplain org.junit.jupiter.api.TestTemplate test template}
+     * @return the <em>context</em> of a single invocation of a {@linkplain org.junit.jupiter.api.TestTemplate test template}
      */
-    private TestTemplateInvocationContext invocationContext(TestVersion version, ExtensionContext context)
+    private TestTemplateInvocationContext invocationContext(TestVersion version,
+                                                            ExtensionContext context)
     {
         return new CassandraTestTemplateInvocationContext(context, version);
     }
@@ -113,8 +111,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                                                           .orElse(null);
         if (result == null && throwIfNotFound)
         {
-            throw new RuntimeException("CassandraTestTemplate could not "
-                                       + "find @CassandraIntegrationTest annotation");
+            throw new RuntimeException("CassandraTestTemplate could not " + "find @CassandraIntegrationTest annotation");
         }
         return result;
     }
@@ -124,15 +121,15 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         private final ExtensionContext context;
         private final TestVersion version;
 
-        private CassandraTestTemplateInvocationContext(ExtensionContext context, TestVersion version)
+        private CassandraTestTemplateInvocationContext(ExtensionContext context,
+                                                       TestVersion version)
         {
             this.context = context;
             this.version = version;
         }
 
         /**
-         * A display name can be configured per test still - this adds the C* version we're testing automatically
-         * as a suffix to the name
+         * A display name can be configured per test still - this adds the C* version we're testing automatically as a suffix to the name
          *
          * @param invocationIndex the index to the invocation
          * @return the display name
@@ -164,22 +161,19 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                 int nodesPerDc = annotation.nodesPerDc();
                 int dcCount = annotation.numDcs();
                 int newNodesPerDc = annotation.newNodesPerDc(); // if the test wants to add more nodes later
-                Preconditions.checkArgument(newNodesPerDc >= 0,
-                                            "newNodesPerDc cannot be a negative number");
+                Preconditions.checkArgument(newNodesPerDc >= 0, "newNodesPerDc cannot be a negative number");
                 int originalNodeCount = nodesPerDc * dcCount;
                 int finalNodeCount = dcCount * (nodesPerDc + newNodesPerDc);
-                Versions.Version requestedVersion = versions.getLatest(new Semver(version.version(),
-                                                                                  Semver.SemverType.LOOSE));
+                Versions.Version requestedVersion = versions.getLatest(new Semver(version.version(), Semver.SemverType.LOOSE));
                 SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(version.version());
 
-                UpgradeableCluster.Builder clusterBuilder =
-                UpgradeableCluster.build(originalNodeCount)
-                                  .withDynamicPortAllocation(true) // to allow parallel test runs
-                                  .withVersion(requestedVersion)
-                                  .withDCs(dcCount)
-                                  .withSharedClasses(extra.or(AbstractCluster.SHARED_PREDICATE))
-                                  .withDataDirCount(annotation.numDataDirsPerInstance())
-                                  .withConfig(config -> annotationToFeatureList(annotation).forEach(config::with));
+                UpgradeableCluster.Builder clusterBuilder = UpgradeableCluster.build(originalNodeCount)
+                                                                              .withDynamicPortAllocation(true) // to allow parallel test runs
+                                                                              .withVersion(requestedVersion)
+                                                                              .withDCs(dcCount)
+                                                                              .withSharedClasses(extra.or(AbstractCluster.SHARED_PREDICATE))
+                                                                              .withDataDirCount(annotation.numDataDirsPerInstance())
+                                                                              .withConfig(config -> annotationToFeatureList(annotation).forEach(config::with));
 
                 Path tempDirPath = Files.createTempDirectory("certs");
                 CertificateBundle ca = ca();
@@ -188,50 +182,50 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 
                 switch (annotation.authMode())
                 {
-                    case PASSWORD:
-                    {
+                    case PASSWORD : {
                         clusterBuilder.appendConfig(config -> config.set("authenticator", "org.apache.cassandra.auth.PasswordAuthenticator"));
                         break;
                     }
-                    case MUTUAL_TLS:
-                    {
+                    case MUTUAL_TLS : {
                         // mTLS authentication was added in Cassandra starting 5.0 version
                         if (clusterBuilder.getVersion().version.getMajor() >= MIN_VERSION_WITH_MTLS)
                         {
                             clusterBuilder.appendConfig(config -> {
                                 config.set("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator")
-                                      .set("authenticator.parameters", Collections.singletonMap("validator_class_name",
-                                                                                                "org.apache.cassandra.auth.SpiffeCertificateValidator"))
+                                      .set("authenticator.parameters",
+                                              Collections.singletonMap("validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator"))
                                       .set("role_manager", "CassandraRoleManager")
                                       .set("authorizer", "CassandraAuthorizer")
                                       .set("client_encryption_options.enabled", "true")
                                       .set("client_encryption_options.optional", "true")
                                       .set("client_encryption_options.require_client_auth", "true")
                                       .set("client_encryption_options.require_endpoint_verification", "false")
-                                      .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath().toString())
+                                      .set("client_encryption_options.keystore", serverKeystorePath.toAbsolutePath()
+                                                                                                   .toString())
                                       .set("client_encryption_options.keystore_password", serverKeystorePassword)
-                                      .set("client_encryption_options.truststore", truststorePath.toAbsolutePath().toString())
+                                      .set("client_encryption_options.truststore", truststorePath.toAbsolutePath()
+                                                                                                 .toString())
                                       .set("client_encryption_options.truststore_password", truststorePassword);
                             });
                         }
                         break;
                     }
-                    default:
+                    default :
                 }
 
-                if (annotation.enableSsl() && !annotation.authMode().equals(AuthMode.MUTUAL_TLS))
+                if (annotation.enableSsl() && !annotation.authMode()
+                                                         .equals(AuthMode.MUTUAL_TLS))
                 {
                     clusterBuilder.appendConfig(config -> {
                         // dot-separated options are not supported in 4.0
-                        config.set("client_encryption_options", ImmutableMap.of("enabled", "true",
-                                                                                "require_client_auth", "false",
-                                                                                "keystore", serverKeystorePath.toAbsolutePath().toString(),
-                                                                                "keystore_password", serverKeystorePassword));
+                        config.set("client_encryption_options", ImmutableMap.of("enabled", "true", "require_client_auth", "false", "keystore",
+                                serverKeystorePath.toAbsolutePath()
+                                                  .toString(),
+                                "keystore_password", serverKeystorePassword));
                     });
                 }
 
-                TokenSupplier tokenSupplier = TokenSupplier.evenlyDistributedTokens(finalNodeCount,
-                                                                                    clusterBuilder.getTokenCount());
+                TokenSupplier tokenSupplier = TokenSupplier.evenlyDistributedTokens(finalNodeCount, clusterBuilder.getTokenCount());
                 clusterBuilder.withTokenSupplier(tokenSupplier);
                 if (annotation.buildCluster())
                 {
@@ -244,14 +238,12 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                     {
                         cluster = clusterBuilder.createWithoutStarting();
                     }
-                    cassandraTestContext = new CassandraTestContext(versionParsed, cluster, ca, serverKeystorePath,
-                                                                    truststorePath, annotation);
+                    cassandraTestContext = new CassandraTestContext(versionParsed, cluster, ca, serverKeystorePath, truststorePath, annotation);
                 }
                 else
                 {
-                    cassandraTestContext = new ConfigurableCassandraTestContext(versionParsed, clusterBuilder, ca,
-                                                                                serverKeystorePath, truststorePath,
-                                                                                annotation);
+                    cassandraTestContext = new ConfigurableCassandraTestContext(versionParsed, clusterBuilder, ca, serverKeystorePath, truststorePath,
+                            annotation);
                 }
                 LOGGER.info("Testing {} against in-jvm dtest cluster", version);
                 LOGGER.info("Created Cassandra test context {}", cassandraTestContext);
@@ -259,8 +251,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         }
 
         /**
-         * Shuts down the in-jvm dtest cluster after an individual test and any user-defined teardown methods
-         * have been executed
+         * Shuts down the in-jvm dtest cluster after an individual test and any user-defined teardown methods have been executed
          *
          * @return the {@link AfterEachCallback}
          */
@@ -275,8 +266,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         }
 
         /**
-         * Builds a list of configured {@link Feature features} requested in the {@link CassandraIntegrationTest}
-         * annotation.
+         * Builds a list of configured {@link Feature features} requested in the {@link CassandraIntegrationTest} annotation.
          *
          * @param annotation the configured annotation
          * @return a list of configured {@link Feature features}
@@ -316,9 +306,9 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                 public boolean supportsParameter(ParameterContext parameterContext,
                                                  ExtensionContext extensionContext)
                 {
-                    Class<?> parameterType = parameterContext.getParameter().getType();
-                    CassandraIntegrationTest annotation =
-                    getCassandraIntegrationTestAnnotation(extensionContext, false);
+                    Class<?> parameterType = parameterContext.getParameter()
+                                                             .getType();
+                    CassandraIntegrationTest annotation = getCassandraIntegrationTestAnnotation(extensionContext, false);
                     if (annotation == null)
                     {
                         return false;
@@ -335,10 +325,9 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                         }
                         else if (parameterType.equals(ConfigurableCassandraTestContext.class))
                         {
-                            throw new IllegalArgumentException("CassandraIntegrationTest.buildCluster is true but"
-                                                               + " a configurable context was requested. Please "
-                                                               + "either request a CassandraTestContext "
-                                                               + "as a parameter or set buildCluster to false");
+                            throw new IllegalArgumentException(
+                                    "CassandraIntegrationTest.buildCluster is true but" + " a configurable context was requested. Please "
+                                            + "either request a CassandraTestContext " + "as a parameter or set buildCluster to false");
                         }
                     }
                     else
@@ -349,19 +338,17 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                         }
                         else if (parameterType.equals(CassandraTestContext.class))
                         {
-                            throw new IllegalArgumentException("CassandraIntegrationTest.buildCluster is false "
-                                                               + "but a built cluster was requested. Please "
-                                                               + "either request a "
-                                                               + "ConfigurableCassandraTestContext as a "
-                                                               + "parameter or set buildCluster to true"
-                                                               + "(the default)");
+                            throw new IllegalArgumentException(
+                                    "CassandraIntegrationTest.buildCluster is false " + "but a built cluster was requested. Please " + "either request a "
+                                            + "ConfigurableCassandraTestContext as a " + "parameter or set buildCluster to true" + "(the default)");
                         }
                     }
                     return false;
                 }
 
                 @Override
-                public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
+                public Object resolveParameter(ParameterContext parameterContext,
+                                               ExtensionContext extensionContext)
                 {
                     return cassandraTestContext;
                 }
@@ -371,18 +358,22 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
 
     private CertificateBundle ca() throws Exception
     {
-        return new CertificateBuilder()
-               .subject("CN=Apache cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
-               .isCertificateAuthority(true)
-               .buildSelfSigned();
+        return new CertificateBuilder().subject("CN=Apache cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
+                                       .isCertificateAuthority(true)
+                                       .buildSelfSigned();
     }
 
-    private Path truststorePath(CertificateBundle ca, Path path) throws Exception
+    private Path truststorePath(CertificateBundle ca,
+                                Path path)
+            throws Exception
     {
         return ca.toTempKeyStorePath(path, truststorePassword.toCharArray(), truststorePassword.toCharArray());
     }
 
-    private Path serverKeystorePath(CertificateBundle ca, Path path, int totalNodes) throws Exception
+    private Path serverKeystorePath(CertificateBundle ca,
+                                    Path path,
+                                    int totalNodes)
+            throws Exception
     {
         CertificateBuilder builder = new CertificateBuilder();
         builder.subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
@@ -395,7 +386,8 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         return keystore.toTempKeyStorePath(path, serverKeystorePassword.toCharArray(), serverKeystorePassword.toCharArray());
     }
 
-    public static UpgradeableCluster retriableStartCluster(UpgradeableCluster.Builder builder, int maxAttempts)
+    public static UpgradeableCluster retriableStartCluster(UpgradeableCluster.Builder builder,
+                                                           int maxAttempts)
     {
         Throwable lastCause = null;
         for (int i = 0; i < maxAttempts; i++)
@@ -425,7 +417,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
     private static boolean portNotAvailableToBind(Throwable cause)
     {
         return (cause instanceof BindException && StringUtils.contains(cause.getMessage(), "Address already in use"))
-               || StringUtils.contains(cause.getMessage(), "is in use by another process");
+                || StringUtils.contains(cause.getMessage(), "is in use by another process");
     }
 
     static
@@ -435,8 +427,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         System.setProperty("cassandra.consistent.simultaneousmoves.allow", "true");
         // End gossip delay settings
         // Set the location of dtest jars
-        System.setProperty("cassandra.test.dtest_jar_path",
-                           System.getProperty("cassandra.test.dtest_jar_path", "dtest-jars"));
+        System.setProperty("cassandra.test.dtest_jar_path", System.getProperty("cassandra.test.dtest_jar_path", "dtest-jars"));
         // Disable tcnative in netty as it can cause jni issues and logs lots errors
         System.setProperty("cassandra.disable_tcactive_openssl", "true");
         // As we enable gossip by default, make the checks happen faster

@@ -17,22 +17,14 @@
 package org.apache.cassandra.sidecar.common.data;
 
 import java.util.Locale;
-
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Consistency level for read/write operations
- * Note: not supporting all consistency level in Cassandra on purpose
+ * Consistency level for read/write operations Note: not supporting all consistency level in Cassandra on purpose
  */
 public enum ConsistencyLevel
 {
-    ONE,
-    TWO,
-    LOCAL_ONE(true),
-    LOCAL_QUORUM(true),
-    EACH_QUORUM,
-    QUORUM,
-    ALL;
+    ONE, TWO, LOCAL_ONE(true), LOCAL_QUORUM(true), EACH_QUORUM, QUORUM, ALL;
 
     public final boolean isLocalDcOnly;
 
@@ -48,6 +40,7 @@ public enum ConsistencyLevel
 
     /**
      * Try to get the enum value based on the input name.
+     *
      * @param name string literal of the enum name
      * @return enum, or null if the input is null
      */

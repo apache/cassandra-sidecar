@@ -26,8 +26,8 @@ import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfigur
 public interface CacheConfiguration
 {
     /**
-     * @return the configured amount of time after the entry's creation, the most recent replacement
-     * of its value, or its last access has elapsed to be considered an expired entry in the cache
+     * @return the configured amount of time after the entry's creation, the most recent replacement of its value, or its last access has elapsed to be
+     *         considered an expired entry in the cache
      */
     MillisecondBoundConfiguration expireAfterAccess();
 

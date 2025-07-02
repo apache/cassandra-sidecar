@@ -23,12 +23,28 @@ package org.apache.cassandra.sidecar.modules.multibindings;
  */
 public interface TableSchemaMapKeys
 {
-    interface ConfigsSchemaKey extends ClassKey {}
-    interface RestoreJobsSchemaKey extends ClassKey {}
-    interface RestoreRangesSchemaKey extends ClassKey {}
-    interface RestoreSlicesSchemaKey extends ClassKey {}
-    interface SidecarLeaseSchemaKey extends ClassKey {}
-    interface SidecarRolePermissionsSchemaKey extends ClassKey {}
-    interface SystemAuthSchemaKey extends ClassKey {}
-    interface SystemViewsSchemaKey extends ClassKey {}
+    interface ConfigsSchemaKey extends ClassKey
+    {
+    }
+    interface RestoreJobsSchemaKey extends ClassKey
+    {
+    }
+    interface RestoreRangesSchemaKey extends ClassKey
+    {
+    }
+    interface RestoreSlicesSchemaKey extends ClassKey
+    {
+    }
+    interface SidecarLeaseSchemaKey extends ClassKey
+    {
+    }
+    interface SidecarRolePermissionsSchemaKey extends ClassKey
+    {
+    }
+    interface SystemAuthSchemaKey extends ClassKey
+    {
+    }
+    interface SystemViewsSchemaKey extends ClassKey
+    {
+    }
 }

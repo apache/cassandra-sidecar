@@ -21,7 +21,9 @@ package org.apache.cassandra.sidecar.datahub;
 
 import java.io.IOException;
 import java.util.Collections;
+
 import com.google.common.collect.ImmutableList;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,9 +54,8 @@ import static org.mockito.Mockito.when;
 final class SchemaReporterTest
 {
     private static final IdentifiersProvider IDENTIFIERS = new TestIdentifiers();
-    private static final MetricRegistryFactory FACTORY = new MetricRegistryFactory(SchemaReporterTest.class.getSimpleName(),
-                                                                                   Collections.emptyList(),
-                                                                                   Collections.emptyList());
+    private static final MetricRegistryFactory FACTORY = new MetricRegistryFactory(SchemaReporterTest.class.getSimpleName(), Collections.emptyList(),
+            Collections.emptyList());
 
     private SidecarMetrics metrics;
 
@@ -83,15 +84,18 @@ final class SchemaReporterTest
         String expected = IOUtils.readFully("/datahub/empty_cluster.json");
         assertThat(actual).isEqualTo(expected);
 
-        SchemaReportingMetrics metrics = this.metrics.server().schemaReporting();                      // Validate captured metrics:
-        assertThat(metrics.startedRequest.metric.getValue()).isOne();                                  //  * one execution triggered by request
-        assertThat(metrics.startedSchedule.metric.getValue()).isZero();                                //  * zero executions triggered by schedule
-        assertThat(metrics.finishedSuccess.metric.getValue()).isOne();                                 //  * one execution resulted in success
-        assertThat(metrics.finishedFailure.metric.getValue()).isZero();                                //  * zero executions resulted in failure
-        assertThat(metrics.sizeAspects.metric.getCount()).isOne();                                     //  * single number of aspects,
-        assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(2L);          //    equal to two
-        assertThat(metrics.totalDuration.metric.getCount()).isOne();                            //  * single duration of execution,
-        assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
+        SchemaReportingMetrics metrics = this.metrics.server()
+                                                     .schemaReporting(); // Validate captured metrics:
+        assertThat(metrics.startedRequest.metric.getValue()).isOne(); // * one execution triggered by request
+        assertThat(metrics.startedSchedule.metric.getValue()).isZero(); // * zero executions triggered by schedule
+        assertThat(metrics.finishedSuccess.metric.getValue()).isOne(); // * one execution resulted in success
+        assertThat(metrics.finishedFailure.metric.getValue()).isZero(); // * zero executions resulted in failure
+        assertThat(metrics.sizeAspects.metric.getCount()).isOne(); // * single number of aspects,
+        assertThat(metrics.sizeAspects.metric.getSnapshot()
+                                             .getValues()).containsExactly(2L); // equal to two
+        assertThat(metrics.totalDuration.metric.getCount()).isOne(); // * single duration of execution,
+        assertThat(metrics.totalDuration.metric.getSnapshot()
+                                               .getValues()[0]).isNotNegative(); // that is non-negative
     }
 
     @Test
@@ -110,15 +114,18 @@ final class SchemaReporterTest
         String expected = IOUtils.readFully("/datahub/empty_keyspace.json");
         assertThat(actual).isEqualTo(expected);
 
-        SchemaReportingMetrics metrics = this.metrics.server().schemaReporting();                      // Validate captured metrics:
-        assertThat(metrics.startedRequest.metric.getValue()).isOne();                                  //  * one execution triggered by request
-        assertThat(metrics.startedSchedule.metric.getValue()).isZero();                                //  * zero executions triggered by schedule
-        assertThat(metrics.finishedSuccess.metric.getValue()).isOne();                                 //  * one execution resulted in success
-        assertThat(metrics.finishedFailure.metric.getValue()).isZero();                                //  * zero executions resulted in failure
-        assertThat(metrics.sizeAspects.metric.getCount()).isOne();                                     //  * single number of aspects,
-        assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(6L);          //    equal to six
-        assertThat(metrics.totalDuration.metric.getCount()).isOne();                            //  * single duration of execution,
-        assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
+        SchemaReportingMetrics metrics = this.metrics.server()
+                                                     .schemaReporting(); // Validate captured metrics:
+        assertThat(metrics.startedRequest.metric.getValue()).isOne(); // * one execution triggered by request
+        assertThat(metrics.startedSchedule.metric.getValue()).isZero(); // * zero executions triggered by schedule
+        assertThat(metrics.finishedSuccess.metric.getValue()).isOne(); // * one execution resulted in success
+        assertThat(metrics.finishedFailure.metric.getValue()).isZero(); // * zero executions resulted in failure
+        assertThat(metrics.sizeAspects.metric.getCount()).isOne(); // * single number of aspects,
+        assertThat(metrics.sizeAspects.metric.getSnapshot()
+                                             .getValues()).containsExactly(6L); // equal to six
+        assertThat(metrics.totalDuration.metric.getCount()).isOne(); // * single duration of execution,
+        assertThat(metrics.totalDuration.metric.getSnapshot()
+                                               .getValues()[0]).isNotNegative(); // that is non-negative
     }
 
     @Test
@@ -144,15 +151,18 @@ final class SchemaReporterTest
         String expected = IOUtils.readFully("/datahub/empty_table.json");
         assertThat(actual).isEqualTo(expected);
 
-        SchemaReportingMetrics metrics = this.metrics.server().schemaReporting();                      // Validate captured metrics:
-        assertThat(metrics.startedRequest.metric.getValue()).isOne();                                  //  * one execution triggered by request
-        assertThat(metrics.startedSchedule.metric.getValue()).isZero();                                //  * zero executions triggered by schedule
-        assertThat(metrics.finishedSuccess.metric.getValue()).isOne();                                 //  * one execution resulted in success
-        assertThat(metrics.finishedFailure.metric.getValue()).isZero();                                //  * zero executions resulted in failure
-        assertThat(metrics.sizeAspects.metric.getCount()).isOne();                                     //  * single number of aspects,
-        assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(13L);         //    equal to thirteen
-        assertThat(metrics.totalDuration.metric.getCount()).isOne();                            //  * single duration of execution,
-        assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
+        SchemaReportingMetrics metrics = this.metrics.server()
+                                                     .schemaReporting(); // Validate captured metrics:
+        assertThat(metrics.startedRequest.metric.getValue()).isOne(); // * one execution triggered by request
+        assertThat(metrics.startedSchedule.metric.getValue()).isZero(); // * zero executions triggered by schedule
+        assertThat(metrics.finishedSuccess.metric.getValue()).isOne(); // * one execution resulted in success
+        assertThat(metrics.finishedFailure.metric.getValue()).isZero(); // * zero executions resulted in failure
+        assertThat(metrics.sizeAspects.metric.getCount()).isOne(); // * single number of aspects,
+        assertThat(metrics.sizeAspects.metric.getSnapshot()
+                                             .getValues()).containsExactly(13L); // equal to thirteen
+        assertThat(metrics.totalDuration.metric.getCount()).isOne(); // * single duration of execution,
+        assertThat(metrics.totalDuration.metric.getSnapshot()
+                                               .getValues()[0]).isNotNegative(); // that is non-negative
     }
 
     @Test
@@ -231,15 +241,18 @@ final class SchemaReporterTest
         String expected = IOUtils.readFully("/datahub/primitive_types.json");
         assertThat(actual).isEqualTo(expected);
 
-        SchemaReportingMetrics metrics = this.metrics.server().schemaReporting();                      // Validate captured metrics:
-        assertThat(metrics.startedRequest.metric.getValue()).isZero();                                 //  * zero executions triggered by request
-        assertThat(metrics.startedSchedule.metric.getValue()).isOne();                                 //  * one execution triggered by schedule
-        assertThat(metrics.finishedSuccess.metric.getValue()).isOne();                                 //  * one execution resulted in success
-        assertThat(metrics.finishedFailure.metric.getValue()).isZero();                                //  * zero executions resulted in failure
-        assertThat(metrics.sizeAspects.metric.getCount()).isOne();                                     //  * single number of aspects,
-        assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(13L);         //    equal to thirteen
-        assertThat(metrics.totalDuration.metric.getCount()).isOne();                            //  * single duration of execution,
-        assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
+        SchemaReportingMetrics metrics = this.metrics.server()
+                                                     .schemaReporting(); // Validate captured metrics:
+        assertThat(metrics.startedRequest.metric.getValue()).isZero(); // * zero executions triggered by request
+        assertThat(metrics.startedSchedule.metric.getValue()).isOne(); // * one execution triggered by schedule
+        assertThat(metrics.finishedSuccess.metric.getValue()).isOne(); // * one execution resulted in success
+        assertThat(metrics.finishedFailure.metric.getValue()).isZero(); // * zero executions resulted in failure
+        assertThat(metrics.sizeAspects.metric.getCount()).isOne(); // * single number of aspects,
+        assertThat(metrics.sizeAspects.metric.getSnapshot()
+                                             .getValues()).containsExactly(13L); // equal to thirteen
+        assertThat(metrics.totalDuration.metric.getCount()).isOne(); // * single duration of execution,
+        assertThat(metrics.totalDuration.metric.getSnapshot()
+                                               .getValues()[0]).isNotNegative(); // that is non-negative
     }
 
     @Test
@@ -312,14 +325,17 @@ final class SchemaReporterTest
         String expected = IOUtils.readFully("/datahub/user_types.json");
         assertThat(actual).isEqualTo(expected);
 
-        SchemaReportingMetrics metrics = this.metrics.server().schemaReporting();                      // Validate captured metrics:
-        assertThat(metrics.startedRequest.metric.getValue()).isZero();                                 //  * zero executions triggered by request
-        assertThat(metrics.startedSchedule.metric.getValue()).isOne();                                 //  * one execution triggered by schedule
-        assertThat(metrics.finishedSuccess.metric.getValue()).isOne();                                 //  * one execution resulted in success
-        assertThat(metrics.finishedFailure.metric.getValue()).isZero();                                //  * zero executions resulted in failure
-        assertThat(metrics.sizeAspects.metric.getCount()).isOne();                                     //  * single number of aspects,
-        assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(13L);         //    equal to thirteen
-        assertThat(metrics.totalDuration.metric.getCount()).isOne();                            //  * single duration of execution,
-        assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
+        SchemaReportingMetrics metrics = this.metrics.server()
+                                                     .schemaReporting(); // Validate captured metrics:
+        assertThat(metrics.startedRequest.metric.getValue()).isZero(); // * zero executions triggered by request
+        assertThat(metrics.startedSchedule.metric.getValue()).isOne(); // * one execution triggered by schedule
+        assertThat(metrics.finishedSuccess.metric.getValue()).isOne(); // * one execution resulted in success
+        assertThat(metrics.finishedFailure.metric.getValue()).isZero(); // * zero executions resulted in failure
+        assertThat(metrics.sizeAspects.metric.getCount()).isOne(); // * single number of aspects,
+        assertThat(metrics.sizeAspects.metric.getSnapshot()
+                                             .getValues()).containsExactly(13L); // equal to thirteen
+        assertThat(metrics.totalDuration.metric.getCount()).isOne(); // * single duration of execution,
+        assertThat(metrics.totalDuration.metric.getSnapshot()
+                                               .getValues()[0]).isNotNegative(); // that is non-negative
     }
 }

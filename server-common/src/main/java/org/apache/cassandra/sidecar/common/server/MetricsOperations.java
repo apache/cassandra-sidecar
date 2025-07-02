@@ -30,6 +30,7 @@ public interface MetricsOperations
 {
     /**
      * Retrieve the connected client stats from the cluster
+     *
      * @param summaryOnly boolean parameter to list connection summary only
      * @return the requested client stats, in full or summary
      */
@@ -37,12 +38,14 @@ public interface MetricsOperations
 
     /**
      * Retrieve the stream progress stats from the cluster
+     *
      * @return the requested stream progress stats
      */
     StreamsProgressStats streamsProgressStats();
 
     /**
      * Retrieve the table stats from the cluster
+     *
      * @param tableName qualified table name
      * @return the requested table stats
      */

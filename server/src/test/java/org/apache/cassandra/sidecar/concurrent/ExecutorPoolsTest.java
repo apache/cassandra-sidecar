@@ -18,22 +18,19 @@
 
 package org.apache.cassandra.sidecar.concurrent;
 
+import io.vertx.core.Vertx;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
-import com.google.common.util.concurrent.Uninterruptibles;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-
+import com.google.common.util.concurrent.Uninterruptibles;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,20 +61,24 @@ class ExecutorPoolsTest
     @AfterEach
     public void after()
     {
-        registry().removeMatching((name, metric) -> true);
-        TestResourceReaper.create().with(vertx).with(pools).close();
+        registry().removeMatching((name,
+                                   metric) -> true);
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(pools)
+                          .close();
     }
 
     @Test
     void testClosingExecutorPoolShouldThrow()
     {
-        assertThatThrownBy(() -> pools.service().close())
-        .hasMessage("Closing TaskExecutorPool is not supported!")
-        .isExactlyInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> pools.service()
+                                      .close()).hasMessage("Closing TaskExecutorPool is not supported!")
+                                               .isExactlyInstanceOf(UnsupportedOperationException.class);
 
-        assertThatThrownBy(() -> pools.internal().close())
-        .hasMessage("Closing TaskExecutorPool is not supported!")
-        .isExactlyInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> pools.internal()
+                                      .close()).hasMessage("Closing TaskExecutorPool is not supported!")
+                                               .isExactlyInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
@@ -100,16 +101,16 @@ class ExecutorPoolsTest
             pool.runBlocking(() -> stop.countDown());
         }
 
-        assertThat(Uninterruptibles.awaitUninterruptibly(stop, 10, TimeUnit.SECONDS))
-        .describedAs("Test should finish in 10 seconds")
-        .isTrue();
+        assertThat(Uninterruptibles.awaitUninterruptibly(stop, 10, TimeUnit.SECONDS)).describedAs("Test should finish in 10 seconds")
+                                                                                     .isTrue();
 
         // there could be some delay to read the metric that reflects the last task. If so, retry the assertion for at most 2 seconds
-        loopAssert(2,
-                   () -> assertThat(metrics.server().resource().internalTaskTime.metric.getCount()).isEqualTo(total));
+        loopAssert(2, () -> assertThat(metrics.server()
+                                              .resource().internalTaskTime.metric.getCount()).isEqualTo(total));
     }
 
-    private void testExecutionOrder(boolean orderedSubmission, boolean orderedExecution)
+    private void testExecutionOrder(boolean orderedSubmission,
+                                    boolean orderedExecution)
     {
         // not thread-safe deliberated
         class IntWrapper
@@ -140,9 +141,8 @@ class ExecutorPoolsTest
         }
         ready.countDown();
 
-        assertThat(Uninterruptibles.awaitUninterruptibly(stop, 10, TimeUnit.SECONDS))
-        .describedAs("Test should finish in 10 seconds")
-        .isTrue();
+        assertThat(Uninterruptibles.awaitUninterruptibly(stop, 10, TimeUnit.SECONDS)).describedAs("Test should finish in 10 seconds")
+                                                                                     .isTrue();
 
         // Although IntWrapper is not thread safe, the serial execution (ordered) prevents any race condition.
         if (orderedExecution)

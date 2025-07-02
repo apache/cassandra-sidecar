@@ -18,15 +18,13 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.job.OperationalJob;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
 
 /**
@@ -40,22 +38,29 @@ public class OperationalJobUtils
      * In the operational job context, sends a {@link OperationalJobResponse} based on the status of the job.
      *
      * @param context the request context
-     * @param job     the operational job to reports status on
+     * @param job the operational job to reports status on
      */
-    public static void sendStatusBasedResponse(RoutingContext context, OperationalJob job)
+    public static void sendStatusBasedResponse(RoutingContext context,
+                                               OperationalJob job)
     {
         OperationalJobStatus status = job.status();
         LOGGER.info("Job completion status={} jobId={}", status, job.jobId());
         if (status.isCompleted())
         {
-            context.response().setStatusCode(HttpResponseStatus.OK.code());
+            context.response()
+                   .setStatusCode(HttpResponseStatus.OK.code());
         }
         else
         {
-            context.response().setStatusCode(HttpResponseStatus.ACCEPTED.code());
+            context.response()
+                   .setStatusCode(HttpResponseStatus.ACCEPTED.code());
         }
 
-        String reason = status == FAILED ? job.asyncResult().cause().getMessage() : null;
+        String reason = status == FAILED
+                ? job.asyncResult()
+                     .cause()
+                     .getMessage()
+                : null;
         context.json(new OperationalJobResponse(job.jobId(), status, job.name(), reason));
     }
 }

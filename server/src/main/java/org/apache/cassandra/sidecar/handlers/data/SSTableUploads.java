@@ -35,9 +35,10 @@ public class SSTableUploads
      * Holds common request params needed for SSTable uploads
      *
      * @param qualifiedTableName the qualified table name in Cassandra
-     * @param uploadId           an identifier for the upload
+     * @param uploadId an identifier for the upload
      */
-    public SSTableUploads(QualifiedTableName qualifiedTableName, String uploadId)
+    public SSTableUploads(QualifiedTableName qualifiedTableName,
+                          String uploadId)
     {
         this.qualifiedTableName = qualifiedTableName;
         this.uploadId = Objects.requireNonNull(uploadId, "uploadId should not be null");

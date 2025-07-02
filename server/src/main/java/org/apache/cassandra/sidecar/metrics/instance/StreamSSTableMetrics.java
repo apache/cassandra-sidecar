@@ -44,22 +44,19 @@ public class StreamSSTableMetrics
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        totalBytesStreamedRate
-        = NamedMetric.builder(metricRegistry::meter)
-                     .withDomain(DOMAIN)
-                     .withName("TotalBytesStreamedRate")
-                     .build();
-        throttled
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(DOMAIN)
-                     .withName("Throttled")
-                     .build();
+        totalBytesStreamedRate = NamedMetric.builder(metricRegistry::meter)
+                                            .withDomain(DOMAIN)
+                                            .withName("TotalBytesStreamedRate")
+                                            .build();
+        throttled = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
+                               .withDomain(DOMAIN)
+                               .withName("Throttled")
+                               .build();
     }
 
     public StreamSSTableComponentMetrics forComponent(String component)
     {
-        return streamComponentMetrics
-               .computeIfAbsent(component, sstableComponent -> new StreamSSTableComponentMetrics(metricRegistry, sstableComponent));
+        return streamComponentMetrics.computeIfAbsent(component, sstableComponent -> new StreamSSTableComponentMetrics(metricRegistry, sstableComponent));
     }
 
     /**
@@ -71,11 +68,11 @@ public class StreamSSTableMetrics
         public final String sstableComponent;
         public final NamedMetric<Meter> bytesStreamedRate;
 
-        public StreamSSTableComponentMetrics(MetricRegistry metricRegistry, String sstableComponent)
+        public StreamSSTableComponentMetrics(MetricRegistry metricRegistry,
+                                             String sstableComponent)
         {
             this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
-            this.sstableComponent
-            = Objects.requireNonNull(sstableComponent, "SSTable component required for component specific metrics capture");
+            this.sstableComponent = Objects.requireNonNull(sstableComponent, "SSTable component required for component specific metrics capture");
             if (sstableComponent.isEmpty())
             {
                 throw new IllegalArgumentException("SSTableComponent required for component specific metrics capture");
@@ -83,12 +80,11 @@ public class StreamSSTableMetrics
 
             NamedMetric.Tag componentTag = NamedMetric.Tag.of("component", sstableComponent);
 
-            bytesStreamedRate
-            = NamedMetric.builder(metricRegistry::meter)
-                         .withDomain(DOMAIN)
-                         .withName("BytesStreamedRate")
-                         .addTag(componentTag)
-                         .build();
+            bytesStreamedRate = NamedMetric.builder(metricRegistry::meter)
+                                           .withDomain(DOMAIN)
+                                           .withName("BytesStreamedRate")
+                                           .addTag(componentTag)
+                                           .build();
         }
     }
 }

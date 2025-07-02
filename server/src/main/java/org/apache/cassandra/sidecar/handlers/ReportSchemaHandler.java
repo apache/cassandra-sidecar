@@ -38,8 +38,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.cassandra.sidecar.modules.ApiModule.OK_STATUS;
 
 /**
- * An implementation of {@link AbstractHandler} used to trigger an immediate,
- * synchronous conversion and report of the current schema
+ * An implementation of {@link AbstractHandler} used to trigger an immediate, synchronous conversion and report of the current schema
  */
 @Singleton
 public class ReportSchemaHandler extends AbstractHandler<Void> implements AccessProtected
@@ -48,8 +47,8 @@ public class ReportSchemaHandler extends AbstractHandler<Void> implements Access
     private final SchemaReporter schemaReporter;
 
     /**
-     * Constructs a new instance of {@link ReportSchemaHandler} using the provided instances
-     * of {@link InstanceMetadataFetcher}, {@link ExecutorPools}, and {@link SchemaReporter}
+     * Constructs a new instance of {@link ReportSchemaHandler} using the provided instances of {@link InstanceMetadataFetcher}, {@link ExecutorPools}, and
+     * {@link SchemaReporter}
      *
      * @param metadata the metadata fetcher
      * @param executor executor pools for blocking executions
@@ -95,7 +94,8 @@ public class ReportSchemaHandler extends AbstractHandler<Void> implements Access
                                   @NotNull SocketAddress address,
                                   @Nullable Void request)
     {
-        Metadata metadata = metadataFetcher.callOnFirstAvailableInstance(instance -> instance.delegate().metadata());
+        Metadata metadata = metadataFetcher.callOnFirstAvailableInstance(instance -> instance.delegate()
+                                                                                             .metadata());
 
         executorPools.service()
                      .runBlocking(() -> schemaReporter.processRequested(metadata))

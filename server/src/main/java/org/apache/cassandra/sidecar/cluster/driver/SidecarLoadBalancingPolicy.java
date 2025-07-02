@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Iterators;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,10 +44,9 @@ import com.datastax.driver.core.policies.RoundRobinPolicy;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 
 /**
- * The SidecarLoadBalancingPolicy is designed to ensure that the Cassandra Metadata objects associated with the
- * CqlSessionProvider have enough non-local hosts in their allowed connections to be kept up-to-date
- * even if the local Cassandra instances are down/have their native transport disabled.
- * NOTE: This policy won't work with a child policy that is token-aware
+ * The SidecarLoadBalancingPolicy is designed to ensure that the Cassandra Metadata objects associated with the CqlSessionProvider have enough non-local hosts
+ * in their allowed connections to be kept up-to-date even if the local Cassandra instances are down/have their native transport disabled. NOTE: This policy
+ * won't work with a child policy that is token-aware
  */
 public class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
 {
@@ -71,15 +71,16 @@ public class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
         this.driverUtils = driverUtils;
         if (numAdditionalConnections < MIN_NON_LOCAL_CONNECTIONS)
         {
-            LOGGER.warn("Additional instances requested was {}, which is less than the minimum of {}. Using {}.",
-                        numAdditionalConnections, MIN_NON_LOCAL_CONNECTIONS, MIN_NON_LOCAL_CONNECTIONS);
+            LOGGER.warn("Additional instances requested was {}, which is less than the minimum of {}. Using {}.", numAdditionalConnections,
+                    MIN_NON_LOCAL_CONNECTIONS, MIN_NON_LOCAL_CONNECTIONS);
             numAdditionalConnections = MIN_NON_LOCAL_CONNECTIONS;
         }
         this.totalRequestedConnections = this.localHostAddresses.size() + numAdditionalConnections;
     }
 
     @Override
-    public void init(Cluster cluster, Collection<Host> hosts)
+    public void init(Cluster cluster,
+                     Collection<Host> hosts)
     {
         this.cluster = cluster;
         this.allHosts.addAll(hosts);
@@ -98,7 +99,8 @@ public class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
     }
 
     @Override
-    public Iterator<Host> newQueryPlan(String loggedKeyspace, Statement statement)
+    public Iterator<Host> newQueryPlan(String loggedKeyspace,
+                                       Statement statement)
     {
         Iterator<Host> child = childPolicy.newQueryPlan(loggedKeyspace, statement);
         // Filter the child policy to only selected hosts
@@ -171,7 +173,9 @@ public class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
     {
         if (localDc != null)
         {
-            return DCAwareRoundRobinPolicy.builder().withLocalDc(localDc).build();
+            return DCAwareRoundRobinPolicy.builder()
+                                          .withLocalDc(localDc)
+                                          .build();
         }
         return new RoundRobinPolicy();
     }
@@ -190,8 +194,8 @@ public class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
         {
             if (localHosts.size() < numLocalHostsConfigured)
             {
-                LOGGER.warn("Could not find all configured local hosts in host list. ConfiguredHosts={} AvailableHosts={}",
-                            numLocalHostsConfigured, localHosts.size());
+                LOGGER.warn("Could not find all configured local hosts in host list. ConfiguredHosts={} AvailableHosts={}", numLocalHostsConfigured,
+                        localHosts.size());
             }
             selectedHosts.addAll(localHosts);
         }
@@ -212,13 +216,11 @@ public class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
 
             if (nonLocalHosts.size() < requiredNonLocalHosts)
             {
-                LOGGER.warn("Could not find enough new, up non-local hosts to meet requested number {}",
-                            requiredNonLocalHosts);
+                LOGGER.warn("Could not find enough new, up non-local hosts to meet requested number {}", requiredNonLocalHosts);
             }
             else
             {
-                LOGGER.debug("Found enough new, up, non-local hosts to meet requested number {}",
-                             requiredNonLocalHosts);
+                LOGGER.debug("Found enough new, up, non-local hosts to meet requested number {}", requiredNonLocalHosts);
             }
             if (nonLocalHosts.size() > requiredNonLocalHosts)
             {

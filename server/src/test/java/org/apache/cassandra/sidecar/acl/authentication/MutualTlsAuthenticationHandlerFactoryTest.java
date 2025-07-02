@@ -18,15 +18,10 @@
 
 package org.apache.cassandra.sidecar.acl.authentication;
 
+import io.vertx.core.Vertx;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
@@ -37,7 +32,9 @@ import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory.CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY;
 import static org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory.CERTIFICATE_VALIDATOR_PARAM_KEY;
@@ -63,7 +60,10 @@ class MutualTlsAuthenticationHandlerFactoryTest
     @AfterEach
     void cleanup()
     {
-        TestResourceReaper.create().with(vertx).with(executorPools).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(executorPools)
+                          .close();
     }
 
     @Test
@@ -76,31 +76,38 @@ class MutualTlsAuthenticationHandlerFactoryTest
     void testMissingParameters()
     {
         Map<String, String> missingValidatorParams = new HashMap<String, String>()
-        {{
-            put(CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY, "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
-        }};
-        testConfigError(missingValidatorParams, String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation",
-                                                              CERTIFICATE_VALIDATOR_PARAM_KEY));
+        {
+            {
+                put(CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY, "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
+            }
+        };
+        testConfigError(missingValidatorParams,
+                String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation", CERTIFICATE_VALIDATOR_PARAM_KEY));
         Map<String, String> missingExtractorParams = new HashMap<String, String>()
-        {{
-            put(CERTIFICATE_VALIDATOR_PARAM_KEY, "io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator");
-        }};
-        testConfigError(missingExtractorParams, String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation",
-                                                              CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY));
+        {
+            {
+                put(CERTIFICATE_VALIDATOR_PARAM_KEY, "io.vertx.ext.auth.mtls.impl.AllowAllCertificateValidator");
+            }
+        };
+        testConfigError(missingExtractorParams,
+                String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation", CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY));
     }
 
     @Test
     void testUnrecognizedParameters()
     {
         Map<String, String> missingValidatorParams = new HashMap<String, String>()
-        {{
-            put(CERTIFICATE_VALIDATOR_PARAM_KEY, "UnrecognizedCertificateValidator");
-            put(CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY, "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
-        }};
+        {
+            {
+                put(CERTIFICATE_VALIDATOR_PARAM_KEY, "UnrecognizedCertificateValidator");
+                put(CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY, "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
+            }
+        };
         testConfigError(missingValidatorParams, "Error creating MutualTlsAuthenticationHandler");
     }
 
-    private void testConfigError(Map<String, String> parameters, String expectedErrMsg)
+    private void testConfigError(Map<String, String> parameters,
+                                 String expectedErrMsg)
     {
         SidecarConfiguration mockSidecarConfig = mock(SidecarConfiguration.class);
         AccessControlConfiguration mockAccessControlConfig = mock(AccessControlConfiguration.class);
@@ -110,20 +117,16 @@ class MutualTlsAuthenticationHandlerFactoryTest
         when(mockSidecarConfig.accessControlConfiguration()).thenReturn(mockAccessControlConfig);
         SystemAuthDatabaseAccessor mockAccessor = mock(SystemAuthDatabaseAccessor.class);
         MutualTlsAuthenticationHandlerFactory factory = factory(mockSidecarConfig, mockAccessor);
-        assertThatThrownBy(() -> factory.create(vertx, mockAccessControlConfig, parameters))
-        .isInstanceOf(ConfigurationException.class)
-        .hasMessage(expectedErrMsg);
+        assertThatThrownBy(() -> factory.create(vertx, mockAccessControlConfig, parameters)).isInstanceOf(ConfigurationException.class)
+                                                                                            .hasMessage(expectedErrMsg);
     }
 
     private MutualTlsAuthenticationHandlerFactory factory(SidecarConfiguration mockSidecarConfig,
                                                           SystemAuthDatabaseAccessor mockAccessor)
     {
-        IdentityToRoleCache identityToRoleCache
-        = new IdentityToRoleCache(vertx, executorPools, mockSidecarConfig, mockAccessor);
-        SuperUserCache superUserCache
-        = new SuperUserCache(vertx, executorPools, mockSidecarConfig, mockAccessor);
-        AdminIdentityResolver adminIdentityResolver
-        = new AdminIdentityResolver(identityToRoleCache, superUserCache, mockSidecarConfig);
+        IdentityToRoleCache identityToRoleCache = new IdentityToRoleCache(vertx, executorPools, mockSidecarConfig, mockAccessor);
+        SuperUserCache superUserCache = new SuperUserCache(vertx, executorPools, mockSidecarConfig, mockAccessor);
+        AdminIdentityResolver adminIdentityResolver = new AdminIdentityResolver(identityToRoleCache, superUserCache, mockSidecarConfig);
         return new MutualTlsAuthenticationHandlerFactory(identityToRoleCache, adminIdentityResolver);
     }
 }

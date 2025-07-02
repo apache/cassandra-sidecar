@@ -18,11 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.snapshots;
 
-import java.io.FileNotFoundException;
-import java.nio.file.NoSuchFileException;
-import java.util.Collections;
-import java.util.Set;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -30,6 +25,10 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.io.FileNotFoundException;
+import java.nio.file.NoSuchFileException;
+import java.util.Collections;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -39,7 +38,6 @@ import org.apache.cassandra.sidecar.handlers.data.SnapshotRequestParam;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -63,12 +61,12 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequestParam> 
     }
 
     /**
-     * Clears a snapshot for the given keyspace and table. **Note**: Currently, Cassandra does not support
-     * the table parameter. We can add support in Cassandra for the additional parameter.
+     * Clears a snapshot for the given keyspace and table. **Note**: Currently, Cassandra does not support the table parameter. We can add support in Cassandra
+     * for the additional parameter.
      *
-     * @param context       the event to handle
-     * @param httpRequest   the {@link HttpServerRequest} object
-     * @param host          the name of the host
+     * @param context the event to handle
+     * @param httpRequest the {@link HttpServerRequest} object
+     * @param host the name of the host
      * @param remoteAddress the remote address that originated the request
      * @param requestParams parameters obtained from the request
      */
@@ -79,14 +77,16 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequestParam> 
                                SocketAddress remoteAddress,
                                SnapshotRequestParam requestParams)
     {
-        StorageOperations storageOperations = metadataFetcher.delegate(host).storageOperations();
-        executorPools.service().runBlocking(() -> {
-            logger.debug("Clearing snapshot request={}, remoteAddress={}, instance={}",
-                         requestParams, remoteAddress, host);
-            storageOperations.clearSnapshot(requestParams.snapshotName(), requestParams.keyspace(),
-                                            requestParams.tableName());
-            context.response().end();
-        }).onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestParams));
+        StorageOperations storageOperations = metadataFetcher.delegate(host)
+                                                             .storageOperations();
+        executorPools.service()
+                     .runBlocking(() -> {
+                         logger.debug("Clearing snapshot request={}, remoteAddress={}, instance={}", requestParams, remoteAddress, host);
+                         storageOperations.clearSnapshot(requestParams.snapshotName(), requestParams.keyspace(), requestParams.tableName());
+                         context.response()
+                                .end();
+                     })
+                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestParams));
     }
 
     @Override
@@ -96,8 +96,10 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequestParam> 
                                   SocketAddress remoteAddress,
                                   SnapshotRequestParam requestParams)
     {
-        logger.error("ClearSnapshotHandler failed for request={}, remoteAddress={}, instance={}, method={}",
-                     requestParams, remoteAddress, host, context.request().method(), cause);
+        logger.error(
+                "ClearSnapshotHandler failed for request={}, remoteAddress={}, instance={}, method={}", requestParams, remoteAddress, host, context.request()
+                                                                                                                                                   .method(),
+                cause);
         if (cause instanceof FileNotFoundException || cause instanceof NoSuchFileException)
         {
             context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));

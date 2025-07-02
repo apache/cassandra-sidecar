@@ -20,27 +20,25 @@ package org.apache.cassandra.sidecar.common.response;
 
 import java.util.Arrays;
 import java.util.stream.Stream;
-
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Converter;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
  * Unit tests for the upper underscore case conversion to lower camel case
  */
 class GossipInfoResponseTest
 {
-    static final Converter<String, String> CASE_CONVERTER = CaseFormat.UPPER_UNDERSCORE
-                                                            .converterTo(CaseFormat.LOWER_CAMEL);
+    static final Converter<String, String> CASE_CONVERTER = CaseFormat.UPPER_UNDERSCORE.converterTo(CaseFormat.LOWER_CAMEL);
 
     @ParameterizedTest(name = "{index} => gossipField={0}, expectedValue={1}")
-    @MethodSource(value = { "gossipFields" })
-    void testLowerCamelCase(GossipInfoResponse.GossipField gossipField, String expectedValue)
+    @MethodSource(value = { "gossipFields"})
+    void testLowerCamelCase(GossipInfoResponse.GossipField gossipField,
+                            String expectedValue)
     {
         assertThat(gossipField.toLowerCamelCase()).isEqualTo(expectedValue);
     }

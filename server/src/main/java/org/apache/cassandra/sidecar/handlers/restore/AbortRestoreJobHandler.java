@@ -18,9 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.restore;
 
-import java.util.Collections;
-import java.util.Set;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -29,6 +26,8 @@ import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Collections;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -41,13 +40,11 @@ import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
 import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * Provides a REST API for aborting existing restore job maintained by Sidecar. Triggers abort status on the
- * {@link org.apache.cassandra.sidecar.db.RestoreJob}
+ * Provides a REST API for aborting existing restore job maintained by Sidecar. Triggers abort status on the {@link org.apache.cassandra.sidecar.db.RestoreJob}
  */
 @Singleton
 public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobRequestPayload> implements AccessProtected
@@ -66,7 +63,8 @@ public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobReque
     {
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
-        this.metrics = metrics.server().restore();
+        this.metrics = metrics.server()
+                              .restore();
     }
 
     @Override
@@ -82,32 +80,33 @@ public class AbortRestoreJobHandler extends AbstractHandler<AbortRestoreJobReque
                                   SocketAddress remoteAddress,
                                   AbortRestoreJobRequestPayload payload)
     {
-        RoutingContextUtils
-        .getAsFuture(context, SC_RESTORE_JOB)
-        .map(job -> {
-            if (job.status.isFinal())
-            {
-                throw wrapHttpException(HttpResponseStatus.CONFLICT,
-                                        "Job is already in final state: " + job.status);
-            }
+        RoutingContextUtils.getAsFuture(context, SC_RESTORE_JOB)
+                           .map(job -> {
+                               if (job.status.isFinal())
+                               {
+                                   throw wrapHttpException(HttpResponseStatus.CONFLICT, "Job is already in final state: " + job.status);
+                               }
 
-            restoreJobDatabaseAccessor.abort(job.jobId, payload.reason());
-            logger.info("Successfully aborted restore job. job={} remoteAddress={} instance={} reason='{}'",
-                        job, remoteAddress, host, payload.reason());
-            return job;
-        })
-        .onSuccess(job -> {
-            metrics.failedJobs.metric.update(1);
-            context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
-        })
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, payload));
+                               restoreJobDatabaseAccessor.abort(job.jobId, payload.reason());
+                               logger.info("Successfully aborted restore job. job={} remoteAddress={} instance={} reason='{}'", job, remoteAddress, host,
+                                       payload.reason());
+                               return job;
+                           })
+                           .onSuccess(job -> {
+                               metrics.failedJobs.metric.update(1);
+                               context.response()
+                                      .setStatusCode(HttpResponseStatus.OK.code())
+                                      .end();
+                           })
+                           .onFailure(cause -> processFailure(cause, context, host, remoteAddress, payload));
     }
 
     @NotNull
     @Override
     protected AbortRestoreJobRequestPayload extractParamsOrThrow(RoutingContext context)
     {
-        String bodyString = context.body().asString(); // nullable
+        String bodyString = context.body()
+                                   .asString(); // nullable
 
         try
         {

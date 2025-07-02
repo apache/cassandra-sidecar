@@ -18,10 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
@@ -31,13 +27,13 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.common.WebEnvironment;
 import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.HttpException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.REQUEST_TIMEOUT;
 
 /**
- * Handles failures in Sidecar, and provides a detailed JSON response payload for {@link HttpException HttpExceptions}
- * and {@code REQUEST_TIMEOUT} errors.
+ * Handles failures in Sidecar, and provides a detailed JSON response payload for {@link HttpException HttpExceptions} and {@code REQUEST_TIMEOUT} errors.
  */
 public class JsonErrorHandler implements ErrorHandler
 {
@@ -86,26 +82,24 @@ public class JsonErrorHandler implements ErrorHandler
     }
 
     /**
-     * Writes a JSON payload to the response with the {@code Fail} status and the {@code message} provided
-     * by the {@code httpException}. The {@link HttpException#getStatusCode() status code} from the exception
-     * is used for the status code for the response.
+     * Writes a JSON payload to the response with the {@code Fail} status and the {@code message} provided by the {@code httpException}. The
+     * {@link HttpException#getStatusCode() status code} from the exception is used for the status code for the response.
      *
-     * @param ctx           the context for the handling of a request in Vert.x-Web
+     * @param ctx the context for the handling of a request in Vert.x-Web
      * @param httpException the {@link HttpException} to be handled
      */
-    private void handleHttpException(RoutingContext ctx, HttpException httpException)
+    private void handleHttpException(RoutingContext ctx,
+                                     HttpException httpException)
     {
-        JsonObject payload = new JsonObject()
-                             .put("status", httpException.getMessage())
-                             .put("code", httpException.getStatusCode())
-                             .put("message", httpException.getPayload());
+        JsonObject payload = new JsonObject().put("status", httpException.getMessage())
+                                             .put("code", httpException.getStatusCode())
+                                             .put("message", httpException.getPayload());
 
         writeResponse(ctx, httpException.getStatusCode(), payload);
     }
 
     /**
-     * Writes a JSON payload to the response with the {@code Request Timeout} status and the
-     * {@link HttpResponseStatus#REQUEST_TIMEOUT} status code.
+     * Writes a JSON payload to the response with the {@code Request Timeout} status and the {@link HttpResponseStatus#REQUEST_TIMEOUT} status code.
      *
      * @param ctx the context for the handling of a request in Vert.x-Web
      */
@@ -116,14 +110,14 @@ public class JsonErrorHandler implements ErrorHandler
     }
 
     /**
-     * Writes a JSON payload to the response with the {@code statusCode} if valid and different
-     * from {@link HttpResponseStatus#OK}. Otherwise, report a {@link HttpResponseStatus#INTERNAL_SERVER_ERROR}
-     * code.
+     * Writes a JSON payload to the response with the {@code statusCode} if valid and different from {@link HttpResponseStatus#OK}. Otherwise, report a
+     * {@link HttpResponseStatus#INTERNAL_SERVER_ERROR} code.
      *
-     * @param ctx       the context for the handling of a request in Vert.x-Web
+     * @param ctx the context for the handling of a request in Vert.x-Web
      * @param exception the throwable that produced the error
      */
-    private void handleThrowable(RoutingContext ctx, Throwable exception)
+    private void handleThrowable(RoutingContext ctx,
+                                 Throwable exception)
     {
         int effectiveStatusCode = ctx.statusCode() != 200 ? ctx.statusCode() : INTERNAL_SERVER_ERROR.code();
         HttpResponseStatus responseStatus = HttpResponseStatus.valueOf(effectiveStatusCode);
@@ -154,11 +148,13 @@ public class JsonErrorHandler implements ErrorHandler
     /**
      * Writes the {@code payload} with the given {@code statusCode} to the response.
      *
-     * @param ctx        the context for the handling of a request in Vert.x-Web
+     * @param ctx the context for the handling of a request in Vert.x-Web
      * @param statusCode the HTTP status code for the response
-     * @param payload    the JSON payload for the response
+     * @param payload the JSON payload for the response
      */
-    private void writeResponse(RoutingContext ctx, int statusCode, JsonObject payload)
+    private void writeResponse(RoutingContext ctx,
+                               int statusCode,
+                               JsonObject payload)
     {
         HttpServerResponse response = ctx.response();
         if (!response.ended() && !response.closed())

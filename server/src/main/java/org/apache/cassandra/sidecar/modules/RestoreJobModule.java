@@ -62,17 +62,20 @@ public class RestoreJobModule extends AbstractModule
     @Override
     protected void configure()
     {
-        MapBinder<Class<? extends ClassKey>, PeriodicTask> periodicTaskMapBinder =
-        MultiBindingUtils.newClassKeyClassMapBinder(binder(), PeriodicTask.class);
+        MapBinder<Class<? extends ClassKey>, PeriodicTask> periodicTaskMapBinder = MultiBindingUtils.newClassKeyClassMapBinder(binder(), PeriodicTask.class);
         // The bindings using DSL if the bound type, e.g. RestoreJobDiscoverer, is referenced _directly_ by other components.
-        periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RestoreJobDiscovererKey.class).to(RestoreJobDiscoverer.class);
-        periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RestoreProcessorKey.class).to(RestoreProcessor.class);
-        periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RingTopologyRefresherKey.class).to(RingTopologyRefresher.class);
+        periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RestoreJobDiscovererKey.class)
+                             .to(RestoreJobDiscoverer.class);
+        periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RestoreProcessorKey.class)
+                             .to(RestoreProcessor.class);
+        periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RingTopologyRefresherKey.class)
+                             .to(RingTopologyRefresher.class);
     }
 
     @Provides
     @Singleton
-    LocalTokenRangesProvider localTokenRangesProvider(InstancesMetadata instancesMetadata, DnsResolver dnsResolver)
+    LocalTokenRangesProvider localTokenRangesProvider(InstancesMetadata instancesMetadata,
+                                                      DnsResolver dnsResolver)
     {
         return new CachedLocalTokenRanges(instancesMetadata, dnsResolver);
     }
@@ -81,24 +84,30 @@ public class RestoreJobModule extends AbstractModule
     @KeyClassMapKey(TableSchemaMapKeys.RestoreJobsSchemaKey.class)
     TableSchema restoreJobsSchema(SidecarConfiguration configuration)
     {
-        return new RestoreJobsSchema(configuration.serviceConfiguration().schemaKeyspaceConfiguration(),
-                                     configuration.restoreJobConfiguration().restoreJobTablesTtl());
+        return new RestoreJobsSchema(configuration.serviceConfiguration()
+                                                  .schemaKeyspaceConfiguration(),
+                configuration.restoreJobConfiguration()
+                             .restoreJobTablesTtl());
     }
 
     @ProvidesIntoMap
     @KeyClassMapKey(TableSchemaMapKeys.RestoreSlicesSchemaKey.class)
     TableSchema restoreSlicesSchema(SidecarConfiguration configuration)
     {
-        return new RestoreSlicesSchema(configuration.serviceConfiguration().schemaKeyspaceConfiguration(),
-                                       configuration.restoreJobConfiguration().restoreJobTablesTtl());
+        return new RestoreSlicesSchema(configuration.serviceConfiguration()
+                                                    .schemaKeyspaceConfiguration(),
+                configuration.restoreJobConfiguration()
+                             .restoreJobTablesTtl());
     }
 
     @ProvidesIntoMap
     @KeyClassMapKey(TableSchemaMapKeys.RestoreRangesSchemaKey.class)
     TableSchema restoreRangesSchema(SidecarConfiguration configuration)
     {
-        return new RestoreRangesSchema(configuration.serviceConfiguration().schemaKeyspaceConfiguration(),
-                                       configuration.restoreJobConfiguration().restoreJobTablesTtl());
+        return new RestoreRangesSchema(configuration.serviceConfiguration()
+                                                    .schemaKeyspaceConfiguration(),
+                configuration.restoreJobConfiguration()
+                             .restoreJobTablesTtl());
     }
 
     @ProvidesIntoMap

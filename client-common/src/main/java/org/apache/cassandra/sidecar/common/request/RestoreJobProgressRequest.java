@@ -42,10 +42,9 @@ public class RestoreJobProgressRequest extends JsonRequest<RestoreJobProgressRes
 
     static String requestURI(RestoreJobProgressRequestParams requestParams)
     {
-        String base = ApiEndpointsV1.RESTORE_JOB_PROGRESS_ROUTE
-                      .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, requestParams.keyspace)
-                      .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, requestParams.table)
-                      .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, requestParams.jobId.toString());
+        String base = ApiEndpointsV1.RESTORE_JOB_PROGRESS_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, requestParams.keyspace)
+                                                               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, requestParams.table)
+                                                               .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, requestParams.jobId.toString());
         return base + "?" + ApiEndpointsV1.FETCH_POLICY_QUERY_PARAM + "=" + requestParams.fetchPolicy.toString();
     }
 }

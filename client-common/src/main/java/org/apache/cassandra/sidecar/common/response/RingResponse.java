@@ -30,9 +30,8 @@ import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 public class RingResponse extends PriorityQueue<RingEntry>
 {
     // sort by datacenter first and then by token
-    private static final Comparator<RingEntry> DEFAULT_COMPARATOR =
-              Comparator.<RingEntry, String>comparing(RingEntry::datacenter)
-                        .thenComparing(e -> new BigInteger(e.token()));
+    private static final Comparator<RingEntry> DEFAULT_COMPARATOR = Comparator.<RingEntry, String>comparing(RingEntry::datacenter)
+                                                                              .thenComparing(e -> new BigInteger(e.token()));
 
     // used by json deserialization
     public RingResponse()

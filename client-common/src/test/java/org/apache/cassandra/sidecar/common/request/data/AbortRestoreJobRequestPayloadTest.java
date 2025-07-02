@@ -18,15 +18,12 @@
 
 package org.apache.cassandra.sidecar.common.request.data;
 
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import org.junit.jupiter.api.Test;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -53,20 +50,20 @@ class AbortRestoreJobRequestPayloadTest
     @Test
     void testValidation()
     {
-        String longString = Stream.generate(() -> "a").limit(2048).collect(Collectors.joining());
-        assertThatThrownBy(() -> new AbortRestoreJobRequestPayload(longString))
-        .hasMessage("Reason string is too long");
+        String longString = Stream.generate(() -> "a")
+                                  .limit(2048)
+                                  .collect(Collectors.joining());
+        assertThatThrownBy(() -> new AbortRestoreJobRequestPayload(longString)).hasMessage("Reason string is too long");
 
         String disallowedChars = "! cat /super/secrets";
-        assertThatThrownBy(() -> new AbortRestoreJobRequestPayload(disallowedChars))
-        .hasMessage("Reason string cannot contain non-alphanumeric-blank characters");
+        assertThatThrownBy(() -> new AbortRestoreJobRequestPayload(disallowedChars)).hasMessage(
+                "Reason string cannot contain non-alphanumeric-blank characters");
 
-        assertThatThrownBy(() -> MAPPER.readValue(String.format("{\"reason\":\"%s\"}", longString),
-                                                  AbortRestoreJobRequestPayload.class))
-        .hasMessageContaining("Reason string is too long");
+        assertThatThrownBy(() -> MAPPER.readValue(String.format("{\"reason\":\"%s\"}", longString), AbortRestoreJobRequestPayload.class)).hasMessageContaining(
+                "Reason string is too long");
 
-        assertThatThrownBy(() -> MAPPER.readValue(String.format("{\"reason\":\"%s\"}", disallowedChars),
-                                                  AbortRestoreJobRequestPayload.class))
-        .hasMessageContaining("Reason string cannot contain non-alphanumeric-blank characters");
+        assertThatThrownBy(
+                () -> MAPPER.readValue(String.format("{\"reason\":\"%s\"}", disallowedChars), AbortRestoreJobRequestPayload.class)).hasMessageContaining(
+                        "Reason string cannot contain non-alphanumeric-blank characters");
     }
 }

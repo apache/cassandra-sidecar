@@ -89,13 +89,11 @@ class RequestUtilsTest
         assertThat(RequestUtils.parseIntegerQueryParam(mockRequest, "max-integer", null)).isEqualTo(2147483647);
 
         when(mockRequest.getParam("overflow-integer")).thenReturn("2147483648");
-        assertThatExceptionOfType(NumberFormatException.class)
-        .isThrownBy(() -> RequestUtils.parseIntegerQueryParam(mockRequest, "overflow-integer", null))
-        .withMessage("For input string: \"2147483648\"");
+        assertThatExceptionOfType(NumberFormatException.class).isThrownBy(() -> RequestUtils.parseIntegerQueryParam(mockRequest, "overflow-integer", null))
+                                                              .withMessage("For input string: \"2147483648\"");
 
         when(mockRequest.getParam("string")).thenReturn("not-an-integer");
-        assertThatExceptionOfType(NumberFormatException.class)
-        .isThrownBy(() -> RequestUtils.parseIntegerQueryParam(mockRequest, "string", null))
-        .withMessage("For input string: \"not-an-integer\"");
+        assertThatExceptionOfType(NumberFormatException.class).isThrownBy(() -> RequestUtils.parseIntegerQueryParam(mockRequest, "string", null))
+                                                              .withMessage("For input string: \"not-an-integer\"");
     }
 }

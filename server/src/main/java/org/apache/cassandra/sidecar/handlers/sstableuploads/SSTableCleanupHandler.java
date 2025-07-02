@@ -47,9 +47,9 @@ public class SSTableCleanupHandler extends AbstractHandler<String> implements Ac
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
      *
-     * @param metadataFetcher   the instance metadata fetcher
+     * @param metadataFetcher the instance metadata fetcher
      * @param uploadPathBuilder a class that provides SSTableUploads directories
-     * @param executorPools     executor pools for blocking executions
+     * @param executorPools executor pools for blocking executions
      */
     @Inject
     protected SSTableCleanupHandler(InstanceMetadataFetcher metadataFetcher,
@@ -83,12 +83,12 @@ public class SSTableCleanupHandler extends AbstractHandler<String> implements Ac
                          .compose(stagingDirectory -> context.vertx()
                                                              .fileSystem()
                                                              .deleteRecursive(stagingDirectory, true))
-                         .onSuccess(x -> context.response().end())
+                         .onSuccess(x -> context.response()
+                                                .end())
                          .onFailure(cause -> {
                              if (cause instanceof NoSuchFileException)
                              {
-                                 logger.warn("Upload directory not found. uploadId={}, remoteAddress={}, instance={}",
-                                             uploadId, remoteAddress, host, cause);
+                                 logger.warn("Upload directory not found. uploadId={}, remoteAddress={}, instance={}", uploadId, remoteAddress, host, cause);
                                  context.fail(HttpResponseStatus.NOT_FOUND.code());
                              }
                              else if (cause instanceof IllegalArgumentException)
@@ -97,8 +97,7 @@ public class SSTableCleanupHandler extends AbstractHandler<String> implements Ac
                              }
                              else
                              {
-                                 logger.error("Unable to cleanup upload. uploadId={}, remoteAddress={}, instance={}",
-                                              uploadId, remoteAddress, host, cause);
+                                 logger.error("Unable to cleanup upload. uploadId={}, remoteAddress={}, instance={}", uploadId, remoteAddress, host, cause);
                                  context.fail(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
                              }
                          });

@@ -41,9 +41,8 @@ import org.jetbrains.annotations.NotNull;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
 
 /**
- * A CQL Session provider that always connects to and queries all hosts provided to it.
- * Useful for integration testing, but will eventually be removed once issues with the Sidecar's
- * CQLSessionProviderImpl are resolved.
+ * A CQL Session provider that always connects to and queries all hosts provided to it. Useful for integration testing, but will eventually be removed once
+ * issues with the Sidecar's CQLSessionProviderImpl are resolved.
  */
 public class TemporaryCqlSessionProvider implements CQLSessionProvider
 {
@@ -53,7 +52,8 @@ public class TemporaryCqlSessionProvider implements CQLSessionProvider
     private final NettyOptions nettyOptions;
     private final ReconnectionPolicy reconnectionPolicy;
 
-    public TemporaryCqlSessionProvider(List<InetSocketAddress> contactPoints, NettyOptions options)
+    public TemporaryCqlSessionProvider(List<InetSocketAddress> contactPoints,
+                                       NettyOptions options)
     {
         nettyOptions = options;
         reconnectionPolicy = new ExponentialReconnectionPolicy(100, 1000);
@@ -124,12 +124,16 @@ public class TemporaryCqlSessionProvider implements CQLSessionProvider
         {
             try
             {
-                localSession.getCluster().closeAsync().get(1, TimeUnit.MINUTES);
-                localSession.closeAsync().get(1, TimeUnit.MINUTES);
+                localSession.getCluster()
+                            .closeAsync()
+                            .get(1, TimeUnit.MINUTES);
+                localSession.closeAsync()
+                            .get(1, TimeUnit.MINUTES);
             }
             catch (InterruptedException e)
             {
-                Thread.currentThread().interrupt();
+                Thread.currentThread()
+                      .interrupt();
             }
             catch (TimeoutException e)
             {

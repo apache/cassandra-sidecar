@@ -23,12 +23,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
 import org.apache.cassandra.testing.utils.tls.CertificateBundle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A class that encapsulates testing with Mutual TLS.
@@ -50,10 +48,13 @@ public class MtlsTestHelper
 
     public MtlsTestHelper(Path secretsPath) throws Exception
     {
-        this(secretsPath, System.getProperty(CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS, "false").equals("true"));
+        this(secretsPath, System.getProperty(CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS, "false")
+                                .equals("true"));
     }
 
-    public MtlsTestHelper(Path secretsPath, boolean enableMtlsForTesting) throws Exception
+    public MtlsTestHelper(Path secretsPath,
+                          boolean enableMtlsForTesting)
+            throws Exception
     {
         this.enableMtlsForTesting = enableMtlsForTesting;
         maybeInitializeSecrets(Objects.requireNonNull(secretsPath, "secretsPath cannot be null"));
@@ -66,16 +67,15 @@ public class MtlsTestHelper
             return;
         }
 
-        certificateAuthority =
-        new CertificateBuilder().subject("CN=Apache Cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
-                                .alias("fakerootca")
-                                .isCertificateAuthority(true)
-                                .buildSelfSigned();
+        certificateAuthority = new CertificateBuilder().subject("CN=Apache Cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
+                                                       .alias("fakerootca")
+                                                       .isCertificateAuthority(true)
+                                                       .buildSelfSigned();
         truststorePath = certificateAuthority.toTempKeyStorePath(secretsPath, EMPTY_PASSWORD, EMPTY_PASSWORD);
 
-        CertificateBuilder serverKeyStoreBuilder =
-        new CertificateBuilder().subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                .addSanDnsName("localhost");
+        CertificateBuilder serverKeyStoreBuilder = new CertificateBuilder().subject(
+                "CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                                           .addSanDnsName("localhost");
         // Add SANs for every potential hostname Sidecar will serve
         for (int i = 1; i <= 20; i++)
         {
@@ -137,8 +137,7 @@ public class MtlsTestHelper
             return Collections.emptyMap();
         }
 
-        LOGGER.info("Test mTLS certificate is enabled. "
-                    + "Will use test keystore as truststore so the client will trust the server");
+        LOGGER.info("Test mTLS certificate is enabled. " + "Will use test keystore as truststore so the client will trust the server");
         Map<String, String> optionMap = new HashMap<>();
         optionMap.put("truststore_path", trustStorePath());
         optionMap.put("truststore_password", EMPTY_PASSWORD_STRING);

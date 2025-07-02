@@ -18,14 +18,11 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -35,6 +32,8 @@ import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.server.HealthMetrics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Periodically checks the health of every instance configured in the {@link InstancesMetadata}.
@@ -55,7 +54,8 @@ public class HealthCheckPeriodicTask implements PeriodicTask
         this.configuration = configuration.healthCheckConfiguration();
         this.instancesMetadata = instancesMetadata;
         this.internalPool = executorPools.internal();
-        this.metrics = metrics.server().health();
+        this.metrics = metrics.server()
+                              .health();
     }
 
     @Override
@@ -98,19 +98,22 @@ public class HealthCheckPeriodicTask implements PeriodicTask
     private void updateMetrics(AtomicInteger instanceDown)
     {
         int instanceDownCount = instanceDown.get();
-        int instanceUpCount = instancesMetadata.instances().size() - instanceDownCount;
+        int instanceUpCount = instancesMetadata.instances()
+                                               .size()
+                - instanceDownCount;
         metrics.cassandraInstancesUp.metric.setValue(instanceUpCount);
         metrics.cassandraInstancesDown.metric.setValue(instanceDownCount);
     }
 
-    private Future<Void> healthCheck(InstanceMetadata instanceMetadata, AtomicInteger instanceDown)
+    private Future<Void> healthCheck(InstanceMetadata instanceMetadata,
+                                     AtomicInteger instanceDown)
     {
-        return internalPool
-               .runBlocking(() -> instanceMetadata.delegate().healthCheck(), false)
-               .onFailure(cause -> {
-                   instanceDown.incrementAndGet();
-                   LOGGER.error("Unable to complete health check on instance={}",
-                                instanceMetadata.id(), cause);
-               });
+        return internalPool.runBlocking(() -> instanceMetadata.delegate()
+                                                              .healthCheck(),
+                false)
+                           .onFailure(cause -> {
+                               instanceDown.incrementAndGet();
+                               LOGGER.error("Unable to complete health check on instance={}", instanceMetadata.id(), cause);
+                           });
     }
 }

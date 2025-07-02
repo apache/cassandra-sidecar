@@ -36,7 +36,9 @@ class RingResponseTest
         RingResponse test = new RingResponse();
         for (int i = 9; i > 0; i--)
         {
-            test.add(new RingEntry.Builder().datacenter("dc" + i).token("1").build());
+            test.add(new RingEntry.Builder().datacenter("dc" + i)
+                                            .token("1")
+                                            .build());
         }
 
         assertThat(test).hasSize(9);
@@ -56,7 +58,9 @@ class RingResponseTest
         RingResponse test = new RingResponse();
         for (int i = 9; i > 0; i--)
         {
-            test.add(new RingEntry.Builder().datacenter("dc1").token(String.valueOf(i)).build());
+            test.add(new RingEntry.Builder().datacenter("dc1")
+                                            .token(String.valueOf(i))
+                                            .build());
         }
 
         assertThat(test).hasSize(9);

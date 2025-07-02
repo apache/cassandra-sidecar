@@ -21,14 +21,11 @@ package org.apache.cassandra.sidecar.client.retry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import org.apache.cassandra.sidecar.client.HttpResponse;
 import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
 import org.apache.cassandra.sidecar.common.request.Request;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,8 +58,8 @@ class NoRetryPolicyTest
         when(mockResponse.statusCode()).thenReturn(OK.code());
 
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        retryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false,
-                               (attempts, retryDelayMillis) -> fail("Should never retry"));
+        retryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false, (attempts,
+                                                                                   retryDelayMillis) -> fail("Should never retry"));
         future.join();
         assertThat(future.isDone()).isTrue();
         assertThat(future.get()).isSameAs(mockResponse);
@@ -74,13 +71,13 @@ class NoRetryPolicyTest
         when(mockResponse.statusCode()).thenReturn(OK.code()); // status code is irrelevant
 
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        retryPolicy.onResponse(future, mockRequest, mockResponse, new IllegalArgumentException("this fails"), 1, false,
-                               (attempts, retryDelayMillis) -> fail("Should never retry"));
+        retryPolicy.onResponse(future, mockRequest, mockResponse, new IllegalArgumentException("this fails"), 1, false, (attempts,
+                                                                                                                         retryDelayMillis) -> fail(
+                                                                                                                                 "Should never retry"));
 
-        assertThatExceptionOfType(CompletionException.class)
-        .isThrownBy(future::join)
-        .withCauseInstanceOf(RetriesExhaustedException.class)
-        .withMessageContaining("Unable to complete request '/api/uri' after 1 attempt");
+        assertThatExceptionOfType(CompletionException.class).isThrownBy(future::join)
+                                                            .withCauseInstanceOf(RetriesExhaustedException.class)
+                                                            .withMessageContaining("Unable to complete request '/api/uri' after 1 attempt");
         assertThat(future.isCompletedExceptionally()).isTrue();
     }
 
@@ -90,13 +87,12 @@ class NoRetryPolicyTest
         when(mockResponse.statusCode()).thenReturn(INTERNAL_SERVER_ERROR.code());
 
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        retryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false,
-                               (attempts, retryDelayMillis) -> fail("Should never retry"));
+        retryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false, (attempts,
+                                                                                   retryDelayMillis) -> fail("Should never retry"));
 
-        assertThatExceptionOfType(CompletionException.class)
-        .isThrownBy(future::join)
-        .withCauseInstanceOf(RetriesExhaustedException.class)
-        .withMessageContaining("Unable to complete request '/api/uri' after 1 attempt");
+        assertThatExceptionOfType(CompletionException.class).isThrownBy(future::join)
+                                                            .withCauseInstanceOf(RetriesExhaustedException.class)
+                                                            .withMessageContaining("Unable to complete request '/api/uri' after 1 attempt");
         assertThat(future.isCompletedExceptionally()).isTrue();
     }
 }

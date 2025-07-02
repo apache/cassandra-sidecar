@@ -28,29 +28,25 @@ class RestoreJobExceptionsTest
     @Test
     void testPropagate()
     {
-        assertThat(RestoreJobExceptions.propagate("msg", new RuntimeException()))
-        .isInstanceOf(RestoreJobException.class)
-        .hasMessage("msg")
-        .hasRootCauseInstanceOf(RuntimeException.class);
+        assertThat(RestoreJobExceptions.propagate("msg", new RuntimeException())).isInstanceOf(RestoreJobException.class)
+                                                                                 .hasMessage("msg")
+                                                                                 .hasRootCauseInstanceOf(RuntimeException.class);
 
-        assertThat(RestoreJobExceptions.propagate("msg", new RestoreJobFatalException("fatal")))
-        .isInstanceOf(RestoreJobFatalException.class)
-        .hasMessage("msg:fatal")
-        .hasRootCauseInstanceOf(RestoreJobFatalException.class)
-        .hasRootCauseMessage("fatal");
+        assertThat(RestoreJobExceptions.propagate("msg", new RestoreJobFatalException("fatal"))).isInstanceOf(RestoreJobFatalException.class)
+                                                                                                .hasMessage("msg:fatal")
+                                                                                                .hasRootCauseInstanceOf(RestoreJobFatalException.class)
+                                                                                                .hasRootCauseMessage("fatal");
     }
 
     @Test
     void testToFatal()
     {
-        assertThat(RestoreJobExceptions.toFatal(new RuntimeException("error")))
-        .isInstanceOf(RestoreJobFatalException.class)
-        .hasMessage("error")
-        .hasRootCauseInstanceOf(RuntimeException.class)
-        .hasRootCauseMessage("error");
+        assertThat(RestoreJobExceptions.toFatal(new RuntimeException("error"))).isInstanceOf(RestoreJobFatalException.class)
+                                                                               .hasMessage("error")
+                                                                               .hasRootCauseInstanceOf(RuntimeException.class)
+                                                                               .hasRootCauseMessage("error");
 
         RestoreJobFatalException fatalException = new RestoreJobFatalException("fatal");
-        assertThat(RestoreJobExceptions.toFatal(fatalException))
-        .isSameAs(fatalException);
+        assertThat(RestoreJobExceptions.toFatal(fatalException)).isSameAs(fatalException);
     }
 }

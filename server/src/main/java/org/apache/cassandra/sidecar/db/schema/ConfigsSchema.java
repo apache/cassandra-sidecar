@@ -27,8 +27,8 @@ import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly
 import org.jetbrains.annotations.NotNull;
 
 /**
- * {@link ConfigsSchema} holds all prepared statements needed for talking to Cassandra for various actions
- * related to storing and updating CDC and Kafka configs.
+ * {@link ConfigsSchema} holds all prepared statements needed for talking to Cassandra for various actions related to storing and updating CDC and Kafka
+ * configs.
  */
 public class ConfigsSchema extends TableSchema implements ExecuteOnClusterLeaseholderOnly
 {
@@ -79,11 +79,8 @@ public class ConfigsSchema extends TableSchema implements ExecuteOnClusterLeaseh
     @Override
     protected String createSchemaStatement()
     {
-        return String.format("CREATE TABLE IF NOT EXISTS %s.%s (" +
-                             " service text," +
-                             " config map<text, text>," +
-                             " PRIMARY KEY (service))",
-                             keyspaceConfig.keyspace(), CONFIGS_TABLE_NAME);
+        return String.format("CREATE TABLE IF NOT EXISTS %s.%s (" + " service text," + " config map<text, text>," + " PRIMARY KEY (service))",
+                keyspaceConfig.keyspace(), CONFIGS_TABLE_NAME);
     }
 
     public PreparedStatement selectConfig()
@@ -110,14 +107,12 @@ public class ConfigsSchema extends TableSchema implements ExecuteOnClusterLeaseh
     {
         static String selectConfig(SchemaKeyspaceConfiguration config)
         {
-            return withTable("SELECT config from %s.%s" +
-                             " WHERE service=?", config);
+            return withTable("SELECT config from %s.%s" + " WHERE service=?", config);
         }
 
         static String insertConfig(SchemaKeyspaceConfiguration config)
         {
-            return withTable("INSERT INTO %s.%s (service, config)" +
-                             " VALUES (?, ?)", config);
+            return withTable("INSERT INTO %s.%s (service, config)" + " VALUES (?, ?)", config);
         }
 
         static String insertConfigIfNotExist(SchemaKeyspaceConfiguration config)
@@ -127,11 +122,11 @@ public class ConfigsSchema extends TableSchema implements ExecuteOnClusterLeaseh
 
         static String deleteConfig(SchemaKeyspaceConfiguration config)
         {
-            return withTable("DELETE FROM %s.%s" +
-                             " WHERE service=?", config);
+            return withTable("DELETE FROM %s.%s" + " WHERE service=?", config);
         }
 
-        private static String withTable(String format, SchemaKeyspaceConfiguration config)
+        private static String withTable(String format,
+                                        SchemaKeyspaceConfiguration config)
         {
             return String.format(format, config.keyspace(), CONFIGS_TABLE_NAME);
         }

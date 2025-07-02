@@ -18,27 +18,26 @@
 
 package io.vertx.ext.auth.mtls;
 
-import java.util.List;
-
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
+import java.util.List;
 
 /**
- * {@link CertificateIdentityExtractor} extracts valid identities from certificate chain. Interface can be extended to
- * implement custom certificate identity validators.
+ * {@link CertificateIdentityExtractor} extracts valid identities from certificate chain. Interface can be extended to implement custom certificate identity
+ * validators.
  */
 public interface CertificateIdentityExtractor
 {
     /**
-     * Extracts valid identities out of {@link CertificateCredentials} certificate chain. These identities can later
-     * be used for authorizing user's resource level permissions. If a valid identity could not be extracted, then
-     * throws {@code CredentialValidationException}
+     * Extracts valid identities out of {@link CertificateCredentials} certificate chain. These identities can later be used for authorizing user's resource
+     * level permissions. If a valid identity could not be extracted, then throws {@code CredentialValidationException}
      *
-     * <p>An example of identity could be the following:
+     * <p>
+     * An example of identity could be the following:
      * <ul>
-     *  <li>an identifier in SAN of the certificate like SPIFFE
-     *  <li>CN of the certificate
-     *  <li>any other fields in the certificate can be combined and be used as identifier of the certificate
+     * <li>an identifier in SAN of the certificate like SPIFFE
+     * <li>CN of the certificate
+     * <li>any other fields in the certificate can be combined and be used as identifier of the certificate
      * </ul>
      *
      * @param certificateCredentials certificate chain of user that is already verified

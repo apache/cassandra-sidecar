@@ -18,19 +18,14 @@
 
 package org.apache.cassandra.sidecar.cdc;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.TestResourceReaper;
@@ -40,7 +35,9 @@ import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -50,7 +47,8 @@ import static org.mockito.Mockito.when;
 
 class CdcLogCacheTest
 {
-    private final Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(new TestModule()));
+    private final Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
+                                                                  .with(new TestModule()));
     private final InstancesMetadata instancesMetadata = injector.getInstance(InstancesMetadata.class);
     private final Vertx vertx = injector.getInstance(Vertx.class);
     private final ExecutorPools executorPools = injector.getInstance(ExecutorPools.class);
@@ -67,7 +65,10 @@ class CdcLogCacheTest
     @AfterEach
     void teardown()
     {
-        TestResourceReaper.create().with(vertx).with(executorPools).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(executorPools)
+                          .close();
     }
 
     @Test
@@ -121,7 +122,10 @@ class CdcLogCacheTest
 
     private File instance1CommitLogFile()
     {
-        String commitLogPathOnInstance1 = instancesMetadata.instances().get(0).cdcDir() + "/CommitLog-1-1.log";
+        String commitLogPathOnInstance1 = instancesMetadata.instances()
+                                                           .get(0)
+                                                           .cdcDir()
+                + "/CommitLog-1-1.log";
         return new File(commitLogPathOnInstance1);
     }
 
@@ -139,14 +143,17 @@ class CdcLogCacheTest
     private SidecarConfiguration sidecarConfiguration()
     {
         SidecarConfiguration sidecarConfiguration = mock(SidecarConfiguration.class, RETURNS_DEEP_STUBS);
-        when(sidecarConfiguration.serviceConfiguration().cdcConfiguration().segmentHardLinkCacheExpiry())
-        .thenReturn(SecondBoundConfiguration.parse("1s"));
+        when(sidecarConfiguration.serviceConfiguration()
+                                 .cdcConfiguration()
+                                 .segmentHardLinkCacheExpiry()).thenReturn(SecondBoundConfiguration.parse("1s"));
         return sidecarConfiguration;
     }
 
     static class FailingCdcLogCache extends CdcLogCache
     {
-        public FailingCdcLogCache(ExecutorPools executorPools, InstancesMetadata cassandraConfig, SidecarConfiguration sidecarConfig)
+        public FailingCdcLogCache(ExecutorPools executorPools,
+                                  InstancesMetadata cassandraConfig,
+                                  SidecarConfiguration sidecarConfig)
         {
             super(executorPools, cassandraConfig, sidecarConfig);
         }

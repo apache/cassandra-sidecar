@@ -37,31 +37,32 @@ public class TestTokenSupplier
     }
 
     /**
-     * Tokens are allocation used in tests to simulate token allocation nodes for an approx even distribution
-     * in a multiDC environment with neighboring nodes different DCs allocated adjacent tokens.
-     * Allocations for new nodes are interleaved among existing tokens. Usings the Murmur3 Partitioner to allocate
+     * Tokens are allocation used in tests to simulate token allocation nodes for an approx even distribution in a multiDC environment with neighboring nodes
+     * different DCs allocated adjacent tokens. Allocations for new nodes are interleaved among existing tokens. Usings the Murmur3 Partitioner to allocate
      * tokens.
      *
-     * @param numNodesPerDC    number of nodes from a single DC
-     * @param newNodesPerDC    number of additional nodes for a DC
-     * @param numDcs           no. of datacenters
+     * @param numNodesPerDC number of nodes from a single DC
+     * @param newNodesPerDC number of additional nodes for a DC
+     * @param numDcs no. of datacenters
      * @param numTokensPerNode no. tokens allocated to each node (this is always 1 if there are no vnodes)
      * @return The token supplier that vends the tokens
      */
-    public static TokenSupplier evenlyDistributedTokens(int numNodesPerDC, int newNodesPerDC, int numDcs, int numTokensPerNode)
+    public static TokenSupplier evenlyDistributedTokens(int numNodesPerDC,
+                                                        int newNodesPerDC,
+                                                        int numDcs,
+                                                        int numTokensPerNode)
     {
         return evenlyDistributedTokens(Partitioner.Murmur3, numNodesPerDC, newNodesPerDC, numDcs, numTokensPerNode);
     }
 
     /**
-     * Tokens are allocation used in tests to simulate token allocation nodes for an approx even distribution
-     * in a multiDC environment with neighboring nodes different DCs allocated adjacent tokens.
-     * Allocations for new nodes are interleaved among existing tokens.
+     * Tokens are allocation used in tests to simulate token allocation nodes for an approx even distribution in a multiDC environment with neighboring nodes
+     * different DCs allocated adjacent tokens. Allocations for new nodes are interleaved among existing tokens.
      *
-     * @param partitioner      the partitioner to use for token allocation
-     * @param numNodesPerDC    number of nodes from a single DC
-     * @param newNodesPerDC    number of additional nodes for a DC
-     * @param numDcs           no. of datacenters
+     * @param partitioner the partitioner to use for token allocation
+     * @param numNodesPerDC number of nodes from a single DC
+     * @param newNodesPerDC number of additional nodes for a DC
+     * @param numDcs no. of datacenters
      * @param numTokensPerNode no. tokens allocated to each node (this is always 1 if there are no vnodes)
      * @return The token supplier that vends the tokens
      */
@@ -79,13 +80,7 @@ public class TestTokenSupplier
         BigInteger increment = partitioner.maxToken.subtract(partitioner.minToken.add(BigInteger.ONE))
                                                    .multiply(BigInteger.valueOf(numDcs))
                                                    .divide(BigInteger.valueOf(totalTokens + 2));
-        List<String>[] tokens = allocateExistingNodeTokens(partitioner,
-                                                           numNodesPerDC,
-                                                           newNodesPerDC,
-                                                           numDcs,
-                                                           numTokensPerNode,
-                                                           increment);
-
+        List<String>[] tokens = allocateExistingNodeTokens(partitioner, numNodesPerDC, newNodesPerDC, numDcs, numTokensPerNode, increment);
 
         // Initial value of the first new node
         BigInteger value = new BigInteger(tokens[(numDcs - 1)].get(0));
@@ -100,7 +95,8 @@ public class TestTokenSupplier
                 // Nodes in different DCs are separated by a single token
                 for (int dc = 0; dc < numDcs; dc++)
                 {
-                    tokens[nodeId - 1].add(value.add(BigInteger.valueOf(dc)).toString());
+                    tokens[nodeId - 1].add(value.add(BigInteger.valueOf(dc))
+                                                .toString());
                     nodeId++;
                 }
                 value = value.add(subIncrement);
@@ -131,7 +127,8 @@ public class TestTokenSupplier
                 // Nodes in different DCs are separated by a single token
                 for (int dc = 0; dc < numDcs; dc++)
                 {
-                    tokens[nodeId - 1].add(value.add(BigInteger.valueOf(dc)).toString());
+                    tokens[nodeId - 1].add(value.add(BigInteger.valueOf(dc))
+                                                .toString());
                     nodeId++;
                 }
             }

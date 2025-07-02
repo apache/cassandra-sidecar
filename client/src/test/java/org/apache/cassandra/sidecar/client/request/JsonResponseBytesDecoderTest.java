@@ -20,13 +20,10 @@ package org.apache.cassandra.sidecar.client.request;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-
-import org.junit.jupiter.api.Test;
-
 import org.apache.cassandra.sidecar.common.request.JsonRequest;
 import org.apache.cassandra.sidecar.common.request.JsonResponseBytesDecoder;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
-
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -46,12 +43,10 @@ class JsonResponseBytesDecoderTest
         assertThat(nodeSettings.releaseVersion()).isEqualTo("1.0-TEST");
     }
 
-
     @Test
     void testDecodeIgnoresUnknownProperties() throws IOException
     {
-        String nodeSettingsAsJsonString = "{\"partitioner\":\"partitioner-value\",\"releaseVersion\":\"1.0-TEST\"," +
-                                          "\"newProperty\":\"some-value\"}";
+        String nodeSettingsAsJsonString = "{\"partitioner\":\"partitioner-value\",\"releaseVersion\":\"1.0-TEST\"," + "\"newProperty\":\"some-value\"}";
 
         NodeSettings nodeSettings = instance.decode(nodeSettingsAsJsonString.getBytes(StandardCharsets.UTF_8));
         assertThat(nodeSettings.partitioner()).isEqualTo("partitioner-value");

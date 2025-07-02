@@ -28,19 +28,16 @@ import java.util.regex.Pattern;
  * Note: The following code uses a slight variation from the semver document (http://semver.org).
  * </p>
  * <p>
- * The rules here are a bit different than normal semver comparison.  For simplicity,
- * an alpha version of 4.0 or a snapshot is equal to 4.0.  This allows us to test sidecar
- * against alpha versions of a release.
+ * The rules here are a bit different than normal semver comparison. For simplicity, an alpha version of 4.0 or a snapshot is equal to 4.0. This allows us to
+ * test sidecar against alpha versions of a release.
  * <p>
- * While it's possible to implement full version comparison, it's likely not very useful
- * This is because the main testing we are going to do will be against release versions - something like 4.0.
- * We want to list an adapter as being compatible with 4.0 - and that should include 4.0 alpha, etc.
+ * While it's possible to implement full version comparison, it's likely not very useful This is because the main testing we are going to do will be against
+ * release versions - something like 4.0. We want to list an adapter as being compatible with 4.0 - and that should include 4.0 alpha, etc.
  */
 public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion>
 {
     /**
-     * note: 3rd group matches to words but only allows number and checked after regexp test.
-     * this is because 3rd and the last can be identical.
+     * note: 3rd group matches to words but only allows number and checked after regexp test. this is because 3rd and the last can be identical.
      **/
     private static final String VERSION_REGEXP = "(\\d+)\\.(\\d+)(?:\\.(\\w+))?(\\-[.\\w]+)?([.+][.\\w]+)?";
 
@@ -56,12 +53,12 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
      *
      * @param version the string to parse
      * @return the {@link SimpleCassandraVersion} parsed from the {@code version} string
-     * @throws IllegalArgumentException if the provided string does not
-     *                                  represent a version
+     * @throws IllegalArgumentException if the provided string does not represent a version
      */
     public static SimpleCassandraVersion create(String version)
     {
-        String stripped = version.toUpperCase().replace(SNAPSHOT, "");
+        String stripped = version.toUpperCase()
+                                 .replace(SNAPSHOT, "");
         Matcher matcher = PATTERN.matcher(stripped);
         if (!matcher.matches())
         {
@@ -82,7 +79,9 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
         }
     }
 
-    public static SimpleCassandraVersion create(int major, int minor, int patch)
+    public static SimpleCassandraVersion create(int major,
+                                                int minor,
+                                                int patch)
     {
         if (major < 0 || minor < 0 || patch < 0)
         {
@@ -91,14 +90,14 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
         return new SimpleCassandraVersion(major, minor, patch);
     }
 
-
-    public SimpleCassandraVersion(int major, int minor, int patch)
+    public SimpleCassandraVersion(int major,
+                                  int minor,
+                                  int patch)
     {
         this.major = major;
         this.minor = minor;
         this.patch = patch;
     }
-
 
     @Override
     public int compareTo(SimpleCassandraVersion other)
@@ -140,9 +139,7 @@ public class SimpleCassandraVersion implements Comparable<SimpleCassandraVersion
             return false;
         }
         SimpleCassandraVersion that = (SimpleCassandraVersion) o;
-        return major == that.major
-               && minor == that.minor
-               && patch == that.patch;
+        return major == that.major && minor == that.minor && patch == that.patch;
     }
 
     /**

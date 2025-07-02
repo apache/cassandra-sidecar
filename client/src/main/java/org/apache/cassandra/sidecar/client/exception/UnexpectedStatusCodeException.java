@@ -27,9 +27,10 @@ public class UnexpectedStatusCodeException extends RuntimeException
      * Constructs a new {@link UnexpectedStatusCodeException} with the given {@code statusCode} and {@code body}
      *
      * @param statusCode the response status code
-     * @param body       the body of the response
+     * @param body the body of the response
      */
-    public UnexpectedStatusCodeException(int statusCode, String body)
+    public UnexpectedStatusCodeException(int statusCode,
+                                         String body)
     {
         this(message(statusCode, body), null);
     }
@@ -38,14 +39,16 @@ public class UnexpectedStatusCodeException extends RuntimeException
      * Constructs a new {@link UnexpectedStatusCodeException} with the specified detail message and cause.
      *
      * @param message the detail message
-     * @param cause   the cause
+     * @param cause the cause
      */
-    public UnexpectedStatusCodeException(String message, Throwable cause)
+    public UnexpectedStatusCodeException(String message,
+                                         Throwable cause)
     {
         super(message, cause);
     }
 
-    private static String message(int statusCode, String body)
+    private static String message(int statusCode,
+                                  String body)
     {
         String message = "Unexpected HTTP status code " + statusCode;
         return body == null ? message : message + "\n\n" + body;

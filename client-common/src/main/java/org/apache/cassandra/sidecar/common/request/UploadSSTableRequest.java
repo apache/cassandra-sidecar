@@ -40,15 +40,19 @@ public class UploadSSTableRequest extends Request implements UploadableRequest
     /**
      * Constructs a request with the provided {@code requestURI}
      *
-     * @param keyspace  the keyspace in Cassandra
-     * @param table     the table name in Cassandra
-     * @param uploadId  an identifier for the upload
+     * @param keyspace the keyspace in Cassandra
+     * @param table the table name in Cassandra
+     * @param uploadId an identifier for the upload
      * @param component SSTable component being uploaded
-     * @param digest    digest value to check integrity of SSTable component uploaded
-     * @param filename  the path to the file to be uploaded
+     * @param digest digest value to check integrity of SSTable component uploaded
+     * @param filename the path to the file to be uploaded
      */
-    public UploadSSTableRequest(String keyspace, String table, String uploadId, String component,
-                                Digest digest, String filename)
+    public UploadSSTableRequest(String keyspace,
+                                String table,
+                                String uploadId,
+                                String component,
+                                Digest digest,
+                                String filename)
     {
         super(requestURI(keyspace, table, uploadId, component));
         this.digest = digest;
@@ -90,12 +94,14 @@ public class UploadSSTableRequest extends Request implements UploadableRequest
         return HttpMethod.PUT;
     }
 
-    static String requestURI(String keyspace, String tableName, String uploadId, String component)
+    static String requestURI(String keyspace,
+                             String tableName,
+                             String uploadId,
+                             String component)
     {
-        return ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE
-               .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, uploadId)
-               .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
-               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName)
-               .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, component);
+        return ApiEndpointsV1.SSTABLE_UPLOAD_ROUTE.replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, uploadId)
+                                                  .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
+                                                  .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName)
+                                                  .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, component);
     }
 }

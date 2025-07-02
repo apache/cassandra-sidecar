@@ -94,7 +94,6 @@ public class SSTableUploadConfigurationImpl implements SSTableUploadConfiguratio
         return minimumSpacePercentageRequired;
     }
 
-
     /**
      * {@inheritDoc}
      */

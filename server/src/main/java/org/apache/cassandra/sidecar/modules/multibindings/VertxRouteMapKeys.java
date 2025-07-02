@@ -26,9 +26,15 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 public interface VertxRouteMapKeys
 {
     /** Handlers that are in the global scope, not binding to any specific route **/
-    interface GlobalChainAuthHandlerKey extends ClassKey {}
-    interface GlobalUtilityHandlerKey extends ClassKey {}
-    interface GlobalErrorHandlerKey extends ClassKey {}
+    interface GlobalChainAuthHandlerKey extends ClassKey
+    {
+    }
+    interface GlobalUtilityHandlerKey extends ClassKey
+    {
+    }
+    interface GlobalErrorHandlerKey extends ClassKey
+    {
+    }
     /*-------*/
 
     /** Alphabetically sorted list of keys **/
@@ -250,12 +256,12 @@ public interface VertxRouteMapKeys
     interface UpdateNodeGossipStateRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.PUT;
-        String    ROUTE_URI   = ApiEndpointsV1.GOSSIP_ROUTE;
+        String ROUTE_URI = ApiEndpointsV1.GOSSIP_ROUTE;
     }
     interface UpdateNodeNativeStateRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.PUT;
-        String    ROUTE_URI   = ApiEndpointsV1.CASSANDRA_NATIVE_ROUTE;
+        String ROUTE_URI = ApiEndpointsV1.CASSANDRA_NATIVE_ROUTE;
     }
     interface UpdateRestoreJobRouteKey extends RouteClassKey
     {

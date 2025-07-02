@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.adapters.cassandra41;
 
 import java.util.Map;
-
 import org.apache.cassandra.sidecar.adapters.base.CassandraStorageOperations;
 import org.apache.cassandra.sidecar.adapters.base.RingProvider;
 import org.apache.cassandra.sidecar.adapters.base.TokenRangeReplicaProvider;
@@ -37,20 +36,21 @@ public class Cassandra41StorageOperations extends CassandraStorageOperations
     /**
      * Creates a new instance with the provided {@link JmxClient} and {@link DnsResolver}
      *
-     * @param jmxClient   the JMX client used to communicate with the Cassandra instance
+     * @param jmxClient the JMX client used to communicate with the Cassandra instance
      * @param dnsResolver the DNS resolver used to lookup replicas
      */
-    public Cassandra41StorageOperations(JmxClient jmxClient, DnsResolver dnsResolver)
+    public Cassandra41StorageOperations(JmxClient jmxClient,
+                                        DnsResolver dnsResolver)
     {
         super(jmxClient, dnsResolver);
     }
 
     /**
-     * Creates a new instances with the provided {@link JmxClient}, {@link RingProvider}, and
-     * {@link TokenRangeReplicaProvider}. This constructor is exposed for extensibility.
+     * Creates a new instances with the provided {@link JmxClient}, {@link RingProvider}, and {@link TokenRangeReplicaProvider}. This constructor is exposed for
+     * extensibility.
      *
-     * @param jmxClient                 the JMX client used to communicate with the Cassandra instance
-     * @param ringProvider              the ring provider instance
+     * @param jmxClient the JMX client used to communicate with the Cassandra instance
+     * @param ringProvider the ring provider instance
      * @param tokenRangeReplicaProvider the token range replica provider
      */
     public Cassandra41StorageOperations(JmxClient jmxClient,

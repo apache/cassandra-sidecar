@@ -18,20 +18,17 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.util.UUID;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import io.vertx.core.Vertx;
+import java.util.UUID;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.InsufficientStorageException;
 import org.apache.cassandra.sidecar.utils.AsyncFileSystemUtils.FileStoreProps;
 import org.apache.cassandra.testing.utils.AssertionUtils;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.sidecar.utils.AsyncFileSystemUtils.ensureSufficientStorage;
 import static org.apache.cassandra.sidecar.utils.AsyncFileSystemUtils.fileStoreProps;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,7 +49,10 @@ class AsyncFileSystemUtilsTest
     @AfterEach
     void teardown()
     {
-        TestResourceReaper.create().with(vertx).with(executorPools).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(executorPools)
+                          .close();
     }
 
     @Test
@@ -64,14 +64,12 @@ class AsyncFileSystemUtilsTest
         long total = props.totalSpace;
         long usable = props.usableSpace;
         long unallocated = props.unallocatedSpace;
-        assertThat(total)
-        .isGreaterThan(usable)
-        .isGreaterThan(unallocated)
-        .isGreaterThan(0L);
+        assertThat(total).isGreaterThan(usable)
+                         .isGreaterThan(unallocated)
+                         .isGreaterThan(0L);
 
-        assertThat(unallocated)
-        .isGreaterThanOrEqualTo(usable)
-        .isGreaterThan(0L);
+        assertThat(unallocated).isGreaterThanOrEqualTo(usable)
+                               .isGreaterThan(0L);
 
         assertThat(usable).isGreaterThan(0L);
     }
@@ -84,21 +82,22 @@ class AsyncFileSystemUtilsTest
 
         // requesting half of the usable space should pass
         FileStoreProps props = AssertionUtils.getBlocking(fileStoreProps(".", executorPools.internal()));
-        AssertionUtils.getBlocking(ensureSufficientStorage(".", props.usableSpace / 2,
-                                                           0, executorPools.internal()));
+        AssertionUtils.getBlocking(ensureSufficientStorage(".", props.usableSpace / 2, 0, executorPools.internal()));
 
-        assertThatThrownBy(() -> AssertionUtils.getBlocking(ensureSufficientStorage(".", Long.MAX_VALUE,
-                                                                                    0.0001,
-                                                                                    executorPools.internal())))
-        .describedAs("Request Long.MAX_VALUE on the local file store should fail")
-        .hasRootCauseExactlyInstanceOf(InsufficientStorageException.class)
-        .hasMessageContaining("FileStore has insufficient space");
+        assertThatThrownBy(() -> AssertionUtils.getBlocking(
+                ensureSufficientStorage(".", Long.MAX_VALUE, 0.0001, executorPools.internal()))).describedAs(
+                        "Request Long.MAX_VALUE on the local file store should fail")
+                                                                                                .hasRootCauseExactlyInstanceOf(
+                                                                                                        InsufficientStorageException.class)
+                                                                                                .hasMessageContaining("FileStore has insufficient space");
 
-        assertThatThrownBy(() -> AssertionUtils.getBlocking(ensureSufficientStorage(".", 123L,
-                                                                                    1.0, executorPools.internal())))
-        .describedAs("Require 100% usable disk of the local file store should fail")
-        .hasRootCauseExactlyInstanceOf(InsufficientStorageException.class)
-        .hasMessageContaining("FileStore has insufficient space");
+        assertThatThrownBy(
+                () -> AssertionUtils.getBlocking(ensureSufficientStorage(".", 123L, 1.0, executorPools.internal()))).describedAs(
+                        "Require 100% usable disk of the local file store should fail")
+                                                                                                                    .hasRootCauseExactlyInstanceOf(
+                                                                                                                            InsufficientStorageException.class)
+                                                                                                                    .hasMessageContaining(
+                                                                                                                            "FileStore has insufficient space");
     }
 
     @Test
@@ -108,7 +107,6 @@ class AsyncFileSystemUtilsTest
         // `ensureSufficientStorage` should navigate to parent paths until finding an existing path
         // to be used for checking
         // The test expects no exception is thrown
-        AssertionUtils.getBlocking(ensureSufficientStorage("./non-existing" + UUID.randomUUID(), 0L,
-                                                           0.0001, executorPools.internal()));
+        AssertionUtils.getBlocking(ensureSufficientStorage("./non-existing" + UUID.randomUUID(), 0L, 0.0001, executorPools.internal()));
     }
 }

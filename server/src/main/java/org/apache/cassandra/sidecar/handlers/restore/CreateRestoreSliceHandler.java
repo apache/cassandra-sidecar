@@ -18,11 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.restore;
 
-import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.Set;
-import javax.inject.Inject;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
@@ -31,6 +26,9 @@ import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
@@ -49,7 +47,7 @@ import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
+import javax.inject.Inject;
 import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_QUALIFIED_TABLE_NAME;
 import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
@@ -89,52 +87,52 @@ public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceReques
                                   CreateSliceRequestPayload request)
     {
         InstanceMetadata instance = metadataFetcher.instance(host);
-        RoutingContextUtils
-        .getAsFuture(context, SC_RESTORE_JOB)
-        .map(restoreJob -> {
-            // the job is either aborted or succeeded
-            if (restoreJob.status.isFinal())
-            {
-                logger.debug("The job has completed already. job={}", restoreJob);
-                // prevent creating slice, since the job is already in the final state
-                String errMsg = "Job is already in final state: " + restoreJob.status;
-                throw wrapHttpException(HttpResponseStatus.CONFLICT, errMsg);
-            }
-            return restoreJob;
-        })
-        .compose(restoreJob -> RoutingContextUtils.getAsFuture(context, SC_QUALIFIED_TABLE_NAME).map(tableName -> {
-            RestoreSlice slice = RestoreSlice
-                                 .builder()
-                                 .jobId(restoreJob.jobId)
-                                 .qualifiedTableName(tableName)
-                                 .createSliceRequestPayload(request)
-                                 .build();
-            return new RestoreSliceAndJob(slice, restoreJob);
-        }))
-        .compose(sliceAndJob -> {
-            // Send response back if all are good, and
-            // it should catch whatever exception and handle at onFailure
-            RestoreSlice slice = sliceAndJob.restoreSlice;
-            RestoreJob job = sliceAndJob.restoreJob;
+        RoutingContextUtils.getAsFuture(context, SC_RESTORE_JOB)
+                           .map(restoreJob -> {
+                               // the job is either aborted or succeeded
+                               if (restoreJob.status.isFinal())
+                               {
+                                   logger.debug("The job has completed already. job={}", restoreJob);
+                                   // prevent creating slice, since the job is already in the final state
+                                   String errMsg = "Job is already in final state: " + restoreJob.status;
+                                   throw wrapHttpException(HttpResponseStatus.CONFLICT, errMsg);
+                               }
+                               return restoreJob;
+                           })
+                           .compose(restoreJob -> RoutingContextUtils.getAsFuture(context, SC_QUALIFIED_TABLE_NAME)
+                                                                     .map(tableName -> {
+                                                                         RestoreSlice slice = RestoreSlice.builder()
+                                                                                                          .jobId(restoreJob.jobId)
+                                                                                                          .qualifiedTableName(tableName)
+                                                                                                          .createSliceRequestPayload(request)
+                                                                                                          .build();
+                                                                         return new RestoreSliceAndJob(slice, restoreJob);
+                                                                     }))
+                           .compose(sliceAndJob -> {
+                               // Send response back if all are good, and
+                               // it should catch whatever exception and handle at onFailure
+                               RestoreSlice slice = sliceAndJob.restoreSlice;
+                               RestoreJob job = sliceAndJob.restoreJob;
 
-            if (job.isManagedBySidecar())
-            {
-                createSliceForSidecarManagedJob(context, slice);
-            }
-            else
-            {
-                createOrPollRangeForSparkManagedJob(context, instance, job, slice);
-            }
-            return Future.succeededFuture();
-        })
-        .onSuccess(nothing -> { // verify that the response should be ended if no error is thrown from prior steps
-            if (!context.response().ended())
-            {
-                logger.warn("The response should have been ended on the absence of error, but not.");
-                context.fail(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
-            }
-        })
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+                               if (job.isManagedBySidecar())
+                               {
+                                   createSliceForSidecarManagedJob(context, slice);
+                               }
+                               else
+                               {
+                                   createOrPollRangeForSparkManagedJob(context, instance, job, slice);
+                               }
+                               return Future.succeededFuture();
+                           })
+                           .onSuccess(nothing -> { // verify that the response should be ended if no error is thrown from prior steps
+                               if (!context.response()
+                                           .ended())
+                               {
+                                   logger.warn("The response should have been ended on the absence of error, but not.");
+                                   context.fail(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
+                               }
+                           })
+                           .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 
     @Override
@@ -178,9 +176,7 @@ public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceReques
             String errorMessage = "Restore slice failed. jobId=" + slice.jobId() + " sliceId=" + slice.sliceId();
             logger.error(errorMessage, ex);
             // propagate the restore slice failure message to client with custom server error status code
-            context.fail(wrapHttpException(HttpResponseStatus.valueOf(SERVER_ERROR_RESTORE_JOB_FAILED),
-                                           errorMessage,
-                                           ex));
+            context.fail(wrapHttpException(HttpResponseStatus.valueOf(SERVER_ERROR_RESTORE_JOB_FAILED), errorMessage, ex));
             return;
         }
 
@@ -188,24 +184,23 @@ public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceReques
 
         switch (status)
         {
-            case CREATED:
+            case CREATED :
                 context.response()
                        .setStatusCode(HttpResponseStatus.CREATED.code())
                        .end();
                 break;
-            case PENDING:
+            case PENDING :
                 context.response()
                        .setStatusCode(HttpResponseStatus.ACCEPTED.code())
                        .end();
                 break;
-            case COMPLETED:
+            case COMPLETED :
                 context.response()
                        .setStatusCode(HttpResponseStatus.OK.code())
                        .end();
                 break;
-            default:
-                logger.error("Unknown restore slice status. jobId={}, sliceId={}, status={}",
-                             slice.jobId(), slice.sliceId(), status);
+            default :
+                logger.error("Unknown restore slice status. jobId={}, sliceId={}, status={}", slice.jobId(), slice.sliceId(), status);
                 context.fail(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
                 break;
         }
@@ -213,7 +208,8 @@ public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceReques
 
     // For sidecar managed jobs, each slice is submitted/created once.
     // Unlike the spark managed job, the spark driver calls the same endpoint to poll restore status
-    private void createSliceForSidecarManagedJob(RoutingContext context, RestoreSlice slice)
+    private void createSliceForSidecarManagedJob(RoutingContext context,
+                                                 RestoreSlice slice)
     {
         try
         {
@@ -221,14 +217,15 @@ public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceReques
         }
         catch (Exception ex)
         {
-            logger.error("Failed to persist restore slice. jobId={} sliceId={}",
-                         slice.jobId(), slice.sliceId(), ex);
+            logger.error("Failed to persist restore slice. jobId={} sliceId={}", slice.jobId(), slice.sliceId(), ex);
             // todo: verify client can retry on this error
             context.fail(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
             return;
         }
 
-        context.response().setStatusCode(HttpResponseStatus.CREATED.code()).end();
+        context.response()
+               .setStatusCode(HttpResponseStatus.CREATED.code())
+               .end();
     }
 
     private static class RestoreSliceAndJob
@@ -236,7 +233,8 @@ public class CreateRestoreSliceHandler extends AbstractHandler<CreateSliceReques
         final RestoreJob restoreJob;
         final RestoreSlice restoreSlice;
 
-        RestoreSliceAndJob(RestoreSlice restoreSlice, RestoreJob restoreJob)
+        RestoreSliceAndJob(RestoreSlice restoreSlice,
+                           RestoreJob restoreJob)
         {
             this.restoreJob = restoreJob;
             this.restoreSlice = restoreSlice;

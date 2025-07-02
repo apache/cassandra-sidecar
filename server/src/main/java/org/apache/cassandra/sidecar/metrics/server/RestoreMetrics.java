@@ -59,10 +59,11 @@ public class RestoreMetrics
         activeJobs = createMetric("ActiveJobs", name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)));
         tokenRefreshed = createMetric("TokenRefreshed", name -> metricRegistry.gauge(name, DeltaGauge::new));
         tokenUnauthorized = createMetric("TokenUnauthorized", name -> metricRegistry.gauge(name, DeltaGauge::new));
-        tokenExpired = createMetric("TokenExpired",  name -> metricRegistry.gauge(name, DeltaGauge::new));
+        tokenExpired = createMetric("TokenExpired", name -> metricRegistry.gauge(name, DeltaGauge::new));
     }
 
-    private <T extends Metric> NamedMetric<T> createMetric(String simpleName, Function<String, T> metricCreator)
+    private <T extends Metric> NamedMetric<T> createMetric(String simpleName,
+                                                           Function<String, T> metricCreator)
     {
         return NamedMetric.builder(metricCreator)
                           .withDomain(DOMAIN)

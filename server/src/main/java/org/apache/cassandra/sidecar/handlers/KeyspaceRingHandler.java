@@ -18,11 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
-import java.util.Set;
-
-import org.apache.commons.lang3.StringUtils;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -30,6 +25,8 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Collections;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
@@ -37,7 +34,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
+import org.apache.commons.lang3.StringUtils;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -73,7 +70,8 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
                                SocketAddress remoteAddress,
                                Name keyspace)
     {
-        StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
+        StorageOperations operations = metadataFetcher.delegate(host)
+                                                      .storageOperations();
         executorPools.service()
                      .executeBlocking(() -> operations.ring(keyspace))
                      .onSuccess(context::json)
@@ -90,8 +88,7 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
                                   SocketAddress remoteAddress,
                                   Name keyspace)
     {
-        if (cause instanceof IllegalArgumentException &&
-            StringUtils.contains(cause.getMessage(), ", does not exist"))
+        if (cause instanceof IllegalArgumentException && StringUtils.contains(cause.getMessage(), ", does not exist"))
         {
             context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage(), cause));
             return;

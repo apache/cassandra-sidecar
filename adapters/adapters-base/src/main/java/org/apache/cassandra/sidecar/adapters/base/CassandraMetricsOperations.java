@@ -25,12 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import javax.management.openmbean.CompositeData;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.cassandra.sidecar.adapters.base.data.SessionInfo;
 import org.apache.cassandra.sidecar.adapters.base.data.StreamState;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStats;
@@ -48,7 +42,9 @@ import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.jetbrains.annotations.NotNull;
-
+import javax.management.openmbean.CompositeData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.MetricsJmxOperations.METRICS_OBJ_TYPE_KEYSPACE_TABLE_FORMAT;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.StreamManagerJmxOperations.STREAM_MANAGER_OBJ_NAME;
 
@@ -61,11 +57,11 @@ public class CassandraMetricsOperations implements MetricsOperations
     private final ConnectedClientStatsDatabaseAccessor dbAccessor;
     protected final JmxClient jmxClient;
 
-
     /**
      * Creates a new instance with the provided {@link CQLSessionProvider}
      */
-    public CassandraMetricsOperations(JmxClient jmxClient, CQLSessionProvider session)
+    public CassandraMetricsOperations(JmxClient jmxClient,
+                                      CQLSessionProvider session)
     {
         this.jmxClient = jmxClient;
         this.dbAccessor = new ConnectedClientStatsDatabaseAccessor(session, new ConnectedClientsSchema());
@@ -76,8 +72,7 @@ public class CassandraMetricsOperations implements MetricsOperations
      */
     public enum MetricType
     {
-        GAUGE,
-        COUNTER
+        GAUGE, COUNTER
     }
 
     /**
@@ -85,15 +80,14 @@ public class CassandraMetricsOperations implements MetricsOperations
      */
     public enum TableStatsMetrics
     {
-        SSTABLE_COUNT("LiveSSTableCount", MetricType.GAUGE),
-        DISKSPACE_USED("LiveDiskSpaceUsed", MetricType.COUNTER),
-        TOTAL_DISKSPACE_USED("TotalDiskSpaceUsed", MetricType.COUNTER),
-        SNAPSHOTS_SIZE("SnapshotsSize", MetricType.GAUGE);
+        SSTABLE_COUNT("LiveSSTableCount", MetricType.GAUGE), DISKSPACE_USED("LiveDiskSpaceUsed", MetricType.COUNTER),
+        TOTAL_DISKSPACE_USED("TotalDiskSpaceUsed", MetricType.COUNTER), SNAPSHOTS_SIZE("SnapshotsSize", MetricType.GAUGE);
 
         private final String metricName;
         private final MetricType type;
 
-        TableStatsMetrics(String metricName, MetricType type)
+        TableStatsMetrics(String metricName,
+                          MetricType type)
         {
             this.metricName = metricName;
             this.type = type;
@@ -119,20 +113,24 @@ public class CassandraMetricsOperations implements MetricsOperations
         return new TableStatsResponse(tableName.keyspace(), tableName.tableName(), sstableCount, diskSpaceUsed, totalDiskSpaceUsed, snapshotsSize);
     }
 
-    private long queryMetric(QualifiedTableName tableName, TableStatsMetrics metric)
+    private long queryMetric(QualifiedTableName tableName,
+                             TableStatsMetrics metric)
     {
         String metricObjectType = String.format(METRICS_OBJ_TYPE_KEYSPACE_TABLE_FORMAT, tableName.keyspace(), tableName.tableName(), metric.metricName());
         MetricsJmxOperations queryResult = jmxClient.proxy(MetricsJmxOperations.class, metricObjectType);
         return extractValue(metric, queryResult);
     }
 
-    private long extractValue(TableStatsMetrics metric, MetricsJmxOperations queryResult)
+    private long extractValue(TableStatsMetrics metric,
+                              MetricsJmxOperations queryResult)
     {
-        switch(metric.type)
+        switch (metric.type)
         {
-            case GAUGE: return getValueAsLong(queryResult.getValue());
-            case COUNTER: return queryResult.getCount();
-            default:
+            case GAUGE :
+                return getValueAsLong(queryResult.getValue());
+            case COUNTER :
+                return queryResult.getCount();
+            default :
                 throw new IllegalArgumentException("Unknown MetricType: " + metric.type);
         }
     }
@@ -169,8 +167,8 @@ public class CassandraMetricsOperations implements MetricsOperations
     public ConnectedClientStatsResponse connectedClientDetails()
     {
         List<ClientConnectionEntry> entries = statsToEntries(dbAccessor.stats());
-        Map<String, Long> connectionsByUser = entries.stream().collect(Collectors.groupingBy(ClientConnectionEntry::username,
-                                                                                             Collectors.counting()));
+        Map<String, Long> connectionsByUser = entries.stream()
+                                                     .collect(Collectors.groupingBy(ClientConnectionEntry::username, Collectors.counting()));
         long totalConnectedClients = entries.size();
         return new ConnectedClientStatsResponse(entries, totalConnectedClients, connectionsByUser);
     }
@@ -183,12 +181,15 @@ public class CassandraMetricsOperations implements MetricsOperations
     {
         Set<CompositeData> streamData = jmxClient.proxy(StreamManagerJmxOperations.class, STREAM_MANAGER_OBJ_NAME)
                                                  .getCurrentStreams();
-        return computeStats(streamData.stream().map(StreamState::new));
+        return computeStats(streamData.stream()
+                                      .map(StreamState::new));
     }
 
     private StreamsProgressStats computeStats(Stream<StreamState> streamStates)
     {
-        Iterator<SessionInfo> sessions = streamStates.map(StreamState::sessions).flatMap(Collection::stream).iterator();
+        Iterator<SessionInfo> sessions = streamStates.map(StreamState::sessions)
+                                                     .flatMap(Collection::stream)
+                                                     .iterator();
 
         long totalFilesToReceive = 0;
         long totalFilesReceived = 0;
@@ -213,10 +214,10 @@ public class CassandraMetricsOperations implements MetricsOperations
             totalFilesSent += sessionInfo.totalFilesSent();
         }
 
-        LOGGER.debug("Progress Stats: totalBytesToReceive:{} totalBytesReceived:{} totalBytesToSend:{} totalBytesSent:{}",
-                     totalBytesToReceive, totalBytesReceived, totalBytesToSend, totalBytesSent);
-        return new StreamsProgressStats(totalFilesToReceive, totalFilesReceived, totalBytesToReceive, totalBytesReceived,
-                                        totalFilesToSend, totalFilesSent, totalBytesToSend, totalBytesSent);
+        LOGGER.debug("Progress Stats: totalBytesToReceive:{} totalBytesReceived:{} totalBytesToSend:{} totalBytesSent:{}", totalBytesToReceive,
+                totalBytesReceived, totalBytesToSend, totalBytesSent);
+        return new StreamsProgressStats(totalFilesToReceive, totalFilesReceived, totalBytesToReceive, totalBytesReceived, totalFilesToSend, totalFilesSent,
+                totalBytesToSend, totalBytesSent);
 
     }
 
@@ -236,19 +237,8 @@ public class CassandraMetricsOperations implements MetricsOperations
     {
         // Note: We explicitly use constructor params based object creation instead of builder in order to optimize the
         // number of potential objects created for each row of the table queried, specifically since we know this can be large
-        return new ClientConnectionEntry(stat.address,
-                                         stat.port,
-                                         stat.sslEnabled,
-                                         stat.sslCipherSuite,
-                                         stat.sslProtocol,
-                                         stat.protocolVersion,
-                                         stat.username,
-                                         stat.requestCount,
-                                         stat.driverName,
-                                         stat.driverVersion,
-                                         stat.keyspaceName,
-                                         stat.clientOptions,
-                                         stat.authenticationMode,
-                                         stat.authenticationMetadata);
+        return new ClientConnectionEntry(stat.address, stat.port, stat.sslEnabled, stat.sslCipherSuite, stat.sslProtocol, stat.protocolVersion, stat.username,
+                stat.requestCount, stat.driverName, stat.driverVersion, stat.keyspaceName, stat.clientOptions, stat.authenticationMode,
+                stat.authenticationMetadata);
     }
 }

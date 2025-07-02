@@ -25,13 +25,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Generates the list of versions we're going to test against.
- * We will run the same module (trunk for example) against multiple versions of Cassandra.
- * This is due to releases that don't add new features that would affect the sidecar,
- * but we still want to test those versions specifically to avoid the chance of regressions.
+ * Generates the list of versions we're going to test against. We will run the same module (trunk for example) against multiple versions of Cassandra. This is
+ * due to releases that don't add new features that would affect the sidecar, but we still want to test those versions specifically to avoid the chance of
+ * regressions.
  *
- * <p>Ideally, we'd probably have concurrent runs of the test infrastructure each running tests against one specific
- * version of C*, but this will require some additional work in the dtest framework so for now we run one at a time.
+ * <p>
+ * Ideally, we'd probably have concurrent runs of the test infrastructure each running tests against one specific version of C*, but this will require some
+ * additional work in the dtest framework so for now we run one at a time.
  */
 public class TestVersionSupplier
 {
@@ -47,6 +47,8 @@ public class TestVersionSupplier
         // By default, we test 2 versions that will exercise oldest and newest supported versions
         String versions = System.getProperty("cassandra.sidecar.versions_to_test", "4.0,5.1");
         LOGGER.info("Testing with versions={}", versions);
-        return Arrays.stream(versions.split(",")).map(String::trim).map(TestVersion::new);
+        return Arrays.stream(versions.split(","))
+                     .map(String::trim)
+                     .map(TestVersion::new);
     }
 }

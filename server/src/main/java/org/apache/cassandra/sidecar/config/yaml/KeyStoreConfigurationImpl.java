@@ -18,14 +18,12 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Encapsulates key or trust store option configurations
@@ -50,17 +48,23 @@ public class KeyStoreConfigurationImpl implements KeyStoreConfiguration
         this(null, null, DEFAULT_TYPE, SecondBoundConfiguration.ZERO);
     }
 
-    public KeyStoreConfigurationImpl(String path, String password)
+    public KeyStoreConfigurationImpl(String path,
+                                     String password)
     {
         this(path, password, DEFAULT_TYPE, SecondBoundConfiguration.ZERO);
     }
 
-    public KeyStoreConfigurationImpl(String path, String password, String type)
+    public KeyStoreConfigurationImpl(String path,
+                                     String password,
+                                     String type)
     {
         this(path, password, type, SecondBoundConfiguration.ZERO);
     }
 
-    public KeyStoreConfigurationImpl(String path, String password, String type, SecondBoundConfiguration checkInterval)
+    public KeyStoreConfigurationImpl(String path,
+                                     String password,
+                                     String type,
+                                     SecondBoundConfiguration checkInterval)
     {
         this.path = path;
         this.password = password;

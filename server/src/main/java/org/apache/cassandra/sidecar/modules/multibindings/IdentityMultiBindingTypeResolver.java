@@ -22,6 +22,7 @@ import java.util.Map;
 
 /**
  * A MultiBindingTypeResolver that resolves the bindings in the map binder to themselves.
+ *
  * @param <V> bound value type
  */
 public class IdentityMultiBindingTypeResolver<V> implements MultiBindingTypeResolver<V>

@@ -21,8 +21,8 @@ package org.apache.cassandra.sidecar.config;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 
 /**
- * Configuration for the global traffic shaping options. These TCP server options enable configuration of
- * bandwidth limiting. Both inbound and outbound bandwidth can be limited through these options.
+ * Configuration for the global traffic shaping options. These TCP server options enable configuration of bandwidth limiting. Both inbound and outbound
+ * bandwidth can be limited through these options.
  */
 public interface TrafficShapingConfiguration
 {
@@ -37,8 +37,7 @@ public interface TrafficShapingConfiguration
     long outboundGlobalBandwidthBytesPerSecond();
 
     /**
-     * @return the maximum global write size in bytes per second allowed in the buffer globally for all channels
-     * before write suspended is set
+     * @return the maximum global write size in bytes per second allowed in the buffer globally for all channels before write suspended is set
      */
     long peakOutboundGlobalBandwidthBytesPerSecond();
 
@@ -48,14 +47,13 @@ public interface TrafficShapingConfiguration
     MillisecondBoundConfiguration maxDelayToWait();
 
     /**
-     * @return the delay between two computations of performances for channels or {@code 0} if no stats
-     * are to be computed
+     * @return the delay between two computations of performances for channels or {@code 0} if no stats are to be computed
      */
     MillisecondBoundConfiguration checkIntervalForStats();
 
     /**
-     * @return the bandwidth limit in bytes per second for incoming files (i.e. SSTable components upload), this
-     * setting is upper-bounded by the {@link #inboundGlobalBandwidthBytesPerSecond()} configuration if throttled
+     * @return the bandwidth limit in bytes per second for incoming files (i.e. SSTable components upload), this setting is upper-bounded by the
+     *         {@link #inboundGlobalBandwidthBytesPerSecond()} configuration if throttled
      */
     long inboundGlobalFileBandwidthBytesPerSecond();
 }

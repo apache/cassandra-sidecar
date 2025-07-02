@@ -63,14 +63,12 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
     public static final SimpleCassandraVersion MIN_VERSION_WITH_IMPORT = SimpleCassandraVersion.create("4.0.0");
 
     @CassandraIntegrationTest
-    void testSSTableImport(VertxTestContext vertxTestContext)
-    throws Exception
+    void testSSTableImport(VertxTestContext vertxTestContext) throws Exception
     {
         // Cassandra before 4.0 does not have the necessary JMX endpoints,
         // so we skip if the cluster version is below 4.0
-        assumeThat(sidecarTestContext.version)
-        .withFailMessage("Import is only available in Cassandra 4.0 and later.")
-        .isGreaterThanOrEqualTo(MIN_VERSION_WITH_IMPORT);
+        assumeThat(sidecarTestContext.version).withFailMessage("Import is only available in Cassandra 4.0 and later.")
+                                              .isGreaterThanOrEqualTo(MIN_VERSION_WITH_IMPORT);
 
         // create a table. Insert some data, create a snapshot that we'll use for import.
         // Truncate the table, insert more data.
@@ -82,14 +80,13 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
 
         // create a snapshot called <tableName>-snapshot for tbl1
         UpgradeableCluster cluster = sidecarTestContext.cluster();
-        final String snapshotStdout = cluster.get(1).nodetoolResult("snapshot",
-                                                                    "--tag", tableName.tableName() + "-snapshot",
-                                                                    "--table", tableName.tableName(),
-                                                                    "--", tableName.keyspace()).getStdout();
+        final String snapshotStdout = cluster.get(1)
+                                             .nodetoolResult("snapshot", "--tag", tableName.tableName() + "-snapshot", "--table", tableName.tableName(), "--",
+                                                     tableName.keyspace())
+                                             .getStdout();
         assertThat(snapshotStdout).contains("Snapshot directory: " + tableName.tableName() + "-snapshot");
         // find the directory in the filesystem
-        final List<Path> snapshotFiles = findChildFile(sidecarTestContext, "127.0.0.1",
-                                                       tableName.keyspace(), tableName.tableName() + "-snapshot");
+        final List<Path> snapshotFiles = findChildFile(sidecarTestContext, "127.0.0.1", tableName.keyspace(), tableName.tableName() + "-snapshot");
 
         assertThat(snapshotFiles).isNotEmpty();
 
@@ -101,21 +98,22 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         // directory does not exist inside the cluster. For that reason we need to do the following to
         // ensure "import" finds the path inside the cluster
         String uploadStagingDir = sidecarTestContext.instancesMetadata()
-                                                    .instanceFromHost("127.0.0.1").stagingDir();
-        final String stagingPathInContainer = uploadStagingDir + File.separator + uploadId
-                                              + File.separator + tableName.keyspace()
-                                              + File.separator + tableName.tableName();
+                                                    .instanceFromHost("127.0.0.1")
+                                                    .stagingDir();
+        final String stagingPathInContainer = uploadStagingDir + File.separator + uploadId + File.separator + tableName.keyspace() + File.separator
+                + tableName.tableName();
         boolean mkdirs = new File(stagingPathInContainer).mkdirs();
-        assertThat(mkdirs)
-        .withFailMessage("Could not create directory " + uploadStagingDir)
-        .isTrue();
+        assertThat(mkdirs).withFailMessage("Could not create directory " + uploadStagingDir)
+                          .isTrue();
 
         // copy snapshot files into the staging path in the cluster
         for (Path path : snapshotFiles)
         {
-            if (path.toFile().isFile())
+            if (path.toFile()
+                    .isFile())
             {
-                Files.copy(path, Paths.get(stagingPathInContainer).resolve(path.getFileName()));
+                Files.copy(path, Paths.get(stagingPathInContainer)
+                                      .resolve(path.getFileName()));
             }
         }
 
@@ -126,21 +124,19 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         populateTable(session, tableName, Arrays.asList("c", "d"));
 
         WebClient client = mTLSClient();
-        String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + tableName.keyspace()
-                           + "/tables/" + tableName.tableName() + "/import";
-        sendRequest(vertxTestContext,
-                    () -> client.put(server.actualPort(), "127.0.0.1", testRoute),
-                    vertxTestContext.succeeding(response -> vertxTestContext.verify(() -> {
-                        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                        assertThat(queryValues(tableName))
-                        .containsAll(Arrays.asList("a", "b", "c", "d"));
-                        vertxTestContext.completeNow();
-                    })));
+        String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + tableName.keyspace() + "/tables/" + tableName.tableName() + "/import";
+        sendRequest(vertxTestContext, () -> client.put(server.actualPort(), "127.0.0.1", testRoute),
+                vertxTestContext.succeeding(response -> vertxTestContext.verify(() -> {
+                    assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                    assertThat(queryValues(tableName)).containsAll(Arrays.asList("a", "b", "c", "d"));
+                    vertxTestContext.completeNow();
+                })));
         // wait until test completes
         assertThat(vertxTestContext.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    private void sendRequest(VertxTestContext vertxTestContext, Supplier<HttpRequest<Buffer>> requestSupplier,
+    private void sendRequest(VertxTestContext vertxTestContext,
+                             Supplier<HttpRequest<Buffer>> requestSupplier,
                              Handler<AsyncResult<HttpResponse<Buffer>>> handler)
     {
         requestSupplier.get()
@@ -158,8 +154,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
                        })));
     }
 
-    private void truncateAndVerify(QualifiedTableName qualifiedTableName)
-    throws InterruptedException
+    private void truncateAndVerify(QualifiedTableName qualifiedTableName) throws InterruptedException
     {
         Session session = maybeGetSession();
         session.execute("TRUNCATE TABLE " + qualifiedTableName);
@@ -168,7 +163,8 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         {
             TimeUnit.MILLISECONDS.sleep(100);
             ResultSet rs = session.execute("SELECT * FROM " + qualifiedTableName);
-            if (rs.all().size() == 0)
+            if (rs.all()
+                  .size() == 0)
                 break; // truncate succeeded
         }
     }
@@ -186,14 +182,15 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
     private QualifiedTableName createTestTableAndPopulate(CassandraSidecarTestContext cassandraTestContext,
                                                           List<String> values)
     {
-        QualifiedTableName tableName = createTestTable(
-        "CREATE TABLE IF NOT EXISTS %s (id text, PRIMARY KEY(id))" + WITH_COMPACTION_DISABLED + ";");
+        QualifiedTableName tableName = createTestTable("CREATE TABLE IF NOT EXISTS %s (id text, PRIMARY KEY(id))" + WITH_COMPACTION_DISABLED + ";");
         Session session = maybeGetSession();
         populateTable(session, tableName, values);
         return tableName;
     }
 
-    private void populateTable(Session session, QualifiedTableName tableName, List<String> values)
+    private void populateTable(Session session,
+                               QualifiedTableName tableName,
+                               List<String> values)
     {
         for (String value : values)
         {

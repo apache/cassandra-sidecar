@@ -18,24 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.snapshots;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -46,6 +28,13 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
@@ -56,7 +45,15 @@ import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -64,7 +61,6 @@ import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstances
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 
 /**
  * Tests for the {@link ListSnapshotHandler}
@@ -82,7 +78,8 @@ class ListSnapshotHandlerTest
     @BeforeEach
     public void setup() throws InterruptedException, IOException
     {
-        canonicalTemporaryPath = temporaryPath.toFile().getCanonicalPath();
+        canonicalTemporaryPath = temporaryPath.toFile()
+                                              .getCanonicalPath();
         Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(Modules.override(new TestModule())
                                                                      .with(new ListSnapshotTestModule())));
@@ -102,7 +99,8 @@ class ListSnapshotHandlerTest
     void tearDown() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else
@@ -114,30 +112,17 @@ class ListSnapshotHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1/snapshots/snapshot1";
-        ListSnapshotFilesResponse.FileInfo fileInfoExpected =
-        new ListSnapshotFilesResponse.FileInfo(11,
-                                               "localhost",
-                                               0,
-                                               0,
-                                               "snapshot1",
-                                               "keyspace1",
-                                               "table1-1234",
-                                               "1.db");
-        ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
-        new ListSnapshotFilesResponse.FileInfo(11,
-                                               "localhost",
-                                               0,
-                                               0,
-                                               "snapshot1",
-                                               "keyspace1",
-                                               "table1-1234",
-                                               "2.db");
+        ListSnapshotFilesResponse.FileInfo fileInfoExpected = new ListSnapshotFilesResponse.FileInfo(11, "localhost", 0, 0, "snapshot1", "keyspace1",
+                "table1-1234", "1.db");
+        ListSnapshotFilesResponse.FileInfo fileInfoNotExpected = new ListSnapshotFilesResponse.FileInfo(11, "localhost", 0, 0, "snapshot1", "keyspace1",
+                "table1-1234", "2.db");
 
         client.get(server.actualPort(), "localhost", testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   ListSnapshotFilesResponse resp = response.bodyAsJson(ListSnapshotFilesResponse.class);
-                  assertThat(resp.snapshotFilesInfo().size()).isEqualTo(1);
+                  assertThat(resp.snapshotFilesInfo()
+                                 .size()).isEqualTo(1);
                   assertThat(resp.snapshotFilesInfo()).contains(fileInfoExpected);
                   assertThat(resp.snapshotFilesInfo()).doesNotContain(fileInfoNotExpected);
                   context.completeNow();
@@ -148,35 +133,12 @@ class ListSnapshotHandlerTest
     void testRouteSucceedsIncludeSecondaryIndexes(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1" +
-                           "/snapshots/snapshot1?includeSecondaryIndexFiles=true";
+        String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1" + "/snapshots/snapshot1?includeSecondaryIndexFiles=true";
         List<ListSnapshotFilesResponse.FileInfo> fileInfoExpected = Arrays.asList(
-        new ListSnapshotFilesResponse.FileInfo(11,
-                                               "localhost",
-                                               0,
-                                               0,
-                                               "snapshot1",
-                                               "keyspace1",
-                                               "table1-1234",
-                                               "1.db"),
-        new ListSnapshotFilesResponse.FileInfo(0,
-                                               "localhost",
-                                               0,
-                                               0,
-                                               "snapshot1",
-                                               "keyspace1",
-                                               "table1-1234",
-                                               ".index/secondary.db")
-        );
-        ListSnapshotFilesResponse.FileInfo fileInfoNotExpected =
-        new ListSnapshotFilesResponse.FileInfo(11,
-                                               "localhost",
-                                               6475,
-                                               0,
-                                               "snapshot1",
-                                               "keyspace1",
-                                               "table1-1234",
-                                               "2.db");
+                new ListSnapshotFilesResponse.FileInfo(11, "localhost", 0, 0, "snapshot1", "keyspace1", "table1-1234", "1.db"),
+                new ListSnapshotFilesResponse.FileInfo(0, "localhost", 0, 0, "snapshot1", "keyspace1", "table1-1234", ".index/secondary.db"));
+        ListSnapshotFilesResponse.FileInfo fileInfoNotExpected = new ListSnapshotFilesResponse.FileInfo(11, "localhost", 6475, 0, "snapshot1", "keyspace1",
+                "table1-1234", "2.db");
 
         client.get(server.actualPort(), "localhost", testRoute)
               .send(context.succeeding(response -> context.verify(() -> {
@@ -197,8 +159,8 @@ class ListSnapshotHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
                   assertThat(response.statusMessage()).isEqualTo(NOT_FOUND.reasonPhrase());
-                  assertThat(response.bodyAsJsonObject().getString("message"))
-                  .isEqualTo("Snapshot 'snapshotInvalid' not found");
+                  assertThat(response.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo("Snapshot 'snapshotInvalid' not found");
                   context.completeNow();
               })));
     }
@@ -212,15 +174,14 @@ class ListSnapshotHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  assertThat(response.bodyAsJsonObject().getString("message"))
-                  .contains("Invalid characters in keyspace: ");
+                  assertThat(response.bodyAsJsonObject()
+                                     .getString("message")).contains("Invalid characters in keyspace: ");
                   context.completeNow();
               })));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "system_schema", "system_traces", "system_distributed", "system", "system_auth",
-                             "system_views", "system_virtual_schema" })
+    @ValueSource(strings = { "system_schema", "system_traces", "system_distributed", "system", "system_auth", "system_views", "system_virtual_schema"})
     void failsWhenKeyspaceIsForbidden(String forbiddenKeyspace) throws InterruptedException
     {
         VertxTestContext context = new VertxTestContext();
@@ -230,8 +191,8 @@ class ListSnapshotHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  assertThat(response.bodyAsJsonObject().getString("message"))
-                  .isEqualTo("Forbidden keyspace: " + forbiddenKeyspace);
+                  assertThat(response.bodyAsJsonObject()
+                                     .getString("message")).isEqualTo("Forbidden keyspace: " + forbiddenKeyspace);
                   context.completeNow();
               })));
         context.awaitCompletion(30, TimeUnit.SECONDS);
@@ -246,8 +207,8 @@ class ListSnapshotHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   assertThat(response.statusMessage()).isEqualTo(BAD_REQUEST.reasonPhrase());
-                  assertThat(response.bodyAsJsonObject().getString("message"))
-                  .contains("Invalid characters in table name: ");
+                  assertThat(response.bodyAsJsonObject()
+                                     .getString("message")).contains("Invalid characters in table name: ");
                   context.completeNow();
               })));
     }
@@ -260,8 +221,8 @@ class ListSnapshotHandlerTest
         {
             CQLSessionProvider mockSession1 = mock(CQLSessionProviderImpl.class);
             TableOperations mockTableOperations = mock(TableOperations.class);
-            when(mockTableOperations.getDataPaths("keyspace1", "table1"))
-            .thenReturn(Collections.singletonList(canonicalTemporaryPath + "/d1/data/keyspace1/table1-1234"));
+            when(mockTableOperations.getDataPaths("keyspace1", "table1")).thenReturn(
+                    Collections.singletonList(canonicalTemporaryPath + "/d1/data/keyspace1/table1-1234"));
             CassandraAdapterDelegate mockDelegate = mock(CassandraAdapterDelegate.class);
             when(mockDelegate.tableOperations()).thenReturn(mockTableOperations);
             return mockInstancesMetadata(vertx, canonicalTemporaryPath, mockDelegate, mockSession1);

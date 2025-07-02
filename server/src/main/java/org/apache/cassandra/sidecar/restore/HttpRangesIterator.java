@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.restore;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-
 import org.apache.cassandra.sidecar.common.utils.HttpRange;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 
@@ -33,7 +32,8 @@ public class HttpRangesIterator implements Iterator<HttpRange>
     private final int rangeSize;
     private long offset = 0;
 
-    public HttpRangesIterator(long totalBytes, int rangeSize)
+    public HttpRangesIterator(long totalBytes,
+                              int rangeSize)
     {
         Preconditions.checkArgument(totalBytes > 0, "totalBytes must be positive");
         Preconditions.checkArgument(rangeSize > 0, "rangeSize must be positive");

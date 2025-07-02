@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
-
 import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
 

@@ -23,7 +23,8 @@ package org.apache.cassandra.sidecar.exceptions;
  */
 public class SidecarSchemaModificationException extends RuntimeException
 {
-    public SidecarSchemaModificationException(String message, Throwable cause)
+    public SidecarSchemaModificationException(String message,
+                                              Throwable cause)
     {
         super(message, cause);
     }

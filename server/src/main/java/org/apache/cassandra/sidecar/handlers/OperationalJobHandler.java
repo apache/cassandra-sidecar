@@ -18,16 +18,14 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
-import java.util.Set;
-import java.util.UUID;
-import javax.inject.Inject;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Collections;
+import java.util.Set;
+import java.util.UUID;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.job.OperationalJob;
@@ -36,7 +34,7 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.OperationalJobUtils;
 import org.jetbrains.annotations.NotNull;
-
+import javax.inject.Inject;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.OPERATIONAL_JOB_ID_PATH_PARAM;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -80,7 +78,7 @@ public class OperationalJobHandler extends AbstractHandler<UUID> implements Acce
                          {
                              logger.info("No operational job found with the jobId. jobId={}", jobId);
                              throw wrapHttpException(HttpResponseStatus.NOT_FOUND,
-                                                     String.format("Unknown job with ID: %s. Please retry the operation.", jobId));
+                                     String.format("Unknown job with ID: %s. Please retry the operation.", jobId));
                          }
                          return job;
                      })
@@ -102,8 +100,7 @@ public class OperationalJobHandler extends AbstractHandler<UUID> implements Acce
         String requestJobId = context.pathParam(OPERATIONAL_JOB_ID_PATH_PARAM.substring(1));
         if (requestJobId == null)
         {
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                    OPERATIONAL_JOB_ID_PATH_PARAM + " is required but not supplied");
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, OPERATIONAL_JOB_ID_PATH_PARAM + " is required but not supplied");
         }
 
         UUID jobId;
@@ -114,8 +111,7 @@ public class OperationalJobHandler extends AbstractHandler<UUID> implements Acce
         catch (IllegalArgumentException e)
         {
             logger.info("Invalid jobId. jobId={}", requestJobId);
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                    String.format("Invalid job ID provided: %s.", requestJobId));
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, String.format("Invalid job ID provided: %s.", requestJobId));
         }
         return jobId;
     }

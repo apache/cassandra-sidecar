@@ -98,14 +98,12 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                          RetryPolicy defaultRetryPolicy)
     {
         this.defaultRetryPolicy = defaultRetryPolicy;
-        ignoreConflictRetryPolicy = new IgnoreConflictRetryPolicy(sidecarClientConfig.maxRetries(),
-                                                                  sidecarClientConfig.retryDelayMillis(),
-                                                                  sidecarClientConfig.maxRetryDelayMillis());
-        oncePerInstanceRetryPolicy = new OncePerInstanceRetryPolicy(sidecarClientConfig.minimumHealthRetryDelay(),
-                                                                    sidecarClientConfig.maximumHealthRetryDelay());
-        baseBuilder = new RequestContext.Builder()
-                      .instanceSelectionPolicy(new RandomInstanceSelectionPolicy(instancesProvider))
-                      .retryPolicy(defaultRetryPolicy);
+        ignoreConflictRetryPolicy = new IgnoreConflictRetryPolicy(sidecarClientConfig.maxRetries(), sidecarClientConfig.retryDelayMillis(),
+                sidecarClientConfig.maxRetryDelayMillis());
+        oncePerInstanceRetryPolicy =
+                                   new OncePerInstanceRetryPolicy(sidecarClientConfig.minimumHealthRetryDelay(), sidecarClientConfig.maximumHealthRetryDelay());
+        baseBuilder = new RequestContext.Builder().instanceSelectionPolicy(new RandomInstanceSelectionPolicy(instancesProvider))
+                                                  .retryPolicy(defaultRetryPolicy);
         executor = requestExecutor;
     }
 
@@ -116,10 +114,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public CompletableFuture<HealthResponse> sidecarHealth()
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .sidecarHealthRequest()
-                                            .retryPolicy(oncePerInstanceRetryPolicy)
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().sidecarHealthRequest()
+                                                            .retryPolicy(oncePerInstanceRetryPolicy)
+                                                            .build());
     }
 
     /**
@@ -130,11 +127,10 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public CompletableFuture<HealthResponse> sidecarHealth(SidecarInstance instance)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .retryPolicy(oncePerInstanceRetryPolicy)
-                                            .sidecarHealthRequest()
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .retryPolicy(oncePerInstanceRetryPolicy)
+                                                            .sidecarHealthRequest()
+                                                            .build());
     }
 
     /**
@@ -146,10 +142,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     @Deprecated
     public CompletableFuture<HealthResponse> cassandraHealth()
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .cassandraHealthRequest()
-                                            .retryPolicy(oncePerInstanceRetryPolicy)
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().cassandraHealthRequest()
+                                                            .retryPolicy(oncePerInstanceRetryPolicy)
+                                                            .build());
     }
 
     /**
@@ -159,10 +154,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public CompletableFuture<HealthResponse> cassandraNativeHealth()
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .cassandraNativeHealthRequest()
-                                            .retryPolicy(new OncePerInstanceRetryPolicy())
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().cassandraNativeHealthRequest()
+                                                            .retryPolicy(new OncePerInstanceRetryPolicy())
+                                                            .build());
     }
 
     /**
@@ -172,10 +166,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public CompletableFuture<HealthResponse> cassandraJmxHealth()
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .cassandraJmxHealthRequest()
-                                            .retryPolicy(new OncePerInstanceRetryPolicy())
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().cassandraJmxHealthRequest()
+                                                            .retryPolicy(new OncePerInstanceRetryPolicy())
+                                                            .build());
     }
 
     /**
@@ -185,31 +178,32 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public CompletableFuture<SchemaResponse> fullSchema()
     {
-        return executor.executeRequestAsync(requestBuilder().schemaRequest().build());
+        return executor.executeRequestAsync(requestBuilder().schemaRequest()
+                                                            .build());
     }
 
     /**
-     * Executes the schema request for the {@code keyspace} using the default retry policy and configured selection
-     * policy
+     * Executes the schema request for the {@code keyspace} using the default retry policy and configured selection policy
      *
      * @param keyspace the keyspace in Cassandra
      * @return a completable future of the schema response for the provided {@code keyspace}
      */
     public CompletableFuture<SchemaResponse> schema(String keyspace)
     {
-        return executor.executeRequestAsync(requestBuilder().schemaRequest(keyspace).build());
+        return executor.executeRequestAsync(requestBuilder().schemaRequest(keyspace)
+                                                            .build());
     }
 
     /**
-     * Executes the ring request for the {@code keyspace} using the default retry policy and configured selection
-     * policy
+     * Executes the ring request for the {@code keyspace} using the default retry policy and configured selection policy
      *
      * @param keyspace the keyspace in Cassandra
      * @return a completable future of the ring response for the provided {@code keyspace}
      */
     public CompletableFuture<RingResponse> ring(String keyspace)
     {
-        return executor.executeRequestAsync(requestBuilder().ringRequest(keyspace).build());
+        return executor.executeRequestAsync(requestBuilder().ringRequest(keyspace)
+                                                            .build());
     }
 
     /**
@@ -219,7 +213,8 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public CompletableFuture<NodeSettings> nodeSettings()
     {
-        return executor.executeRequestAsync(requestBuilder().nodeSettingsRequest().build());
+        return executor.executeRequestAsync(requestBuilder().nodeSettingsRequest()
+                                                            .build());
     }
 
     /**
@@ -242,21 +237,21 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public CompletableFuture<GossipInfoResponse> gossipInfo()
     {
-        return executor.executeRequestAsync(requestBuilder().gossipInfoRequest().build());
+        return executor.executeRequestAsync(requestBuilder().gossipInfoRequest()
+                                                            .build());
     }
-
 
     /**
      * Executes the GET gossip health request using the default retry policy and configured selection policy
+     *
      * @param instance the instance where the request will be executed
      * @return a completable future with gossip health response
      */
     public CompletableFuture<HealthResponse> gossipHealth(SidecarInstance instance)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .gossipHealthRequest()
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .gossipHealthRequest()
+                                                            .build());
     }
 
     /**
@@ -266,12 +261,12 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public CompletableFuture<TimeSkewResponse> timeSkew()
     {
-        return executor.executeRequestAsync(requestBuilder().timeSkewRequest().build());
+        return executor.executeRequestAsync(requestBuilder().timeSkewRequest()
+                                                            .build());
     }
 
     /**
-     * Executes the time skew request using the default retry policy and uses random instance selection policy
-     * with the provided instances
+     * Executes the time skew request using the default retry policy and uses random instance selection policy with the provided instances
      *
      * @param instances the list of Sidecar instances to try for this request
      * @return a completable future of the time skew
@@ -280,17 +275,16 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     {
         SidecarInstancesProvider instancesProvider = new SimpleSidecarInstancesProvider(instances);
         InstanceSelectionPolicy instanceSelectionPolicy = new RandomInstanceSelectionPolicy(instancesProvider);
-        return executor.executeRequestAsync(requestBuilder()
-                                            .instanceSelectionPolicy(instanceSelectionPolicy)
-                                            .timeSkewRequest()
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().instanceSelectionPolicy(instanceSelectionPolicy)
+                                                            .timeSkewRequest()
+                                                            .build());
     }
 
     /**
      * Executes the token-range replicas request using the default retry policy and configured selection policy
      *
      * @param instances the list of Sidecar instances to try for this request
-     * @param keyspace  the keyspace in Cassandra
+     * @param keyspace the keyspace in Cassandra
      * @return a completable future of the token-range replicas
      */
     public CompletableFuture<TokenRangeReplicasResponse> tokenRangeReplicas(List<? extends SidecarInstance> instances,
@@ -298,19 +292,17 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     {
         SidecarInstancesProvider instancesProvider = new SimpleSidecarInstancesProvider(instances);
         InstanceSelectionPolicy instanceSelectionPolicy = new RandomInstanceSelectionPolicy(instancesProvider);
-        return executeRequestAsync(requestBuilder()
-                                   .instanceSelectionPolicy(instanceSelectionPolicy)
-                                   .tokenRangeReplicasRequest(keyspace)
-                                   .build());
+        return executeRequestAsync(requestBuilder().instanceSelectionPolicy(instanceSelectionPolicy)
+                                                   .tokenRangeReplicasRequest(keyspace)
+                                                   .build());
     }
 
     /**
-     * Executes the list snapshot files request including secondary index files using the default retry policy and
-     * provided {@code instance}
+     * Executes the list snapshot files request including secondary index files using the default retry policy and provided {@code instance}
      *
-     * @param instance     the instance where the request will be executed
-     * @param keyspace     the keyspace in Cassandra
-     * @param table        the table name in Cassandra
+     * @param instance the instance where the request will be executed
+     * @param keyspace the keyspace in Cassandra
+     * @param table the table name in Cassandra
      * @param snapshotName the name of the snapshot
      * @return a completable future for the request
      */
@@ -322,14 +314,13 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
         return listSnapshotFiles(instance, keyspace, table, snapshotName, true);
     }
 
-
     /**
      * Executes the list snapshot files request using the default retry policy and provided {@code instance}
      *
-     * @param instance                   the instance where the request will be executed
-     * @param keyspace                   the keyspace in Cassandra
-     * @param table                      the table name in Cassandra
-     * @param snapshotName               the name of the snapshot
+     * @param instance the instance where the request will be executed
+     * @param keyspace the keyspace in Cassandra
+     * @param table the table name in Cassandra
+     * @param snapshotName the name of the snapshot
      * @param includeSecondaryIndexFiles whether to include secondary index files
      * @return a completable future for the request
      */
@@ -340,19 +331,16 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                                                           boolean includeSecondaryIndexFiles)
     {
         return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
-                                                            .listSnapshotFilesRequest(keyspace,
-                                                                                      table,
-                                                                                      snapshotName,
-                                                                                      includeSecondaryIndexFiles)
+                                                            .listSnapshotFilesRequest(keyspace, table, snapshotName, includeSecondaryIndexFiles)
                                                             .build());
     }
 
     /**
      * Executes the clear snapshot request using the default retry policy and provided {@code instance}
      *
-     * @param instance     the instance where the request will be executed
-     * @param keyspace     the keyspace in Cassandra
-     * @param table        the table name in Cassandra
+     * @param instance the instance where the request will be executed
+     * @param keyspace the keyspace in Cassandra
+     * @param table the table name in Cassandra
      * @param snapshotName the name of the snapshot
      * @return a completable future for the request
      */
@@ -369,9 +357,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     /**
      * Executes the create snapshot request using the default retry policy and provided {@code instance}
      *
-     * @param instance     the instance where the request will be executed
-     * @param keyspace     the keyspace in Cassandra
-     * @param table        the table name in Cassandra
+     * @param instance the instance where the request will be executed
+     * @param keyspace the keyspace in Cassandra
+     * @param table the table name in Cassandra
      * @param snapshotName the name of the snapshot
      * @return a completable future for the request
      */
@@ -386,14 +374,13 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     /**
      * Executes the create snapshot request using the default retry policy and provided {@code instance}
      *
-     * @param instance     the instance where the request will be executed
-     * @param keyspace     the keyspace in Cassandra
-     * @param table        the table name in Cassandra
+     * @param instance the instance where the request will be executed
+     * @param keyspace the keyspace in Cassandra
+     * @param table the table name in Cassandra
      * @param snapshotName the name of the snapshot
-     * @param snapshotTTL  an optional time to live option for the snapshot (available since Cassandra 4.1+).
-     *                     The TTL option must specify the units, for example 2d represents a TTL for 2 days;
-     *                     1h represents a TTL of 1 hour, etc. Valid units are {@code d}, {@code h}, {@code s},
-     *                     {@code ms}, {@code us}, {@code µs}, {@code ns}, and {@code m}.
+     * @param snapshotTTL an optional time to live option for the snapshot (available since Cassandra 4.1+). The TTL option must specify the units, for example
+     *            2d represents a TTL for 2 days; 1h represents a TTL of 1 hour, etc. Valid units are {@code d}, {@code h}, {@code s}, {@code ms}, {@code us},
+     *            {@code µs}, {@code ns}, and {@code m}.
      * @return a completable future for the request
      */
     public CompletableFuture<Void> createSnapshot(SidecarInstance instance,
@@ -404,25 +391,22 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     {
         return executor.executeRequestAsync(requestBuilder().retryPolicy(ignoreConflictRetryPolicy)
                                                             .singleInstanceSelectionPolicy(instance)
-                                                            .createSnapshotRequest(keyspace, table,
-                                                                                   snapshotName, snapshotTTL)
+                                                            .createSnapshotRequest(keyspace, table, snapshotName, snapshotTTL)
                                                             .build());
     }
 
     /**
-     * Streams the specified {@code range} of an SSTable {@code componentName} for the given {@code keyspace},
-     * {@code table} from an existing {@code snapshotName}, the stream is consumed by the
-     * {@link StreamConsumer consumer}.
+     * Streams the specified {@code range} of an SSTable {@code componentName} for the given {@code keyspace}, {@code table} from an existing
+     * {@code snapshotName}, the stream is consumed by the {@link StreamConsumer consumer}.
      *
-     * @param instance       the instance where the request will be executed
-     * @param keyspace       the keyspace in Cassandra
-     * @param table          the table name in Cassandra
-     * @param snapshotName   the name of the snapshot
-     * @param componentName  the name of the SSTable component
-     * @param range          the HTTP range for the request
+     * @param instance the instance where the request will be executed
+     * @param keyspace the keyspace in Cassandra
+     * @param table the table name in Cassandra
+     * @param snapshotName the name of the snapshot
+     * @param componentName the name of the SSTable component
+     * @param range the HTTP range for the request
      * @param streamConsumer the object that consumes the stream
-     * @deprecated use {@link #streamSSTableComponent(SidecarInstance, ListSnapshotFilesResponse.FileInfo, HttpRange, StreamConsumer)}
-     * instead
+     * @deprecated use {@link #streamSSTableComponent(SidecarInstance, ListSnapshotFilesResponse.FileInfo, HttpRange, StreamConsumer)} instead
      */
     @Deprecated
     public void streamSSTableComponent(SidecarInstance instance,
@@ -433,20 +417,19 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                        HttpRange range,
                                        StreamConsumer streamConsumer)
     {
-        executor.streamRequest(requestBuilder()
-                               .singleInstanceSelectionPolicy(instance)
-                               .ssTableComponentRequest(keyspace, table, snapshotName, componentName, range)
-                               .build(), streamConsumer);
+        executor.streamRequest(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                               .ssTableComponentRequest(keyspace, table, snapshotName, componentName, range)
+                                               .build(),
+                streamConsumer);
     }
 
     /**
-     * Streams the specified {@code range} of an SSTable {@code componentName} for the given {@code keyspace},
-     * {@code table} from an existing {@code snapshotName}, the stream is consumed by the
-     * {@link StreamConsumer consumer}.
+     * Streams the specified {@code range} of an SSTable {@code componentName} for the given {@code keyspace}, {@code table} from an existing
+     * {@code snapshotName}, the stream is consumed by the {@link StreamConsumer consumer}.
      *
-     * @param instance       the instance where the request will be executed
-     * @param fileInfo       contains information about the file to stream
-     * @param range          the HTTP range for the request
+     * @param instance the instance where the request will be executed
+     * @param fileInfo contains information about the file to stream
+     * @param range the HTTP range for the request
      * @param streamConsumer the object that consumes the stream
      */
     public void streamSSTableComponent(SidecarInstance instance,
@@ -454,22 +437,22 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                        HttpRange range,
                                        StreamConsumer streamConsumer)
     {
-        executor.streamRequest(requestBuilder()
-                               .singleInstanceSelectionPolicy(instance)
-                               .ssTableComponentRequest(fileInfo, range)
-                               .build(), streamConsumer);
+        executor.streamRequest(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                               .ssTableComponentRequest(fileInfo, range)
+                                               .build(),
+                streamConsumer);
     }
 
     /**
      * Uploads the SSTable to the provided {@code instance} using the default retry policy.
      *
-     * @param instance      the instance where the request will be executed
-     * @param keyspace      the keyspace in Cassandra
-     * @param table         the table name in Cassandra
-     * @param uploadId      the unique identifier for the upload
+     * @param instance the instance where the request will be executed
+     * @param keyspace the keyspace in Cassandra
+     * @param table the table name in Cassandra
+     * @param uploadId the unique identifier for the upload
      * @param componentName the name of the SSTable component
-     * @param digest        digest value to check integrity of SSTable component uploaded
-     * @param filename      the path to the file to be uploaded
+     * @param digest digest value to check integrity of SSTable component uploaded
+     * @param filename the path to the file to be uploaded
      * @return a completable future for the request
      */
     public CompletableFuture<Void> uploadSSTableRequest(SidecarInstance instance,
@@ -481,12 +464,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                                         String filename)
     {
         return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
-                                                            .uploadSSTableRequest(keyspace,
-                                                                                  table,
-                                                                                  uploadId,
-                                                                                  componentName,
-                                                                                  digest,
-                                                                                  filename)
+                                                            .uploadSSTableRequest(keyspace, table, uploadId, componentName, digest, filename)
                                                             .build());
     }
 
@@ -495,9 +473,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      *
      * @param instance the instance where the request will be executed
      * @param keyspace the keyspace in Cassandra
-     * @param table    the table name in Cassandra
+     * @param table the table name in Cassandra
      * @param uploadId the unique identifier for the upload
-     * @param options  additional options for the import process
+     * @param options additional options for the import process
      * @return a completable future for the request
      */
     public CompletableFuture<SSTableImportResponse> importSSTableRequest(SidecarInstance instance,
@@ -506,13 +484,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                                                          String uploadId,
                                                                          ImportSSTableRequest.ImportOptions options)
     {
-        Runnable customLog = () ->
-                             LOGGER.info("Request to {} ACCEPTED but not yet complete - " +
-                                         "will retry until success/failure. uploadId={}", instance, uploadId);
-        RetryPolicy retryPolicy = new RunnableOnStatusCodeRetryPolicy(customLog,
-                                                                      defaultRetryPolicy,
-                                                                      HttpResponseStatus.ACCEPTED.code(),
-                                                                      10);
+        Runnable customLog = () -> LOGGER.info("Request to {} ACCEPTED but not yet complete - " + "will retry until success/failure. uploadId={}", instance,
+                uploadId);
+        RetryPolicy retryPolicy = new RunnableOnStatusCodeRetryPolicy(customLog, defaultRetryPolicy, HttpResponseStatus.ACCEPTED.code(), 10);
         return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
                                                             .retryPolicy(retryPolicy)
                                                             .importSSTableRequest(keyspace, table, uploadId, options)
@@ -526,7 +500,8 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      * @param uploadId the unique identifier for the upload
      * @return a completable future for the request
      */
-    public CompletableFuture<Void> cleanUploadSession(SidecarInstance instance, String uploadId)
+    public CompletableFuture<Void> cleanUploadSession(SidecarInstance instance,
+                                                      String uploadId)
     {
         return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
                                                             .cleanSSTableUploadSessionRequest(uploadId)
@@ -535,22 +510,21 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
 
     /**
      * Lists CDC commit logs in CDC directory for an instance
+     *
      * @param sidecarInstance instance on which the CDC commit logs are to be listed
      * @return a completable future with List of cdc commitLogs on the requested instance
      */
     public CompletableFuture<ListCdcSegmentsResponse> listCdcSegments(SidecarInstance sidecarInstance)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(sidecarInstance)
-                                            .request(new ListCdcSegmentsRequest())
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(sidecarInstance)
+                                                            .request(new ListCdcSegmentsRequest())
+                                                            .build());
     }
 
     /**
      * Streams CDC commit log segments from the requested instance.
      *
-     * Streams the specified {@code range} of a CDC CommitLog from the given instance and the
-     * stream is consumed by the {@link StreamConsumer consumer}.
+     * Streams the specified {@code range} of a CDC CommitLog from the given instance and the stream is consumed by the {@link StreamConsumer consumer}.
      *
      * @param sidecarInstance instance on which the CDC commit logs are to be streamed
      * @param segment segment file name
@@ -562,40 +536,36 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                   HttpRange range,
                                   StreamConsumer streamConsumer)
     {
-        executor.streamRequest(requestBuilder()
-                               .singleInstanceSelectionPolicy(sidecarInstance)
-                               .request(new StreamCdcSegmentRequest(segment, range))
-                               .build(), streamConsumer);
+        executor.streamRequest(requestBuilder().singleInstanceSelectionPolicy(sidecarInstance)
+                                               .request(new StreamCdcSegmentRequest(segment, range))
+                                               .build(),
+                streamConsumer);
     }
 
     /**
-     * Sends a request to trigger an immediate, synchronous schema
-     * conversion and report on the specified instance of the Sidecar
-     * regardless of the periodic task schedule or status
+     * Sends a request to trigger an immediate, synchronous schema conversion and report on the specified instance of the Sidecar regardless of the periodic
+     * task schedule or status
      *
      * @param instance the {@link SidecarInstance} to receive the request
      * @return a {@link CompletableFuture} for the request
      */
     public <T> CompletableFuture<T> reportSchema(SidecarInstance instance)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .reportSchemaRequest()
-                                            .noRetryPolicy()  // {@link NoRetryPolicy} is the preferred behavior here
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .reportSchemaRequest()
+                                                            .noRetryPolicy() // {@link NoRetryPolicy} is the preferred behavior here
+                                                            .build());
     }
 
     /**
-     * Get configs for all the services in the "configs" table inside sidecar's internal
-     * keyspace
+     * Get configs for all the services in the "configs" table inside sidecar's internal keyspace
      *
      * @return List of services and their corresponding configs
      */
     public CompletableFuture<AllServicesConfigPayload> allServicesConfig()
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .request(new AllServicesConfigRequest())
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().request(new AllServicesConfigRequest())
+                                                            .build());
     }
 
     /**
@@ -605,11 +575,11 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      * @param config the updated config
      * @return updated config
      */
-    public CompletableFuture<UpdateCdcServiceConfigPayload> updateCdcServiceConfig(Service service, Map<String, String> config)
+    public CompletableFuture<UpdateCdcServiceConfigPayload> updateCdcServiceConfig(Service service,
+                                                                                   Map<String, String> config)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .request(new UpdateServiceConfigRequest(service, new UpdateCdcServiceConfigPayload(config)))
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().request(new UpdateServiceConfigRequest(service, new UpdateCdcServiceConfigPayload(config)))
+                                                            .build());
     }
 
     /**
@@ -619,9 +589,8 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public CompletableFuture<Void> deleteCdcServiceConfig(Service service)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .request(new DeleteServiceConfigRequest(service))
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().request(new DeleteServiceConfigRequest(service))
+                                                            .build());
     }
 
     /**
@@ -633,10 +602,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                                                                CreateRestoreJobRequestPayload payload)
     {
         Objects.requireNonNull(payload, "payload cannot be null");
-        return executor.executeRequestAsync(requestBuilder()
-                                            .retryPolicy(new CreateRestoreJobRetryPolicy(defaultRetryPolicy))
-                                            .request(new CreateRestoreJobRequest(keyspace, table, payload))
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().retryPolicy(new CreateRestoreJobRetryPolicy(defaultRetryPolicy))
+                                                            .request(new CreateRestoreJobRequest(keyspace, table, payload))
+                                                            .build());
     }
 
     /**
@@ -648,21 +616,21 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                                     UUID jobId,
                                                     UpdateRestoreJobRequestPayload payload)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .request(new UpdateRestoreJobRequest(keyspace, table, jobId, payload))
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().request(new UpdateRestoreJobRequest(keyspace, table, jobId, payload))
+                                                            .build());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public CompletableFuture<Void> abortRestoreJob(String keyspace, String table, UUID jobId,
+    public CompletableFuture<Void> abortRestoreJob(String keyspace,
+                                                   String table,
+                                                   UUID jobId,
                                                    AbortRestoreJobRequestPayload payload)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .request(new AbortRestoreJobRequest(keyspace, table, jobId, payload))
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().request(new AbortRestoreJobRequest(keyspace, table, jobId, payload))
+                                                            .build());
     }
 
     /**
@@ -673,9 +641,8 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                                                                  String table,
                                                                                  UUID jobId)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .request(new RestoreJobSummaryRequest(keyspace, table, jobId))
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().request(new RestoreJobSummaryRequest(keyspace, table, jobId))
+                                                            .build());
     }
 
     /**
@@ -688,21 +655,22 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                                          UUID jobId,
                                                          CreateSliceRequestPayload payload)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .request(new CreateRestoreJobSliceRequest(keyspace, table, jobId, payload))
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .request(new CreateRestoreJobSliceRequest(keyspace, table, jobId, payload))
+                                                            .build());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public CompletableFuture<Void> createRestoreJobSlice(String keyspace, String table, UUID jobId, CreateSliceRequestPayload payload)
+    public CompletableFuture<Void> createRestoreJobSlice(String keyspace,
+                                                         String table,
+                                                         UUID jobId,
+                                                         CreateSliceRequestPayload payload)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .request(new CreateRestoreJobSliceRequest(keyspace, table, jobId, payload))
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().request(new CreateRestoreJobSliceRequest(keyspace, table, jobId, payload))
+                                                            .build());
     }
 
     /**
@@ -711,9 +679,8 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     @Override
     public CompletableFuture<RestoreJobProgressResponsePayload> restoreJobProgress(RestoreJobProgressRequestParams params)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .request(new RestoreJobProgressRequest(params))
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().request(new RestoreJobProgressRequest(params))
+                                                            .build());
     }
 
     /**
@@ -724,10 +691,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public CompletableFuture<ConnectedClientStatsResponse> connectedClientStats(SidecarInstance instance)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .connectedClientStatsRequest()
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .connectedClientStatsRequest()
+                                                            .build());
     }
 
     /**
@@ -735,32 +701,31 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      *
      * @param instance the instance where the request will be executed
      * @param keyspace the keyspace in Cassandra
-     * @param table    the table name in Cassandra
+     * @param table the table name in Cassandra
      * @return a completable future of the table stats
      */
     public CompletableFuture<TableStatsResponse> tableStats(SidecarInstance instance,
                                                             String keyspace,
                                                             String table)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .tableStatsRequest(keyspace, table)
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .tableStatsRequest(keyspace, table)
+                                                            .build());
     }
 
     /**
      * Executes the operational job request using the default retry policy and provided {@code instance}.
      *
      * @param instance the instance where the request will be executed
-     * @param jobId    the unique operational job identifier
+     * @param jobId the unique operational job identifier
      * @return a completable future of the operational job response
      */
-    public CompletableFuture<OperationalJobResponse> operationalJobs(SidecarInstance instance, UUID jobId)
+    public CompletableFuture<OperationalJobResponse> operationalJobs(SidecarInstance instance,
+                                                                     UUID jobId)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .operationalJobRequest(jobId)
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .operationalJobRequest(jobId)
+                                                            .build());
     }
 
     /**
@@ -771,84 +736,80 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      */
     public CompletableFuture<ListOperationalJobsResponse> listOperationalJobs(SidecarInstance instance)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .listOperationalJobsRequest()
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .listOperationalJobsRequest()
+                                                            .build());
     }
 
     /**
      * Executes the streams stats request using the default retry policy and configured selection policy
+     *
      * @param instance the instance where the request will be executed
      * @return a completable future of the connected client stats
      */
     public CompletableFuture<StreamStatsResponse> streamsStats(SidecarInstance instance)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .streamsStatsRequest()
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .streamsStatsRequest()
+                                                            .build());
     }
 
     /**
      * Executes the node decommission request using the default retry policy and configured selection policy
+     *
      * @param instance the instance where the request will be executed
      * @return a completable future of the jobs list
      */
     public CompletableFuture<OperationalJobResponse> nodeDecommission(SidecarInstance instance)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .nodeDecommissionRequest()
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .nodeDecommissionRequest()
+                                                            .build());
     }
 
     /**
      * Sends a request to start or stop Cassandra gossiping on the provided instance.
      * <p>
-     * This operation asynchronously triggers start or stop of gossip via Cassandra's JMX interface.
-     * The request body must contain a JSON payload with a "state" field, which can be either "start" or "stop".
-     * On success, the server responds with HTTP 200 OK and payload {@code {"status":"OK"}}.
+     * This operation asynchronously triggers start or stop of gossip via Cassandra's JMX interface. The request body must contain a JSON payload with a "state"
+     * field, which can be either "start" or "stop". On success, the server responds with HTTP 200 OK and payload {@code {"status":"OK"}}.
      * </p>
      *
      * @param instance the instance where the request will be executed
      * @param state the desired gossip state: {@link NodeCommandRequestPayload.State#START} or {@link NodeCommandRequestPayload.State#STOP}
      * @return a CompletableFuture representing the completion of the operation
      */
-    public CompletableFuture<HealthResponse> nodeUpdateGossip(SidecarInstance instance, NodeCommandRequestPayload.State state)
+    public CompletableFuture<HealthResponse> nodeUpdateGossip(SidecarInstance instance,
+                                                              NodeCommandRequestPayload.State state)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .nodeGossipUpdateRequest(state)
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .nodeGossipUpdateRequest(state)
+                                                            .build());
     }
 
     /**
      * Sends a request to start or stop Cassandra native transport on the provided instance.
      * <p>
-     * This operation asynchronously triggers start or stop of native transport via Cassandra's JMX interface.
-     * The request body must contain a JSON payload with a "state" field, which can be either "start" or "stop".
-     * On success, the server responds with HTTP 200 OK and payload {@code {"status":"OK"}}.
+     * This operation asynchronously triggers start or stop of native transport via Cassandra's JMX interface. The request body must contain a JSON payload with
+     * a "state" field, which can be either "start" or "stop". On success, the server responds with HTTP 200 OK and payload {@code {"status":"OK"}}.
      * </p>
      *
      * @param instance the instance where the request will be executed
      * @param state the desired native transport state: {@link NodeCommandRequestPayload.State#START} or {@link NodeCommandRequestPayload.State#STOP}
      * @return a CompletableFuture representing the completion of the operation
      */
-    public CompletableFuture<HealthResponse> nodeUpdateNative(SidecarInstance instance, NodeCommandRequestPayload.State state)
+    public CompletableFuture<HealthResponse> nodeUpdateNative(SidecarInstance instance,
+                                                              NodeCommandRequestPayload.State state)
     {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .nodeNativeUpdateRequest(state)
-                                            .build());
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .nodeNativeUpdateRequest(state)
+                                                            .build());
     }
-
 
     /**
      * Returns a copy of the request builder with the default parameters configured for the client.
      *
-     * <p>The request builder can be used to create the request, containing default values as depicted in the example
-     * below:
+     * <p>
+     * The request builder can be used to create the request, containing default values as depicted in the example below:
      *
      * <pre>
      * RequestContext requestContext = client.requestBuilder()
@@ -857,9 +818,9 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      *                                       .build();
      * </pre>
      *
-     * <p>The example above will create a request to retrieve the node settings from a random Sidecar instance
-     * in the cluster. It will use the {@code NoRetryPolicy} policy. A custom retry policy can encapsulate the
-     * desired behavior of the client when dealing with specific status codes.
+     * <p>
+     * The example above will create a request to retrieve the node settings from a random Sidecar instance in the cluster. It will use the
+     * {@code NoRetryPolicy} policy. A custom retry policy can encapsulate the desired behavior of the client when dealing with specific status codes.
      *
      * @return a copy of the builder to prevent threads modifying the state of the builder
      */
@@ -877,13 +838,11 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     }
 
     /**
-     * Returns a future with the expected instance of type {@code <T>} after executing the {@code request} and
-     * processing it.
+     * Returns a future with the expected instance of type {@code <T>} after executing the {@code request} and processing it.
      *
      * @param context the request context
-     * @param <T>     the expected type for the instance
-     * @return a future with the expected instance of type {@code <T>} after executing the {@code request} and
-     * processing it
+     * @param <T> the expected type for the instance
+     * @return a future with the expected instance of type {@code <T>} after executing the {@code request} and processing it
      */
     public <T> CompletableFuture<T> executeRequestAsync(RequestContext context)
     {

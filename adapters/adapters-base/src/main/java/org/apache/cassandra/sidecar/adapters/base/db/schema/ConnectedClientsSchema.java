@@ -24,8 +24,7 @@ import org.apache.cassandra.sidecar.db.schema.CassandraSystemTableSchema;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Holds the prepared statements for operations related to client connection stats retrieved from
- * the "clients" virtual table
+ * Holds the prepared statements for operations related to client connection stats retrieved from the "clients" virtual table
  */
 public class ConnectedClientsSchema extends CassandraSystemTableSchema
 {
@@ -71,9 +70,6 @@ public class ConnectedClientsSchema extends CassandraSystemTableSchema
 
     static String selectConnectionsByUserStatement()
     {
-        return String.format("SELECT username, COUNT(*) AS connection_count " +
-                             "FROM %s.%s;",
-                             KEYSPACE_NAME,
-                             TABLE_NAME);
+        return String.format("SELECT username, COUNT(*) AS connection_count " + "FROM %s.%s;", KEYSPACE_NAME, TABLE_NAME);
     }
 }

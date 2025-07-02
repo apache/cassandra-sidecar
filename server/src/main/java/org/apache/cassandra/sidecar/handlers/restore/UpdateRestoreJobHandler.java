@@ -69,7 +69,8 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
     {
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
-        this.metrics = metrics.server().restore();
+        this.metrics = metrics.server()
+                              .restore();
     }
 
     @Override
@@ -85,46 +86,47 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
                                   SocketAddress remoteAddress,
                                   UpdateRestoreJobRequestPayload requestPayload)
     {
-        RoutingContextUtils
-        .getAsFuture(context, SC_RESTORE_JOB)
-        .compose(job -> {
-            if (job.status.isFinal())
-            {
-                // skip the update, since the job is in the final state already
-                logger.debug("The job has completed already. job={}", job);
-                return Future.failedFuture(wrapHttpException(HttpResponseStatus.CONFLICT,
-                                                             "Job is already in final state: " + job.status));
-            }
+        RoutingContextUtils.getAsFuture(context, SC_RESTORE_JOB)
+                           .compose(job -> {
+                               if (job.status.isFinal())
+                               {
+                                   // skip the update, since the job is in the final state already
+                                   logger.debug("The job has completed already. job={}", job);
+                                   return Future.failedFuture(wrapHttpException(HttpResponseStatus.CONFLICT, "Job is already in final state: " + job.status));
+                               }
 
-            return executorPools.service()
-                                .executeBlocking(() -> restoreJobDatabaseAccessor.update(requestPayload, job.jobId));
-        })
-        .onSuccess(job -> {
-            logger.info("Successfully updated restore job. job={}, request={}, remoteAddress={}, instance={}",
-                        job, requestPayload, remoteAddress, host);
-            if (job.status == RestoreJobStatus.SUCCEEDED)
-            {
-                metrics.successfulJobs.metric.update(1);
-                long startMillis = UUIDs.unixTimestamp(job.jobId);
-                long durationMillis = System.currentTimeMillis() - startMillis;
-                // toNanos does not overflow. Nanos in `long` can at most represent 106,751 days.
-                metrics.jobCompletionTime.metric.update(durationMillis, TimeUnit.MILLISECONDS);
-            }
+                               return executorPools.service()
+                                                   .executeBlocking(() -> restoreJobDatabaseAccessor.update(requestPayload, job.jobId));
+                           })
+                           .onSuccess(job -> {
+                               logger.info("Successfully updated restore job. job={}, request={}, remoteAddress={}, instance={}", job, requestPayload,
+                                       remoteAddress, host);
+                               if (job.status == RestoreJobStatus.SUCCEEDED)
+                               {
+                                   metrics.successfulJobs.metric.update(1);
+                                   long startMillis = UUIDs.unixTimestamp(job.jobId);
+                                   long durationMillis = System.currentTimeMillis() - startMillis;
+                                   // toNanos does not overflow. Nanos in `long` can at most represent 106,751 days.
+                                   metrics.jobCompletionTime.metric.update(durationMillis, TimeUnit.MILLISECONDS);
+                               }
 
-            if (job.secrets != null)
-            {
-                metrics.tokenRefreshed.metric.update(1);
-            }
+                               if (job.secrets != null)
+                               {
+                                   metrics.tokenRefreshed.metric.update(1);
+                               }
 
-            context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
-        })
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestPayload));
+                               context.response()
+                                      .setStatusCode(HttpResponseStatus.OK.code())
+                                      .end();
+                           })
+                           .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestPayload));
     }
 
     @Override
     protected UpdateRestoreJobRequestPayload extractParamsOrThrow(RoutingContext context)
     {
-        String bodyString = context.body().asString();
+        String bodyString = context.body()
+                                   .asString();
         if (bodyString == null || bodyString.equalsIgnoreCase("null")) // json encoder writes null as "null"
         {
             logger.warn("Bad request to update restore job. Received null payload.");
@@ -136,8 +138,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
             if (payload.isEmpty())
             {
                 logger.warn("Bad request to update restore job. Received empty payload.");
-                throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                        "Update request body cannot have all empty fields");
+                throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Update request body cannot have all empty fields");
             }
             return payload;
         }

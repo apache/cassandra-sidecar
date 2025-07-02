@@ -22,6 +22,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +53,10 @@ public class S3ProxyConfigurationImpl implements S3ProxyConfiguration
         this(null, null, null, null);
     }
 
-    protected S3ProxyConfigurationImpl(String proxy, String username, String password, String endpointOverride)
+    protected S3ProxyConfigurationImpl(String proxy,
+                                       String username,
+                                       String password,
+                                       String endpointOverride)
     {
         this.proxy = proxy;
         this.username = username;
@@ -101,7 +105,8 @@ public class S3ProxyConfigurationImpl implements S3ProxyConfiguration
         return toURI(endpointOverride, "S3 client endpointOverrides");
     }
 
-    private URI toURI(String uriString, String hint)
+    private URI toURI(String uriString,
+                      String hint)
     {
         if (uriString == null)
         {

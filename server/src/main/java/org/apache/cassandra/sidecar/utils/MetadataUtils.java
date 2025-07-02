@@ -33,11 +33,11 @@ public class MetadataUtils
      *
      * @param metadata the metadata object.
      * @param keyspace the name of the keyspace for which metadata should be returned.
-     * @return the metadata of the requested keyspace or {@code null} if {@code keyspace} is not a
-     * known keyspace. Note that the result might be stale or null if metadata was explicitly
-     * disabled with {@link QueryOptions#setMetadataEnabled(boolean)}.
+     * @return the metadata of the requested keyspace or {@code null} if {@code keyspace} is not a known keyspace. Note that the result might be stale or null
+     *         if metadata was explicitly disabled with {@link QueryOptions#setMetadataEnabled(boolean)}.
      */
-    public static KeyspaceMetadata keyspace(Metadata metadata, Name keyspace)
+    public static KeyspaceMetadata keyspace(Metadata metadata,
+                                            Name keyspace)
     {
         return metadata.getKeyspace(keyspace.maybeQuotedName());
     }
@@ -46,11 +46,11 @@ public class MetadataUtils
      * Returns the metadata for a table contained in this keyspace.
      *
      * @param metadata the metadata object.
-     * @param table    the name of table to retrieve
-     * @return the metadata for table {@code name} if it exists in this keyspace, {@code null}
-     * otherwise.
+     * @param table the name of table to retrieve
+     * @return the metadata for table {@code name} if it exists in this keyspace, {@code null} otherwise.
      */
-    public static TableMetadata table(KeyspaceMetadata metadata, Name table)
+    public static TableMetadata table(KeyspaceMetadata metadata,
+                                      Name table)
     {
         return metadata.getTable(table.maybeQuotedName());
     }

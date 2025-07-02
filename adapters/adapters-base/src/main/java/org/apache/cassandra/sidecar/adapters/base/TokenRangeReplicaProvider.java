@@ -31,6 +31,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.google.common.net.HostAndPort;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,24 +74,26 @@ public class TokenRangeReplicaProvider
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TokenRangeReplicaProvider.class);
 
-    public TokenRangeReplicaProvider(JmxClient jmxClient, DnsResolver dnsResolver)
+    public TokenRangeReplicaProvider(JmxClient jmxClient,
+                                     DnsResolver dnsResolver)
     {
 
         this.jmxClient = jmxClient;
         this.dnsResolver = dnsResolver;
     }
 
-    public TokenRangeReplicasResponse tokenRangeReplicas(Name keyspace, Partitioner partitioner)
+    public TokenRangeReplicasResponse tokenRangeReplicas(Name keyspace,
+                                                         Partitioner partitioner)
     {
         Objects.requireNonNull(keyspace, "keyspace must be non-null");
 
         StorageJmxOperations storage = initializeStorageOps();
 
-        List<TokenRangeReplicas> naturalTokenRangeReplicas =
-        getTokenRangeReplicas("Natural", keyspace.name(), partitioner, storage::getRangeToEndpointWithPortMap);
+        List<TokenRangeReplicas> naturalTokenRangeReplicas = getTokenRangeReplicas("Natural", keyspace.name(), partitioner,
+                storage::getRangeToEndpointWithPortMap);
         // Pending ranges include bootstrap tokens and leaving endpoints as represented in the Cassandra TokenMetadata
-        List<TokenRangeReplicas> pendingTokenRangeReplicas =
-        getTokenRangeReplicas("Pending", keyspace.name(), partitioner, storage::getPendingRangeToEndpointWithPortMap);
+        List<TokenRangeReplicas> pendingTokenRangeReplicas = getTokenRangeReplicas("Pending", keyspace.name(), partitioner,
+                storage::getPendingRangeToEndpointWithPortMap);
 
         // Merge natural and pending range replicas to generate candidates for write-replicas
         List<TokenRangeReplicas> allTokenRangeReplicas = new ArrayList<>(naturalTokenRangeReplicas);
@@ -102,16 +105,14 @@ public class TokenRangeReplicaProvider
         List<ReplicaInfo> writeReplicas = writeReplicasFromPendingRanges(allTokenRangeReplicas, hostToDatacenter);
 
         List<ReplicaInfo> readReplicas = readReplicasFromReplicaMapping(naturalTokenRangeReplicas, hostToDatacenter);
-        Map<String, ReplicaMetadata> replicaMetadata = replicaMetadata(allTokenRangeReplicas,
-                                                                       storage,
-                                                                       hostToDatacenter);
+        Map<String, ReplicaMetadata> replicaMetadata = replicaMetadata(allTokenRangeReplicas, storage, hostToDatacenter);
 
-        return new TokenRangeReplicasResponse(writeReplicas,
-                                              readReplicas,
-                                              replicaMetadata);
+        return new TokenRangeReplicasResponse(writeReplicas, readReplicas, replicaMetadata);
     }
 
-    private List<TokenRangeReplicas> getTokenRangeReplicas(String rangeType, String keyspace, Partitioner partitioner,
+    private List<TokenRangeReplicas> getTokenRangeReplicas(String rangeType,
+                                                           String keyspace,
+                                                           Partitioner partitioner,
                                                            KeyspaceToRangeMappingFunc rangeMappingSupplier)
     {
         Map<List<String>, List<String>> rangeMappings = rangeMappingSupplier.apply(keyspace);
@@ -124,10 +125,11 @@ public class TokenRangeReplicaProvider
     {
         return replicaMappings.entrySet()
                               .stream()
-                              .map(entry -> generateTokenRangeReplicas(Token.from(entry.getKey().get(0)),
-                                                                       Token.from(entry.getKey().get(1)),
-                                                                       partitioner,
-                                                                       new HashSet<>(entry.getValue())))
+                              .map(entry -> generateTokenRangeReplicas(Token.from(entry.getKey()
+                                                                                       .get(0)),
+                                      Token.from(entry.getKey()
+                                                      .get(1)),
+                                      partitioner, new HashSet<>(entry.getValue())))
                               .flatMap(Collection::stream)
                               .collect(toList());
     }
@@ -142,7 +144,6 @@ public class TokenRangeReplicaProvider
 
         List<String> liveNodes = storage.getLiveNodesWithPort();
         List<String> deadNodes = storage.getUnreachableNodesWithPort();
-
 
         String rawGossipInfo = getRawGossipInfo();
         GossipInfoResponse gossipInfo = GossipInfoParser.parse(rawGossipInfo);
@@ -161,17 +162,11 @@ public class TokenRangeReplicaProvider
                                  String fqdn = dnsResolver.reverseResolve(hap.getHost());
                                  String datacenter = hostToDatacenter.get(replica);
                                  return new AbstractMap.SimpleEntry<>(replica,
-                                                                      new ReplicaMetadata(state.of(replica),
-                                                                                          status.of(replica),
-                                                                                          fqdn,
-                                                                                          hap.getHost(),
-                                                                                          hap.getPort(),
-                                                                                          datacenter));
+                                         new ReplicaMetadata(state.of(replica), status.of(replica), fqdn, hap.getHost(), hap.getPort(), datacenter));
                              }
                              catch (UnknownHostException e)
                              {
-                                 throw new RuntimeException(
-                                 String.format("Failed to resolve fqdn for replica %s ", replica), e);
+                                 throw new RuntimeException(String.format("Failed to resolve fqdn for replica %s ", replica), e);
                              }
                          })
                          .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
@@ -184,8 +179,7 @@ public class TokenRangeReplicaProvider
 
     protected StorageJmxOperations initializeStorageOps()
     {
-        return new GossipDependentStorageJmxOperations(jmxClient.proxy(StorageJmxOperations.class,
-                                                                       STORAGE_SERVICE_OBJ_NAME));
+        return new GossipDependentStorageJmxOperations(jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME));
     }
 
     protected String getRawGossipInfo()
@@ -198,7 +192,8 @@ public class TokenRangeReplicaProvider
                                                              Map<String, String> hostToDatacenter)
     {
         // Candidate write-replica mappings are normalized by consolidating overlapping ranges
-        return TokenRangeReplicas.normalize(tokenRangeReplicaSet).stream()
+        return TokenRangeReplicas.normalize(tokenRangeReplicaSet)
+                                 .stream()
                                  .map(range -> buildReplicaInfo(hostToDatacenter, range))
                                  .collect(toList());
     }
@@ -213,13 +208,18 @@ public class TokenRangeReplicaProvider
     }
 
     @NotNull
-    private static ReplicaInfo buildReplicaInfo(Map<String, String> hostToDatacenter, TokenRangeReplicas rep)
+    private static ReplicaInfo buildReplicaInfo(Map<String, String> hostToDatacenter,
+                                                TokenRangeReplicas rep)
     {
         Map<String, List<String>> replicasByDc = replicasByDataCenter(hostToDatacenter, rep.replicaSet());
 
-        return new ReplicaInfo(rep.start().toBigInteger().toString(),
-                               rep.end().toBigInteger().toString(),
-                               replicasByDc);
+        return new ReplicaInfo(rep.start()
+                                  .toBigInteger()
+                                  .toString(),
+                rep.end()
+                   .toBigInteger()
+                   .toString(),
+                replicasByDc);
     }
 
     private Map<String, String> buildHostToDatacenterMapping(List<TokenRangeReplicas> replicaSet)
@@ -230,11 +230,11 @@ public class TokenRangeReplicaProvider
                          .map(TokenRangeReplicas::replicaSet)
                          .flatMap(Collection::stream)
                          .distinct()
-                         .collect(Collectors.toMap(Function.identity(),
-                                                   (String host) -> getDatacenter(endpointSnitchInfo, host)));
+                         .collect(Collectors.toMap(Function.identity(), (String host) -> getDatacenter(endpointSnitchInfo, host)));
     }
 
-    private String getDatacenter(EndpointSnitchJmxOperations endpointSnitchInfo, String host)
+    private String getDatacenter(EndpointSnitchJmxOperations endpointSnitchInfo,
+                                 String host)
     {
         try
         {
@@ -261,18 +261,20 @@ public class TokenRangeReplicaProvider
     }
 
     /**
-     * We want to identity a joining node, to replace a dead node, differently from a newly joining node. To
-     * do this we analyze gossip info and set 'Replacing' state for node replacing a dead node.
-     * {@link StateWithReplacement} is used to set replacing state for a node.
+     * We want to identity a joining node, to replace a dead node, differently from a newly joining node. To do this we analyze gossip info and set 'Replacing'
+     * state for node replacing a dead node. {@link StateWithReplacement} is used to set replacing state for a node.
      *
-     * <p>We are adding this state for token range replica provider endpoint. To send out replicas for a
-     * range along with state of replicas including replacing state.
+     * <p>
+     * We are adding this state for token range replica provider endpoint. To send out replicas for a range along with state of replicas including replacing
+     * state.
      */
     static class StateWithReplacement extends RingProvider.State
     {
         private final GossipInfoResponse gossipInfo;
 
-        StateWithReplacement(List<String> joiningNodes, List<String> leavingNodes, List<String> movingNodes,
+        StateWithReplacement(List<String> joiningNodes,
+                             List<String> leavingNodes,
+                             List<String> movingNodes,
                              GossipInfoResponse gossipInfo)
         {
             super(joiningNodes, leavingNodes, movingNodes);
@@ -280,9 +282,8 @@ public class TokenRangeReplicaProvider
         }
 
         /**
-         * This method returns state of a node and accounts for a new 'Replacing' state if the node is
-         * replacing a dead node. For returning this state, the method checks status of the node in gossip
-         * information.
+         * This method returns state of a node and accounts for a new 'Replacing' state if the node is replacing a dead node. For returning this state, the
+         * method checks status of the node in gossip information.
          *
          * @param endpoint node information represented usually in form of 'ip:port'
          * @return Node status
@@ -299,8 +300,8 @@ public class TokenRangeReplicaProvider
                     LOGGER.debug("Found gossipInfoEntry={}", gossipInfoEntry);
                     String hostStatus = gossipInfoEntry.status();
                     String hostStatusWithPort = gossipInfoEntry.statusWithPort();
-                    if ((hostStatus != null && hostStatus.startsWith("BOOT_REPLACE,")) ||
-                        (hostStatusWithPort != null && hostStatusWithPort.startsWith("BOOT_REPLACE,")))
+                    if ((hostStatus != null && hostStatus.startsWith("BOOT_REPLACE,"))
+                            || (hostStatusWithPort != null && hostStatusWithPort.startsWith("BOOT_REPLACE,")))
                     {
                         return NodeState.REPLACING.displayName();
                     }

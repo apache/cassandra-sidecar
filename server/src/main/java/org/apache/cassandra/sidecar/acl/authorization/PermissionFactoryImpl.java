@@ -18,14 +18,12 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
+import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
+import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-
-import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
-import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
-
 import static org.apache.cassandra.sidecar.acl.authorization.DomainAwarePermission.WILDCARD_PART_DIVIDER_TOKEN;
 import static org.apache.cassandra.sidecar.acl.authorization.FeaturePermission.ALL_FEATURE_PERMISSIONS;
 
@@ -35,8 +33,7 @@ import static org.apache.cassandra.sidecar.acl.authorization.FeaturePermission.A
 public class PermissionFactoryImpl implements PermissionFactory
 {
     private static final String FORBIDDEN_PERMISSION_PREFIX = "*:";
-    static final String FORBIDDEN_PREFIX_ERR_MSG
-    = String.format("Permission with prefix %s are forbidden", FORBIDDEN_PERMISSION_PREFIX);
+    static final String FORBIDDEN_PREFIX_ERR_MSG = String.format("Permission with prefix %s are forbidden", FORBIDDEN_PERMISSION_PREFIX);
     private final List<CompositePermission> supportedFeaturePermissions;
 
     public PermissionFactoryImpl()

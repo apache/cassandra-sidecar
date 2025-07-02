@@ -18,14 +18,12 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import java.util.Collections;
-import java.util.List;
-
-import com.google.common.annotations.VisibleForTesting;
-
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
+import java.util.Collections;
+import java.util.List;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Provider for getting {@link FilteringMetricRegistry} based on provided metrics configuration
@@ -38,13 +36,18 @@ public class MetricRegistryFactory
 
     public MetricRegistryFactory(SidecarConfiguration sidecarConfiguration)
     {
-        this(sidecarConfiguration.metricsConfiguration().registryName(),
-             MetricFilter.parse(sidecarConfiguration.metricsConfiguration().includeConfigurations()),
-             MetricFilter.parse(sidecarConfiguration.metricsConfiguration().excludeConfigurations()));
+        this(sidecarConfiguration.metricsConfiguration()
+                                 .registryName(),
+                MetricFilter.parse(sidecarConfiguration.metricsConfiguration()
+                                                       .includeConfigurations()),
+                MetricFilter.parse(sidecarConfiguration.metricsConfiguration()
+                                                       .excludeConfigurations()));
     }
 
     @VisibleForTesting
-    public MetricRegistryFactory(String globalRegistryName, List<MetricFilter> inclusions, List<MetricFilter> exclusions)
+    public MetricRegistryFactory(String globalRegistryName,
+                                 List<MetricFilter> inclusions,
+                                 List<MetricFilter> exclusions)
     {
         this.globalRegistryName = globalRegistryName;
         this.inclusions = Collections.unmodifiableList(inclusions);
@@ -64,13 +67,15 @@ public class MetricRegistryFactory
 
     /**
      * Provides a {@link FilteringMetricRegistry} with given name and provided filters in configuration.
+     *
      * @param name registry name
      * @return a {@link MetricRegistry} that can filter out metrics
      */
     public MetricRegistry getOrCreate(String name)
     {
         // the metric registry already exists
-        if (SharedMetricRegistries.names().contains(name))
+        if (SharedMetricRegistries.names()
+                                  .contains(name))
         {
             return SharedMetricRegistries.getOrCreate(name);
         }
@@ -81,19 +86,20 @@ public class MetricRegistryFactory
     }
 
     /**
-     * Check if the metric is allowed to register
-     * The evaluation order is inclusions first, then exclusions. In other words,
-     * a metric name is allowed if it is in the inclusions, but not in the exclusions.
+     * Check if the metric is allowed to register The evaluation order is inclusions first, then exclusions. In other words, a metric name is allowed if it is
+     * in the inclusions, but not in the exclusions.
      * <p>
      * Note that an empty inclusions means including all
      *
-     * @param name  metric name
+     * @param name metric name
      * @return true if allowed; false otherwise
      */
     private boolean isAllowed(String name)
     {
-        boolean included = inclusions.isEmpty() || inclusions.stream().anyMatch(filter -> filter.matches(name));
-        boolean excluded = exclusions.stream().anyMatch(filter -> filter.matches(name));
+        boolean included = inclusions.isEmpty() || inclusions.stream()
+                                                             .anyMatch(filter -> filter.matches(name));
+        boolean excluded = exclusions.stream()
+                                     .anyMatch(filter -> filter.matches(name));
         return included && !excluded;
     }
 }

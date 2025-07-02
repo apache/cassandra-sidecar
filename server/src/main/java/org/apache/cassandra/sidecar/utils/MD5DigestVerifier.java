@@ -25,18 +25,20 @@ import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Implementation of {@link DigestVerifier}. Here we use MD5 implementation of {@link java.security.MessageDigest}
- * for calculating digest and match the calculated digest with expected digest obtained from request.
+ * Implementation of {@link DigestVerifier}. Here we use MD5 implementation of {@link java.security.MessageDigest} for calculating digest and match the
+ * calculated digest with expected digest obtained from request.
  */
 public class MD5DigestVerifier extends AsyncFileDigestVerifier<MD5Digest>
 {
-    protected MD5DigestVerifier(@NotNull FileSystem fs, @NotNull MD5Digest digest,
+    protected MD5DigestVerifier(@NotNull FileSystem fs,
+                                @NotNull MD5Digest digest,
                                 @NotNull DigestAlgorithm digestAlgorithm)
     {
         super(fs, digest, digestAlgorithm);
     }
 
-    public static DigestVerifier create(FileSystem fs, MultiMap headers,
+    public static DigestVerifier create(FileSystem fs,
+                                        MultiMap headers,
                                         DigestAlgorithmProvider digestAlgorithmProvider)
     {
         MD5Digest md5Digest = new MD5Digest(headers.get(HttpHeaderNames.CONTENT_MD5.toString()));

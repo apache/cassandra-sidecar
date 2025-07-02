@@ -18,19 +18,17 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.Collections;
-import java.util.List;
-
 import io.vertx.ext.auth.authorization.AndAuthorization;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.WildcardPermissionBasedAuthorization;
 import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
+import java.util.Collections;
+import java.util.List;
 
 /**
- * Represents a collection of permissions that can be combined and assigned together. This is mainly used to expand
- * feature level permissions granted for users. Feature level permissions grant access to a set of related features.
- * Features may involve accessing multiple handlers each requiring individual permissions. By grouping permissions,
- * feature level permissions simplify assigning access control for features.
+ * Represents a collection of permissions that can be combined and assigned together. This is mainly used to expand feature level permissions granted for users.
+ * Feature level permissions grant access to a set of related features. Features may involve accessing multiple handlers each requiring individual permissions.
+ * By grouping permissions, feature level permissions simplify assigning access control for features.
  */
 public class CompositePermission extends StandardPermission
 {
@@ -40,10 +38,11 @@ public class CompositePermission extends StandardPermission
     /**
      * Creates a {@link CompositePermission} with given permission name and list of child permissions.
      *
-     * @param name          permission name
-     * @param permissions   list of child permissions
+     * @param name permission name
+     * @param permissions list of child permissions
      */
-    public CompositePermission(String name, List<Permission> permissions)
+    public CompositePermission(String name,
+                               List<Permission> permissions)
     {
         super(name);
         if (permissions == null || permissions.isEmpty())
@@ -55,8 +54,8 @@ public class CompositePermission extends StandardPermission
     }
 
     /**
-     * @return {@link WildcardPermissionBasedAuthorization} created from permission name. {@link #nameAuthorization}
-     * can be used for finding match between {@link CompositePermission}
+     * @return {@link WildcardPermissionBasedAuthorization} created from permission name. {@link #nameAuthorization} can be used for finding match between
+     *         {@link CompositePermission}
      */
     public WildcardPermissionBasedAuthorization nameAuthorization()
     {

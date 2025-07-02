@@ -37,12 +37,10 @@ import org.slf4j.LoggerFactory;
 
 import org.jetbrains.annotations.NotNull;
 
-
 /**
- * Representation of a token range (exclusive start and inclusive end - (start, end]) and the
- * corresponding mapping to replica-set hosts. Static factory ensures that ranges are always unwrapped.
- * Note: Range comparisons are used for ordering of ranges. e.g. {@code A.compareTo(B) <= 0} implies that
- * range A occurs before range B, not their sizes.
+ * Representation of a token range (exclusive start and inclusive end - (start, end]) and the corresponding mapping to replica-set hosts. Static factory ensures
+ * that ranges are always unwrapped. Note: Range comparisons are used for ordering of ranges. e.g. {@code A.compareTo(B) <= 0} implies that range A occurs
+ * before range B, not their sizes.
  */
 public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
 {
@@ -55,7 +53,10 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TokenRangeReplicas.class);
 
-    private TokenRangeReplicas(Token start, Token end, Partitioner partitioner, Set<String> replicaSet)
+    private TokenRangeReplicas(Token start,
+                               Token end,
+                               Partitioner partitioner,
+                               Set<String> replicaSet)
     {
         this.start = start;
         this.end = end;
@@ -76,7 +77,6 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
         LOGGER.debug("Generating replica-map for range: {} - {} : Replicaset: {}", start, end, replicaSet);
         return Collections.singletonList(new TokenRangeReplicas(start, end, partitioner, replicaSet));
     }
-
 
     public Token start()
     {
@@ -121,10 +121,7 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
 
         TokenRangeReplicas that = (TokenRangeReplicas) o;
 
-        return Objects.equals(start, that.start)
-               && Objects.equals(end, that.end)
-               && partitioner == that.partitioner
-               && replicaSet.equals(that.replicaSet);
+        return Objects.equals(start, that.start) && Objects.equals(end, that.end) && partitioner == that.partitioner && replicaSet.equals(that.replicaSet);
     }
 
     /**
@@ -149,10 +146,9 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
     }
 
     /**
-     * Determines intersection if the next range starts before the current range ends. This method assumes that
-     * the provided ranges are sorted and unwrapped.
-     * When the current range goes all the way to the end, we determine intersection if the next range starts
-     * after the current since all subsequent ranges have to be subsets.
+     * Determines intersection if the next range starts before the current range ends. This method assumes that the provided ranges are sorted and unwrapped.
+     * When the current range goes all the way to the end, we determine intersection if the next range starts after the current since all subsequent ranges have
+     * to be subsets.
      *
      * @param other the range we are currently processing to check if "this" intersects it
      * @return true if "this" range intersects the other
@@ -166,9 +162,8 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
     }
 
     /**
-     * Unwraps the token range if it wraps-around to end either on or after the least token by overriding such
-     * ranges to end at the partitioner max-token value in the former case and splitting into 2 ranges in the latter
-     * case.
+     * Unwraps the token range if it wraps-around to end either on or after the least token by overriding such ranges to end at the partitioner max-token value
+     * in the former case and splitting into 2 ranges in the latter case.
      *
      * @return list of split ranges
      */
@@ -184,13 +179,11 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
         // https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/dht/IPartitioner.java#L77
         if (end.compareTo(partitioner.minimumToken()) == 0)
         {
-            return Collections.singletonList(
-            new TokenRangeReplicas(start, partitioner.maximumToken(), partitioner, replicaSet));
+            return Collections.singletonList(new TokenRangeReplicas(start, partitioner.maximumToken(), partitioner, replicaSet));
         }
         else if (start.compareTo(partitioner.maximumToken()) == 0)
         {
-            return Collections.singletonList(
-            new TokenRangeReplicas(partitioner.minimumToken(), end, partitioner, replicaSet));
+            return Collections.singletonList(new TokenRangeReplicas(partitioner.minimumToken(), end, partitioner, replicaSet));
         }
 
         // Wrap-around range goes beyond at the "min-token" and is therefore split into two.
@@ -200,39 +193,37 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
         return unwrapped;
     }
 
-
     /**
-     * Given a list of token ranges with replica-sets, normalizes them by unwrapping around the beginning/min
-     * of the range and removing overlaps to return a sorted list of non-overlapping ranges.
+     * Given a list of token ranges with replica-sets, normalizes them by unwrapping around the beginning/min of the range and removing overlaps to return a
+     * sorted list of non-overlapping ranges.
      * <p>
-     * For an overlapping range that is included in both natural and pending ranges, say R_natural and R_pending
-     * (where R_natural == R_pending), the replicas of both R_natural and R_pending should receive writes.
-     * Therefore, the write-replicas of such range is the union of both replica sets.
-     * This method implements the consolidation process.
+     * For an overlapping range that is included in both natural and pending ranges, say R_natural and R_pending (where R_natural == R_pending), the replicas of
+     * both R_natural and R_pending should receive writes. Therefore, the write-replicas of such range is the union of both replica sets. This method implements
+     * the consolidation process.
      *
      * @param ranges
      * @return sorted list of non-overlapping ranges and replica-sets
      */
     public static List<TokenRangeReplicas> normalize(List<TokenRangeReplicas> ranges)
     {
-        if (ranges.stream().noneMatch(r -> r.partitioner.minimumToken().compareTo(r.start()) == 0))
+        if (ranges.stream()
+                  .noneMatch(r -> r.partitioner.minimumToken()
+                                               .compareTo(r.start()) == 0))
         {
-            LOGGER.warn("{} based minToken does not exist in the token ranges",
-                        ranges.stream()
-                              .findFirst()
-                              .map(r -> r.partitioner.name())
-                              .orElse("Unknown partitioner"));
+            LOGGER.warn("{} based minToken does not exist in the token ranges", ranges.stream()
+                                                                                      .findFirst()
+                                                                                      .map(r -> r.partitioner.name())
+                                                                                      .orElse("Unknown partitioner"));
         }
 
         return deoverlap(ranges);
     }
 
     /**
-     * Given a list of unwrapped (around the starting/min value) token ranges and their replica-sets, return list of
-     * ranges with no overlaps. Any impacted range absorbs the replica-sets from the overlapping range.
-     * This is to ensure that we have most coverage while using the replica-sets as write-replicas.
-     * Overlaps are removed by splitting the original range around the overlap boundaries, resulting in sub-ranges
-     * with replicas from all the overlapping replicas.
+     * Given a list of unwrapped (around the starting/min value) token ranges and their replica-sets, return list of ranges with no overlaps. Any impacted range
+     * absorbs the replica-sets from the overlapping range. This is to ensure that we have most coverage while using the replica-sets as write-replicas.
+     * Overlaps are removed by splitting the original range around the overlap boundaries, resulting in sub-ranges with replicas from all the overlapping
+     * replicas.
      *
      *
      * <pre>
@@ -249,7 +240,7 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
      * for the resulting ranges.
      *  |-----A------|----AC---||---BC-----|-----B------|
      *
-     *  </pre>
+     * </pre>
      */
     private static List<TokenRangeReplicas> deoverlap(List<TokenRangeReplicas> allRanges)
     {
@@ -284,7 +275,7 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
     private static List<TokenRangeReplicas> mergeIdenticalRanges(List<TokenRangeReplicas> ranges)
     {
         Map<TokenRangeReplicas, Set<String>> rangeMapping = new HashMap<>();
-        for (TokenRangeReplicas r: ranges)
+        for (TokenRangeReplicas r : ranges)
         {
             if (!rangeMapping.containsKey(r))
             {
@@ -292,7 +283,8 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
             }
             else
             {
-                rangeMapping.get(r).addAll(r.replicaSet);
+                rangeMapping.get(r)
+                            .addAll(r.replicaSet);
             }
         }
 
@@ -300,9 +292,11 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
         for (Map.Entry<TokenRangeReplicas, Set<String>> entry : rangeMapping.entrySet())
         {
             TokenRangeReplicas r = entry.getKey();
-            if (!r.replicaSet().equals(entry.getValue()))
+            if (!r.replicaSet()
+                  .equals(entry.getValue()))
             {
-                r.replicaSet().addAll(entry.getValue());
+                r.replicaSet()
+                 .addAll(entry.getValue());
             }
             merged.add(r);
         }
@@ -311,17 +305,15 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
     }
 
     /**
-     * Splits intersecting token ranges starting from the provided cursors and the iterator, while accumulating
-     * overlapping replicas into each sub-range.
+     * Splits intersecting token ranges starting from the provided cursors and the iterator, while accumulating overlapping replicas into each sub-range.
      * <p>
-     * The algorithm 1) extracts all intersecting ranges at the provided cursor, and 2) Maintains a min-heap of all
-     * intersecting ranges ordered by the end of the range, so that the least common sub-range relative to the current
-     * range can be extracted.
+     * The algorithm 1) extracts all intersecting ranges at the provided cursor, and 2) Maintains a min-heap of all intersecting ranges ordered by the end of
+     * the range, so that the least common sub-range relative to the current range can be extracted.
      *
-     * @param output  ongoing list of resulting non-overlapping ranges
-     * @param iter    iterator over the list of ranges
+     * @param output ongoing list of resulting non-overlapping ranges
+     * @param iter iterator over the list of ranges
      * @param current cursor to the current, intersecting range
-     * @param next    cursor to the intersecting range after the current range
+     * @param next cursor to the intersecting range after the current range
      * @return cursor to the subsequent non-intersecting range
      */
     static TokenRangeReplicas processIntersectingRanges(List<TokenRangeReplicas> output,
@@ -330,66 +322,68 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
                                                         TokenRangeReplicas next)
     {
         // min-heap with a comparator comparing the ends of ranges
-        PriorityQueue<TokenRangeReplicas> rangeHeap =
-        new PriorityQueue<>((n1, n2) -> (!n1.end.equals(n2.end())) ?
-                                        n1.end().compareTo(n2.end()) : n1.compareTo(n2));
+        PriorityQueue<TokenRangeReplicas> rangeHeap = new PriorityQueue<>((n1,
+                                                                           n2) -> (!n1.end.equals(n2.end()))
+                                                                                   ? n1.end()
+                                                                                       .compareTo(n2.end())
+                                                                                   : n1.compareTo(n2));
 
         List<TokenRangeReplicas> intersectingRanges = new ArrayList<>();
         next = extractIntersectingRanges(intersectingRanges::add, iter, current, next);
         rangeHeap.add(intersectingRanges.get(0));
-        intersectingRanges.stream().skip(1).forEach(r -> {
-            if (!rangeHeap.isEmpty())
-            {
-                TokenRangeReplicas range = rangeHeap.peek();
-                // Use the last processed range's end as the new range's start
-                // Except when its the first range, in which case, we use the queue-head's start
-                Token newStart = output.isEmpty() ? range.start() : output.get(output.size() - 1).end();
+        intersectingRanges.stream()
+                          .skip(1)
+                          .forEach(r -> {
+                              if (!rangeHeap.isEmpty())
+                              {
+                                  TokenRangeReplicas range = rangeHeap.peek();
+                                  // Use the last processed range's end as the new range's start
+                                  // Except when its the first range, in which case, we use the queue-head's start
+                                  Token newStart = output.isEmpty()
+                                          ? range.start()
+                                          : output.get(output.size() - 1)
+                                                  .end();
 
-                if (r.start().compareTo(rangeHeap.peek().end()) == 0)
-                {
-                    output.add(new TokenRangeReplicas(newStart,
-                                                      r.start(),
-                                                      range.partitioner,
-                                                      getBatchReplicas(rangeHeap)));
-                    rangeHeap.poll();
-                }
-                else if (r.start().compareTo(rangeHeap.peek().end()) > 0)
-                {
-                    output.add(new TokenRangeReplicas(newStart,
-                                                      range.end(),
-                                                      range.partitioner,
-                                                      getBatchReplicas(rangeHeap)));
-                    rangeHeap.poll();
-                }
-                // Start-token is before the first intersecting range end. We have not encountered end of the range, so
-                // it is not removed from the heap yet.
-                else
-                {
-                    if (newStart.compareTo(r.start()) != 0)
-                    {
-                        output.add(new TokenRangeReplicas(newStart,
-                                                          r.start(),
-                                                          range.partitioner,
-                                                          getBatchReplicas(rangeHeap)));
-                    }
-                }
-                rangeHeap.add(r);
-            }
-        });
+                                  if (r.start()
+                                       .compareTo(rangeHeap.peek()
+                                                           .end()) == 0)
+                                  {
+                                      output.add(new TokenRangeReplicas(newStart, r.start(), range.partitioner, getBatchReplicas(rangeHeap)));
+                                      rangeHeap.poll();
+                                  }
+                                  else if (r.start()
+                                            .compareTo(rangeHeap.peek()
+                                                                .end()) > 0)
+                                  {
+                                      output.add(new TokenRangeReplicas(newStart, range.end(), range.partitioner, getBatchReplicas(rangeHeap)));
+                                      rangeHeap.poll();
+                                  }
+                                  // Start-token is before the first intersecting range end. We have not encountered end of the range, so
+                                  // it is not removed from the heap yet.
+                                  else
+                                  {
+                                      if (newStart.compareTo(r.start()) != 0)
+                                      {
+                                          output.add(new TokenRangeReplicas(newStart, r.start(), range.partitioner, getBatchReplicas(rangeHeap)));
+                                      }
+                                  }
+                                  rangeHeap.add(r);
+                              }
+                          });
 
         // Remaining intersecting ranges from heap are processed
         while (!rangeHeap.isEmpty())
         {
             LOGGER.debug("Non-empty heap while resolving intersecting ranges:" + rangeHeap.size());
             TokenRangeReplicas nextVal = rangeHeap.peek();
-            Token newStart = output.isEmpty() ? nextVal.start() : output.get(output.size() - 1).end();
+            Token newStart = output.isEmpty()
+                    ? nextVal.start()
+                    : output.get(output.size() - 1)
+                            .end();
             // Corner case w/ common end ranges - we do not add redundant single token range
             if (newStart.compareTo(nextVal.end()) != 0)
             {
-                output.add(new TokenRangeReplicas(newStart,
-                                                  nextVal.end(),
-                                                  nextVal.partitioner,
-                                                  getBatchReplicas(rangeHeap)));
+                output.add(new TokenRangeReplicas(newStart, nextVal.end(), nextVal.partitioner, getBatchReplicas(rangeHeap)));
             }
             rangeHeap.poll();
         }
@@ -397,13 +391,13 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
     }
 
     /**
-     * Extract all the intersecting ranges starting from the current cursor, which we know is intersecting with the
-     * next range. Note that the cursor is moved forward until a non-intersecting range is found.
+     * Extract all the intersecting ranges starting from the current cursor, which we know is intersecting with the next range. Note that the cursor is moved
+     * forward until a non-intersecting range is found.
      *
      * @param rangeConsumer functional interface to collect candidate intersecting ranges
-     * @param iter          ongoing iterator over the entire range-set
-     * @param current       cursor to the current, intersecting range
-     * @param next          cursor to the next intersecting range
+     * @param iter ongoing iterator over the entire range-set
+     * @param current cursor to the current, intersecting range
+     * @param next cursor to the next intersecting range
      * @return list of intersecting ranges starting at the specified cursor
      */
     private static TokenRangeReplicas extractIntersectingRanges(Consumer<TokenRangeReplicas> rangeConsumer,
@@ -440,7 +434,8 @@ public class TokenRangeReplicas implements Comparable<TokenRangeReplicas>
                         .collect(Collectors.toSet());
     }
 
-    private static Set<String> mergeReplicas(TokenRangeReplicas current, TokenRangeReplicas next)
+    private static Set<String> mergeReplicas(TokenRangeReplicas current,
+                                             TokenRangeReplicas next)
     {
         Set<String> merged = new HashSet<>(current.replicaSet);
         merged.addAll(next.replicaSet);

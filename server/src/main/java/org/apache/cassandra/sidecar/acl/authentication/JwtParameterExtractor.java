@@ -22,12 +22,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
-
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
 
@@ -47,8 +44,7 @@ public class JwtParameterExtractor implements JwtParameters
     private static final String DEFAULT_SCOPE_SEPARATOR = ",";
     private static final String SCOPES_SUPPORTED_PARAM_KEY = "scopes_supported";
     private static final String CONFIG_DISCOVER_INTERVAL_PARAM_KEY = "config_discover_interval";
-    private static final SecondBoundConfiguration DEFAULT_CONFIG_DISCOVER_INTERVAL
-    = SecondBoundConfiguration.parse("1h");
+    private static final SecondBoundConfiguration DEFAULT_CONFIG_DISCOVER_INTERVAL = SecondBoundConfiguration.parse("1h");
 
     private final boolean enabled;
     private final String site;
@@ -64,8 +60,8 @@ public class JwtParameterExtractor implements JwtParameters
         this.clientId = parameters.get(CLIENT_ID_PARAM_KEY);
         this.scopes = buildScopes(parameters);
         this.configDiscoverInterval = parameters.containsKey(CONFIG_DISCOVER_INTERVAL_PARAM_KEY)
-                                      ? SecondBoundConfiguration.parse(parameters.get(CONFIG_DISCOVER_INTERVAL_PARAM_KEY))
-                                      : DEFAULT_CONFIG_DISCOVER_INTERVAL;
+                ? SecondBoundConfiguration.parse(parameters.get(CONFIG_DISCOVER_INTERVAL_PARAM_KEY))
+                : DEFAULT_CONFIG_DISCOVER_INTERVAL;
     }
 
     @Override
@@ -109,7 +105,8 @@ public class JwtParameterExtractor implements JwtParameters
         validateParameterPresence(parameters, CLIENT_ID_PARAM_KEY);
     }
 
-    private void validateParameterPresence(Map<String, String> parameters, String paramKey)
+    private void validateParameterPresence(Map<String, String> parameters,
+                                           String paramKey)
     {
         if (isNullOrEmpty(parameters.get(paramKey)))
         {
@@ -118,9 +115,8 @@ public class JwtParameterExtractor implements JwtParameters
     }
 
     /**
-     * We remove site suffix prior hand. This is to address a bug in Vert.x in
-     * {@link io.vertx.ext.auth.oauth2.providers.OpenIDConnectAuth} where the issuer is verified once the request
-     * is successful, it is matched against a computed issuer with suffix removed.
+     * We remove site suffix prior hand. This is to address a bug in Vert.x in {@link io.vertx.ext.auth.oauth2.providers.OpenIDConnectAuth} where the issuer is
+     * verified once the request is successful, it is matched against a computed issuer with suffix removed.
      */
     private String removeSiteSuffix(Map<String, String> parameters)
     {
@@ -138,10 +134,9 @@ public class JwtParameterExtractor implements JwtParameters
         List<String> scopes = new ArrayList<>();
         if (isNotEmpty(parameters.get(SCOPES_SUPPORTED_PARAM_KEY)))
         {
-            String delimiter = isNotEmpty(parameters.get(SCOPE_SEPARATOR_PARAM_KEY))
-                               ? parameters.get(SCOPE_SEPARATOR_PARAM_KEY)
-                               : DEFAULT_SCOPE_SEPARATOR;
-            scopes.addAll(Arrays.asList(parameters.get(SCOPES_SUPPORTED_PARAM_KEY).split(delimiter)));
+            String delimiter = isNotEmpty(parameters.get(SCOPE_SEPARATOR_PARAM_KEY)) ? parameters.get(SCOPE_SEPARATOR_PARAM_KEY) : DEFAULT_SCOPE_SEPARATOR;
+            scopes.addAll(Arrays.asList(parameters.get(SCOPES_SUPPORTED_PARAM_KEY)
+                                                  .split(delimiter)));
         }
         return scopes;
     }

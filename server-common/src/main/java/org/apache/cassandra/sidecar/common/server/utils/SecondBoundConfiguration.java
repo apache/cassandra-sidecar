@@ -25,9 +25,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * Represents a duration used for Sidecar configuration. The bound is [0, Long.MAX_VALUE) in seconds.
- * If the user sets a different unit - we still validate that converted to seconds the quantity will not exceed
- * that upper bound.
+ * Represents a duration used for Sidecar configuration. The bound is [0, Long.MAX_VALUE) in seconds. If the user sets a different unit - we still validate that
+ * converted to seconds the quantity will not exceed that upper bound.
  */
 public class SecondBoundConfiguration extends DurationSpec
 {
@@ -55,7 +54,8 @@ public class SecondBoundConfiguration extends DurationSpec
         super(value);
     }
 
-    public SecondBoundConfiguration(long quantity, TimeUnit unit)
+    public SecondBoundConfiguration(long quantity,
+                                    TimeUnit unit)
     {
         super(quantity, unit);
     }

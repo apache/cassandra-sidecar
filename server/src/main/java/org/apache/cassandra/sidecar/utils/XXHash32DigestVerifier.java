@@ -27,18 +27,19 @@ import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CO
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32_SEED;
 
 /**
- * Implementation of {@link DigestVerifier} to calculate the digest and match the calculated digest
- * with the expected digest.
+ * Implementation of {@link DigestVerifier} to calculate the digest and match the calculated digest with the expected digest.
  */
 public class XXHash32DigestVerifier extends AsyncFileDigestVerifier<XXHash32Digest>
 {
-    protected XXHash32DigestVerifier(@NotNull FileSystem fs, @NotNull XXHash32Digest digest,
+    protected XXHash32DigestVerifier(@NotNull FileSystem fs,
+                                     @NotNull XXHash32Digest digest,
                                      @NotNull DigestAlgorithm digestAlgorithm)
     {
         super(fs, digest, digestAlgorithm);
     }
 
-    public static XXHash32DigestVerifier create(FileSystem fs, MultiMap headers,
+    public static XXHash32DigestVerifier create(FileSystem fs,
+                                                MultiMap headers,
                                                 DigestAlgorithmProvider digestAlgorithmProvider)
     {
         XXHash32Digest digest = new XXHash32Digest(headers.get(CONTENT_XXHASH32), headers.get(CONTENT_XXHASH32_SEED));

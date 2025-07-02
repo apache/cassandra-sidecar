@@ -18,14 +18,11 @@
 
 package org.apache.cassandra.sidecar.acl.authentication;
 
-import java.util.Map;
-
-import org.junit.jupiter.api.Test;
-
 import io.vertx.core.Vertx;
+import java.util.Map;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
-
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
@@ -43,16 +40,13 @@ class JWTAuthenticationHandlerFactoryTest
     {
         PeriodicTaskExecutor mockTaskExecutor = mock(PeriodicTaskExecutor.class);
         JwtAuthenticationHandlerFactory factory = new JwtAuthenticationHandlerFactory(mockRoleProcessor, mockTaskExecutor);
-        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, null))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("JWT parameters can not be null");
+        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, null)).isInstanceOf(IllegalArgumentException.class)
+                                                                             .hasMessage("JWT parameters can not be null");
 
-        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, Map.of()))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Missing site JWT parameter");
+        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, Map.of())).isInstanceOf(IllegalArgumentException.class)
+                                                                                 .hasMessage("Missing site JWT parameter");
 
-        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, Map.of("site", "www.apache.org")))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Missing client_id JWT parameter");
+        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, Map.of("site", "www.apache.org"))).isInstanceOf(IllegalArgumentException.class)
+                                                                                                         .hasMessage("Missing client_id JWT parameter");
     }
 }

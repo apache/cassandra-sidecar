@@ -38,8 +38,7 @@ public interface PeriodicTaskConfiguration
     MillisecondBoundConfiguration initialDelay();
 
     /**
-     * @return how often this task will execute after the previous task has completed the {@link io.vertx.core.Promise}
-     * of the execution
+     * @return how often this task will execute after the previous task has completed the {@link io.vertx.core.Promise} of the execution
      */
     @NotNull
     MillisecondBoundConfiguration executeInterval();

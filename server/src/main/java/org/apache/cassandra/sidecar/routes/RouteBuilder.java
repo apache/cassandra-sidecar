@@ -100,7 +100,9 @@ public class RouteBuilder
 
     /**
      * Indicate the route does not require authorization.
-     * <p>Note that the method is to be accessed by {@link Factory} only
+     * <p>
+     * Note that the method is to be accessed by {@link Factory} only
+     *
      * @return a reference to {@link RouteBuilder} for chaining
      */
     RouteBuilder setUnauthorized()
@@ -110,8 +112,7 @@ public class RouteBuilder
     }
 
     /**
-     * Builds an authorized route. Adds {@link io.vertx.ext.web.handler.AuthorizationHandler} at top of handler
-     * chain if access control is enabled.
+     * Builds an authorized route. Adds {@link io.vertx.ext.web.handler.AuthorizationHandler} at top of handler chain if access control is enabled.
      */
     public SettableVertxRoute build()
     {
@@ -138,9 +139,8 @@ public class RouteBuilder
                 if (accessControlConfiguration.enabled())
                 {
                     // authorization handler added before route specific handler chain
-                    AuthorizationWithAdminBypassHandler authorizationHandler
-                    = new AuthorizationWithAdminBypassHandler(authZParameterValidateHandler, adminIdentityResolver,
-                                                              requiredAuthorization());
+                    AuthorizationWithAdminBypassHandler authorizationHandler = new AuthorizationWithAdminBypassHandler(authZParameterValidateHandler,
+                            adminIdentityResolver, requiredAuthorization());
                     authorizationHandler.addAuthorizationProvider(authorizationProvider);
                     authorizationHandler.variableConsumer(routeGenericVariableConsumer());
 
@@ -154,12 +154,12 @@ public class RouteBuilder
 
     private Authorization requiredAuthorization()
     {
-        Set<Authorization> requiredAuthorizations = handlers
-                                                    .stream()
-                                                    .filter(handler -> handler instanceof AccessProtected)
-                                                    .map(handler -> (AccessProtected) handler)
-                                                    .flatMap(handler -> handler.requiredAuthorizations().stream())
-                                                    .collect(Collectors.toSet());
+        Set<Authorization> requiredAuthorizations = handlers.stream()
+                                                            .filter(handler -> handler instanceof AccessProtected)
+                                                            .map(handler -> (AccessProtected) handler)
+                                                            .flatMap(handler -> handler.requiredAuthorizations()
+                                                                                       .stream())
+                                                            .collect(Collectors.toSet());
         if (accessProtected && requiredAuthorizations.isEmpty())
         {
             throw new ConfigurationException("Authorized route must have required authorizations declared");
@@ -175,7 +175,8 @@ public class RouteBuilder
 
     private BiConsumer<RoutingContext, AuthorizationContext> routeGenericVariableConsumer()
     {
-        return (routingCtx, authZContext) -> {
+        return (routingCtx,
+                authZContext) -> {
             Optional<QualifiedTableName> optional = RoutingContextUtils.getAsOptional(routingCtx, SC_QUALIFIED_TABLE_NAME);
             String keyspace = null;
             String table = null;
@@ -188,11 +189,13 @@ public class RouteBuilder
 
             if (keyspace != null)
             {
-                authZContext.variables().add(KEYSPACE, keyspace);
+                authZContext.variables()
+                            .add(KEYSPACE, keyspace);
             }
             if (table != null)
             {
-                authZContext.variables().add(TABLE, table);
+                authZContext.variables()
+                            .add(TABLE, table);
             }
         };
     }
@@ -221,15 +224,13 @@ public class RouteBuilder
 
         public RouteBuilder builderForRoute()
         {
-            return new RouteBuilder(accessControlConfiguration,
-                                    authorizationProvider,
-                                    adminIdentityResolver,
-                                    authZParameterValidateHandler);
+            return new RouteBuilder(accessControlConfiguration, authorizationProvider, adminIdentityResolver, authZParameterValidateHandler);
         }
 
         public VertxRoute buildRouteWithHandler(Handler<RoutingContext> handler)
         {
-            return builderForRoute().handler(handler).build();
+            return builderForRoute().handler(handler)
+                                    .build();
         }
 
         public RouteBuilder builderForUnauthorizedRoute()

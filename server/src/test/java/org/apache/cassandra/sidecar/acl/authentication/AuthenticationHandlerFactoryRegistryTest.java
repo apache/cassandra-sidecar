@@ -18,11 +18,9 @@
 
 package org.apache.cassandra.sidecar.acl.authentication;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
-
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -46,7 +44,7 @@ class AuthenticationHandlerFactoryRegistryTest
         IdentityToRoleCache identityToRoleCache = mock(IdentityToRoleCache.class);
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
         MutualTlsAuthenticationHandlerFactory mutualTlsAuthenticationHandlerFactory = new MutualTlsAuthenticationHandlerFactory(identityToRoleCache,
-                                                                                                                                mockAdminIdentityResolver);
+                mockAdminIdentityResolver);
         registry.register(mutualTlsAuthenticationHandlerFactory);
         assertThat(registry.getFactory(MutualTlsAuthenticationHandlerFactory.class.getName())).isNotNull();
     }

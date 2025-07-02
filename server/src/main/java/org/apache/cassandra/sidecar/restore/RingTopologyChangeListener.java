@@ -29,6 +29,7 @@ public interface RingTopologyChangeListener
 {
     /**
      * Notification on ring topology changed
+     *
      * @param keyspace keyspace (which defines replication factor) to derive the topology from
      * @param oldTopology old topology. The value is nullable. When the ring topology of the keyspace is just learned, the value is null.
      * @param newTopology new topology. The value is always non-null

@@ -23,7 +23,8 @@ package org.apache.cassandra.distributed.impl;
  */
 public class AbstractClusterUtils
 {
-    public static InstanceConfig createInstanceConfig(AbstractCluster cluster, int nodeNumber)
+    public static InstanceConfig createInstanceConfig(AbstractCluster cluster,
+                                                      int nodeNumber)
     {
         return cluster.createInstanceConfig(nodeNumber);
     }

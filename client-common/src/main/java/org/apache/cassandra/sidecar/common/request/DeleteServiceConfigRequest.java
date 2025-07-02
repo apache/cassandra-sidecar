@@ -22,8 +22,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 
 /**
- * Represents a request for deleting configurations for a service from "configs" table inside
- * sidecar internal keyspace.
+ * Represents a request for deleting configurations for a service from "configs" table inside sidecar internal keyspace.
  */
 public class DeleteServiceConfigRequest extends Request
 {

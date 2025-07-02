@@ -18,10 +18,6 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import com.google.common.util.concurrent.MoreExecutors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -32,6 +28,9 @@ import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.jetbrains.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.MoreExecutors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A factory for caches used in Sidecar
@@ -44,17 +43,20 @@ public class CacheFactory
     private final Cache<SSTableImporter.ImportOptions, Future<Void>> ssTableImportCache;
 
     @Inject
-    public CacheFactory(ServiceConfiguration configuration, SSTableImporter ssTableImporter)
+    public CacheFactory(ServiceConfiguration configuration,
+                        SSTableImporter ssTableImporter)
     {
         this(configuration, ssTableImporter, Ticker.systemTicker());
     }
 
     @VisibleForTesting
-    CacheFactory(ServiceConfiguration configuration, SSTableImporter ssTableImporter, Ticker ticker)
+    CacheFactory(ServiceConfiguration configuration,
+                 SSTableImporter ssTableImporter,
+                 Ticker ticker)
     {
         this.ssTableImportCache = initSSTableImportCache(configuration.sstableImportConfiguration()
                                                                       .cacheConfiguration(),
-                                                         ssTableImporter, ticker);
+                ssTableImporter, ticker);
     }
 
     /**
@@ -66,33 +68,34 @@ public class CacheFactory
     }
 
     /**
-     * Initializes the SSTable Import Cache using the provided {@code configuration} and {@code ticker}
-     * for the cache
+     * Initializes the SSTable Import Cache using the provided {@code configuration} and {@code ticker} for the cache
      *
-     * @param configuration   the Cache configuration parameters
+     * @param configuration the Cache configuration parameters
      * @param ssTableImporter the reference to the SSTable importer singleton
-     * @param ticker          the ticker for the cache
+     * @param ticker the ticker for the cache
      * @return the initialized cache
      */
-    protected Cache<SSTableImporter.ImportOptions, Future<Void>>
-    initSSTableImportCache(CacheConfiguration configuration, SSTableImporter ssTableImporter, Ticker ticker)
+    protected Cache<SSTableImporter.ImportOptions, Future<Void>> initSSTableImportCache(CacheConfiguration configuration,
+                                                                                        SSTableImporter ssTableImporter,
+                                                                                        Ticker ticker)
     {
         long maximumSize = configuration.maximumSize();
-        LOGGER.info("Building SSTable Import Cache with expireAfterAccess={}, maxSize={}",
-                    configuration.expireAfterAccess(), maximumSize);
+        LOGGER.info("Building SSTable Import Cache with expireAfterAccess={}, maxSize={}", configuration.expireAfterAccess(), maximumSize);
         return Caffeine.newBuilder()
                        .ticker(ticker)
                        .executor(MoreExecutors.directExecutor())
-                       .expireAfterAccess(configuration.expireAfterAccess().quantity(), configuration.expireAfterAccess().unit())
+                       .expireAfterAccess(configuration.expireAfterAccess()
+                                                       .quantity(),
+                               configuration.expireAfterAccess()
+                                            .unit())
                        .maximumSize(maximumSize)
                        .recordStats()
-                       .removalListener((RemovalListener<SSTableImporter.ImportOptions, Future<Void>>)
-                                        (options, result, cause) -> {
-                                            LOGGER.debug("Removed entry '{}' with options '{}' from SSTable Import " +
-                                                         "Cache and cause {}", result, options, cause);
-                                            ssTableImporter.cancelImport(options);
-                                        }
-                       )
+                       .removalListener((RemovalListener<SSTableImporter.ImportOptions, Future<Void>>) (options,
+                                                                                                        result,
+                                                                                                        cause) -> {
+                           LOGGER.debug("Removed entry '{}' with options '{}' from SSTable Import " + "Cache and cause {}", result, options, cause);
+                           ssTableImporter.cancelImport(options);
+                       })
                        .build();
     }
 }

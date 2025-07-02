@@ -53,7 +53,9 @@ public class JdkMd5DigestProvider implements DigestAlgorithmProvider
         }
 
         @Override
-        public void update(byte[] buf, int off, int len)
+        public void update(byte[] buf,
+                           int off,
+                           int len)
         {
             md5.update(buf, off, len);
         }
@@ -61,7 +63,8 @@ public class JdkMd5DigestProvider implements DigestAlgorithmProvider
         @Override
         public String digest()
         {
-            return Base64.getEncoder().encodeToString(md5.digest());
+            return Base64.getEncoder()
+                         .encodeToString(md5.digest());
         }
 
         @Override

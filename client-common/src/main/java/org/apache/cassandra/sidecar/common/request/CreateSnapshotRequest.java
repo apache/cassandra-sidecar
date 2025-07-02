@@ -27,18 +27,19 @@ import org.jetbrains.annotations.Nullable;
 public class CreateSnapshotRequest extends SnapshotRequest<Void>
 {
     /**
-     * Constructs a new request to create a snapshot with name {@code snapshotName} for the given {@code keyspace}
-     * and {@code table}.
+     * Constructs a new request to create a snapshot with name {@code snapshotName} for the given {@code keyspace} and {@code table}.
      *
-     * @param keyspace     the keyspace in Cassandra
-     * @param table        the table name in Cassandra
+     * @param keyspace the keyspace in Cassandra
+     * @param table the table name in Cassandra
      * @param snapshotName the name of the snapshot
-     * @param snapshotTTL  an optional time to live option for the snapshot (available since Cassandra 4.1+)
-     *                     The TTL option must specify the units, for example 2d represents a TTL for 2 days;
-     *                     1h represents a TTL of 1 hour, etc. Valid units are {@code d}, {@code h}, {@code s},
-     *                     {@code ms}, {@code us}, {@code µs}, {@code ns}, and {@code m}.
+     * @param snapshotTTL an optional time to live option for the snapshot (available since Cassandra 4.1+) The TTL option must specify the units, for example
+     *            2d represents a TTL for 2 days; 1h represents a TTL of 1 hour, etc. Valid units are {@code d}, {@code h}, {@code s}, {@code ms}, {@code us},
+     *            {@code µs}, {@code ns}, and {@code m}.
      */
-    public CreateSnapshotRequest(String keyspace, String table, String snapshotName, @Nullable String snapshotTTL)
+    public CreateSnapshotRequest(String keyspace,
+                                 String table,
+                                 String snapshotName,
+                                 @Nullable String snapshotTTL)
     {
         super(keyspace, table, snapshotName, false, snapshotTTL);
     }

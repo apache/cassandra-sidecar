@@ -23,12 +23,14 @@ package org.apache.cassandra.sidecar.exceptions;
  */
 public class CassandraUnavailableException extends RuntimeException
 {
-    public CassandraUnavailableException(Service service, String additionalMessage)
+    public CassandraUnavailableException(Service service,
+                                         String additionalMessage)
     {
         super(service.toExceptionMessage() + ". " + additionalMessage);
     }
 
-    public CassandraUnavailableException(Service service, Throwable cause)
+    public CassandraUnavailableException(Service service,
+                                         Throwable cause)
     {
         super(service.toExceptionMessage(), cause);
     }

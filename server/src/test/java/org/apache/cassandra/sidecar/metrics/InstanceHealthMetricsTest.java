@@ -18,10 +18,6 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -30,7 +26,9 @@ import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.JMX;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -57,16 +55,17 @@ public class InstanceHealthMetricsTest
         when(mockCqlSessionProvider.get()).thenThrow(new CassandraUnavailableException(JMX, "not available"));
         jmxClient = mock(JmxClient.class);
         metrics = new InstanceHealthMetrics(registry(1));
-        delegate = new CassandraAdapterDelegate(vertx, 1, mockCassandraVersionProvider,
-                                                mockCqlSessionProvider, jmxClient, new DriverUtils(), null,
-                                                "localhost1", 9042, metrics);
+        delegate = new CassandraAdapterDelegate(vertx, 1, mockCassandraVersionProvider, mockCqlSessionProvider, jmxClient, new DriverUtils(), null,
+                "localhost1", 9042, metrics);
     }
 
     @AfterEach
     void clear()
     {
-        registry().removeMatching((name, metric) -> true);
-        registry(1).removeMatching((name, metric) -> true);
+        registry().removeMatching((name,
+                                   metric) -> true);
+        registry(1).removeMatching((name,
+                                    metric) -> true);
         vertx.close();
     }
 

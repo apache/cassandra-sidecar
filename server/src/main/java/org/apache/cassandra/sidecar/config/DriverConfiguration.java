@@ -27,21 +27,22 @@ import java.util.List;
 public interface DriverConfiguration
 {
     /**
-     * A list of contact points to use for initial connection to Cassandra.
-     * At least 2 non-replica nodes are recommended.
+     * A list of contact points to use for initial connection to Cassandra. At least 2 non-replica nodes are recommended.
+     *
      * @return a list of contact points
      */
     List<InetSocketAddress> contactPoints();
 
     /**
-     * The number of connections other than locally-managed nodes to use.
-     * The minimum is 2 - if your value is less than 2, the Sidecar will use 2.
+     * The number of connections other than locally-managed nodes to use. The minimum is 2 - if your value is less than 2, the Sidecar will use 2.
+     *
      * @return the number of connections to make to the cluster.
      */
     int numConnections();
 
     /**
      * The local datacenter to use for non-local queries to the cluster.
+     *
      * @return the local datacenter, or null if no local datacenter is specified.
      */
     String localDc();
@@ -57,8 +58,7 @@ public interface DriverConfiguration
     String password();
 
     /**
-     * @return Configuration such as keystore, truststore needed for establishing SSL/mTLS connection with
-     * Cassandra instance.
+     * @return Configuration such as keystore, truststore needed for establishing SSL/mTLS connection with Cassandra instance.
      */
     SslConfiguration sslConfiguration();
 }

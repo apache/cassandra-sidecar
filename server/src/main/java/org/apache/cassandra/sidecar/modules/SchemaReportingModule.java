@@ -46,8 +46,8 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Instantiates the objects necessary for converting and reporting the cluster's
- * current schema in a DataHub-compatible format either on schedule or as requested
+ * Instantiates the objects necessary for converting and reporting the cluster's current schema in a DataHub-compatible format either on schedule or as
+ * requested
  */
 public class SchemaReportingModule extends AbstractModule
 {
@@ -66,10 +66,7 @@ public class SchemaReportingModule extends AbstractModule
                                      @NotNull SchemaReporter reporter,
                                      @NotNull ExecutorPools executors)
     {
-        return new SchemaReportingTask(configuration,
-                                       session,
-                                       reporter,
-                                       executors.internal());
+        return new SchemaReportingTask(configuration, session, reporter, executors.internal());
     }
 
     @Provides
@@ -94,7 +91,8 @@ public class SchemaReportingModule extends AbstractModule
             @NotNull
             public String cluster()
             {
-                return ThrowableUtils.supplier(cluster::get).get();
+                return ThrowableUtils.supplier(cluster::get)
+                                     .get();
             }
         };
     }

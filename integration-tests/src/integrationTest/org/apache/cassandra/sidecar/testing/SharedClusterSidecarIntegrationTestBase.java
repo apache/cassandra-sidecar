@@ -26,8 +26,7 @@ import static io.vertx.core.Vertx.vertx;
 import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.EMPTY_PASSWORD_STRING;
 
 /**
- * Builds on top of {@link SharedClusterIntegrationTestBase} and adds functionality to interact
- * with the Sidecar process with a trusted client
+ * Builds on top of {@link SharedClusterIntegrationTestBase} and adds functionality to interact with the Sidecar process with a trusted client
  */
 public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClusterIntegrationTestBase
 {
@@ -60,14 +59,11 @@ public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClus
             return trustedClient;
         }
 
-        WebClientOptions clientOptions = new WebClientOptions()
-                                         .setKeyStoreOptions(new JksOptions()
-                                                             .setPath(mtlsTestHelper.clientKeyStorePath())
-                                                             .setPassword(EMPTY_PASSWORD_STRING))
-                                         .setTrustStoreOptions(new JksOptions()
-                                                               .setPath(mtlsTestHelper.trustStorePath())
-                                                               .setPassword(EMPTY_PASSWORD_STRING))
-                                         .setSsl(true);
+        WebClientOptions clientOptions = new WebClientOptions().setKeyStoreOptions(new JksOptions().setPath(mtlsTestHelper.clientKeyStorePath())
+                                                                                                   .setPassword(EMPTY_PASSWORD_STRING))
+                                                               .setTrustStoreOptions(new JksOptions().setPath(mtlsTestHelper.trustStorePath())
+                                                                                                     .setPassword(EMPTY_PASSWORD_STRING))
+                                                               .setSsl(true);
         trustedClient = WebClient.create(vertx(), clientOptions);
         return trustedClient;
     }
@@ -82,11 +78,9 @@ public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClus
             return noAuthClient;
         }
 
-        WebClientOptions clientOptions = new WebClientOptions()
-                                         .setTrustStoreOptions(new JksOptions()
-                                                               .setPath(mtlsTestHelper.trustStorePath())
-                                                               .setPassword(mtlsTestHelper.trustStorePassword()))
-                                         .setSsl(true);
+        WebClientOptions clientOptions = new WebClientOptions().setTrustStoreOptions(new JksOptions().setPath(mtlsTestHelper.trustStorePath())
+                                                                                                     .setPassword(mtlsTestHelper.trustStorePassword()))
+                                                               .setSsl(true);
         noAuthClient = WebClient.create(vertx(), clientOptions);
         return noAuthClient;
     }

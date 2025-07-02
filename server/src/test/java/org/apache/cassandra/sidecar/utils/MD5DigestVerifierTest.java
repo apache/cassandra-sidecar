@@ -18,6 +18,10 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.file.AsyncFile;
+import io.vertx.core.file.FileSystem;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,18 +30,11 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
+import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.file.AsyncFile;
-import io.vertx.core.file.FileSystem;
-import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -64,8 +61,7 @@ class MD5DigestVerifierTest
     }
 
     @Test
-    void testFileDescriptorsClosedWithValidDigest() throws IOException, NoSuchAlgorithmException,
-                                                           InterruptedException
+    void testFileDescriptorsClosedWithValidDigest() throws IOException, NoSuchAlgorithmException, InterruptedException
     {
         Path randomFilePath = TestFileUtils.prepareTestFile(tempDir, "random-file.txt", 1024);
         byte[] randomBytes = Files.readAllBytes(randomFilePath);
@@ -83,20 +79,22 @@ class MD5DigestVerifierTest
         runTestScenario(randomFilePath, "invalid");
     }
 
-    private void runTestScenario(Path filePath, String digest) throws InterruptedException
+    private void runTestScenario(Path filePath,
+                                 String digest)
+            throws InterruptedException
     {
         CountDownLatch latch = new CountDownLatch(1);
         ExposeAsyncFileMD5DigestVerifier verifier = newVerifier(new MD5Digest(digest));
-        verifier.verify(filePath.toAbsolutePath().toString())
+        verifier.verify(filePath.toAbsolutePath()
+                                .toString())
                 .onComplete(complete -> latch.countDown());
 
         assertThat(latch.await(2, TimeUnit.SECONDS)).isTrue();
 
         assertThat(verifier.file).isNotNull();
         // we can't close the file if it's already closed, so we expect the exception here
-        assertThatThrownBy(() -> verifier.file.end())
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("File handle is closed");
+        assertThatThrownBy(() -> verifier.file.end()).isInstanceOf(IllegalStateException.class)
+                                                     .hasMessageContaining("File handle is closed");
     }
 
     static ExposeAsyncFileMD5DigestVerifier newVerifier(MD5Digest digest)
@@ -105,14 +103,15 @@ class MD5DigestVerifierTest
     }
 
     /**
-     * Class that extends from {@link MD5DigestVerifier} for testing purposes and holds a reference to the
-     * {@link AsyncFile} to ensure that the file has been closed.
+     * Class that extends from {@link MD5DigestVerifier} for testing purposes and holds a reference to the {@link AsyncFile} to ensure that the file has been
+     * closed.
      */
     static class ExposeAsyncFileMD5DigestVerifier extends MD5DigestVerifier
     {
         AsyncFile file;
 
-        public ExposeAsyncFileMD5DigestVerifier(FileSystem fs, MD5Digest md5Digest)
+        public ExposeAsyncFileMD5DigestVerifier(FileSystem fs,
+                                                MD5Digest md5Digest)
         {
             super(fs, md5Digest, new JdkMd5DigestProvider.JdkMD5Digest());
         }

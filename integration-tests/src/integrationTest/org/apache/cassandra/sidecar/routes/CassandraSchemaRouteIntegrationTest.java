@@ -18,14 +18,11 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.util.Map;
-
-import org.junit.jupiter.api.Test;
-
 import io.vertx.core.http.HttpResponseExpectation;
+import java.util.Map;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
-
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,11 +40,9 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
     void testListKeyspaces()
     {
         String testRoute = "/api/v1/schema/keyspaces";
-        SchemaResponse response = getBlocking(trustedClient()
-                                              .get(serverWrapper.serverPort, "localhost", testRoute)
-                                              .send()
-                                              .expecting(HttpResponseExpectation.SC_OK))
-                                  .bodyAsJson(SchemaResponse.class);
+        SchemaResponse response = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", testRoute)
+                                                             .send()
+                                                             .expecting(HttpResponseExpectation.SC_OK)).bodyAsJson(SchemaResponse.class);
         assertThat(response).isNotNull();
         assertThat(response.keyspace()).isNull();
         assertThat(response.schema()).isNotNull();
@@ -57,21 +52,18 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
     void testSchemaHandlerKeyspaceDoesNotExist()
     {
         String testRoute = "/api/v1/schema/keyspaces/non_existent";
-        getBlocking(trustedClient()
-                    .get(serverWrapper.serverPort, "localhost", testRoute)
-                    .send()
-                    .expecting(HttpResponseExpectation.SC_NOT_FOUND));
+        getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", testRoute)
+                                   .send()
+                                   .expecting(HttpResponseExpectation.SC_NOT_FOUND));
     }
 
     @Test
     void testSchemaHandlerWithKeyspace()
     {
         String testRoute = "/api/v1/schema/keyspaces/testkeyspace";
-        SchemaResponse response = getBlocking(trustedClient()
-                                              .get(serverWrapper.serverPort, "localhost", testRoute)
-                                              .send()
-                                              .expecting(HttpResponseExpectation.SC_OK))
-                                  .bodyAsJson(SchemaResponse.class);
+        SchemaResponse response = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", testRoute)
+                                                             .send()
+                                                             .expecting(HttpResponseExpectation.SC_OK)).bodyAsJson(SchemaResponse.class);
         assertThat(response).isNotNull();
         assertThat(response.keyspace()).isEqualTo("testkeyspace");
         assertThat(response.schema()).isNotNull();
@@ -81,11 +73,9 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
     void testSchemaHandlerWithCaseSensitiveKeyspace()
     {
         String testRoute = "/api/v1/schema/keyspaces/\"Cycling\"";
-        SchemaResponse response = getBlocking(trustedClient()
-                                              .get(serverWrapper.serverPort, "localhost", testRoute)
-                                              .send()
-                                              .expecting(HttpResponseExpectation.SC_OK))
-                                  .bodyAsJson(SchemaResponse.class);
+        SchemaResponse response = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", testRoute)
+                                                             .send()
+                                                             .expecting(HttpResponseExpectation.SC_OK)).bodyAsJson(SchemaResponse.class);
         assertThat(response).isNotNull();
         assertThat(response.keyspace()).isEqualTo("Cycling");
         assertThat(response.schema()).isNotNull();
@@ -95,11 +85,9 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
     void testSchemaHandlerWithReservedKeywordKeyspace()
     {
         String testRoute = "/api/v1/schema/keyspaces/\"keyspace\"";
-        SchemaResponse response = getBlocking(trustedClient()
-                                              .get(serverWrapper.serverPort, "localhost", testRoute)
-                                              .send()
-                                              .expecting(HttpResponseExpectation.SC_OK))
-                                  .bodyAsJson(SchemaResponse.class);
+        SchemaResponse response = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", testRoute)
+                                                             .send()
+                                                             .expecting(HttpResponseExpectation.SC_OK)).bodyAsJson(SchemaResponse.class);
         assertThat(response).isNotNull();
         assertThat(response.keyspace()).isEqualTo("keyspace");
         assertThat(response.schema()).isNotNull();

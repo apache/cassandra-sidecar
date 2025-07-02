@@ -18,12 +18,11 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
-import java.net.URISyntaxException;
-
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.linkedin.common.DataPlatformInstance;
 import com.linkedin.common.urn.Urn;
 import datahub.event.MetadataChangeProposalWrapper;
+import java.net.URISyntaxException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -42,9 +41,8 @@ public class KeyspaceToDataPlatformInstanceConverter extends KeyspaceToAspectCon
     {
         String urn = identifiers.urnContainer(keyspace);
 
-        DataPlatformInstance aspect = new DataPlatformInstance()
-                .setPlatform(new Urn(identifiers.urnDataPlatform()))
-                .setInstance(new Urn(identifiers.urnDataPlatformInstance()));
+        DataPlatformInstance aspect = new DataPlatformInstance().setPlatform(new Urn(identifiers.urnDataPlatform()))
+                                                                .setInstance(new Urn(identifiers.urnDataPlatformInstance()));
 
         return wrap(urn, aspect);
     }

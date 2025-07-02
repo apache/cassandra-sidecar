@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.handlers.restore;
 
 import java.util.UUID;
+
 import javax.annotation.Nullable;
 
 import com.google.inject.Inject;
@@ -70,9 +71,8 @@ public class RestoreRequestValidationHandler implements Handler<RoutingContext>
         RoutingContextUtils.put(context, SC_QUALIFIED_TABLE_NAME, tableName);
         UUID jobId = verifyJobIdIfPresent(context);
         verifyJobStatusIfPresent(context);
-        verifyJobExistAndStoreAsync(context, jobId, tableName)
-        .onSuccess(ignored -> context.next())
-        .onFailure(context::fail);
+        verifyJobExistAndStoreAsync(context, jobId, tableName).onSuccess(ignored -> context.next())
+                                                              .onFailure(context::fail);
     }
 
     private QualifiedTableName verifyQualifiedTableName(RoutingContext context)
@@ -88,8 +88,8 @@ public class RestoreRequestValidationHandler implements Handler<RoutingContext>
     {
         HttpServerRequest request = context.request();
         // Skip jobId verification if the request is sent to create restore job endpoint
-        if (request.method() == HttpMethod.POST
-            && request.path().endsWith(RESTORE_JOBS))
+        if (request.method() == HttpMethod.POST && request.path()
+                                                          .endsWith(RESTORE_JOBS))
         {
             return null;
         }
@@ -97,8 +97,7 @@ public class RestoreRequestValidationHandler implements Handler<RoutingContext>
         String jobIdFromPath = context.pathParam("jobId");
         if (jobIdFromPath == null)
         {
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                    "PathParam jobId must be present for the request");
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "PathParam jobId must be present for the request");
         }
 
         UUID jobId;
@@ -108,45 +107,45 @@ public class RestoreRequestValidationHandler implements Handler<RoutingContext>
         }
         catch (Exception e)
         {
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                    "Invalid jobId - not an UUID, " + jobIdFromPath);
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid jobId - not an UUID, " + jobIdFromPath);
         }
         if (jobId.version() != 1) // Version number 1: Time-based UUID
         {
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                    "Invalid jobId - not a time-based UUID, " + jobIdFromPath);
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid jobId - not a time-based UUID, " + jobIdFromPath);
         }
         return jobId;
     }
 
-    private Future<Void> verifyJobExistAndStoreAsync(RoutingContext context, @Nullable UUID jobId,
+    private Future<Void> verifyJobExistAndStoreAsync(RoutingContext context,
+                                                     @Nullable UUID jobId,
                                                      QualifiedTableName tableName)
     {
         if (jobId == null)
         {
             return Future.succeededFuture();
         }
-        return findJob(jobId)
-               .compose(restoreJob -> {
-                   // Make sure the persisted restore job has the matching keyspace and table values
-                   // It is to avoid selecting a wrong job mistakenly
-                   if (!tableName.keyspace().equalsIgnoreCase(restoreJob.keyspaceName)
-                       || !tableName.tableName().equalsIgnoreCase(restoreJob.tableName))
-                   {
-                       return Future.failedFuture(wrapHttpException(HttpResponseStatus.NOT_FOUND,
-                                                                    "Restore job with jobId: " + jobId +
-                                                                    " is not found for table: " + tableName));
-                   }
-                   RoutingContextUtils.put(context, SC_RESTORE_JOB, restoreJob);
-                   return Future.succeededFuture();
-               });
+        return findJob(jobId).compose(restoreJob -> {
+            // Make sure the persisted restore job has the matching keyspace and table values
+            // It is to avoid selecting a wrong job mistakenly
+            if (!tableName.keyspace()
+                          .equalsIgnoreCase(restoreJob.keyspaceName)
+                    || !tableName.tableName()
+                                 .equalsIgnoreCase(restoreJob.tableName))
+            {
+                return Future.failedFuture(
+                        wrapHttpException(HttpResponseStatus.NOT_FOUND, "Restore job with jobId: " + jobId + " is not found for table: " + tableName));
+            }
+            RoutingContextUtils.put(context, SC_RESTORE_JOB, restoreJob);
+            return Future.succeededFuture();
+        });
     }
 
     private void verifyJobStatusIfPresent(RoutingContext context)
     {
         String status = context.getBodyAsJson() == null
-                        ? null
-                        : context.getBodyAsJson().getString(RestoreJobConstants.JOB_STATUS);
+                ? null
+                : context.getBodyAsJson()
+                         .getString(RestoreJobConstants.JOB_STATUS);
         if (status == null)
         {
             return;
@@ -157,22 +156,21 @@ public class RestoreRequestValidationHandler implements Handler<RoutingContext>
         }
         catch (Exception e)
         {
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                    "Unrecognized restore job status passed, " + status);
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Unrecognized restore job status passed, " + status);
         }
     }
 
     private Future<RestoreJob> findJob(UUID jobId)
     {
-        return executorPools.service().executeBlocking(() -> {
-            RestoreJob restoreJob = restoreJobs.find(jobId);
-            if (restoreJob == null)
-            {
-                throw wrapHttpException(HttpResponseStatus.NOT_FOUND,
-                                        "Restore job with id: " + jobId + " does not exist");
-            }
+        return executorPools.service()
+                            .executeBlocking(() -> {
+                                RestoreJob restoreJob = restoreJobs.find(jobId);
+                                if (restoreJob == null)
+                                {
+                                    throw wrapHttpException(HttpResponseStatus.NOT_FOUND, "Restore job with id: " + jobId + " does not exist");
+                                }
 
-            return restoreJob;
-        });
+                                return restoreJob;
+                            });
     }
 }

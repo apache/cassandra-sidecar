@@ -18,6 +18,13 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
+import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.HttpException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
@@ -31,17 +38,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.inject.Inject;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.net.SocketAddress;
-import io.vertx.ext.auth.authorization.Authorization;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -55,16 +51,16 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.DIR_INDEX_PARAM;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.DIR_TYPE_PARAM;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.replacePlaceholder;
 
 /**
- * Handler that allows Cassandra instance files to be downloaded during LiveMigration. This handler
- * doesn't stream the file but relies on {@link FileStreamHandler} to do so. This handler doesn't allow
- * using "/.." in the path to access files. This handler does not serve files which are excluded in
- * Live Migration configuration.
+ * Handler that allows Cassandra instance files to be downloaded during LiveMigration. This handler doesn't stream the file but relies on
+ * {@link FileStreamHandler} to do so. This handler doesn't allow using "/.." in the path to access files. This handler does not serve files which are excluded
+ * in Live Migration configuration.
  */
 public class LiveMigrationFileStreamHandler extends AbstractHandler<Void> implements AccessProtected
 {
@@ -120,12 +116,16 @@ public class LiveMigrationFileStreamHandler extends AbstractHandler<Void> implem
                                   SocketAddress remoteAddress,
                                   @Nullable Void request)
     {
-        String reqPath = URLDecoder.decode(rc.request().path(), StandardCharsets.UTF_8);
+        String reqPath = URLDecoder.decode(rc.request()
+                                             .path(),
+                StandardCharsets.UTF_8);
 
         if (reqPath.contains("/../") || reqPath.endsWith("/.."))
         {
             LOGGER.warn("Tried to access file using relative path({}). Rejecting the request.", reqPath);
-            rc.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
+            rc.response()
+              .setStatusCode(HttpResponseStatus.BAD_REQUEST.code())
+              .end();
             return;
         }
 
@@ -140,7 +140,9 @@ public class LiveMigrationFileStreamHandler extends AbstractHandler<Void> implem
         catch (IllegalArgumentException e)
         {
             LOGGER.warn("Invalid path", e);
-            rc.response().setStatusCode(HttpResponseStatus.NOT_FOUND.code()).end();
+            rc.response()
+              .setStatusCode(HttpResponseStatus.NOT_FOUND.code())
+              .end();
             return;
         }
 
@@ -157,49 +159,56 @@ public class LiveMigrationFileStreamHandler extends AbstractHandler<Void> implem
                      });
     }
 
-    private boolean isInvalidPath(RoutingContext rc, Path path, String reqPath, InstanceMetadata instanceMeta)
+    private boolean isInvalidPath(RoutingContext rc,
+                                  Path path,
+                                  String reqPath,
+                                  InstanceMetadata instanceMeta)
     {
         if (!Files.exists(path))
         {
             LOGGER.info("Requested file is not found. file={}", path);
-            rc.response().setStatusCode(HttpResponseStatus.NOT_FOUND.code()).end();
+            rc.response()
+              .setStatusCode(HttpResponseStatus.NOT_FOUND.code())
+              .end();
             return true;
         }
         if (Files.isDirectory(path))
         {
             LOGGER.info("Cannot transfer directory. path={}.", reqPath);
-            rc.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
+            rc.response()
+              .setStatusCode(HttpResponseStatus.BAD_REQUEST.code())
+              .end();
             return true;
         }
         if (isExcluded(path, instanceMeta))
         {
-            LOGGER.debug("Requested path or one of its parent directories is excluded from Live Migration. " +
-                         "path={}", reqPath);
-            rc.response().setStatusCode(HttpResponseStatus.NOT_FOUND.code()).end();
+            LOGGER.debug("Requested path or one of its parent directories is excluded from Live Migration. " + "path={}", reqPath);
+            rc.response()
+              .setStatusCode(HttpResponseStatus.NOT_FOUND.code())
+              .end();
             return true;
         }
         return false;
     }
 
-    private boolean isExcluded(Path localFile, InstanceMetadata instanceMetadata)
+    private boolean isExcluded(Path localFile,
+                               InstanceMetadata instanceMetadata)
     {
         return isFileExcluded(localFile, instanceMetadata) || isDirExcluded(localFile.getParent(), instanceMetadata);
     }
 
-    private boolean isFileExcluded(Path localFile, InstanceMetadata instanceMetadata)
+    private boolean isFileExcluded(Path localFile,
+                                   InstanceMetadata instanceMetadata)
     {
-        List<PathMatcher> fileExclusionMatchers = getPathMatchers(fileExclusionsByInstanceId,
-                                                                  instanceMetadata,
-                                                                  LiveMigrationConfiguration::filesToExclude);
+        List<PathMatcher> fileExclusionMatchers = getPathMatchers(fileExclusionsByInstanceId, instanceMetadata, LiveMigrationConfiguration::filesToExclude);
 
         return isMatch(localFile, fileExclusionMatchers);
     }
 
-    private boolean isDirExcluded(Path dir, InstanceMetadata instanceMetadata)
+    private boolean isDirExcluded(Path dir,
+                                  InstanceMetadata instanceMetadata)
     {
-        List<PathMatcher> dirExclusionMatchers = getPathMatchers(dirExclusionsByInstanceId,
-                                                                 instanceMetadata,
-                                                                 LiveMigrationConfiguration::directoriesToExclude);
+        List<PathMatcher> dirExclusionMatchers = getPathMatchers(dirExclusionsByInstanceId, instanceMetadata, LiveMigrationConfiguration::directoriesToExclude);
 
         // Recursively check all parent directories to see if they are excluded or not.
         while (dir != null)
@@ -224,13 +233,15 @@ public class LiveMigrationFileStreamHandler extends AbstractHandler<Void> implem
             for (String placeholderPattern : exclusions)
             {
                 Set<String> filePatterns = replacePlaceholder(placeholderPattern, instanceMetadata);
-                filePatterns.forEach(filePattern -> matchers.add(FileSystems.getDefault().getPathMatcher(filePattern)));
+                filePatterns.forEach(filePattern -> matchers.add(FileSystems.getDefault()
+                                                                            .getPathMatcher(filePattern)));
             }
             return matchers;
         });
     }
 
-    private boolean isMatch(Path localFile, List<PathMatcher> pathMatchers)
+    private boolean isMatch(Path localFile,
+                            List<PathMatcher> pathMatchers)
     {
         if (null == pathMatchers || pathMatchers.isEmpty())
         {

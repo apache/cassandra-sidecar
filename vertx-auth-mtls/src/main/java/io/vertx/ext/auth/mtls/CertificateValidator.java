@@ -31,12 +31,13 @@ public interface CertificateValidator
     /**
      * Validates if certificates shared as part of {@link CertificateCredentials} are valid.
      *
-     * <p>For example:
+     * <p>
+     * For example:
      * <ul>
-     *  <li>Verifying CA information
-     *  <li>Checking CN information
-     *  <li>Validating Issuer information
-     *  <li>Checking organization information etc
+     * <li>Verifying CA information
+     * <li>Checking CN information
+     * <li>Validating Issuer information
+     * <li>Checking organization information etc
      * </ul>
      *
      * @param credentials user certificate credentials shared

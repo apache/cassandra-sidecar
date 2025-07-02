@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,7 +82,8 @@ final class ReportSchemaHandlerTest
         @Override
         @NotNull
         public synchronized Future<MetadataWriteResponse> emit(@NotNull MetadataChangeProposal proposal,
-                                                               @Nullable Callback callback) throws IOException
+                                                               @Nullable Callback callback)
+                throws IOException
         {
             throw new IOException();
         }
@@ -162,7 +164,8 @@ final class ReportSchemaHandlerTest
     {
         String expected = IOUtils.readFully("/datahub/empty_cluster.json");
         emitter = new JsonEmitter();
-        assertThat(emitter.content().length()).isLessThanOrEqualTo(1);
+        assertThat(emitter.content()
+                          .length()).isLessThanOrEqualTo(1);
 
         client.put(server.actualPort(), LOCALHOST, ENDPOINT)
               .expect(ResponsePredicate.SC_OK)
@@ -178,7 +181,8 @@ final class ReportSchemaHandlerTest
     {
         String expected = "[\n]";
         emitter = new ThrowingEmitter();
-        assertThat(emitter.content().length()).isLessThanOrEqualTo(1);
+        assertThat(emitter.content()
+                          .length()).isLessThanOrEqualTo(1);
 
         client.put(server.actualPort(), LOCALHOST, ENDPOINT)
               .expect(ResponsePredicate.SC_INTERNAL_SERVER_ERROR)

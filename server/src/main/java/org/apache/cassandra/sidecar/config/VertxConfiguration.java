@@ -28,5 +28,6 @@ public interface VertxConfiguration
     /**
      * @return vert.x file system configuration
      */
-    @Nullable FileSystemOptionsConfiguration filesystemOptionsConfiguration();
+    @Nullable
+    FileSystemOptionsConfiguration filesystemOptionsConfiguration();
 }

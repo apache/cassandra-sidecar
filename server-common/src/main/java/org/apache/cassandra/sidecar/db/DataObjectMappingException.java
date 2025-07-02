@@ -23,7 +23,8 @@ package org.apache.cassandra.sidecar.db;
  */
 public class DataObjectMappingException extends RuntimeException
 {
-    public DataObjectMappingException(String message, Throwable cause)
+    public DataObjectMappingException(String message,
+                                      Throwable cause)
     {
         super(message, cause);
     }

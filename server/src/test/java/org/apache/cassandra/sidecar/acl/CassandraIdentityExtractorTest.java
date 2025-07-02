@@ -18,16 +18,11 @@
 
 package org.apache.cassandra.sidecar.acl;
 
-import java.security.cert.X509Certificate;
-import java.util.Collections;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import io.vertx.core.Vertx;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
+import java.security.cert.X509Certificate;
+import java.util.Collections;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
@@ -37,7 +32,9 @@ import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -62,7 +59,10 @@ class CassandraIdentityExtractorTest
     @AfterEach
     void teardown()
     {
-        TestResourceReaper.create().with(vertx).with(executorPools).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(executorPools)
+                          .close();
     }
 
     @Test
@@ -75,7 +75,8 @@ class CassandraIdentityExtractorTest
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(mockAdminIdentityResolver, cache);
 
         X509Certificate certificate = certificate("spiffe://cassandra/sidecar/test");
-        assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate)).size()).isOne();
+        assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate))
+                                    .size()).isOne();
         assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate))).contains("spiffe://cassandra/sidecar/test");
     }
 
@@ -89,8 +90,7 @@ class CassandraIdentityExtractorTest
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(mockAdminIdentityResolver, cache);
 
         X509Certificate certificate = certificate("spiffe://identity/without/role");
-        assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate)))
-        .isInstanceOf(CredentialValidationException.class);
+        assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate))).isInstanceOf(CredentialValidationException.class);
     }
 
     @Test
@@ -105,7 +105,8 @@ class CassandraIdentityExtractorTest
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(mockAdminIdentityResolver, cache);
 
         X509Certificate certificate = certificate("spiffe://sidecar/admin/identity");
-        assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate)).size()).isOne();
+        assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate))
+                                    .size()).isOne();
         assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate))).contains("spiffe://sidecar/admin/identity");
     }
 
@@ -142,10 +143,9 @@ class CassandraIdentityExtractorTest
 
     private X509Certificate certificate(String identity) throws Exception
     {
-        return new CertificateBuilder()
-               .subject("CN=Sidecar Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-               .addSanUriName(identity)
-               .buildSelfSigned()
-               .certificate();
+        return new CertificateBuilder().subject("CN=Sidecar Auth, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                       .addSanUriName(identity)
+                                       .buildSelfSigned()
+                                       .certificate();
     }
 }

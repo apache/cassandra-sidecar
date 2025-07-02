@@ -18,20 +18,18 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
-import java.util.Set;
-
 import com.google.inject.Inject;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.util.Collections;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
 import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.DATA_SCOPE;
 import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
 
@@ -44,10 +42,11 @@ public class ConnectedClientStatsHandler extends AbstractHandler<Boolean> implem
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the metadata fetcher
-     * @param executorPools   executor pools for blocking executions
+     * @param executorPools executor pools for blocking executions
      */
     @Inject
-    protected ConnectedClientStatsHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools)
+    protected ConnectedClientStatsHandler(InstanceMetadataFetcher metadataFetcher,
+                                          ExecutorPools executorPools)
     {
         super(metadataFetcher, executorPools, null);
     }
@@ -56,12 +55,12 @@ public class ConnectedClientStatsHandler extends AbstractHandler<Boolean> implem
     public Set<Authorization> requiredAuthorizations()
     {
         Set<String> eligibleResources = Set.of(DATA_SCOPE.variableAwareResource(),
-                                               // Keyspace access to system_views
-                                               "data/system_views",
-                                               // Access to all tables in keyspace system_views
-                                               "data/system_views/*",
-                                               // Access to the clients table in the system_views keyspace
-                                               "data/system_views/clients");
+                // Keyspace access to system_views
+                "data/system_views",
+                // Access to all tables in keyspace system_views
+                "data/system_views/*",
+                // Access to the clients table in the system_views keyspace
+                "data/system_views/clients");
         return Collections.singleton(CassandraPermissions.SELECT.toAuthorization(eligibleResources));
     }
 
@@ -75,7 +74,8 @@ public class ConnectedClientStatsHandler extends AbstractHandler<Boolean> implem
                                SocketAddress remoteAddress,
                                Boolean summaryOnly)
     {
-        MetricsOperations operations = metadataFetcher.delegate(host).metricsOperations();
+        MetricsOperations operations = metadataFetcher.delegate(host)
+                                                      .metricsOperations();
         executorPools.service()
                      .executeBlocking(() -> operations.connectedClientStats(summaryOnly))
                      .onSuccess(context::json)

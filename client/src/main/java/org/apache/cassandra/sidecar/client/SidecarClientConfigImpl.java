@@ -79,20 +79,20 @@ public class SidecarClientConfigImpl implements SidecarClientConfig
     /**
      * @return the minimum amount of time to wait before retrying a failed health check
      */
-     @Override
-     public Duration minimumHealthRetryDelay()
-     {
+    @Override
+    public Duration minimumHealthRetryDelay()
+    {
         return minimumHealthRetryDelay;
-     }
+    }
 
     /**
      * @return the maximum amount of time to wait before retrying a failed health check
      */
-     @Override
-     public Duration maximumHealthRetryDelay()
-     {
+    @Override
+    public Duration maximumHealthRetryDelay()
+    {
         return maximumHealthRetryDelay;
-     }
+    }
 
     public static Builder builder()
     {

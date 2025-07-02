@@ -18,13 +18,12 @@
 
 package org.apache.cassandra.sidecar.common.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.net.InetAddress;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 
 /**
@@ -135,14 +134,9 @@ public class NodeSettings
             return false;
         }
         NodeSettings that = (NodeSettings) other;
-        return Objects.equals(this.releaseVersion, that.releaseVersion)
-               && Objects.equals(this.partitioner, that.partitioner)
-               && Objects.equals(this.sidecar, that.sidecar)
-               && Objects.equals(this.datacenter, that.datacenter)
-               && Objects.equals(this.rpcAddress, that.rpcAddress)
-               && Objects.equals(this.rpcPort, that.rpcPort)
-               && Objects.equals(this.tokens, that.tokens)
-        ;
+        return Objects.equals(this.releaseVersion, that.releaseVersion) && Objects.equals(this.partitioner, that.partitioner)
+                && Objects.equals(this.sidecar, that.sidecar) && Objects.equals(this.datacenter, that.datacenter)
+                && Objects.equals(this.rpcAddress, that.rpcAddress) && Objects.equals(this.rpcPort, that.rpcPort) && Objects.equals(this.tokens, that.tokens);
     }
 
     /**
@@ -263,8 +257,7 @@ public class NodeSettings
         }
 
         /**
-         * Sets the {@code sidecarVersion} in the {@code sidecar} map and returns a reference to this Builder
-         * enabling method chaining.
+         * Sets the {@code sidecarVersion} in the {@code sidecar} map and returns a reference to this Builder enabling method chaining.
          *
          * @param sidecarVersion the {@code sidecarVersion} to set
          * @return a reference to this Builder

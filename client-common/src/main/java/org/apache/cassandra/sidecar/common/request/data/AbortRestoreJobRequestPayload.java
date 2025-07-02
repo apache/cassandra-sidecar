@@ -18,15 +18,13 @@
 
 package org.apache.cassandra.sidecar.common.request.data;
 
-import java.util.regex.Pattern;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.regex.Pattern;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.jetbrains.annotations.Nullable;
-
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_OPERATION_REASON;
 
 /**
@@ -56,6 +54,7 @@ public class AbortRestoreJobRequestPayload
 
     /**
      * As reason string is logged and persisted, the validation is performed to avoid any malicious behavior
+     *
      * @param reason client-sent string content
      * @return the same string if content is good
      */
@@ -67,8 +66,9 @@ public class AbortRestoreJobRequestPayload
         }
 
         Preconditions.checkArgument(reason.length() <= 1024, "Reason string is too long");
-        Preconditions.checkArgument(ALPHANUMERIC_BLANK_ONLY.matcher(reason).matches(),
-                                    "Reason string cannot contain non-alphanumeric-blank characters");
+        Preconditions.checkArgument(ALPHANUMERIC_BLANK_ONLY.matcher(reason)
+                                                           .matches(),
+                "Reason string cannot contain non-alphanumeric-blank characters");
         return reason;
     }
 }

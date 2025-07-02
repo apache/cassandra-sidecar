@@ -55,9 +55,7 @@ public class SnapshotUtils
 {
     public static final String STAGING_DIR = "staging";
     public static final List<MetricFilter> INCLUDE_ALL = Collections.singletonList(new MetricFilter.Regex(".*"));
-    public static final MetricRegistryFactory METRIC_REGISTRY_PROVIDER = new MetricRegistryFactory("cassandra_sidecar",
-                                                                                                   INCLUDE_ALL,
-                                                                                                   Collections.emptyList());
+    public static final MetricRegistryFactory METRIC_REGISTRY_PROVIDER = new MetricRegistryFactory("cassandra_sidecar", INCLUDE_ALL, Collections.emptyList());
 
     public static String makeStagingDir(String rootPath)
     {
@@ -85,9 +83,9 @@ public class SnapshotUtils
             Files.write(nonSnapshotFile.toPath(), new byte[0]);
         }
         // adding secondary index files
-        assertThat(new File(temporaryFolder, "d1/data/keyspace1/table1-1234/snapshots/snapshot1/.index/")
-                   .mkdirs()).isTrue();
-        Path path = temporaryFolder.toPath().resolve("d1")
+        assertThat(new File(temporaryFolder, "d1/data/keyspace1/table1-1234/snapshots/snapshot1/.index/").mkdirs()).isTrue();
+        Path path = temporaryFolder.toPath()
+                                   .resolve("d1")
                                    .resolve("data")
                                    .resolve("keyspace1")
                                    .resolve("table1-1234")
@@ -97,11 +95,11 @@ public class SnapshotUtils
                                    .resolve("secondary.db");
         Files.write(path, new byte[0]);
 
-        assertThat(new File(temporaryFolder, "d1/data/keyspace1/table1-1234")
-                   .setLastModified(System.currentTimeMillis() + 2_000_000)).isTrue();
+        assertThat(new File(temporaryFolder, "d1/data/keyspace1/table1-1234").setLastModified(System.currentTimeMillis() + 2_000_000)).isTrue();
     }
 
-    public static InstancesMetadata mockInstancesMetadata(Vertx vertx, String rootPath)
+    public static InstancesMetadata mockInstancesMetadata(Vertx vertx,
+                                                          String rootPath)
     {
         CQLSessionProvider mockSession1 = mock(CQLSessionProviderImpl.class);
         return mockInstancesMetadata(vertx, rootPath, null, mockSession1);
@@ -120,9 +118,8 @@ public class SnapshotUtils
         if (delegate == null)
         {
             JmxClient mockJmxClient = mock(JmxClient.class);
-            delegate = new CassandraAdapterDelegate(vertx, 1, versionProvider, cqlSessionProvider1, mockJmxClient,
-                                                    new DriverUtils(), null, "localhost1", 9042,
-                                                    new InstanceHealthMetrics(METRIC_REGISTRY_PROVIDER.getOrCreate(1)));
+            delegate = new CassandraAdapterDelegate(vertx, 1, versionProvider, cqlSessionProvider1, mockJmxClient, new DriverUtils(), null, "localhost1", 9042,
+                    new InstanceHealthMetrics(METRIC_REGISTRY_PROVIDER.getOrCreate(1)));
         }
 
         InstanceMetadataImpl localhost = InstanceMetadataImpl.builder()
@@ -151,22 +148,22 @@ public class SnapshotUtils
 
     public static List<String[]> mockSnapshotDirectories()
     {
-        return Arrays.asList(new String[]{ "d1", "data", "keyspace1", "table1-1234", "snapshots", "snapshot1" },
-                             new String[]{ "d1", "data", "keyspace1", "table1-1234", "snapshots", "snapshot2" },
-                             new String[]{ "d1", "data", "keyspace1", "table2-1234", "snapshots", "snapshot1" },
-                             new String[]{ "d1", "data", "keyspace1", "table2-1234", "snapshots", "snapshot2" },
-                             new String[]{ "d2", "data", "keyspace1", "table1-1234", "snapshots", "snapshot1" },
-                             new String[]{ "d2", "data", "keyspace1", "table1-1234", "snapshots", "snapshot2" },
-                             new String[]{ "d2", "data", "keyspace1", "table2-1234", "snapshots", "snapshot1" },
-                             new String[]{ "d2", "data", "keyspace1", "table2-1234", "snapshots", "snapshot2" });
+        return Arrays.asList(new String[] { "d1", "data", "keyspace1", "table1-1234", "snapshots", "snapshot1"},
+                new String[] { "d1", "data", "keyspace1", "table1-1234", "snapshots", "snapshot2"},
+                new String[] { "d1", "data", "keyspace1", "table2-1234", "snapshots", "snapshot1"},
+                new String[] { "d1", "data", "keyspace1", "table2-1234", "snapshots", "snapshot2"},
+                new String[] { "d2", "data", "keyspace1", "table1-1234", "snapshots", "snapshot1"},
+                new String[] { "d2", "data", "keyspace1", "table1-1234", "snapshots", "snapshot2"},
+                new String[] { "d2", "data", "keyspace1", "table2-1234", "snapshots", "snapshot1"},
+                new String[] { "d2", "data", "keyspace1", "table2-1234", "snapshots", "snapshot2"});
     }
 
     public static List<String[]> mockNonSnapshotDirectories()
     {
-        return Arrays.asList(new String[]{ "d1", "data", "keyspace1", "table1", "nonsnapshots", "snapshot1" },
-                             new String[]{ "d1", "data", "keyspace1", "table2", "nonsnapshots", "snapshot1" },
-                             new String[]{ "d2", "data", "keyspace1", "table1", "nonsnapshots", "snapshot1" },
-                             new String[]{ "d2", "data", "keyspace1", "table2", "nonsnapshots", "snapshot1" });
+        return Arrays.asList(new String[] { "d1", "data", "keyspace1", "table1", "nonsnapshots", "snapshot1"},
+                new String[] { "d1", "data", "keyspace1", "table2", "nonsnapshots", "snapshot1"},
+                new String[] { "d2", "data", "keyspace1", "table1", "nonsnapshots", "snapshot1"},
+                new String[] { "d2", "data", "keyspace1", "table2", "nonsnapshots", "snapshot1"});
     }
 
     public static List<String> mockSnapshotFiles()
@@ -189,32 +186,27 @@ public class SnapshotUtils
 
     public static List<String> snapshot1Instance1Files()
     {
-        return Arrays.asList("d1/data/keyspace1/table1-1234/snapshots/snapshot1/1.db",
-                             "d1/data/keyspace1/table2-1234/snapshots/snapshot1/3.db");
+        return Arrays.asList("d1/data/keyspace1/table1-1234/snapshots/snapshot1/1.db", "d1/data/keyspace1/table2-1234/snapshots/snapshot1/3.db");
     }
 
     public static List<String> snapshot1Instance2Files()
     {
-        return Arrays.asList("d2/data/keyspace1/table1-1234/snapshots/snapshot1/5.db",
-                             "d2/data/keyspace1/table2-1234/snapshots/snapshot1/7.db");
+        return Arrays.asList("d2/data/keyspace1/table1-1234/snapshots/snapshot1/5.db", "d2/data/keyspace1/table2-1234/snapshots/snapshot1/7.db");
     }
 
     public static List<String> snapshot2Files()
     {
         List<String> snapshotFiles = Arrays.asList("d1/data/keyspace1/table1-1234/snapshots/snapshot2/2.db",
-                                                   "d1/data/keyspace1/table2-1234/snapshots/snapshot2/4.db",
-                                                   "d2/data/keyspace1/table1-1234/snapshots/snapshot2/6.db",
-                                                   "d2/data/keyspace1/table2-1234/snapshots/snapshot2/8.db");
+                "d1/data/keyspace1/table2-1234/snapshots/snapshot2/4.db", "d2/data/keyspace1/table1-1234/snapshots/snapshot2/6.db",
+                "d2/data/keyspace1/table2-1234/snapshots/snapshot2/8.db");
         Collections.sort(snapshotFiles);
         return snapshotFiles;
     }
 
     public static List<String> mockNonSnapshotFiles()
     {
-        List<String> nonSnapshotFiles = Arrays.asList("d1/data/keyspace1/table1/11.db",
-                                                      "d1/data/keyspace1/table2/12.db",
-                                                      "d2/data/keyspace1/table1/13.db",
-                                                      "d2/data/keyspace1/table2/14.db");
+        List<String> nonSnapshotFiles = Arrays.asList("d1/data/keyspace1/table1/11.db", "d1/data/keyspace1/table2/12.db", "d2/data/keyspace1/table1/13.db",
+                "d2/data/keyspace1/table2/14.db");
         Collections.sort(nonSnapshotFiles);
         return nonSnapshotFiles;
     }

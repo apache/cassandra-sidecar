@@ -18,15 +18,14 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.User;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.User;
 
 /**
  * Class with utility methods for Authentication and Authorization.
@@ -59,7 +58,8 @@ public class AuthUtils
             identities.add(identity);
         }
 
-        String identitiesString = user.principal().getString("identities");
+        String identitiesString = user.principal()
+                                      .getString("identities");
         if (identitiesString != null)
         {
             String[] parts = identitiesString.split(",");
@@ -77,6 +77,9 @@ public class AuthUtils
     public static List<String> extractCassandraRoles(User user)
     {
         // noinspection unchecked
-        return Objects.requireNonNullElse(user.attributes().getJsonArray(CASSANDRA_ROLES_ATTRIBUTE_NAME), EMPTY_JSON_ARRAY).getList();
+        return Objects.requireNonNullElse(user.attributes()
+                                              .getJsonArray(CASSANDRA_ROLES_ATTRIBUTE_NAME),
+                EMPTY_JSON_ARRAY)
+                      .getList();
     }
 }

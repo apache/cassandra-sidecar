@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
+import com.datastax.driver.core.Session;
+import com.vdurmont.semver4j.Semver;
+import io.vertx.core.Vertx;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -32,19 +35,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.StreamSupport;
-
-import com.google.common.util.concurrent.Uninterruptibles;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.datastax.driver.core.Session;
-import com.vdurmont.semver4j.Semver;
-import io.vertx.core.Vertx;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.ConsistencyLevel;
 import org.apache.cassandra.distributed.api.Feature;
@@ -73,7 +63,14 @@ import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
 import org.apache.cassandra.testing.TestVersion;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
+import com.google.common.util.concurrent.Uninterruptibles;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static com.google.common.util.concurrent.Uninterruptibles.awaitUninterruptibly;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
@@ -115,7 +112,9 @@ class ClusterLeaseClaimTaskIntegrationTest
     @AfterAll
     static void cleanup()
     {
-        TestResourceReaper.create().with(vertx).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .close();
     }
 
     @ParameterizedTest(name = "{index} => version {0}")
@@ -123,7 +122,8 @@ class ClusterLeaseClaimTaskIntegrationTest
     void test(TestVersion version) throws IOException
     {
         Versions versions = Versions.find();
-        assertThat(versions).as("No dtest jar versions found").isNotNull();
+        assertThat(versions).as("No dtest jar versions found")
+                            .isNotNull();
         Versions.Version requestedVersion = versions.getLatest(new Semver(version.version(), Semver.SemverType.LOOSE));
 
         // Spin up a 3-node cluster
@@ -172,9 +172,8 @@ class ClusterLeaseClaimTaskIntegrationTest
         currentLeaseholder.get().clusterLeaseClaimTask.resetLeaseholder();
         assertThat(simulatedInstances).as("No instances are expected as we've just reset the existing leaseholder information")
                                       .allMatch(e -> !e.clusterLease.isClaimedByLocalSidecar());
-        assertThat(currentLeaseholder.get().clusterLease.toScheduleDecision())
-        .as("And the state for the current leaseholder is indeterminate")
-        .isEqualTo(ScheduleDecision.RESCHEDULE);
+        assertThat(currentLeaseholder.get().clusterLease.toScheduleDecision()).as("And the state for the current leaseholder is indeterminate")
+                                                                              .isEqualTo(ScheduleDecision.RESCHEDULE);
 
         loopAssert(3, () -> {
             runLeaseAcquireProcess(pool, simulatedInstances);
@@ -232,7 +231,8 @@ class ClusterLeaseClaimTaskIntegrationTest
             assertThat(currentLeaseholderInstances).as("Existing leaseholder is part of the selected instances")
                                                    .anyMatch(l -> l.clusterLeaseClaimTask == currentLeaseholder.get().clusterLeaseClaimTask);
             assertThat(currentLeaseholderInstances).as("New leaseholder is also part of the selected instances")
-                                                   .anyMatch(l -> l.clusterLeaseClaimTask.sidecarHostId().equals(newLeaseholderQueryResult1[0][1]));
+                                                   .anyMatch(l -> l.clusterLeaseClaimTask.sidecarHostId()
+                                                                                         .equals(newLeaseholderQueryResult1[0][1]));
             assertThat(currentLeaseholder.get().clusterLeaseClaimTask.sidecarHostId()).as("New leaseholder is not the same as the previous leaseholder")
                                                                                       .isNotEqualTo(newLeaseholderQueryResult1[0][1]);
             validateMetrics(simulatedInstances, 2);
@@ -252,7 +252,8 @@ class ClusterLeaseClaimTaskIntegrationTest
 
         // Now let's actually wait for the TTL to expire and ensure the leaseholder gives up the lease
         TestInstanceWrapper leaseholder = getCurrentLeaseholder(simulatedInstances);
-        assertThat(leaseholder).as("First find out who the leaseholder is").isNotNull();
+        assertThat(leaseholder).as("First find out who the leaseholder is")
+                               .isNotNull();
         // then disable binary
         simulateDisableBinaryOfLeaseholder(simulatedInstances);
 
@@ -266,14 +267,17 @@ class ClusterLeaseClaimTaskIntegrationTest
                                         .isEqualTo(ScheduleDecision.RESCHEDULE);
             // ensure the data is TTL'd in the database
             long rowCount = rowCountInLeaseTable(cluster);
-            assertThat(rowCount).describedAs("Lease should be TTL'd").isZero();
+            assertThat(rowCount).describedAs("Lease should be TTL'd")
+                                .isZero();
         });
     }
 
-    private void validateMetrics(List<TestInstanceWrapper> simulatedInstances, int expectedLeaseholderCount)
+    private void validateMetrics(List<TestInstanceWrapper> simulatedInstances,
+                                 int expectedLeaseholderCount)
     {
         // Validate metrics, metrics instance is shared so we check on any instance
-        CoordinationMetrics coordinationMetrics = simulatedInstances.get(0).metrics.server().coordination();
+        CoordinationMetrics coordinationMetrics = simulatedInstances.get(0).metrics.server()
+                                                                                   .coordination();
         assertThat(coordinationMetrics.participants.metric.getValue()).as("Everyone participates in this simulation")
                                                                       .isEqualTo(CONCURRENT_PROCESSES);
         assertThat(coordinationMetrics.leaseholders.metric.getValue()).as("We only have %s leaseholder(s)", expectedLeaseholderCount)
@@ -284,12 +288,14 @@ class ClusterLeaseClaimTaskIntegrationTest
     private void cleanupDeltaGaugeMetrics(List<TestInstanceWrapper> simulatedInstances)
     {
         // Validate metrics, metrics instance is shared so we check on any instance
-        CoordinationMetrics coordinationMetrics = simulatedInstances.get(0).metrics.server().coordination();
+        CoordinationMetrics coordinationMetrics = simulatedInstances.get(0).metrics.server()
+                                                                                   .coordination();
         coordinationMetrics.participants.metric.getValue();
         coordinationMetrics.leaseholders.metric.getValue();
     }
 
-    private void runLeaseAcquireProcess(ExecutorService pool, List<TestInstanceWrapper> simulatedInstances)
+    private void runLeaseAcquireProcess(ExecutorService pool,
+                                        List<TestInstanceWrapper> simulatedInstances)
     {
         cleanupDeltaGaugeMetrics(simulatedInstances);
         int electorateSize = simulatedInstances.size();
@@ -322,12 +328,12 @@ class ClusterLeaseClaimTaskIntegrationTest
         assertThat(awaitUninterruptibly(completedLatch, 1, TimeUnit.MINUTES)).isTrue();
     }
 
-    void initializeSchemas(AbstractCluster<?> cluster, SidecarLeaseSchema tableSchema)
+    void initializeSchemas(AbstractCluster<?> cluster,
+                           SidecarLeaseSchema tableSchema)
     {
-        String createKeyspaceStatement = String.format("CREATE KEYSPACE %s WITH REPLICATION = { " +
-                                                       "   'class' : 'NetworkTopologyStrategy', " +
-                                                       "   'replication_factor' : 3 " +
-                                                       "  } ;", mockSchemaConfig.keyspace());
+        String createKeyspaceStatement = String.format(
+                "CREATE KEYSPACE %s WITH REPLICATION = { " + "   'class' : 'NetworkTopologyStrategy', " + "   'replication_factor' : 3 " + "  } ;",
+                mockSchemaConfig.keyspace());
         cluster.schemaChange(createKeyspaceStatement);
         LOGGER.info("Creating keyspace with DDL: {}", createKeyspaceStatement);
         cluster.schemaChange(tableSchema.createSchemaStatement());
@@ -350,11 +356,7 @@ class ClusterLeaseClaimTaskIntegrationTest
             SidecarLeaseDatabaseAccessor accessor = buildAccessor(cqlSessionProvider);
 
             ClusterLease clusterLease = new ClusterLease();
-            ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration,
-                                                                   null,
-                                                                   accessor,
-                                                                   clusterLease,
-                                                                   metrics);
+            ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, null, accessor, clusterLease, metrics);
             task.deploy(vertx, null);
             processes.add(new TestInstanceWrapper(cqlSessionProvider, task, clusterLease, metrics));
         }
@@ -370,8 +372,7 @@ class ClusterLeaseClaimTaskIntegrationTest
 
     DisconnectableCQLSessionProvider buildCqlSession(List<InetSocketAddress> address)
     {
-        CQLSessionProvider sessionProvider =
-        new CQLSessionProviderImpl(address, address, 500, null, 0, SharedExecutorNettyOptions.INSTANCE);
+        CQLSessionProvider sessionProvider = new CQLSessionProviderImpl(address, address, 500, null, 0, SharedExecutorNettyOptions.INSTANCE);
         sessionProviderList.add(sessionProvider);
         return new DisconnectableCQLSessionProvider(sessionProvider);
     }
@@ -381,8 +382,11 @@ class ClusterLeaseClaimTaskIntegrationTest
         Session session = sessionProvider.get();
         assertThat(session).isNotNull();
         assertThat(session.getCluster()).isNotNull();
-        assertThat(session.getCluster().getMetadata()).isNotNull();
-        assertThat(session.getCluster().getMetadata().getKeyspace("sidecar_internal")).isNotNull();
+        assertThat(session.getCluster()
+                          .getMetadata()).isNotNull();
+        assertThat(session.getCluster()
+                          .getMetadata()
+                          .getKeyspace("sidecar_internal")).isNotNull();
         SidecarLeaseSchema tableSchema = new SidecarLeaseSchema(mockSchemaConfig);
         tableSchema.prepareStatements(session);
         return new SidecarLeaseDatabaseAccessor(tableSchema, sessionProvider);
@@ -391,8 +395,9 @@ class ClusterLeaseClaimTaskIntegrationTest
     static List<InetSocketAddress> buildContactList(IInstance instance)
     {
         IInstanceConfig config = instance.config();
-        return Collections.singletonList(new InetSocketAddress(config.broadcastAddress().getAddress(),
-                                                               tryGetIntConfig(config, "native_transport_port", 9042)));
+        return Collections.singletonList(new InetSocketAddress(config.broadcastAddress()
+                                                                     .getAddress(),
+                tryGetIntConfig(config, "native_transport_port", 9042)));
     }
 
     static int simulateDisableBinaryOfLeaseholder(List<TestInstanceWrapper> simulatedInstances)
@@ -412,17 +417,20 @@ class ClusterLeaseClaimTaskIntegrationTest
         return -1;
     }
 
-    static void simulateEnableBinaryOnInstance(List<TestInstanceWrapper> allSimulatedInstances, int disabledInstanceNum)
+    static void simulateEnableBinaryOnInstance(List<TestInstanceWrapper> allSimulatedInstances,
+                                               int disabledInstanceNum)
     {
         DisconnectableCQLSessionProvider sessionProvider = allSimulatedInstances.get(disabledInstanceNum).sessionProvider;
         sessionProvider.reconnect();
-        assertThat(sessionProvider.get()).as("Enabled binary on instance %s", disabledInstanceNum).isNotNull();
+        assertThat(sessionProvider.get()).as("Enabled binary on instance %s", disabledInstanceNum)
+                                         .isNotNull();
     }
 
     static TestInstanceWrapper getCurrentLeaseholder(List<TestInstanceWrapper> allSimulatedInstances)
     {
         List<TestInstanceWrapper> currentInstances = getCurrentLeaseholderInstances(allSimulatedInstances);
-        assertThat(currentInstances).as("There is more than one leaseholder. This is unexpected in the simulation").hasSize(1);
+        assertThat(currentInstances).as("There is more than one leaseholder. This is unexpected in the simulation")
+                                    .hasSize(1);
         return currentInstances.get(0);
     }
 
@@ -436,7 +444,8 @@ class ClusterLeaseClaimTaskIntegrationTest
                 instances.add(instance);
             }
         }
-        assertThat(instances).as("Expected to have at least one instance").isNotNull();
+        assertThat(instances).as("Expected to have at least one instance")
+                             .isNotNull();
         return instances;
     }
 
@@ -444,18 +453,17 @@ class ClusterLeaseClaimTaskIntegrationTest
     {
         SimpleQueryResult rows = cluster.getFirstRunningInstance()
                                         .coordinator()
-                                        .executeWithResult("SELECT * FROM sidecar_internal.sidecar_lease_v1 ALLOW FILTERING",
-                                                           ConsistencyLevel.SERIAL);
-        return StreamSupport.stream(rows.spliterator(), false).count();
+                                        .executeWithResult("SELECT * FROM sidecar_internal.sidecar_lease_v1 ALLOW FILTERING", ConsistencyLevel.SERIAL);
+        return StreamSupport.stream(rows.spliterator(), false)
+                            .count();
     }
 
     static Object[][] queryCurrentLeaseholders(AbstractCluster<?> cluster)
     {
-        Object[][] result =
-        cluster.getFirstRunningInstance()
-               .coordinator()
-               .execute("SELECT writetime(owner), owner FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'cluster_lease_holder'",
-                        ConsistencyLevel.SERIAL);
+        Object[][] result = cluster.getFirstRunningInstance()
+                                   .coordinator()
+                                   .execute("SELECT writetime(owner), owner FROM sidecar_internal.sidecar_lease_v1 WHERE name = 'cluster_lease_holder'",
+                                           ConsistencyLevel.SERIAL);
         assertThat(result).isNotNull();
         assertThat(result).hasDimensions(1, 2);
         return result;
@@ -468,10 +476,10 @@ class ClusterLeaseClaimTaskIntegrationTest
         {
             try
             {
-                cluster.getFirstRunningInstance().coordinator().execute("DELETE FROM sidecar_internal.sidecar_lease_v1 " +
-                                                                        "WHERE name = 'cluster_lease_holder' " +
-                                                                        "IF EXISTS",
-                                                                        ConsistencyLevel.QUORUM);
+                cluster.getFirstRunningInstance()
+                       .coordinator()
+                       .execute("DELETE FROM sidecar_internal.sidecar_lease_v1 " + "WHERE name = 'cluster_lease_holder' " + "IF EXISTS",
+                               ConsistencyLevel.QUORUM);
                 LOGGER.info("Successfully removed current leaseholder from database");
                 return;
             }
@@ -489,7 +497,8 @@ class ClusterLeaseClaimTaskIntegrationTest
      */
     static class TestServiceConfigurationImpl extends ServiceConfigurationImpl
     {
-        private final String hostId = UUID.randomUUID().toString();
+        private final String hostId = UUID.randomUUID()
+                                          .toString();
         private final SchemaKeyspaceConfiguration schemaKeyspaceConfiguration;
 
         TestServiceConfigurationImpl(SchemaKeyspaceConfiguration schemaKeyspaceConfiguration)

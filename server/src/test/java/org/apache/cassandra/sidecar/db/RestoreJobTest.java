@@ -45,14 +45,17 @@ public class RestoreJobTest
         return createTestingJob(jobId, RestoreJobStatus.CREATED);
     }
 
-    public static RestoreJob createTestingJob(UUID jobId, RestoreJobStatus status) throws DataObjectMappingException
+    public static RestoreJob createTestingJob(UUID jobId,
+                                              RestoreJobStatus status)
+            throws DataObjectMappingException
     {
         return createTestingJob(jobId, status, null);
     }
 
     public static RestoreJob createTestingJob(UUID jobId,
                                               RestoreJobStatus status,
-                                              ConsistencyLevel consistencyLevel) throws DataObjectMappingException
+                                              ConsistencyLevel consistencyLevel)
+            throws DataObjectMappingException
     {
         return createTestingJob(jobId, "ks", status, consistencyLevel, null);
     }
@@ -60,7 +63,8 @@ public class RestoreJobTest
     public static RestoreJob createTestingJob(UUID jobId,
                                               String keyspace,
                                               RestoreJobStatus status,
-                                              ConsistencyLevel consistencyLevel) throws DataObjectMappingException
+                                              ConsistencyLevel consistencyLevel)
+            throws DataObjectMappingException
     {
         return createTestingJob(jobId, keyspace, status, consistencyLevel, null);
     }
@@ -69,7 +73,8 @@ public class RestoreJobTest
                                               String keyspace,
                                               RestoreJobStatus status,
                                               ConsistencyLevel consistencyLevel,
-                                              String dcName) throws DataObjectMappingException
+                                              String dcName)
+            throws DataObjectMappingException
     {
         RestoreJob.Builder builder = RestoreJob.builder();
         builder.createdAt(RestoreJob.toLocalDate(jobId))
@@ -84,15 +89,17 @@ public class RestoreJobTest
         return builder.build();
     }
 
-    public static RestoreJob createUpdatedJob(UUID jobId, String jobAgent,
+    public static RestoreJob createUpdatedJob(UUID jobId,
+                                              String jobAgent,
                                               RestoreJobStatus status,
                                               RestoreJobSecrets secrets,
                                               Date expireAt)
-    throws DataObjectMappingException
+            throws DataObjectMappingException
     {
         RestoreJob.Builder builder = RestoreJob.builder();
         builder.createdAt(RestoreJob.toLocalDate(jobId))
-               .jobId(jobId).jobAgent(jobAgent)
+               .jobId(jobId)
+               .jobAgent(jobAgent)
                .jobStatus(status)
                .jobSecrets(secrets)
                .expireAt(expireAt);
@@ -115,26 +122,23 @@ public class RestoreJobTest
             RestoreJob job = createTestingJob(jobId, status);
             if (status == RestoreJobStatus.CREATED)
             {
-                assertThatThrownBy(job::expectedNextRangeStatus)
-                .hasMessage("Cannot check progress for restore job in CREATED status. jobId: " + jobId);
+                assertThatThrownBy(job::expectedNextRangeStatus).hasMessage("Cannot check progress for restore job in CREATED status. jobId: " + jobId);
             }
             else if (status == RestoreJobStatus.STAGE_READY)
             {
-                assertThat(job.expectedNextRangeStatus())
-                .describedAs("Expecting the ranges in STAGE_READY job to enter STAGED")
-                .isEqualTo(RestoreRangeStatus.STAGED);
+                assertThat(job.expectedNextRangeStatus()).describedAs("Expecting the ranges in STAGE_READY job to enter STAGED")
+                                                         .isEqualTo(RestoreRangeStatus.STAGED);
             }
             else if (status == RestoreJobStatus.STAGED)
             {
-                assertThat(job.expectedNextRangeStatus())
-                .describedAs("Expecting the ranges in STAGED job to remain STAGED")
-                .isEqualTo(RestoreRangeStatus.STAGED);
+                assertThat(job.expectedNextRangeStatus()).describedAs("Expecting the ranges in STAGED job to remain STAGED")
+                                                         .isEqualTo(RestoreRangeStatus.STAGED);
             }
             else
             {
-                assertThat(job.expectedNextRangeStatus())
-                .describedAs("Expecting the ranges in IMPORT_READY or SUCCEEDED or FAILED or ABORTED job to enter SUCCEEDED")
-                .isEqualTo(RestoreRangeStatus.SUCCEEDED);
+                assertThat(job.expectedNextRangeStatus()).describedAs(
+                        "Expecting the ranges in IMPORT_READY or SUCCEEDED or FAILED or ABORTED job to enter SUCCEEDED")
+                                                         .isEqualTo(RestoreRangeStatus.SUCCEEDED);
             }
         }
     }
@@ -145,9 +149,9 @@ public class RestoreJobTest
         UUID jobId = UUIDs.timeBased();
         for (ConsistencyLevel localCL : Arrays.asList(ConsistencyLevel.LOCAL_QUORUM, ConsistencyLevel.LOCAL_ONE))
         {
-            assertThatThrownBy(() -> createTestingJob(jobId, RestoreJobStatus.CREATED, localCL))
-            .isExactlyInstanceOf(IllegalArgumentException.class)
-            .hasMessage("When local consistency level is used, localDatacenter must also present");
+            assertThatThrownBy(() -> createTestingJob(jobId, RestoreJobStatus.CREATED, localCL)).isExactlyInstanceOf(IllegalArgumentException.class)
+                                                                                                .hasMessage(
+                                                                                                        "When local consistency level is used, localDatacenter must also present");
         }
     }
 
@@ -168,7 +172,9 @@ public class RestoreJobTest
     {
         long timestamp = System.currentTimeMillis();
         Date expireAt = new Date(timestamp + TimeUnit.HOURS.toMillis(1));
-        RestoreJob job = createNewTestingJob(UUIDs.startOf(timestamp)).unbuild().expireAt(expireAt).build();
+        RestoreJob job = createNewTestingJob(UUIDs.startOf(timestamp)).unbuild()
+                                                                      .expireAt(expireAt)
+                                                                      .build();
         assertThat(job.hasExpired(timestamp)).isFalse();
         assertThat(job.hasExpired(timestamp - 1000)).isFalse();
         assertThat(job.hasExpired(expireAt.getTime() - 1)).isFalse();

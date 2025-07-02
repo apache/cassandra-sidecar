@@ -74,20 +74,20 @@ public class RestoreJob
     }
 
     /**
-     * Create from a row read from Cassandra.
-     * Read {@code SidecarSchema.CqlLiterals#RESTORE_JOB_TABLE_SCHEMA} for the schema.
+     * Create from a row read from Cassandra. Read {@code SidecarSchema.CqlLiterals#RESTORE_JOB_TABLE_SCHEMA} for the schema.
      *
      * @param row cannot be null
      */
     public static RestoreJob from(@NotNull Row row) throws DataObjectMappingException
     {
         Builder builder = new Builder();
-        ConsistencyConfig consistencyConfig = ConsistencyConfig.parseString(row.getString("consistency_level"),
-                                                                            row.getString("local_datacenter"));
+        ConsistencyConfig consistencyConfig = ConsistencyConfig.parseString(row.getString("consistency_level"), row.getString("local_datacenter"));
         builder.createdAt(row.getDate("created_at"))
-               .jobId(row.getUUID("job_id")).jobAgent(row.getString("job_agent"))
+               .jobId(row.getUUID("job_id"))
+               .jobAgent(row.getString("job_agent"))
                .bucketCount((short) 0) // always use 0 for now; TODO - Add bucketCount field to CreateRestoreJobRequestPayload
-               .keyspace(row.getString("keyspace_name")).table(row.getString("table_name"))
+               .keyspace(row.getString("keyspace_name"))
+               .table(row.getString("table_name"))
                .jobStatusText(row.getString("status"))
                .jobSecrets(decodeJobSecrets(row.getBytes("blob_secrets")))
                .expireAt(row.getTimestamp("expire_at"))
@@ -112,34 +112,23 @@ public class RestoreJob
 
     private static RestoreJobSecrets decodeJobSecrets(ByteBuffer secretsBytes)
     {
-        return secretsBytes == null
-               ? null
-               : deserializeJsonBytes(secretsBytes,
-                                      RestoreJobSecrets.class,
-                                      "secrets");
+        return secretsBytes == null ? null : deserializeJsonBytes(secretsBytes, RestoreJobSecrets.class, "secrets");
     }
 
     private static SSTableImportOptions decodeSSTableImportOptions(ByteBuffer importOptionsBytes)
     {
-        return importOptionsBytes == null
-               ? null
-               : deserializeJsonBytes(importOptionsBytes,
-                                      SSTableImportOptions.class,
-                                      "importOptions");
+        return importOptionsBytes == null ? null : deserializeJsonBytes(importOptionsBytes, SSTableImportOptions.class, "importOptions");
     }
 
     private RestoreJob(Builder builder)
     {
-        Preconditions.checkArgument(builder.consistencyLevel == null
-                                    || !builder.consistencyLevel.isLocalDcOnly
-                                    || StringUtils.isNotEmpty(builder.localDatacenter),
-                                    "When local consistency level is used, localDatacenter must also present");
+        Preconditions.checkArgument(
+                builder.consistencyLevel == null || !builder.consistencyLevel.isLocalDcOnly || StringUtils.isNotEmpty(builder.localDatacenter),
+                "When local consistency level is used, localDatacenter must also present");
         // log a warning when consistency level is absent or no local, but localDatacenter is defined
-        if ((builder.consistencyLevel == null || !builder.consistencyLevel.isLocalDcOnly)
-            && StringUtils.isNotEmpty(builder.localDatacenter))
+        if ((builder.consistencyLevel == null || !builder.consistencyLevel.isLocalDcOnly) && StringUtils.isNotEmpty(builder.localDatacenter))
         {
-            LOGGER.warn("'localDatacenter' is defined but ignored. consistencyLevel={} localDatacenter={}",
-                        builder.consistencyLevel, builder.localDatacenter);
+            LOGGER.warn("'localDatacenter' is defined but ignored. consistencyLevel={} localDatacenter={}", builder.consistencyLevel, builder.localDatacenter);
         }
         this.createdAt = builder.createdAt;
         this.jobId = builder.jobId;
@@ -149,9 +138,7 @@ public class RestoreJob
         this.status = builder.status;
         this.statusText = builder.statusText;
         this.secrets = builder.secrets;
-        this.importOptions = builder.importOptions == null
-                             ? SSTableImportOptions.defaults()
-                             : builder.importOptions;
+        this.importOptions = builder.importOptions == null ? SSTableImportOptions.defaults() : builder.importOptions;
         this.expireAt = builder.expireAt;
         this.bucketCount = builder.bucketCount;
         this.consistencyLevel = builder.consistencyLevel;
@@ -177,6 +164,7 @@ public class RestoreJob
 
     /**
      * Check whether the {@link RestoreJob} has expired at the referenceTimestampMillis
+     *
      * @param referenceTimestampMillis the number of milliseconds since January 1, 1970, 00:00:00 GMT
      * @return true if the job expires at the referenceTimestampMillis; false, otherwise
      */
@@ -187,16 +175,14 @@ public class RestoreJob
 
     /**
      * Determine the expected range status based on the job status
+     *
      * @return the expected next range status in order to succeed
      */
     public RestoreRangeStatus expectedNextRangeStatus()
     {
-        Preconditions.checkArgument(status != RestoreJobStatus.CREATED,
-                                    "Cannot check progress for restore job in CREATED status. jobId: " + jobId);
+        Preconditions.checkArgument(status != RestoreJobStatus.CREATED, "Cannot check progress for restore job in CREATED status. jobId: " + jobId);
 
-        return status == RestoreJobStatus.STAGE_READY || status == RestoreJobStatus.STAGED
-               ? RestoreRangeStatus.STAGED
-               : RestoreRangeStatus.SUCCEEDED;
+        return status == RestoreJobStatus.STAGE_READY || status == RestoreJobStatus.STAGED ? RestoreRangeStatus.STAGED : RestoreRangeStatus.SUCCEEDED;
     }
 
     @Nullable
@@ -210,15 +196,11 @@ public class RestoreJob
      */
     public String toString()
     {
-        return String.format("RestoreJob{" +
-                             "createdAt='%s', jobId='%s', keyspaceName='%s', " +
-                             "tableName='%s', status='%s', secrets='%s', importOptions='%s', " +
-                             "expireAt='%s', bucketCount='%s', consistencyLevel='%s', localDatacenter='%s'}",
-                             createdAt.toString(), jobId.toString(),
-                             keyspaceName, tableName,
-                             statusText, secrets, importOptions,
-                             expireAt, bucketCount,
-                             consistencyLevel, localDatacenter);
+        return String.format(
+                "RestoreJob{" + "createdAt='%s', jobId='%s', keyspaceName='%s', " + "tableName='%s', status='%s', secrets='%s', importOptions='%s', "
+                        + "expireAt='%s', bucketCount='%s', consistencyLevel='%s', localDatacenter='%s'}",
+                createdAt.toString(), jobId.toString(), keyspaceName, tableName, statusText, secrets, importOptions, expireAt, bucketCount, consistencyLevel,
+                localDatacenter);
     }
 
     public static LocalDate toLocalDate(UUID jobId)
@@ -226,7 +208,9 @@ public class RestoreJob
         return LocalDate.fromMillisSinceEpoch(UUIDs.unixTimestamp(jobId));
     }
 
-    private static <T> T deserializeJsonBytes(ByteBuffer byteBuffer, Class<T> type, String fieldNameHint)
+    private static <T> T deserializeJsonBytes(ByteBuffer byteBuffer,
+                                              Class<T> type,
+                                              String fieldNameHint)
     {
         try
         {
@@ -317,8 +301,9 @@ public class RestoreJob
         }
 
         /**
-         * Assign the job status; primarily used when loading the restore job from database
-         * Note that the status text might contain additional description than the status enum
+         * Assign the job status; primarily used when loading the restore job from database Note that the status text might contain additional description than
+         * the status enum
+         *
          * @param statusText status text read from database
          */
         public Builder jobStatusText(String statusText)
@@ -381,6 +366,7 @@ public class RestoreJob
 
         /**
          * Resolve the manager of the restore job based on the existence of consistencyLevel
+         *
          * @return the resolved Manager
          */
         private Manager resolveJobManager()
@@ -392,20 +378,18 @@ public class RestoreJob
     }
 
     /**
-     * The manager of the restore job. The variant could change the code path a restore job runs.
-     * It is a feature switch essentially.
+     * The manager of the restore job. The variant could change the code path a restore job runs. It is a feature switch essentially.
      */
     public enum Manager
     {
         /**
-         * The restore job is managed by Spark. Sidecar instances are just simple workers. They rely on client/Spark
-         * for decision-making.
+         * The restore job is managed by Spark. Sidecar instances are just simple workers. They rely on client/Spark for decision-making.
          */
         SPARK,
 
         /**
-         * The restore job is managed by Sidecar. Sidecar instances should assign slices to sidecar instances
-         * and check whether the job has met the consistency level to complete the job.
+         * The restore job is managed by Sidecar. Sidecar instances should assign slices to sidecar instances and check whether the job has met the consistency
+         * level to complete the job.
          */
         SIDECAR,
     }

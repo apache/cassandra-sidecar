@@ -32,9 +32,9 @@ public interface MutualTlsAuthentication extends AuthenticationProvider
     /**
      * Create a MTLS authentication provider
      *
-     * @param vertx                Vertx instance
+     * @param vertx Vertx instance
      * @param certificateValidator for validating details within {@link io.vertx.ext.auth.authentication.CertificateCredentials}
-     * @param identityExtractor    for extracting valid identity out of {@link io.vertx.ext.auth.authentication.CertificateCredentials}
+     * @param identityExtractor for extracting valid identity out of {@link io.vertx.ext.auth.authentication.CertificateCredentials}
      * @return the authentication provider
      */
     static MutualTlsAuthentication create(Vertx vertx,

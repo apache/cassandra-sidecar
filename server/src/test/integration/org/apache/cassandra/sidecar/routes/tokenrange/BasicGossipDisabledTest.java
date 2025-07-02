@@ -18,15 +18,13 @@
 
 package org.apache.cassandra.sidecar.routes.tokenrange;
 
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
-
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -36,18 +34,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class BasicGossipDisabledTest extends BaseTokenRangeIntegrationTest
 {
     @CassandraIntegrationTest
-    void tokenRangeEndpointFailsWhenGossipIsDisabled(CassandraTestContext context, VertxTestContext testContext)
-    throws Exception
+    void tokenRangeEndpointFailsWhenGossipIsDisabled(CassandraTestContext context,
+                                                     VertxTestContext testContext)
+            throws Exception
     {
-        int disableGossip = context.cluster().getFirstRunningInstance().nodetool("disablegossip");
+        int disableGossip = context.cluster()
+                                   .getFirstRunningInstance()
+                                   .nodetool("disablegossip");
         assertThat(disableGossip).isEqualTo(0);
         retrieveMappingWithKeyspace(testContext, TEST_KEYSPACE, response -> {
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
             JsonObject payload = response.bodyAsJsonObject();
             assertThat(payload.getString("status")).isEqualTo("Service Unavailable");
             assertThat(payload.getInteger("code")).isEqualTo(503);
-            assertThat(payload.getString("message"))
-            .isEqualTo("Gossip is required for the operation but it is disabled");
+            assertThat(payload.getString("message")).isEqualTo("Gossip is required for the operation but it is disabled");
             testContext.completeNow();
         });
     }

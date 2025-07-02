@@ -18,34 +18,32 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
+import io.vertx.core.Closeable;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import io.vertx.core.Closeable;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
 import org.jetbrains.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * This class manages the scheduling and execution of {@link PeriodicTask}s.
- * For the {@link PeriodicTask} that also is {@link ExecuteOnClusterLeaseholderOnly}, the executor ensures
- * the task execution is only performed when {@link ClusterLease} is claimed by the local Sidecar instance.
+ * This class manages the scheduling and execution of {@link PeriodicTask}s. For the {@link PeriodicTask} that also is {@link ExecuteOnClusterLeaseholderOnly},
+ * the executor ensures the task execution is only performed when {@link ClusterLease} is claimed by the local Sidecar instance.
  *
- * <p>The execution of each {@link PeriodicTask} is <i>ordered</i> and <i>serial</i>, meanwhile there could
- * be concurrent execution of different {@link PeriodicTask}s.
- * <p>Memory consistency effects: Actions in the prior {@link PeriodicTask} run <i>happen-before</i> its
- * next run, perhaps in another thread. In other words, writes in the prior run can be read by its next run,
- * as if it is running in a single thread.
+ * <p>
+ * The execution of each {@link PeriodicTask} is <i>ordered</i> and <i>serial</i>, meanwhile there could be concurrent execution of different
+ * {@link PeriodicTask}s.
+ * <p>
+ * Memory consistency effects: Actions in the prior {@link PeriodicTask} run <i>happen-before</i> its next run, perhaps in another thread. In other words,
+ * writes in the prior run can be read by its next run, as if it is running in a single thread.
  */
 public class PeriodicTaskExecutor implements Closeable
 {
@@ -59,7 +57,8 @@ public class PeriodicTaskExecutor implements Closeable
     private final TaskExecutorPool internalPool;
     private final ClusterLease clusterLease;
 
-    public PeriodicTaskExecutor(ExecutorPools executorPools, ClusterLease clusterLease)
+    public PeriodicTaskExecutor(ExecutorPools executorPools,
+                                ClusterLease clusterLease)
     {
         this.internalPool = executorPools.internal();
         this.clusterLease = clusterLease;
@@ -67,22 +66,29 @@ public class PeriodicTaskExecutor implements Closeable
 
     /**
      * Schedules the {@code task} iff it has not been scheduled yet.
-     * <p>A task is identified by the combination of its class name and the {@link PeriodicTask#name()}, see {@link PeriodicTaskKey}.
-     * There is one and exactly one task of the same identity can be scheduled.
+     * <p>
+     * A task is identified by the combination of its class name and the {@link PeriodicTask#name()}, see {@link PeriodicTaskKey}. There is one and exactly one
+     * task of the same identity can be scheduled.
      *
      * @param task the task to execute
      */
     public void schedule(PeriodicTask task)
     {
         PeriodicTaskKey key = new PeriodicTaskKey(task);
-        schedule(key, 0, task.initialDelay().to(TimeUnit.MILLISECONDS), 0);
+        schedule(key, 0, task.initialDelay()
+                             .to(TimeUnit.MILLISECONDS),
+                0);
     }
 
-    private void schedule(PeriodicTaskKey key, long priorExecDurationMillis, long delayMillis, long execCount)
+    private void schedule(PeriodicTaskKey key,
+                          long priorExecDurationMillis,
+                          long delayMillis,
+                          long execCount)
     {
         long actualDelayMillis = delayMillis - priorExecDurationMillis;
         AtomicBoolean runNow = new AtomicBoolean(actualDelayMillis <= 0);
-        timerIds.compute(key, (k, tid) -> {
+        timerIds.compute(key, (k,
+                               tid) -> {
             // The periodic task has been scheduled already. Exit early and avoid scheduling the duplication
             if (tid != null && execCount == 0)
             {
@@ -101,16 +107,14 @@ public class PeriodicTaskExecutor implements Closeable
 
             if (tid == null && execCount != 0)
             {
-                LOGGER.info("The executor is closed or the task is already unscheduled. " +
-                            "Avoid scheduling more runs." +
-                            "tid=null task='{}' execCount={}", key, execCount);
+                LOGGER.info("The executor is closed or the task is already unscheduled. " + "Avoid scheduling more runs." + "tid=null task='{}' execCount={}",
+                        key, execCount);
                 runNow.set(false);
                 return null;
             }
 
-            LOGGER.debug("Scheduling task {}. task='{}' execCount={}",
-                         runNow.get() ? "immediately" : "in " + actualDelayMillis + " milliseconds",
-                         key, execCount);
+            LOGGER.debug("Scheduling task {}. task='{}' execCount={}", runNow.get() ? "immediately" : "in " + actualDelayMillis + " milliseconds", key,
+                    execCount);
 
             // If run immediately, do not execute within the compute block.
             // Return the placeholder timer ID, and execute after exiting the compute block.
@@ -130,13 +134,15 @@ public class PeriodicTaskExecutor implements Closeable
 
     /**
      * This method ensures the happens-before memory consistency effect between runs of the same {@link PeriodicTask}.
-     * <p>Each run, essentially, is executed at {@link java.util.concurrent.Executor#execute(Runnable)}. At the end of the
-     * execution, the executor schedules a new run. When the scheduled time comes, the next run is executed.
-     * There are the following happens-before relationships, <i>hb(prior_run, scheduler></i> and <i>hb(scheduler, next_run)</i>.
-     * Therefore, <i>hb(prior_run, next_run)</i>, i.e. the effects from prior_run are visible to next_run.
-     * <p>More on <a href="https://docs.oracle.com/javase/specs/jls/se11/html/jls-17.html#jls-17.4">Java Memory Model</a>
+     * <p>
+     * Each run, essentially, is executed at {@link java.util.concurrent.Executor#execute(Runnable)}. At the end of the execution, the executor schedules a new
+     * run. When the scheduled time comes, the next run is executed. There are the following happens-before relationships, <i>hb(prior_run, scheduler></i> and
+     * <i>hb(scheduler, next_run)</i>. Therefore, <i>hb(prior_run, next_run)</i>, i.e. the effects from prior_run are visible to next_run.
+     * <p>
+     * More on <a href="https://docs.oracle.com/javase/specs/jls/se11/html/jls-17.html#jls-17.4">Java Memory Model</a>
      */
-    private void executeAndScheduleNext(PeriodicTaskKey key, long execCount)
+    private void executeAndScheduleNext(PeriodicTaskKey key,
+                                        long execCount)
     {
         Promise<Void> runPromise = Promise.promise();
         if (activeRuns.computeIfAbsent(key, k -> runPromise.future()) != runPromise)
@@ -178,7 +184,8 @@ public class PeriodicTaskExecutor implements Closeable
     {
         PeriodicTaskKey key = new PeriodicTaskKey(task);
         AtomicBoolean alreadyUnscheduled = new AtomicBoolean(false);
-        Long timerId = timerIds.computeIfPresent(key, (k, tid) -> {
+        Long timerId = timerIds.computeIfPresent(key, (k,
+                                                       tid) -> {
             alreadyUnscheduled.set(tid == UNSCHEDULED_STATE_TIMER_ID);
             if (tid > 0)
             {
@@ -205,23 +212,22 @@ public class PeriodicTaskExecutor implements Closeable
         // If so, close the task once the run is completed; the task entry is removed on the next schedule.
         // Otherwise, the task entry should be removed here, as there are no more schedules.
         boolean removeEntry = !activeRuns.containsKey(key);
-        return activeRuns
-               .getOrDefault(key, Future.succeededFuture())
-               .andThen(ignored -> {
-                   try
-                   {
-                       task.close();
-                   }
-                   catch (Throwable cause)
-                   {
-                       // just log any error while closing and continue
-                       LOGGER.warn("Failed to close task during unscheduling. task='{}'", key, cause);
-                   }
-                   if (removeEntry)
-                   {
-                       timerIds.remove(key);
-                   }
-               });
+        return activeRuns.getOrDefault(key, Future.succeededFuture())
+                         .andThen(ignored -> {
+                             try
+                             {
+                                 task.close();
+                             }
+                             catch (Throwable cause)
+                             {
+                                 // just log any error while closing and continue
+                                 LOGGER.warn("Failed to close task during unscheduling. task='{}'", key, cause);
+                             }
+                             if (removeEntry)
+                             {
+                                 timerIds.remove(key);
+                             }
+                         });
     }
 
     @Override
@@ -230,7 +236,8 @@ public class PeriodicTaskExecutor implements Closeable
         LOGGER.info("Closing...");
         try
         {
-            timerIds.keySet().forEach(key -> unschedule(key.task));
+            timerIds.keySet()
+                    .forEach(key -> unschedule(key.task));
             timerIds.clear();
             completion.complete();
         }
@@ -247,7 +254,9 @@ public class PeriodicTaskExecutor implements Closeable
         return promise.future();
     }
 
-    private void executeInternal(Promise<ScheduleDecision> promise, PeriodicTaskKey key, long execCount)
+    private void executeInternal(Promise<ScheduleDecision> promise,
+                                 PeriodicTaskKey key,
+                                 long execCount)
     {
         PeriodicTask periodicTask = key.task;
         ScheduleDecision scheduleDecision = consolidateScheduleDecision(periodicTask);
@@ -255,7 +264,8 @@ public class PeriodicTaskExecutor implements Closeable
         if (scheduleDecision == ScheduleDecision.EXECUTE)
         {
             Promise<Void> taskRunPromise = Promise.promise();
-            taskRunPromise.future().onComplete(ignored -> promise.tryComplete(ScheduleDecision.EXECUTE));
+            taskRunPromise.future()
+                          .onComplete(ignored -> promise.tryComplete(ScheduleDecision.EXECUTE));
             try
             {
                 periodicTask.execute(taskRunPromise);
@@ -285,8 +295,7 @@ public class PeriodicTaskExecutor implements Closeable
         // decides to execute or reschedule.
         // For example, if the local sidecar is not the cluster leaseholder, the lease
         // ownership should override the decision.
-        if (decisionFromTask != ScheduleDecision.SKIP
-            && periodicTask instanceof ExecuteOnClusterLeaseholderOnly)
+        if (decisionFromTask != ScheduleDecision.SKIP && periodicTask instanceof ExecuteOnClusterLeaseholderOnly)
         {
             return clusterLease.toScheduleDecision();
         }
@@ -302,7 +311,9 @@ public class PeriodicTaskExecutor implements Closeable
 
         PeriodicTaskKey(PeriodicTask task)
         {
-            this.fqcnAndName = task.getClass().getCanonicalName() + task.name();
+            this.fqcnAndName = task.getClass()
+                                   .getCanonicalName()
+                    + task.name();
             this.task = task;
         }
 

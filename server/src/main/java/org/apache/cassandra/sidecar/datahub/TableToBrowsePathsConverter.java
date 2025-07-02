@@ -29,7 +29,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class TableToBrowsePathsConverter extends TableToAspectConverter<BrowsePaths>
 {
-    protected static final String PROD = "prod";  // DataHub requires this to be {@code prod} regardless
+    protected static final String PROD = "prod"; // DataHub requires this to be {@code prod} regardless
 
     public TableToBrowsePathsConverter(@NotNull IdentifiersProvider identifiers)
     {
@@ -42,16 +42,11 @@ public class TableToBrowsePathsConverter extends TableToAspectConverter<BrowsePa
     {
         String urn = identifiers.urnDataset(table);
 
-        String path = String.format("/%s/%s/%s/%s/%s/%s/",
-                PROD,
-                identifiers.platform(),
-                identifiers.environment(),
-                identifiers.application(),
-                identifiers.cluster(),
-                table.getKeyspace().getName());
+        String path = String.format("/%s/%s/%s/%s/%s/%s/", PROD, identifiers.platform(), identifiers.environment(), identifiers.application(),
+                identifiers.cluster(), table.getKeyspace()
+                                            .getName());
 
-        BrowsePaths aspect = new BrowsePaths()
-                .setPaths(new StringArray(path));
+        BrowsePaths aspect = new BrowsePaths().setPaths(new StringArray(path));
 
         return wrap(urn, aspect);
     }

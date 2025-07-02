@@ -18,19 +18,16 @@
 
 package org.apache.cassandra.sidecar.cluster.instance;
 
+import com.codahale.metrics.MetricRegistry;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
-import com.codahale.metrics.MetricRegistry;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
@@ -116,28 +113,26 @@ class InstanceMetadataImplTest
     @Test
     void failsWhenDataDirsAreNotConfigured()
     {
-        assertThatNullPointerException()
-        .isThrownBy(() -> InstanceMetadataImpl.builder()
-                                              .id(ID)
-                                              .host(HOST)
-                                              .port(PORT)
-                                              .metricRegistry(METRIC_REGISTRY)
-                                              .build())
-        .withMessageContaining("dataDirs are required when storageDir is not configured");
+        assertThatNullPointerException().isThrownBy(() -> InstanceMetadataImpl.builder()
+                                                                              .id(ID)
+                                                                              .host(HOST)
+                                                                              .port(PORT)
+                                                                              .metricRegistry(METRIC_REGISTRY)
+                                                                              .build())
+                                        .withMessageContaining("dataDirs are required when storageDir is not configured");
     }
 
     @Test
     void failsWhenDataDirsAreEmpty()
     {
-        assertThatIllegalArgumentException()
-        .isThrownBy(() -> InstanceMetadataImpl.builder()
-                                              .id(ID)
-                                              .host(HOST)
-                                              .port(PORT)
-                                              .metricRegistry(METRIC_REGISTRY)
-                                              .dataDirs(Collections.emptyList())
-                                              .build())
-        .withMessageContaining("dataDirs are required when storageDir is not configured");
+        assertThatIllegalArgumentException().isThrownBy(() -> InstanceMetadataImpl.builder()
+                                                                                  .id(ID)
+                                                                                  .host(HOST)
+                                                                                  .port(PORT)
+                                                                                  .metricRegistry(METRIC_REGISTRY)
+                                                                                  .dataDirs(Collections.emptyList())
+                                                                                  .build())
+                                            .withMessageContaining("dataDirs are required when storageDir is not configured");
     }
 
     @Test
@@ -279,12 +274,14 @@ class InstanceMetadataImplTest
     void testResolveIpAddress() throws Exception
     {
         String rootDir = tempDir.toString();
-        InstanceMetadataImpl instance = getInstanceMetadataBuilder(rootDir).host("localhost").build();
+        InstanceMetadataImpl instance = getInstanceMetadataBuilder(rootDir).host("localhost")
+                                                                           .build();
         instance.refreshIpAddress();
         assertThat(instance.ipAddress()).isEqualTo("127.0.0.1");
 
         String host = "cassandra.sidecar.org";
-        instance = getInstanceMetadataBuilder(rootDir).host(host, createDnsResolver(host, "127.0.0.1")).build();
+        instance = getInstanceMetadataBuilder(rootDir).host(host, createDnsResolver(host, "127.0.0.1"))
+                                                      .build();
         instance.refreshIpAddress();
         assertThat(instance.ipAddress()).isEqualTo("127.0.0.1");
     }
@@ -293,12 +290,10 @@ class InstanceMetadataImplTest
     void testIpAddressResolutionFails()
     {
         String rootDir = tempDir.toString();
-        InstanceMetadataImpl instanceMetadata = getInstanceMetadataBuilder(rootDir)
-                                                .host("my_host", createDnsResolver("localhost", "127.0.0.1"))
-                                                .build();
-        assertThatThrownBy(instanceMetadata::refreshIpAddress)
-        .isExactlyInstanceOf(UnknownHostException.class)
-        .hasMessage("my_host");
+        InstanceMetadataImpl instanceMetadata = getInstanceMetadataBuilder(rootDir).host("my_host", createDnsResolver("localhost", "127.0.0.1"))
+                                                                                   .build();
+        assertThatThrownBy(instanceMetadata::refreshIpAddress).isExactlyInstanceOf(UnknownHostException.class)
+                                                              .hasMessage("my_host");
     }
 
     static InstanceMetadataImpl.Builder getInstanceMetadataBuilder(String rootDir)
@@ -321,7 +316,8 @@ class InstanceMetadataImplTest
                                    .metricRegistry(METRIC_REGISTRY);
     }
 
-    private DnsResolver createDnsResolver(String hostName, String ipAddress)
+    private DnsResolver createDnsResolver(String hostName,
+                                          String ipAddress)
     {
         return new DnsResolver()
         {

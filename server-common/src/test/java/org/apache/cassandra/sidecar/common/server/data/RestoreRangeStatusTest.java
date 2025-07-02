@@ -51,7 +51,8 @@ class RestoreRangeStatusTest
 
     @ParameterizedTest(name = "{index}: {0} -> {1}")
     @MethodSource("invalidStatusAdvancingSource")
-    void testInvalidStatusAdvancing(RestoreRangeStatus from, RestoreRangeStatus to)
+    void testInvalidStatusAdvancing(RestoreRangeStatus from,
+                                    RestoreRangeStatus to)
     {
         String commonErrorMsg = from + " status can only advance to one of the follow statuses";
 
@@ -62,18 +63,13 @@ class RestoreRangeStatusTest
 
     public static Stream<Arguments> invalidStatusAdvancingSource()
     {
-        return Stream.of(Arguments.of(STAGED, CREATED),
-                         Arguments.of(CREATED, SUCCEEDED),
-                         Arguments.of(STAGED, STAGED),
-                         Arguments.of(SUCCEEDED, FAILED),
-                         Arguments.of(FAILED, SUCCEEDED),
-                         Arguments.of(FAILED, ABORTED),
-                         Arguments.of(DISCARDED, CREATED),
-                         Arguments.of(DISCARDED, STAGED),
-                         Arguments.of(DISCARDED, SUCCEEDED));
+        return Stream.of(Arguments.of(STAGED, CREATED), Arguments.of(CREATED, SUCCEEDED), Arguments.of(STAGED, STAGED), Arguments.of(SUCCEEDED, FAILED),
+                Arguments.of(FAILED, SUCCEEDED), Arguments.of(FAILED, ABORTED), Arguments.of(DISCARDED, CREATED), Arguments.of(DISCARDED, STAGED),
+                Arguments.of(DISCARDED, SUCCEEDED));
     }
 
-    private void assertAdvanceTo(RestoreRangeStatus from, RestoreRangeStatus to)
+    private void assertAdvanceTo(RestoreRangeStatus from,
+                                 RestoreRangeStatus to)
     {
         assertThat(from.advanceTo(to)).isEqualTo(to);
     }

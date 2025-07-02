@@ -40,8 +40,8 @@ abstract class MetadataToAspectConverter<T extends RecordTemplate>
     }
 
     /**
-     * A helper method that implementing classes should use in order to create a new instance of {@link MetadataChangeProposalWrapper};
-     * the instance will have its {@code type}, {@code urn}, and {@code aspect} fields initialized with the provided values
+     * A helper method that implementing classes should use in order to create a new instance of {@link MetadataChangeProposalWrapper}; the instance will have
+     * its {@code type}, {@code urn}, and {@code aspect} fields initialized with the provided values
      *
      * @param type the type to initialize the wrapper with
      * @param urn the URN to initialize the wrapper with
@@ -49,7 +49,7 @@ abstract class MetadataToAspectConverter<T extends RecordTemplate>
      * @return a new instance of the wrapper that has been initialized
      */
     @NotNull
-    @SuppressWarnings({"unchecked"})
+    @SuppressWarnings({ "unchecked"})
     protected MetadataChangeProposalWrapper<T> wrap(@NotNull String type,
                                                     @NotNull String urn,
                                                     @NotNull T aspect)

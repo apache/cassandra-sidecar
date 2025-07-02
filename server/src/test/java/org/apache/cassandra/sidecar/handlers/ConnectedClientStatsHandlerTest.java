@@ -18,22 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -46,6 +30,13 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
@@ -55,7 +46,12 @@ import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -72,15 +68,15 @@ public class ConnectedClientStatsHandlerTest
     private static final Map<String, Long> EXPECTED_CONNECTIONS_BY_USER = new HashMap<String, Long>()
     {
         {
-        put("u1", 5L);
-        put("u2", 5L);
+            put("u1", 5L);
+            put("u2", 5L);
         }
     };
     private static final List<ClientConnectionEntry> EXPECTED_STATS = Arrays.asList(
-    new ClientConnectionEntry("1", 0, false, null, null, "5", "u1", 5,
-                              "name", "version", "keyspace1", Collections.emptyMap(), null, Collections.emptyMap()),
-    new ClientConnectionEntry("1", 0, false, null, null, "5", "u1", 5,
-                              "name", "version", "keyspace1", Collections.emptyMap(), null, Collections.emptyMap()));
+            new ClientConnectionEntry("1", 0, false, null, null, "5", "u1", 5, "name", "version", "keyspace1", Collections.emptyMap(), null,
+                    Collections.emptyMap()),
+            new ClientConnectionEntry("1", 0, false, null, null, "5", "u1", 5, "name", "version", "keyspace1", Collections.emptyMap(), null,
+                    Collections.emptyMap()));
     static final Logger LOGGER = LoggerFactory.getLogger(ConnectedClientStatsHandlerTest.class);
     Vertx vertx;
     Server server;
@@ -106,7 +102,8 @@ public class ConnectedClientStatsHandlerTest
     void after() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -136,12 +133,9 @@ public class ConnectedClientStatsHandlerTest
         @Singleton
         public InstancesMetadata instanceConfig()
         {
-            ConnectedClientStatsResponse summaryResponse = new ConnectedClientStatsResponse(Collections.emptyList(),
-                                                                                            EXPECTED_TOTAL_CLIENTS,
-                                                                                            EXPECTED_CONNECTIONS_BY_USER);
-            ConnectedClientStatsResponse statsResponse = new ConnectedClientStatsResponse(EXPECTED_STATS,
-                                                                                          EXPECTED_TOTAL_CLIENTS,
-                                                                                          EXPECTED_CONNECTIONS_BY_USER);
+            ConnectedClientStatsResponse summaryResponse = new ConnectedClientStatsResponse(Collections.emptyList(), EXPECTED_TOTAL_CLIENTS,
+                    EXPECTED_CONNECTIONS_BY_USER);
+            ConnectedClientStatsResponse statsResponse = new ConnectedClientStatsResponse(EXPECTED_STATS, EXPECTED_TOTAL_CLIENTS, EXPECTED_CONNECTIONS_BY_USER);
 
             final int instanceId = 100;
             final String host = "127.0.0.1";

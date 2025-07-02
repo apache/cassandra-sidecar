@@ -45,13 +45,11 @@ public class IOUtils
      *
      * @param inputStream the input stream to read from
      * @return the {@link StandardCharsets#UTF_8} String read from the provided {@link InputStream inputStream}
-     * @throws IOException when an error occurs during reading the input stream or decoding the resource to
-     *                     {@code UTF-8}
+     * @throws IOException when an error occurs during reading the input stream or decoding the resource to {@code UTF-8}
      */
     public static String readFully(InputStream inputStream) throws IOException
     {
-        try (InputStream input = inputStream;
-             ByteArrayOutputStream output = new ByteArrayOutputStream())
+        try (InputStream input = inputStream; ByteArrayOutputStream output = new ByteArrayOutputStream())
         {
             int length;
             byte[] buffer = new byte[32];

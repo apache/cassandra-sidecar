@@ -72,10 +72,9 @@ class SSTableImporterTest
     public void setup() throws InterruptedException
     {
         vertx = Vertx.vertx();
-        serviceConfiguration =
-        TestServiceConfiguration.builder()
-                                .sstableImportConfiguration(new SSTableImportConfigurationImpl(10))
-                                .build();
+        serviceConfiguration = TestServiceConfiguration.builder()
+                                                       .sstableImportConfiguration(new SSTableImportConfigurationImpl(10))
+                                                       .build();
 
         mockMetadataFetcher = mock(InstanceMetadataFetcher.class);
         CassandraAdapterDelegate mockCassandraAdapterDelegate1 = mock(CassandraAdapterDelegate.class);
@@ -97,16 +96,12 @@ class SSTableImporterTest
         when(mockMetadataFetcher.instance("127.0.0.2")).thenReturn(mockInstanceMetadata2);
         when(mockMetadataFetcher.instance("127.0.0.3")).thenReturn(mockInstanceMetadata3);
         when(mockCassandraAdapterDelegate1.tableOperations()).thenReturn(mockTableOperations1);
-        when(mockTableOperations1.importNewSSTables("ks", "tbl", "/dir", true, true,
-                                                    true, true, true, true, false))
-        .thenReturn(Collections.emptyList());
-        when(mockTableOperations1.importNewSSTables("ks", "tbl", "/failed-dir", true, true,
-                                                    true, true, true, true, false))
-        .thenReturn(Collections.singletonList("/failed-dir"));
+        when(mockTableOperations1.importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false)).thenReturn(Collections.emptyList());
+        when(mockTableOperations1.importNewSSTables("ks", "tbl", "/failed-dir", true, true, true, true, true, true, false)).thenReturn(
+                Collections.singletonList("/failed-dir"));
         when(mockCassandraAdapterDelegate2.tableOperations()).thenReturn(mockTableOperations2);
-        when(mockTableOperations2.importNewSSTables("ks", "tbl", "/dir", true, true,
-                                                    true, true, true, true, false))
-        .thenThrow(new RuntimeException("Exception during import"));
+        when(mockTableOperations2.importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false)).thenThrow(
+                new RuntimeException("Exception during import"));
         when(mockCassandraAdapterDelegate3.tableOperations()).thenThrow(new CassandraUnavailableException(CQL_AND_JMX, "Cassandra unavailable"));
         executorPools = new ExecutorPools(vertx, serviceConfiguration);
         mockUploadPathBuilder = mock(SSTableUploadsPathBuilder.class);
@@ -115,30 +110,30 @@ class SSTableImporterTest
         // get NullPointerExceptions because the mock is not wired up, and we need to prevent vertx from actually
         // doing a vertx.filesystem().deleteRecursive(). So we return a failed future with a fake path when checking
         // if the directory exists.
-        when(mockUploadPathBuilder.resolveUploadIdDirectory(anyString(), anyString()))
-        .thenReturn(Future.failedFuture("fake-path"));
+        when(mockUploadPathBuilder.resolveUploadIdDirectory(anyString(), anyString())).thenReturn(Future.failedFuture("fake-path"));
         when(mockUploadPathBuilder.isValidDirectory("fake-path")).thenReturn(Future.failedFuture("skip cleanup"));
-        importer = new TestSSTableImporter(vertx, mockMetadataFetcher, serviceConfiguration, executorPools,
-                                           mockUploadPathBuilder);
+        importer = new TestSSTableImporter(vertx, mockMetadataFetcher, serviceConfiguration, executorPools, mockUploadPathBuilder);
     }
 
     @AfterEach
     void clear()
     {
         SharedMetricRegistries.clear();
-        TestResourceReaper.create().with(vertx).with(executorPools).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(executorPools)
+                          .close();
     }
 
     @Test
     void testImportSucceeds(VertxTestContext context)
     {
-        Future<Void> importFuture = importer.scheduleImport(new SSTableImporter.ImportOptions.Builder()
-                                                            .host("localhost")
-                                                            .keyspace("ks")
-                                                            .tableName("tbl")
-                                                            .directory("/dir")
-                                                            .uploadId("0000-0000")
-                                                            .build());
+        Future<Void> importFuture = importer.scheduleImport(new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                                       .keyspace("ks")
+                                                                                                       .tableName("tbl")
+                                                                                                       .directory("/dir")
+                                                                                                       .uploadId("0000-0000")
+                                                                                                       .build());
 
         loopAssert(1, () -> {
             // ensure that one element is reported in the import queue
@@ -153,8 +148,7 @@ class SSTableImporterTest
             {
                 assertThat(queue).isEmpty();
             }
-            verify(mockTableOperations1, times(1))
-            .importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false);
+            verify(mockTableOperations1, times(1)).importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false);
             vertx.setTimer(100, handle -> {
                 // after successful import, the queue must be drained
                 assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isZero();
@@ -167,13 +161,12 @@ class SSTableImporterTest
     @Test
     void testImportFailsWhenCassandraIsUnavailable(VertxTestContext context)
     {
-        Future<Void> importFuture = importer.scheduleImport(new SSTableImporter.ImportOptions.Builder()
-                                                            .host("127.0.0.3")
-                                                            .keyspace("ks")
-                                                            .tableName("tbl")
-                                                            .directory("/dir3")
-                                                            .uploadId("0000-0000")
-                                                            .build());
+        Future<Void> importFuture = importer.scheduleImport(new SSTableImporter.ImportOptions.Builder().host("127.0.0.3")
+                                                                                                       .keyspace("ks")
+                                                                                                       .tableName("tbl")
+                                                                                                       .directory("/dir3")
+                                                                                                       .uploadId("0000-0000")
+                                                                                                       .build());
 
         loopAssert(1, () -> {
             // ensure that one element is reported in the import queue
@@ -203,13 +196,12 @@ class SSTableImporterTest
     @Test
     void testImportFailsWhenImportReturnsFailedDirectories(VertxTestContext context)
     {
-        Future<Void> importFuture = importer.scheduleImport(new SSTableImporter.ImportOptions.Builder()
-                                                            .host("localhost")
-                                                            .keyspace("ks")
-                                                            .tableName("tbl")
-                                                            .directory("/failed-dir")
-                                                            .uploadId("0000-0000")
-                                                            .build());
+        Future<Void> importFuture = importer.scheduleImport(new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                                       .keyspace("ks")
+                                                                                                       .tableName("tbl")
+                                                                                                       .directory("/failed-dir")
+                                                                                                       .uploadId("0000-0000")
+                                                                                                       .build());
 
         loopAssert(1, () -> {
             // ensure that one element is reported in the import queue
@@ -240,13 +232,12 @@ class SSTableImporterTest
     @Test
     void testImportFailsWhenImportThrowsIOException(VertxTestContext context)
     {
-        Future<Void> importFuture = importer.scheduleImport(new SSTableImporter.ImportOptions.Builder()
-                                                            .host("127.0.0.2")
-                                                            .keyspace("ks")
-                                                            .tableName("tbl")
-                                                            .directory("/dir")
-                                                            .uploadId("0000-0000")
-                                                            .build());
+        Future<Void> importFuture = importer.scheduleImport(new SSTableImporter.ImportOptions.Builder().host("127.0.0.2")
+                                                                                                       .keyspace("ks")
+                                                                                                       .tableName("tbl")
+                                                                                                       .directory("/dir")
+                                                                                                       .uploadId("0000-0000")
+                                                                                                       .build());
 
         loopAssert(1, () -> {
             // ensure that one element is reported in the import queue
@@ -276,20 +267,17 @@ class SSTableImporterTest
     @Test
     void testCancelImportSucceeds(VertxTestContext context)
     {
-        serviceConfiguration =
-        TestServiceConfiguration.builder()
-                                .sstableImportConfiguration(new SSTableImportConfigurationImpl(500))
-                                .build();
+        serviceConfiguration = TestServiceConfiguration.builder()
+                                                       .sstableImportConfiguration(new SSTableImportConfigurationImpl(500))
+                                                       .build();
 
-        SSTableImporter importer = new SSTableImporter(vertx, mockMetadataFetcher, serviceConfiguration, executorPools,
-                                                       mockUploadPathBuilder);
-        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder()
-                                                .host("localhost")
-                                                .keyspace("ks")
-                                                .tableName("tbl")
-                                                .directory("/dir")
-                                                .uploadId("0000-0000")
-                                                .build();
+        SSTableImporter importer = new SSTableImporter(vertx, mockMetadataFetcher, serviceConfiguration, executorPools, mockUploadPathBuilder);
+        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                           .keyspace("ks")
+                                                                                           .tableName("tbl")
+                                                                                           .directory("/dir")
+                                                                                           .uploadId("0000-0000")
+                                                                                           .build();
         importer.scheduleImport(options);
         assertThat(importer.cancelImport(options)).isTrue();
         context.completeNow();
@@ -298,13 +286,12 @@ class SSTableImporterTest
     @Test
     void testCancelImportNoOpAfterProcessing(VertxTestContext context)
     {
-        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder()
-                                                .host("localhost")
-                                                .keyspace("ks")
-                                                .tableName("tbl")
-                                                .directory("/dir")
-                                                .uploadId("0000-0000")
-                                                .build();
+        SSTableImporter.ImportOptions options = new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                           .keyspace("ks")
+                                                                                           .tableName("tbl")
+                                                                                           .directory("/dir")
+                                                                                           .uploadId("0000-0000")
+                                                                                           .build();
         Future<Void> importFuture = importer.scheduleImport(options);
 
         loopAssert(1, () -> {
@@ -323,20 +310,18 @@ class SSTableImporterTest
     void testAggregatesMetricsForTheSameHost(VertxTestContext context)
     {
         List<Future<Void>> futures = new ArrayList<>();
-        futures.add(importer.scheduleImport(new SSTableImporter.ImportOptions.Builder()
-                                            .host("localhost")
-                                            .keyspace("ks")
-                                            .tableName("tbl")
-                                            .directory("/dir")
-                                            .uploadId("0000-0000")
-                                            .build()));
-        futures.add(importer.scheduleImport(new SSTableImporter.ImportOptions.Builder()
-                                            .host("localhost")
-                                            .keyspace("ks2")
-                                            .tableName("tbl")
-                                            .directory("/dir")
-                                            .uploadId("0000-0001")
-                                            .build()));
+        futures.add(importer.scheduleImport(new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                       .keyspace("ks")
+                                                                                       .tableName("tbl")
+                                                                                       .directory("/dir")
+                                                                                       .uploadId("0000-0000")
+                                                                                       .build()));
+        futures.add(importer.scheduleImport(new SSTableImporter.ImportOptions.Builder().host("localhost")
+                                                                                       .keyspace("ks2")
+                                                                                       .tableName("tbl")
+                                                                                       .directory("/dir")
+                                                                                       .uploadId("0000-0001")
+                                                                                       .build()));
 
         loopAssert(1, () -> {
             // ensure that one element is reported in the import queue
@@ -353,10 +338,8 @@ class SSTableImporterTest
                   {
                       assertThat(queue).isEmpty();
                   }
-                  verify(mockTableOperations1, times(1))
-                  .importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false);
-                  verify(mockTableOperations1, times(1))
-                  .importNewSSTables("ks2", "tbl", "/dir", true, true, true, true, true, true, false);
+                  verify(mockTableOperations1, times(1)).importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false);
+                  verify(mockTableOperations1, times(1)).importNewSSTables("ks2", "tbl", "/dir", true, true, true, true, true, true, false);
                   vertx.setTimer(100, handle -> {
                       // after successful import, the queue must be drained
                       assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isZero();

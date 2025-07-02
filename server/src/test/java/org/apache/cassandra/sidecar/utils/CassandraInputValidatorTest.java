@@ -18,15 +18,13 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.ext.web.handler.HttpException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.ext.web.handler.HttpException;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -43,56 +41,44 @@ public class CassandraInputValidatorTest
     }
 
     @ParameterizedTest(name = "[{0}]")
-    @ValueSource(strings = { "test_table_name", "\"test_table_name\"", "testTableName", "\"testTableName\"", "a_",
-                             "\"cycling\"", "\"Helmets\"", "\"mIxEd_cAsE\"", "a8", "a", "\"8a\"",
-                             "\"_must_begin_with_alphabetic_unless_quoted_p\"" })
+    @ValueSource(strings = { "test_table_name", "\"test_table_name\"", "testTableName", "\"testTableName\"", "a_", "\"cycling\"", "\"Helmets\"",
+            "\"mIxEd_cAsE\"", "a8", "a", "\"8a\"", "\"_must_begin_with_alphabetic_unless_quoted_p\""})
     public void testValidTableNameValidation(String tableName)
     {
         instance.validateTableName(tableName);
     }
 
     @ParameterizedTest(name = "[{0}]")
-    @ValueSource(strings = { "", "test table", "_must_begin_with_alphabetic", "dash-is-not-allowed", "\"\"", "\"",
-                             "\"inv@lid_chars\"", "test:table_name", "test-table$name", "8a", "testTable/Name" })
+    @ValueSource(strings = { "", "test table", "_must_begin_with_alphabetic", "dash-is-not-allowed", "\"\"", "\"", "\"inv@lid_chars\"", "test:table_name",
+            "test-table$name", "8a", "testTable/Name"})
     public void failsWithInvalidTableName(String tableName)
     {
-        HttpException httpEx = Assertions.assertThrows(HttpException.class,
-                                                       () -> instance.validateTableName(tableName));
+        HttpException httpEx = Assertions.assertThrows(HttpException.class, () -> instance.validateTableName(tableName));
         assertThat(httpEx.getStatusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
         assertThat(httpEx.getPayload()).isEqualTo("Invalid characters in table name: " + tableName);
     }
 
     @ParameterizedTest(name = "[{0}]")
-    @ValueSource(strings = { "SystemViews", "system_views_test", "\"keyspace\"", "\"cycling\"", "\"Cycling\"",
-                             "\"mIxEd_cAsE\"", "a8", "a", "a_", "\"_a\"" })
+    @ValueSource(strings = { "SystemViews", "system_views_test", "\"keyspace\"", "\"cycling\"", "\"Cycling\"", "\"mIxEd_cAsE\"", "a8", "a", "a_", "\"_a\""})
     public void testValidKeyspaceValidation(String keyspace)
     {
         instance.validateKeyspaceName(keyspace);
     }
 
     @ParameterizedTest(name = "[{0}]")
-    @ValueSource(strings = { "system_schema",
-                             "system_traces",
-                             "system_distributed",
-                             "system",
-                             "system_auth",
-                             "system_views",
-                             "system_virtual_schema" })
+    @ValueSource(strings = { "system_schema", "system_traces", "system_distributed", "system", "system_auth", "system_views", "system_virtual_schema"})
     public void failsWithForbiddenKeyspace(String keyspace)
     {
-        HttpException httpEx = Assertions.assertThrows(HttpException.class,
-                                                       () -> instance.validateKeyspaceName(keyspace));
+        HttpException httpEx = Assertions.assertThrows(HttpException.class, () -> instance.validateKeyspaceName(keyspace));
         assertThat(httpEx.getStatusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
         assertThat(httpEx.getPayload()).isEqualTo("Forbidden keyspace: " + keyspace);
     }
 
     @ParameterizedTest(name = "[{0}]")
-    @ValueSource(strings = { "", "test keyspace", "_cycling", "dash-is-not-allowed", "\"\"", "\"",
-                             "\"inv@lid_chars\"", "8a" })
+    @ValueSource(strings = { "", "test keyspace", "_cycling", "dash-is-not-allowed", "\"\"", "\"", "\"inv@lid_chars\"", "8a"})
     public void failsWithInvalidKeyspaceName(String keyspace)
     {
-        HttpException httpEx = Assertions.assertThrows(HttpException.class,
-                                                       () -> instance.validateKeyspaceName(keyspace));
+        HttpException httpEx = Assertions.assertThrows(HttpException.class, () -> instance.validateKeyspaceName(keyspace));
         assertThat(httpEx.getStatusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
         assertThat(httpEx.getPayload()).isEqualTo("Invalid characters in keyspace: " + keyspace);
     }
@@ -109,8 +95,7 @@ public class CassandraInputValidatorTest
 
     private void testCommon_testInvalidFileName(String testFileName)
     {
-        HttpException httpEx = Assertions.assertThrows(HttpException.class,
-                                                       () -> instance.validateComponentName(testFileName));
+        HttpException httpEx = Assertions.assertThrows(HttpException.class, () -> instance.validateComponentName(testFileName));
         assertThat(httpEx.getStatusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
         assertThat(httpEx.getPayload()).isEqualTo("Invalid component name: " + testFileName);
     }
@@ -139,7 +124,6 @@ public class CassandraInputValidatorTest
         testCommon_testInvalidFileName("TOC.txt");
     }
 
-
     @Test
     public void testValidateSnapshotName_validSnapshotNames_expectNoException()
     {
@@ -154,8 +138,7 @@ public class CassandraInputValidatorTest
     public void testValidateSnapshotName_snapshotNameWithSlash_expectException()
     {
         String testSnapName = "valid" + '/' + "snapshotname";
-        HttpException httpEx = Assertions.assertThrows(HttpException.class,
-                                                       () -> instance.validateSnapshotName(testSnapName));
+        HttpException httpEx = Assertions.assertThrows(HttpException.class, () -> instance.validateSnapshotName(testSnapName));
         assertThat(httpEx.getStatusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
         assertThat(httpEx.getPayload()).isEqualTo("Invalid characters in snapshot name: " + testSnapName);
     }
@@ -164,8 +147,7 @@ public class CassandraInputValidatorTest
     public void testValidateSnapshotName_snapshotNameWithNullChar_expectException()
     {
         String testSnapName = "valid" + '\0' + "snapshotname";
-        HttpException httpEx = Assertions.assertThrows(HttpException.class,
-                                                       () -> instance.validateSnapshotName(testSnapName));
+        HttpException httpEx = Assertions.assertThrows(HttpException.class, () -> instance.validateSnapshotName(testSnapName));
         assertThat(httpEx.getStatusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
         assertThat(httpEx.getPayload()).isEqualTo("Invalid characters in snapshot name: " + testSnapName);
     }
@@ -178,7 +160,7 @@ public class CassandraInputValidatorTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "a", "abc", "abc124", "fff1234567890", "53464aa75e6b3d8a84c4e87abbdcbbef" })
+    @ValueSource(strings = { "a", "abc", "abc124", "fff1234567890", "53464aa75e6b3d8a84c4e87abbdcbbef"})
     void testValidateTableId(String tableId)
     {
         instance.validateTableId(tableId);
@@ -188,16 +170,15 @@ public class CassandraInputValidatorTest
     void testTableIdExceedsLengthLimit()
     {
         IllegalArgumentException iae = Assertions.assertThrows(IllegalArgumentException.class,
-                                                               () -> instance.validateTableId("53464aa75e6b3d8a84c4e87abbdcbbefa"));
+                () -> instance.validateTableId("53464aa75e6b3d8a84c4e87abbdcbbefa"));
         assertThat(iae.getMessage()).isEqualTo("tableId cannot be longer than 32 characters");
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "g", "--", "abc-124", "z", "x", "xax" })
+    @ValueSource(strings = { "g", "--", "abc-124", "z", "x", "xax"})
     void testInvalidTableId(String tableId)
     {
-        HttpException httpEx = Assertions.assertThrows(HttpException.class,
-                                                       () -> instance.validateTableId(tableId));
+        HttpException httpEx = Assertions.assertThrows(HttpException.class, () -> instance.validateTableId(tableId));
         assertThat(httpEx.getStatusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
         assertThat(httpEx.getPayload()).isEqualTo("Invalid characters in table id: " + tableId);
     }

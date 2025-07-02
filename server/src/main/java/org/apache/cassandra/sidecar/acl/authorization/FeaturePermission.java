@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.acl.authorization;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.CREATE_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.CREATE_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DELETE_RESTORE_JOB;
@@ -46,43 +45,28 @@ import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABL
  */
 public enum FeaturePermission
 {
-    ANALYTICS_READ_DIRECT("ANALYTICS:READ_DIRECT",
-                          READ_RING_KEYSPACE_SCOPED,
-                          READ_SCHEMA_KEYSPACE_SCOPED,
-                          CREATE_SNAPSHOT,
-                          READ_SNAPSHOT,
-                          DELETE_SNAPSHOT,
-                          STREAM_SNAPSHOT,
-                          STATS_TABLE_SCOPED,
-                          new StandardPermission(SELECT.name(), TABLE_SCOPE)),
+    ANALYTICS_READ_DIRECT("ANALYTICS:READ_DIRECT", READ_RING_KEYSPACE_SCOPED, READ_SCHEMA_KEYSPACE_SCOPED, CREATE_SNAPSHOT, READ_SNAPSHOT, DELETE_SNAPSHOT,
+            STREAM_SNAPSHOT, STATS_TABLE_SCOPED, new StandardPermission(SELECT.name(), TABLE_SCOPE)),
 
-    ANALYTICS_WRITE_DIRECT("ANALYTICS:WRITE_DIRECT",
-                           READ_SCHEMA_KEYSPACE_SCOPED,
-                           READ_TOPOLOGY,
-                           UPLOAD_STAGED_SSTABLE,
-                           IMPORT_STAGED_SSTABLE,
-                           DELETE_STAGED_SSTABLE,
-                           new StandardPermission(MODIFY.name(), TABLE_SCOPE)),
+    ANALYTICS_WRITE_DIRECT("ANALYTICS:WRITE_DIRECT", READ_SCHEMA_KEYSPACE_SCOPED, READ_TOPOLOGY, UPLOAD_STAGED_SSTABLE, IMPORT_STAGED_SSTABLE,
+            DELETE_STAGED_SSTABLE, new StandardPermission(MODIFY.name(), TABLE_SCOPE)),
 
-    ANALYTICS_WRITE_S3_COMPAT("ANALYTICS:WRITE_S3_COMPAT",
-                              READ_SCHEMA_KEYSPACE_SCOPED,
-                              READ_TOPOLOGY,
-                              CREATE_RESTORE_JOB,
-                              READ_RESTORE_JOB,
-                              EDIT_RESTORE_JOB,
-                              DELETE_RESTORE_JOB),
+    ANALYTICS_WRITE_S3_COMPAT("ANALYTICS:WRITE_S3_COMPAT", READ_SCHEMA_KEYSPACE_SCOPED, READ_TOPOLOGY, CREATE_RESTORE_JOB, READ_RESTORE_JOB, EDIT_RESTORE_JOB,
+            DELETE_RESTORE_JOB),
 
     CDC("CDC", BasicPermissions.CDC);
 
-    public static final List<CompositePermission> ALL_FEATURE_PERMISSIONS
-    = Arrays.stream(values()).map(FeaturePermission::permission).collect(Collectors.toList());
+    public static final List<CompositePermission> ALL_FEATURE_PERMISSIONS = Arrays.stream(values())
+                                                                                  .map(FeaturePermission::permission)
+                                                                                  .collect(Collectors.toList());
 
     private final CompositePermission permission;
 
-    FeaturePermission(String name, Permission... permissions)
+    FeaturePermission(String name,
+                      Permission... permissions)
     {
-        this.permission
-        = new CompositePermission(name, Arrays.stream(permissions).collect(Collectors.toList()));
+        this.permission = new CompositePermission(name, Arrays.stream(permissions)
+                                                              .collect(Collectors.toList()));
     }
 
     public CompositePermission permission()

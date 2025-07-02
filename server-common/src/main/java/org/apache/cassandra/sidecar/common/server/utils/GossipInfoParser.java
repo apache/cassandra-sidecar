@@ -20,12 +20,10 @@ package org.apache.cassandra.sidecar.common.server.utils;
 
 import java.util.List;
 import java.util.regex.Pattern;
-
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
-
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.jetbrains.annotations.NotNull;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
 
 /**
  * Parses raw gossip info text into structured object, i.e. a map of host name to map of node details
@@ -59,8 +57,7 @@ public class GossipInfoParser
                                                                        .limit(3);
 
     /**
-     * Parse raw gossip info into a map, where the key is the host name,
-     * and the value is a map of all field keys associated with their values.
+     * Parse raw gossip info into a map, where the key is the host name, and the value is a map of all field keys associated with their values.
      *
      * @param rawGossipInfo the raw string retrieved from gossip
      * @return map parsed from raw gossip info.
@@ -80,9 +77,7 @@ public class GossipInfoParser
             {
                 assert gossipInfo != null; // the host line appears before the rest. gossipInfo map must be initialized
                 final List<String> splitLine = GOSSIP_INFO_FIELD_SPLITTER.splitToList(line);
-                Preconditions.checkState(splitLine.size() == 2 || splitLine.size() == 3,
-                                         "A gossip field should be split into two or three parts. %s",
-                                         line);
+                Preconditions.checkState(splitLine.size() == 2 || splitLine.size() == 3, "A gossip field should be split into two or three parts. %s", line);
                 String key = splitLine.get(0);
                 // ignore the version tag if present
                 String value = splitLine.get(splitLine.size() - 1);
@@ -100,6 +95,7 @@ public class GossipInfoParser
      */
     public static boolean isGossipInfoHostHeader(String line)
     {
-        return GOSSIP_INFO_HOST_PATTERN.matcher(line).matches();
+        return GOSSIP_INFO_HOST_PATTERN.matcher(line)
+                                       .matches();
     }
 }

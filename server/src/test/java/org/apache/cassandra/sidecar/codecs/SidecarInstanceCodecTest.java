@@ -56,7 +56,10 @@ class SidecarInstanceCodecTest
     @AfterAll
     static void tearDown()
     {
-        getBlocking(TestResourceReaper.create().with(vertx).close(), 30, TimeUnit.SECONDS, "Closing vertx");
+        getBlocking(TestResourceReaper.create()
+                                      .with(vertx)
+                                      .close(),
+                30, TimeUnit.SECONDS, "Closing vertx");
     }
 
     @Test

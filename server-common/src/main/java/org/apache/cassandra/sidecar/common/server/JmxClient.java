@@ -31,6 +31,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import javax.management.JMX;
 import javax.management.MBeanServerConnection;
 import javax.management.MalformedObjectNameException;
@@ -42,16 +47,9 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import javax.rmi.ssl.SslRMIClientSocketFactory;
-
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
-import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
-import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
-import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.common.utils.Preconditions;
 
 /**
  * A simple wrapper around a JMX connection that makes it easier to get proxy instances.
@@ -71,8 +69,7 @@ public class JmxClient implements NotificationListener, Closeable
     private final BooleanSupplier enableSslSupplier;
     private final int connectionMaxRetries;
     private final DurationSpec connectionRetryDelay;
-    private final Set<NotificationListener> registeredNotificationListeners =
-    Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<NotificationListener> registeredNotificationListeners = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /**
      * Creates a new JMX client with {@link Builder} options.
@@ -87,15 +84,13 @@ public class JmxClient implements NotificationListener, Closeable
         }
         else
         {
-            jmxServiceURL = buildJmxServiceURL(Objects.requireNonNull(builder.host, "host is required"),
-                                               builder.port);
+            jmxServiceURL = buildJmxServiceURL(Objects.requireNonNull(builder.host, "host is required"), builder.port);
         }
         Objects.requireNonNull(jmxServiceURL, "jmxServiceUrl is required");
         roleSupplier = Objects.requireNonNull(builder.roleSupplier, "roleSupplier is required");
         passwordSupplier = Objects.requireNonNull(builder.passwordSupplier, "passwordSupplier is required");
         enableSslSupplier = Objects.requireNonNull(builder.enableSslSupplier, "enableSslSupplier is required");
-        Preconditions.checkArgument(builder.connectionMaxRetries > 0,
-                                    "connectionMaxRetries must be a positive integer");
+        Preconditions.checkArgument(builder.connectionMaxRetries > 0, "connectionMaxRetries must be a positive integer");
         connectionMaxRetries = builder.connectionMaxRetries;
         connectionRetryDelay = builder.connectionRetryDelay;
     }
@@ -103,13 +98,13 @@ public class JmxClient implements NotificationListener, Closeable
     /**
      * Returns a proxy for a Standard MBean in a local or remote MBean Server.
      *
-     * @param clientClass the management interface that the MBean exports, which will
-     *                    also be implemented by the returned proxy
-     * @param remoteName  the name of the MBean within {@code connection} to forward to
-     * @param <C>         the type of the proxy client
+     * @param clientClass the management interface that the MBean exports, which will also be implemented by the returned proxy
+     * @param remoteName the name of the MBean within {@code connection} to forward to
+     * @param <C> the type of the proxy client
      * @return the proxy for a Standard MBean in a local or remote MBean Server
      */
-    public <C> C proxy(Class<C> clientClass, String remoteName)
+    public <C> C proxy(Class<C> clientClass,
+                       String remoteName)
     {
         checkConnection();
         try
@@ -126,8 +121,8 @@ public class JmxClient implements NotificationListener, Closeable
     }
 
     /**
-     * Registers a {@link NotificationListener} to be notified whenever we encounter a JMX event. This method
-     * guarantees that a listener will be registered at most once.
+     * Registers a {@link NotificationListener} to be notified whenever we encounter a JMX event. This method guarantees that a listener will be registered at
+     * most once.
      *
      * @param notificationListener the listener to be notified
      */
@@ -148,9 +143,7 @@ public class JmxClient implements NotificationListener, Closeable
 
     private RMIClientSocketFactory rmiClientSocketFactory(boolean enableSsl)
     {
-        return enableSsl
-               ? new SslRMIClientSocketFactory()
-               : RMISocketFactory.getDefaultSocketFactory();
+        return enableSsl ? new SslRMIClientSocketFactory() : RMISocketFactory.getDefaultSocketFactory();
     }
 
     protected synchronized void checkConnection()
@@ -178,9 +171,7 @@ public class JmxClient implements NotificationListener, Closeable
             {
                 // If we can't connect because we have bad credentials, don't retry
                 connected = false;
-                String errorMessage = securityException.getMessage() != null
-                                      ? securityException.getMessage()
-                                      : "JMX Authentication failed";
+                String errorMessage = securityException.getMessage() != null ? securityException.getMessage() : "JMX Authentication failed";
                 throw new JmxAuthenticationException(errorMessage, securityException);
             }
             catch (RuntimeException runtimeException)
@@ -194,8 +185,7 @@ public class JmxClient implements NotificationListener, Closeable
                 lastThrown = t;
                 if (attempts < maxAttempts)
                 {
-                    LOGGER.info("Could not connect to JMX on {} after {} attempts. Will retry.",
-                                jmxServiceURL, attempts, t);
+                    LOGGER.info("Could not connect to JMX on {} after {} attempts. Will retry.", jmxServiceURL, attempts, t);
                     Uninterruptibles.sleepUninterruptibly(connectionRetryDelay.quantity(), connectionRetryDelay.unit());
                 }
                 attempts++;
@@ -212,21 +202,19 @@ public class JmxClient implements NotificationListener, Closeable
         jmxConnector.addConnectionNotificationListener(this, null, null);
         mBeanServerConnection = jmxConnector.getMBeanServerConnection();
         connected = true;
-        LOGGER.info("Connected to JMX server at {} after {} attempt(s)",
-                    jmxServiceURL, currentAttempt);
+        LOGGER.info("Connected to JMX server at {} after {} attempt(s)", jmxServiceURL, currentAttempt);
     }
 
     @Override
-    public void handleNotification(Notification notification, Object handback)
+    public void handleNotification(Notification notification,
+                                   Object handback)
     {
         if (notification instanceof JMXConnectionNotification)
         {
             JMXConnectionNotification connectNotice = (JMXConnectionNotification) notification;
             final String type = connectNotice.getType();
-            if (type.equals(JMXConnectionNotification.CLOSED) ||
-                type.equals(JMXConnectionNotification.FAILED) ||
-                type.equals(JMXConnectionNotification.NOTIFS_LOST) ||
-                type.equals(JMXConnectionNotification.OPENED))
+            if (type.equals(JMXConnectionNotification.CLOSED) || type.equals(JMXConnectionNotification.FAILED)
+                    || type.equals(JMXConnectionNotification.NOTIFS_LOST) || type.equals(JMXConnectionNotification.OPENED))
             {
                 boolean justConnected = type.equals(JMXConnectionNotification.OPENED);
                 synchronized (this)
@@ -238,7 +226,8 @@ public class JmxClient implements NotificationListener, Closeable
         }
     }
 
-    private void forwardNotification(Notification notification, Object handback)
+    private void forwardNotification(Notification notification,
+                                     Object handback)
     {
         registeredNotificationListeners.forEach(listener -> listener.handleNotification(notification, handback));
     }
@@ -261,7 +250,8 @@ public class JmxClient implements NotificationListener, Closeable
         return jmxServiceURL.getPort();
     }
 
-    private static JMXServiceURL buildJmxServiceURL(String host, int port)
+    private static JMXServiceURL buildJmxServiceURL(String host,
+                                                    int port)
     {
         if (host == null)
             return null;
@@ -272,8 +262,7 @@ public class JmxClient implements NotificationListener, Closeable
         }
         catch (MalformedURLException e)
         {
-            String errorMessage = String.format("Unable to build JMXServiceURL for host=%s, port=%d",
-                                                host, port);
+            String errorMessage = String.format("Unable to build JMXServiceURL for host=%s, port=%d", host, port);
             throw new RuntimeException(errorMessage, e);
         }
     }
@@ -287,7 +276,7 @@ public class JmxClient implements NotificationListener, Closeable
         Map<String, Object> jmxEnv = new HashMap<>();
         if (role != null && password != null)
         {
-            String[] credentials = new String[]{ role, password };
+            String[] credentials = new String[] { role, password};
             jmxEnv.put(JMXConnector.CREDENTIALS, credentials);
         }
         jmxEnv.put(REGISTRY_CONTEXT_SOCKET_FACTORY, rmiClientSocketFactory(enableSsl));
@@ -310,7 +299,8 @@ public class JmxClient implements NotificationListener, Closeable
         }
     }
 
-    private static String jmxUrlPath(String host, int port)
+    private static String jmxUrlPath(String host,
+                                     int port)
     {
         return String.format(JMX_URL_PATH_FORMAT, maybeAddSquareBrackets(host), port);
     }
@@ -318,9 +308,9 @@ public class JmxClient implements NotificationListener, Closeable
     private static String maybeAddSquareBrackets(String host)
     {
         if (host == null // host is null
-            || host.isEmpty() // or host is empty
-            || host.charAt(0) == '[' // host already starts with square brackets
-            || !host.contains(":")) // or host doesn't contain ":" (not an IPv6 address)
+                || host.isEmpty() // or host is empty
+                || host.charAt(0) == '[' // host already starts with square brackets
+                || !host.contains(":")) // or host doesn't contain ":" (not an IPv6 address)
             return host;
 
         // Use square brackets to surround IPv6 addresses to fix CASSANDRA-7669 and CASSANDRA-17581
@@ -397,8 +387,7 @@ public class JmxClient implements NotificationListener, Closeable
          */
         public Builder roleSupplier(Supplier<String> roleSupplier)
         {
-            return update(b -> b.roleSupplier = Objects.requireNonNull(roleSupplier,
-                                                                       "roleSupplier must be provided"));
+            return update(b -> b.roleSupplier = Objects.requireNonNull(roleSupplier, "roleSupplier must be provided"));
         }
 
         /**
@@ -420,8 +409,7 @@ public class JmxClient implements NotificationListener, Closeable
          */
         public Builder passwordSupplier(Supplier<String> passwordSupplier)
         {
-            return update(b -> b.passwordSupplier = Objects.requireNonNull(passwordSupplier,
-                                                                           "passwordSupplier must be provided"));
+            return update(b -> b.passwordSupplier = Objects.requireNonNull(passwordSupplier, "passwordSupplier must be provided"));
         }
 
         /**

@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.cluster.instance;
 
+import com.codahale.metrics.MetricRegistry;
 import java.io.File;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -25,8 +26,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
@@ -39,7 +38,6 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.utils.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 
 /**
@@ -196,11 +194,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
     @Override
     public String toString()
     {
-        return "InstanceMetadataImpl{" +
-               "id=" + id +
-               ", host='" + host + '\'' +
-               ", port=" + port +
-               '}';
+        return "InstanceMetadataImpl{" + "id=" + id + ", host='" + host + '\'' + ", port=" + port + '}';
     }
 
     /**
@@ -264,8 +258,8 @@ public class InstanceMetadataImpl implements InstanceMetadata
         }
 
         /**
-         * Sets the {@code host} and the {@code ipAddress} resolved by {@link DnsResolvers#DEFAULT}
-         * and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code host} and the {@code ipAddress} resolved by {@link DnsResolvers#DEFAULT} and returns a reference to this Builder enabling method
+         * chaining.
          *
          * @param host the {@code host} to set
          * @return a reference to this Builder
@@ -276,13 +270,13 @@ public class InstanceMetadataImpl implements InstanceMetadata
         }
 
         /**
-         * Sets the {@code host} and the {@code ipAddress} resolved by dnsResolver
-         * and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code host} and the {@code ipAddress} resolved by dnsResolver and returns a reference to this Builder enabling method chaining.
          *
          * @param host the {@code host} to set
          * @return a reference to this Builder
          */
-        public Builder host(String host, DnsResolver dnsResolver)
+        public Builder host(String host,
+                            DnsResolver dnsResolver)
         {
             return update(b -> {
                 b.host = host;
@@ -452,23 +446,17 @@ public class InstanceMetadataImpl implements InstanceMetadata
 
         public String resolveCommitlogDir()
         {
-            return commitlogDir != null
-                   ? FileUtils.maybeResolveHomeDirectory(commitlogDir)
-                   : storageDirFor(DEFAULT_COMMITLOG_DIR);
+            return commitlogDir != null ? FileUtils.maybeResolveHomeDirectory(commitlogDir) : storageDirFor(DEFAULT_COMMITLOG_DIR);
         }
 
         public String resolveHintsDir()
         {
-            return hintsDir != null
-                   ? FileUtils.maybeResolveHomeDirectory(hintsDir)
-                   : storageDirFor(DEFAULT_HINTS_DIR);
+            return hintsDir != null ? FileUtils.maybeResolveHomeDirectory(hintsDir) : storageDirFor(DEFAULT_HINTS_DIR);
         }
 
         public String resolveSavedCachesDir()
         {
-            return savedCachesDir != null
-                   ? FileUtils.maybeResolveHomeDirectory(savedCachesDir)
-                   : storageDirFor(DEFAULT_SAVED_CACHES_DIR);
+            return savedCachesDir != null ? FileUtils.maybeResolveHomeDirectory(savedCachesDir) : storageDirFor(DEFAULT_SAVED_CACHES_DIR);
         }
 
         public String resolveCdcDir()
@@ -485,8 +473,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         }
 
         /**
-         * This method mirrors the Cassandra implementation. See
-         * {@code org.apache.cassandra.config.DatabaseDescriptor#storagedirFor(java.lang.String)}.
+         * This method mirrors the Cassandra implementation. See {@code org.apache.cassandra.config.DatabaseDescriptor#storagedirFor(java.lang.String)}.
          *
          * @param type the type of directory
          * @return the storage directory for the provided {@code type}

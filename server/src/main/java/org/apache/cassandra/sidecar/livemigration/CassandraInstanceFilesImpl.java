@@ -32,14 +32,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.hasAnyPlaceholder;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.replacePlaceholder;
 
@@ -69,7 +66,8 @@ public class CassandraInstanceFilesImpl implements CassandraInstanceFiles
     }
 
     private List<InstanceFileInfo> files(Set<String> filesToExclude,
-                                         Set<String> dirsToExclude) throws IOException
+                                         Set<String> dirsToExclude)
+            throws IOException
     {
         List<DirVisitor> dirVisitors = dirVisitorList(filesToExclude, dirsToExclude);
         List<InstanceFileInfo> instanceFileInfos = new ArrayList<>();
@@ -93,19 +91,17 @@ public class CassandraInstanceFilesImpl implements CassandraInstanceFiles
 
         for (String dir : dirsToCopy)
         {
-            dirToVisit(dir,
-                       dirPlaceholderMap.get(dir),
-                       dirPathPrefix.get(dir),
-                       filesToExclude,
-                       dirsToExclude)
-            .ifPresent(dataFilesToVisit::add);
+            dirToVisit(dir, dirPlaceholderMap.get(dir), dirPathPrefix.get(dir), filesToExclude, dirsToExclude).ifPresent(dataFilesToVisit::add);
         }
 
         return dataFilesToVisit;
     }
 
-    private Optional<DirVisitor> dirToVisit(String homeDir, Set<String> placeholders, String pathPrefix,
-                                            Set<String> filesToExclude, Set<String> dirsToExclude)
+    private Optional<DirVisitor> dirToVisit(String homeDir,
+                                            Set<String> placeholders,
+                                            String pathPrefix,
+                                            Set<String> filesToExclude,
+                                            Set<String> dirsToExclude)
     {
         if (null == homeDir)
         {
@@ -128,7 +124,9 @@ public class CassandraInstanceFilesImpl implements CassandraInstanceFiles
         return Optional.of(new DirVisitor(homeDir, pathPrefix, fileExclusionMatchers, dirExclusionMatchers));
     }
 
-    List<PathMatcher> toPathMatchers(Set<String> exclusions, Set<String> homeDirPlaceholders, String homeDir)
+    List<PathMatcher> toPathMatchers(Set<String> exclusions,
+                                     Set<String> homeDirPlaceholders,
+                                     String homeDir)
     {
         if (null == exclusions || exclusions.isEmpty())
         {
@@ -136,11 +134,11 @@ public class CassandraInstanceFilesImpl implements CassandraInstanceFiles
         }
 
         return exclusions.stream()
-                         .filter(exclusion -> !hasAnyPlaceholder(exclusion)
-                                              || hasAnyPlaceholder(exclusion, homeDirPlaceholders))
+                         .filter(exclusion -> !hasAnyPlaceholder(exclusion) || hasAnyPlaceholder(exclusion, homeDirPlaceholders))
                          .map(file -> replacePlaceholder(file, homeDirPlaceholders, homeDir))
                          .filter(Objects::nonNull)
-                         .map(file -> FileSystems.getDefault().getPathMatcher(file))
+                         .map(file -> FileSystems.getDefault()
+                                                 .getPathMatcher(file))
                          .collect(Collectors.toList());
     }
 }

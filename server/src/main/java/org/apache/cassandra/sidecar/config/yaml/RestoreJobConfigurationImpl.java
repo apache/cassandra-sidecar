@@ -35,17 +35,13 @@ import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreJobConfigurationImpl.class);
-    private static final SecondBoundConfiguration MIN_RESTORE_JOB_TABLES_TTL =
-    SecondBoundConfiguration.parse("14d");
+    private static final SecondBoundConfiguration MIN_RESTORE_JOB_TABLES_TTL = SecondBoundConfiguration.parse("14d");
 
-    private static final MillisecondBoundConfiguration DEFAULT_JOB_DISCOVERY_ACTIVE_LOOP_DELAY =
-    MillisecondBoundConfiguration.parse("5m");
-    private static final MillisecondBoundConfiguration DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY =
-    MillisecondBoundConfiguration.parse("10m");
+    private static final MillisecondBoundConfiguration DEFAULT_JOB_DISCOVERY_ACTIVE_LOOP_DELAY = MillisecondBoundConfiguration.parse("5m");
+    private static final MillisecondBoundConfiguration DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY = MillisecondBoundConfiguration.parse("10m");
     private static final int DEFAULT_JOB_DISCOVERY_MINIMUM_RECENCY_DAYS = 5;
     private static final int DEFAULT_PROCESS_MAX_CONCURRENCY = 20; // process at most 20 slices concurrently
-    private static final SecondBoundConfiguration DEFAULT_RESTORE_JOB_TABLES_TTL =
-    SecondBoundConfiguration.parse("90d");
+    private static final SecondBoundConfiguration DEFAULT_RESTORE_JOB_TABLES_TTL = SecondBoundConfiguration.parse("90d");
     // A restore task is considered slow if it has been in the "active" list for 10 minutes.
     private static final SecondBoundConfiguration DEFAULT_RESTORE_JOB_SLOW_TASK_THRESHOLD = SecondBoundConfiguration.parse("10m");
     // report once a minute
@@ -92,14 +88,12 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     {
         if (restoreJobTablesTtl.compareTo(MIN_RESTORE_JOB_TABLES_TTL) < 0)
         {
-            throw new IllegalArgumentException("restoreJobTablesTtl cannot be less than "
-                                               + MIN_RESTORE_JOB_TABLES_TTL);
+            throw new IllegalArgumentException("restoreJobTablesTtl cannot be less than " + MIN_RESTORE_JOB_TABLES_TTL);
         }
         long ttl = restoreJobTablesTtl().toSeconds();
         if (TimeUnit.DAYS.toSeconds(jobDiscoveryMinimumRecencyDays()) >= ttl)
         {
-            throw new IllegalArgumentException("JobDiscoveryMinimumRecencyDays (in seconds) cannot be greater than "
-                                               + ttl);
+            throw new IllegalArgumentException("JobDiscoveryMinimumRecencyDays (in seconds) cannot be greater than " + ttl);
         }
     }
 
@@ -330,8 +324,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         }
 
         /**
-         * Sets the {@code jobDiscoveryActiveLoopDelay} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code jobDiscoveryActiveLoopDelay} and returns a reference to this Builder enabling method chaining.
          *
          * @param jobDiscoveryActiveLoopDelay the {@code jobDiscoveryActiveLoopDelay} to set
          * @return a reference to this Builder
@@ -342,8 +335,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         }
 
         /**
-         * Sets the {@code jobDiscoveryIdleLoopDelay} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code jobDiscoveryIdleLoopDelay} and returns a reference to this Builder enabling method chaining.
          *
          * @param jobDiscoveryIdleLoopDelay the {@code jobDiscoveryIdleLoopDelay} to set
          * @return a reference to this Builder
@@ -354,8 +346,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         }
 
         /**
-         * Sets the {@code jobDiscoveryMinimumRecencyDays} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code jobDiscoveryMinimumRecencyDays} and returns a reference to this Builder enabling method chaining.
          *
          * @param jobDiscoveryMinimumRecencyDays the {@code jobDiscoveryMinimumRecencyDays} to set
          * @return a reference to this Builder
@@ -366,8 +357,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         }
 
         /**
-         * Sets the {@code processMaxConcurrency} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code processMaxConcurrency} and returns a reference to this Builder enabling method chaining.
          *
          * @param processMaxConcurrency the {@code processMaxConcurrency} to set
          * @return a reference to this Builder
@@ -378,8 +368,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         }
 
         /**
-         * Sets the {@code restoreJobTablesTtl} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code restoreJobTablesTtl} and returns a reference to this Builder enabling method chaining.
          *
          * @param restoreJobTablesTtl the {@code restoreJobTablesTtl} to set
          * @return a reference to this Builder
@@ -390,8 +379,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         }
 
         /**
-         * Sets the {@code slowTaskThreshold} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code slowTaskThreshold} and returns a reference to this Builder enabling method chaining.
          *
          * @param slowTaskThreshold the {@code slowTaskThreshold} to set
          * @return a reference to this Builder
@@ -402,8 +390,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         }
 
         /**
-         * Sets the {@code slowTaskReportDelay} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code slowTaskReportDelay} and returns a reference to this Builder enabling method chaining.
          *
          * @param slowTaskReportDelay the {@code slowTaskReportDelay} to set
          * @return a reference to this Builder
@@ -414,8 +401,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         }
 
         /**
-         * Sets the {@code ringTopologyRefreshDelay} and returns a reference to this Builder enabling
-         * method chaining.
+         * Sets the {@code ringTopologyRefreshDelay} and returns a reference to this Builder enabling method chaining.
          *
          * @param ringTopologyRefreshDelay the {@code ringTopologyRefreshDelay} to set
          * @return a reference to this Builder

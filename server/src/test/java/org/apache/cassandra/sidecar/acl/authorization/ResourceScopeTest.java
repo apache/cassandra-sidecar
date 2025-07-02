@@ -38,7 +38,8 @@ class ResourceScopeTest
     {
         assertThat(CLUSTER_SCOPE.variableAwareResource()).isEqualTo("cluster");
         assertThat(CLUSTER_SCOPE.resolveWithResource("any")).isEqualTo("cluster");
-        assertThat(CLUSTER_SCOPE.expandedResources().size()).isOne();
+        assertThat(CLUSTER_SCOPE.expandedResources()
+                                .size()).isOne();
         assertThat(CLUSTER_SCOPE.expandedResources()).contains("cluster");
     }
 
@@ -47,7 +48,8 @@ class ResourceScopeTest
     {
         assertThat(OPERATION_SCOPE.variableAwareResource()).isEqualTo("operation");
         assertThat(OPERATION_SCOPE.resolveWithResource("any")).isEqualTo("operation");
-        assertThat(OPERATION_SCOPE.expandedResources().size()).isOne();
+        assertThat(OPERATION_SCOPE.expandedResources()
+                                  .size()).isOne();
         assertThat(OPERATION_SCOPE.expandedResources()).contains("operation");
     }
 
@@ -55,7 +57,8 @@ class ResourceScopeTest
     void testDataScope()
     {
         assertThat(DATA_SCOPE.variableAwareResource()).isEqualTo("data");
-        assertThat(DATA_SCOPE.expandedResources().size()).isOne();
+        assertThat(DATA_SCOPE.expandedResources()
+                             .size()).isOne();
         assertThat(DATA_SCOPE.expandedResources()).contains("data");
     }
 
@@ -78,10 +81,7 @@ class ResourceScopeTest
         assertThat(TABLE_SCOPE.resolveWithResource("data/university")).isEqualTo("data/university");
         assertThat(TABLE_SCOPE.resolveWithResource("data/university/student")).isEqualTo("data/university/student");
         assertThat(TABLE_SCOPE.expandedResources()).hasSize(4)
-                                                   .contains("data",
-                                                             "data/{keyspace}",
-                                                             "data/{keyspace}/*",
-                                                             "data/{keyspace}/{table}");
+                                                   .contains("data", "data/{keyspace}", "data/{keyspace}/*", "data/{keyspace}/{table}");
     }
 
     @Test
@@ -94,32 +94,29 @@ class ResourceScopeTest
     @Test
     void testInvalidDataResourceScopes()
     {
-        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("data/"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("data/ is not a valid data resource, expected format is data/<keyspace>/<table>");
+        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("data/")).isInstanceOf(IllegalArgumentException.class)
+                                                                         .hasMessage(
+                                                                                 "data/ is not a valid data resource, expected format is data/<keyspace>/<table>");
 
-        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("dataOMG/ks/tbl"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("dataOMG/ks/tbl is not a valid data resource, expected format is data/<keyspace>/<table>");
+        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("dataOMG/ks/tbl")).isInstanceOf(IllegalArgumentException.class)
+                                                                                  .hasMessage(
+                                                                                          "dataOMG/ks/tbl is not a valid data resource, expected format is data/<keyspace>/<table>");
 
-        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("data/ /tbl"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Keyspace or table can not be empty in data resource");
+        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("data/ /tbl")).isInstanceOf(IllegalArgumentException.class)
+                                                                              .hasMessage("Keyspace or table can not be empty in data resource");
 
-        assertThatThrownBy(() -> KEYSPACE_SCOPE.resolveWithResource("data//"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("data// is not a valid data resource, expected format is data/<keyspace>/<table>");
+        assertThatThrownBy(() -> KEYSPACE_SCOPE.resolveWithResource("data//")).isInstanceOf(IllegalArgumentException.class)
+                                                                              .hasMessage(
+                                                                                      "data// is not a valid data resource, expected format is data/<keyspace>/<table>");
 
-        assertThatThrownBy(() -> TABLE_SCOPE.resolveWithResource("data//tbl"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Keyspace or table can not be empty in data resource");
+        assertThatThrownBy(() -> TABLE_SCOPE.resolveWithResource("data//tbl")).isInstanceOf(IllegalArgumentException.class)
+                                                                              .hasMessage("Keyspace or table can not be empty in data resource");
 
-        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("data/ks/tbl/extra"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("data/ks/tbl/extra is not a valid data resource, expected format is data/<keyspace>/<table>");
+        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("data/ks/tbl/extra")).isInstanceOf(IllegalArgumentException.class)
+                                                                                     .hasMessage(
+                                                                                             "data/ks/tbl/extra is not a valid data resource, expected format is data/<keyspace>/<table>");
 
-        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("/"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("/ is not a valid data resource, expected format is data/<keyspace>/<table>");
+        assertThatThrownBy(() -> DATA_SCOPE.resolveWithResource("/")).isInstanceOf(IllegalArgumentException.class)
+                                                                     .hasMessage("/ is not a valid data resource, expected format is data/<keyspace>/<table>");
     }
 }

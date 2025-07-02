@@ -26,8 +26,9 @@ public interface RetryAction
     /**
      * Notify that the request must be retried with {@code retryDelayMillis}.
      *
-     * @param attempts         the number of attempts for this request
+     * @param attempts the number of attempts for this request
      * @param retryDelayMillis the delay between retries in milliseconds
      */
-    void retry(int attempts, long retryDelayMillis);
+    void retry(int attempts,
+               long retryDelayMillis);
 }

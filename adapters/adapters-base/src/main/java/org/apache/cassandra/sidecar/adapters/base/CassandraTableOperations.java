@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.adapters.base;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.cassandra.sidecar.adapters.base.jmx.TableJmxOperations;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
@@ -55,30 +54,25 @@ public class CassandraTableOperations implements TableOperations
                                           boolean copyData)
     {
         return jmxClient.proxy(TableJmxOperations.class, tableMBeanName(keyspace, tableName))
-                        .importNewSSTables(Collections.singleton(directory),
-                                           resetLevel,
-                                           clearRepaired,
-                                           verifySSTables,
-                                           verifyTokens,
-                                           invalidateCaches,
-                                           extendedVerify,
-                                           copyData);
+                        .importNewSSTables(Collections.singleton(directory), resetLevel, clearRepaired, verifySSTables, verifyTokens, invalidateCaches,
+                                extendedVerify, copyData);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public List<String> getDataPaths(@NotNull String keyspace, @NotNull String table) throws IOException
+    public List<String> getDataPaths(@NotNull String keyspace,
+                                     @NotNull String table)
+            throws IOException
     {
         return jmxClient.proxy(TableJmxOperations.class, tableMBeanName(keyspace, table))
                         .getDataPaths();
     }
 
-    String tableMBeanName(String keyspace, String tableName)
+    String tableMBeanName(String keyspace,
+                          String tableName)
     {
-        return String.format("org.apache.cassandra.db:type=%s,keyspace=%s,table=%s",
-                             tableName.contains(".") ? "IndexTables" : "Tables",
-                             keyspace, tableName);
+        return String.format("org.apache.cassandra.db:type=%s,keyspace=%s,table=%s", tableName.contains(".") ? "IndexTables" : "Tables", keyspace, tableName);
     }
 }

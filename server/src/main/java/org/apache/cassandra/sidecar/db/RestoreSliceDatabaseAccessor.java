@@ -32,8 +32,7 @@ import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
 /**
- * {@link RestoreSliceDatabaseAccessor} is a data accessor to Cassandra.
- * It encapsulates the CRUD operations for restore_slice table
+ * {@link RestoreSliceDatabaseAccessor} is a data accessor to Cassandra. It encapsulates the CRUD operations for restore_slice table
  */
 @Singleton
 public class RestoreSliceDatabaseAccessor extends DatabaseAccessor<RestoreSlicesSchema>
@@ -53,35 +52,30 @@ public class RestoreSliceDatabaseAccessor extends DatabaseAccessor<RestoreSlices
         sidecarSchema.ensureInitialized();
 
         BoundStatement statement = tableSchema.insertSlice()
-                                              .bind(slice.jobId(),
-                                                    slice.bucketId(),
-                                                    slice.sliceId(),
-                                                    slice.bucket(),
-                                                    slice.key(),
-                                                    slice.checksum(),
-                                                    slice.startToken(),
-                                                    slice.endToken(),
-                                                    slice.compressedSize(),
-                                                    slice.uncompressedSize());
+                                              .bind(slice.jobId(), slice.bucketId(), slice.sliceId(), slice.bucket(), slice.key(), slice.checksum(),
+                                                      slice.startToken(), slice.endToken(), slice.compressedSize(), slice.uncompressedSize());
         execute(statement);
         return slice;
     }
 
     /**
      * Find all {@link RestoreSlice} that overlaps the range of the job and bucket.
+     *
      * @param restoreJob restore job
      * @param bucketId bucket id
      * @param range range to check the overlaps
      * @return list of overlapping {@link RestoreSlice}
      */
-    public List<RestoreSlice> selectByJobByBucketByTokenRange(RestoreJob restoreJob, short bucketId, TokenRange range)
+    public List<RestoreSlice> selectByJobByBucketByTokenRange(RestoreJob restoreJob,
+                                                              short bucketId,
+                                                              TokenRange range)
     {
         sidecarSchema.ensureInitialized();
         BoundStatement statement = tableSchema.findAllByTokenRange()
-                                              .bind(restoreJob.jobId,
-                                                    bucketId,
-                                                    range.start().toBigInteger(),
-                                                    range.end().toBigInteger());
+                                              .bind(restoreJob.jobId, bucketId, range.start()
+                                                                                     .toBigInteger(),
+                                                      range.end()
+                                                           .toBigInteger());
         ResultSet result = execute(statement);
         List<RestoreSlice> slices = new ArrayList<>();
         for (Row row : result)

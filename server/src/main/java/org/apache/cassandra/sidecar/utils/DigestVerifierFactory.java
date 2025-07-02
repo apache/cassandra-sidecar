@@ -27,7 +27,6 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.FileSystem;
 import org.jetbrains.annotations.VisibleForTesting;
-
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;
 
 /**
@@ -60,13 +59,11 @@ public class DigestVerifierFactory
     }
 
     /***
-     * Returns the first match for a {@link DigestVerifier} from the registered list of verifiers. If none of the
-     * verifiers matches, a no-op validator is returned.
+     * Returns the first match for a {@link DigestVerifier} from the registered list of verifiers. If none of the verifiers matches, a no-op validator is
+     * returned.
      *
-     * @param headers the request headers used to test whether a {@link DigestVerifier} can be used to verify the
-     *                request
-     * @return the first match for a {@link DigestVerifier} from the registered list of verifiers, or a no-op
-     * verifier if none match
+     * @param headers the request headers used to test whether a {@link DigestVerifier} can be used to verify the request
+     * @return the first match for a {@link DigestVerifier} from the registered list of verifiers, or a no-op verifier if none match
      */
     public DigestVerifier verifier(MultiMap headers)
     {

@@ -35,8 +35,7 @@ import org.jetbrains.annotations.NotNull;
 import software.amazon.awssdk.utils.ImmutableMap;
 
 /**
- * Schema for the manifest file in slice
- * It is essentially the mapping from SSTable identifier (String) to the ManifestEntry.
+ * Schema for the manifest file in slice It is essentially the mapping from SSTable identifier (String) to the ManifestEntry.
  */
 public class RestoreSliceManifest extends HashMap<String, RestoreSliceManifest.ManifestEntry>
 {
@@ -65,6 +64,7 @@ public class RestoreSliceManifest extends HashMap<String, RestoreSliceManifest.M
 
     /**
      * Merge all checksums of all the SSTable components included in the manifest
+     *
      * @return map of file name to checksum; it never returns null
      */
     public @NotNull Map<String, String> mergeAllChecksums()

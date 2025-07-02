@@ -114,17 +114,17 @@ public class Server
         validate();
 
         LOGGER.info("Starting Cassandra Sidecar");
-        int serverVerticleCount = sidecarConfiguration.serviceConfiguration().serverVerticleInstances();
-        Preconditions.checkArgument(serverVerticleCount > 0,
-                                    "Server verticle count can not be less than 1");
+        int serverVerticleCount = sidecarConfiguration.serviceConfiguration()
+                                                      .serverVerticleInstances();
+        Preconditions.checkArgument(serverVerticleCount > 0, "Server verticle count can not be less than 1");
         LOGGER.debug("Deploying {} verticles to vertx", serverVerticleCount);
         DeploymentOptions deploymentOptions = new DeploymentOptions().setInstances(serverVerticleCount);
         HttpServerOptions options = optionsProvider.apply(sidecarConfiguration);
         return vertx.deployVerticle(() -> {
-                        ServerVerticle serverVerticle = new ServerVerticle(sidecarConfiguration, router, options);
-                        deployedServerVerticles.add(serverVerticle);
-                        return serverVerticle;
-                    }, deploymentOptions)
+            ServerVerticle serverVerticle = new ServerVerticle(sidecarConfiguration, router, options);
+            deployedServerVerticles.add(serverVerticle);
+            return serverVerticle;
+        }, deploymentOptions)
                     .compose(this::notifyServerStart);
     }
 
@@ -139,15 +139,15 @@ public class Server
         LOGGER.info("Stopping Cassandra Sidecar");
         deployedServerVerticles.clear();
         Objects.requireNonNull(deploymentId, "deploymentId must not be null");
-        return notifyServerStopping(deploymentId)
-               .compose(v -> vertx.undeploy(deploymentId))
-               .onSuccess(v -> LOGGER.info("Successfully stopped Cassandra Sidecar"));
+        return notifyServerStopping(deploymentId).compose(v -> vertx.undeploy(deploymentId))
+                                                 .onSuccess(v -> LOGGER.info("Successfully stopped Cassandra Sidecar"));
     }
 
     /**
      * Stops the {@link Vertx} instance and release any resources held by it.
      *
-     * <p>The instance cannot be used after it has been closed.
+     * <p>
+     * The instance cannot be used after it has been closed.
      *
      * @return a future completed with the result
      */
@@ -161,32 +161,34 @@ public class Server
             sidecarClientProvider.close();
             p.complete();
         }));
-        instancesMetadata.instances().forEach(instance -> {
-            Promise<Void> closingFutureForInstance = Promise.promise();
-            executorPools.internal()
-                         .runBlocking(() -> {
-                             try
-                             {
-                                 instance.delegate().close();
-                             }
-                             catch (Exception e)
-                             {
-                                 LOGGER.error("Failed to close delegate", e);
-                                 closingFutureForInstance.tryFail(e);
-                             }
-                             finally
-                             {
-                                 closingFutureForInstance.tryComplete(null);
-                             }
+        instancesMetadata.instances()
+                         .forEach(instance -> {
+                             Promise<Void> closingFutureForInstance = Promise.promise();
+                             executorPools.internal()
+                                          .runBlocking(() -> {
+                                              try
+                                              {
+                                                  instance.delegate()
+                                                          .close();
+                                              }
+                                              catch (Exception e)
+                                              {
+                                                  LOGGER.error("Failed to close delegate", e);
+                                                  closingFutureForInstance.tryFail(e);
+                                              }
+                                              finally
+                                              {
+                                                  closingFutureForInstance.tryComplete(null);
+                                              }
+                                          });
+                             closingFutures.add(closingFutureForInstance.future());
                          });
-            closingFutures.add(closingFutureForInstance.future());
-        });
 
         return Future.all(closingFutures)
                      .onSuccess(ignored -> LOGGER.debug("Closed Cassandra adapters"))
                      .transform(v -> {
-                        LOGGER.debug("Closing PeriodicTaskExecutor");
-                        return periodicTaskExecutor.close();
+                         LOGGER.debug("Closing PeriodicTaskExecutor");
+                         return periodicTaskExecutor.close();
                      })
                      .transform(v -> {
                          LOGGER.debug("Closing executor pools");
@@ -201,8 +203,7 @@ public class Server
     }
 
     /**
-     * Updates the SSL Options for all servers in all the deployed verticle instances with the {@code timestamp}
-     * of the updated file
+     * Updates the SSL Options for all servers in all the deployed verticle instances with the {@code timestamp} of the updated file
      *
      * @param timestamp the timestamp of the updated file
      * @return a future to indicate the update was successfully completed
@@ -213,10 +214,9 @@ public class Server
         // Sets the updated SSL options
         optionsProvider.configureSSLOptions(options, sidecarConfiguration.sslConfiguration(), timestamp);
         // Updates the SSL options of all the deployed verticles
-        List<Future<CompositeFuture>> updateFutures =
-        deployedServerVerticles.stream()
-                               .map(serverVerticle -> serverVerticle.updateSSLOptions(options))
-                               .collect(Collectors.toList());
+        List<Future<CompositeFuture>> updateFutures = deployedServerVerticles.stream()
+                                                                             .map(serverVerticle -> serverVerticle.updateSSLOptions(options))
+                                                                             .collect(Collectors.toList());
         return Future.all(updateFutures);
     }
 
@@ -241,7 +241,8 @@ public class Server
     public int actualPort()
     {
         if (!deployedServerVerticles.isEmpty())
-            return deployedServerVerticles.get(0).actualPort();
+            return deployedServerVerticles.get(0)
+                                          .actualPort();
         throw new IllegalStateException("No deployed server verticles. Maybe server failed to deploy due to port conflict");
     }
 
@@ -253,35 +254,39 @@ public class Server
     public String deploymentId()
     {
         if (!deployedServerVerticles.isEmpty())
-            return deployedServerVerticles.get(0).deploymentID();
+            return deployedServerVerticles.get(0)
+                                          .deploymentID();
         throw new IllegalStateException("No deployed server verticles");
     }
 
     protected Future<String> notifyServerStart(String deploymentId)
     {
         LOGGER.info("Successfully started Cassandra Sidecar");
-        MessageConsumer<JsonObject> cqlReadyConsumer = vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address());
+        MessageConsumer<JsonObject> cqlReadyConsumer = vertx.eventBus()
+                                                            .localConsumer(ON_CASSANDRA_CQL_READY.address());
         cqlReadyConsumer.handler(message -> onCqlReady(cqlReadyConsumer, message));
-        vertx.eventBus().publish(SidecarServerEvents.ON_SERVER_START.address(), deploymentId);
+        vertx.eventBus()
+             .publish(SidecarServerEvents.ON_SERVER_START.address(), deploymentId);
         return Future.succeededFuture(deploymentId);
     }
 
     protected Future<Void> notifyServerStopping(String deploymentId)
     {
-        vertx.eventBus().publish(SidecarServerEvents.ON_SERVER_STOP.address(), deploymentId);
+        vertx.eventBus()
+             .publish(SidecarServerEvents.ON_SERVER_STOP.address(), deploymentId);
         return Future.succeededFuture();
     }
 
     protected void banner(PrintStream out)
     {
-        out.println(" _____                               _              _____ _     _                     \n" +
-                    "/  __ \\                             | |            /  ___(_)   | |                    \n" +
-                    "| /  \\/ __ _ ___ ___  __ _ _ __   __| |_ __ __ _   \\ `--. _  __| | ___  ___ __ _ _ __ \n" +
-                    "| |    / _` / __/ __|/ _` | '_ \\ / _` | '__/ _` |   `--. \\ |/ _` |/ _ \\/ __/ _` | '__|\n" +
-                    "| \\__/\\ (_| \\__ \\__ \\ (_| | | | | (_| | | | (_| |  /\\__/ / | (_| |  __/ (_| (_| | |   \n" +
-                    " \\____/\\__,_|___/___/\\__,_|_| |_|\\__,_|_|  \\__,_|  \\____/|_|\\__,_|\\___|\\___\\__,_|_|\n" +
-                    "                                                                                      \n" +
-                    "                                                                                      ");
+        out.println(" _____                               _              _____ _     _                     \n"
+                + "/  __ \\                             | |            /  ___(_)   | |                    \n"
+                + "| /  \\/ __ _ ___ ___  __ _ _ __   __| |_ __ __ _   \\ `--. _  __| | ___  ___ __ _ _ __ \n"
+                + "| |    / _` / __/ __|/ _` | '_ \\ / _` | '__/ _` |   `--. \\ |/ _` |/ _ \\/ __/ _` | '__|\n"
+                + "| \\__/\\ (_| \\__ \\__ \\ (_| | | | | (_| | | | (_| |  /\\__/ / | (_| |  __/ (_| (_| | |   \n"
+                + " \\____/\\__,_|___/___/\\__,_|_| |_|\\__,_|_|  \\__,_|  \\____/|_|\\__,_|\\___|\\___\\__,_|_|\n"
+                + "                                                                                      \n"
+                + "                                                                                      ");
     }
 
     protected void validate()
@@ -309,17 +314,20 @@ public class Server
     }
 
     /**
-     * Handles CQL ready events. When all the expected CQL connections are ready, notifies to the
-     * {@link SidecarServerEvents#ON_ALL_CASSANDRA_CQL_READY} address.
+     * Handles CQL ready events. When all the expected CQL connections are ready, notifies to the {@link SidecarServerEvents#ON_ALL_CASSANDRA_CQL_READY}
+     * address.
      *
      * @param cqlReadyConsumer the consumer
-     * @param message          the received message
+     * @param message the received message
      */
-    protected void onCqlReady(MessageConsumer<JsonObject> cqlReadyConsumer, Message<JsonObject> message)
+    protected void onCqlReady(MessageConsumer<JsonObject> cqlReadyConsumer,
+                              Message<JsonObject> message)
     {
-        cqlReadyInstanceIds.add(message.body().getInteger("cassandraInstanceId"));
+        cqlReadyInstanceIds.add(message.body()
+                                       .getInteger("cassandraInstanceId"));
 
-        boolean isCqlReadyOnAllInstances = instancesMetadata.instances().stream()
+        boolean isCqlReadyOnAllInstances = instancesMetadata.instances()
+                                                            .stream()
                                                             .map(InstanceMetadata::id)
                                                             .allMatch(cqlReadyInstanceIds::contains);
         if (isCqlReadyOnAllInstances)
@@ -331,16 +339,16 @@ public class Server
     }
 
     /**
-     * Constructs the notification message containing all the Cassandra instance IDs and publishes the message
-     * notifying consumers that all the CQL connections are available.
+     * Constructs the notification message containing all the Cassandra instance IDs and publishes the message notifying consumers that all the CQL connections
+     * are available.
      */
     protected void notifyAllCassandraCqlAreReady()
     {
         JsonArray cassandraInstanceIds = new JsonArray();
         cqlReadyInstanceIds.forEach(cassandraInstanceIds::add);
-        JsonObject allReadyMessage = new JsonObject()
-                                     .put("cassandraInstanceIds", cassandraInstanceIds);
+        JsonObject allReadyMessage = new JsonObject().put("cassandraInstanceIds", cassandraInstanceIds);
 
-        vertx.eventBus().publish(ON_ALL_CASSANDRA_CQL_READY.address(), allReadyMessage);
+        vertx.eventBus()
+             .publish(ON_ALL_CASSANDRA_CQL_READY.address(), allReadyMessage);
     }
 }

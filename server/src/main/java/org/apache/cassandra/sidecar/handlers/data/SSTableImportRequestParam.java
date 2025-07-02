@@ -27,8 +27,7 @@ import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
 
 /**
- * Holder class for the {@code org.apache.cassandra.sidecar.routes.SSTableUploadsResource}
- * request parameters
+ * Holder class for the {@code org.apache.cassandra.sidecar.routes.SSTableUploadsResource} request parameters
  */
 public class SSTableImportRequestParam extends SSTableUploads
 {
@@ -44,19 +43,24 @@ public class SSTableImportRequestParam extends SSTableUploads
      * Constructs an SSTableImportRequest
      *
      * @param qualifiedTableName the qualified table name in Cassandra
-     * @param uploadId           an identifier for the upload
-     * @param resetLevel         if the level should be reset to 0 on the new SSTables
-     * @param clearRepaired      if repaired info should be wiped from the new SSTables
-     * @param verifySSTables     if the new SSTables should be verified that they are not corrupt
-     * @param verifyTokens       if the tokens in the new SSTables should be verified that they are owned by the
-     *                           current node
-     * @param invalidateCaches   if row cache should be invalidated for the keys in the new SSTables
-     * @param extendedVerify     if we should run an extended verify checking all values in the new SSTables
-     * @param copyData           if we should copy data from source paths instead of moving them
+     * @param uploadId an identifier for the upload
+     * @param resetLevel if the level should be reset to 0 on the new SSTables
+     * @param clearRepaired if repaired info should be wiped from the new SSTables
+     * @param verifySSTables if the new SSTables should be verified that they are not corrupt
+     * @param verifyTokens if the tokens in the new SSTables should be verified that they are owned by the current node
+     * @param invalidateCaches if row cache should be invalidated for the keys in the new SSTables
+     * @param extendedVerify if we should run an extended verify checking all values in the new SSTables
+     * @param copyData if we should copy data from source paths instead of moving them
      */
-    public SSTableImportRequestParam(QualifiedTableName qualifiedTableName, String uploadId, boolean resetLevel,
-                                     boolean clearRepaired, boolean verifySSTables, boolean verifyTokens,
-                                     boolean invalidateCaches, boolean extendedVerify, boolean copyData)
+    public SSTableImportRequestParam(QualifiedTableName qualifiedTableName,
+                                     String uploadId,
+                                     boolean resetLevel,
+                                     boolean clearRepaired,
+                                     boolean verifySSTables,
+                                     boolean verifyTokens,
+                                     boolean invalidateCaches,
+                                     boolean extendedVerify,
+                                     boolean copyData)
     {
         super(qualifiedTableName, uploadId);
         this.resetLevel = resetLevel;
@@ -93,8 +97,7 @@ public class SSTableImportRequestParam extends SSTableUploads
     }
 
     /**
-     * @return true if the tokens in the new SSTables should be verified that they are owned by the current node,
-     * false otherwise
+     * @return true if the tokens in the new SSTables should be verified that they are owned by the current node, false otherwise
      */
     public boolean verifyTokens()
     {
@@ -130,19 +133,14 @@ public class SSTableImportRequestParam extends SSTableUploads
      */
     public boolean equals(Object o)
     {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         SSTableImportRequestParam that = (SSTableImportRequestParam) o;
-        return resetLevel == that.resetLevel
-               && clearRepaired == that.clearRepaired
-               && verifySSTables == that.verifySSTables
-               && verifyTokens == that.verifyTokens
-               && invalidateCaches == that.invalidateCaches
-               && extendedVerify == that.extendedVerify
-               && copyData == that.copyData
-               && uploadId().equals(that.uploadId())
-               && keyspace().equals(that.keyspace())
-               && table().equals(that.table());
+        return resetLevel == that.resetLevel && clearRepaired == that.clearRepaired && verifySSTables == that.verifySSTables
+                && verifyTokens == that.verifyTokens && invalidateCaches == that.invalidateCaches && extendedVerify == that.extendedVerify
+                && copyData == that.copyData && uploadId().equals(that.uploadId()) && keyspace().equals(that.keyspace()) && table().equals(that.table());
     }
 
     /**
@@ -150,8 +148,8 @@ public class SSTableImportRequestParam extends SSTableUploads
      */
     public int hashCode()
     {
-        return Objects.hash(uploadId(), keyspace(), table(), resetLevel, clearRepaired, verifySSTables,
-                            verifyTokens, invalidateCaches, extendedVerify, copyData);
+        return Objects.hash(uploadId(), keyspace(), table(), resetLevel, clearRepaired, verifySSTables, verifyTokens, invalidateCaches, extendedVerify,
+                copyData);
     }
 
     /**
@@ -159,18 +157,9 @@ public class SSTableImportRequestParam extends SSTableUploads
      */
     public String toString()
     {
-        return "SSTableUploadRequest{" +
-               "uploadId='" + uploadId() + '\'' +
-               ", keyspace='" + keyspace() + '\'' +
-               ", tableName='" + table() + '\'' +
-               ", resetLevel=" + resetLevel +
-               ", clearRepaired=" + clearRepaired +
-               ", verifySSTables=" + verifySSTables +
-               ", verifyTokens=" + verifyTokens +
-               ", invalidateCaches=" + invalidateCaches +
-               ", extendedVerify=" + extendedVerify +
-               ", copyData=" + copyData +
-               '}';
+        return "SSTableUploadRequest{" + "uploadId='" + uploadId() + '\'' + ", keyspace='" + keyspace() + '\'' + ", tableName='" + table() + '\''
+                + ", resetLevel=" + resetLevel + ", clearRepaired=" + clearRepaired + ", verifySSTables=" + verifySSTables + ", verifyTokens=" + verifyTokens
+                + ", invalidateCaches=" + invalidateCaches + ", extendedVerify=" + extendedVerify + ", copyData=" + copyData + '}';
     }
 
     /**
@@ -180,17 +169,13 @@ public class SSTableImportRequestParam extends SSTableUploads
      * @param context context from handler
      * @return SSTableImportRequest created from params
      */
-    public static SSTableImportRequestParam from(QualifiedTableName qualifiedTableName, RoutingContext context)
+    public static SSTableImportRequestParam from(QualifiedTableName qualifiedTableName,
+                                                 RoutingContext context)
     {
         HttpServerRequest request = context.request();
-        return new SSTableImportRequestParam(qualifiedTableName,
-                                             context.pathParam("uploadId"),
-                                             parseBooleanQueryParam(request, "resetLevel", true),
-                                             parseBooleanQueryParam(request, "clearRepaired", true),
-                                             parseBooleanQueryParam(request, "verifySSTables", true),
-                                             parseBooleanQueryParam(request, "verifyTokens", true),
-                                             parseBooleanQueryParam(request, "invalidateCaches", true),
-                                             parseBooleanQueryParam(request, "extendedVerify", true),
-                                             parseBooleanQueryParam(request, "copyData", false));
+        return new SSTableImportRequestParam(qualifiedTableName, context.pathParam("uploadId"), parseBooleanQueryParam(request, "resetLevel", true),
+                parseBooleanQueryParam(request, "clearRepaired", true), parseBooleanQueryParam(request, "verifySSTables", true),
+                parseBooleanQueryParam(request, "verifyTokens", true), parseBooleanQueryParam(request, "invalidateCaches", true),
+                parseBooleanQueryParam(request, "extendedVerify", true), parseBooleanQueryParam(request, "copyData", false));
     }
 }

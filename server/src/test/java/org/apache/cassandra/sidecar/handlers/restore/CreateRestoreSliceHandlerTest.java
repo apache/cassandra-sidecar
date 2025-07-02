@@ -18,25 +18,22 @@
 
 package org.apache.cassandra.sidecar.handlers.restore;
 
-import java.math.BigInteger;
-import java.util.function.Consumer;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.math.BigInteger;
+import java.util.function.Consumer;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.restore.RestoreJobProgressTracker;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(VertxExtension.class)
@@ -50,8 +47,7 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     {
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
         mockSubmitRestoreSlice(x -> RestoreJobProgressTracker.Status.CREATED);
-        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, dummy(), context,
-                                               HttpResponseStatus.CREATED);
+        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, dummy(), context, HttpResponseStatus.CREATED);
     }
 
     @Test
@@ -59,11 +55,8 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     {
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
         mockSubmitRestoreSlice(x -> RestoreJobProgressTracker.Status.PENDING);
-        CreateSliceRequestPayload slice = new CreateSliceRequestPayload("2", 3, "bucket", "key",
-                                                                        "checksum", BigInteger.ONE,
-                                                                        BigInteger.valueOf(2), 123L, 234L);
-        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, slice, context,
-                                               HttpResponseStatus.ACCEPTED);
+        CreateSliceRequestPayload slice = new CreateSliceRequestPayload("2", 3, "bucket", "key", "checksum", BigInteger.ONE, BigInteger.valueOf(2), 123L, 234L);
+        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, slice, context, HttpResponseStatus.ACCEPTED);
     }
 
     @Test
@@ -71,11 +64,8 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     {
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
         mockSubmitRestoreSlice(x -> RestoreJobProgressTracker.Status.COMPLETED);
-        CreateSliceRequestPayload slice = new CreateSliceRequestPayload("3", 2, "bucket", "key",
-                                                                        "checksum", BigInteger.ONE,
-                                                                        BigInteger.valueOf(2), 123L, 234L);
-        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, slice, context,
-                                               HttpResponseStatus.OK);
+        CreateSliceRequestPayload slice = new CreateSliceRequestPayload("3", 2, "bucket", "key", "checksum", BigInteger.ONE, BigInteger.valueOf(2), 123L, 234L);
+        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, slice, context, HttpResponseStatus.OK);
     }
 
     @Test
@@ -83,11 +73,8 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
     {
         // the restore job is completed / SUCCEEDED
         mockLookupRestoreJob(id -> RestoreJobTest.createTestingJob(id, RestoreJobStatus.SUCCEEDED));
-        CreateSliceRequestPayload slice = new CreateSliceRequestPayload("3", 2, "bucket", "key",
-                                                                        "checksum", BigInteger.ONE,
-                                                                        BigInteger.valueOf(2), 123L, 234L);
-        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, slice, context,
-                                               HttpResponseStatus.CONFLICT);
+        CreateSliceRequestPayload slice = new CreateSliceRequestPayload("3", 2, "bucket", "key", "checksum", BigInteger.ONE, BigInteger.valueOf(2), 123L, 234L);
+        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, slice, context, HttpResponseStatus.CONFLICT);
     }
 
     @Test
@@ -99,34 +86,28 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
         mockSubmitRestoreSlice(x -> {
             throw new RestoreJobFatalException("job failed");
         });
-        CreateSliceRequestPayload slice = new CreateSliceRequestPayload("3", 2, "bucket", "key",
-                                                                        "checksum", BigInteger.ONE,
-                                                                        BigInteger.valueOf(2), 123L, 234L);
-        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, slice, context,
-                                               HttpResponseStatus.valueOf(550));
+        CreateSliceRequestPayload slice = new CreateSliceRequestPayload("3", 2, "bucket", "key", "checksum", BigInteger.ONE, BigInteger.valueOf(2), 123L, 234L);
+        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, slice, context, HttpResponseStatus.valueOf(550));
     }
 
     @Test
     void testInvalidJobId(VertxTestContext context)
     {
         String invalidJobId = "12951f25-d393-4158-9e90-ec0cbe05af21";
-        sendCreateRestoreSliceRequestAndVerify("ks", invalidJobId, dummy(), context,
-                                               HttpResponseStatus.BAD_REQUEST);
+        sendCreateRestoreSliceRequestAndVerify("ks", invalidJobId, dummy(), context, HttpResponseStatus.BAD_REQUEST);
     }
 
     @Test
     void testInvalidKeyspace(VertxTestContext context)
     {
-        sendCreateRestoreSliceRequestAndVerify("sidecar_internal", TEST_JOB_ID, dummy(), context,
-                                               HttpResponseStatus.FORBIDDEN);
+        sendCreateRestoreSliceRequestAndVerify("sidecar_internal", TEST_JOB_ID, dummy(), context, HttpResponseStatus.FORBIDDEN);
     }
 
     @Test
     void testRestoreJobNotFound(VertxTestContext context)
     {
         mockLookupRestoreJob(x -> null);
-        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, dummy(), context,
-                                               HttpResponseStatus.NOT_FOUND);
+        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, dummy(), context, HttpResponseStatus.NOT_FOUND);
     }
 
     @Test
@@ -137,8 +118,7 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
         mockCreateRestoreSlice(slice -> {
             throw new RuntimeException("Persisting to Cassandra failed");
         });
-        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, dummy(), context,
-                                               HttpResponseStatus.INTERNAL_SERVER_ERROR);
+        sendCreateRestoreSliceRequestAndVerify("ks", TEST_JOB_ID, dummy(), context, HttpResponseStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test
@@ -164,8 +144,7 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
 
     private CreateSliceRequestPayload dummy()
     {
-        return new CreateSliceRequestPayload("1", 5, "bucket", "key", "checksum",
-                                             BigInteger.ONE, BigInteger.valueOf(2), 123L, 234L);
+        return new CreateSliceRequestPayload("1", 5, "bucket", "key", "checksum", BigInteger.ONE, BigInteger.valueOf(2), 123L, 234L);
     }
 
     private void sendCreateRestoreSliceRequestAndVerify(String keyspace,
@@ -187,17 +166,15 @@ class CreateRestoreSliceHandlerTest extends BaseRestoreJobTests
                                                         Consumer<HttpResponse<?>> additionalResponseVerifier)
     {
         Checkpoint completion = context.checkpoint();
-        postAndVerify(String.format(CREATE_RESTORE_SLICE_ENDPOINT, keyspace, "table", jobId),
-                      JsonObject.mapFrom(createSliceRequest),
-                      asyncResult -> {
-                          context.verify(() -> {
-                              HttpResponse<?> response = asyncResult.result();
-                              assertThat(response).isNotNull();
-                              assertThat(response.statusCode()).isEqualTo(expectedStatus.code());
-                              additionalResponseVerifier.accept(response);
-                              completion.flag();
-                          });
-                      });
+        postAndVerify(String.format(CREATE_RESTORE_SLICE_ENDPOINT, keyspace, "table", jobId), JsonObject.mapFrom(createSliceRequest), asyncResult -> {
+            context.verify(() -> {
+                HttpResponse<?> response = asyncResult.result();
+                assertThat(response).isNotNull();
+                assertThat(response.statusCode()).isEqualTo(expectedStatus.code());
+                additionalResponseVerifier.accept(response);
+                completion.flag();
+            });
+        });
 
     }
 }

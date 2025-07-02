@@ -31,9 +31,8 @@ import io.vertx.ext.auth.authorization.AuthorizationProvider;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractCassandraRoles;
 
 /**
- * Provides authorizations based on user's role. Extracts permissions user holds from Cassandra's
- * system_auth.role_permissions table and from Sidecar's sidecar_internal.role_permissions_v1 table and sets
- * them in user.
+ * Provides authorizations based on user's role. Extracts permissions user holds from Cassandra's system_auth.role_permissions table and from Sidecar's
+ * sidecar_internal.role_permissions_v1 table and sets them in user.
  */
 public class RoleBasedAuthorizationProvider implements AuthorizationProvider
 {
@@ -51,7 +50,8 @@ public class RoleBasedAuthorizationProvider implements AuthorizationProvider
     }
 
     @Override
-    public void getAuthorizations(User user, Handler<AsyncResult<Void>> handler)
+    public void getAuthorizations(User user,
+                                  Handler<AsyncResult<Void>> handler)
     {
         getAuthorizations(user).onComplete(handler);
     }
@@ -78,7 +78,8 @@ public class RoleBasedAuthorizationProvider implements AuthorizationProvider
             // when entries in cache are not found, null is returned. We can not add null in user.authorizations()
             if (authorizations != null)
             {
-                user.authorizations().add(authorizationId, authorizations);
+                user.authorizations()
+                    .add(authorizationId, authorizations);
             }
         }
         return Future.succeededFuture();

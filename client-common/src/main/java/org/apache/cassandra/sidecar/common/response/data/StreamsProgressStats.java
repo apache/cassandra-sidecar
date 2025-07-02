@@ -108,15 +108,8 @@ public class StreamsProgressStats
     @Override
     public String toString()
     {
-        return "StreamsProgressStats{" +
-               "totalFilesToReceive=" + totalFilesToReceive +
-               ", totalFilesReceived=" + totalFilesReceived +
-               ", totalBytesToReceive=" + totalBytesToReceive +
-               ", totalBytesReceived=" + totalBytesReceived +
-               ", totalFilesToSend=" + totalFilesToSend +
-               ", totalFilesSent=" + totalFilesSent +
-               ", totalBytesToSend=" + totalBytesToSend +
-               ", totalBytesSent=" + totalBytesSent +
-               '}';
+        return "StreamsProgressStats{" + "totalFilesToReceive=" + totalFilesToReceive + ", totalFilesReceived=" + totalFilesReceived + ", totalBytesToReceive="
+                + totalBytesToReceive + ", totalBytesReceived=" + totalBytesReceived + ", totalFilesToSend=" + totalFilesToSend + ", totalFilesSent="
+                + totalFilesSent + ", totalBytesToSend=" + totalBytesToSend + ", totalBytesSent=" + totalBytesSent + '}';
     }
 }

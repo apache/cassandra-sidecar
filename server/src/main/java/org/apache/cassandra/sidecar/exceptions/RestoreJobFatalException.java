@@ -19,8 +19,7 @@
 package org.apache.cassandra.sidecar.exceptions;
 
 /**
- * Exception thrown when operations related to restore data into Cassandra through Sidecar feature results in fatal
- * error and operation can't be retried
+ * Exception thrown when operations related to restore data into Cassandra through Sidecar feature results in fatal error and operation can't be retried
  */
 public class RestoreJobFatalException extends RestoreJobException
 {
@@ -29,13 +28,15 @@ public class RestoreJobFatalException extends RestoreJobException
         super(message);
     }
 
-    public RestoreJobFatalException(String message, Throwable cause)
+    public RestoreJobFatalException(String message,
+                                    Throwable cause)
     {
         super(message, cause);
     }
 
     /**
      * A fatal exception thrown during the restore job is not retryable
+     *
      * @return false
      */
     @Override

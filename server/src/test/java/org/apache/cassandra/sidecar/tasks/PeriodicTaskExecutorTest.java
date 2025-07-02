@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -26,16 +29,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-
-import com.google.common.util.concurrent.Uninterruptibles;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
@@ -43,7 +36,11 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
-
+import com.google.common.util.concurrent.Uninterruptibles;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -77,7 +74,10 @@ class PeriodicTaskExecutorTest
     @AfterAll
     static void teardown()
     {
-        TestResourceReaper.create().with(vertx).with(executorPools).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(executorPools)
+                          .close();
     }
 
     @Test
@@ -88,16 +88,12 @@ class PeriodicTaskExecutorTest
         CountDownLatch closeLatch = new CountDownLatch(1);
         AtomicBoolean isClosed = new AtomicBoolean(false);
         PeriodicTask task = createSimplePeriodicTask("SimpleTask", 1, 1,
-                                                     () -> failuresCount.incrementAndGet() >= totalFailures
-                                                           ? ScheduleDecision.SKIP
-                                                           : ScheduleDecision.EXECUTE,
-                                                     () -> {
-                                                         throw new RuntimeException("ah, it failed");
-                                                     },
-                                                     () -> {
-                                                         isClosed.set(true);
-                                                         closeLatch.countDown();
-                                                     });
+                () -> failuresCount.incrementAndGet() >= totalFailures ? ScheduleDecision.SKIP : ScheduleDecision.EXECUTE, () -> {
+                    throw new RuntimeException("ah, it failed");
+                }, () -> {
+                    isClosed.set(true);
+                    closeLatch.countDown();
+                });
         taskExecutor.schedule(task);
         loopAssert(1, 1, () -> {
             assertThat(failuresCount.get()).isGreaterThanOrEqualTo(totalFailures);
@@ -124,10 +120,9 @@ class PeriodicTaskExecutorTest
         tasks.forEach(taskExecutor::unschedule);
         // wait until unschedule is complete
         loopAssert(1, () -> assertThat(taskExecutor.timerIds()).isEmpty());
-        tasks.forEach(incTask -> assertThat(incTask.atomicValue.get())
-                                 .describedAs(incTask.name() + " should have same value")
-                                 .isEqualTo(incTask.value)
-                                 .isPositive());
+        tasks.forEach(incTask -> assertThat(incTask.atomicValue.get()).describedAs(incTask.name() + " should have same value")
+                                                                      .isEqualTo(incTask.value)
+                                                                      .isPositive());
     }
 
     @Test
@@ -160,7 +155,8 @@ class PeriodicTaskExecutorTest
     @Test
     void testUnscheduleNonExistTaskHasNoEffect()
     {
-        PeriodicTask notScheduled = createSimplePeriodicTask("simple task", 1, 1, () -> {});
+        PeriodicTask notScheduled = createSimplePeriodicTask("simple task", 1, 1, () -> {
+        });
         Future<Void> unscheduleFuture = taskExecutor.unschedule(notScheduled);
         assertThat(unscheduleFuture.failed()).isTrue();
         assertThat(unscheduleFuture.cause()).hasMessage("No such task to unschedule");
@@ -171,15 +167,12 @@ class PeriodicTaskExecutorTest
     void testUnscheduleNonExistTaskShouldNotClose()
     {
         AtomicBoolean isCloseCalled = new AtomicBoolean(false);
-        PeriodicTask task = createSimplePeriodicTask("SimpleTask", 1, 1,
-                                                     () -> ScheduleDecision.EXECUTE,
-                                                     () -> {},
-                                                     () -> isCloseCalled.set(true));
+        PeriodicTask task = createSimplePeriodicTask("SimpleTask", 1, 1, () -> ScheduleDecision.EXECUTE, () -> {
+        }, () -> isCloseCalled.set(true));
 
         taskExecutor.unschedule(task);
-        assertThat(isCloseCalled.get())
-        .describedAs("When rescheduling an unscheduled task, the close method of the task should not be called")
-        .isFalse();
+        assertThat(isCloseCalled.get()).describedAs("When rescheduling an unscheduled task, the close method of the task should not be called")
+                                       .isFalse();
     }
 
     @Test
@@ -191,28 +184,28 @@ class PeriodicTaskExecutorTest
         testRescheduleDecision(0, 1);
     }
 
-    void testRescheduleDecision(long initialDelay, long delay)
+    void testRescheduleDecision(long initialDelay,
+                                long delay)
     {
         AtomicInteger totalScheduleDecisionCalls = new AtomicInteger(0);
         AtomicBoolean isExecuteCalled = new AtomicBoolean(false);
         AtomicBoolean isCloseCalled = new AtomicBoolean(false);
         // the task that keeps on rescheduling
-        PeriodicTask task = createSimplePeriodicTask("SimpleTask", initialDelay, delay,
-                                                     () -> {
-                                                         totalScheduleDecisionCalls.incrementAndGet();
-                                                         return ScheduleDecision.RESCHEDULE;
-                                                     },
-                                                     () -> {
-                                                         isExecuteCalled.set(true);
-                                                         Uninterruptibles.sleepUninterruptibly(1, TimeUnit.MILLISECONDS);
-                                                     },
-                                                     () -> isCloseCalled.set(true));
+        PeriodicTask task = createSimplePeriodicTask("SimpleTask", initialDelay, delay, () -> {
+            totalScheduleDecisionCalls.incrementAndGet();
+            return ScheduleDecision.RESCHEDULE;
+        }, () -> {
+            isExecuteCalled.set(true);
+            Uninterruptibles.sleepUninterruptibly(1, TimeUnit.MILLISECONDS);
+        }, () -> isCloseCalled.set(true));
         taskExecutor.schedule(task);
         Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
         taskExecutor.unschedule(task);
         Uninterruptibles.sleepUninterruptibly(50, TimeUnit.MILLISECONDS);
-        assertThat(isCloseCalled.get()).describedAs("Task close should be called").isTrue();
-        assertThat(isExecuteCalled.get()).describedAs("Task should never be executed").isFalse();
+        assertThat(isCloseCalled.get()).describedAs("Task close should be called")
+                                       .isTrue();
+        assertThat(isExecuteCalled.get()).describedAs("Task should never be executed")
+                                         .isFalse();
         int lastVal = totalScheduleDecisionCalls.get();
         Uninterruptibles.sleepUninterruptibly(50, TimeUnit.MILLISECONDS);
         assertThat(totalScheduleDecisionCalls.get()).isEqualTo(lastVal);
@@ -227,20 +220,17 @@ class PeriodicTaskExecutorTest
         CountDownLatch closed = new CountDownLatch(1);
         AtomicBoolean executionFinishes = new AtomicBoolean(false);
         AtomicBoolean closeAfterLastExecution = new AtomicBoolean(false);
-        PeriodicTask task = createSimplePeriodicTask("SimpleTask", 1, 1,
-                                                     () -> ScheduleDecision.EXECUTE,
-                                                     () -> {
-                                                         readyToExecute.countDown();
-                                                         Uninterruptibles.awaitUninterruptibly(unscheduleCalled);
-                                                         executionFinishes.set(true);
-                                                     },
-                                                     () -> {
-                                                         if (executionFinishes.get())
-                                                         {
-                                                             closeAfterLastExecution.set(true);
-                                                         }
-                                                         closed.countDown();
-                                                     });
+        PeriodicTask task = createSimplePeriodicTask("SimpleTask", 1, 1, () -> ScheduleDecision.EXECUTE, () -> {
+            readyToExecute.countDown();
+            Uninterruptibles.awaitUninterruptibly(unscheduleCalled);
+            executionFinishes.set(true);
+        }, () -> {
+            if (executionFinishes.get())
+            {
+                closeAfterLastExecution.set(true);
+            }
+            closed.countDown();
+        });
         assertThat(taskExecutor.activeRuns()).isEmpty();
         taskExecutor.schedule(task);
         Uninterruptibles.awaitUninterruptibly(readyToExecute);
@@ -251,9 +241,8 @@ class PeriodicTaskExecutorTest
         unscheduleCalled.countDown();
         Uninterruptibles.awaitUninterruptibly(closed);
         assertThat(executionFinishes.get()).isTrue();
-        assertThat(closeAfterLastExecution.get())
-        .describedAs("Close should be called after the active run when unscheduling")
-        .isTrue();
+        assertThat(closeAfterLastExecution.get()).describedAs("Close should be called after the active run when unscheduling")
+                                                 .isTrue();
     }
 
     @Test
@@ -261,36 +250,32 @@ class PeriodicTaskExecutorTest
     {
         CountDownLatch readyToExecute = new CountDownLatch(1);
         CountDownLatch executeFinishes = new CountDownLatch(1);
-        PeriodicTask task = createSimplePeriodicTask("SimpleTask", 1, 1,
-                                                     () -> ScheduleDecision.EXECUTE,
-                                                     () -> {
-                                                         readyToExecute.countDown();
-                                                         Uninterruptibles.awaitUninterruptibly(executeFinishes);
-                                                     },
-                                                     () -> {});
+        PeriodicTask task = createSimplePeriodicTask("SimpleTask", 1, 1, () -> ScheduleDecision.EXECUTE, () -> {
+            readyToExecute.countDown();
+            Uninterruptibles.awaitUninterruptibly(executeFinishes);
+        }, () -> {
+        });
         assertThat(taskExecutor.timerIds()).isEmpty();
         taskExecutor.schedule(task);
         assertThat(taskExecutor.timerIds()).hasSize(1);
         Uninterruptibles.awaitUninterruptibly(readyToExecute);
         Future<Void> unscheduleFuture = taskExecutor.unschedule(task);
-        assertThat(unscheduleFuture.isComplete())
-        .describedAs("Unscheduled future should be pending")
-        .isFalse();
-        assertThat(taskExecutor.timerIds())
-        .describedAs("task should be unscheduled")
-        .hasSize(1).containsValue(-2L);
+        assertThat(unscheduleFuture.isComplete()).describedAs("Unscheduled future should be pending")
+                                                 .isFalse();
+        assertThat(taskExecutor.timerIds()).describedAs("task should be unscheduled")
+                                           .hasSize(1)
+                                           .containsValue(-2L);
         // now call unschedule for the second time
         Future<Void> alreadyUnscheduled = taskExecutor.unschedule(task);
         assertThat(alreadyUnscheduled.failed()).isTrue();
         assertThat(alreadyUnscheduled.cause()).hasMessage("Task is already unscheduled");
-        assertThat(taskExecutor.timerIds())
-        .describedAs("task should continue to be unscheduled")
-        .hasSize(1).containsValue(-2L);
+        assertThat(taskExecutor.timerIds()).describedAs("task should continue to be unscheduled")
+                                           .hasSize(1)
+                                           .containsValue(-2L);
         executeFinishes.countDown();
         loopAssert(1, 10, () -> assertThat(taskExecutor.timerIds()).isEmpty());
-        assertThat(unscheduleFuture.isComplete())
-        .describedAs("Unscheduled future should not be completed")
-        .isTrue();
+        assertThat(unscheduleFuture.isComplete()).describedAs("Unscheduled future should not be completed")
+                                                 .isTrue();
     }
 
     @Test
@@ -312,7 +297,8 @@ class PeriodicTaskExecutorTest
         assertThat(testTaskExecutor.timerIds()).hasSize(1);
         Promise<Void> closePromise = Promise.promise();
         testTaskExecutor.close(closePromise);
-        getBlocking(closePromise.future().andThen(ignored -> executorClosed.set(true))); // wait for the close to complete
+        getBlocking(closePromise.future()
+                                .andThen(ignored -> executorClosed.set(true))); // wait for the close to complete
         assertThat(executorClosed.get()).isTrue();
         assertThat(taskExecutedAfterClosure.get()).isFalse();
         assertThat(testTaskExecutor.timerIds()).isEmpty();
@@ -363,7 +349,9 @@ class PeriodicTaskExecutorTest
         taskExecutor.close(Promise.promise());
     }
 
-    private void testUnscheduleShouldStopExecution(String taskName, long taskInitialDelay, long taskDelayMillis)
+    private void testUnscheduleShouldStopExecution(String taskName,
+                                                   long taskInitialDelay,
+                                                   long taskDelayMillis)
     {
         AtomicInteger counter = new AtomicInteger(0);
         CountDownLatch testFinish = new CountDownLatch(1);
@@ -374,10 +362,8 @@ class PeriodicTaskExecutorTest
         taskExecutor.schedule(task);
         Uninterruptibles.awaitUninterruptibly(testFinish);
         taskExecutor.unschedule(task);
-        loopAssert(1,
-                   () -> assertThat(taskExecutor.timerIds())
-                         .describedAs("Execution should stop after unschedule is called")
-                         .isEmpty());
+        loopAssert(1, () -> assertThat(taskExecutor.timerIds()).describedAs("Execution should stop after unschedule is called")
+                                                               .isEmpty());
     }
 
     static class TestClusterLease extends ClusterLease
@@ -392,7 +378,8 @@ class PeriodicTaskExecutorTest
         @Override
         public ScheduleDecision toScheduleDecision()
         {
-            ScheduleDecision scheduleDecision = delegate.get().toScheduleDecision();
+            ScheduleDecision scheduleDecision = delegate.get()
+                                                        .toScheduleDecision();
             if (scheduleDecision == ScheduleDecision.RESCHEDULE)
             {
                 delegate.set(new ClusterLease(Ownership.CLAIMED));
@@ -403,7 +390,8 @@ class PeriodicTaskExecutorTest
         @Override
         public boolean isClaimedByLocalSidecar()
         {
-            return delegate.get().isClaimedByLocalSidecar();
+            return delegate.get()
+                           .isClaimedByLocalSidecar();
         }
     }
 
@@ -416,12 +404,15 @@ class PeriodicTaskExecutorTest
         private final CountDownLatch executeLatch;
         private final PeriodicTaskExecutor executor;
 
-        SimulatedTask(PeriodicTaskExecutor executor, CountDownLatch executeLatch)
+        SimulatedTask(PeriodicTaskExecutor executor,
+                      CountDownLatch executeLatch)
         {
             this(executor, new CountDownLatch(1), executeLatch);
         }
 
-        SimulatedTask(PeriodicTaskExecutor executor, CountDownLatch shouldSkipLatch, CountDownLatch executeLatch)
+        SimulatedTask(PeriodicTaskExecutor executor,
+                      CountDownLatch shouldSkipLatch,
+                      CountDownLatch executeLatch)
         {
             this.shouldSkipLatch = shouldSkipLatch;
             this.executeLatch = executeLatch;
@@ -503,9 +494,13 @@ class PeriodicTaskExecutorTest
         }
     }
 
-    static PeriodicTask createSimplePeriodicTask(String name, long initialDelayMillis, long delayMillis, Runnable taskBody)
+    static PeriodicTask createSimplePeriodicTask(String name,
+                                                 long initialDelayMillis,
+                                                 long delayMillis,
+                                                 Runnable taskBody)
     {
-        return createSimplePeriodicTask(name, initialDelayMillis, delayMillis, () -> ScheduleDecision.EXECUTE, taskBody, () -> {});
+        return createSimplePeriodicTask(name, initialDelayMillis, delayMillis, () -> ScheduleDecision.EXECUTE, taskBody, () -> {
+        });
     }
 
     static PeriodicTask createSimplePeriodicTask(String name,

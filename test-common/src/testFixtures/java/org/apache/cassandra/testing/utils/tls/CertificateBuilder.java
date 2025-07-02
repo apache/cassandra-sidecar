@@ -36,8 +36,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
-import javax.security.auth.x500.X500Principal;
-
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.Extension;
@@ -48,11 +46,13 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import javax.security.auth.x500.X500Principal;
 
 /**
  * A utility class to generate certificates for tests.
  *
- * <p>This class is copied from the Apache Cassandra code
+ * <p>
+ * This class is copied from the Apache Cassandra code
  */
 public class CertificateBuilder
 {
@@ -63,8 +63,10 @@ public class CertificateBuilder
     private String alias;
     private X500Name subject;
     private SecureRandom random;
-    private Date notBefore = Date.from(Instant.now().minus(1, ChronoUnit.DAYS));
-    private Date notAfter = Date.from(Instant.now().plus(1, ChronoUnit.DAYS));
+    private Date notBefore = Date.from(Instant.now()
+                                              .minus(1, ChronoUnit.DAYS));
+    private Date notAfter = Date.from(Instant.now()
+                                             .plus(1, ChronoUnit.DAYS));
     private String algorithm;
     private AlgorithmParameterSpec algorithmParameterSpec;
     private String signatureAlgorithm;
@@ -172,7 +174,7 @@ public class CertificateBuilder
         ContentSigner signer = new JcaContentSignerBuilder(signatureAlgorithm).build(keyPair.getPrivate());
         X509CertificateHolder holder = builder.build(signer);
         X509Certificate root = new JcaX509CertificateConverter().getCertificate(holder);
-        return new CertificateBundle(signatureAlgorithm, new X509Certificate[]{root}, root, keyPair, alias);
+        return new CertificateBundle(signatureAlgorithm, new X509Certificate[] { root}, root, keyPair, alias);
     }
 
     public CertificateBundle buildIssuedBy(CertificateBundle issuer) throws Exception
@@ -181,17 +183,21 @@ public class CertificateBuilder
         return buildIssuedBy(issuer, issuerSignAlgorithm);
     }
 
-    public CertificateBundle buildIssuedBy(CertificateBundle issuer, String issuerSignAlgorithm) throws Exception
+    public CertificateBundle buildIssuedBy(CertificateBundle issuer,
+                                           String issuerSignAlgorithm)
+            throws Exception
     {
         KeyPair keyPair = generateKeyPair();
 
-        X500Principal issuerPrincipal = issuer.certificate().getSubjectX500Principal();
+        X500Principal issuerPrincipal = issuer.certificate()
+                                              .getSubjectX500Principal();
         X500Name issuerName = X500Name.getInstance(issuerPrincipal.getEncoded());
         JcaX509v3CertificateBuilder builder = createCertBuilder(issuerName, subject, keyPair);
 
         addExtensions(builder);
 
-        PrivateKey issuerPrivateKey = issuer.keyPair().getPrivate();
+        PrivateKey issuerPrivateKey = issuer.keyPair()
+                                            .getPrivate();
         if (issuerPrivateKey == null)
         {
             throw new IllegalArgumentException("Cannot sign certificate with issuer that does not have a private key.");
@@ -218,7 +224,9 @@ public class CertificateBuilder
         return keyGen.generateKeyPair();
     }
 
-    private JcaX509v3CertificateBuilder createCertBuilder(X500Name issuer, X500Name subject, KeyPair keyPair)
+    private JcaX509v3CertificateBuilder createCertBuilder(X500Name issuer,
+                                                          X500Name subject,
+                                                          KeyPair keyPair)
     {
         BigInteger serial = this.serial != null ? this.serial : new BigInteger(159, secureRandom());
         PublicKey pubKey = keyPair.getPublic();
@@ -235,8 +243,7 @@ public class CertificateBuilder
         boolean criticality = false;
         if (!subjectAlternativeNames.isEmpty())
         {
-            builder.addExtension(Extension.subjectAlternativeName, criticality,
-                                 new GeneralNames(subjectAlternativeNames.toArray(EMPTY_SAN)));
+            builder.addExtension(Extension.subjectAlternativeName, criticality, new GeneralNames(subjectAlternativeNames.toArray(EMPTY_SAN)));
         }
     }
 }

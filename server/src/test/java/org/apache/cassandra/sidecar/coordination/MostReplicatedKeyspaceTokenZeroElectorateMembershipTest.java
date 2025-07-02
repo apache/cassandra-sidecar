@@ -22,9 +22,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
-
-import org.junit.jupiter.api.Test;
-
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -34,7 +31,7 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -53,8 +50,8 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipTest
         InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
         InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
         CassandraAdapterDelegate mockCassandraAdapterDelegate = mock(CassandraAdapterDelegate.class);
-        when(mockCassandraAdapterDelegate.localStorageBroadcastAddress())
-        .thenThrow(new CassandraUnavailableException(CQL, "Cannot retrieve storageBroadcastAddress"));
+        when(mockCassandraAdapterDelegate.localStorageBroadcastAddress()).thenThrow(
+                new CassandraUnavailableException(CQL, "Cannot retrieve storageBroadcastAddress"));
         when(instanceMetadata.delegate()).thenReturn(mockCassandraAdapterDelegate);
         when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
         InstanceMetadataFetcher instanceMetadataFetcher = new InstanceMetadataFetcher(mockInstancesMetadata);

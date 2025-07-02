@@ -93,7 +93,8 @@ public class StreamStatsHandlerTest
     void after() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -104,11 +105,9 @@ public class StreamStatsHandlerTest
     void testStreamingStatsHandler(VertxTestContext context)
     {
         streamingStatsSupplier = () -> {
-            StreamStatsResponse response = new StreamStatsResponse("NORMAL",
-                                                                   new StreamsProgressStats(7, 7, 1024, 1024, 0, 0, 0, 0));
+            StreamStatsResponse response = new StreamStatsResponse("NORMAL", new StreamsProgressStats(7, 7, 1024, 1024, 0, 0, 0, 0));
             return response;
         };
-
 
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/stats/streams";
@@ -138,11 +137,12 @@ public class StreamStatsHandlerTest
             when(instanceMetadata.stagingDir()).thenReturn("");
             CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
             StorageOperations ops = mock(StorageOperations.class);
-            when(ops.operationMode()).thenAnswer((Answer<String>) invocation -> streamingStatsSupplier.get().operationMode());
+            when(ops.operationMode()).thenAnswer((Answer<String>) invocation -> streamingStatsSupplier.get()
+                                                                                                      .operationMode());
             when(delegate.storageOperations()).thenReturn(ops);
             MetricsOperations metricsOps = mock(MetricsOperations.class);
-            when(metricsOps.streamsProgressStats())
-            .thenAnswer((Answer<StreamsProgressStats>) invocation -> streamingStatsSupplier.get().streamsProgressStats());
+            when(metricsOps.streamsProgressStats()).thenAnswer((Answer<StreamsProgressStats>) invocation -> streamingStatsSupplier.get()
+                                                                                                                                  .streamsProgressStats());
             when(delegate.metricsOperations()).thenReturn(metricsOps);
 
             when(instanceMetadata.delegate()).thenReturn(delegate);

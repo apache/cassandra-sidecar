@@ -18,16 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -42,7 +32,14 @@ import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.TimeoutHandler;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -68,8 +65,7 @@ class JsonErrorHandlerTest
     @Test
     public void testHttpExceptionHandling() throws InterruptedException
     {
-        testHelper("/http-exception", result ->
-        {
+        testHelper("/http-exception", result -> {
             assertThat(result.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
             JsonObject response = result.bodyAsJsonObject();
             assertThat(response.getString("status")).isEqualTo("Fail");
@@ -80,20 +76,18 @@ class JsonErrorHandlerTest
     @Test
     public void testRequestTimeoutHandling() throws InterruptedException
     {
-        testHelper("/timeout", result ->
-        {
+        testHelper("/timeout", result -> {
             assertThat(result.statusCode()).isEqualTo(HttpResponseStatus.REQUEST_TIMEOUT.code());
-            assertThat(result.bodyAsJsonObject().getString("status")).isEqualTo("Request Timeout");
+            assertThat(result.bodyAsJsonObject()
+                             .getString("status")).isEqualTo("Request Timeout");
         }, false);
     }
 
     @ParameterizedTest(name = "unhandled throwable displayExceptionDetails={0}")
-    @ValueSource(booleans = { false, true })
-    public void testUnhandledThrowable(boolean displayExceptionDetails)
-    throws InterruptedException
+    @ValueSource(booleans = { false, true})
+    public void testUnhandledThrowable(boolean displayExceptionDetails) throws InterruptedException
     {
-        testHelper("/RuntimeException", result ->
-        {
+        testHelper("/RuntimeException", result -> {
             assertThat(result.statusCode()).isEqualTo(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
             JsonObject jsonResponse = result.bodyAsJsonObject();
             assertThat(jsonResponse.getString("status")).isEqualTo("Internal Server Error");
@@ -112,7 +106,8 @@ class JsonErrorHandlerTest
 
     private void testHelper(String requestURI,
                             Consumer<HttpResponse<Buffer>> consumer,
-                            boolean displayExceptionDetails) throws InterruptedException
+                            boolean displayExceptionDetails)
+            throws InterruptedException
     {
         VertxTestContext context = new VertxTestContext();
 
@@ -129,8 +124,7 @@ class JsonErrorHandlerTest
         client.get(server.actualPort(), "localhost", requestURI)
               .as(BodyCodec.buffer())
               .send(testContext.succeeding(response -> testContext.verify(() -> {
-                  assertThat(response.getHeader(HttpHeaders.CONTENT_TYPE.toString()))
-                  .isEqualTo("application/json");
+                  assertThat(response.getHeader(HttpHeaders.CONTENT_TYPE.toString())).isEqualTo("application/json");
                   consumer.accept(response);
                   testContext.completeNow();
                   server.close();
@@ -138,20 +132,25 @@ class JsonErrorHandlerTest
         assertThat(testContext.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    private Router router(Vertx vertx, boolean displayExceptionDetails)
+    private Router router(Vertx vertx,
+                          boolean displayExceptionDetails)
     {
         Router router = Router.router(vertx);
-        router.route().failureHandler(new JsonErrorHandler(displayExceptionDetails))
+        router.route()
+              .failureHandler(new JsonErrorHandler(displayExceptionDetails))
               .handler(TimeoutHandler.create(250, HttpResponseStatus.REQUEST_TIMEOUT.code()));
-        router.get("/http-exception").handler(ctx -> {
-            throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(), "Payload is written to JSON");
-        });
-        router.get("/timeout").handler(ctx -> {
-            // wait for the timeout
-        });
-        router.get("/RuntimeException").handler(ctx -> {
-            throw new RuntimeException("oops");
-        });
+        router.get("/http-exception")
+              .handler(ctx -> {
+                  throw new HttpException(HttpResponseStatus.BAD_REQUEST.code(), "Payload is written to JSON");
+              });
+        router.get("/timeout")
+              .handler(ctx -> {
+                  // wait for the timeout
+              });
+        router.get("/RuntimeException")
+              .handler(ctx -> {
+                  throw new RuntimeException("oops");
+              });
         return router;
     }
 }

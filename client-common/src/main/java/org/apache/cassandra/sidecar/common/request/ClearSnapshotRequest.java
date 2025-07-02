@@ -26,14 +26,15 @@ import io.netty.handler.codec.http.HttpMethod;
 public class ClearSnapshotRequest extends SnapshotRequest<Void>
 {
     /**
-     * Constructs a new request to clear a snapshot with name {@code snapshotName} for the given {@code keyspace}
-     * and {@code table}.
+     * Constructs a new request to clear a snapshot with name {@code snapshotName} for the given {@code keyspace} and {@code table}.
      *
-     * @param keyspace     the keyspace in Cassandra
-     * @param table        the table name in Cassandra
+     * @param keyspace the keyspace in Cassandra
+     * @param table the table name in Cassandra
      * @param snapshotName the name of the snapshot
      */
-    public ClearSnapshotRequest(String keyspace, String table, String snapshotName)
+    public ClearSnapshotRequest(String keyspace,
+                                String table,
+                                String snapshotName)
     {
         super(keyspace, table, snapshotName);
     }

@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.common.server.utils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
@@ -31,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 class ByteUtilsTest
 {
     @ParameterizedTest
-    @ValueSource(longs = { -1L, -10L, -100L, -1024L, Long.MIN_VALUE })
+    @ValueSource(longs = { -1L, -10L, -100L, -1024L, Long.MIN_VALUE})
     void failsWithNegativeInputs(long bytes)
     {
         assertThatIllegalArgumentException().isThrownBy(() -> ByteUtils.bytesToHumanReadableBinaryPrefix(bytes))
@@ -50,9 +49,7 @@ class ByteUtilsTest
         assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(4L * 1024 * 1024)).isEqualTo("4.00 MiB");
         assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(4L * 1024 * 1024 * 1024)).isEqualTo("4.00 GiB");
         assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(4L * 1024 * 1024 * 1024 * 1024)).isEqualTo("4.00 TiB");
-        assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(4L * 1024 * 1024 * 1024 * 1024 * 1024))
-        .isEqualTo("4.00 PiB");
-        assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(4L * 1024 * 1024 * 1024 * 1024 * 1024 * 1024))
-        .isEqualTo("4.00 EiB");
+        assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(4L * 1024 * 1024 * 1024 * 1024 * 1024)).isEqualTo("4.00 PiB");
+        assertThat(ByteUtils.bytesToHumanReadableBinaryPrefix(4L * 1024 * 1024 * 1024 * 1024 * 1024 * 1024)).isEqualTo("4.00 EiB");
     }
 }

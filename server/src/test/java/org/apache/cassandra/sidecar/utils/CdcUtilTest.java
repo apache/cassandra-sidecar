@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.utils;
 
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,10 +31,14 @@ public class CdcUtilTest
     @Test
     public void testMatcher()
     {
-        assertTrue(CdcUtil.SEGMENT_PATTERN.matcher("CommitLog-7-1689642717704.log").matches());
-        assertTrue(CdcUtil.SEGMENT_PATTERN.matcher("CommitLog-12345.log").matches());
-        assertTrue(CdcUtil.SEGMENT_PATTERN.matcher("CommitLog-2-1340512736956320000.log").matches());
-        assertTrue(CdcUtil.SEGMENT_PATTERN.matcher("CommitLog-2-1340512736959990000.log").matches());
+        assertTrue(CdcUtil.SEGMENT_PATTERN.matcher("CommitLog-7-1689642717704.log")
+                                          .matches());
+        assertTrue(CdcUtil.SEGMENT_PATTERN.matcher("CommitLog-12345.log")
+                                          .matches());
+        assertTrue(CdcUtil.SEGMENT_PATTERN.matcher("CommitLog-2-1340512736956320000.log")
+                                          .matches());
+        assertTrue(CdcUtil.SEGMENT_PATTERN.matcher("CommitLog-2-1340512736959990000.log")
+                                          .matches());
         assertTrue(CdcUtil.isValid("CommitLog-7-1689642717704.log"));
         assertTrue(CdcUtil.isValid("CommitLog-12345.log"));
         assertTrue(CdcUtil.isValid("CommitLog-2-1340512736956320000.log"));
@@ -44,10 +47,14 @@ public class CdcUtilTest
         assertTrue(CdcUtil.isLogFile("CommitLog-12345.log"));
         assertTrue(CdcUtil.isLogFile("CommitLog-2-1340512736956320000.log"));
         assertTrue(CdcUtil.isLogFile("CommitLog-2-1340512736959990000.log"));
-        assertTrue(CdcUtil.IDX_FILE_PATTERN.matcher("CommitLog-7-1689642717704_cdc.idx").matches());
-        assertTrue(CdcUtil.IDX_FILE_PATTERN.matcher("CommitLog-12345_cdc.idx").matches());
-        assertTrue(CdcUtil.IDX_FILE_PATTERN.matcher("CommitLog-2-1240512736956320000_cdc.idx").matches());
-        assertTrue(CdcUtil.IDX_FILE_PATTERN.matcher("CommitLog-2-1340512736956320000_cdc.idx").matches());
+        assertTrue(CdcUtil.IDX_FILE_PATTERN.matcher("CommitLog-7-1689642717704_cdc.idx")
+                                           .matches());
+        assertTrue(CdcUtil.IDX_FILE_PATTERN.matcher("CommitLog-12345_cdc.idx")
+                                           .matches());
+        assertTrue(CdcUtil.IDX_FILE_PATTERN.matcher("CommitLog-2-1240512736956320000_cdc.idx")
+                                           .matches());
+        assertTrue(CdcUtil.IDX_FILE_PATTERN.matcher("CommitLog-2-1340512736956320000_cdc.idx")
+                                           .matches());
 
         assertFalse(CdcUtil.isValid("CommitLog-abc.log"));
         assertFalse(CdcUtil.isValid("abc-7-1689642717704.log"));

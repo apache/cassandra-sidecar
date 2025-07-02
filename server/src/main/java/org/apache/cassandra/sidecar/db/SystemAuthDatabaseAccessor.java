@@ -72,7 +72,8 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public String findRoleFromIdentity(String identity)
     {
-        BoundStatement statement = tableSchema.roleFromIdentity().bind(identity);
+        BoundStatement statement = tableSchema.roleFromIdentity()
+                                              .bind(identity);
         ResultSet result = execute(statement);
         Row row = result.one();
         return row != null ? row.getString("role") : null;
@@ -85,7 +86,8 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public Map<String, String> findAllIdentityToRoles()
     {
-        BoundStatement statement = tableSchema.allRolesAndIdentities().bind();
+        BoundStatement statement = tableSchema.allRolesAndIdentities()
+                                              .bind();
         ResultSet resultSet = execute(statement);
         Map<String, String> results = new HashMap<>();
         for (Row row : resultSet)
@@ -96,14 +98,15 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
     }
 
     /**
-     * Queries Cassandra for all rows in system_auth.role_permissions table. Maps permissions of a role into
-     * {@link Authorization} and returns a {@code Map} of cassandra role to authorizations
+     * Queries Cassandra for all rows in system_auth.role_permissions table. Maps permissions of a role into {@link Authorization} and returns a {@code Map} of
+     * cassandra role to authorizations
      *
      * @return - {@code Map} contains role and granted authorizations
      */
     public Map<String, Set<Authorization>> findAllRolesAndPermissions()
     {
-        BoundStatement statement = tableSchema.allRolesAndPermissions().bind();
+        BoundStatement statement = tableSchema.allRolesAndPermissions()
+                                              .bind();
         ResultSet result = execute(statement);
         Map<String, Set<Authorization>> roleAuthorizations = new HashMap<>();
         for (Row row : result)
@@ -116,15 +119,16 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
             {
                 try
                 {
-                    authorizations.add(permissionFactory.createPermission(permission).toAuthorization(resource));
+                    authorizations.add(permissionFactory.createPermission(permission)
+                                                        .toAuthorization(resource));
                 }
                 catch (Exception e)
                 {
-                    logger.error("Error parsing Cassandra permission={} resource={} role={}",
-                                 permission, resource, role, e);
+                    logger.error("Error parsing Cassandra permission={} resource={} role={}", permission, resource, role, e);
                 }
             }
-            roleAuthorizations.computeIfAbsent(role, k -> new HashSet<>()).addAll(authorizations);
+            roleAuthorizations.computeIfAbsent(role, k -> new HashSet<>())
+                              .addAll(authorizations);
         }
         return roleAuthorizations;
     }
@@ -133,9 +137,8 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      * Queries Cassandra for superuser status of a given role.
      *
      * @param role role in Cassandra
-     * @return {@code true} if the supplied role or any other role granted to it (directly or indirectly) has superuser
-     * status., {@code false} otherwise
-     * Note: {@code false} response does not indicate whether the role exists or not
+     * @return {@code true} if the supplied role or any other role granted to it (directly or indirectly) has superuser status., {@code false} otherwise Note:
+     *         {@code false} response does not indicate whether the role exists or not
      */
     public boolean isSuperUser(String role)
     {
@@ -156,12 +159,12 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public Map<String, Boolean> findAllRolesToSuperuserStatus()
     {
-        BoundStatement statement = tableSchema.allRoles().bind();
+        BoundStatement statement = tableSchema.allRoles()
+                                              .bind();
         ResultSet result = execute(statement);
         List<Row> rows = result.all();
         Map<String, Boolean> roleToSuperUser = rows.stream()
-                                                   .collect(Collectors.toMap(row -> row.getString("role"),
-                                                                             row -> row.getBool("is_superuser")));
+                                                   .collect(Collectors.toMap(row -> row.getString("role"), row -> row.getBool("is_superuser")));
         for (Row row : rows)
         {
             if (roleToSuperUser.get(row.getString("role")))
@@ -172,7 +175,8 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
 
             // check if superuser status has been granted indirectly to this user
             List<String> memberOf = row.getList("member_of", String.class);
-            if (memberOf.stream().anyMatch(roleToSuperUser::get))
+            if (memberOf.stream()
+                        .anyMatch(roleToSuperUser::get))
             {
                 roleToSuperUser.put(row.getString("role"), true);
             }

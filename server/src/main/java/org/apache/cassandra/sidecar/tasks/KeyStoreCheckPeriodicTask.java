@@ -18,24 +18,20 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
-import java.util.function.Function;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import java.util.function.Function;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.utils.EventBusUtils;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_START;
 
 /**
- * Periodically checks whether the key store file has changed. Triggers an update to the server's SSLOptions
- * whenever a file change has detected.
+ * Periodically checks whether the key store file has changed. Triggers an update to the server's SSLOptions whenever a file change has detected.
  */
 public class KeyStoreCheckPeriodicTask implements PeriodicTask
 {
@@ -62,20 +58,16 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
                                                       SidecarConfiguration configuration,
                                                       Function<Long, Future<Boolean>> updateSSLOptionsFunction)
     {
-        return new KeyStoreCheckPeriodicTask(vertx,
-                                             configuration.sslConfiguration(),
-                                             updateSSLOptionsFunction,
-                                             "ServerKeyStoreCheckPeriodicTask");
+        return new KeyStoreCheckPeriodicTask(vertx, configuration.sslConfiguration(), updateSSLOptionsFunction, "ServerKeyStoreCheckPeriodicTask");
     }
 
     public static KeyStoreCheckPeriodicTask forClient(Vertx vertx,
                                                       SidecarConfiguration configuration,
                                                       Function<Long, Future<Boolean>> updateSSLOptionsFunction)
     {
-        return new KeyStoreCheckPeriodicTask(vertx,
-                                             configuration.sidecarClientConfiguration().sslConfiguration(),
-                                             updateSSLOptionsFunction,
-                                             "ClientKeyStoreCheckPeriodicTask");
+        return new KeyStoreCheckPeriodicTask(vertx, configuration.sidecarClientConfiguration()
+                                                                 .sslConfiguration(),
+                updateSSLOptionsFunction, "ClientKeyStoreCheckPeriodicTask");
     }
 
     @Override
@@ -85,13 +77,13 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
     }
 
     @Override
-    public void deploy(Vertx vertx, PeriodicTaskExecutor executor)
+    public void deploy(Vertx vertx,
+                       PeriodicTaskExecutor executor)
     {
-        if (sslConfiguration != null
-            && sslConfiguration.enabled()
-            && sslConfiguration.keystore() != null
-            && sslConfiguration.keystore().isConfigured()
-            && sslConfiguration.keystore().reloadStore())
+        if (sslConfiguration != null && sslConfiguration.enabled() && sslConfiguration.keystore() != null && sslConfiguration.keystore()
+                                                                                                                             .isConfigured()
+                && sslConfiguration.keystore()
+                                   .reloadStore())
         {
             maybeRecordLastModifiedTime();
             EventBusUtils.onceLocalConsumer(vertx.eventBus(), ON_SERVER_START.address(), message -> executor.schedule(this));
@@ -106,30 +98,30 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
     @Override
     public ScheduleDecision scheduleDecision()
     {
-        return shouldSkip()
-               ? ScheduleDecision.SKIP
-               : ScheduleDecision.EXECUTE;
+        return shouldSkip() ? ScheduleDecision.SKIP : ScheduleDecision.EXECUTE;
     }
 
     @Override
     public DurationSpec delay()
     {
-        return sslConfiguration.keystore().checkInterval();
+        return sslConfiguration.keystore()
+                               .checkInterval();
     }
 
     @Override
     public void execute(Promise<Void> promise)
     {
         LOGGER.info("Running periodic key store checker");
-        String keyStorePath = sslConfiguration.keystore().path();
-        vertx.fileSystem().props(keyStorePath)
+        String keyStorePath = sslConfiguration.keystore()
+                                              .path();
+        vertx.fileSystem()
+             .props(keyStorePath)
              .onSuccess(props -> {
                  long previousLastModifiedTime = lastModifiedTime;
                  if (props.lastModifiedTime() != previousLastModifiedTime)
                  {
-                     LOGGER.info("Certificate file change detected for path={}, previousLastModifiedTime={}, " +
-                                 "lastModifiedTime={}", keyStorePath, previousLastModifiedTime,
-                                 props.lastModifiedTime());
+                     LOGGER.info("Certificate file change detected for path={}, previousLastModifiedTime={}, " + "lastModifiedTime={}", keyStorePath,
+                             previousLastModifiedTime, props.lastModifiedTime());
 
                      updateSSLOptionsFunction.apply(props.lastModifiedTime())
                                              .onSuccess(v -> {
@@ -159,8 +151,10 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
         {
             return;
         }
-        String keyStorePath = sslConfiguration.keystore().path();
-        vertx.fileSystem().props(keyStorePath)
+        String keyStorePath = sslConfiguration.keystore()
+                                              .path();
+        vertx.fileSystem()
+             .props(keyStorePath)
              .onSuccess(props -> lastModifiedTime = props.lastModifiedTime())
              .onFailure(err -> {
                  LOGGER.error("Unable to get lastModifiedTime for path={}", keyStorePath);
@@ -171,12 +165,11 @@ public class KeyStoreCheckPeriodicTask implements PeriodicTask
     /**
      * Skip check if the key store is not configured or if the key store should not be reloaded
      *
-     * @return {@code true} if the key store is not configured or if the keystore should not be reloaded,
-     * {@code false} otherwise
+     * @return {@code true} if the key store is not configured or if the keystore should not be reloaded, {@code false} otherwise
      */
     private boolean shouldSkip()
     {
-        return !sslConfiguration.isKeystoreConfigured()
-               || !sslConfiguration.keystore().reloadStore();
+        return !sslConfiguration.isKeystoreConfigured() || !sslConfiguration.keystore()
+                                                                            .reloadStore();
     }
 }

@@ -30,24 +30,23 @@ public class AuthenticationHandlerFactoryRegistry
     private final Map<String, AuthenticationHandlerFactory> registry = new ConcurrentHashMap<>();
 
     /**
-     * Registers the {@code factory} class in the registry. The registration is made by using
-     * the class name.
+     * Registers the {@code factory} class in the registry. The registration is made by using the class name.
      *
      * @param factory the factory to register
      */
     public void register(AuthenticationHandlerFactory factory)
     {
         Objects.requireNonNull(factory, "Factory must be non-null");
-        registry.put(factory.getClass().getName(), factory);
+        registry.put(factory.getClass()
+                            .getName(),
+                factory);
     }
 
     /**
-     * Returns the registered factory instance for the given {@code className} or {@code null} if none is
-     * registered.
+     * Returns the registered factory instance for the given {@code className} or {@code null} if none is registered.
      *
      * @param className the name of the factory class name
-     * @return the registered factory instance for the given {@code className} or {@code null} if none is
-     * registered
+     * @return the registered factory instance for the given {@code className} or {@code null} if none is registered
      */
     public AuthenticationHandlerFactory getFactory(String className)
     {

@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.common.server.cluster.locator;
 
 import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -30,18 +29,19 @@ class PartitionersTest
     {
         Partitioner random1 = Partitioners.from("org.apache.cassandra.dht.RandomPartitioner");
         Partitioner random2 = Partitioners.from("RandomPartitioner");
-        assertThat(Partitioners.RANDOM).isSameAs(random1).isSameAs(random2);
+        assertThat(Partitioners.RANDOM).isSameAs(random1)
+                                       .isSameAs(random2);
 
         Partitioner murmur3a = Partitioners.from("org.apache.cassandra.dht.Murmur3Partitioner");
         Partitioner murmur3b = Partitioners.from("Murmur3Partitioner");
-        assertThat(Partitioners.MURMUR3).isSameAs(murmur3a).isSameAs(murmur3b);
+        assertThat(Partitioners.MURMUR3).isSameAs(murmur3a)
+                                        .isSameAs(murmur3b);
     }
 
     @Test
     void testCreatePartitionerFromInvalidString()
     {
-        assertThatThrownBy(() -> Partitioners.from("foo"))
-        .isExactlyInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Unsupported partitioner");
+        assertThatThrownBy(() -> Partitioners.from("foo")).isExactlyInstanceOf(IllegalArgumentException.class)
+                                                          .hasMessageContaining("Unsupported partitioner");
     }
 }

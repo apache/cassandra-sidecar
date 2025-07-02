@@ -32,15 +32,13 @@ public interface CassandraInputValidationConfiguration
 
     /**
      * @return a regular expression for an allowed pattern for name of keyspaces and tables defined by the grammar in
-     * <a href="https://cassandra.apache.org/doc/4.1/cassandra/cql/ddl.html#common-definitions">Cassandra CQL common
-     * definitions</a>
+     *         <a href="https://cassandra.apache.org/doc/4.1/cassandra/cql/ddl.html#common-definitions">Cassandra CQL common definitions</a>
      */
     String allowedPatternForName();
 
     /**
-     * @return a regular expression for an allowed pattern for <i>quoted</i> names of keyspace and tables defined by
-     * the grammar in <a href="https://cassandra.apache.org/doc/4.1/cassandra/cql/ddl.html#common-definitions">
-     * Cassandra CQL common definitions</a>
+     * @return a regular expression for an allowed pattern for <i>quoted</i> names of keyspace and tables defined by the grammar in
+     *         <a href="https://cassandra.apache.org/doc/4.1/cassandra/cql/ddl.html#common-definitions"> Cassandra CQL common definitions</a>
      */
     String allowedPatternForQuotedName();
 

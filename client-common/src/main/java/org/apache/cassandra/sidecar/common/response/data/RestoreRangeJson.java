@@ -31,8 +31,8 @@ import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.SLICE
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.SLICE_STORAGE_KEY;
 
 /**
- * The minimum data presentation (in json) of a range of data in the restore job. The data structure is client-facing.
- * A range is fully enclosed in a slice, i.e. range covers the smaller or same amount of data of the enclosing slice.
+ * The minimum data presentation (in json) of a range of data in the restore job. The data structure is client-facing. A range is fully enclosed in a slice,
+ * i.e. range covers the smaller or same amount of data of the enclosing slice.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -38,8 +38,8 @@ public class TokenRangeReplicasResponse
     /**
      * Constructs token range replicas response object with given params.
      *
-     * @param writeReplicas   list of write replicas {@link ReplicaInfo} instances breakdown by token range
-     * @param readReplicas    list of read replica {@link ReplicaInfo} instances breakdown by token range
+     * @param writeReplicas list of write replicas {@link ReplicaInfo} instances breakdown by token range
+     * @param readReplicas list of read replica {@link ReplicaInfo} instances breakdown by token range
      * @param replicaMetadata mapping replica to it's state and status information
      */
     public TokenRangeReplicasResponse(@JsonProperty("writeReplicas") List<ReplicaInfo> writeReplicas,
@@ -131,12 +131,12 @@ public class TokenRangeReplicasResponse
         @Override
         public boolean equals(Object o)
         {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
             ReplicaInfo that = (ReplicaInfo) o;
-            return start.equals(that.start)
-                   && end.equals(that.end)
-                   && replicasByDatacenter.equals(that.replicasByDatacenter);
+            return start.equals(that.start) && end.equals(that.end) && replicasByDatacenter.equals(that.replicasByDatacenter);
         }
 
         /**
@@ -154,11 +154,7 @@ public class TokenRangeReplicasResponse
         @Override
         public String toString()
         {
-            return "ReplicaInfo{" +
-                   "start='" + start + '\'' +
-                   ", end='" + end + '\'' +
-                   ", replicasByDatacenter=" + replicasByDatacenter +
-                   '}';
+            return "ReplicaInfo{" + "start='" + start + '\'' + ", end='" + end + '\'' + ", replicasByDatacenter=" + replicasByDatacenter + '}';
         }
     }
 
@@ -248,14 +244,8 @@ public class TokenRangeReplicasResponse
          */
         public String toString()
         {
-            return "ReplicaMetadata{" +
-                   "state='" + state + '\'' +
-                   ", status='" + status + '\'' +
-                   ", fqdn='" + fqdn + '\'' +
-                   ", address='" + address + '\'' +
-                   ", port='" + port + '\'' +
-                   ", datacenter='" + datacenter + '\'' +
-                   '}';
+            return "ReplicaMetadata{" + "state='" + state + '\'' + ", status='" + status + '\'' + ", fqdn='" + fqdn + '\'' + ", address='" + address + '\''
+                    + ", port='" + port + '\'' + ", datacenter='" + datacenter + '\'' + '}';
         }
     }
 }

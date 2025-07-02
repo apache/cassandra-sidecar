@@ -48,8 +48,7 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * RestoreJobs is the data accessor to Cassandra.
- * It encapsulates the CRUD operations for RestoreJob
+ * RestoreJobs is the data accessor to Cassandra. It encapsulates the CRUD operations for RestoreJob
  */
 @Singleton
 public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSchema>
@@ -66,8 +65,9 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         this.sidecarSchema = sidecarSchema;
     }
 
-    public RestoreJob create(CreateRestoreJobRequestPayload payload, QualifiedTableName qualifiedTableName)
-    throws DataObjectMappingException
+    public RestoreJob create(CreateRestoreJobRequestPayload payload,
+                             QualifiedTableName qualifiedTableName)
+            throws DataObjectMappingException
     {
         sidecarSchema.ensureInitialized();
 
@@ -89,17 +89,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         ByteBuffer secrets = serializeValue(job.secrets, "secrets");
         ByteBuffer importOptions = serializeValue(job.importOptions, "sstable import options");
         BoundStatement statement = tableSchema.insertJob()
-                                              .bind(job.createdAt,
-                                                    job.jobId,
-                                                    job.keyspaceName,
-                                                    job.tableName,
-                                                    job.jobAgent,
-                                                    job.status.name(),
-                                                    secrets,
-                                                    importOptions,
-                                                    job.consistencyLevelText(),
-                                                    job.localDatacenter,
-                                                    job.expireAt);
+                                              .bind(job.createdAt, job.jobId, job.keyspaceName, job.tableName, job.jobAgent, job.status.name(), secrets,
+                                                      importOptions, job.consistencyLevelText(), job.localDatacenter, job.expireAt);
 
         execute(statement);
         return job;
@@ -113,8 +104,9 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
      * @return the restore job object with only the updated fields
      * @throws DataObjectMappingException when secrets json cannot be serialized
      */
-    public RestoreJob update(UpdateRestoreJobRequestPayload payload, UUID jobId)
-    throws DataObjectMappingException
+    public RestoreJob update(UpdateRestoreJobRequestPayload payload,
+                             UUID jobId)
+            throws DataObjectMappingException
     {
         sidecarSchema.ensureInitialized();
         RestoreJob.Builder updateBuilder = RestoreJob.builder();
@@ -148,22 +140,26 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         }
         if (status != null)
         {
-            batchStatement.add(tableSchema.updateStatus().bind(createdAt, jobId, status.name()));
+            batchStatement.add(tableSchema.updateStatus()
+                                          .bind(createdAt, jobId, status.name()));
             updateBuilder.jobStatus(status);
         }
         if (jobAgent != null)
         {
-            batchStatement.add(tableSchema.updateJobAgent().bind(createdAt, jobId, jobAgent));
+            batchStatement.add(tableSchema.updateJobAgent()
+                                          .bind(createdAt, jobId, jobAgent));
             updateBuilder.jobAgent(jobAgent);
         }
         if (expireAt != null)
         {
-            batchStatement.add(tableSchema.updateExpireAt().bind(createdAt, jobId, expireAt));
+            batchStatement.add(tableSchema.updateExpireAt()
+                                          .bind(createdAt, jobId, expireAt));
             updateBuilder.expireAt(expireAt);
         }
         if (sliceCount != null)
         {
-            batchStatement.add(tableSchema.updateSliceCount().bind(createdAt, jobId, sliceCount));
+            batchStatement.add(tableSchema.updateSliceCount()
+                                          .bind(createdAt, jobId, sliceCount));
             updateBuilder.sliceCount(sliceCount);
         }
 
@@ -171,7 +167,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         return updateBuilder.build();
     }
 
-    public void abort(UUID jobId, @Nullable String reason)
+    public void abort(UUID jobId,
+                      @Nullable String reason)
     {
         sidecarSchema.ensureInitialized();
 
@@ -190,7 +187,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     {
         sidecarSchema.ensureInitialized();
 
-        BoundStatement statement = tableSchema.selectJob().bind(RestoreJob.toLocalDate(jobId), jobId);
+        BoundStatement statement = tableSchema.selectJob()
+                                              .bind(RestoreJob.toLocalDate(jobId), jobId);
         ResultSet resultSet = execute(statement);
         Row row = resultSet.one();
         if (row == null)
@@ -208,6 +206,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
 
     /**
      * Find all restore jobs created in a day
+     *
      * @param date creation date of the jobs
      * @return the list of restore jobs in that day
      */
@@ -215,7 +214,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     {
         sidecarSchema.ensureInitialized();
 
-        BoundStatement statement = tableSchema.findAllByCreatedAt().bind(date);
+        BoundStatement statement = tableSchema.findAllByCreatedAt()
+                                              .bind(date);
         ResultSet resultSet = execute(statement);
         List<RestoreJob> result = new ArrayList<>();
         for (Row row : resultSet)
@@ -238,12 +238,12 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
      * @param days number of days to search back; the value should be non-negative.
      * @return the list of recent restore job
      *
-     * Note that in the implementation, one extra day is considered to overcome the timezone differences.
+     *         Note that in the implementation, one extra day is considered to overcome the timezone differences.
      */
-    public List<RestoreJob> findAllRecent(long referenceTimestampMillis, int days)
+    public List<RestoreJob> findAllRecent(long referenceTimestampMillis,
+                                          int days)
     {
-        Preconditions.checkArgument(days >= 0,
-                                    "Input days cannot be negative. We can only look up the created jobs");
+        Preconditions.checkArgument(days >= 0, "Input days cannot be negative. We can only look up the created jobs");
         if (days > 10)
         {
             logger.warn("Potentially collecting too many restore jobs. numberOfRecentDays={}", days);
@@ -267,13 +267,15 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     // or, the other way around, depending on the geographic location (i.e. different timezones).
     // Example 1. 23:01 UTC is 00:01 CET (UTC +1) of the next day.
     // Example 2. 00:01 UTC of the next day is 17:01 PST (UTC -8)
-    static LocalDate dateInPast(long referenceTimestampMillis, int days)
+    static LocalDate dateInPast(long referenceTimestampMillis,
+                                int days)
     {
         long daysInMillis = days * ONE_DAY_MILLISECONDS;
         return LocalDate.fromMillisSinceEpoch(referenceTimestampMillis - daysInMillis);
     }
 
-    private static <T> ByteBuffer serializeValue(T value, String type)
+    private static <T> ByteBuffer serializeValue(T value,
+                                                 String type)
     {
         byte[] bytes;
         try

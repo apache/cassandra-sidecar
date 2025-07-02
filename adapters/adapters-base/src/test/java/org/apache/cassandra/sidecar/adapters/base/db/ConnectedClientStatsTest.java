@@ -18,15 +18,12 @@
 
 package org.apache.cassandra.sidecar.adapters.base.db;
 
+import com.datastax.driver.core.ColumnDefinitions;
+import com.datastax.driver.core.Row;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.junit.jupiter.api.Test;
-
-import com.datastax.driver.core.ColumnDefinitions;
-import com.datastax.driver.core.Row;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -65,7 +62,8 @@ public class ConnectedClientStatsTest
         assertThat(stats.clientOptions).isNull();
     }
 
-    private void setupMockData(Row mockRow, boolean isMissingFields)
+    private void setupMockData(Row mockRow,
+                               boolean isMissingFields)
     {
         ColumnDefinitions mockColumnDefinitions = mock(ColumnDefinitions.class);
         when(mockRow.getColumnDefinitions()).thenReturn(mockColumnDefinitions);
@@ -80,13 +78,12 @@ public class ConnectedClientStatsTest
         {
             ks = null;
             authMode = null;
-            when(mockRow.getColumnDefinitions().contains(anyString())).thenAnswer(i -> {
-                String input = i.getArgument(0, String.class);
-                return !("keyspace_name".equals(input)
-                         || "authentication_mode".equals(input)
-                         || "authentication_metadata".equals(input)
-                         || "client_options".equals(input));
-            });
+            when(mockRow.getColumnDefinitions()
+                        .contains(anyString())).thenAnswer(i -> {
+                            String input = i.getArgument(0, String.class);
+                            return !("keyspace_name".equals(input) || "authentication_mode".equals(input) || "authentication_metadata".equals(input)
+                                    || "client_options".equals(input));
+                        });
         }
         else
         {
@@ -95,18 +92,19 @@ public class ConnectedClientStatsTest
             authMetadata = new HashMap<String, String>()
             {
                 {
-                put("identity", TEST_SPIFFE_IDENTITY);
+                    put("identity", TEST_SPIFFE_IDENTITY);
                 }
             };
             clientOptions = new HashMap<String, String>()
             {
                 {
-                put("CQL_VERSION", "3.4.6");
-                put("DRIVER_NAME", "DataStax Python Driver");
-                put("DRIVER_VERSION", "3.25.0");
+                    put("CQL_VERSION", "3.4.6");
+                    put("DRIVER_NAME", "DataStax Python Driver");
+                    put("DRIVER_VERSION", "3.25.0");
                 }
             };
-            when(mockRow.getColumnDefinitions().contains(anyString())).thenReturn(true);
+            when(mockRow.getColumnDefinitions()
+                        .contains(anyString())).thenReturn(true);
         }
 
         when(mockRow.getInet("address")).thenReturn(InetAddress.getLoopbackAddress());

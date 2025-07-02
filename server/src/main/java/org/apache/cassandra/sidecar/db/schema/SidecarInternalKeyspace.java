@@ -29,9 +29,8 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Manages table setup needed for features provided by Sidecar. For e.g. creates schema needed for
- * {@link org.apache.cassandra.sidecar.db.RestoreJob} table and {@link org.apache.cassandra.sidecar.db.RestoreSlice}
- * table
+ * Manages table setup needed for features provided by Sidecar. For e.g. creates schema needed for {@link org.apache.cassandra.sidecar.db.RestoreJob} table and
+ * {@link org.apache.cassandra.sidecar.db.RestoreSlice} table
  */
 public class SidecarInternalKeyspace extends AbstractSchema
 {
@@ -41,7 +40,8 @@ public class SidecarInternalKeyspace extends AbstractSchema
 
     public SidecarInternalKeyspace(SidecarConfiguration config)
     {
-        this.keyspaceConfig = config.serviceConfiguration().schemaKeyspaceConfiguration();
+        this.keyspaceConfig = config.serviceConfiguration()
+                                    .schemaKeyspaceConfiguration();
         this.isEnabled = keyspaceConfig.isEnabled();
     }
 
@@ -58,7 +58,7 @@ public class SidecarInternalKeyspace extends AbstractSchema
 
     public <T extends TableSchema> T tableSchema(Class<T> type)
     {
-        //noinspection unchecked
+        // noinspection unchecked
         return (T) tableSchemas.get(type);
     }
 
@@ -99,7 +99,6 @@ public class SidecarInternalKeyspace extends AbstractSchema
     @Override
     protected String createSchemaStatement()
     {
-        return String.format("CREATE KEYSPACE IF NOT EXISTS %s WITH REPLICATION = %s",
-                             keyspaceName(), keyspaceConfig.createReplicationStrategyString());
+        return String.format("CREATE KEYSPACE IF NOT EXISTS %s WITH REPLICATION = %s", keyspaceName(), keyspaceConfig.createReplicationStrategyString());
     }
 }

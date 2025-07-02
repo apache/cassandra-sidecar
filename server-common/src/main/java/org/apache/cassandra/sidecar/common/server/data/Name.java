@@ -22,10 +22,13 @@ import java.util.Objects;
 
 /**
  * Represents the name of keyspaces and tables defined by the grammar in
- * <a href="https://cassandra.apache.org/doc/4.1/cassandra/cql/ddl.html#common-definitions">Cassandra CQL common
- * definitions</a>
- * <p>The data class derives the unquoted name from the input string, which may or may not be quoted.</p>
- * <p>Note that it assumes the input string must contain quotations, if the name should be quoted.</p>
+ * <a href="https://cassandra.apache.org/doc/4.1/cassandra/cql/ddl.html#common-definitions">Cassandra CQL common definitions</a>
+ * <p>
+ * The data class derives the unquoted name from the input string, which may or may not be quoted.
+ * </p>
+ * <p>
+ * Note that it assumes the input string must contain quotations, if the name should be quoted.
+ * </p>
  */
 public class Name
 {
@@ -55,8 +58,7 @@ public class Name
     }
 
     /**
-     * @return the quoted name, if the original input was quoted and if the unquoted name needs to be quoted,
-     * or the unquoted name otherwise
+     * @return the quoted name, if the original input was quoted and if the unquoted name needs to be quoted, or the unquoted name otherwise
      */
     public String maybeQuotedName()
     {
@@ -77,11 +79,12 @@ public class Name
     @Override
     public boolean equals(Object o)
     {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         Name name = (Name) o;
-        return Objects.equals(unquotedName, name.unquotedName)
-               && Objects.equals(maybeQuotedName, name.maybeQuotedName);
+        return Objects.equals(unquotedName, name.unquotedName) && Objects.equals(maybeQuotedName, name.maybeQuotedName);
     }
 
     /**
@@ -99,23 +102,18 @@ public class Name
     @Override
     public String toString()
     {
-        return "Name{" +
-               "unquotedName='" + unquotedName + '\'' +
-               ", maybeQuotedName='" + maybeQuotedName + '\'' +
-               '}';
+        return "Name{" + "unquotedName='" + unquotedName + '\'' + ", maybeQuotedName='" + maybeQuotedName + '\'' + '}';
     }
 
     /**
-     * Removes the surrounding quotes for the name, if the quotes are present. Otherwise, returns the original
-     * input.
+     * Removes the surrounding quotes for the name, if the quotes are present. Otherwise, returns the original input.
      *
      * @param name the name
      * @return the {@code name} without surrounding quotes
      */
     private String removeQuotesIfNecessary(String name)
     {
-        if (name == null || name.length() <= 1
-            || name.charAt(0) != '"' || name.charAt(name.length() - 1) != '"')
+        if (name == null || name.length() <= 1 || name.charAt(0) != '"' || name.charAt(name.length() - 1) != '"')
         {
             return name;
         }

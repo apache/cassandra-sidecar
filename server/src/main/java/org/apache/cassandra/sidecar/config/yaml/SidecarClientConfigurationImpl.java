@@ -18,12 +18,10 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
-
 
 /**
  * Configuration for Sidecar client
@@ -51,7 +49,6 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
     public static final int DEFAULT_MAX_RETRIES = 5;
     public static final MillisecondBoundConfiguration DEFAULT_RETRY_DELAY = MillisecondBoundConfiguration.parse("500ms");
     public static final MillisecondBoundConfiguration DEFAULT_MAX_RETRY_DELAY = MillisecondBoundConfiguration.parse("10s");
-
 
     @JsonProperty(value = SSL_CONFIGURATION)
     protected final SslConfiguration sslConfiguration;
@@ -85,32 +82,16 @@ public class SidecarClientConfigurationImpl implements SidecarClientConfiguratio
 
     public SidecarClientConfigurationImpl()
     {
-        this(DEFAULT_SSL_CONFIGURATION,
-             DEFAULT_REQUEST_TIMEOUT,
-             DEFAULT_REQUEST_IDLE_TIMEOUT,
-             DEFAULT_CONNECTION_POOL_MAX_SIZE,
-             DEFAULT_CONNECTION_POOL_CLEANER_PERIOD,
-             DEFAULT_CONNECTION_POOL_EVENT_LOOP_SIZE,
-             DEFAULT_CONNECTION_POOL_MAX_WAIT_QUEUE_SIZE,
-             DEFAULT_MAX_RETRIES,
-             DEFAULT_RETRY_DELAY,
-             DEFAULT_MAX_RETRY_DELAY
-        );
+        this(DEFAULT_SSL_CONFIGURATION, DEFAULT_REQUEST_TIMEOUT, DEFAULT_REQUEST_IDLE_TIMEOUT, DEFAULT_CONNECTION_POOL_MAX_SIZE,
+                DEFAULT_CONNECTION_POOL_CLEANER_PERIOD, DEFAULT_CONNECTION_POOL_EVENT_LOOP_SIZE, DEFAULT_CONNECTION_POOL_MAX_WAIT_QUEUE_SIZE,
+                DEFAULT_MAX_RETRIES, DEFAULT_RETRY_DELAY, DEFAULT_MAX_RETRY_DELAY);
     }
 
     public SidecarClientConfigurationImpl(SslConfiguration sslConfiguration)
     {
-        this(sslConfiguration,
-             DEFAULT_REQUEST_TIMEOUT,
-             DEFAULT_REQUEST_IDLE_TIMEOUT,
-             DEFAULT_CONNECTION_POOL_MAX_SIZE,
-             DEFAULT_CONNECTION_POOL_CLEANER_PERIOD,
-             DEFAULT_CONNECTION_POOL_EVENT_LOOP_SIZE,
-             DEFAULT_CONNECTION_POOL_MAX_WAIT_QUEUE_SIZE,
-             DEFAULT_MAX_RETRIES,
-             DEFAULT_RETRY_DELAY,
-             DEFAULT_MAX_RETRY_DELAY
-        );
+        this(sslConfiguration, DEFAULT_REQUEST_TIMEOUT, DEFAULT_REQUEST_IDLE_TIMEOUT, DEFAULT_CONNECTION_POOL_MAX_SIZE, DEFAULT_CONNECTION_POOL_CLEANER_PERIOD,
+                DEFAULT_CONNECTION_POOL_EVENT_LOOP_SIZE, DEFAULT_CONNECTION_POOL_MAX_WAIT_QUEUE_SIZE, DEFAULT_MAX_RETRIES, DEFAULT_RETRY_DELAY,
+                DEFAULT_MAX_RETRY_DELAY);
     }
 
     public SidecarClientConfigurationImpl(SslConfiguration sslConfiguration,

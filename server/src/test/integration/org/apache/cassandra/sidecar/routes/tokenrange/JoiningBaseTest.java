@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.routes.tokenrange;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.junit5.VertxTestContext;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -31,13 +33,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
-
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Range;
-import com.google.common.collect.Sets;
-
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
@@ -47,7 +42,9 @@ import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
-
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Range;
+import com.google.common.collect.Sets;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -62,7 +59,7 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
                                 List<Range<BigInteger>> expectedRanges,
                                 Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings,
                                 boolean isCrossDCKeyspace)
-    throws Exception
+            throws Exception
     {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         try
@@ -89,17 +86,17 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
                 for (int dc = 1; dc <= annotation.numDcs(); dc++)
                 {
                     IUpgradeableInstance dcNode = cluster.get(dcNodeIdx++);
-                    IUpgradeableInstance newInstance = ClusterUtils.addInstance(cluster,
-                                                                                dcNode.config().localDatacenter(),
-                                                                                dcNode.config().localRack(),
-                                                                                inst -> {
-                                                                                    inst.set("auto_bootstrap", true);
-                                                                                    inst.with(Feature.GOSSIP,
-                                                                                              Feature.JMX,
-                                                                                              Feature.NATIVE_PROTOCOL);
-                                                                                });
-                    startAsync("Start new node node" + newInstance.config().num(),
-                               () -> newInstance.startup(cluster));
+                    IUpgradeableInstance newInstance = ClusterUtils.addInstance(cluster, dcNode.config()
+                                                                                               .localDatacenter(),
+                            dcNode.config()
+                                  .localRack(),
+                            inst -> {
+                                inst.set("auto_bootstrap", true);
+                                inst.with(Feature.GOSSIP, Feature.JMX, Feature.NATIVE_PROTOCOL);
+                            });
+                    startAsync("Start new node node" + newInstance.config()
+                                                                  .num(),
+                            () -> newInstance.startup(cluster));
                     newInstances.add(newInstance);
                 }
             }
@@ -114,40 +111,29 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
             retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
                 assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                 TokenRangeReplicasResponse mappingResponse = response.bodyAsJson(TokenRangeReplicasResponse.class);
-                assertMappingResponseOK(mappingResponse,
-                                        DEFAULT_RF,
-                                        dcReplication);
+                assertMappingResponseOK(mappingResponse, DEFAULT_RF, dcReplication);
                 int finalNodeCount = (annotation.nodesPerDc() + annotation.newNodesPerDc()) * annotation.numDcs();
-                TokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
-                                                                                        annotation.newNodesPerDc(),
-                                                                                        annotation.numDcs(),
-                                                                                        1);
+                TokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(), annotation.newNodesPerDc(),
+                        annotation.numDcs(), 1);
                 // New split ranges resulting from joining nodes and corresponding tokens
-                List<Range<BigInteger>> splitRanges = extractSplitRanges(annotation.newNodesPerDc() *
-                                                                         annotation.numDcs(),
-                                                                         finalNodeCount,
-                                                                         tokenSupplier,
-                                                                         expectedRanges);
+                List<Range<BigInteger>> splitRanges = extractSplitRanges(annotation.newNodesPerDc() * annotation.numDcs(), finalNodeCount, tokenSupplier,
+                        expectedRanges);
 
-                List<Integer> newNodes = newInstances.stream().map(i -> i.config().num()).collect(Collectors.toList());
-                validateNodeStates(mappingResponse,
-                                   dcReplication,
-                                   nodeNumber -> newNodes.contains(nodeNumber) ? "Joining" : "Normal");
+                List<Integer> newNodes = newInstances.stream()
+                                                     .map(i -> i.config()
+                                                                .num())
+                                                     .collect(Collectors.toList());
+                validateNodeStates(mappingResponse, dcReplication, nodeNumber -> newNodes.contains(nodeNumber) ? "Joining" : "Normal");
 
                 validateTokenRanges(mappingResponse, expectedRanges);
-                validateReplicaMapping(mappingResponse,
-                                       newInstances,
-                                       isCrossDCKeyspace,
-                                       splitRanges,
-                                       expectedRangeMappings);
+                validateReplicaMapping(mappingResponse, newInstances, isCrossDCKeyspace, splitRanges, expectedRangeMappings);
 
                 completeContextOrThrow(context);
             });
         }
         finally
         {
-            for (int i = 0;
-                 i < (annotation.newNodesPerDc() * annotation.numDcs()); i++)
+            for (int i = 0; i < (annotation.newNodesPerDc() * annotation.numDcs()); i++)
             {
                 transientStateEnd.countDown();
             }
@@ -164,24 +150,30 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
         if (!isCrossDCKeyspace)
         {
             newInstances = newInstances.stream()
-                                       .filter(i -> i.config().localDatacenter().equals("datacenter1"))
+                                       .filter(i -> i.config()
+                                                     .localDatacenter()
+                                                     .equals("datacenter1"))
                                        .collect(Collectors.toList());
         }
 
-        List<String> transientNodeAddresses = newInstances.stream().map(i -> {
-            InetSocketAddress address = i.config().broadcastAddress();
-            return address.getAddress().getHostAddress() +
-                   ":" +
-                   address.getPort();
-        }).collect(Collectors.toList());
+        List<String> transientNodeAddresses = newInstances.stream()
+                                                          .map(i -> {
+                                                              InetSocketAddress address = i.config()
+                                                                                           .broadcastAddress();
+                                                              return address.getAddress()
+                                                                            .getHostAddress()
+                                                                      + ":" + address.getPort();
+                                                          })
+                                                          .collect(Collectors.toList());
 
         Set<String> writeReplicaInstances = instancesFromReplicaSet(mappingResponse.writeReplicas());
         Set<String> readReplicaInstances = instancesFromReplicaSet(mappingResponse.readReplicas());
 
-        Set<String> splitRangeReplicas = mappingResponse.writeReplicas().stream()
+        Set<String> splitRangeReplicas = mappingResponse.writeReplicas()
+                                                        .stream()
                                                         .filter(w -> matchSplitRanges(w, splitRanges))
-                                                        .map(r ->
-                                                             r.replicasByDatacenter().values())
+                                                        .map(r -> r.replicasByDatacenter()
+                                                                   .values())
                                                         .flatMap(Collection::stream)
                                                         .flatMap(Collection::stream)
                                                         .collect(Collectors.toSet());
@@ -205,13 +197,15 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
         while (newNode <= newNodes)
         {
             int nodeIdx = finalNodeCount - newNode;
-            newNodeTokens.add(new BigInteger(tokenSupplier.tokens(nodeIdx).stream().findFirst().get()));
+            newNodeTokens.add(new BigInteger(tokenSupplier.tokens(nodeIdx)
+                                                          .stream()
+                                                          .findFirst()
+                                                          .get()));
             newNode++;
         }
 
         return expectedRanges.stream()
-                             .filter(r -> newNodeTokens.contains(r.upperEndpoint()) ||
-                                          newNodeTokens.contains(r.lowerEndpoint()))
+                             .filter(r -> newNodeTokens.contains(r.upperEndpoint()) || newNodeTokens.contains(r.lowerEndpoint()))
                              .collect(Collectors.toList());
     }
 
@@ -219,8 +213,12 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
                                      List<Range<BigInteger>> expectedSplitRanges)
     {
         return expectedSplitRanges.stream()
-                                  .anyMatch(s -> range.start().equals(s.lowerEndpoint().toString()) &&
-                                                 range.end().equals(s.upperEndpoint().toString()));
+                                  .anyMatch(s -> range.start()
+                                                      .equals(s.lowerEndpoint()
+                                                               .toString())
+                                          && range.end()
+                                                  .equals(s.upperEndpoint()
+                                                           .toString()));
     }
 
     void runJoiningTestScenario(VertxTestContext context,
@@ -229,26 +227,17 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
                                 CountDownLatch transientStateStart,
                                 CountDownLatch transientStateEnd,
                                 Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings)
-    throws Exception
+            throws Exception
     {
 
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
-        TokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
-                                                                                annotation.newNodesPerDc(),
-                                                                                annotation.numDcs(),
-                                                                                1);
+        TokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(), annotation.newNodesPerDc(), annotation.numDcs(), 1);
 
         UpgradeableCluster cluster = cassandraTestContext.configureAndStartCluster(builder -> {
             builder.withInstanceInitializer(instanceInitializer);
             builder.withTokenSupplier(tokenSupplier);
         });
 
-        runJoiningTestScenario(context,
-                               transientStateStart,
-                               transientStateEnd,
-                               cluster,
-                               generateExpectedRanges(),
-                               expectedRangeMappings,
-                               true);
+        runJoiningTestScenario(context, transientStateStart, transientStateEnd, cluster, generateExpectedRanges(), expectedRangeMappings, true);
     }
 }

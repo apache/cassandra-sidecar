@@ -18,13 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.snapshots;
 
-import java.io.FileNotFoundException;
-import java.nio.file.NoSuchFileException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Stream;
-
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.inject.Inject;
@@ -35,6 +28,12 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.io.FileNotFoundException;
+import java.nio.file.NoSuchFileException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -50,23 +49,21 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.RequestUtils;
 import org.jetbrains.annotations.NotNull;
-
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * The <b>GET</b> verb will produce a list of paths of all the snapshot files of a given
- * snapshot name.
+ * The <b>GET</b> verb will produce a list of paths of all the snapshot files of a given snapshot name.
  *
- * <p>The query param {@code includeSecondaryIndexFiles} is used to request secondary index
- * files along with other files. For example:
+ * <p>
+ * The query param {@code includeSecondaryIndexFiles} is used to request secondary index files along with other files. For example:
  *
- * <p>{@code /api/v1/keyspaces/ks/tables/tbl/snapshots/testSnapshot}
- * lists all SSTable component files for the <i>"testSnapshot"</i> snapshot for the
- * <i>"ks"</i> keyspace and the <i>"tbl"</i> table
+ * <p>
+ * {@code /api/v1/keyspaces/ks/tables/tbl/snapshots/testSnapshot} lists all SSTable component files for the <i>"testSnapshot"</i> snapshot for the <i>"ks"</i>
+ * keyspace and the <i>"tbl"</i> table
  *
- * <p>{@code /api/v1/keyspaces/ks/tables/tbl/snapshots/testSnapshot?includeSecondaryIndexFiles=true}
- * lists all SSTable component files, including secondary index files, for the
- * <i>"testSnapshot"</i> snapshot for the <i>"ks"</i> keyspace and the <i>"tbl"</i> table
+ * <p>
+ * {@code /api/v1/keyspaces/ks/tables/tbl/snapshots/testSnapshot?includeSecondaryIndexFiles=true} lists all SSTable component files, including secondary index
+ * files, for the <i>"testSnapshot"</i> snapshot for the <i>"ks"</i> keyspace and the <i>"tbl"</i> table
  */
 @Singleton
 public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> implements AccessProtected
@@ -89,8 +86,10 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
         super(metadataFetcher, executorPools, validator);
         this.builder = builder;
         this.configuration = configuration;
-        this.cacheConfiguration = configuration.sstableSnapshotConfiguration().snapshotListCacheConfiguration();
-        this.cache = initializeCache(cacheConfiguration, sidecarMetrics.server().cache().snapshotCacheMetrics);
+        this.cacheConfiguration = configuration.sstableSnapshotConfiguration()
+                                               .snapshotListCacheConfiguration();
+        this.cache = initializeCache(cacheConfiguration, sidecarMetrics.server()
+                                                                       .cache().snapshotCacheMetrics);
     }
 
     @Override
@@ -102,22 +101,19 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
     /**
      * Lists paths of all the snapshot files of a given snapshot name.
      * <p>
-     * The query param {@code includeSecondaryIndexFiles} is used to request secondary index
-     * files along with other files. For example:
+     * The query param {@code includeSecondaryIndexFiles} is used to request secondary index files along with other files. For example:
      * <p>
-     * {@code /api/v1/keyspaces/ks/tables/tbl/snapshots/testSnapshot}
-     * lists all SSTable component files for the <i>"testSnapshot"</i> snapshot for the
+     * {@code /api/v1/keyspaces/ks/tables/tbl/snapshots/testSnapshot} lists all SSTable component files for the <i>"testSnapshot"</i> snapshot for the
      * <i>"ks"</i> keyspace and the <i>"tbl"</i> table
      * <p>
-     * {@code /api/v1/keyspaces/ks/tables/tbl/snapshots/testSnapshot?includeSecondaryIndexFiles=true}
-     * lists all SSTable component files, including secondary index files, for the
-     * <i>"testSnapshot"</i> snapshot for the <i>"ks"</i> keyspace and the <i>"tbl"</i> table
+     * {@code /api/v1/keyspaces/ks/tables/tbl/snapshots/testSnapshot?includeSecondaryIndexFiles=true} lists all SSTable component files, including secondary
+     * index files, for the <i>"testSnapshot"</i> snapshot for the <i>"ks"</i> keyspace and the <i>"tbl"</i> table
      *
-     * @param context       the event to handle
-     * @param httpRequest   the {@link HttpServerRequest} object
-     * @param host          the name of the host
+     * @param context the event to handle
+     * @param httpRequest the {@link HttpServerRequest} object
+     * @param host the name of the host
      * @param remoteAddress the remote address that originated the request
-     * @param request       parameters obtained from the request
+     * @param request parameters obtained from the request
      */
     @Override
     public void handleInternal(RoutingContext context,
@@ -126,21 +122,20 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
                                SocketAddress remoteAddress,
                                SnapshotRequestParam request)
     {
-        cachedResponseOrProcess(host, request)
-        .onSuccess(response -> {
-            if (response.snapshotFilesInfo().isEmpty())
+        cachedResponseOrProcess(host, request).onSuccess(response -> {
+            if (response.snapshotFilesInfo()
+                        .isEmpty())
             {
                 String payload = "Snapshot '" + request.snapshotName() + "' not found";
                 context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, payload));
             }
             else
             {
-                logger.debug("SnapshotsHandler handled request={}, remoteAddress={}, " +
-                             "instance={}", request, remoteAddress, host);
+                logger.debug("SnapshotsHandler handled request={}, remoteAddress={}, " + "instance={}", request, remoteAddress, host);
                 context.json(response);
             }
         })
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+                                              .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 
     @Override
@@ -150,8 +145,9 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
                                   SocketAddress remoteAddress,
                                   SnapshotRequestParam request)
     {
-        logger.error("SnapshotsHandler failed for request={}, remoteAddress={}, instance={}, method={}",
-                     request, remoteAddress, host, context.request().method(), cause);
+        logger.error("SnapshotsHandler failed for request={}, remoteAddress={}, instance={}, method={}", request, remoteAddress, host, context.request()
+                                                                                                                                              .method(),
+                cause);
         if (cause instanceof FileNotFoundException || cause instanceof NoSuchFileException)
         {
             context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
@@ -168,8 +164,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
     @Override
     protected SnapshotRequestParam extractParamsOrThrow(RoutingContext context)
     {
-        boolean includeSecondaryIndexFiles =
-        RequestUtils.parseBooleanQueryParam(context.request(), INCLUDE_SECONDARY_INDEX_FILES_QUERY_PARAM, false);
+        boolean includeSecondaryIndexFiles = RequestUtils.parseBooleanQueryParam(context.request(), INCLUDE_SECONDARY_INDEX_FILES_QUERY_PARAM, false);
 
         return SnapshotRequestParam.builder()
                                    .qualifiedTableName(qualifiedTableName(context))
@@ -178,7 +173,8 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
                                    .build();
     }
 
-    protected Future<ListSnapshotFilesResponse> cachedResponseOrProcess(String host, SnapshotRequestParam request)
+    protected Future<ListSnapshotFilesResponse> cachedResponseOrProcess(String host,
+                                                                        SnapshotRequestParam request)
     {
         if (cache != null && cacheConfiguration.enabled())
         {
@@ -188,43 +184,34 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
         return processResponse(host, request);
     }
 
-    protected Future<ListSnapshotFilesResponse> processResponse(String host, SnapshotRequestParam request)
+    protected Future<ListSnapshotFilesResponse> processResponse(String host,
+                                                                SnapshotRequestParam request)
     {
-        return dataPaths(host, request.keyspace(), request.tableName())
-               .compose(dataDirectoryList ->
-                        builder.streamSnapshotFiles(dataDirectoryList,
-                                                    request.snapshotName(),
-                                                    request.includeSecondaryIndexFiles())
-               )
-               .compose(snapshotFileStream -> buildResponse(host, request, snapshotFileStream));
+        return dataPaths(host, request.keyspace(), request.tableName()).compose(
+                dataDirectoryList -> builder.streamSnapshotFiles(dataDirectoryList, request.snapshotName(), request.includeSecondaryIndexFiles()))
+                                                                       .compose(snapshotFileStream -> buildResponse(host, request, snapshotFileStream));
     }
 
-    protected Future<List<String>> dataPaths(String host, String keyspace, String table)
+    protected Future<List<String>> dataPaths(String host,
+                                             String keyspace,
+                                             String table)
     {
-        return executorPools.service().executeBlocking(() -> metadataFetcher.delegate(host)
-                                                                            .tableOperations()
-                                                                            .getDataPaths(keyspace, table));
+        return executorPools.service()
+                            .executeBlocking(() -> metadataFetcher.delegate(host)
+                                                                  .tableOperations()
+                                                                  .getDataPaths(keyspace, table));
     }
 
-    protected Future<ListSnapshotFilesResponse>
-    buildResponse(String host,
-                  SnapshotRequestParam request,
-                  Stream<SnapshotPathBuilder.SnapshotFile> snapshotFileStream)
+    protected Future<ListSnapshotFilesResponse> buildResponse(String host,
+                                                              SnapshotRequestParam request,
+                                                              Stream<SnapshotPathBuilder.SnapshotFile> snapshotFileStream)
     {
         int sidecarPort = configuration.port();
         ListSnapshotFilesResponse response = new ListSnapshotFilesResponse();
         snapshotFileStream.forEach(file -> {
-            String tableNameAndId = file.tableId != null
-                                    ? request.tableName() + "-" + file.tableId
-                                    : request.tableName();
-            response.addSnapshotFile(new ListSnapshotFilesResponse.FileInfo(file.size,
-                                                                            host,
-                                                                            sidecarPort,
-                                                                            file.dataDirectoryIndex,
-                                                                            request.snapshotName(),
-                                                                            request.keyspace(),
-                                                                            tableNameAndId,
-                                                                            file.name));
+            String tableNameAndId = file.tableId != null ? request.tableName() + "-" + file.tableId : request.tableName();
+            response.addSnapshotFile(new ListSnapshotFilesResponse.FileInfo(file.size, host, sidecarPort, file.dataDirectoryIndex, request.snapshotName(),
+                    request.keyspace(), tableNameAndId, file.name));
         });
         return Future.succeededFuture(response);
     }
@@ -238,11 +225,14 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
         }
         return Caffeine.newBuilder()
                        .maximumSize(cacheConfiguration.maximumSize())
-                       .expireAfterAccess(cacheConfiguration.expireAfterAccess().quantity(), cacheConfiguration.expireAfterAccess().unit())
+                       .expireAfterAccess(cacheConfiguration.expireAfterAccess()
+                                                            .quantity(),
+                               cacheConfiguration.expireAfterAccess()
+                                                 .unit())
                        .recordStats(() -> snapshotCacheMetrics)
-                       .removalListener((key, value, cause) ->
-                                        logger.debug("Removed from cache={}, entry={}, key={}, cause={}",
-                                                     SNAPSHOT_CACHE_NAME, value, key, cause))
+                       .removalListener((key,
+                                         value,
+                                         cause) -> logger.debug("Removed from cache={}, entry={}, key={}, cause={}", SNAPSHOT_CACHE_NAME, value, key, cause))
                        .build();
     }
 }

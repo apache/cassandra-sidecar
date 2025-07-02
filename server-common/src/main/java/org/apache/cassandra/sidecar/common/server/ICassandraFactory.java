@@ -28,8 +28,8 @@ public interface ICassandraFactory
     /**
      * Creates a new {@link ICassandraAdapter} with the provided {@link CQLSessionProvider} and {@link JmxClient}
      *
-     * @param session                     the session to the Cassandra database
-     * @param client                      the JMX client to connect to the Cassandra database
+     * @param session the session to the Cassandra database
+     * @param client the JMX client to connect to the Cassandra database
      * @param localNativeTransportAddress the native transport address and port of the instance
      * @return an {@link ICassandraAdapter} implementation for the instance provided
      */

@@ -20,19 +20,16 @@ package org.apache.cassandra.sidecar.coordination;
 
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
-
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import static org.apache.cassandra.sidecar.coordination.ClusterLeaseClaimTask.MINIMUM_DELAY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
@@ -48,14 +45,14 @@ import static org.mockito.Mockito.when;
 class ClusterLeaseClaimTaskTest
 {
     @ParameterizedTest(name = "{index} => schemaConfigurationEnabled={0}, featureEnabled={1}")
-    @MethodSource(value = { "disabledConfigurationValues" })
-    void testSkipWhenConfigurationDisabled(boolean schemaConfigurationEnabled, boolean featureEnabled)
+    @MethodSource(value = { "disabledConfigurationValues"})
+    void testSkipWhenConfigurationDisabled(boolean schemaConfigurationEnabled,
+                                           boolean featureEnabled)
     {
         ServiceConfiguration serviceConfiguration = mockConfiguration(schemaConfigurationEnabled, featureEnabled);
         ElectorateMembership mockElectorateMembership = mock(ElectorateMembership.class);
-        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, mockElectorateMembership,
-                                                               mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
-                                                               mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, mockElectorateMembership, mock(SidecarLeaseDatabaseAccessor.class),
+                new ClusterLease(), mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
         assertThat(task.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
         // avoid expensive calls
         verifyNoInteractions(mockElectorateMembership);
@@ -68,9 +65,8 @@ class ClusterLeaseClaimTaskTest
         ElectorateMembership mockElectorateMembership = mock(ElectorateMembership.class);
         when(mockElectorateMembership.isMember()).thenReturn(false);
         ClusterLease clusterLease = new ClusterLease();
-        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, mockElectorateMembership,
-                                                               mock(SidecarLeaseDatabaseAccessor.class), clusterLease,
-                                                               mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, mockElectorateMembership, mock(SidecarLeaseDatabaseAccessor.class),
+                clusterLease, mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
         assertThat(task.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
         assertThat(clusterLease.toScheduleDecision()).as("Skip when not a member of the electorate")
@@ -86,9 +82,8 @@ class ClusterLeaseClaimTaskTest
         when(mockElectorateMembership.isMember()).thenReturn(true);
         SidecarLeaseDatabaseAccessor accessor = mock(SidecarLeaseDatabaseAccessor.class);
         when(accessor.isAvailable()).thenReturn(true);
-        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, mockElectorateMembership,
-                                                               accessor, new ClusterLease(),
-                                                               mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, mockElectorateMembership, accessor, new ClusterLease(),
+                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
         assertThat(task.scheduleDecision()).isEqualTo(ScheduleDecision.EXECUTE);
         verify(mockElectorateMembership, times(1)).isMember();
@@ -102,40 +97,50 @@ class ClusterLeaseClaimTaskTest
         when(mockElectorateMembership.isMember()).thenReturn(true);
         SidecarLeaseDatabaseAccessor databaseAccessor = mock(SidecarLeaseDatabaseAccessor.class);
         when(databaseAccessor.isAvailable()).thenReturn(false);
-        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, mockElectorateMembership,
-                                                               databaseAccessor, new ClusterLease(),
-                                                               mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
+        ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(serviceConfiguration, mockElectorateMembership, databaseAccessor, new ClusterLease(),
+                mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
         assertThat(task.scheduleDecision()).isEqualTo(ScheduleDecision.RESCHEDULE);
         verify(mockElectorateMembership, times(1)).isMember();
     }
 
     @ParameterizedTest(name = "{index} => configuredInitialDelay {0} millis")
-    @ValueSource(longs = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 })
+    @ValueSource(longs = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
     void testRandomizedInitialDelayFromConfiguration(long configuredDelayMillis)
     {
         ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
-        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().quantity())
-        .thenReturn(configuredDelayMillis);
-        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().unit())
-        .thenReturn(TimeUnit.MILLISECONDS);
-        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().toMillis())
-        .thenCallRealMethod();
-        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelay().to(TimeUnit.MILLISECONDS))
-        .thenCallRealMethod();
-        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().randomDeltaDelayMillis())
-        .thenCallRealMethod();
-        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().initialDelayRandomDelta().toMillis())
-        .thenReturn(30_000L);
+        when(mockServiceConfiguration.coordinationConfiguration()
+                                     .clusterLeaseClaimConfiguration()
+                                     .initialDelay()
+                                     .quantity()).thenReturn(configuredDelayMillis);
+        when(mockServiceConfiguration.coordinationConfiguration()
+                                     .clusterLeaseClaimConfiguration()
+                                     .initialDelay()
+                                     .unit()).thenReturn(TimeUnit.MILLISECONDS);
+        when(mockServiceConfiguration.coordinationConfiguration()
+                                     .clusterLeaseClaimConfiguration()
+                                     .initialDelay()
+                                     .toMillis()).thenCallRealMethod();
+        when(mockServiceConfiguration.coordinationConfiguration()
+                                     .clusterLeaseClaimConfiguration()
+                                     .initialDelay()
+                                     .to(TimeUnit.MILLISECONDS)).thenCallRealMethod();
+        when(mockServiceConfiguration.coordinationConfiguration()
+                                     .clusterLeaseClaimConfiguration()
+                                     .randomDeltaDelayMillis()).thenCallRealMethod();
+        when(mockServiceConfiguration.coordinationConfiguration()
+                                     .clusterLeaseClaimConfiguration()
+                                     .initialDelayRandomDelta()
+                                     .toMillis()).thenReturn(30_000L);
         ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mockServiceConfiguration, mock(ElectorateMembership.class),
-                                                               mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
-                                                               mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
+                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(), mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
-        assertThat(task.initialDelay().to(TimeUnit.MILLISECONDS)).isBetween(configuredDelayMillis, configuredDelayMillis + 30_000L);
+        assertThat(task.initialDelay()
+                       .to(TimeUnit.MILLISECONDS)).isBetween(configuredDelayMillis, configuredDelayMillis + 30_000L);
     }
 
     @ParameterizedTest(name = "{index} => configuredDelayMillis {0} millis")
-    @ValueSource(longs = { 30_000, 40_000, 50_000, 100_000, 1_000_000, 10_000_000, 20_000_000, Long.MAX_VALUE - 1 })
+    @ValueSource(longs = { 30_000, 40_000, 50_000, 100_000, 1_000_000, 10_000_000, 20_000_000, Long.MAX_VALUE - 1})
     void testDelayFromConfiguration(long configuredDelayMillis)
     {
         ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
@@ -144,10 +149,10 @@ class ClusterLeaseClaimTaskTest
                                      .clusterLeaseClaimConfiguration()
                                      .executeInterval()).thenReturn(value);
         ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mockServiceConfiguration, mock(ElectorateMembership.class),
-                                                               mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
-                                                               mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
+                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(), mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
 
-        assertThat(task.delay().to(TimeUnit.MILLISECONDS)).isEqualTo(configuredDelayMillis);
+        assertThat(task.delay()
+                       .to(TimeUnit.MILLISECONDS)).isEqualTo(configuredDelayMillis);
     }
 
     @Test
@@ -155,26 +160,30 @@ class ClusterLeaseClaimTaskTest
     {
         ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
         MillisecondBoundConfiguration lessThanMinimum = MillisecondBoundConfiguration.parse("29s");
-        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().executeInterval()).thenReturn(lessThanMinimum);
+        when(mockServiceConfiguration.coordinationConfiguration()
+                                     .clusterLeaseClaimConfiguration()
+                                     .executeInterval()).thenReturn(lessThanMinimum);
         ClusterLeaseClaimTask task = new ClusterLeaseClaimTask(mockServiceConfiguration, mock(ElectorateMembership.class),
-                                                               mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(),
-                                                               mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
-        assertThat(task.delay()).as("The minimum is guaranteed").isEqualTo(MINIMUM_DELAY);
+                mock(SidecarLeaseDatabaseAccessor.class), new ClusterLease(), mock(SidecarMetrics.class, RETURNS_DEEP_STUBS));
+        assertThat(task.delay()).as("The minimum is guaranteed")
+                                .isEqualTo(MINIMUM_DELAY);
     }
 
-    private ServiceConfiguration mockConfiguration(boolean schemaConfigurationEnabled, boolean featureEnabled)
+    private ServiceConfiguration mockConfiguration(boolean schemaConfigurationEnabled,
+                                                   boolean featureEnabled)
     {
         ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
-        when(mockServiceConfiguration.schemaKeyspaceConfiguration().isEnabled()).thenReturn(schemaConfigurationEnabled);
-        when(mockServiceConfiguration.coordinationConfiguration().clusterLeaseClaimConfiguration().enabled()).thenReturn(featureEnabled);
+        when(mockServiceConfiguration.schemaKeyspaceConfiguration()
+                                     .isEnabled()).thenReturn(schemaConfigurationEnabled);
+        when(mockServiceConfiguration.coordinationConfiguration()
+                                     .clusterLeaseClaimConfiguration()
+                                     .enabled()).thenReturn(featureEnabled);
 
         return mockServiceConfiguration;
     }
 
     static Stream<Arguments> disabledConfigurationValues()
     {
-        return Stream.of(Arguments.of(false, false),
-                         Arguments.of(false, true),
-                         Arguments.of(true, false));
+        return Stream.of(Arguments.of(false, false), Arguments.of(false, true), Arguments.of(true, false));
     }
 }

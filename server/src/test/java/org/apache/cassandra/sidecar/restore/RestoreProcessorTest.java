@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import com.google.common.util.concurrent.Uninterruptibles;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,24 +83,21 @@ class RestoreProcessorTest
         sidecarSchema = mock(SidecarSchema.class);
         SidecarMetrics sidecarMetrics = mock(SidecarMetrics.class);
         when(sidecarMetrics.instance(1)).thenReturn(instanceMetrics);
-        SidecarConfiguration sidecarConfig = SidecarConfigurationImpl
-                                             .builder()
-                                             .restoreJobConfiguration(RestoreJobConfigurationImpl
-                                                                      .builder()
-                                                                      .processMaxConcurrency(TestModule.RESTORE_MAX_CONCURRENCY)
-                                                                      .slowTaskThreshold(SecondBoundConfiguration.parse("10s"))
-                                                                      .slowTaskReportDelay(SecondBoundConfiguration.parse("2m"))
-                                                                      .build())
-                                             .build();
-        RestoreProcessor delegate = new RestoreProcessor(executorPools,
-                                                         sidecarConfig,
-                                                         sidecarSchema,
-                                                         mock(StorageClientPool.class),
-                                                         mock(SSTableImporter.class),
-                                                         mock(RestoreRangeDatabaseAccessor.class),
-                                                         mock(RestoreJobUtil.class),
-                                                         mock(LocalTokenRangesProvider.class),
-                                                         sidecarMetrics);
+        SidecarConfiguration sidecarConfig = SidecarConfigurationImpl.builder()
+                                                                     .restoreJobConfiguration(RestoreJobConfigurationImpl.builder()
+                                                                                                                         .processMaxConcurrency(
+                                                                                                                                 TestModule.RESTORE_MAX_CONCURRENCY)
+                                                                                                                         .slowTaskThreshold(
+                                                                                                                                 SecondBoundConfiguration.parse(
+                                                                                                                                         "10s"))
+                                                                                                                         .slowTaskReportDelay(
+                                                                                                                                 SecondBoundConfiguration.parse(
+                                                                                                                                         "2m"))
+                                                                                                                         .build())
+                                                                     .build();
+        RestoreProcessor delegate = new RestoreProcessor(executorPools, sidecarConfig, sidecarSchema, mock(StorageClientPool.class),
+                mock(SSTableImporter.class), mock(RestoreRangeDatabaseAccessor.class), mock(RestoreJobUtil.class), mock(LocalTokenRangesProvider.class),
+                sidecarMetrics);
         periodicTaskExecutor = new PeriodicTaskExecutor(executorPools, new ClusterLease());
         processor = spy(delegate);
         when(processor.delay()).thenReturn(MillisecondBoundConfiguration.parse("100ms"));
@@ -116,7 +114,10 @@ class RestoreProcessorTest
     @AfterAll
     static void afterAll()
     {
-        TestResourceReaper.create().with(vertx).with(executorPools).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(executorPools)
+                          .close();
     }
 
     @Test
@@ -145,12 +146,10 @@ class RestoreProcessorTest
         // assert before any slice can be completed
         loopAssert(3, () -> {
             // expect slice import queue has the size of concurrency
-            assertThat(instanceRestoreMetrics.sliceImportQueueLength.metric.getValue())
-            .isLessThanOrEqualTo(concurrency);
+            assertThat(instanceRestoreMetrics.sliceImportQueueLength.metric.getValue()).isLessThanOrEqualTo(concurrency);
 
             // expect the pending slices count equals to "total - concurrency"
-            assertThat(instanceRestoreMetrics.pendingSliceCount.metric.getValue())
-            .isLessThanOrEqualTo(total - concurrency);
+            assertThat(instanceRestoreMetrics.pendingSliceCount.metric.getValue()).isLessThanOrEqualTo(total - concurrency);
 
             assertThat(processor.activeRanges()).isEqualTo(concurrency);
         });
@@ -160,10 +159,9 @@ class RestoreProcessorTest
 
         // it never grows beyond `concurrency`
         loopAssert(3, () -> {
-            assertThat(processor.activeRanges())
-            .describedAs("Active slice count should be in the range of (0, concurrency]")
-            .isLessThanOrEqualTo(concurrency)
-            .isPositive();
+            assertThat(processor.activeRanges()).describedAs("Active slice count should be in the range of (0, concurrency]")
+                                                .isLessThanOrEqualTo(concurrency)
+                                                .isPositive();
         });
 
         // the active slices should be back to 0
@@ -175,8 +173,10 @@ class RestoreProcessorTest
         });
 
         // all slices complete successfully
-        assertThat(instanceRestoreMetrics.sliceCompletionTime.metric.getSnapshot().getValues()).hasSize(total);
-        for (long sliceCompleteDuration : instanceRestoreMetrics.sliceCompletionTime.metric.getSnapshot().getValues())
+        assertThat(instanceRestoreMetrics.sliceCompletionTime.metric.getSnapshot()
+                                                                    .getValues()).hasSize(total);
+        for (long sliceCompleteDuration : instanceRestoreMetrics.sliceCompletionTime.metric.getSnapshot()
+                                                                                           .getValues())
         {
             assertThat(sliceCompleteDuration).isPositive();
         }
@@ -192,9 +192,8 @@ class RestoreProcessorTest
 
         CountDownLatch latch = new CountDownLatch(1);
         processor.submit(mockSlowRestoreRange(latch));
-        assertThat(processor.activeRanges())
-        .describedAs("No slice should be active because executions are skipped")
-        .isZero();
+        assertThat(processor.activeRanges()).describedAs("No slice should be active because executions are skipped")
+                                            .isZero();
 
         // Make slice completable. But since all executions are skipped, the active slice should remain as 1
         latch.countDown();
@@ -217,14 +216,11 @@ class RestoreProcessorTest
         currentTime.set(oneMinutesInNanos);
         processor.submit(range);
         loopAssert(3, () -> {
-            long[] slowRestoreTaskTimes = instanceMetrics
-                                          .restore()
-                                          .slowRestoreTaskTime.metric.getSnapshot().getValues();
-            assertThat(slowRestoreTaskTimes)
-            .describedAs("The task takes 1 minute. " +
-                         "The slow task threshold is 10 seconds and report delay is 2 minutes (see TestModule). " +
-                         "It should only report once")
-            .hasSize(1);
+            long[] slowRestoreTaskTimes = instanceMetrics.restore().slowRestoreTaskTime.metric.getSnapshot()
+                                                                                              .getValues();
+            assertThat(slowRestoreTaskTimes).describedAs("The task takes 1 minute. "
+                    + "The slow task threshold is 10 seconds and report delay is 2 minutes (see TestModule). " + "It should only report once")
+                                            .hasSize(1);
             long handlerTimeInNanos = slowRestoreTaskTimes[0];
             assertThat(handlerTimeInNanos).isEqualTo(oneMinutesInNanos);
             assertThat(processor.activeTasks()).isOne();
@@ -251,13 +247,13 @@ class RestoreProcessorTest
         processor.submit(range);
 
         // the canceled range should fail the job
-        loopAssert(3,
-                   () -> assertThat(range.trackerUnsafe().isFailed()).isTrue());
+        loopAssert(3, () -> assertThat(range.trackerUnsafe()
+                                            .isFailed()).isTrue());
 
         // trying to submit the range again, it throws fatal exception that the range has been cancelled
-        assertThatThrownBy(() -> range.trackerUnsafe().trySubmit(range))
-        .isExactlyInstanceOf(RestoreJobFatalException.class)
-        .hasMessageContaining("Restore range is cancelled.");
+        assertThatThrownBy(() -> range.trackerUnsafe()
+                                      .trySubmit(range)).isExactlyInstanceOf(RestoreJobFatalException.class)
+                                                        .hasMessageContaining("Restore range is cancelled.");
     }
 
     @Test
@@ -282,12 +278,11 @@ class RestoreProcessorTest
         assertThat(processor.activeTasks()).isOne();
         processor.discardAndRemove(range);
         assertThat(processor.activeRanges())
-        .describedAs("The range is being processed already, we wait for it to fail " +
-                     "and discard in org.apache.cassandra.sidecar.restore.RestoreProcessor.taskFailureHandler")
-        .isOne();
-        assertThat(range.isDiscarded())
-        .describedAs("The range should be marked as discarded")
-        .isTrue();
+                                            .describedAs("The range is being processed already, we wait for it to fail "
+                                                    + "and discard in org.apache.cassandra.sidecar.restore.RestoreProcessor.taskFailureHandler")
+                                            .isOne();
+        assertThat(range.isDiscarded()).describedAs("The range should be marked as discarded")
+                                       .isTrue();
         readyToFinish.countDown();
         loopAssert(3, () -> {
             assertThat(processor.activeRanges()).isZero();
@@ -305,11 +300,11 @@ class RestoreProcessorTest
         return mockSlowRestoreRange(latch, System::nanoTime);
     }
 
-    private RestoreRange mockSlowRestoreRange(CountDownLatch latch, Supplier<Long> timeInNanosSupplier)
+    private RestoreRange mockSlowRestoreRange(CountDownLatch latch,
+                                              Supplier<Long> timeInNanosSupplier)
     {
         RestoreRange range = mockRestoreRange();
-        when(range.toAsyncTask(any(), any(), any(), anyDouble(), any(), any(), any(), any())).thenReturn(
-        new RestoreRangeHandler()
+        when(range.toAsyncTask(any(), any(), any(), anyDouble(), any(), any(), any(), any())).thenReturn(new RestoreRangeHandler()
         {
             private final Long startTime = timeInNanosSupplier.get();
 
@@ -317,8 +312,7 @@ class RestoreProcessorTest
             public void handle(Promise<RestoreRange> promise)
             {
                 Uninterruptibles.awaitUninterruptibly(latch);
-                failOnCancelled(range, range)
-                .onComplete(promise);
+                failOnCancelled(range, range).onComplete(promise);
             }
 
             @Override
@@ -340,7 +334,8 @@ class RestoreProcessorTest
     {
         RestoreRange mockRange = RestoreRangeTest.createTestRange();
         RestoreRange range = spy(mockRange);
-        when(range.owner().metrics()).thenReturn(instanceMetrics);
+        when(range.owner()
+                  .metrics()).thenReturn(instanceMetrics);
         return range;
     }
 }

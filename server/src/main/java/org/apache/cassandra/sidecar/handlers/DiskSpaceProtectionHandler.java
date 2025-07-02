@@ -31,13 +31,12 @@ import org.apache.cassandra.sidecar.exceptions.InsufficientStorageException;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
 import static org.apache.cassandra.sidecar.utils.AsyncFileSystemUtils.ensureSufficientStorage;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * A protection machinery that rejects incoming requests if the used disk space has exceeded the configured threshold.
- * The protection should only be applied to write requests, e.g. UploadSSTable, CreateRestoreSlice, etc.
+ * A protection machinery that rejects incoming requests if the used disk space has exceeded the configured threshold. The protection should only be applied to
+ * write requests, e.g. UploadSSTable, CreateRestoreSlice, etc.
  */
 @Singleton
 public class DiskSpaceProtectionHandler extends AbstractHandler<Void>
@@ -48,8 +47,8 @@ public class DiskSpaceProtectionHandler extends AbstractHandler<Void>
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the interface to retrieve instance metadata
-     * @param executorPools   the executor pools for blocking executions
-     * @param validator       a validator instance to validate Cassandra-specific input
+     * @param executorPools the executor pools for blocking executions
+     * @param validator a validator instance to validate Cassandra-specific input
      */
     @Inject
     protected DiskSpaceProtectionHandler(ServiceConfiguration config,
@@ -77,11 +76,11 @@ public class DiskSpaceProtectionHandler extends AbstractHandler<Void>
             return;
         }
 
-        float minimumPercentageRequired = config.sstableUploadConfiguration().minimumSpacePercentageRequired();
+        float minimumPercentageRequired = config.sstableUploadConfiguration()
+                                                .minimumSpacePercentageRequired();
         if (minimumPercentageRequired == 0)
         {
-            logger.info("Minimum disk space percentage protection is disabled. " +
-                        "It is highly recommend to configure the disk space protection.");
+            logger.info("Minimum disk space percentage protection is disabled. " + "It is highly recommend to configure the disk space protection.");
             // since it is disabled, the request is let go.
             context.next();
             return;
@@ -89,25 +88,21 @@ public class DiskSpaceProtectionHandler extends AbstractHandler<Void>
 
         double scaledRequiredUsablePercentage = minimumPercentageRequired / 100.0;
 
-        context
-        .vertx()
-        .fileSystem()
-        .mkdirs(stagingDir)
-        .compose(ignored -> ensureSufficientStorage(stagingDir,
-                                                    scaledRequiredUsablePercentage,
-                                                    executorPools.internal()))
-        .onSuccess(ignored -> context.next())
-        .onFailure(throwable -> {
-            if (throwable instanceof InsufficientStorageException)
-            {
-                instance.metrics().resource().insufficientStagingSpace.metric.update(1);
-                InsufficientStorageException exception = (InsufficientStorageException) throwable;
-                throwable = wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE,
-                                              exception.getMessage(),
-                                              exception);
-            }
-            processFailure(throwable, context, host, remoteAddress, request);
-        });
+        context.vertx()
+               .fileSystem()
+               .mkdirs(stagingDir)
+               .compose(ignored -> ensureSufficientStorage(stagingDir, scaledRequiredUsablePercentage, executorPools.internal()))
+               .onSuccess(ignored -> context.next())
+               .onFailure(throwable -> {
+                   if (throwable instanceof InsufficientStorageException)
+                   {
+                       instance.metrics()
+                               .resource().insufficientStagingSpace.metric.update(1);
+                       InsufficientStorageException exception = (InsufficientStorageException) throwable;
+                       throwable = wrapHttpException(HttpResponseStatus.INSUFFICIENT_STORAGE, exception.getMessage(), exception);
+                   }
+                   processFailure(throwable, context, host, remoteAddress, request);
+               });
     }
 
     @Override

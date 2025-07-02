@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.metrics.server;
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.metrics.DeltaGauge;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
-
 import static org.apache.cassandra.sidecar.metrics.server.ServerMetrics.SERVER_PREFIX;
 
 /**
@@ -34,23 +33,20 @@ public class CoordinationMetrics
      */
     public final NamedMetric<DeltaGauge> leaseholders;
     /**
-     * Keeps track of the number of instances participating in the selection of
-     * the best-effort single instance executor
+     * Keeps track of the number of instances participating in the selection of the best-effort single instance executor
      */
     public final NamedMetric<DeltaGauge> participants;
 
     public CoordinationMetrics(MetricRegistry metricRegistry)
     {
         String domain = DOMAIN + ".ClusterLeaseClaim";
-        leaseholders
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(domain)
-                     .withName("Leaseholder")
-                     .build();
-        participants
-        = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
-                     .withDomain(domain)
-                     .withName("Participant")
-                     .build();
+        leaseholders = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
+                                  .withDomain(domain)
+                                  .withName("Leaseholder")
+                                  .build();
+        participants = NamedMetric.builder(name -> metricRegistry.gauge(name, DeltaGauge::new))
+                                  .withDomain(domain)
+                                  .withName("Participant")
+                                  .build();
     }
 }

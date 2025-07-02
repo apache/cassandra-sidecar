@@ -44,7 +44,9 @@ public class XXHash32Provider implements DigestAlgorithmProvider
         }
 
         @Override
-        public void update(byte[] buf, int off, int len)
+        public void update(byte[] buf,
+                           int off,
+                           int len)
         {
             xxHash32.update(buf, off, len);
         }

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarPeerHealthConfiguration;
 
-
 /**
  * Configuration for Peer Health checks
  */
@@ -41,8 +40,7 @@ public class SidecarPeerHealthConfigurationImpl extends PeriodicTaskConfiguratio
     private final MillisecondBoundConfiguration retryDelay;
 
     /**
-     * Constructs a new {@link SidecarPeerHealthConfigurationImpl} instance with the default configuration
-     * values.
+     * Constructs a new {@link SidecarPeerHealthConfigurationImpl} instance with the default configuration values.
      */
     public SidecarPeerHealthConfigurationImpl()
     {

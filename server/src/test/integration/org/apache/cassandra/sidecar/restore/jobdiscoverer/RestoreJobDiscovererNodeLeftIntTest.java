@@ -66,7 +66,7 @@ class RestoreJobDiscovererNodeLeftIntTest extends IntegrationTestBase
     @Override
     protected int[] getInstancesToManage(int clusterSize)
     {
-        return new int[] { NODE_1, NODE_LEFT };
+        return new int[] { NODE_1, NODE_LEFT};
     }
 
     @CassandraIntegrationTest(nodesPerDc = 3, network = true, buildCluster = false)
@@ -78,7 +78,8 @@ class RestoreJobDiscovererNodeLeftIntTest extends IntegrationTestBase
         test(testClient, cluster);
     }
 
-    private void test(RestoreJobTestUtils.RestoreJobClient testClient, UpgradeableCluster cluster)
+    private void test(RestoreJobTestUtils.RestoreJobClient testClient,
+                      UpgradeableCluster cluster)
     {
         // prepare schema
         waitForSchemaReady(30, TimeUnit.SECONDS);
@@ -90,13 +91,14 @@ class RestoreJobDiscovererNodeLeftIntTest extends IntegrationTestBase
 
         // create slice
         short bucketId = 0;
-        CreateSliceRequestPayload slicePayload = new CreateSliceRequestPayload("sliceId", bucketId, "bucket", "key",
-                                                                               "checksum", BigInteger.valueOf(1L), BigInteger.valueOf(1600L),
-                                                                               100L, 100L);
+        CreateSliceRequestPayload slicePayload = new CreateSliceRequestPayload("sliceId", bucketId, "bucket", "key", "checksum", BigInteger.valueOf(1L),
+                BigInteger.valueOf(1600L), 100L, 100L);
         testClient.createRestoreSlice(tableName, jobId, slicePayload);
 
         // STAGE_READY is required in order to discover slices; update the restore job status
-        testClient.updateRestoreJob(tableName, jobId, UpdateRestoreJobRequestPayload.builder().withStatus(RestoreJobStatus.STAGE_READY).build());
+        testClient.updateRestoreJob(tableName, jobId, UpdateRestoreJobRequestPayload.builder()
+                                                                                    .withStatus(RestoreJobStatus.STAGE_READY)
+                                                                                    .build());
 
         // first discovery run
         RestoreJobDiscoverer restoreJobDiscoverer = injector.getInstance(RestoreJobDiscoverer.class);
@@ -104,49 +106,53 @@ class RestoreJobDiscovererNodeLeftIntTest extends IntegrationTestBase
 
         RingTopologyRefresher ringTopologyRefresher = injector.getInstance(RingTopologyRefresher.class);
         Map<Integer, Set<TokenRange>> localTokenRanges = ringTopologyRefresher.localTokenRanges(tableName.keyspace(), true);
-        assertThat(localTokenRanges)
-        .hasSize(2)
-        .containsEntry(NODE_1, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
-                                               new TokenRange(1000, 2000),
-                                               new TokenRange(2000, Long.MAX_VALUE)))
-        .containsEntry(NODE_LEFT, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
-                                               new TokenRange(0, 1000),
-                                               new TokenRange(2000, Long.MAX_VALUE)));
+        assertThat(localTokenRanges).hasSize(2)
+                                    .containsEntry(NODE_1,
+                                            ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0), new TokenRange(1000, 2000),
+                                                    new TokenRange(2000, Long.MAX_VALUE)))
+                                    .containsEntry(NODE_LEFT,
+                                            ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0), new TokenRange(0, 1000), new TokenRange(2000, Long.MAX_VALUE)));
 
         // assert that no restore ranges are create
         RestoreRangeDatabaseAccessor rangeDatabaseAccessor = injector.getInstance(RestoreRangeDatabaseAccessor.class);
         List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
         Collections.sort(ranges, RestoreRange.TOKEN_BASED_NATURAL_ORDER);
         assertThat(ranges).hasSize(2);
-        assertThat(ranges.get(0).tokenRange()).isEqualTo(new TokenRange(0, 1000)); // node 2
-        assertThat(ranges.get(1).tokenRange()).isEqualTo(new TokenRange(1000, 1600)); // node 1
+        assertThat(ranges.get(0)
+                         .tokenRange()).isEqualTo(new TokenRange(0, 1000)); // node 2
+        assertThat(ranges.get(1)
+                         .tokenRange()).isEqualTo(new TokenRange(1000, 1600)); // node 1
 
         // Decommission
         IUpgradeableInstance node = cluster.get(NODE_LEFT);
         // testing keyspace has RF == 2. Using --force does not hurt fault tolerance.
-        node.nodetoolResult("decommission", "--force").asserts().success();
+        node.nodetoolResult("decommission", "--force")
+            .asserts()
+            .success();
 
         // Fetch the local token ranges again;
         // RingTopologyRefresher should detect the topology change and notify RestoreJobDiscover via #onRingTopologyChanged
         localTokenRanges = ringTopologyRefresher.localTokenRanges(tableName.keyspace(), true);
-        assertThat(localTokenRanges)
-        .hasSize(1)
-        .containsEntry(NODE_1, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0),
-                                               new TokenRange(0, 2000), // expanded from (1000, 2000] to (0, 2000] due to left node
-                                               new TokenRange(2000, Long.MAX_VALUE)))
-        .doesNotContainKey(NODE_LEFT);
+        assertThat(localTokenRanges).hasSize(1)
+                                    .containsEntry(NODE_1, ImmutableSet.of(new TokenRange(Long.MIN_VALUE, 0), new TokenRange(0, 2000), // expanded from (1000,
+                                                                                                                                       // 2000] to (0, 2000] due
+                                                                                                                                       // to left node
+                                            new TokenRange(2000, Long.MAX_VALUE)))
+                                    .doesNotContainKey(NODE_LEFT);
 
         // Using loopAssert because #onRingTopologyChanged runs in another thread. It takes some time to reflect the RestoreRange update
         loopAssert(30, 1000, () -> {
             List<RestoreRange> restoreRanges = rangeDatabaseAccessor.findAll(jobId, bucketId);
-            assertThat(restoreRanges)
-            .hasSize(2);
-            assertThat(restoreRanges.get(0).tokenRange()).isEqualTo(new TokenRange(0, 1000)); // node 1 now gains the range and create the restoreRange
-            assertThat(restoreRanges.get(1).tokenRange()).isEqualTo(new TokenRange(1000, 1600));
+            assertThat(restoreRanges).hasSize(2);
+            assertThat(restoreRanges.get(0)
+                                    .tokenRange()).isEqualTo(new TokenRange(0, 1000)); // node 1 now gains the range and create the restoreRange
+            assertThat(restoreRanges.get(1)
+                                    .tokenRange()).isEqualTo(new TokenRange(1000, 1600));
         });
     }
 
-    private static UpgradeableCluster startCluster(TokenSupplier tokenSupplier, ConfigurableCassandraTestContext cassandraTestContext)
+    private static UpgradeableCluster startCluster(TokenSupplier tokenSupplier,
+                                                   ConfigurableCassandraTestContext cassandraTestContext)
     {
         return cassandraTestContext.configureAndStartCluster(builder -> {
             builder.withTokenSupplier(tokenSupplier);

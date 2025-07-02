@@ -18,22 +18,19 @@
 
 package org.apache.cassandra.sidecar.handlers.restore;
 
-import java.util.Collections;
-import java.util.UUID;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import com.datastax.driver.core.Session;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.Collections;
+import java.util.UUID;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -68,8 +65,7 @@ class CreateRestoreJobHandlerTest extends BaseRestoreJobTests
     void testInvalidKeyspace(VertxTestContext context) throws Throwable
     {
         JsonObject payload = getRequestPayload("8e5799a4-d277-11ed-8d85-6916bb9b8056");
-        sendCreateRestoreJobRequestAndVerify("sidecar_internal", "table", payload,
-                                             context, HttpResponseStatus.FORBIDDEN.code());
+        sendCreateRestoreJobRequestAndVerify("sidecar_internal", "table", payload, context, HttpResponseStatus.FORBIDDEN.code());
     }
 
     @Test
@@ -77,8 +73,7 @@ class CreateRestoreJobHandlerTest extends BaseRestoreJobTests
     {
         JsonObject payload = getRequestPayload("7cd82ff9-d276-11ed-93e5-7fce0df1306f");
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
-        sendCreateRestoreJobRequestAndVerify("ks", "table", payload,
-                                             context, HttpResponseStatus.CONFLICT.code());
+        sendCreateRestoreJobRequestAndVerify("ks", "table", payload, context, HttpResponseStatus.CONFLICT.code());
     }
 
     @Test
@@ -88,8 +83,7 @@ class CreateRestoreJobHandlerTest extends BaseRestoreJobTests
         mockCreateRestoreJob(x -> {
             throw new RuntimeException("Failed to create job");
         });
-        sendCreateRestoreJobRequestAndVerify("ks", "table", payload, context,
-                                             HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
+        sendCreateRestoreJobRequestAndVerify("ks", "table", payload, context, HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
     }
 
     @Test
@@ -122,15 +116,13 @@ class CreateRestoreJobHandlerTest extends BaseRestoreJobTests
             throw new RuntimeException("unexpected exception");
         });
         when(sessionProviderWithNonWorkingSession.get()).thenReturn(nonWorkingSession);
-        sendCreateRestoreJobRequestAndVerify("ks", "table", payload,
-                                             context, HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
+        sendCreateRestoreJobRequestAndVerify("ks", "table", payload, context, HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
     }
 
     @Test
     void testNullPayload(VertxTestContext context) throws Throwable
     {
-        sendCreateRestoreJobRequestAndVerify("ks", "table", null,
-                                             context, HttpResponseStatus.BAD_REQUEST.code());
+        sendCreateRestoreJobRequestAndVerify("ks", "table", null, context, HttpResponseStatus.BAD_REQUEST.code());
 
     }
 
@@ -156,25 +148,23 @@ class CreateRestoreJobHandlerTest extends BaseRestoreJobTests
                                                       int expectedStatusCode)
     {
         String expectedJobId = payload == null ? null : payload.getString(JOB_ID);
-        postThenComplete(context, String.format(CREATE_RESTORE_JOB_ENDPOINT, keyspace, table),
-                         payload,
-                         asyncResult -> {
-                             HttpResponse<?> resp = asyncResult.result();
-                             assertThat(resp).isNotNull();
-                             assertThat(resp.statusCode()).isEqualTo(expectedStatusCode);
-                             if (expectedStatusCode == HttpResponseStatus.OK.code())
-                             {
-                                 JsonObject responseBody = resp.bodyAsJsonObject();
+        postThenComplete(context, String.format(CREATE_RESTORE_JOB_ENDPOINT, keyspace, table), payload, asyncResult -> {
+            HttpResponse<?> resp = asyncResult.result();
+            assertThat(resp).isNotNull();
+            assertThat(resp.statusCode()).isEqualTo(expectedStatusCode);
+            if (expectedStatusCode == HttpResponseStatus.OK.code())
+            {
+                JsonObject responseBody = resp.bodyAsJsonObject();
 
-                                 if (expectedJobId == null)
-                                 {
-                                     assertThat(responseBody.containsKey(JOB_ID)).isTrue();
-                                 }
-                                 else
-                                 {
-                                     assertThat(responseBody.getString(JOB_ID)).isEqualTo(expectedJobId);
-                                 }
-                             }
-                         });
+                if (expectedJobId == null)
+                {
+                    assertThat(responseBody.containsKey(JOB_ID)).isTrue();
+                }
+                else
+                {
+                    assertThat(responseBody.getString(JOB_ID)).isEqualTo(expectedJobId);
+                }
+            }
+        });
     }
 }

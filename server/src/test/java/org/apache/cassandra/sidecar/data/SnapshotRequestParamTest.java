@@ -33,49 +33,54 @@ class SnapshotRequestParamTest
     @Test
     void failsWhenSnapshotNameIsNull()
     {
-        assertThatThrownBy(() -> SnapshotRequestParam.builder().qualifiedTableName("ks", "table").build())
-        .isInstanceOf(NullPointerException.class)
-        .hasMessageContaining("snapshotName must not be null");
+        assertThatThrownBy(() -> SnapshotRequestParam.builder()
+                                                     .qualifiedTableName("ks", "table")
+                                                     .build()).isInstanceOf(NullPointerException.class)
+                                                              .hasMessageContaining("snapshotName must not be null");
     }
 
     @Test
     void testValidRequest()
     {
-        SnapshotRequestParam request = SnapshotRequestParam.builder().qualifiedTableName("ks", "table")
+        SnapshotRequestParam request = SnapshotRequestParam.builder()
+                                                           .qualifiedTableName("ks", "table")
                                                            .snapshotName("snapshot")
                                                            .build();
 
         assertThat(request.qualifiedTableName()).isNotNull();
-        assertThat(request.qualifiedTableName().keyspace()).isEqualTo("ks");
-        assertThat(request.qualifiedTableName().tableName()).isEqualTo("table");
+        assertThat(request.qualifiedTableName()
+                          .keyspace()).isEqualTo("ks");
+        assertThat(request.qualifiedTableName()
+                          .tableName()).isEqualTo("table");
         assertThat(request.keyspace()).isEqualTo("ks");
         assertThat(request.tableName()).isEqualTo("table");
         assertThat(request.snapshotName()).isEqualTo("snapshot");
         assertThat(request.includeSecondaryIndexFiles()).isFalse();
         assertThat(request.ttl()).isNull();
-        assertThat(request.toString()).isEqualTo("SnapshotRequest{keyspace='ks', tableName='table', " +
-                                                 "snapshotName='snapshot', includeSecondaryIndexFiles=false, " +
-                                                 "ttl=null}");
+        assertThat(request.toString()).isEqualTo(
+                "SnapshotRequest{keyspace='ks', tableName='table', " + "snapshotName='snapshot', includeSecondaryIndexFiles=false, " + "ttl=null}");
     }
 
     @Test
     void testValidRequestWithTTL()
     {
-        SnapshotRequestParam request = SnapshotRequestParam.builder().qualifiedTableName("ks", "table")
+        SnapshotRequestParam request = SnapshotRequestParam.builder()
+                                                           .qualifiedTableName("ks", "table")
                                                            .snapshotName("snapshot")
                                                            .ttl("3d")
                                                            .build();
 
         assertThat(request.qualifiedTableName()).isNotNull();
-        assertThat(request.qualifiedTableName().keyspace()).isEqualTo("ks");
-        assertThat(request.qualifiedTableName().tableName()).isEqualTo("table");
+        assertThat(request.qualifiedTableName()
+                          .keyspace()).isEqualTo("ks");
+        assertThat(request.qualifiedTableName()
+                          .tableName()).isEqualTo("table");
         assertThat(request.keyspace()).isEqualTo("ks");
         assertThat(request.tableName()).isEqualTo("table");
         assertThat(request.snapshotName()).isEqualTo("snapshot");
         assertThat(request.includeSecondaryIndexFiles()).isFalse();
         assertThat(request.ttl()).isEqualTo("3d");
-        assertThat(request.toString()).isEqualTo("SnapshotRequest{keyspace='ks', tableName='table', " +
-                                                 "snapshotName='snapshot', includeSecondaryIndexFiles=false, " +
-                                                 "ttl=3d}");
+        assertThat(request.toString()).isEqualTo(
+                "SnapshotRequest{keyspace='ks', tableName='table', " + "snapshotName='snapshot', includeSecondaryIndexFiles=false, " + "ttl=3d}");
     }
 }

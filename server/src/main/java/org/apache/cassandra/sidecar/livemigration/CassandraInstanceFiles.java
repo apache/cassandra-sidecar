@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.livemigration;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 
@@ -30,9 +29,8 @@ import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 public interface CassandraInstanceFiles
 {
     /**
-     * Lists files belong to a Cassandra instance after excluding default set files to exclude
-     * {@link LiveMigrationConfiguration#filesToExclude()} and default set of directories to exclude
-     * {@link LiveMigrationConfiguration#directoriesToExclude()}.
+     * Lists files belong to a Cassandra instance after excluding default set files to exclude {@link LiveMigrationConfiguration#filesToExclude()} and default
+     * set of directories to exclude {@link LiveMigrationConfiguration#directoriesToExclude()}.
      *
      * @return list of files a Cassandra instance has after excluding default files and folders.
      * @throws IOException when failed to read any file or folder.

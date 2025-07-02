@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.handlers.restore;
 
 import java.util.Collections;
 import java.util.Set;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -69,9 +70,8 @@ public class RestoreJobSummaryHandler extends AbstractHandler<String> implements
                                   SocketAddress remoteAddress,
                                   String jobId)
     {
-        validateAndFindJob(context)
-        .onSuccess(context::json)
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, jobId));
+        validateAndFindJob(context).onSuccess(context::json)
+                                   .onFailure(cause -> processFailure(cause, context, host, remoteAddress, jobId));
     }
 
     @Override
@@ -82,20 +82,18 @@ public class RestoreJobSummaryHandler extends AbstractHandler<String> implements
 
     private Future<RestoreJobSummaryResponsePayload> validateAndFindJob(RoutingContext context)
     {
-        return RoutingContextUtils
-        .getAsFuture(context, SC_RESTORE_JOB)
-        .compose(restoreJob -> {
-            if (restoreJob.status == null || restoreJob.secrets == null)
-            {
-                logger.error("Restore job record read is missing required fields. job={}", restoreJob);
-                return Future.failedFuture(wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                                                             "Restore job is missing required fields"));
-            }
-            RestoreJobSummaryResponsePayload response
-            = new RestoreJobSummaryResponsePayload(restoreJob.createdAt.toString(), restoreJob.jobId,
-                                                   restoreJob.jobAgent, restoreJob.keyspaceName, restoreJob.tableName,
-                                                   restoreJob.secrets, restoreJob.statusWithOptionalDescription());
-            return Future.succeededFuture(response);
-        });
+        return RoutingContextUtils.getAsFuture(context, SC_RESTORE_JOB)
+                                  .compose(restoreJob -> {
+                                      if (restoreJob.status == null || restoreJob.secrets == null)
+                                      {
+                                          logger.error("Restore job record read is missing required fields. job={}", restoreJob);
+                                          return Future.failedFuture(
+                                                  wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR, "Restore job is missing required fields"));
+                                      }
+                                      RestoreJobSummaryResponsePayload response = new RestoreJobSummaryResponsePayload(restoreJob.createdAt.toString(),
+                                              restoreJob.jobId, restoreJob.jobAgent, restoreJob.keyspaceName, restoreJob.tableName, restoreJob.secrets,
+                                              restoreJob.statusWithOptionalDescription());
+                                      return Future.succeededFuture(response);
+                                  });
     }
 }

@@ -25,6 +25,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +61,8 @@ class TimeSkewInfoHandlerTest
     @BeforeEach
     public void setUp() throws InterruptedException
     {
-        Module customTimeProvider = binder -> binder.bind(TimeProvider.class).toInstance(() -> TEST_TIMESTAMP);
+        Module customTimeProvider = binder -> binder.bind(TimeProvider.class)
+                                                    .toInstance(() -> TEST_TIMESTAMP);
         Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(new TestModule(), customTimeProvider));
         this.vertx = injector.getInstance(Vertx.class);
@@ -77,7 +79,8 @@ class TimeSkewInfoHandlerTest
     void tearDown() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else

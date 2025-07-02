@@ -18,18 +18,17 @@
 
 package org.apache.cassandra.sidecar.acl.authentication;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
 /**
- * {@link CassandraIdentityExtractor} verifies {@code SPIFFE} identities extracted from certificate are mapped
- * to a valid role in Cassandra or a pre-configured administrative identity.
+ * {@link CassandraIdentityExtractor} verifies {@code SPIFFE} identities extracted from certificate are mapped to a valid role in Cassandra or a pre-configured
+ * administrative identity.
  */
 public class CassandraIdentityExtractor extends SpiffeIdentityExtractor
 {

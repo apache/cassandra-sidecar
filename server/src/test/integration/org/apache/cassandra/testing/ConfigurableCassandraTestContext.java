@@ -20,13 +20,11 @@ package org.apache.cassandra.testing;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;
-
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.testing.utils.tls.CertificateBundle;
 
 /**
- * A Cassandra Test Context implementation that allows advanced cluster configuration before cluster creation
- * by providing access to the cluster builder.
+ * A Cassandra Test Context implementation that allows advanced cluster configuration before cluster creation by providing access to the cluster builder.
  */
 public class ConfigurableCassandraTestContext extends AbstractCassandraTestContext
 {
@@ -54,10 +52,6 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
     @Override
     public String toString()
     {
-        return "ConfigurableCassandraTestContext{"
-               + ", version=" + version
-               + ", cluster=" + cluster()
-               + ", builder=" + builder
-               + '}';
+        return "ConfigurableCassandraTestContext{" + ", version=" + version + ", cluster=" + cluster() + ", builder=" + builder + '}';
     }
 }

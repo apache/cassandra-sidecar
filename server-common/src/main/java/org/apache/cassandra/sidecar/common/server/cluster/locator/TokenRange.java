@@ -38,26 +38,30 @@ public class TokenRange
     public final Range<Token> range;
 
     /**
-     * Unwrap the java driver's token range if necessary and convert the unwrapped ranges list.
-     * Only the token ranges from Murmur3Partitioner and RandomPartitioner are supported.
+     * Unwrap the java driver's token range if necessary and convert the unwrapped ranges list. Only the token ranges from Murmur3Partitioner and
+     * RandomPartitioner are supported.
      *
      * @param dsTokenRange TokenRange implementation in Cassandra java driver
-     * @return list of token ranges. If the input token range wraps around, the size of the list is 2;
-     * otherwise, the list has only one range
+     * @return list of token ranges. If the input token range wraps around, the size of the list is 2; otherwise, the list has only one range
      */
     public static List<TokenRange> from(com.datastax.driver.core.TokenRange dsTokenRange)
     {
-        DataType tokenDataType = dsTokenRange.getStart().getType();
+        DataType tokenDataType = dsTokenRange.getStart()
+                                             .getType();
         if (tokenDataType == DataType.varint()) // BigInteger - RandomPartitioner
         {
             return dsTokenRange.unwrap()
                                .stream()
                                .map(range -> {
-                                   BigInteger start = (BigInteger) range.getStart().getValue();
-                                   BigInteger end = (BigInteger) range.getEnd().getValue();
-                                   if (end.compareTo(Partitioners.RANDOM.minimumToken().toBigInteger()) == 0)
+                                   BigInteger start = (BigInteger) range.getStart()
+                                                                        .getValue();
+                                   BigInteger end = (BigInteger) range.getEnd()
+                                                                      .getValue();
+                                   if (end.compareTo(Partitioners.RANDOM.minimumToken()
+                                                                        .toBigInteger()) == 0)
                                    {
-                                       end = Partitioners.RANDOM.maximumToken().toBigInteger();
+                                       end = Partitioners.RANDOM.maximumToken()
+                                                                .toBigInteger();
                                    }
                                    return new TokenRange(start, end);
                                })
@@ -68,11 +72,15 @@ public class TokenRange
             return dsTokenRange.unwrap()
                                .stream()
                                .map(range -> {
-                                   BigInteger start = BigInteger.valueOf((Long) range.getStart().getValue());
-                                   BigInteger end = BigInteger.valueOf((Long) range.getEnd().getValue());
-                                   if (end.compareTo(Partitioners.MURMUR3.minimumToken().toBigInteger()) == 0)
+                                   BigInteger start = BigInteger.valueOf((Long) range.getStart()
+                                                                                     .getValue());
+                                   BigInteger end = BigInteger.valueOf((Long) range.getEnd()
+                                                                                   .getValue());
+                                   if (end.compareTo(Partitioners.MURMUR3.minimumToken()
+                                                                         .toBigInteger()) == 0)
                                    {
-                                       end = Partitioners.MURMUR3.maximumToken().toBigInteger();
+                                       end = Partitioners.MURMUR3.maximumToken()
+                                                                 .toBigInteger();
                                    }
                                    return new TokenRange(start, end);
                                })
@@ -81,22 +89,23 @@ public class TokenRange
         else
         {
             throw new IllegalArgumentException(
-            "Unsupported token type: " + tokenDataType +
-            ". Only tokens of Murmur3Partitioner and RandomPartitioner are supported.");
+                    "Unsupported token type: " + tokenDataType + ". Only tokens of Murmur3Partitioner and RandomPartitioner are supported.");
         }
     }
 
     /**
-     * Diff the two set of {@link TokenRange}s. The connected token ranges in each set are merged before diffing.
-     * The result {@link SymmetricDiffResult#onlyInLeft} contains the token ranges that are only in the input {@code left} token range set, and
-     * the result {@link SymmetricDiffResult#onlyInRight} contains the token ranges that are only in the input {@code right} token range set.
+     * Diff the two set of {@link TokenRange}s. The connected token ranges in each set are merged before diffing. The result
+     * {@link SymmetricDiffResult#onlyInLeft} contains the token ranges that are only in the input {@code left} token range set, and the result
+     * {@link SymmetricDiffResult#onlyInRight} contains the token ranges that are only in the input {@code right} token range set.
+     *
      * @param left token range set
      * @param right token range set
-     * @return {@link SymmetricDiffResult} where its left contains the token ranges that are only in the input {@code left} token range set, and
-     *         its right contains the token ranges that are only in the input {@code right} token range set.
+     * @return {@link SymmetricDiffResult} where its left contains the token ranges that are only in the input {@code left} token range set, and its right
+     *         contains the token ranges that are only in the input {@code right} token range set.
      */
     @SuppressWarnings("UnstableApiUsage")
-    public static SymmetricDiffResult symmetricDiff(Set<TokenRange> left, Set<TokenRange> right)
+    public static SymmetricDiffResult symmetricDiff(Set<TokenRange> left,
+                                                    Set<TokenRange> right)
     {
         RangeSet<Token> mergedLeft = TreeRangeSet.create();
         RangeSet<Token> mergedRight = TreeRangeSet.create();
@@ -109,17 +118,20 @@ public class TokenRange
         return new SymmetricDiffResult(resultLeft.asRanges(), resultRight.asRanges());
     }
 
-    public TokenRange(long start, long end)
+    public TokenRange(long start,
+                      long end)
     {
         this(BigInteger.valueOf(start), BigInteger.valueOf(end));
     }
 
-    public TokenRange(BigInteger start, BigInteger end)
+    public TokenRange(BigInteger start,
+                      BigInteger end)
     {
         this(Token.from(start), Token.from(end));
     }
 
-    public TokenRange(Token start, Token end)
+    public TokenRange(Token start,
+                      Token end)
     {
         this.range = Range.openClosed(start, end);
     }
@@ -137,7 +149,8 @@ public class TokenRange
      */
     public BigInteger startAsBigInt()
     {
-        return range.lowerEndpoint().toBigInteger();
+        return range.lowerEndpoint()
+                    .toBigInteger();
     }
 
     /**
@@ -153,12 +166,12 @@ public class TokenRange
      */
     public BigInteger endAsBigInt()
     {
-        return range.upperEndpoint().toBigInteger();
+        return range.upperEndpoint()
+                    .toBigInteger();
     }
 
     /**
-     * Test if this range encloses the other range.
-     * It simply delegates to {@link Range#encloses(Range)}
+     * Test if this range encloses the other range. It simply delegates to {@link Range#encloses(Range)}
      */
     public boolean encloses(TokenRange other)
     {
@@ -167,27 +180,36 @@ public class TokenRange
 
     /**
      * Two ranges are intersecting when their intersection is non-empty. For example,
-     * <p>Ranges {@code (0, 3]} and {@code (1, 4]} are overlapping. The intersection is {@code (1, 3]}
-     * <p>Ranges {@code (0, 3]} and {@code (5, 7]} are not overlapping, as there is no intersection
-     * <p>Ranges {@code (0, 3]} and {@code (3, 5]} are not overlapping, as the intersection {@code (3, 3]} is empty
+     * <p>
+     * Ranges {@code (0, 3]} and {@code (1, 4]} are overlapping. The intersection is {@code (1, 3]}
+     * <p>
+     * Ranges {@code (0, 3]} and {@code (5, 7]} are not overlapping, as there is no intersection
+     * <p>
+     * Ranges {@code (0, 3]} and {@code (3, 5]} are not overlapping, as the intersection {@code (3, 3]} is empty
      *
-     * <p>Note that the semantics is different from {@link Range#isConnected(Range)}
+     * <p>
+     * Note that the semantics is different from {@link Range#isConnected(Range)}
      *
      * @return true if this range intersects with the other range; otherwise, false
      */
     public boolean intersects(TokenRange other)
     {
-        return this.range.lowerEndpoint().compareTo(other.range.upperEndpoint()) < 0
-               && other.range.lowerEndpoint().compareTo(this.range.upperEndpoint()) < 0;
+        return this.range.lowerEndpoint()
+                         .compareTo(other.range.upperEndpoint()) < 0
+                && other.range.lowerEndpoint()
+                              .compareTo(this.range.upperEndpoint()) < 0;
     }
 
     /**
      * Two ranges connect with each other when 1) they overlap or 2) their ends are connected.
-     * <p>For 1), refer to {@link #intersects(TokenRange)}
-     * <p>For 2), see the following examples. The ranges {@code (0, 3]} and {@code (3, 5]} are connected.
-     * The ranges {@code (0, 3]} and {@code (4, 6]} are not connected.
+     * <p>
+     * For 1), refer to {@link #intersects(TokenRange)}
+     * <p>
+     * For 2), see the following examples. The ranges {@code (0, 3]} and {@code (3, 5]} are connected. The ranges {@code (0, 3]} and {@code (4, 6]} are not
+     * connected.
      *
-     * <p> Note that it is implemented using {@link Range#isConnected(Range)}
+     * <p>
+     * Note that it is implemented using {@link Range#isConnected(Range)}
      *
      * @param other the other range to check
      * @return true if this range connects with the other range; otherwise, false
@@ -208,12 +230,14 @@ public class TokenRange
 
     /**
      * Determine whether all tokens in this range are larger than the ones in the other token range
+     *
      * @param other token range
      * @return true if the start token of this range is larger or equals to the other range's end token; otherwise, false
      */
     public boolean largerThan(TokenRange other)
     {
-        return this.start().compareTo(other.end()) >= 0;
+        return this.start()
+                   .compareTo(other.end()) >= 0;
     }
 
     @Override
@@ -242,9 +266,11 @@ public class TokenRange
     @Override
     public String toString()
     {
-        return "TokenRange(" +
-               range.lowerEndpoint().toBigInteger() + ", " +
-               range.upperEndpoint().toBigInteger() + ']';
+        return "TokenRange(" + range.lowerEndpoint()
+                                    .toBigInteger()
+                + ", " + range.upperEndpoint()
+                              .toBigInteger()
+                + ']';
     }
 
     /**
@@ -255,7 +281,8 @@ public class TokenRange
         public final Set<TokenRange> onlyInLeft;
         public final Set<TokenRange> onlyInRight;
 
-        private SymmetricDiffResult(Set<Range<Token>> onlyInLeft, Set<Range<Token>> onlyInRight)
+        private SymmetricDiffResult(Set<Range<Token>> onlyInLeft,
+                                    Set<Range<Token>> onlyInRight)
         {
             this.onlyInLeft = toUnmodifiableSet(onlyInLeft);
             this.onlyInRight = toUnmodifiableSet(onlyInRight);

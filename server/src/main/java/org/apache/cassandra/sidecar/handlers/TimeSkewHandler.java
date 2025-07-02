@@ -24,8 +24,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.utils.TimeSkewInfo;
 
 /**
- * Provides clients information about the current time on this host
- * and the allowable time skew between this host and the client.
+ * Provides clients information about the current time on this host and the allowable time skew between this host and the client.
  */
 public class TimeSkewHandler implements Handler<RoutingContext>
 {

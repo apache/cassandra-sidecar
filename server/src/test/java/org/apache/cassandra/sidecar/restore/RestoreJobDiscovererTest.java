@@ -100,23 +100,17 @@ class RestoreJobDiscovererTest
         when(mockRegistryFactory.getOrCreate()).thenReturn(registry());
         InstanceMetadataFetcher mockMetadataFetcher = mock(InstanceMetadataFetcher.class);
         metrics = new SidecarMetricsImpl(mockRegistryFactory, mockMetadataFetcher);
-        loop = new RestoreJobDiscoverer(testConfig(),
-                                        sidecarSchema,
-                                        mockJobAccessor,
-                                        mockSliceAccessor,
-                                        mockRangeAccessor,
-                                        () -> mockManagers,
-                                        instanceMetadataFetcher,
-                                        ringTopologyRefresher,
-                                        executor,
-                                        metrics);
+        loop = new RestoreJobDiscoverer(testConfig(), sidecarSchema, mockJobAccessor, mockSliceAccessor, mockRangeAccessor, () -> mockManagers,
+                instanceMetadataFetcher, ringTopologyRefresher, executor, metrics);
     }
 
     @AfterEach
     void clear()
     {
-        registry().removeMatching((name, metric) -> true);
-        registry(1).removeMatching((name, metric) -> true);
+        registry().removeMatching((name,
+                                   metric) -> true);
+        registry(1).removeMatching((name,
+                                    metric) -> true);
     }
 
     @Test
@@ -126,30 +120,32 @@ class RestoreJobDiscovererTest
         assertThat(loop.delay()).isEqualTo(idleLoopDelay);
         // when there is active restore job (status: CREATED)
         UUID jobId = UUIDs.timeBased();
-        when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
-        .thenReturn(Collections.singletonList(RestoreJob.builder()
-                                                        .createdAt(RestoreJob.toLocalDate(jobId))
-                                                        .jobId(jobId)
-                                                        .jobAgent("agent")
-                                                        .jobStatus(RestoreJobStatus.CREATED)
-                                                        .expireAt(new Date(System.currentTimeMillis() + 10000L))
-                                                        .build()));
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(Collections.singletonList(RestoreJob.builder()
+                                                                                                                .createdAt(RestoreJob.toLocalDate(jobId))
+                                                                                                                .jobId(jobId)
+                                                                                                                .jobAgent("agent")
+                                                                                                                .jobStatus(RestoreJobStatus.CREATED)
+                                                                                                                .expireAt(new Date(
+                                                                                                                        System.currentTimeMillis() + 10000L))
+                                                                                                                .build()));
         executeBlocking();
-        assertThat(metrics.server().restore().activeJobs.metric.getValue()).describedAs("active jobs count is updated")
-                                                                           .isOne();
+        assertThat(metrics.server()
+                          .restore().activeJobs.metric.getValue()).describedAs("active jobs count is updated")
+                                                                  .isOne();
         assertThat(loop.delay()).isEqualTo(activeLoopDelay);
         // when no more jobs are active, the delay is reset back to idle loop delay accordingly.
-        when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
-        .thenReturn(Collections.singletonList(RestoreJob.builder()
-                                                        .createdAt(RestoreJob.toLocalDate(jobId))
-                                                        .jobId(jobId)
-                                                        .jobAgent("agent")
-                                                        .jobStatus(RestoreJobStatus.SUCCEEDED)
-                                                        .expireAt(new Date(System.currentTimeMillis() + 10000L))
-                                                        .build()));
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(Collections.singletonList(RestoreJob.builder()
+                                                                                                                .createdAt(RestoreJob.toLocalDate(jobId))
+                                                                                                                .jobId(jobId)
+                                                                                                                .jobAgent("agent")
+                                                                                                                .jobStatus(RestoreJobStatus.SUCCEEDED)
+                                                                                                                .expireAt(new Date(
+                                                                                                                        System.currentTimeMillis() + 10000L))
+                                                                                                                .build()));
         executeBlocking();
-        assertThat(metrics.server().restore().activeJobs.metric.getValue()).describedAs("active jobs count is updated")
-                                                                           .isZero();
+        assertThat(metrics.server()
+                          .restore().activeJobs.metric.getValue()).describedAs("active jobs count is updated")
+                                                                  .isZero();
         assertThat(loop.delay()).isEqualTo(idleLoopDelay);
     }
 
@@ -169,45 +165,42 @@ class RestoreJobDiscovererTest
         UUID failedJobId = UUIDs.timeBased();
         UUID succeededJobId = UUIDs.timeBased();
         mockResult.add(createNewTestingJob(newJobId));
-        mockResult.add(createUpdatedJob(failedJobId, "agent", RestoreJobStatus.ABORTED, null,
-                                        new Date(System.currentTimeMillis() + 10000L)));
-        mockResult.add(createUpdatedJob(succeededJobId, "agent", RestoreJobStatus.SUCCEEDED, null,
-                                        new Date(System.currentTimeMillis() + 10000L)));
+        mockResult.add(createUpdatedJob(failedJobId, "agent", RestoreJobStatus.ABORTED, null, new Date(System.currentTimeMillis() + 10000L)));
+        mockResult.add(createUpdatedJob(succeededJobId, "agent", RestoreJobStatus.SUCCEEDED, null, new Date(System.currentTimeMillis() + 10000L)));
         ArgumentCaptor<RestoreJob> jobCapture = ArgumentCaptor.forClass(RestoreJob.class);
-        doNothing().when(mockManagers).removeJobInternal(jobCapture.capture());
+        doNothing().when(mockManagers)
+                   .removeJobInternal(jobCapture.capture());
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(mockResult);
 
-        assertThat(loop.hasInflightJobs())
-        .describedAs("No inflight jobs are discovery when loop has not started")
-        .isFalse();
-        assertThat(loop.jobDiscoveryRecencyDays())
-        .describedAs("Initial recency days should be " + recencyDays)
-        .isEqualTo(recencyDays);
-        assertThat(metrics.server().restore().activeJobs.metric.getValue()).isZero();
+        assertThat(loop.hasInflightJobs()).describedAs("No inflight jobs are discovery when loop has not started")
+                                          .isFalse();
+        assertThat(loop.jobDiscoveryRecencyDays()).describedAs("Initial recency days should be " + recencyDays)
+                                                  .isEqualTo(recencyDays);
+        assertThat(metrics.server()
+                          .restore().activeJobs.metric.getValue()).isZero();
 
         // Execution 1
         executeBlocking();
 
-        assertThat(metrics.server().restore().activeJobs.metric.getValue()).isOne();
-        assertThat(jobCapture.getAllValues().stream().map(job -> job.jobId))
-        .containsExactlyInAnyOrder(failedJobId, succeededJobId);
-        assertThat(loop.hasInflightJobs())
-        .describedAs("An inflight job should be found")
-        .isTrue();
-        assertThat(loop.jobDiscoveryRecencyDays())
-        .describedAs("The recency days should be adjusted to 1")
-        .isEqualTo(5);
+        assertThat(metrics.server()
+                          .restore().activeJobs.metric.getValue()).isOne();
+        assertThat(jobCapture.getAllValues()
+                             .stream()
+                             .map(job -> job.jobId)).containsExactlyInAnyOrder(failedJobId, succeededJobId);
+        assertThat(loop.hasInflightJobs()).describedAs("An inflight job should be found")
+                                          .isTrue();
+        assertThat(loop.jobDiscoveryRecencyDays()).describedAs("The recency days should be adjusted to 1")
+                                                  .isEqualTo(5);
 
         // Execution 2
-        when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
-        .thenReturn(Collections.singletonList(createUpdatedJob(newJobId, "agent",
-                                                               RestoreJobStatus.SUCCEEDED, null, new Date())));
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(
+                Collections.singletonList(createUpdatedJob(newJobId, "agent", RestoreJobStatus.SUCCEEDED, null, new Date())));
         executeBlocking();
 
-        assertThat(metrics.server().restore().activeJobs.metric.getValue()).isZero();
-        assertThat(loop.hasInflightJobs())
-        .describedAs("There should be no more inflight jobs")
-        .isFalse();
+        assertThat(metrics.server()
+                          .restore().activeJobs.metric.getValue()).isZero();
+        assertThat(loop.hasInflightJobs()).describedAs("There should be no more inflight jobs")
+                                          .isFalse();
 
         // Execution 3
         // shouldSkip always returns false
@@ -215,29 +208,26 @@ class RestoreJobDiscovererTest
 
         // Execution 4
         UUID newJobId2 = UUIDs.timeBased();
-        when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
-        .thenReturn(Collections.singletonList(createNewTestingJob(newJobId2)));
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(Collections.singletonList(createNewTestingJob(newJobId2)));
 
         executeBlocking();
 
-        assertThat(metrics.server().restore().activeJobs.metric.getValue()).isOne();
-        assertThat(loop.hasInflightJobs())
-        .describedAs("It should find a new inflight job")
-        .isTrue();
+        assertThat(metrics.server()
+                          .restore().activeJobs.metric.getValue()).isOne();
+        assertThat(loop.hasInflightJobs()).describedAs("It should find a new inflight job")
+                                          .isTrue();
 
         // Execution 5
-        when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
-        .thenReturn(Collections.singletonList(createUpdatedJob(newJobId2, "agent",
-                                                               RestoreJobStatus.ABORTED, null, new Date())));
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(
+                Collections.singletonList(createUpdatedJob(newJobId2, "agent", RestoreJobStatus.ABORTED, null, new Date())));
         executeBlocking();
 
-        assertThat(metrics.server().restore().activeJobs.metric.getValue()).isZero();
-        assertThat(loop.hasInflightJobs())
-        .describedAs("Last job failed, no more inflight jobs")
-        .isFalse();
-        assertThat(jobCapture.getValue().jobId)
-        .describedAs("Failed job should be removed")
-        .isEqualTo(newJobId2);
+        assertThat(metrics.server()
+                          .restore().activeJobs.metric.getValue()).isZero();
+        assertThat(loop.hasInflightJobs()).describedAs("Last job failed, no more inflight jobs")
+                                          .isFalse();
+        assertThat(jobCapture.getValue().jobId).describedAs("Failed job should be removed")
+                                               .isEqualTo(newJobId2);
     }
 
     @Test
@@ -254,16 +244,18 @@ class RestoreJobDiscovererTest
         when(sidecarSchema.isInitialized()).thenReturn(true);
         List<RestoreJob> mockResult = IntStream.range(0, 3)
                                                .boxed()
-                                               .map(x -> createUpdatedJob(UUIDs.timeBased(), "agent",
-                                                                          RestoreJobStatus.CREATED, null,
-                                                                          new Date(System.currentTimeMillis() - 1000L)))
+                                               .map(x -> createUpdatedJob(UUIDs.timeBased(), "agent", RestoreJobStatus.CREATED, null,
+                                                       new Date(System.currentTimeMillis() - 1000L)))
                                                .collect(Collectors.toList());
         ArgumentCaptor<UUID> abortedJobs = ArgumentCaptor.forClass(UUID.class);
-        doNothing().when(mockJobAccessor).abort(abortedJobs.capture(), eq("Expired"));
+        doNothing().when(mockJobAccessor)
+                   .abort(abortedJobs.capture(), eq("Expired"));
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(mockResult);
         executeBlocking();
 
-        List<UUID> expectedAbortedJobs = mockResult.stream().map(s -> s.jobId).collect(Collectors.toList());
+        List<UUID> expectedAbortedJobs = mockResult.stream()
+                                                   .map(s -> s.jobId)
+                                                   .collect(Collectors.toList());
         assertThat(abortedJobs.getAllValues()).isEqualTo(expectedAbortedJobs);
     }
 
@@ -293,19 +285,18 @@ class RestoreJobDiscovererTest
         RestoreJob sidecarManagedJob = createTestingJob(jobId, RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM);
         assertThat(sidecarManagedJob.isManagedBySidecar()).isTrue();
 
-        when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
-        .thenReturn(Collections.singletonList(sidecarManagedJob));
-        when(ringTopologyRefresher.localTokenRanges(any(), anyBoolean()))
-        .thenReturn(Collections.singletonMap(1, Collections.singleton(new TokenRange(0, 100))));
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(Collections.singletonList(sidecarManagedJob));
+        when(ringTopologyRefresher.localTokenRanges(any(), anyBoolean())).thenReturn(
+                Collections.singletonMap(1, Collections.singleton(new TokenRange(0, 100))));
         InstanceMetadata instance = mock(InstanceMetadata.class);
         when(instance.stagingDir()).thenReturn("stagingDir");
         when(instanceMetadataFetcher.instance(anyInt())).thenReturn(instance);
-        when(mockSliceAccessor.selectByJobByBucketByTokenRange(any(), anyShort(), any()))
-        .thenReturn(Collections.singletonList(RestoreSliceTest.createTestingSlice(sidecarManagedJob, "sliceId", 0, 10)));
+        when(mockSliceAccessor.selectByJobByBucketByTokenRange(any(), anyShort(), any())).thenReturn(
+                Collections.singletonList(RestoreSliceTest.createTestingSlice(sidecarManagedJob, "sliceId", 0, 10)));
         if (isJobFailed)
         {
-            doThrow(RestoreJobExceptions.ofFatal("Job failed", mock(RestoreRange.class), null))
-            .when(mockManagers).trySubmit(any(), any(), any());
+            doThrow(RestoreJobExceptions.ofFatal("Job failed", mock(RestoreRange.class), null)).when(mockManagers)
+                                                                                               .trySubmit(any(), any(), any());
         }
         else
         {
@@ -321,19 +312,17 @@ class RestoreJobDiscovererTest
     {
         RestoreJobDiscoverer.JobIdsByDay jobIdsByDay = new RestoreJobDiscoverer.JobIdsByDay();
         RestoreJob job = createNewTestingJob(UUIDs.timeBased());
-        assertThat(jobIdsByDay.shouldLogJob(job))
-        .describedAs("should return true for the new job")
-        .isTrue();
-        assertThat(jobIdsByDay.shouldLogJob(job))
-        .describedAs("should return true for the same job in CREATED status")
-        .isTrue();
-        RestoreJob statusUpdated = job.unbuild().jobStatus(RestoreJobStatus.SUCCEEDED).build();
-        assertThat(jobIdsByDay.shouldLogJob(statusUpdated))
-        .describedAs("should return true for the status-updated job")
-        .isTrue();
-        assertThat(jobIdsByDay.shouldLogJob(statusUpdated))
-        .describedAs("should return false for the same SUCCEEDED job")
-        .isFalse();
+        assertThat(jobIdsByDay.shouldLogJob(job)).describedAs("should return true for the new job")
+                                                 .isTrue();
+        assertThat(jobIdsByDay.shouldLogJob(job)).describedAs("should return true for the same job in CREATED status")
+                                                 .isTrue();
+        RestoreJob statusUpdated = job.unbuild()
+                                      .jobStatus(RestoreJobStatus.SUCCEEDED)
+                                      .build();
+        assertThat(jobIdsByDay.shouldLogJob(statusUpdated)).describedAs("should return true for the status-updated job")
+                                                           .isTrue();
+        assertThat(jobIdsByDay.shouldLogJob(statusUpdated)).describedAs("should return false for the same SUCCEEDED job")
+                                                           .isFalse();
     }
 
     @Test
@@ -345,7 +334,9 @@ class RestoreJobDiscovererTest
         jobIdsByDay.cleanupMaybe(); // issue a cleanup. but it should not remove anything
         assertThat(jobIdsByDay.jobsByDay()).hasSize(1)
                                            .containsKey(job.createdAt.getDaysSinceEpoch());
-        RestoreJob jobOfNextDay = job.unbuild().createdAt(LocalDate.fromDaysSinceEpoch(job.createdAt.getDaysSinceEpoch() + 1)).build();
+        RestoreJob jobOfNextDay = job.unbuild()
+                                     .createdAt(LocalDate.fromDaysSinceEpoch(job.createdAt.getDaysSinceEpoch() + 1))
+                                     .build();
         jobIdsByDay.shouldLogJob(jobOfNextDay);
         jobIdsByDay.cleanupMaybe(); // issue a new cleanup. it should remove the job that is not reported in the new round
         assertThat(jobIdsByDay.jobsByDay()).hasSize(1)
@@ -361,22 +352,19 @@ class RestoreJobDiscovererTest
 
         executeBlocking();
 
-        assertThat(loop.jobDiscoveryRecencyDays())
-        .describedAs("Recency days is adjusted to 1 since there are no jobs running")
-        .isEqualTo(5);
+        assertThat(loop.jobDiscoveryRecencyDays()).describedAs("Recency days is adjusted to 1 since there are no jobs running")
+                                                  .isEqualTo(5);
 
         // set up an old job that is created 10 days ago
         long now = System.currentTimeMillis();
         long tenDaysAgo = now - TimeUnit.DAYS.toMillis(10);
         UUID newJobId = UUIDs.startOf(tenDaysAgo);
-        when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
-        .thenReturn(Collections.singletonList(createNewTestingJob(newJobId)));
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(Collections.singletonList(createNewTestingJob(newJobId)));
 
         executeBlocking();
 
-        assertThat(loop.jobDiscoveryRecencyDays())
-        .describedAs("Recency days is adjusted accordingly to the earliest job (10 days)")
-        .isEqualTo(10);
+        assertThat(loop.jobDiscoveryRecencyDays()).describedAs("Recency days is adjusted accordingly to the earliest job (10 days)")
+                                                  .isEqualTo(10);
     }
 
     private RestoreJobConfiguration testConfig()
@@ -386,8 +374,7 @@ class RestoreJobDiscovererTest
         when(restoreJobConfiguration.jobDiscoveryIdleLoopDelay()).thenReturn(idleLoopDelay);
         when(restoreJobConfiguration.jobDiscoveryMinimumRecencyDays()).thenReturn(recencyDays);
         when(restoreJobConfiguration.processMaxConcurrency()).thenReturn(TestModule.RESTORE_MAX_CONCURRENCY);
-        when(restoreJobConfiguration.restoreJobTablesTtl())
-        .thenReturn(SecondBoundConfiguration.parse((TimeUnit.DAYS.toSeconds(14) + 1) + "s"));
+        when(restoreJobConfiguration.restoreJobTablesTtl()).thenReturn(SecondBoundConfiguration.parse((TimeUnit.DAYS.toSeconds(14) + 1) + "s"));
 
         return restoreJobConfiguration;
     }
@@ -397,6 +384,7 @@ class RestoreJobDiscovererTest
         Promise<Void> promise = Promise.promise();
         loop.execute(promise);
         CountDownLatch latch = new CountDownLatch(1);
-        promise.future().onComplete(v -> latch.countDown());
+        promise.future()
+               .onComplete(v -> latch.countDown());
     }
 }

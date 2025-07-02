@@ -18,15 +18,10 @@
 
 package org.apache.cassandra.sidecar.job;
 
-import java.util.UUID;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import java.util.UUID;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
@@ -34,7 +29,9 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,9 +44,15 @@ import static org.mockito.Mockito.when;
  * Tests to validate the Job submission behavior for scenarios which are a combination of values for
  *
  * <ul>
- * <ol> 1) Downstream job existence,</ol>
- * <ol> 2) Cached job (null (not in cache), Completed/Failed job, Running job), and</ol>
- * <ol> 3) Request UUID (null (no header), UUID)</ol>
+ * <ol>
+ * 1) Downstream job existence,
+ * </ol>
+ * <ol>
+ * 2) Cached job (null (not in cache), Completed/Failed job, Running job), and
+ * </ol>
+ * <ol>
+ * 3) Request UUID (null (no header), UUID)
+ * </ol>
  * </ul>
  */
 class OperationalJobManagerTest
@@ -67,7 +70,10 @@ class OperationalJobManagerTest
     @AfterEach
     void cleanup()
     {
-        TestResourceReaper.create().with(vertx).with(executorPool).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(executorPool)
+                          .close();
     }
 
     @Test
@@ -79,7 +85,8 @@ class OperationalJobManagerTest
         OperationalJob testJob = OperationalJobTest.createOperationalJob(SUCCEEDED);
         manager.trySubmitJob(testJob);
         testJob.execute(Promise.promise());
-        assertThat(testJob.asyncResult().isComplete()).isTrue();
+        assertThat(testJob.asyncResult()
+                          .isComplete()).isTrue();
         assertThat(testJob.status()).isEqualTo(SUCCEEDED);
         assertThat(tracker.get(testJob.jobId())).isNotNull();
     }
@@ -94,9 +101,9 @@ class OperationalJobManagerTest
         when(mockPools.internal()).thenReturn(mockExecPool);
         when(mockExecPool.runBlocking(any())).thenReturn(null);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
-        assertThatThrownBy(() -> manager.trySubmitJob(runningJob))
-        .isExactlyInstanceOf(OperationalJobConflictException.class)
-        .hasMessage("The same operational job is already running on Cassandra. operationName='Operation X'");
+        assertThatThrownBy(() -> manager.trySubmitJob(runningJob)).isExactlyInstanceOf(OperationalJobConflictException.class)
+                                                                  .hasMessage(
+                                                                          "The same operational job is already running on Cassandra. operationName='Operation X'");
     }
 
     @Test
@@ -113,7 +120,8 @@ class OperationalJobManagerTest
         // execute the job async.
         vertx.executeBlocking(testJob::execute);
         // by the time of checking, the job should still be running. It runs for 10 seconds.
-        assertThat(testJob.asyncResult().isComplete()).isFalse();
+        assertThat(testJob.asyncResult()
+                          .isComplete()).isFalse();
         assertThat(tracker.get(jobId)).isNotNull();
     }
 
@@ -143,8 +151,10 @@ class OperationalJobManagerTest
 
         manager.trySubmitJob(failingJob);
         failingJob.execute(Promise.promise());
-        assertThat(failingJob.asyncResult().isComplete()).isTrue();
-        assertThat(failingJob.asyncResult().failed()).isTrue();
+        assertThat(failingJob.asyncResult()
+                             .isComplete()).isTrue();
+        assertThat(failingJob.asyncResult()
+                             .failed()).isTrue();
         assertThat(tracker.get(jobId)).isNotNull();
     }
 }

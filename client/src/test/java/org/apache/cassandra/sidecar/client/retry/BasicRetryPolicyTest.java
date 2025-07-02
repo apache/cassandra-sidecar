@@ -28,20 +28,17 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
+import org.apache.cassandra.sidecar.client.HttpResponse;
+import org.apache.cassandra.sidecar.client.exception.ResourceNotFoundException;
+import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
+import org.apache.cassandra.sidecar.client.exception.UnexpectedStatusCodeException;
+import org.apache.cassandra.sidecar.common.request.Request;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import org.apache.cassandra.sidecar.client.HttpResponse;
-import org.apache.cassandra.sidecar.client.exception.ResourceNotFoundException;
-import org.apache.cassandra.sidecar.client.exception.RetriesExhaustedException;
-import org.apache.cassandra.sidecar.client.exception.UnexpectedStatusCodeException;
-import org.apache.cassandra.sidecar.common.request.Request;
-
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_ACCEPTABLE;
@@ -78,7 +75,7 @@ class BasicRetryPolicyTest
     }
 
     @ParameterizedTest(name = "{index} => canRetryOnADifferentHost={0}")
-    @ValueSource(booleans = { true, false })
+    @ValueSource(booleans = { true, false})
     void testRetriesWhenThrowableIsProvided(boolean canRetryOnADifferentHost)
     {
         IllegalArgumentException throwable = new IllegalArgumentException("Connection Refused");
@@ -99,17 +96,16 @@ class BasicRetryPolicyTest
         when(mockResponse.statusCode()).thenReturn(OK.code());
 
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        defaultBasicRetryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false,
-                                           (attempts, retryDelayMillis) -> fail("Should never retry"));
+        defaultBasicRetryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false, (attempts,
+                                                                                               retryDelayMillis) -> fail("Should never retry"));
         future.join();
         assertThat(future.isDone()).isTrue();
         assertThat(future.get()).isSameAs(mockResponse);
     }
 
     @ParameterizedTest(name = "{index} => canRetryOnADifferentHost={0}")
-    @ValueSource(booleans = { true, false })
-    void testCompletesWithNotFoundStatusCode(boolean canRetryOnADifferentHost)
-    throws ExecutionException, InterruptedException
+    @ValueSource(booleans = { true, false})
+    void testCompletesWithNotFoundStatusCode(boolean canRetryOnADifferentHost) throws ExecutionException, InterruptedException
     {
         when(mockResponse.statusCode()).thenReturn(NOT_FOUND.code());
 
@@ -120,27 +116,27 @@ class BasicRetryPolicyTest
         }
         else
         {
-            defaultBasicRetryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, canRetryOnADifferentHost,
-                                               (attempts, retryDelayMillis) -> fail("Should never retry"));
-            assertThatExceptionOfType(CompletionException.class)
-            .isThrownBy(future::join)
-            .withCauseInstanceOf(ResourceNotFoundException.class);
+            defaultBasicRetryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, canRetryOnADifferentHost, (attempts,
+                                                                                                                      retryDelayMillis) -> fail(
+                                                                                                                              "Should never retry"));
+            assertThatExceptionOfType(CompletionException.class).isThrownBy(future::join)
+                                                                .withCauseInstanceOf(ResourceNotFoundException.class);
         }
     }
 
     @ParameterizedTest(name = "{index} => canRetryOnADifferentHost={0}")
-    @ValueSource(booleans = { true, false })
+    @ValueSource(booleans = { true, false})
     void testRetriesWithNotImplementedStatusCode(boolean canRetryOnADifferentHost)
     {
         when(mockResponse.statusCode()).thenReturn(NOT_IMPLEMENTED.code());
 
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        defaultBasicRetryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, canRetryOnADifferentHost,
-                                           (attempts, retryDelayMillis) -> fail("Should never retry"));
+        defaultBasicRetryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, canRetryOnADifferentHost, (attempts,
+                                                                                                                  retryDelayMillis) -> fail(
+                                                                                                                          "Should never retry"));
 
-        assertThatExceptionOfType(CompletionException.class)
-        .isThrownBy(future::join)
-        .withCauseInstanceOf(UnsupportedOperationException.class);
+        assertThatExceptionOfType(CompletionException.class).isThrownBy(future::join)
+                                                            .withCauseInstanceOf(UnsupportedOperationException.class);
         assertThat(future.isCompletedExceptionally()).isTrue();
     }
 
@@ -152,7 +148,7 @@ class BasicRetryPolicyTest
     }
 
     @ParameterizedTest(name = "{index} => canRetryOnADifferentHost={0}")
-    @ValueSource(booleans = { true, false })
+    @ValueSource(booleans = { true, false})
     void testRetriesWithServiceUnavailableStatusCode(boolean canRetryOnADifferentHost)
     {
         when(mockResponse.statusCode()).thenReturn(SERVICE_UNAVAILABLE.code());
@@ -160,7 +156,7 @@ class BasicRetryPolicyTest
     }
 
     @ParameterizedTest(name = "{index} => canRetryOnADifferentHost={0}")
-    @ValueSource(booleans = { true, false })
+    @ValueSource(booleans = { true, false})
     void testRetriesWithChecksumMismatchStatusCode(boolean canRetryOnADifferentHost)
     {
         when(mockResponse.statusCode()).thenReturn(CHECKSUM_MISMATCH.code());
@@ -195,18 +191,18 @@ class BasicRetryPolicyTest
         int maxRetries = 50;
         for (int currentAttempt = 1; currentAttempt <= maxRetries; currentAttempt++)
         {
-            retryPolicy.onResponse(future, mockRequest, mockResponse, null, currentAttempt, true,
-                                   (attempts, retryDelayMillis) -> {
-                                       retryActionCalls.incrementAndGet();
-                                       assertThat(attempts).isEqualTo(1);
-                                       assertThat(retryDelayMillis).isEqualTo(0);
-                                   });
+            retryPolicy.onResponse(future, mockRequest, mockResponse, null, currentAttempt, true, (attempts,
+                                                                                                   retryDelayMillis) -> {
+                retryActionCalls.incrementAndGet();
+                assertThat(attempts).isEqualTo(1);
+                assertThat(retryDelayMillis).isEqualTo(0);
+            });
         }
 
         when(mockResponse.statusCode()).thenReturn(OK.code());
 
-        retryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false,
-                               (attempts, retryDelayMillis) -> fail("Should not retry"));
+        retryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false, (attempts,
+                                                                                   retryDelayMillis) -> fail("Should not retry"));
         future.join();
         assertThat(future.isDone()).isTrue();
         assertThat(future.get()).isSameAs(mockResponse);
@@ -216,8 +212,7 @@ class BasicRetryPolicyTest
     private static Stream<Arguments> clientStatusCodeArguments()
     {
         return IntStream.range(400, 500)
-                        .filter(statusCode -> statusCode != NOT_FOUND.code()
-                                              && statusCode != CHECKSUM_MISMATCH.code())
+                        .filter(statusCode -> statusCode != NOT_FOUND.code() && statusCode != CHECKSUM_MISMATCH.code())
                         .boxed()
                         .map(Arguments::of);
     }
@@ -234,9 +229,8 @@ class BasicRetryPolicyTest
     private static Stream<Arguments> serverStatusCodeArguments()
     {
         return IntStream.range(500, 600)
-                        .filter(statusCode -> statusCode != INTERNAL_SERVER_ERROR.code()
-                                              && statusCode != NOT_IMPLEMENTED.code()
-                                              && statusCode != SERVICE_UNAVAILABLE.code())
+                        .filter(statusCode -> statusCode != INTERNAL_SERVER_ERROR.code() && statusCode != NOT_IMPLEMENTED.code()
+                                && statusCode != SERVICE_UNAVAILABLE.code())
                         .boxed()
                         .map(Arguments::of);
     }
@@ -256,34 +250,44 @@ class BasicRetryPolicyTest
         when(mockResponse.statusCode()).thenReturn(700); // 700 is an invalid status code
 
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        defaultBasicRetryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false,
-                                           (attempts, retryDelayMillis) -> fail("Should never retry"));
-        assertThatExceptionOfType(CompletionException.class)
-        .isThrownBy(future::join)
-        .withCauseInstanceOf(UnexpectedStatusCodeException.class)
-        .withMessageContaining("Unexpected HTTP status code 700");
+        defaultBasicRetryPolicy.onResponse(future, mockRequest, mockResponse, null, 1, false, (attempts,
+                                                                                               retryDelayMillis) -> fail("Should never retry"));
+        assertThatExceptionOfType(CompletionException.class).isThrownBy(future::join)
+                                                            .withCauseInstanceOf(UnexpectedStatusCodeException.class)
+                                                            .withMessageContaining("Unexpected HTTP status code 700");
         assertThat(future.isCompletedExceptionally()).isTrue();
     }
 
-    private static void testWithRetries(Request request, HttpResponse response, Throwable throwable,
-                                        int configuredMaxRetries, int configuredRetryDelayMillis,
+    private static void testWithRetries(Request request,
+                                        HttpResponse response,
+                                        Throwable throwable,
+                                        int configuredMaxRetries,
+                                        int configuredRetryDelayMillis,
                                         boolean canRetryOnADifferentHost)
     {
         testWithRetries(request, response, throwable, configuredMaxRetries, configuredRetryDelayMillis,
-                        canRetryOnADifferentHost ? 0 : configuredRetryDelayMillis, canRetryOnADifferentHost);
+                canRetryOnADifferentHost ? 0 : configuredRetryDelayMillis, canRetryOnADifferentHost);
     }
 
-    private static void testWithRetries(Request request, HttpResponse response, Throwable throwable,
-                                        int configuredMaxRetries, int configuredRetryDelayMillis,
-                                        int expectedRetryDelayMillis, boolean canRetryOnADifferentHost)
+    private static void testWithRetries(Request request,
+                                        HttpResponse response,
+                                        Throwable throwable,
+                                        int configuredMaxRetries,
+                                        int configuredRetryDelayMillis,
+                                        int expectedRetryDelayMillis,
+                                        boolean canRetryOnADifferentHost)
     {
-        testWithRetries(request, response, throwable, configuredMaxRetries, configuredRetryDelayMillis,
-                        expectedRetryDelayMillis, canRetryOnADifferentHost, true);
+        testWithRetries(request, response, throwable, configuredMaxRetries, configuredRetryDelayMillis, expectedRetryDelayMillis, canRetryOnADifferentHost,
+                true);
     }
 
-    private static void testWithRetries(Request request, HttpResponse response, Throwable throwable,
-                                        int configuredMaxRetries, int configuredRetryDelayMillis,
-                                        int expectedRetryDelayMillis, boolean canRetryOnADifferentHost,
+    private static void testWithRetries(Request request,
+                                        HttpResponse response,
+                                        Throwable throwable,
+                                        int configuredMaxRetries,
+                                        int configuredRetryDelayMillis,
+                                        int expectedRetryDelayMillis,
+                                        boolean canRetryOnADifferentHost,
                                         boolean expectedToRetryOnSameHost)
     {
         RetryPolicy retryPolicy = new BasicRetryPolicy(configuredMaxRetries, configuredRetryDelayMillis);
@@ -292,18 +296,18 @@ class BasicRetryPolicyTest
         {
             // retries on error
             int expectedNextAttempt = currentAttempt + 1;
-            retryPolicy.onResponse(future, request, response, throwable, currentAttempt, canRetryOnADifferentHost,
-                                   (attempts, retryDelayMillis) -> {
-                                       if (expectedNextAttempt > configuredMaxRetries)
-                                       {
-                                           fail("Should never retry");
-                                       }
-                                       else
-                                       {
-                                           assertThat(attempts).isEqualTo(expectedNextAttempt);
-                                           assertThat(retryDelayMillis).isEqualTo(expectedRetryDelayMillis);
-                                       }
-                                   });
+            retryPolicy.onResponse(future, request, response, throwable, currentAttempt, canRetryOnADifferentHost, (attempts,
+                                                                                                                    retryDelayMillis) -> {
+                if (expectedNextAttempt > configuredMaxRetries)
+                {
+                    fail("Should never retry");
+                }
+                else
+                {
+                    assertThat(attempts).isEqualTo(expectedNextAttempt);
+                    assertThat(retryDelayMillis).isEqualTo(expectedRetryDelayMillis);
+                }
+            });
 
             if (!canRetryOnADifferentHost && !expectedToRetryOnSameHost)
             {
@@ -321,10 +325,9 @@ class BasicRetryPolicyTest
             description = "Unable to complete request '/api/uri' after 1 attempt";
         }
 
-        assertThatExceptionOfType(CompletionException.class)
-        .isThrownBy(future::join)
-        .withCauseInstanceOf(RetriesExhaustedException.class)
-        .withMessageContaining(description);
+        assertThatExceptionOfType(CompletionException.class).isThrownBy(future::join)
+                                                            .withCauseInstanceOf(RetriesExhaustedException.class)
+                                                            .withMessageContaining(description);
         assertThat(future.isCompletedExceptionally()).isTrue();
     }
 }

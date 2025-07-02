@@ -28,33 +28,34 @@ import com.google.common.net.HostAndPort;
 public class StringUtils
 {
     /**
-     * The string representation of the address with the same signature as represented by
-     * the Cassandra server. This is useful when we consume data representing an Inet address
-     * and port from JMX that has been stringyfied, and we need to perform string matching
-     * against those results from JMX.
+     * The string representation of the address with the same signature as represented by the Cassandra server. This is useful when we consume data representing
+     * an Inet address and port from JMX that has been stringyfied, and we need to perform string matching against those results from JMX.
      *
      * @param address the {@link InetSocketAddress address}
-     * @return the string representation of the address with the same signature as represented by
-     * the Cassandra server
+     * @return the string representation of the address with the same signature as represented by the Cassandra server
      */
     @SuppressWarnings("UnstableApiUsage")
     public static String cassandraFormattedHostAndPort(InetSocketAddress address)
     {
-        return HostAndPort.fromParts(address.getAddress().getHostAddress(), address.getPort()).toString();
+        return HostAndPort.fromParts(address.getAddress()
+                                            .getHostAddress(),
+                address.getPort())
+                          .toString();
     }
 
     /**
-     * Similar to {@link #cassandraFormattedHostAndPort(InetSocketAddress)}, but use ip and port to
-     * create the address string representing the Cassandra server.
+     * Similar to {@link #cassandraFormattedHostAndPort(InetSocketAddress)}, but use ip and port to create the address string representing the Cassandra server.
+     *
      * @param ip ip address
      * @param port port
-     * @return the string representation of the address with the same signature as represented by
-     * the Cassandra server
+     * @return the string representation of the address with the same signature as represented by the Cassandra server
      */
     @SuppressWarnings("UnstableApiUsage")
-    public static String cassandraFormattedHostAndPort(String ip, int port)
+    public static String cassandraFormattedHostAndPort(String ip,
+                                                       int port)
     {
-        return HostAndPort.fromParts(ip, port).toString();
+        return HostAndPort.fromParts(ip, port)
+                          .toString();
 
     }
 }

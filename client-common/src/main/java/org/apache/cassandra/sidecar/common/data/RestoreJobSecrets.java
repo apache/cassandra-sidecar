@@ -65,9 +65,7 @@ public class RestoreJobSecrets
     @Override
     public String toString()
     {
-        return String.format("RestoreJobSecrets{%s=%s, %s=%s}",
-                             SECRET_WRITE_CREDENTIALS, writeCredentials,
-                             SECRET_READ_CREDENTIALS, readCredentials);
+        return String.format("RestoreJobSecrets{%s=%s, %s=%s}", SECRET_WRITE_CREDENTIALS, writeCredentials, SECRET_READ_CREDENTIALS, readCredentials);
     }
 
     @Override
@@ -80,8 +78,7 @@ public class RestoreJobSecrets
             return false;
 
         RestoreJobSecrets that = (RestoreJobSecrets) obj;
-        return Objects.equals(this.readCredentials, that.readCredentials)
-               && Objects.equals(this.writeCredentials, that.writeCredentials);
+        return Objects.equals(this.readCredentials, that.readCredentials) && Objects.equals(this.writeCredentials, that.writeCredentials);
     }
 
     @Override

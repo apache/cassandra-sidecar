@@ -54,50 +54,47 @@ class StreamSSTableComponentHandlerIntegrationTest extends IntegrationTestBase
         createTestKeyspace();
         QualifiedTableName table = createTestTableAndPopulate();
 
-        List<String> expectedFileList = Arrays.asList(".ryear/[a-z]{2}-[0-9]-big-Data.db",
-                                                      ".ryear/[a-z]{2}-[0-9]-big-TOC.txt",
-                                                      "[a-z]{2}-[0-9]-big-Data.db",
-                                                      "[a-z]{2}-[0-9]-big-TOC.txt");
+        List<String> expectedFileList = Arrays.asList(".ryear/[a-z]{2}-[0-9]-big-Data.db", ".ryear/[a-z]{2}-[0-9]-big-TOC.txt", "[a-z]{2}-[0-9]-big-Data.db",
+                "[a-z]{2}-[0-9]-big-TOC.txt");
 
         WebClient client = mTLSClient();
-        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
-                                         table.keyspace(), table.tableName());
+        String testRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot", table.keyspace(), table.tableName());
 
-        createSnapshot(client, testRoute)
-        .compose(route -> listSnapshot(client, route, true))
-        .onComplete(context.succeeding(response -> {
+        createSnapshot(client, testRoute).compose(route -> listSnapshot(client, route, true))
+                                         .onComplete(context.succeeding(response -> {
 
-            List<ListSnapshotFilesResponse.FileInfo> filesToStream =
-            response.snapshotFilesInfo()
-                    .stream()
-                    .filter(info -> info.fileName.endsWith("-Data.db") || info.fileName.endsWith("-TOC.txt"))
-                    .sorted(Comparator.comparing(o -> o.fileName))
-                    .collect(Collectors.toList());
+                                             List<ListSnapshotFilesResponse.FileInfo> filesToStream = response.snapshotFilesInfo()
+                                                                                                              .stream()
+                                                                                                              .filter(info -> info.fileName.endsWith("-Data.db")
+                                                                                                                      || info.fileName.endsWith("-TOC.txt"))
+                                                                                                              .sorted(Comparator.comparing(o -> o.fileName))
+                                                                                                              .collect(Collectors.toList());
 
-            assertThat(filesToStream).hasSize(4);
-            for (int i = 0; i < filesToStream.size(); i++)
-            {
-                ListSnapshotFilesResponse.FileInfo fileInfo = filesToStream.get(i);
-                assertThat(fileInfo.fileName).matches(expectedFileList.get(i));
-            }
+                                             assertThat(filesToStream).hasSize(4);
+                                             for (int i = 0; i < filesToStream.size(); i++)
+                                             {
+                                                 ListSnapshotFilesResponse.FileInfo fileInfo = filesToStream.get(i);
+                                                 assertThat(fileInfo.fileName).matches(expectedFileList.get(i));
+                                             }
 
-            List<Future<HttpResponse<Buffer>>> futures = new ArrayList<>();
-            // Stream all the files including index files
-            for (ListSnapshotFilesResponse.FileInfo fileInfo : filesToStream)
-            {
-                futures.add(streamSSTableComponent(client, fileInfo));
-            }
+                                             List<Future<HttpResponse<Buffer>>> futures = new ArrayList<>();
+                                             // Stream all the files including index files
+                                             for (ListSnapshotFilesResponse.FileInfo fileInfo : filesToStream)
+                                             {
+                                                 futures.add(streamSSTableComponent(client, fileInfo));
+                                             }
 
-            Future.all(futures)
-                  .onSuccess(s -> context.completeNow())
-                  .onFailure(context::failNow);
-        }));
+                                             Future.all(futures)
+                                                   .onSuccess(s -> context.completeNow())
+                                                   .onFailure(context::failNow);
+                                         }));
 
         // wait until test completes
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
     }
 
-    Future<String> createSnapshot(WebClient client, String route)
+    Future<String> createSnapshot(WebClient client,
+                                  String route)
     {
         Promise<String> promise = Promise.promise();
         client.put(server.actualPort(), "127.0.0.1", route)
@@ -111,7 +108,9 @@ class StreamSSTableComponentHandlerIntegrationTest extends IntegrationTestBase
         return promise.future();
     }
 
-    Future<ListSnapshotFilesResponse> listSnapshot(WebClient client, String route, boolean includeSecondaryIndexFiles)
+    Future<ListSnapshotFilesResponse> listSnapshot(WebClient client,
+                                                   String route,
+                                                   boolean includeSecondaryIndexFiles)
     {
         return client.get(server.actualPort(), "127.0.0.1", route + "?includeSecondaryIndexFiles=" + includeSecondaryIndexFiles)
                      .expect(ResponsePredicate.SC_OK)
@@ -133,23 +132,17 @@ class StreamSSTableComponentHandlerIntegrationTest extends IntegrationTestBase
 
     QualifiedTableName createTestTableAndPopulate()
     {
-        QualifiedTableName tableName = createTestTable(
-        "CREATE TABLE %s ( \n" +
-        "  race_year int, \n" +
-        "  race_name text, \n" +
-        "  cyclist_name text, \n" +
-        "  rank int, \n" +
-        "  PRIMARY KEY ((race_year, race_name), rank) \n" +
-        ");");
+        QualifiedTableName tableName = createTestTable("CREATE TABLE %s ( \n" + "  race_year int, \n" + "  race_name text, \n" + "  cyclist_name text, \n"
+                + "  rank int, \n" + "  PRIMARY KEY ((race_year, race_name), rank) \n" + ");");
         Session session = maybeGetSession();
 
         session.execute("CREATE INDEX ryear ON " + tableName + " (race_year);");
-        session.execute("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
-                        "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', 1, 'Benjamin PRADES');");
-        session.execute("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
-                        "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', 2, 'Adam PHELAN');");
-        session.execute("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +
-                        "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', 3, 'Thomas LEBAS');");
+        session.execute("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) "
+                + "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', 1, 'Benjamin PRADES');");
+        session.execute("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) "
+                + "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', 2, 'Adam PHELAN');");
+        session.execute("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) "
+                + "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', 3, 'Thomas LEBAS');");
         return tableName;
     }
 }

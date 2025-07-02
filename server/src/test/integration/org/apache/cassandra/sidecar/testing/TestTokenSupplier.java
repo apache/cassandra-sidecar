@@ -32,15 +32,18 @@ public class TestTokenSupplier
 {
 
     /**
-     * Tokens are allocation used in tests to simulate token allocation nodes for an approx even distribution
-     * in a multiDC environment with neighboring nodes different DCs allocated adjacent tokens.
-     * Allocations for new nodes are interleaved among existing tokens.
+     * Tokens are allocation used in tests to simulate token allocation nodes for an approx even distribution in a multiDC environment with neighboring nodes
+     * different DCs allocated adjacent tokens. Allocations for new nodes are interleaved among existing tokens.
+     *
      * @param numNodesPerDC no. nodes from a single DC
      * @param numDcs no. of datacenters
      * @param numTokensPerNode no. tokens allocated to each node (this is always 1 if there are no vnodes)
      * @return The token supplier that vends the tokens
      */
-    public static TokenSupplier evenlyDistributedTokens(int numNodesPerDC, int newNodesPerDC, int numDcs, int numTokensPerNode)
+    public static TokenSupplier evenlyDistributedTokens(int numNodesPerDC,
+                                                        int newNodesPerDC,
+                                                        int numDcs,
+                                                        int numTokensPerNode)
     {
         // Use token count using initial node count to first assign tokens to nodes
         long totalTokens = (long) numNodesPerDC * numDcs * numTokensPerNode;
@@ -48,12 +51,7 @@ public class TestTokenSupplier
         // For multi-DC, since neighboring nodes from different DCs have consecutive tokens, the increment is
         // broadened by a factor of numDcs.
         BigInteger increment = BigInteger.valueOf(((Long.MAX_VALUE / (totalTokens + 2)) * 2 * numDcs));
-        List<String>[] tokens = allocateExistingNodeTokens(numNodesPerDC,
-                                                           newNodesPerDC,
-                                                           numDcs,
-                                                           numTokensPerNode,
-                                                           increment);
-
+        List<String>[] tokens = allocateExistingNodeTokens(numNodesPerDC, newNodesPerDC, numDcs, numTokensPerNode, increment);
 
         // Initial value of the first new node
         BigInteger value = new BigInteger(tokens[numDcs - 1].get(0));
@@ -68,7 +66,8 @@ public class TestTokenSupplier
                 // Nodes in different DCs are separated by a single token
                 for (int dc = 0; dc < numDcs; dc++)
                 {
-                    tokens[nodeId - 1].add(value.add(BigInteger.valueOf(dc)).toString());
+                    tokens[nodeId - 1].add(value.add(BigInteger.valueOf(dc))
+                                                .toString());
                     nodeId++;
                 }
                 value = value.add(subIncrement);
@@ -80,6 +79,7 @@ public class TestTokenSupplier
 
     /**
      * Statically allocated tokens, one per node.
+     *
      * @param tokens array of tokens to use
      * @return TokenSupplier to vend tokens
      */
@@ -111,7 +111,8 @@ public class TestTokenSupplier
                 // Nodes in different DCs are separated by a single token
                 for (int dc = 0; dc < numDcs; dc++)
                 {
-                    tokens[nodeId - 1].add(value.add(BigInteger.valueOf(dc)).toString());
+                    tokens[nodeId - 1].add(value.add(BigInteger.valueOf(dc))
+                                                .toString());
                     nodeId++;
                 }
             }

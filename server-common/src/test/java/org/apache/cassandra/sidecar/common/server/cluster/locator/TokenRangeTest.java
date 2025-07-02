@@ -50,9 +50,8 @@ class TokenRangeTest
     @Test
     void testCreateRangeWithInvalidParams()
     {
-        assertThatThrownBy(() -> new TokenRange(1, -1))
-        .isExactlyInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Invalid range: (Token(1)‥Token(-1)]");
+        assertThatThrownBy(() -> new TokenRange(1, -1)).isExactlyInstanceOf(IllegalArgumentException.class)
+                                                       .hasMessageContaining("Invalid range: (Token(1)‥Token(-1)]");
     }
 
     @Test
@@ -70,13 +69,11 @@ class TokenRangeTest
     void testCreateFromWraparoundJavaDriverTokenRange()
     {
         com.datastax.driver.core.TokenRange range = mockRange(10L, -10L);
-        List<com.datastax.driver.core.TokenRange> unwrapped = Arrays.asList(mockRange(10L, Long.MAX_VALUE),
-                                                                            mockRange(Long.MIN_VALUE, -10L));
+        List<com.datastax.driver.core.TokenRange> unwrapped = Arrays.asList(mockRange(10L, Long.MAX_VALUE), mockRange(Long.MIN_VALUE, -10L));
         when(range.unwrap()).thenReturn(unwrapped);
         List<TokenRange> ranges = TokenRange.from(range);
         assertThat(ranges).hasSize(2)
-                          .isEqualTo(Arrays.asList(new TokenRange(10, Long.MAX_VALUE),
-                                                   new TokenRange(Long.MIN_VALUE, -10L)));
+                          .isEqualTo(Arrays.asList(new TokenRange(10, Long.MAX_VALUE), new TokenRange(Long.MIN_VALUE, -10L)));
     }
 
     @Test
@@ -154,7 +151,11 @@ class TokenRangeTest
 
     @ParameterizedTest(name = "{index} - {0}: inputLeft={1} inputRight={2} expectedLeft={3} expectedRight={4}")
     @MethodSource("inputAndExpectedResultAfterSymmetricDiff")
-    void testSymmetricDiff(String testTitle, Set<TokenRange> left, Set<TokenRange> right, Set<TokenRange> expectedLeft, Set<TokenRange> expectedRight)
+    void testSymmetricDiff(String testTitle,
+                           Set<TokenRange> left,
+                           Set<TokenRange> right,
+                           Set<TokenRange> expectedLeft,
+                           Set<TokenRange> expectedRight)
     {
         TokenRange.SymmetricDiffResult symmetricDiffResult = TokenRange.symmetricDiff(left, right);
         assertThat(symmetricDiffResult.onlyInLeft).isEqualTo(expectedLeft);
@@ -169,40 +170,36 @@ class TokenRangeTest
     public static Stream<Arguments> inputAndExpectedResultAfterSymmetricDiff()
     {
         return Stream.of(
-        //  inputLeft, inputRight, expectedLeft, expectedRight
-        args("Diff on identical sets",
-             Set.of(r(0, 1000), r(1000, 2000)), // inputLeft
-             Set.of(r(0, 2000)), // inputRight
-             Set.of(), // expectedLeft
-             Set.of()), // expectedRight
+                // inputLeft, inputRight, expectedLeft, expectedRight
+                args("Diff on identical sets", Set.of(r(0, 1000), r(1000, 2000)), // inputLeft
+                        Set.of(r(0, 2000)), // inputRight
+                        Set.of(), // expectedLeft
+                        Set.of()), // expectedRight
 
-        args("Diff on enclosing sets",
-             Set.of(r(0, 1000), r(1000, 2000)), // inputLeft
-             Set.of(r(1000, 2000)), // inputRight
-             Set.of(r(0, 1000)), // expectedLeft
-             Set.of()), // expectedRight
+                args("Diff on enclosing sets", Set.of(r(0, 1000), r(1000, 2000)), // inputLeft
+                        Set.of(r(1000, 2000)), // inputRight
+                        Set.of(r(0, 1000)), // expectedLeft
+                        Set.of()), // expectedRight
 
-        args("Diff on overlapping sets",
-             Set.of(r(0, 1000), r(1000, 2000)), // inputLeft
-             Set.of(r(500, 1500), r(2000, 2500)), // inputRight
-             Set.of(r(0, 500), r(1500, 2000)), // expectedLeft
-             Set.of(r(2000, 2500))), // expectedRight
+                args("Diff on overlapping sets", Set.of(r(0, 1000), r(1000, 2000)), // inputLeft
+                        Set.of(r(500, 1500), r(2000, 2500)), // inputRight
+                        Set.of(r(0, 500), r(1500, 2000)), // expectedLeft
+                        Set.of(r(2000, 2500))), // expectedRight
 
-        args("Diff on disjoint ranges",
-             Set.of(r(0, 1000)), // inputLeft
-             Set.of(r(2000, 2500)), // inputRight
-             Set.of(r(0, 1000)), // expectedLeft
-             Set.of(r(2000, 2500))), // expectedRight
+                args("Diff on disjoint ranges", Set.of(r(0, 1000)), // inputLeft
+                        Set.of(r(2000, 2500)), // inputRight
+                        Set.of(r(0, 1000)), // expectedLeft
+                        Set.of(r(2000, 2500))), // expectedRight
 
-        args("Diff on overlapping singleton sets",
-             Set.of(r(0, 1000)), // inputLeft
-             Set.of(r(500, 1500)), // inputRight
-             Set.of(r(0, 500)), // expectedLeft
-             Set.of(r(1000, 1500))) // expectedRight
+                args("Diff on overlapping singleton sets", Set.of(r(0, 1000)), // inputLeft
+                        Set.of(r(500, 1500)), // inputRight
+                        Set.of(r(0, 500)), // expectedLeft
+                        Set.of(r(1000, 1500))) // expectedRight
         );
     }
 
-    private static TokenRange r(long start, long end)
+    private static TokenRange r(long start,
+                                long end)
     {
         return new TokenRange(start, end);
     }
@@ -212,7 +209,8 @@ class TokenRangeTest
         return Arguments.arguments(args);
     }
 
-    private com.datastax.driver.core.TokenRange mockRange(long start, long end)
+    private com.datastax.driver.core.TokenRange mockRange(long start,
+                                                          long end)
     {
         com.datastax.driver.core.TokenRange range = mock(com.datastax.driver.core.TokenRange.class);
         com.datastax.driver.core.Token startToken = mockToken(start);

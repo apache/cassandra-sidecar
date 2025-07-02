@@ -18,9 +18,8 @@
 
 package org.apache.cassandra.sidecar.common.request;
 
-import java.util.UUID;
-
 import io.netty.handler.codec.http.HttpMethod;
+import java.util.UUID;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 
@@ -35,8 +34,7 @@ public class OperationalJobRequest extends JsonRequest<OperationalJobResponse>
      */
     public OperationalJobRequest(UUID jobId)
     {
-        super(ApiEndpointsV1.OPERATIONAL_JOB_ROUTE
-              .replaceAll(ApiEndpointsV1.OPERATIONAL_JOB_ID_PATH_PARAM, jobId.toString()));
+        super(ApiEndpointsV1.OPERATIONAL_JOB_ROUTE.replaceAll(ApiEndpointsV1.OPERATIONAL_JOB_ID_PATH_PARAM, jobId.toString()));
     }
 
     /**

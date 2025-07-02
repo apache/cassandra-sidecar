@@ -36,7 +36,8 @@ public class SidecarMetricsImpl implements SidecarMetrics
     protected final InstanceMetadataFetcher instanceMetadataFetcher;
     protected final ServerMetrics serverMetrics;
 
-    public SidecarMetricsImpl(MetricRegistryFactory registryFactory, InstanceMetadataFetcher instanceMetadataFetcher)
+    public SidecarMetricsImpl(MetricRegistryFactory registryFactory,
+                              InstanceMetadataFetcher instanceMetadataFetcher)
     {
         this.registryFactory = registryFactory;
         this.instanceMetadataFetcher = instanceMetadataFetcher;
@@ -54,12 +55,14 @@ public class SidecarMetricsImpl implements SidecarMetrics
     @Override
     public InstanceMetrics instance(int instanceId)
     {
-        return instanceMetadataFetcher.instance(instanceId).metrics();
+        return instanceMetadataFetcher.instance(instanceId)
+                                      .metrics();
     }
 
     @Override
     public InstanceMetrics instance(@NotNull String host) throws NoSuchCassandraInstanceException, CassandraUnavailableException
     {
-        return instanceMetadataFetcher.instance(host).metrics();
+        return instanceMetadataFetcher.instance(host)
+                                      .metrics();
     }
 }

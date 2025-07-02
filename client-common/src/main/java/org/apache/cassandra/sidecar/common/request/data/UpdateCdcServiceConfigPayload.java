@@ -19,6 +19,7 @@ package org.apache.cassandra.sidecar.common.request.data;
 
 import java.util.Map;
 import java.util.Objects;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -44,8 +45,10 @@ public class UpdateCdcServiceConfigPayload
     @Override
     public boolean equals(Object o)
     {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         UpdateCdcServiceConfigPayload that = (UpdateCdcServiceConfigPayload) o;
         return Objects.equals(config, that.config);
     }

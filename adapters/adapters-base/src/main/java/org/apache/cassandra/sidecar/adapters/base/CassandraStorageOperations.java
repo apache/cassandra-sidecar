@@ -25,10 +25,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
@@ -41,7 +37,8 @@ import org.apache.cassandra.sidecar.common.server.exceptions.NodeBootstrappingEx
 import org.apache.cassandra.sidecar.common.server.exceptions.SnapshotAlreadyExistsException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static java.util.Objects.requireNonNull;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
 
@@ -59,22 +56,21 @@ public class CassandraStorageOperations implements StorageOperations
     /**
      * Creates a new instance with the provided {@link JmxClient} and {@link DnsResolver}
      *
-     * @param jmxClient   the JMX client used to communicate with the Cassandra instance
+     * @param jmxClient the JMX client used to communicate with the Cassandra instance
      * @param dnsResolver the DNS resolver used to lookup replicas
      */
-    public CassandraStorageOperations(JmxClient jmxClient, DnsResolver dnsResolver)
+    public CassandraStorageOperations(JmxClient jmxClient,
+                                      DnsResolver dnsResolver)
     {
-        this(jmxClient,
-             new RingProvider(jmxClient, dnsResolver),
-             new TokenRangeReplicaProvider(jmxClient, dnsResolver));
+        this(jmxClient, new RingProvider(jmxClient, dnsResolver), new TokenRangeReplicaProvider(jmxClient, dnsResolver));
     }
 
     /**
-     * Creates a new instances with the provided {@link JmxClient}, {@link RingProvider}, and
-     * {@link TokenRangeReplicaProvider}. This constructor is exposed for extensibility.
+     * Creates a new instances with the provided {@link JmxClient}, {@link RingProvider}, and {@link TokenRangeReplicaProvider}. This constructor is exposed for
+     * extensibility.
      *
-     * @param jmxClient                 the JMX client used to communicate with the Cassandra instance
-     * @param ringProvider              the ring provider instance
+     * @param jmxClient the JMX client used to communicate with the Cassandra instance
+     * @param ringProvider the ring provider instance
      * @param tokenRangeReplicaProvider the token range replica provider
      */
     public CassandraStorageOperations(JmxClient jmxClient,
@@ -87,16 +83,18 @@ public class CassandraStorageOperations implements StorageOperations
     }
 
     /**
-     * Takes the snapshot of a multiple column family from different keyspaces. A snapshot name must be specified.
-     * It logs a warning when the {@code ttl} option is provided as the option is unsupported.
+     * Takes the snapshot of a multiple column family from different keyspaces. A snapshot name must be specified. It logs a warning when the {@code ttl} option
+     * is provided as the option is unsupported.
      *
-     * @param tag      the tag given to the snapshot; may not be null or empty
+     * @param tag the tag given to the snapshot; may not be null or empty
      * @param keyspace the keyspace in the Cassandra database to use for the snapshot
-     * @param table    the table in the Cassandra database to use for the snapshot
-     * @param options  map of options, for example ttl, skipFlush
+     * @param table the table in the Cassandra database to use for the snapshot
+     * @param options map of options, for example ttl, skipFlush
      */
     @Override
-    public void takeSnapshot(@NotNull String tag, @NotNull String keyspace, @NotNull String table,
+    public void takeSnapshot(@NotNull String tag,
+                             @NotNull String keyspace,
+                             @NotNull String table,
                              @Nullable Map<String, String> options)
     {
         if (options != null && options.containsKey("ttl"))
@@ -108,13 +106,12 @@ public class CassandraStorageOperations implements StorageOperations
     }
 
     /**
-     * Actually performs the take snapshot operation of a multiple column family from different keyspaces.
-     * A snapshot name must be specified.
+     * Actually performs the take snapshot operation of a multiple column family from different keyspaces. A snapshot name must be specified.
      *
-     * @param tag      the tag given to the snapshot; may not be null or empty
+     * @param tag the tag given to the snapshot; may not be null or empty
      * @param keyspace the keyspace in the Cassandra database to use for the snapshot
-     * @param table    the table in the Cassandra database to use for the snapshot
-     * @param options  map of options, for example ttl, skipFlush
+     * @param table the table in the Cassandra database to use for the snapshot
+     * @param options map of options, for example ttl, skipFlush
      */
     protected void takeSnapshotInternal(@NotNull String tag,
                                         @NotNull String keyspace,
@@ -155,14 +152,16 @@ public class CassandraStorageOperations implements StorageOperations
      * {@inheritDoc}
      */
     @Override
-    public void clearSnapshot(@NotNull String tag, @NotNull String keyspace, @NotNull String table)
+    public void clearSnapshot(@NotNull String tag,
+                              @NotNull String keyspace,
+                              @NotNull String table)
     {
         requireNonNull(tag, "snapshot tag must be non-null");
         requireNonNull(keyspace, "keyspace must be non-null");
         requireNonNull(table, "table must be non-null");
-        LOGGER.debug("Table is not supported by Cassandra JMX endpoints. " +
-                     "Clearing snapshot with tag={} and keyspace={}; table={} is ignored", tag, keyspace, table);
-        String[] keyspaces = { keyspace };
+        LOGGER.debug("Table is not supported by Cassandra JMX endpoints. " + "Clearing snapshot with tag={} and keyspace={}; table={} is ignored", tag,
+                keyspace, table);
+        String[] keyspaces = { keyspace};
         jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
                  .clearSnapshot(tag, keyspaces);
     }
@@ -180,7 +179,8 @@ public class CassandraStorageOperations implements StorageOperations
      * {@inheritDoc}
      */
     @Override
-    public TokenRangeReplicasResponse tokenRangeReplicas(@NotNull Name keyspace, @NotNull String partitioner)
+    public TokenRangeReplicasResponse tokenRangeReplicas(@NotNull Name keyspace,
+                                                         @NotNull String partitioner)
     {
         return tokenRangeReplicaProvider.tokenRangeReplicas(keyspace, Partitioners.from(partitioner));
     }
@@ -206,8 +206,10 @@ public class CassandraStorageOperations implements StorageOperations
     }
 
     @Override
-    public void outOfRangeDataCleanup(@NotNull String keyspace, @NotNull String table, int concurrency)
-    throws IOException, ExecutionException, InterruptedException
+    public void outOfRangeDataCleanup(@NotNull String keyspace,
+                                      @NotNull String table,
+                                      int concurrency)
+            throws IOException, ExecutionException, InterruptedException
     {
         requireNonNull(keyspace, "keyspace must be non-null");
         requireNonNull(table, "table must be non-null");

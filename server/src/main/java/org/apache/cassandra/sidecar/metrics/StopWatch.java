@@ -24,8 +24,7 @@ import java.util.function.LongConsumer;
 import io.vertx.core.Future;
 
 /**
- * Provides functionality to measure time taken for operations to completed, i.e. a stopwatch. The time measured is generally used for
- * metrics collection.
+ * Provides functionality to measure time taken for operations to completed, i.e. a stopwatch. The time measured is generally used for metrics collection.
  */
 public class StopWatch
 {
@@ -34,7 +33,8 @@ public class StopWatch
         throw new UnsupportedOperationException();
     }
 
-    public static void measureTimeTaken(Runnable runnable, LongConsumer intervalConsumer)
+    public static void measureTimeTaken(Runnable runnable,
+                                        LongConsumer intervalConsumer)
     {
         long start = System.nanoTime();
         boolean success = true;
@@ -56,13 +56,15 @@ public class StopWatch
         }
     }
 
-    public static <V> Future<V> measureTimeTaken(Future<V> future, LongConsumer intervalConsumer)
+    public static <V> Future<V> measureTimeTaken(Future<V> future,
+                                                 LongConsumer intervalConsumer)
     {
         long start = System.nanoTime();
         return future.onSuccess(v -> intervalConsumer.accept(System.nanoTime() - start));
     }
 
-    public static <V> CompletableFuture<V> measureTimeTaken(CompletableFuture<V> future, LongConsumer intervalConsumer)
+    public static <V> CompletableFuture<V> measureTimeTaken(CompletableFuture<V> future,
+                                                            LongConsumer intervalConsumer)
     {
         long start = System.nanoTime();
         return future.thenApply(v -> {

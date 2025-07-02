@@ -31,16 +31,14 @@ public interface TableJmxOperations
     /**
      * Load new sstables from the given directory
      *
-     * @param srcPaths         the path to the new sstables - if it is an empty set, the data directories will
-     *                         be scanned
-     * @param resetLevel       if the level should be reset to 0 on the new sstables
-     * @param clearRepaired    if repaired info should be wiped from the new sstables
-     * @param verifySSTables   if the new sstables should be verified that they are not corrupt
-     * @param verifyTokens     if the tokens in the new sstables should be verified that they are owned by the
-     *                         current node
+     * @param srcPaths the path to the new sstables - if it is an empty set, the data directories will be scanned
+     * @param resetLevel if the level should be reset to 0 on the new sstables
+     * @param clearRepaired if repaired info should be wiped from the new sstables
+     * @param verifySSTables if the new sstables should be verified that they are not corrupt
+     * @param verifyTokens if the tokens in the new sstables should be verified that they are owned by the current node
      * @param invalidateCaches if row cache should be invalidated for the keys in the new sstables
-     * @param extendedVerify   if we should run an extended verify checking all values in the new sstables
-     * @param copyData         if we should copy data from source paths instead of moving them
+     * @param extendedVerify if we should run an extended verify checking all values in the new sstables
+     * @param copyData if we should copy data from source paths instead of moving them
      * @return list of failed import directories
      */
     List<String> importNewSSTables(Set<String> srcPaths,

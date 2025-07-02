@@ -38,10 +38,8 @@ class RestoreSliceManifestTest
     void testSerDeser() throws JsonProcessingException
     {
         RestoreSliceManifest origin = new RestoreSliceManifest();
-        origin.put("sstable1", new RestoreSliceManifest.ManifestEntry(Collections.singletonMap("file1", "checksum1"),
-                                                                      BigInteger.ONE, BigInteger.valueOf(2)));
-        origin.put("sstable2", new RestoreSliceManifest.ManifestEntry(Collections.singletonMap("file2", "checksum1"),
-                                                                      BigInteger.ONE, BigInteger.valueOf(2)));
+        origin.put("sstable1", new RestoreSliceManifest.ManifestEntry(Collections.singletonMap("file1", "checksum1"), BigInteger.ONE, BigInteger.valueOf(2)));
+        origin.put("sstable2", new RestoreSliceManifest.ManifestEntry(Collections.singletonMap("file2", "checksum1"), BigInteger.ONE, BigInteger.valueOf(2)));
         String json = MAPPER.writeValueAsString(origin);
         RestoreSliceManifest manifestRead = MAPPER.readValue(json, RestoreSliceManifest.class);
 
@@ -54,9 +52,8 @@ class RestoreSliceManifestTest
         RestoreSliceManifest manifest = new RestoreSliceManifest();
         for (int i = 0; i < 10; i++)
         {
-            manifest.put("sstable" + i,
-                         new RestoreSliceManifest.ManifestEntry(Collections.singletonMap("file" + i, "checksum" + i),
-                                                                BigInteger.valueOf(i), BigInteger.valueOf(i + 1)));
+            manifest.put("sstable" + i, new RestoreSliceManifest.ManifestEntry(Collections.singletonMap("file" + i, "checksum" + i), BigInteger.valueOf(i),
+                    BigInteger.valueOf(i + 1)));
         }
 
         Map<String, String> merged = manifest.mergeAllChecksums();

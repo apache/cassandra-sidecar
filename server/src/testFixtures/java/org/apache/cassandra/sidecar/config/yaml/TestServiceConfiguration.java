@@ -18,12 +18,10 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 
 /**
- * A ServiceConfiguration implementation created for test.
- * It binds to "0.0.0.0" and port 0 to find an available port at test runtime
+ * A ServiceConfiguration implementation created for test. It binds to "0.0.0.0" and port 0 to find an available port at test runtime
  */
 public class TestServiceConfiguration extends ServiceConfigurationImpl
 {

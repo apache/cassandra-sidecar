@@ -115,7 +115,10 @@ public class CdcModule extends AbstractModule
     VertxRoute updateServiceConfigurationRoute(RouteBuilder.Factory factory,
                                                UpdateServiceConfigHandler updateServiceConfigHandler)
     {
-        return factory.builderForRoute().setBodyHandler(true).handler(updateServiceConfigHandler).build();
+        return factory.builderForRoute()
+                      .setBodyHandler(true)
+                      .handler(updateServiceConfigHandler)
+                      .build();
     }
 
     @ProvidesIntoMap
@@ -151,7 +154,8 @@ public class CdcModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SidecarInstancesProvider sidecarInstancesProvider(InstancesMetadata instancesMetadata, ServiceConfiguration serviceConfiguration)
+    public SidecarInstancesProvider sidecarInstancesProvider(InstancesMetadata instancesMetadata,
+                                                             ServiceConfiguration serviceConfiguration)
     {
         return new DynamicSidecarInstancesProvider(instancesMetadata, serviceConfiguration);
     }

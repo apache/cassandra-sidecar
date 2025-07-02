@@ -18,9 +18,8 @@
 
 package org.apache.cassandra.sidecar.common.request;
 
-import java.util.UUID;
-
 import io.netty.handler.codec.http.HttpMethod;
+import java.util.UUID;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 
@@ -35,11 +34,14 @@ public class CreateRestoreJobSliceRequest extends Request
      * Constructs a Sidecar request with the given {@code requestURI}
      *
      * @param keyspace name of the keyspace in the cluster
-     * @param table    name of the table in the cluster
-     * @param jobId    job ID of the restore job to create slice
-     * @param payload  request payload
+     * @param table name of the table in the cluster
+     * @param jobId job ID of the restore job to create slice
+     * @param payload request payload
      */
-    public CreateRestoreJobSliceRequest(String keyspace, String table, UUID jobId, CreateSliceRequestPayload payload)
+    public CreateRestoreJobSliceRequest(String keyspace,
+                                        String table,
+                                        UUID jobId,
+                                        CreateSliceRequestPayload payload)
     {
         super(requestURI(keyspace, table, jobId));
         this.payload = payload;
@@ -57,11 +59,12 @@ public class CreateRestoreJobSliceRequest extends Request
         return payload;
     }
 
-    static String requestURI(String keyspace, String table, UUID jobId)
+    static String requestURI(String keyspace,
+                             String table,
+                             UUID jobId)
     {
-        return ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE
-               .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
-               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table)
-               .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, jobId.toString());
+        return ApiEndpointsV1.RESTORE_JOB_SLICES_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
+                                                      .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table)
+                                                      .replaceAll(ApiEndpointsV1.JOB_ID_PATH_PARAM, jobId.toString());
     }
 }

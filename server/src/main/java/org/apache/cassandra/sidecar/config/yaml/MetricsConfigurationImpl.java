@@ -18,10 +18,9 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Collections;
 import java.util.List;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.MetricsConfiguration;
 import org.apache.cassandra.sidecar.config.MetricsFilteringConfiguration;
 import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
@@ -32,8 +31,7 @@ import org.apache.cassandra.sidecar.config.VertxMetricsConfiguration;
 public class MetricsConfigurationImpl implements MetricsConfiguration
 {
     public static final String DEFAULT_DROPWIZARD_REGISTRY_NAME = "cassandra_sidecar";
-    public static final VertxMetricsConfiguration DEFAULT_VERTX_METRICS_CONFIGURATION
-    = new VertxMetricsConfigurationImpl();
+    public static final VertxMetricsConfiguration DEFAULT_VERTX_METRICS_CONFIGURATION = new VertxMetricsConfigurationImpl();
 
     @JsonProperty(value = "registry_name")
     protected final String registryName;
@@ -46,8 +44,7 @@ public class MetricsConfigurationImpl implements MetricsConfiguration
 
     public MetricsConfigurationImpl()
     {
-        this(DEFAULT_DROPWIZARD_REGISTRY_NAME, DEFAULT_VERTX_METRICS_CONFIGURATION,
-             Collections.emptyList(), Collections.emptyList());
+        this(DEFAULT_DROPWIZARD_REGISTRY_NAME, DEFAULT_VERTX_METRICS_CONFIGURATION, Collections.emptyList(), Collections.emptyList());
     }
 
     public MetricsConfigurationImpl(String registryName,

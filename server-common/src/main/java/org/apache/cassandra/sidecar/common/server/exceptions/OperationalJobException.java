@@ -45,7 +45,8 @@ public class OperationalJobException extends RuntimeException
         super(message);
     }
 
-    public OperationalJobException(String message, Throwable cause)
+    public OperationalJobException(String message,
+                                   Throwable cause)
     {
         super(message, cause);
     }

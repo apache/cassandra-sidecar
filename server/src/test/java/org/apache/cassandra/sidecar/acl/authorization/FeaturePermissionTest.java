@@ -18,17 +18,14 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
-import org.junit.jupiter.api.Test;
-
 import io.vertx.ext.auth.authorization.AndAuthorization;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.impl.PermissionBasedAuthorizationImpl;
 import io.vertx.ext.auth.authorization.impl.WildcardPermissionBasedAuthorizationImpl;
-
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.CREATE_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DELETE_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DELETE_STAGED_SSTABLE;
@@ -57,106 +54,70 @@ class FeaturePermissionTest
     @Test
     void testFeaturePermissionAuthorizesAllChildPermissions()
     {
-        Authorization bulkReadAuthorization
-        = ANALYTICS_READ_DIRECT.permission().toAuthorization("data/university/student");
+        Authorization bulkReadAuthorization = ANALYTICS_READ_DIRECT.permission()
+                                                                   .toAuthorization("data/university/student");
 
-        assertThat(bulkReadAuthorization.verify(READ_RING_KEYSPACE_SCOPED
-                                                .toAuthorization("data/university"))).isTrue();
-        assertThat(bulkReadAuthorization.verify(READ_SCHEMA_KEYSPACE_SCOPED
-                                                .toAuthorization("data/university"))).isTrue();
-        assertThat(bulkReadAuthorization.verify(CREATE_SNAPSHOT
-                                                .toAuthorization("data/university/student"))).isTrue();
-        assertThat(bulkReadAuthorization.verify(READ_SNAPSHOT
-                                                .toAuthorization("data/university/student"))).isTrue();
-        assertThat(bulkReadAuthorization.verify(DELETE_SNAPSHOT
-                                                .toAuthorization("data/university/student"))).isTrue();
-        assertThat(bulkReadAuthorization.verify(STREAM_SNAPSHOT
-                                                .toAuthorization("data/university/student"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(READ_RING_KEYSPACE_SCOPED.toAuthorization("data/university"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(READ_SCHEMA_KEYSPACE_SCOPED.toAuthorization("data/university"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(CREATE_SNAPSHOT.toAuthorization("data/university/student"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(READ_SNAPSHOT.toAuthorization("data/university/student"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(DELETE_SNAPSHOT.toAuthorization("data/university/student"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(STREAM_SNAPSHOT.toAuthorization("data/university/student"))).isTrue();
         assertThat(bulkReadAuthorization.verify(SELECT.toAuthorization("data/university/student"))).isTrue();
 
-        assertThat(bulkReadAuthorization.verify(UPLOAD_STAGED_SSTABLE
-                                                .toAuthorization("data/university/student"))).isFalse();
-        assertThat(bulkReadAuthorization.verify(IMPORT_STAGED_SSTABLE
-                                                .toAuthorization("data/university/student"))).isFalse();
-        assertThat(bulkReadAuthorization.verify(DELETE_STAGED_SSTABLE
-                                                .toAuthorization("data/university/student"))).isFalse();
-        assertThat(bulkReadAuthorization.verify(STATS_TABLE_SCOPED
-                                                .toAuthorization("data/university/student"))).isTrue();
-        assertThat(bulkReadAuthorization.verify(STATS_CLUSTER_SCOPED
-                                                .toAuthorization("cluster"))).isFalse();
+        assertThat(bulkReadAuthorization.verify(UPLOAD_STAGED_SSTABLE.toAuthorization("data/university/student"))).isFalse();
+        assertThat(bulkReadAuthorization.verify(IMPORT_STAGED_SSTABLE.toAuthorization("data/university/student"))).isFalse();
+        assertThat(bulkReadAuthorization.verify(DELETE_STAGED_SSTABLE.toAuthorization("data/university/student"))).isFalse();
+        assertThat(bulkReadAuthorization.verify(STATS_TABLE_SCOPED.toAuthorization("data/university/student"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(STATS_CLUSTER_SCOPED.toAuthorization("cluster"))).isFalse();
 
-        Authorization bulkWriteAuthorization
-        = ANALYTICS_WRITE_DIRECT.permission().toAuthorization("data/university/student");
+        Authorization bulkWriteAuthorization = ANALYTICS_WRITE_DIRECT.permission()
+                                                                     .toAuthorization("data/university/student");
 
-        assertThat(bulkWriteAuthorization.verify(READ_SCHEMA_KEYSPACE_SCOPED
-                                                 .toAuthorization("data/university"))).isTrue();
-        assertThat(bulkWriteAuthorization.verify(READ_TOPOLOGY
-                                                 .toAuthorization("data/university"))).isTrue();
-        assertThat(bulkWriteAuthorization.verify(UPLOAD_STAGED_SSTABLE
-                                                 .toAuthorization("data/university/student"))).isTrue();
-        assertThat(bulkWriteAuthorization.verify(IMPORT_STAGED_SSTABLE
-                                                 .toAuthorization("data/university/student"))).isTrue();
-        assertThat(bulkWriteAuthorization.verify(DELETE_STAGED_SSTABLE
-                                                 .toAuthorization("data/university/student"))).isTrue();
+        assertThat(bulkWriteAuthorization.verify(READ_SCHEMA_KEYSPACE_SCOPED.toAuthorization("data/university"))).isTrue();
+        assertThat(bulkWriteAuthorization.verify(READ_TOPOLOGY.toAuthorization("data/university"))).isTrue();
+        assertThat(bulkWriteAuthorization.verify(UPLOAD_STAGED_SSTABLE.toAuthorization("data/university/student"))).isTrue();
+        assertThat(bulkWriteAuthorization.verify(IMPORT_STAGED_SSTABLE.toAuthorization("data/university/student"))).isTrue();
+        assertThat(bulkWriteAuthorization.verify(DELETE_STAGED_SSTABLE.toAuthorization("data/university/student"))).isTrue();
 
         assertThat(bulkWriteAuthorization.verify(READ_RING.toAuthorization("cluster"))).isFalse();
-        assertThat(bulkWriteAuthorization.verify(READ_SNAPSHOT
-                                                 .toAuthorization("data/university/student"))).isFalse();
-        assertThat(bulkWriteAuthorization.verify(STREAM_SNAPSHOT
-                                                 .toAuthorization("data/university/student"))).isFalse();
+        assertThat(bulkWriteAuthorization.verify(READ_SNAPSHOT.toAuthorization("data/university/student"))).isFalse();
+        assertThat(bulkWriteAuthorization.verify(STREAM_SNAPSHOT.toAuthorization("data/university/student"))).isFalse();
         assertThat(bulkWriteAuthorization.verify(SELECT.toAuthorization("data/university/student"))).isFalse();
     }
 
     @Test
     void testFeaturePermissionAcrossTables()
     {
-        Authorization bulkReadAuthorization
-        = ANALYTICS_READ_DIRECT.permission().toAuthorization("data/university/*");
+        Authorization bulkReadAuthorization = ANALYTICS_READ_DIRECT.permission()
+                                                                   .toAuthorization("data/university/*");
 
-        assertThat(bulkReadAuthorization.verify(READ_RING_KEYSPACE_SCOPED
-                                                .toAuthorization("data/university"))).isTrue();
-        assertThat(bulkReadAuthorization.verify(READ_SCHEMA_KEYSPACE_SCOPED
-                                                .toAuthorization("data/university"))).isTrue();
-        assertThat(bulkReadAuthorization.verify(CREATE_SNAPSHOT
-                                                .toAuthorization("data/university/*"))).isTrue();
-        assertThat(bulkReadAuthorization.verify(READ_SNAPSHOT
-                                                .toAuthorization("data/university/*"))).isTrue();
-        assertThat(bulkReadAuthorization.verify(DELETE_SNAPSHOT
-                                                .toAuthorization("data/university/*"))).isTrue();
-        assertThat(bulkReadAuthorization.verify(STREAM_SNAPSHOT
-                                                .toAuthorization("data/university/*"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(READ_RING_KEYSPACE_SCOPED.toAuthorization("data/university"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(READ_SCHEMA_KEYSPACE_SCOPED.toAuthorization("data/university"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(CREATE_SNAPSHOT.toAuthorization("data/university/*"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(READ_SNAPSHOT.toAuthorization("data/university/*"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(DELETE_SNAPSHOT.toAuthorization("data/university/*"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(STREAM_SNAPSHOT.toAuthorization("data/university/*"))).isTrue();
         assertThat(bulkReadAuthorization.verify(SELECT.toAuthorization("data/university/*"))).isTrue();
 
-        assertThat(bulkReadAuthorization.verify(UPLOAD_STAGED_SSTABLE
-                                                .toAuthorization("data/university/*"))).isFalse();
-        assertThat(bulkReadAuthorization.verify(IMPORT_STAGED_SSTABLE
-                                                .toAuthorization("data/university/*"))).isFalse();
-        assertThat(bulkReadAuthorization.verify(DELETE_STAGED_SSTABLE
-                                                .toAuthorization("data/university/*"))).isFalse();
-        assertThat(bulkReadAuthorization.verify(STATS_TABLE_SCOPED
-                                                .toAuthorization("data/university/*"))).isTrue();
-        assertThat(bulkReadAuthorization.verify(STATS_CLUSTER_SCOPED
-                                                .toAuthorization("cluster"))).isFalse();
+        assertThat(bulkReadAuthorization.verify(UPLOAD_STAGED_SSTABLE.toAuthorization("data/university/*"))).isFalse();
+        assertThat(bulkReadAuthorization.verify(IMPORT_STAGED_SSTABLE.toAuthorization("data/university/*"))).isFalse();
+        assertThat(bulkReadAuthorization.verify(DELETE_STAGED_SSTABLE.toAuthorization("data/university/*"))).isFalse();
+        assertThat(bulkReadAuthorization.verify(STATS_TABLE_SCOPED.toAuthorization("data/university/*"))).isTrue();
+        assertThat(bulkReadAuthorization.verify(STATS_CLUSTER_SCOPED.toAuthorization("cluster"))).isFalse();
 
-        Authorization bulkWriteAuthorization
-        = ANALYTICS_WRITE_DIRECT.permission().toAuthorization("data/university/*");
+        Authorization bulkWriteAuthorization = ANALYTICS_WRITE_DIRECT.permission()
+                                                                     .toAuthorization("data/university/*");
 
-        assertThat(bulkWriteAuthorization.verify(READ_SCHEMA_KEYSPACE_SCOPED
-                                                 .toAuthorization("data/university"))).isTrue();
-        assertThat(bulkWriteAuthorization.verify(READ_TOPOLOGY
-                                                 .toAuthorization("data/university"))).isTrue();
-        assertThat(bulkWriteAuthorization.verify(UPLOAD_STAGED_SSTABLE
-                                                 .toAuthorization("data/university/*"))).isTrue();
-        assertThat(bulkWriteAuthorization.verify(IMPORT_STAGED_SSTABLE
-                                                 .toAuthorization("data/university/*"))).isTrue();
-        assertThat(bulkWriteAuthorization.verify(DELETE_STAGED_SSTABLE
-                                                 .toAuthorization("data/university/*"))).isTrue();
+        assertThat(bulkWriteAuthorization.verify(READ_SCHEMA_KEYSPACE_SCOPED.toAuthorization("data/university"))).isTrue();
+        assertThat(bulkWriteAuthorization.verify(READ_TOPOLOGY.toAuthorization("data/university"))).isTrue();
+        assertThat(bulkWriteAuthorization.verify(UPLOAD_STAGED_SSTABLE.toAuthorization("data/university/*"))).isTrue();
+        assertThat(bulkWriteAuthorization.verify(IMPORT_STAGED_SSTABLE.toAuthorization("data/university/*"))).isTrue();
+        assertThat(bulkWriteAuthorization.verify(DELETE_STAGED_SSTABLE.toAuthorization("data/university/*"))).isTrue();
 
         assertThat(bulkWriteAuthorization.verify(READ_RING.toAuthorization("data/university"))).isFalse();
-        assertThat(bulkWriteAuthorization.verify(READ_SNAPSHOT
-                                                 .toAuthorization("data/university/*"))).isFalse();
-        assertThat(bulkWriteAuthorization.verify(STREAM_SNAPSHOT
-                                                 .toAuthorization("data/university/*"))).isFalse();
+        assertThat(bulkWriteAuthorization.verify(READ_SNAPSHOT.toAuthorization("data/university/*"))).isFalse();
+        assertThat(bulkWriteAuthorization.verify(STREAM_SNAPSHOT.toAuthorization("data/university/*"))).isFalse();
         assertThat(bulkWriteAuthorization.verify(SELECT.toAuthorization("data/university/*"))).isFalse();
     }
 
@@ -182,8 +143,7 @@ class FeaturePermissionTest
         };
         Permission repairPermission = new StandardPermission("REPAIR", dcScope);
 
-        CompositePermission compositePermission
-        = new CompositePermission("featureX", Collections.singletonList(repairPermission));
+        CompositePermission compositePermission = new CompositePermission("featureX", Collections.singletonList(repairPermission));
 
         Authorization compositeAuthorization = compositePermission.toAuthorization("DC1");
 
@@ -196,43 +156,41 @@ class FeaturePermissionTest
     {
         CompositePermission cdcPermission = permissionFactory.createFeaturePermission("CDC");
         assertThat(cdcPermission).isNotNull();
-        assertThat(cdcPermission.childPermissions().size()).isOne();
+        assertThat(cdcPermission.childPermissions()
+                                .size()).isOne();
         CompositePermission bulkReadPermission = permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT");
         assertThat(bulkReadPermission).isNotNull();
-        assertThat(bulkReadPermission.childPermissions().size()).isEqualTo(8);
+        assertThat(bulkReadPermission.childPermissions()
+                                     .size()).isEqualTo(8);
         CompositePermission bulkWritePermission = permissionFactory.createFeaturePermission("ANALYTICS:WRITE_DIRECT");
         assertThat(bulkWritePermission).isNotNull();
-        assertThat(bulkWritePermission.childPermissions().size()).isEqualTo(6);
+        assertThat(bulkWritePermission.childPermissions()
+                                      .size()).isEqualTo(6);
         CompositePermission bulkWriteS3Permission = permissionFactory.createFeaturePermission("ANALYTICS:WRITE_S3_COMPAT");
         assertThat(bulkWriteS3Permission).isNotNull();
-        assertThat(bulkWriteS3Permission.childPermissions().size()).isEqualTo(6);
+        assertThat(bulkWriteS3Permission.childPermissions()
+                                        .size()).isEqualTo(6);
     }
 
     @Test
     void testResourceResolvedForAllChildPermissions()
     {
-        CompositePermission bulkReadPermission
-        = permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT");
-        AndAuthorization bulkReadAuthorization
-        = (AndAuthorization) bulkReadPermission.toAuthorization("data/university/student");
+        CompositePermission bulkReadPermission = permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT");
+        AndAuthorization bulkReadAuthorization = (AndAuthorization) bulkReadPermission.toAuthorization("data/university/student");
         Set<Authorization> resolvedAuthorizations = new HashSet<>(bulkReadAuthorization.getAuthorizations());
         assertThat(resolvedAuthorizations.size()).isEqualTo(8);
-        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:CREATE")
-                                                   .setResource("data/university/student"))).isTrue();
-        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:DELETE")
-                                                   .setResource("data/university/student"))).isTrue();
-        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:READ")
-                                                   .setResource("data/university/student"))).isTrue();
-        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:STREAM")
-                                                   .setResource("data/university/student"))).isTrue();
-        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SCHEMA:READ")
-                                                   .setResource("data/university"))).isTrue();
-        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("RING:READ")
-                                                   .setResource("data/university"))).isTrue();
-        assertThat(resolvedAuthorizations.contains(new PermissionBasedAuthorizationImpl("SELECT")
-                                                   .setResource("data/university/student"))).isTrue();
-        assertThat(resolvedAuthorizations.contains(new PermissionBasedAuthorizationImpl("STATS")
-                                                   .setResource("data/university/student"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(
+                new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:CREATE").setResource("data/university/student"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(
+                new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:DELETE").setResource("data/university/student"))).isTrue();
+        assertThat(
+                resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:READ").setResource("data/university/student"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(
+                new WildcardPermissionBasedAuthorizationImpl("SNAPSHOT:STREAM").setResource("data/university/student"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("SCHEMA:READ").setResource("data/university"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new WildcardPermissionBasedAuthorizationImpl("RING:READ").setResource("data/university"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new PermissionBasedAuthorizationImpl("SELECT").setResource("data/university/student"))).isTrue();
+        assertThat(resolvedAuthorizations.contains(new PermissionBasedAuthorizationImpl("STATS").setResource("data/university/student"))).isTrue();
     }
 
     @Test
@@ -241,12 +199,14 @@ class FeaturePermissionTest
         CompositePermission readPermission = permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT");
         assertThat(readPermission).isNotNull();
         // has basic permissions for bulk read feature
-        assertThat(readPermission.childPermissions().size()).isEqualTo(8);
+        assertThat(readPermission.childPermissions()
+                                 .size()).isEqualTo(8);
 
         CompositePermission readWritePermission = permissionFactory.createFeaturePermission("ANALYTICS:READ_DIRECT,WRITE_DIRECT");
         assertThat(readWritePermission).isNotNull();
         // has basic permissions for both bulk read and bulk write feature
-        assertThat(readWritePermission.childPermissions().size()).isEqualTo(14);
+        assertThat(readWritePermission.childPermissions()
+                                      .size()).isEqualTo(14);
     }
 
     @Test

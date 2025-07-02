@@ -18,21 +18,6 @@
 
 package org.apache.cassandra.sidecar.cluster;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
-import javax.management.Notification;
-import javax.management.NotificationListener;
-import javax.management.remote.JMXConnectionNotification;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Host;
@@ -45,6 +30,14 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
@@ -60,7 +53,11 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.jetbrains.annotations.NotNull;
-
+import javax.management.Notification;
+import javax.management.NotificationListener;
+import javax.management.remote.JMXConnectionNotification;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
@@ -71,9 +68,8 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSAND
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_JMX_READY;
 
 /**
- * Since it's possible for the version of Cassandra to change under us, we need this delegate to wrap the functionality
- * of the underlying Cassandra adapter.  If a server reboots, we can swap out the right Adapter when the driver
- * reconnects.
+ * Since it's possible for the version of Cassandra to change under us, we need this delegate to wrap the functionality of the underlying Cassandra adapter. If
+ * a server reboots, we can swap out the right Adapter when the driver reconnects.
  *
  * <ol>
  * <li>The session lazily connects</li>
@@ -106,16 +102,16 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     /**
      * Constructs a new {@link CassandraAdapterDelegate} for the given {@code cassandraInstance}
      *
-     * @param vertx               the vertx instance
+     * @param vertx the vertx instance
      * @param cassandraInstanceId the cassandra instance identifier
-     * @param versionProvider     a Cassandra version provider
-     * @param session             the session to the Cassandra database
-     * @param jmxClient           the JMX client used to communicate with the Cassandra instance
-     * @param driverUtils         a wrapper that exposes Cassandra driver utilities
-     * @param sidecarVersion      the version of the Sidecar from the current binary
-     * @param host                the Cassandra instance's hostname or ip address as a string
-     * @param port                the Cassandra instance's port number
-     * @param healthMetrics       health metrics
+     * @param versionProvider a Cassandra version provider
+     * @param session the session to the Cassandra database
+     * @param jmxClient the JMX client used to communicate with the Cassandra instance
+     * @param driverUtils a wrapper that exposes Cassandra driver utilities
+     * @param sidecarVersion the version of the Sidecar from the current binary
+     * @param host the Cassandra instance's hostname or ip address as a string
+     * @param port the Cassandra instance's port number
+     * @param healthMetrics health metrics
      */
     public CassandraAdapterDelegate(Vertx vertx,
                                     int cassandraInstanceId,
@@ -173,10 +169,12 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     }
 
     /**
-     * Should be called on initial connect as well as when a server comes back since it might be from an upgrade
-     * synchronized, so we don't flood the DB with version requests
+     * Should be called on initial connect as well as when a server comes back since it might be from an upgrade synchronized, so we don't flood the DB with
+     * version requests
      *
-     * <p>If the healthcheck determines we've changed versions, it should load the proper adapter</p>
+     * <p>
+     * If the healthcheck determines we've changed versions, it should load the proper adapter
+     * </p>
      */
     public void healthCheck()
     {
@@ -200,14 +198,13 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
         else
         {
-            LOGGER.debug("Skipping health check for cassandraInstanceId={} because there's " +
-                         "an active check at the moment", cassandraInstanceId);
+            LOGGER.debug("Skipping health check for cassandraInstanceId={} because there's " + "an active check at the moment", cassandraInstanceId);
         }
     }
 
     /**
-     * Performs health checks by utilizing the JMX protocol. It uses a small subset of the exposed mBeans to
-     * collect information needed to populate the {@link NodeSettings} object.
+     * Performs health checks by utilizing the JMX protocol. It uses a small subset of the exposed mBeans to collect information needed to populate the
+     * {@link NodeSettings} object.
      */
     protected synchronized void jmxHealthCheck()
     {
@@ -222,8 +219,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 adapter = versionProvider.cassandra(newNodeSettings.releaseVersion())
                                          .create(cqlSessionProvider, jmxClient, localNativeTransportAddress);
                 nodeSettingsFromJmx = newNodeSettings;
-                LOGGER.info("Cassandra version change detected (from={} to={}) for cassandraInstanceId={}. " +
-                            "New adapter loaded={}", previousVersion, currentVersion, cassandraInstanceId, adapter);
+                LOGGER.info("Cassandra version change detected (from={} to={}) for cassandraInstanceId={}. " + "New adapter loaded={}", previousVersion,
+                        currentVersion, cassandraInstanceId, adapter);
 
                 notifyJmxConnection();
             }
@@ -249,8 +246,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
         catch (CassandraUnavailableException cue)
         {
-            LOGGER.info("No local CQL session is available for cassandraInstanceId={}. " +
-                        "Cassandra instance is down presumably.", cassandraInstanceId);
+            LOGGER.info("No local CQL session is available for cassandraInstanceId={}. " + "Cassandra instance is down presumably.", cassandraInstanceId);
             markNativeDownAndMaybeNotifyDisconnection();
             return;
         }
@@ -261,17 +257,18 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         {
             // NOTE: We cannot use `executeLocal` here as there may be no adapter yet.
             SimpleStatement healthCheckStatement = new SimpleStatement("SELECT release_version FROM system.local");
-            Metadata metadata = activeSession.getCluster().getMetadata();
+            Metadata metadata = activeSession.getCluster()
+                                             .getMetadata();
             host = getHost(metadata);
             if (host == null)
             {
-                LOGGER.warn("Could not find host in cluster metadata by address and port {}",
-                            localNativeTransportAddress);
+                LOGGER.warn("Could not find host in cluster metadata by address and port {}", localNativeTransportAddress);
                 return;
             }
             healthCheckStatement.setHost(host);
             healthCheckStatement.setConsistencyLevel(ConsistencyLevel.ONE);
-            Row row = activeSession.execute(healthCheckStatement).one();
+            Row row = activeSession.execute(healthCheckStatement)
+                                   .one();
             // This should never happen but added for completeness
             Preconditions.checkArgument(row != null, "Session execution result should never be null");
 
@@ -292,10 +289,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     protected NodeSettings newNodeSettingsFromJmx()
     {
-        LimitedStorageOperations storageOperations =
-        jmxClient.proxy(LimitedStorageOperations.class, STORAGE_SERVICE_OBJ_NAME);
-        LimitedEndpointSnitchOperations endpointSnitchOperations =
-        jmxClient.proxy(LimitedEndpointSnitchOperations.class, ENDPOINT_SNITCH_INFO_OBJ_NAME);
+        LimitedStorageOperations storageOperations = jmxClient.proxy(LimitedStorageOperations.class, STORAGE_SERVICE_OBJ_NAME);
+        LimitedEndpointSnitchOperations endpointSnitchOperations = jmxClient.proxy(LimitedEndpointSnitchOperations.class, ENDPOINT_SNITCH_INFO_OBJ_NAME);
 
         String releaseVersion = storageOperations.getReleaseVersion();
         String partitionerName = storageOperations.getPartitionerName();
@@ -350,8 +345,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     }
 
     /**
-     * @return metadata on the connected cluster, including known nodes and schema definitions obtained from the
-     * {@link ICassandraAdapter}
+     * @return metadata on the connected cluster, including known nodes and schema definitions obtained from the {@link ICassandraAdapter}
      */
     @Override
     @NotNull
@@ -361,8 +355,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     }
 
     /**
-     * Returns the cached node settings value obtained during scheduled health checks. This method does not delegate
-     * to the internal adapter, as the information is retrieved on the configured health check interval.
+     * Returns the cached node settings value obtained during scheduled health checks. This method does not delegate to the internal adapter, as the information
+     * is retrieved on the configured health check interval.
      *
      * @return a cached {@link NodeSettings}.
      * @throws CassandraUnavailableException when no JMX connection is established
@@ -514,18 +508,18 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     protected void notifyJmxConnection()
     {
         healthMetrics.jmxDown.metric.setValue(0);
-        JsonObject connectMessage = new JsonObject()
-                                    .put("cassandraInstanceId", cassandraInstanceId);
-        vertx.eventBus().publish(ON_CASSANDRA_JMX_READY.address(), connectMessage);
+        JsonObject connectMessage = new JsonObject().put("cassandraInstanceId", cassandraInstanceId);
+        vertx.eventBus()
+             .publish(ON_CASSANDRA_JMX_READY.address(), connectMessage);
         LOGGER.info("JMX connected to cassandraInstanceId={}", cassandraInstanceId);
     }
 
     protected void notifyNativeConnection()
     {
         healthMetrics.nativeDown.metric.setValue(0);
-        JsonObject connectMessage = new JsonObject()
-                                    .put("cassandraInstanceId", cassandraInstanceId);
-        vertx.eventBus().publish(ON_CASSANDRA_CQL_READY.address(), connectMessage);
+        JsonObject connectMessage = new JsonObject().put("cassandraInstanceId", cassandraInstanceId);
+        vertx.eventBus()
+             .publish(ON_CASSANDRA_CQL_READY.address(), connectMessage);
         LOGGER.info("CQL connected to cassandraInstanceId={}", cassandraInstanceId);
     }
 
@@ -534,9 +528,9 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         healthMetrics.nativeDown.metric.setValue(1);
         if (isNativeUp.compareAndSet(true, false))
         {
-            JsonObject disconnectMessage = new JsonObject()
-                                           .put("cassandraInstanceId", cassandraInstanceId);
-            vertx.eventBus().publish(ON_CASSANDRA_CQL_DISCONNECTED.address(), disconnectMessage);
+            JsonObject disconnectMessage = new JsonObject().put("cassandraInstanceId", cassandraInstanceId);
+            vertx.eventBus()
+                 .publish(ON_CASSANDRA_CQL_DISCONNECTED.address(), disconnectMessage);
             LOGGER.info("CQL disconnection from cassandraInstanceId={}", cassandraInstanceId);
         }
     }
@@ -550,9 +544,9 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         adapter = null;
         if (currentNodeSettings != null)
         {
-            JsonObject disconnectMessage = new JsonObject()
-                                           .put("cassandraInstanceId", cassandraInstanceId);
-            vertx.eventBus().publish(ON_CASSANDRA_JMX_DISCONNECTED.address(), disconnectMessage);
+            JsonObject disconnectMessage = new JsonObject().put("cassandraInstanceId", cassandraInstanceId);
+            vertx.eventBus()
+                 .publish(ON_CASSANDRA_JMX_DISCONNECTED.address(), disconnectMessage);
             LOGGER.info("JMX disconnection from cassandraInstanceId={}", cassandraInstanceId);
         }
     }
@@ -568,7 +562,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         return getter.apply(localAdapter);
     }
 
-    private void runIfThisHost(Host host, Runnable runnable)
+    private void runIfThisHost(Host host,
+                               Runnable runnable)
     {
         if (this.localNativeTransportAddress.equals(driverUtils.getSocketAddress(host)))
         {
@@ -577,13 +572,14 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     }
 
     /**
-     * A {@link NotificationListener} implementation that reacts to {@link JMXConnectionNotification} notifications
-     * and updates the state of the JMX connection internally.
+     * A {@link NotificationListener} implementation that reacts to {@link JMXConnectionNotification} notifications and updates the state of the JMX connection
+     * internally.
      */
     protected class JmxNotificationListener implements NotificationListener
     {
         @Override
-        public void handleNotification(Notification notification, Object handback)
+        public void handleNotification(Notification notification,
+                                       Object handback)
         {
             if (notification instanceof JMXConnectionNotification)
             {
@@ -591,20 +587,20 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 String type = connectNotice.getType();
                 switch (type)
                 {
-                    case JMXConnectionNotification.OPENED:
+                    case JMXConnectionNotification.OPENED :
                         // Do not notify here as we may not have set up our own delegate yet
                         // Instead, run the JMX Health Check, which will notify once we have
                         // created or updated the adapter.
                         jmxHealthCheck();
                         break;
 
-                    case JMXConnectionNotification.CLOSED:
-                    case JMXConnectionNotification.FAILED:
-                    case JMXConnectionNotification.NOTIFS_LOST:
+                    case JMXConnectionNotification.CLOSED :
+                    case JMXConnectionNotification.FAILED :
+                    case JMXConnectionNotification.NOTIFS_LOST :
                         markJmxDownAndMaybeNotifyDisconnection();
                         break;
 
-                    default:
+                    default :
                         LOGGER.warn("Encountered unexpected JMX notification type={}", type);
                         break;
                 }
@@ -613,8 +609,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     }
 
     /**
-     * Limited StorageOperations to obtain information required for node settings. Interface visibility is public
-     * because JMX proxy works on public interfaces only.
+     * Limited StorageOperations to obtain information required for node settings. Interface visibility is public because JMX proxy works on public interfaces
+     * only.
      */
     public interface LimitedStorageOperations
     {
@@ -639,8 +635,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     }
 
     /**
-     * Limited standard Snitch info to obtain information required for node settings. Interface visibility is public
-     * because JMX proxy works on public interfaces only.
+     * Limited standard Snitch info to obtain information required for node settings. Interface visibility is public because JMX proxy works on public
+     * interfaces only.
      */
     public interface LimitedEndpointSnitchOperations
     {

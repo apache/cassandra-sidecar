@@ -17,17 +17,6 @@
  */
 package org.apache.cassandra.sidecar.handlers.cassandra;
 
-import java.net.InetAddress;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
@@ -41,11 +30,19 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.net.InetAddress;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.NODE_SETTINGS_ROUTE;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -61,7 +58,8 @@ class NodeSettingsHandlerTest
     @BeforeEach
     void setUp() throws InterruptedException
     {
-        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(new TestModule()));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
+                                                        .with(new TestModule()));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 
@@ -77,7 +75,8 @@ class NodeSettingsHandlerTest
     void tearDown() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -91,7 +90,8 @@ class NodeSettingsHandlerTest
         client.get(server.actualPort(), "localhost", NODE_SETTINGS_ROUTE)
               .as(BodyCodec.buffer())
               .send(resp -> {
-                  assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                  assertThat(resp.result()
+                                 .statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                   validateNodeSettings(resp);
                   context.completeNow();
               });
@@ -104,7 +104,8 @@ class NodeSettingsHandlerTest
         client.get(server.actualPort(), "localhost", String.format(URI_WITH_INSTANCE_ID, "1"))
               .as(BodyCodec.buffer())
               .send(resp -> {
-                  assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                  assertThat(resp.result()
+                                 .statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                   validateNodeSettings(resp);
                   context.completeNow();
               });
@@ -117,8 +118,10 @@ class NodeSettingsHandlerTest
         client.get(server.actualPort(), "localhost", String.format(URI_WITH_INSTANCE_ID, "10"))
               .as(BodyCodec.buffer())
               .send(resp -> {
-                  assertThat(resp.result().statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code());
-                  JsonObject error = resp.result().bodyAsJsonObject();
+                  assertThat(resp.result()
+                                 .statusCode()).isEqualTo(HttpResponseStatus.NOT_FOUND.code());
+                  JsonObject error = resp.result()
+                                         .bodyAsJsonObject();
                   assertThat(error.getString("status")).isEqualTo("Not Found");
                   assertThat(error.getString("message")).isEqualTo("Instance id '10' not found");
                   context.completeNow();
@@ -127,7 +130,8 @@ class NodeSettingsHandlerTest
 
     static void validateNodeSettings(AsyncResult<HttpResponse<Buffer>> resp)
     {
-        NodeSettings status = resp.result().bodyAsJson(NodeSettings.class);
+        NodeSettings status = resp.result()
+                                  .bodyAsJson(NodeSettings.class);
         assertThat(status.partitioner()).isEqualTo("testPartitioner");
         assertThat(status.releaseVersion()).isEqualTo("testVersion");
         assertThat(status.sidecarVersion()).isEqualTo("testSidecar");

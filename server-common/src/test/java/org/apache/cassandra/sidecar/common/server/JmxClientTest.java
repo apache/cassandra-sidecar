@@ -37,12 +37,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
+import org.apache.cassandra.sidecar.common.ResourceUtils;
+import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
+import sun.rmi.server.UnicastRef;
+import sun.rmi.transport.LiveRef;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import javax.management.remote.JMXConnectorServer;
 import javax.management.remote.JMXConnectorServerFactory;
 import javax.management.remote.JMXServiceURL;
-
 import com.google.common.collect.Sets;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -50,22 +53,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.platform.commons.util.Preconditions;
-
-import org.apache.cassandra.sidecar.common.ResourceUtils;
-import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
-import sun.rmi.server.UnicastRef;
-import sun.rmi.transport.LiveRef;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-
 /***
- * In order to support multiple versions of Cassandra in the Sidecar, we would like to avoid depending directly on
- * any Cassandra code.
- * Additionally, whe would like to avoid copy/pasting the entire MBean interface classes into the Sidecar.
- * This test exists to prove out some assumptions about using matching sub-interfaces (or even functional interfaces)
- * to make JMX calls. This particular call happens to match the signature of the `importNewSSTables` method on
+ * In order to support multiple versions of Cassandra in the Sidecar, we would like to avoid depending directly on any Cassandra code. Additionally, whe would
+ * like to avoid copy/pasting the entire MBean interface classes into the Sidecar. This test exists to prove out some assumptions about using matching
+ * sub-interfaces (or even functional interfaces) to make JMX calls. This particular call happens to match the signature of the `importNewSSTables` method on
  * StorageServiceProxy in C* 4.0.
  */
 class JmxClientTest
@@ -86,9 +80,7 @@ class JmxClientTest
     {
         System.setProperty("java.rmi.server.hostname", "127.0.0.1");
         System.setProperty("java.rmi.server.randomIds", "true");
-        String passwordFile = ResourceUtils.writeResourceToPath(JmxClientTest.class.getClassLoader(),
-                                                                passwordFilePath,
-                                                                "testJmxPassword.properties")
+        String passwordFile = ResourceUtils.writeResourceToPath(JmxClientTest.class.getClassLoader(), passwordFilePath, "testJmxPassword.properties")
                                            .toAbsolutePath()
                                            .toString();
         Map<String, String> env = new HashMap<>();
@@ -98,8 +90,7 @@ class JmxClientTest
 
         port = determinePortNumber(registry);
 
-        serviceURL = new JMXServiceURL("service:jmx:rmi://127.0.0.1:" + port
-                                       + "/jndi/rmi://127.0.0.1:" + port + "/jmxrmi");
+        serviceURL = new JMXServiceURL("service:jmx:rmi://127.0.0.1:" + port + "/jndi/rmi://127.0.0.1:" + port + "/jmxrmi");
         jmxServer = JMXConnectorServerFactory.newJMXConnectorServer(serviceURL, env, mbs);
         jmxServer.start();
         importMBean = new StorageService();
@@ -136,9 +127,7 @@ class JmxClientTest
                                          .build())
         {
             result = client.proxy(Import.class, objectName)
-                           .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
-                                              true, true, true, true,
-                                              true);
+                           .importNewSSTables(Sets.newHashSet("foo", "bar"), true, true, true, true, true, true);
         }
         assertThat(result.size()).isEqualTo(0);
     }
@@ -157,9 +146,7 @@ class JmxClientTest
         {
             srcPaths = Sets.newHashSet("foo", "bar");
             failedDirs = client.proxy(Import.class, objectName)
-                               .importNewSSTables(srcPaths, true,
-                                                  true, true, true, true,
-                                                  true);
+                               .importNewSSTables(srcPaths, true, true, true, true, true, true);
         }
         assertThat(failedDirs.size()).isEqualTo(2);
         assertThat(failedDirs.toArray()).isEqualTo(srcPaths.toArray());
@@ -168,19 +155,14 @@ class JmxClientTest
     @Test
     void testCallWithoutCredentialsFails() throws IOException
     {
-        try (JmxClient client = JmxClient.builder().jmxServiceURL(serviceURL).build())
+        try (JmxClient client = JmxClient.builder()
+                                         .jmxServiceURL(serviceURL)
+                                         .build())
         {
-            assertThatExceptionOfType(JmxAuthenticationException.class)
-            .isThrownBy(() ->
-                        client.proxy(Import.class, objectName)
-                              .importNewSSTables(Sets.newHashSet("foo", "bar"),
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true))
-            .withMessageContaining("Authentication failed! Credentials required");
+            assertThatExceptionOfType(JmxAuthenticationException.class).isThrownBy(() -> client.proxy(Import.class, objectName)
+                                                                                               .importNewSSTables(Sets.newHashSet("foo", "bar"), true, true,
+                                                                                                       true, true, true, true))
+                                                                       .withMessageContaining("Authentication failed! Credentials required");
         }
     }
 
@@ -246,23 +228,14 @@ class JmxClientTest
                                          .build())
         {
             // First attempt fails
-            assertThatExceptionOfType(JmxAuthenticationException.class)
-            .isThrownBy(() ->
-                        client.proxy(Import.class, objectName)
-                              .importNewSSTables(Sets.newHashSet("foo", "bar"),
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true))
-            .withMessageContaining("Authentication failed! Invalid username or password");
+            assertThatExceptionOfType(JmxAuthenticationException.class).isThrownBy(() -> client.proxy(Import.class, objectName)
+                                                                                               .importNewSSTables(Sets.newHashSet("foo", "bar"), true, true,
+                                                                                                       true, true, true, true))
+                                                                       .withMessageContaining("Authentication failed! Invalid username or password");
 
             // second attempt succeeds after getting the correct password
             result = client.proxy(Import.class, objectName)
-                           .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
-                                              true, true, true, true,
-                                              true);
+                           .importNewSSTables(Sets.newHashSet("foo", "bar"), true, true, true, true, true, true);
         }
         assertThat(result.size()).isEqualTo(0);
     }
@@ -279,10 +252,7 @@ class JmxClientTest
         {
             assertThat(client.isConnected()).isFalse();
             result = client.proxy(Import.class, objectName)
-                           .importNewSSTables(
-                           Sets.newHashSet("foo", "bar"), true, true, true,
-                           true, true,
-                           true);
+                           .importNewSSTables(Sets.newHashSet("foo", "bar"), true, true, true, true, true, true);
             assertThat(client.isConnected()).isTrue();
             assertThat(result.size()).isEqualTo(0);
 
@@ -290,10 +260,7 @@ class JmxClientTest
             setUp();
 
             result = client.proxy(Import.class, objectName)
-                           .importNewSSTables(
-                           Sets.newHashSet("foo", "bar"), true, true, true,
-                           true, true,
-                           true);
+                           .importNewSSTables(Sets.newHashSet("foo", "bar"), true, true, true, true, true, true);
         }
         assertThat(result.size()).isEqualTo(0);
     }
@@ -310,10 +277,7 @@ class JmxClientTest
             for (int i = 0; i < PROXIES_TO_TEST; i++)
             {
                 List<String> result = client.proxy(Import.class, objectName)
-                                            .importNewSSTables(
-                                            Sets.newHashSet("foo", "bar"), true, true, true,
-                                            true, true,
-                                            true);
+                                            .importNewSSTables(Sets.newHashSet("foo", "bar"), true, true, true, true, true, true);
                 assertThat(result).isNotNull();
             }
         }
@@ -330,9 +294,7 @@ class JmxClientTest
                                          .build())
         {
             List<String> result = client.proxy(Import.class, objectName)
-                                        .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
-                                                           true, true, true, true,
-                                                           true);
+                                        .importNewSSTables(Sets.newHashSet("foo", "bar"), true, true, true, true, true, true);
             assertThat(result.size()).isEqualTo(0);
         }
     }
@@ -348,16 +310,12 @@ class JmxClientTest
         {
             assertThat(extended.proxyInterceptionCount.get()).isEqualTo(0);
             List<String> result = extended.proxy(Import.class, objectName)
-                                          .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
-                                                             true, true, true, true,
-                                                             true);
+                                          .importNewSSTables(Sets.newHashSet("foo", "bar"), true, true, true, true, true, true);
             assertThat(result.size()).isEqualTo(0);
             assertThat(extended.proxyInterceptionCount.get()).isEqualTo(1);
 
             extended.proxy(Import.class, objectName)
-                    .importNewSSTables(Sets.newHashSet("foo", "bar"), true,
-                                       true, true, true, true,
-                                       true);
+                    .importNewSSTables(Sets.newHashSet("foo", "bar"), true, true, true, true, true, true);
             assertThat(extended.proxyInterceptionCount.get()).isEqualTo(2);
         }
     }
@@ -375,7 +333,8 @@ class JmxClientTest
         }
 
         @Override
-        public <C> C proxy(Class<C> clientClass, String remoteName)
+        public <C> C proxy(Class<C> clientClass,
+                           String remoteName)
         {
             proxyInterceptionCount.incrementAndGet();
             return super.proxy(clientClass, remoteName);
@@ -387,8 +346,12 @@ class JmxClientTest
      */
     public interface Import
     {
-        List<String> importNewSSTables(Set<String> srcPaths, boolean resetLevel, boolean clearRepaired,
-                                       boolean verifySSTables, boolean verifyTokens, boolean invalidateCaches,
+        List<String> importNewSSTables(Set<String> srcPaths,
+                                       boolean resetLevel,
+                                       boolean clearRepaired,
+                                       boolean verifySSTables,
+                                       boolean verifyTokens,
+                                       boolean invalidateCaches,
                                        boolean extendedVerify);
     }
 
@@ -397,8 +360,12 @@ class JmxClientTest
      */
     public interface StorageServiceMBean
     {
-        List<String> importNewSSTables(Set<String> srcPaths, boolean resetLevel, boolean clearRepaired,
-                                       boolean verifySSTables, boolean verifyTokens, boolean invalidateCaches,
+        List<String> importNewSSTables(Set<String> srcPaths,
+                                       boolean resetLevel,
+                                       boolean clearRepaired,
+                                       boolean verifySSTables,
+                                       boolean verifyTokens,
+                                       boolean invalidateCaches,
                                        boolean extendedVerify);
 
         void someOtherMethod(String helloString);
@@ -414,9 +381,13 @@ class JmxClientTest
         public boolean shouldSucceed = true;
 
         @Override
-        public List<String> importNewSSTables(Set<String> srcPaths, boolean resetLevel, boolean clearRepaired,
-                                              boolean verifySSTables, boolean verifyTokens,
-                                              boolean invalidateCaches, boolean extendedVerify)
+        public List<String> importNewSSTables(Set<String> srcPaths,
+                                              boolean resetLevel,
+                                              boolean clearRepaired,
+                                              boolean verifySSTables,
+                                              boolean verifyTokens,
+                                              boolean invalidateCaches,
+                                              boolean extendedVerify)
         {
             Preconditions.notNull(srcPaths, "Source Paths missing");
             if (shouldSucceed)
@@ -433,21 +404,16 @@ class JmxClientTest
         }
     }
 
-    private static void testSupplierThrows(String errorMessage, JmxClient jmxClient) throws IOException
+    private static void testSupplierThrows(String errorMessage,
+                                           JmxClient jmxClient)
+            throws IOException
     {
         try (JmxClient client = jmxClient)
         {
-            assertThatExceptionOfType(JmxAuthenticationException.class)
-            .isThrownBy(() ->
-                        client.proxy(Import.class, objectName)
-                              .importNewSSTables(Sets.newHashSet("foo", "bar"),
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true,
-                                                 true))
-            .withMessageContaining(errorMessage);
+            assertThatExceptionOfType(JmxAuthenticationException.class).isThrownBy(() -> client.proxy(Import.class, objectName)
+                                                                                               .importNewSSTables(Sets.newHashSet("foo", "bar"), true, true,
+                                                                                                       true, true, true, true))
+                                                                       .withMessageContaining(errorMessage);
         }
     }
 

@@ -35,21 +35,23 @@ public class RestoreJobProgressCollectors
 
     /**
      * Create a {@link RestoreJobProgressCollector} for the {@link RestoreJob} using the specified {@link RestoreJobProgressFetchPolicy}
+     *
      * @param restoreJob restore job to check
      * @param fetchPolicy the policy on compose progress, see {@link RestoreJobProgressFetchPolicy} for detail
      * @return collector
      */
-    public static RestoreJobProgressCollector create(RestoreJob restoreJob, RestoreJobProgressFetchPolicy fetchPolicy)
+    public static RestoreJobProgressCollector create(RestoreJob restoreJob,
+                                                     RestoreJobProgressFetchPolicy fetchPolicy)
     {
         switch (fetchPolicy)
         {
-            case ALL:
+            case ALL :
                 return new CollectAll(restoreJob);
-            case FIRST_FAILED:
+            case FIRST_FAILED :
                 return new CollectFirstFailed(restoreJob);
-            case ALL_FAILED_AND_PENDING:
+            case ALL_FAILED_AND_PENDING :
                 return new CollectAllFailedAndPending(restoreJob);
-            default:
+            default :
                 throw new IllegalStateException("Encountered unknown fetch policy: " + fetchPolicy);
         }
     }
@@ -71,7 +73,8 @@ public class RestoreJobProgressCollectors
         }
 
         @Override
-        public void collect(RestoreRange range, ConsistencyVerificationResult checkResult)
+        public void collect(RestoreRange range,
+                            ConsistencyVerificationResult checkResult)
         {
             if (checkResult == ConsistencyVerificationResult.FAILED)
             {
@@ -89,13 +92,13 @@ public class RestoreJobProgressCollectors
 
             switch (checkResult)
             {
-                case FAILED:
+                case FAILED :
                     progressBuilder.addFailedRange(range);
                     break;
-                case PENDING:
+                case PENDING :
                     progressBuilder.addPendingRange(range);
                     break;
-                case SATISFIED:
+                case SATISFIED :
                     progressBuilder.addSucceededRange(range);
                     break;
             }

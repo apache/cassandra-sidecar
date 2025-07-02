@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.coordination;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.client.SidecarInstancesProvider;
@@ -28,15 +27,15 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 
 /**
- * A {@link SidecarInstancesProvider} implementation that returns Sidecar instances based on the configured
- * {@link InstancesMetadata} for the local Sidecar
+ * A {@link SidecarInstancesProvider} implementation that returns Sidecar instances based on the configured {@link InstancesMetadata} for the local Sidecar
  */
 public class DynamicSidecarInstancesProvider implements SidecarInstancesProvider
 {
     private final InstancesMetadata instancesMetadata;
     private final ServiceConfiguration serviceConfiguration;
 
-    public DynamicSidecarInstancesProvider(InstancesMetadata instancesMetadata, ServiceConfiguration serviceConfiguration)
+    public DynamicSidecarInstancesProvider(InstancesMetadata instancesMetadata,
+                                           ServiceConfiguration serviceConfiguration)
     {
         this.instancesMetadata = instancesMetadata;
         this.serviceConfiguration = serviceConfiguration;

@@ -44,8 +44,7 @@ public class RestoreJobProgress
 
     public static RestoreJobProgress pending(RestoreJob restoreJob)
     {
-        Builder builder = new Builder(restoreJob)
-                          .withOverallStatus(ConsistencyVerificationResult.PENDING);
+        Builder builder = new Builder(restoreJob).withOverallStatus(ConsistencyVerificationResult.PENDING);
         return new RestoreJobProgress(builder);
     }
 
@@ -66,12 +65,8 @@ public class RestoreJobProgress
                                                 .withFailedRanges(toJson(failedRanges))
                                                 .withPendingRanges(toJson(pendingRanges))
                                                 .withMessage(buildMessage(restoreJob.status))
-                                                .withJobSummary(restoreJob.createdAt.toString(),
-                                                                restoreJob.jobId,
-                                                                restoreJob.jobAgent,
-                                                                restoreJob.keyspaceName,
-                                                                restoreJob.tableName,
-                                                                restoreJob.status.name())
+                                                .withJobSummary(restoreJob.createdAt.toString(), restoreJob.jobId, restoreJob.jobAgent, restoreJob.keyspaceName,
+                                                        restoreJob.tableName, restoreJob.status.name())
                                                 .build();
     }
 
@@ -94,13 +89,13 @@ public class RestoreJobProgress
         String message;
         switch (overallStatus)
         {
-            case SATISFIED:
+            case SATISFIED :
                 message = "All ranges have succeeded.";
                 break;
-            case FAILED:
+            case FAILED :
                 message = "One or more ranges have failed.";
                 break;
-            default:
+            default :
                 message = "One or more ranges are in progress. None of the ranges fail.";
                 break;
         }

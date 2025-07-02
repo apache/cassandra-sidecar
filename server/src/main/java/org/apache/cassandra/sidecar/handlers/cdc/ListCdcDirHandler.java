@@ -18,6 +18,13 @@
 
 package org.apache.cassandra.sidecar.handlers.cdc;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.net.SocketAddress;
+import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.web.RoutingContext;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,17 +36,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.net.SocketAddress;
-import io.vertx.ext.auth.authorization.Authorization;
-import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.data.CdcSegmentInfo;
@@ -53,7 +49,8 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
 import static org.apache.cassandra.sidecar.utils.CdcUtil.getIdxFileName;
 import static org.apache.cassandra.sidecar.utils.CdcUtil.getLogFilePrefix;
@@ -95,29 +92,30 @@ public class ListCdcDirHandler extends AbstractHandler<Void> implements AccessPr
                                   SocketAddress remoteAddress,
                                   Void request)
     {
-        String cdcDir = metadataFetcher.instance(host).cdcDir();
+        String cdcDir = metadataFetcher.instance(host)
+                                       .cdcDir();
         if (isNullOrEmpty(cdcDir))
         {
-            throw wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE,
-                                    "CDC directory is not configured in Sidecar");
+            throw wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE, "CDC directory is not configured in Sidecar");
         }
-        serviceExecutorPool
-        .executeBlocking(() -> collectCdcSegmentsFromFileSystem(cdcDir))
-        .map(segments -> new ListCdcSegmentsResponse(config.host(), config.port(), segments))
-        .onSuccess(context::json)
-        .onFailure(cause -> {
-            LOGGER.warn("Error listing the CDC commit log segments", cause);
-            context.response()
-                   .setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
-                   .setStatusMessage(Objects.requireNonNullElse(cause.getMessage(), "Error while listing CDC segments"))
-                   .end();
-        });
+        serviceExecutorPool.executeBlocking(() -> collectCdcSegmentsFromFileSystem(cdcDir))
+                           .map(segments -> new ListCdcSegmentsResponse(config.host(), config.port(), segments))
+                           .onSuccess(context::json)
+                           .onFailure(cause -> {
+                               LOGGER.warn("Error listing the CDC commit log segments", cause);
+                               context.response()
+                                      .setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
+                                      .setStatusMessage(Objects.requireNonNullElse(cause.getMessage(), "Error while listing CDC segments"))
+                                      .end();
+                           });
     }
 
     private List<CdcSegmentInfo> collectCdcSegmentsFromFileSystem(String cdcDirPath) throws IOException
     {
         List<CdcSegmentInfo> segmentInfos = new ArrayList<>();
-        File cdcDir = Paths.get(cdcDirPath).toAbsolutePath().toFile();
+        File cdcDir = Paths.get(cdcDirPath)
+                           .toAbsolutePath()
+                           .toFile();
         if (!cdcDir.isDirectory())
         {
             throw new IOException("CDC directory does not exist");
@@ -142,19 +140,17 @@ public class ListCdcDirHandler extends AbstractHandler<Void> implements AccessPr
         {
             String fileName = cdcFile.getName();
             BasicFileAttributes fileAttributes = Files.readAttributes(cdcFile.toPath(), BasicFileAttributes.class);
-            if (!cdcFile.exists()
-                || !fileAttributes.isRegularFile() // the file just gets deleted? ignore it
-                || isIndexFile(fileName) // ignore all .idx files
-                || !idxFileNamePrefixes.contains(getLogFilePrefix(fileName))) // ignore .log files found without matching .idx files
+            if (!cdcFile.exists() || !fileAttributes.isRegularFile() // the file just gets deleted? ignore it
+                    || isIndexFile(fileName) // ignore all .idx files
+                    || !idxFileNamePrefixes.contains(getLogFilePrefix(fileName))) // ignore .log files found without matching .idx files
             {
                 continue;
             }
 
             CdcUtil.CdcIndex cdcIndex = parseIndexFile(new File(cdcDirPath, getIdxFileName(fileName)), fileAttributes.size());
-            CdcSegmentInfo segmentInfo =
-            new CdcSegmentInfo(fileName, fileAttributes.size(),
-                               cdcIndex.latestFlushPosition, cdcIndex.isCompleted,
-                               fileAttributes.lastModifiedTime().toMillis());
+            CdcSegmentInfo segmentInfo = new CdcSegmentInfo(fileName, fileAttributes.size(), cdcIndex.latestFlushPosition, cdcIndex.isCompleted,
+                    fileAttributes.lastModifiedTime()
+                                  .toMillis());
             segmentInfos.add(segmentInfo);
         }
         return segmentInfos;

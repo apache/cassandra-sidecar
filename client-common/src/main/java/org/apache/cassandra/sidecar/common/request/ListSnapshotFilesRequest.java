@@ -27,12 +27,12 @@ import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 public class ListSnapshotFilesRequest extends SnapshotRequest<ListSnapshotFilesResponse>
 {
     /**
-     * Constructs a request to list the Cassandra snapshot for the given {@code snapshotName} in the {@code keyspace}
-     * and {@code table}, specifying whether secondary index files should be included as part of the response.
+     * Constructs a request to list the Cassandra snapshot for the given {@code snapshotName} in the {@code keyspace} and {@code table}, specifying whether
+     * secondary index files should be included as part of the response.
      *
-     * @param keyspace                   the keyspace in Cassandra
-     * @param table                      the table name in Cassandra
-     * @param snapshotName               the name of the snapshot
+     * @param keyspace the keyspace in Cassandra
+     * @param table the table name in Cassandra
+     * @param snapshotName the name of the snapshot
      * @param includeSecondaryIndexFiles whether to include secondary index files
      */
     public ListSnapshotFilesRequest(String keyspace,

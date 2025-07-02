@@ -18,14 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -38,6 +30,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
@@ -46,7 +40,10 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.vertx.core.buffer.Buffer.buffer;
@@ -71,19 +68,26 @@ public class NativeUpdateHandlerTest
     void before() throws InterruptedException
     {
         Injector injector;
-        Module testOverride = Modules.override(new TestModule()).with(new NativeUpdateHandlerTest.NativeUpdateHandlerTestModule());
-        injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(testOverride));
+        Module testOverride = Modules.override(new TestModule())
+                                     .with(new NativeUpdateHandlerTest.NativeUpdateHandlerTestModule());
+        injector = Guice.createInjector(Modules.override(SidecarModules.all())
+                                               .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);
         VertxTestContext context = new VertxTestContext();
-        server.start().onSuccess(s -> context.completeNow()).onFailure(context::failNow);
+        server.start()
+              .onSuccess(s -> context.completeNow())
+              .onFailure(context::failNow);
         context.awaitCompletion(5, TimeUnit.SECONDS);
     }
 
     @AfterEach
     void after() throws InterruptedException
     {
-        getBlocking(TestResourceReaper.create().with(server).close(), 60, TimeUnit.SECONDS, "Closing server");
+        getBlocking(TestResourceReaper.create()
+                                      .with(server)
+                                      .close(),
+                60, TimeUnit.SECONDS, "Closing server");
     }
 
     @Test
@@ -91,16 +95,18 @@ public class NativeUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"state\":\"start\"}";
-        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native").sendBuffer(buffer(payload), ctx.succeeding(resp -> {
-            ctx.verify(() -> {
-                verify(mockStorageOperations, times(1)).startNativeTransport();
+        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native")
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      verify(mockStorageOperations, times(1)).startNativeTransport();
 
-                assertThat(resp.statusCode()).isEqualTo(OK.code());
-                JsonObject json = resp.bodyAsJsonObject();
-                assertThat(json.getMap().get("status")).isEqualTo("OK");
-            });
-            ctx.completeNow();
-        }));
+                      assertThat(resp.statusCode()).isEqualTo(OK.code());
+                      JsonObject json = resp.bodyAsJsonObject();
+                      assertThat(json.getMap()
+                                     .get("status")).isEqualTo("OK");
+                  });
+                  ctx.completeNow();
+              }));
     }
 
     @Test
@@ -108,16 +114,18 @@ public class NativeUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"state\":\"stop\"}";
-        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native").sendBuffer(buffer(payload), ctx.succeeding(resp -> {
-            ctx.verify(() -> {
-                verify(mockStorageOperations, times(1)).stopNativeTransport();
+        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native")
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      verify(mockStorageOperations, times(1)).stopNativeTransport();
 
-                assertThat(resp.statusCode()).isEqualTo(OK.code());
-                JsonObject json = resp.bodyAsJsonObject();
-                assertThat(json.getMap().get("status")).isEqualTo("OK");
-            });
-            ctx.completeNow();
-        }));
+                      assertThat(resp.statusCode()).isEqualTo(OK.code());
+                      JsonObject json = resp.bodyAsJsonObject();
+                      assertThat(json.getMap()
+                                     .get("status")).isEqualTo("OK");
+                  });
+                  ctx.completeNow();
+              }));
     }
 
     @Test
@@ -125,16 +133,16 @@ public class NativeUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"state\":\"foo\"}";
-        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native").sendBuffer(buffer(payload), ctx.succeeding(resp -> {
-            ctx.verify(() -> {
-                assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
-                verify(mockStorageOperations, times(0)).startNativeTransport();
-                verify(mockStorageOperations, times(0)).stopNativeTransport();
-            });
-            ctx.completeNow();
-        }));
+        client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/native")
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
+                      verify(mockStorageOperations, times(0)).startNativeTransport();
+                      verify(mockStorageOperations, times(0)).stopNativeTransport();
+                  });
+                  ctx.completeNow();
+              }));
     }
-
 
     /**
      * Test guice module for {@link NativeUpdateHandler}

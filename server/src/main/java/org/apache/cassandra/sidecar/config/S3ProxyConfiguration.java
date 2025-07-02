@@ -41,8 +41,7 @@ public interface S3ProxyConfiguration
     String password();
 
     /**
-     * Optional/nullable; only used for testing. Specify the override so the s3 client can connect to local S3
-     * testing server.
+     * Optional/nullable; only used for testing. Specify the override so the s3 client can connect to local S3 testing server.
      *
      * @return the S3 client override used for testing only
      */

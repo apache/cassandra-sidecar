@@ -18,20 +18,17 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
+import com.codahale.metrics.MetricRegistry;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.LiveMigrationConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 class LiveMigrationMapSidecarConfigImplTest
@@ -43,24 +40,22 @@ class LiveMigrationMapSidecarConfigImplTest
     @Test
     void testMigrationMap()
     {
-        LiveMigrationConfiguration liveMigrationConfiguration =
-        new LiveMigrationConfigurationImpl(Collections.emptySet(),
-                                           Collections.emptySet(),
-                                           Map.of("localhost1", "localhost4"));
+        LiveMigrationConfiguration liveMigrationConfiguration = new LiveMigrationConfigurationImpl(Collections.emptySet(), Collections.emptySet(),
+                Map.of("localhost1", "localhost4"));
 
-        SidecarConfigurationImpl sidecarConfig =
-        SidecarConfigurationImpl.builder()
-                                .liveMigrationConfiguration(liveMigrationConfiguration).build();
+        SidecarConfigurationImpl sidecarConfig = SidecarConfigurationImpl.builder()
+                                                                         .liveMigrationConfiguration(liveMigrationConfiguration)
+                                                                         .build();
 
-        LiveMigrationMapSidecarConfigImpl migrationMapSidecarConfig =
-        new LiveMigrationMapSidecarConfigImpl(sidecarConfig);
+        LiveMigrationMapSidecarConfigImpl migrationMapSidecarConfig = new LiveMigrationMapSidecarConfigImpl(sidecarConfig);
 
         InstanceMetadata localhost1Metadata = instanceMetadata("localhost1", 1);
         InstanceMetadata localhost2Metadata = instanceMetadata("localhost2", 2);
         InstanceMetadata localhost4Metadata = instanceMetadata("localhost4", 4);
 
         assertThat(migrationMapSidecarConfig.getMigrationMap()).isNotNull();
-        assertThat(migrationMapSidecarConfig.getMigrationMap().size()).isEqualTo(1);
+        assertThat(migrationMapSidecarConfig.getMigrationMap()
+                                            .size()).isEqualTo(1);
 
         assertThat(migrationMapSidecarConfig.isSource(localhost1Metadata)).isTrue();
         assertThat(migrationMapSidecarConfig.isDestination(localhost1Metadata)).isFalse();
@@ -72,10 +67,15 @@ class LiveMigrationMapSidecarConfigImplTest
         assertThat(migrationMapSidecarConfig.isDestination(localhost4Metadata)).isTrue();
     }
 
-    InstanceMetadata instanceMetadata(String host, int id)
+    InstanceMetadata instanceMetadata(String host,
+                                      int id)
     {
-        return InstanceMetadataImpl.builder().host(host).id(id).port(9042)
+        return InstanceMetadataImpl.builder()
+                                   .host(host)
+                                   .id(id)
+                                   .port(9042)
                                    .storageDir(tempDirPath.toAbsolutePath() + "/" + host)
-                                   .metricRegistry(new MetricRegistry()).build();
+                                   .metricRegistry(new MetricRegistry())
+                                   .build();
     }
 }

@@ -44,8 +44,8 @@ public interface KeyStoreConfiguration
     String type();
 
     /**
-     * Returns the interval in which the key store will be checked for filesystem changes. Setting
-     * this value to {@link SecondBoundConfiguration#ZERO} will disable reloading the store.
+     * Returns the interval in which the key store will be checked for filesystem changes. Setting this value to {@link SecondBoundConfiguration#ZERO} will
+     * disable reloading the store.
      *
      * @return the interval in which the key store will be checked for changes in the filesystem
      */

@@ -47,8 +47,7 @@ import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_RESTORE
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * Provides a REST API for querying the progress of a {@link RestoreJob}
- * The response content can vary based on the {@link RestoreJobProgressFetchPolicy}
+ * Provides a REST API for querying the progress of a {@link RestoreJob} The response content can vary based on the {@link RestoreJobProgressFetchPolicy}
  */
 @Singleton
 public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgressFetchPolicy> implements AccessProtected
@@ -59,8 +58,8 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the interface to retrieve instance metadata
-     * @param executorPools   the executor pools for blocking executions
-     * @param validator       a validator instance to validate Cassandra-specific input
+     * @param executorPools the executor pools for blocking executions
+     * @param validator a validator instance to validate Cassandra-specific input
      */
     @Inject
     public RestoreJobProgressHandler(InstanceMetadataFetcher metadataFetcher,
@@ -101,13 +100,12 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
                                   SocketAddress remoteAddress,
                                   RestoreJobProgressFetchPolicy fetchPolicy)
     {
-        RoutingContextUtils
-        .getAsFuture(context, SC_RESTORE_JOB)
-        .map(this::validateSidecarManagedRestoreJob)
-        .compose(restoreJob -> consistencyLevelChecker.check(restoreJob, fetchPolicy))
-        .map(RestoreJobProgress::toResponsePayload)
-        .onSuccess(context::json)
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, fetchPolicy));
+        RoutingContextUtils.getAsFuture(context, SC_RESTORE_JOB)
+                           .map(this::validateSidecarManagedRestoreJob)
+                           .compose(restoreJob -> consistencyLevelChecker.check(restoreJob, fetchPolicy))
+                           .map(RestoreJobProgress::toResponsePayload)
+                           .onSuccess(context::json)
+                           .onFailure(cause -> processFailure(cause, context, host, remoteAddress, fetchPolicy));
     }
 
     private RestoreJob validateSidecarManagedRestoreJob(RestoreJob restoreJob)
@@ -115,16 +113,13 @@ public class RestoreJobProgressHandler extends AbstractHandler<RestoreJobProgres
         if (!restoreJob.isManagedBySidecar())
         {
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                    "Only Sidecar-managed restore jobs are allowed. " +
-                                    "jobId=" + restoreJob.jobId +
-                                    " jobManager=" + restoreJob.restoreJobManager.name());
+                    "Only Sidecar-managed restore jobs are allowed. " + "jobId=" + restoreJob.jobId + " jobManager=" + restoreJob.restoreJobManager.name());
         }
 
         if (restoreJob.sliceCount == null)
         {
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                    "Controller must set the sliceCount for Sidecar-managed restore job. " +
-                                    "jobId=" + restoreJob.jobId);
+                    "Controller must set the sliceCount for Sidecar-managed restore job. " + "jobId=" + restoreJob.jobId);
         }
         return restoreJob;
     }

@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,7 +90,8 @@ class SchemaMetricsTest
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
         SharedMetricRegistries.clear();
-        server.close().onComplete(result -> closeLatch.countDown());
+        server.close()
+              .onComplete(result -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else
@@ -101,8 +103,8 @@ class SchemaMetricsTest
     {
         sidecarSchemaInitializer.execute(Promise.promise());
         loopAssert(3, () -> {
-            assertThat(metrics.server().schema().failedInitializations.metric.getValue())
-            .isGreaterThanOrEqualTo(1);
+            assertThat(metrics.server()
+                              .schema().failedInitializations.metric.getValue()).isGreaterThanOrEqualTo(1);
         });
     }
 
@@ -124,12 +126,12 @@ class SchemaMetricsTest
 
         @Provides
         @Singleton
-        public SidecarSchema sidecarSchema(Vertx vertx, SidecarConfiguration configuration)
+        public SidecarSchema sidecarSchema(Vertx vertx,
+                                           SidecarConfiguration configuration)
         {
             SidecarInternalKeyspace sidecarInternalKeyspace = mock(SidecarInternalKeyspace.class);
-            when(sidecarInternalKeyspace.initialize(any(), any()))
-            .thenThrow(new SidecarSchemaModificationException("Simulated failure",
-                                                              new RuntimeException("Simulated exception")));
+            when(sidecarInternalKeyspace.initialize(any(), any())).thenThrow(
+                    new SidecarSchemaModificationException("Simulated failure", new RuntimeException("Simulated exception")));
             return new SidecarSchema(vertx, configuration, sidecarInternalKeyspace);
         }
 

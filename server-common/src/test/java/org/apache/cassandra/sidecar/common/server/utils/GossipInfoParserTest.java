@@ -19,11 +19,8 @@
 package org.apache.cassandra.sidecar.common.server.utils;
 
 import java.util.Collections;
-
-import org.junit.jupiter.api.Test;
-
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
-
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class GossipInfoParserTest
@@ -51,38 +48,18 @@ class GossipInfoParserTest
     @Test
     void testGossipInfoHostHeaderCheck()
     {
-        assertThat(GossipInfoParser.isGossipInfoHostHeader("/127.0.0.1"))
-            .as("should parse format /IP")
-            .isTrue();
-        assertThat(GossipInfoParser.isGossipInfoHostHeader("optional_hostname/127.0.0.1"))
-            .as("should parse format HOSTNAME/IP")
-            .isTrue();
-        assertThat(GossipInfoParser.isGossipInfoHostHeader("127.0.0.1"))
-            .as("should reject IP without the heading /")
-            .isFalse();
+        assertThat(GossipInfoParser.isGossipInfoHostHeader("/127.0.0.1")).as("should parse format /IP")
+                                                                         .isTrue();
+        assertThat(GossipInfoParser.isGossipInfoHostHeader("optional_hostname/127.0.0.1")).as("should parse format HOSTNAME/IP")
+                                                                                          .isTrue();
+        assertThat(GossipInfoParser.isGossipInfoHostHeader("127.0.0.1")).as("should reject IP without the heading /")
+                                                                        .isFalse();
     }
 
-    private static final String SAMPLE_GOSSIP_INFO =
-        "/127.0.0.3\n" +
-        "  generation:1668100877\n" +
-        "  heartbeat:248\n" +
-        "  LOAD:217:88883.0\n" +
-        "  STATUS_WITH_PORT:71:NORMAL,3074457345618258602\n" +
-        "  SSTABLE_VERSIONS:6:big-nb\n" +
-        "  TOKENS:70:<hidden>\n" +
-        "localhost2/127.0.0.2\n" +
-        "  generation:1668100877\n" +
-        "  heartbeat:243\n" +
-        "  LOAD:211:83702.0\n" +
-        "  STATUS_WITH_PORT:19:NORMAL,-3074457345618258603\n" +
-        "  SSTABLE_VERSIONS:6:big-nb\n" +
-        "  TOKENS:18:<hidden>\n" +
-        "/127.0.0.1\n" +
-        "  generation:1668100877\n" +
-        "  heartbeat:242\n" +
-        "  LOAD:211:88971.0\n" +
-        "  STATUS_WITH_PORT:19:NORMAL,-9223372036854775808\n" +
-        "  SSTABLE_VERSIONS:6:big-nb\n" +
-        "  TOKENS:18:<hidden>\n" +
-        "  INDEX_STATUS:2198:{\"ks.tbl_idx\":\"BUILD_SUCCEEDED\"}";
+    private static final String SAMPLE_GOSSIP_INFO = "/127.0.0.3\n" + "  generation:1668100877\n" + "  heartbeat:248\n" + "  LOAD:217:88883.0\n"
+            + "  STATUS_WITH_PORT:71:NORMAL,3074457345618258602\n" + "  SSTABLE_VERSIONS:6:big-nb\n" + "  TOKENS:70:<hidden>\n" + "localhost2/127.0.0.2\n"
+            + "  generation:1668100877\n" + "  heartbeat:243\n" + "  LOAD:211:83702.0\n" + "  STATUS_WITH_PORT:19:NORMAL,-3074457345618258603\n"
+            + "  SSTABLE_VERSIONS:6:big-nb\n" + "  TOKENS:18:<hidden>\n" + "/127.0.0.1\n" + "  generation:1668100877\n" + "  heartbeat:242\n"
+            + "  LOAD:211:88971.0\n" + "  STATUS_WITH_PORT:19:NORMAL,-9223372036854775808\n" + "  SSTABLE_VERSIONS:6:big-nb\n" + "  TOKENS:18:<hidden>\n"
+            + "  INDEX_STATUS:2198:{\"ks.tbl_idx\":\"BUILD_SUCCEEDED\"}";
 }

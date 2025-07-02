@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.client;
 
-
 import java.util.Collections;
 import java.util.List;
 
@@ -30,8 +29,8 @@ public class SimpleSidecarInstancesProvider implements SidecarInstancesProvider
     private final List<SidecarInstance> sidecarInstances;
 
     /**
-     * Constructs this object with the provided list of Sidecar instances. Creates an unmodifiable copy of the list
-     * and keeps a reference to the copy internally.
+     * Constructs this object with the provided list of Sidecar instances. Creates an unmodifiable copy of the list and keeps a reference to the copy
+     * internally.
      *
      * @param sidecarInstances the list of Sidecar instances
      */

@@ -18,11 +18,10 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.util.Objects;
-import java.util.function.Consumer;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Objects;
+import java.util.function.Consumer;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.ClusterLeaseClaimConfiguration;
@@ -34,11 +33,14 @@ public class ClusterLeaseClaimConfigurationImpl extends PeriodicTaskConfiguratio
 {
     private static final String DEFAULT_ELECTORATE_MEMBERSHIP_STRATEGY = "MostReplicatedKeyspaceTokenZeroElectorateMembership";
     private static final MillisecondBoundConfiguration DEFAULT_INITIAL_DELAY_RANDOM_DELTA = MillisecondBoundConfiguration.parse("30s");
-    public static final PeriodicTaskConfigurationImpl.Builder DEFAULT_PERIODIC_TASK_BUILDER = PeriodicTaskConfigurationImpl.Builder
-                                                                                              .builder()
-                                                                                              .enabled(true)
-                                                                                              .initialDelay(MillisecondBoundConfiguration.parse("1s"))
-                                                                                              .executeInterval(MillisecondBoundConfiguration.parse("100s"));
+    public static final PeriodicTaskConfigurationImpl.Builder DEFAULT_PERIODIC_TASK_BUILDER = PeriodicTaskConfigurationImpl.Builder.builder()
+                                                                                                                                   .enabled(true)
+                                                                                                                                   .initialDelay(
+                                                                                                                                           MillisecondBoundConfiguration.parse(
+                                                                                                                                                   "1s"))
+                                                                                                                                   .executeInterval(
+                                                                                                                                           MillisecondBoundConfiguration.parse(
+                                                                                                                                                   "100s"));
 
     @JsonProperty("electorate_membership_strategy")
     private final String electorateMembershipStrategy;

@@ -18,25 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.codahale.metrics.MetricRegistry;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -48,6 +29,16 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.HelperTestModules;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -58,7 +49,13 @@ import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.createFile;
@@ -79,8 +76,8 @@ class LiveMigrationFileStreamHandlerTest
     private static final String THIRD_INSTANCE_IP = "127.0.0.3";
     private static final String DUMMY_CONTENT = "data";
 
-    private static final MetricRegistryFactory REGISTRY_FACTORY =
-    new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(), Collections.emptyList(), Collections.emptyList());
+    private static final MetricRegistryFactory REGISTRY_FACTORY = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(), Collections.emptyList(),
+            Collections.emptyList());
     private final Vertx vertx = Vertx.vertx();
     @TempDir
     Path tempDir;
@@ -99,8 +96,8 @@ class LiveMigrationFileStreamHandlerTest
         secondInstanceDataDirs = secondInstanceMeta.dataDirs();
         InstanceMetadata thirdInstanceMeta = getInstanceMetadata(THIRD_INSTANCE_IP, THIRD_ID);
         thirdInstanceDataDirs = thirdInstanceMeta.dataDirs();
-        FileStreamHandlerTestModule handlerTestModule = new FileStreamHandlerTestModule(
-        Arrays.asList(firstInstanceMeta, secondInstanceMeta, thirdInstanceMeta));
+        FileStreamHandlerTestModule handlerTestModule =
+                                                      new FileStreamHandlerTestModule(Arrays.asList(firstInstanceMeta, secondInstanceMeta, thirdInstanceMeta));
         injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                .with(Modules.override(new TestModule())
                                                             .with(handlerTestModule)));
@@ -116,7 +113,8 @@ class LiveMigrationFileStreamHandlerTest
     private InstanceMetadata getInstanceMetadata(String instanceIp,
                                                  int instanceId)
     {
-        String root = tempDir.resolve(String.valueOf(instanceId)).toString();
+        String root = tempDir.resolve(String.valueOf(instanceId))
+                             .toString();
         List<String> dataDirs = Arrays.asList(root + "/d1/data", root + "/d2/data");
         MetricRegistry instanceSpecificRegistry = REGISTRY_FACTORY.getOrCreate(instanceId);
 
@@ -137,7 +135,8 @@ class LiveMigrationFileStreamHandlerTest
     public void tearDown() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -170,8 +169,7 @@ class LiveMigrationFileStreamHandlerTest
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/data/0/..",
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
+        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/data/0/..", FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
     }
 
     @Test
@@ -180,8 +178,8 @@ class LiveMigrationFileStreamHandlerTest
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/ks/tb-1234/ks-tb-1234-Data.db/..",
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
+        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/ks/tb-1234/ks-tb-1234-Data.db/..", FIRST_INSTANCE_IP, THIRD_INSTANCE_IP,
+                FIRST_INSTANCE_IP, 400);
     }
 
     @Test
@@ -190,8 +188,8 @@ class LiveMigrationFileStreamHandlerTest
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/../ks/tb-1234/ks-tb-1234-Data.db",
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
+        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/../ks/tb-1234/ks-tb-1234-Data.db", FIRST_INSTANCE_IP, THIRD_INSTANCE_IP,
+                FIRST_INSTANCE_IP, 400);
     }
 
     @Test
@@ -201,10 +199,9 @@ class LiveMigrationFileStreamHandlerTest
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
         // Using escape character of '.' i.e. %2E
-        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/ks/tb-1234/%2E%2E/%2E%2E/secrets",
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
+        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/ks/tb-1234/%2E%2E/%2E%2E/secrets", FIRST_INSTANCE_IP, THIRD_INSTANCE_IP,
+                FIRST_INSTANCE_IP, 400);
     }
-
 
     @Test
     public void testRequestInvalidPathUsingEncodedDots(final VertxTestContext context) throws IOException
@@ -213,10 +210,9 @@ class LiveMigrationFileStreamHandlerTest
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
         // Vertx is stopping routes having three "%2E%2E" in the path and returning 404
-        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/%2E%2E/%2E%2E/%2E%2E/secrets",
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
+        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/%2E%2E/%2E%2E/%2E%2E/secrets", FIRST_INSTANCE_IP, THIRD_INSTANCE_IP,
+                FIRST_INSTANCE_IP, 404);
     }
-
 
     @Test
     public void testRequestDirectory(final VertxTestContext context) throws IOException
@@ -225,8 +221,7 @@ class LiveMigrationFileStreamHandlerTest
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
         // Requesting directory, it should not succeed.
-        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/ks/tb-1234",
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
+        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/ks/tb-1234", FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
     }
 
     @Test
@@ -235,8 +230,7 @@ class LiveMigrationFileStreamHandlerTest
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/../../.." + filePath,
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
+        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/../../.." + filePath, FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
     }
 
     @Test
@@ -246,8 +240,7 @@ class LiveMigrationFileStreamHandlerTest
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
         // This route doesn't have data file dir index init. It should fail.
-        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + filePath,
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
+        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + filePath, FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
     }
 
     @Test
@@ -257,8 +250,7 @@ class LiveMigrationFileStreamHandlerTest
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
         // This route has negative dataHomeDir which is invalid. It should fail.
-        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/-1" + filePath,
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
+        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/-1" + filePath, FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
     }
 
     @Test
@@ -268,8 +260,7 @@ class LiveMigrationFileStreamHandlerTest
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
         // This route has 100 as dataHomeDir index which is greater than instance data home dir count. It should fail.
-        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/100" + filePath,
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
+        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/100" + filePath, FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
     }
 
     @Test
@@ -292,7 +283,6 @@ class LiveMigrationFileStreamHandlerTest
         // In this test second instance is neither source nor destination
         shouldThrowError(context, testRoute, "127.0.0.4", "127.0.0.5", SECOND_INSTANCE_IP, 404);
     }
-
 
     @Test
     public void testRouteFailsExcludedDataDirFile(final VertxTestContext context) throws IOException
@@ -318,7 +308,6 @@ class LiveMigrationFileStreamHandlerTest
         shouldThrowError(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
     }
 
-
     @Test
     public void testRouteFailsWhenParentDirExcluded(final VertxTestContext context) throws IOException
     {
@@ -342,7 +331,6 @@ class LiveMigrationFileStreamHandlerTest
 
         shouldSucceed(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP);
     }
-
 
     @SuppressWarnings("SameParameterValue")
     void shouldSucceed(final VertxTestContext context,
@@ -384,7 +372,8 @@ class LiveMigrationFileStreamHandlerTest
               })));
     }
 
-    void mockLiveMigrationMap(final String source, final String destination)
+    void mockLiveMigrationMap(final String source,
+                              final String destination)
     {
         LiveMigrationConfiguration liveMigrationConfig = injector.getInstance(SidecarConfiguration.class)
                                                                  .liveMigrationConfiguration();
@@ -405,7 +394,6 @@ class LiveMigrationFileStreamHandlerTest
         when(configuration.directoriesToExclude()).thenReturn(dirExclusions);
     }
 
-
     private static class FileStreamHandlerTestModule extends AbstractModule
     {
 
@@ -421,12 +409,9 @@ class LiveMigrationFileStreamHandlerTest
         {
 
             LiveMigrationConfiguration mockLiveMigrationConfiguration = mock(LiveMigrationConfiguration.class);
-            when(mockLiveMigrationConfiguration.filesToExclude())
-            .thenReturn(Collections.emptySet());
-            when(mockLiveMigrationConfiguration.directoriesToExclude())
-            .thenReturn(Collections.singleton("glob:${DATA_FILE_DIR}/*/*/snapshots"));
-            when(mockLiveMigrationConfiguration.migrationMap())
-            .thenReturn(Collections.emptyMap());
+            when(mockLiveMigrationConfiguration.filesToExclude()).thenReturn(Collections.emptySet());
+            when(mockLiveMigrationConfiguration.directoriesToExclude()).thenReturn(Collections.singleton("glob:${DATA_FILE_DIR}/*/*/snapshots"));
+            when(mockLiveMigrationConfiguration.migrationMap()).thenReturn(Collections.emptyMap());
 
             SidecarConfiguration sidecarConfiguration = SidecarConfigurationImpl.builder()
                                                                                 .liveMigrationConfiguration(mockLiveMigrationConfiguration)

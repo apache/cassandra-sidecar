@@ -17,15 +17,13 @@
  */
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Encapsulate configuration values for CDC
@@ -37,13 +35,10 @@ public class CdcConfigurationImpl implements CdcConfiguration
     public static final String CONFIGURATION_REFRESH_TIME_PROPERTY = "config_refresh_time";
     public static final String SEGMENT_HARD_LINK_CACHE_EXPIRY_PROPERTY = "segment_hardlink_cache_expiry";
     public static final boolean DEFAULT_IS_ENABLED = false;
-    public static final MillisecondBoundConfiguration DEFAULT_CDC_CONFIG_REFRESH_TIME =
-            MillisecondBoundConfiguration.parse("30s");
-    public static final SecondBoundConfiguration DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY =
-            SecondBoundConfiguration.parse("5m");
+    public static final MillisecondBoundConfiguration DEFAULT_CDC_CONFIG_REFRESH_TIME = MillisecondBoundConfiguration.parse("30s");
+    public static final SecondBoundConfiguration DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY = SecondBoundConfiguration.parse("5m");
     public static final String CDC_RAW_CLEANER_FREQUENCY_PROPERTY = "cdc_raw_cleaner_frequency";
-    public static final SecondBoundConfiguration DEFAULT_CDC_RAW_CLEANER_FREQUENCY =
-    SecondBoundConfiguration.parse("1m");
+    public static final SecondBoundConfiguration DEFAULT_CDC_RAW_CLEANER_FREQUENCY = SecondBoundConfiguration.parse("1m");
 
     public static final String ENABLE_CDC_RAW_CLEANER_PROPERTY = "enable_cdc_raw_cleaner";
     public static final boolean DEFAULT_ENABLE_CDC_RAW_CLEANER_PROPERTY = true;
@@ -102,18 +97,9 @@ public class CdcConfigurationImpl implements CdcConfiguration
                                 MillisecondBoundConfiguration cdcConfigRefreshTime,
                                 SecondBoundConfiguration segmentHardLinkCacheExpiry)
     {
-        this(
-        isEnabled,
-        cdcConfigRefreshTime,
-        segmentHardLinkCacheExpiry,
-        DEFAULT_CDC_RAW_CLEANER_FREQUENCY,
-        DEFAULT_ENABLE_CDC_RAW_CLEANER_PROPERTY,
-        DEFAULT_FALLBACK_CDC_RAW_MAX_DIRECTORY_SIZE_BYTES,
-        DEFAULT_CDC_RAW_MAX_DIRECTORY_MAX_PERCENT,
-        DEFAULT_CDC_RAW_MAX_CRITICAL_BUFFER_WINDOW,
-        DEFAULT_CDC_RAW_MAX_LOW_BUFFER_WINDOW,
-        DEFAULT_CDC_CACHE_MAX_USAGE_DURATION
-        );
+        this(isEnabled, cdcConfigRefreshTime, segmentHardLinkCacheExpiry, DEFAULT_CDC_RAW_CLEANER_FREQUENCY, DEFAULT_ENABLE_CDC_RAW_CLEANER_PROPERTY,
+                DEFAULT_FALLBACK_CDC_RAW_MAX_DIRECTORY_SIZE_BYTES, DEFAULT_CDC_RAW_MAX_DIRECTORY_MAX_PERCENT, DEFAULT_CDC_RAW_MAX_CRITICAL_BUFFER_WINDOW,
+                DEFAULT_CDC_RAW_MAX_LOW_BUFFER_WINDOW, DEFAULT_CDC_CACHE_MAX_USAGE_DURATION);
     }
 
     public CdcConfigurationImpl(boolean isEnabled,
@@ -205,7 +191,6 @@ public class CdcConfigurationImpl implements CdcConfiguration
     {
         this.enableCdcRawCleaner = enableCdcRawCleaner;
     }
-
 
     /**
      * {@inheritDoc}

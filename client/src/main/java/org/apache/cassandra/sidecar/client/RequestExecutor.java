@@ -54,69 +54,73 @@ public class RequestExecutor implements AutoCloseable
     }
 
     /**
-     * Executes the request and waits if necessary for at most the configured time in the
-     * {@link HttpClientConfig#timeoutMillis()} for this future to complete, and then returns its result, if available.
+     * Executes the request and waits if necessary for at most the configured time in the {@link HttpClientConfig#timeoutMillis()} for this future to complete,
+     * and then returns its result, if available.
      *
      * @param context the request context
-     * @param <T>     the expected type for the instance
+     * @param <T> the expected type for the instance
      * @return the result value
      * @throws CancellationException if this future was cancelled
-     * @throws ExecutionException    if this future completed exceptionally
-     * @throws InterruptedException  if the current thread was interrupted while waiting
-     * @throws TimeoutException      if the wait timed out
+     * @throws ExecutionException if this future completed exceptionally
+     * @throws InterruptedException if the current thread was interrupted while waiting
+     * @throws TimeoutException if the wait timed out
      */
-    public <T> T executeRequest(RequestContext context)
-    throws ExecutionException, InterruptedException, TimeoutException
+    public <T> T executeRequest(RequestContext context) throws ExecutionException, InterruptedException, TimeoutException
     {
-        return executeRequest(context, httpClient.config().timeoutMillis(), TimeUnit.MILLISECONDS);
+        return executeRequest(context, httpClient.config()
+                                                 .timeoutMillis(),
+                TimeUnit.MILLISECONDS);
     }
 
     /**
-     * Executes the request and waits if necessary for at most the provided {@code timeout} with units {@code unit}
-     * for this future to complete, and then returns its result, if available.
+     * Executes the request and waits if necessary for at most the provided {@code timeout} with units {@code unit} for this future to complete, and then
+     * returns its result, if available.
      *
      * @param context the request context
      * @param timeout the maximum time to wait
-     * @param unit    the time unit of the timeout argument
-     * @param <T>     the expected type for the instance
+     * @param unit the time unit of the timeout argument
+     * @param <T> the expected type for the instance
      * @return the result value
      * @throws CancellationException if this future was cancelled
-     * @throws ExecutionException    if this future completed exceptionally
-     * @throws InterruptedException  if the current thread was interrupted while waiting
-     * @throws TimeoutException      if the wait timed out
+     * @throws ExecutionException if this future completed exceptionally
+     * @throws InterruptedException if the current thread was interrupted while waiting
+     * @throws TimeoutException if the wait timed out
      */
-    public <T> T executeRequest(RequestContext context, long timeout, TimeUnit unit)
-    throws ExecutionException, InterruptedException, TimeoutException
+    public <T> T executeRequest(RequestContext context,
+                                long timeout,
+                                TimeUnit unit)
+            throws ExecutionException, InterruptedException, TimeoutException
     {
-        return this.<T>executeRequestAsync(context).get(timeout, unit);
+        return this.<T>executeRequestAsync(context)
+                   .get(timeout, unit);
     }
 
     /**
      * Returns the expected instance of type {@code <T>} after executing the {@code request} and processing it.
      *
      * @param context the request context
-     * @param <T>     the expected type for the instance
+     * @param <T> the expected type for the instance
      * @return the expected instance of type {@code <T>} after executing the {@code request} and processing it
      */
     public <T> CompletableFuture<T> executeRequestAsync(RequestContext context)
     {
-        Iterator<SidecarInstance> iterator = context.instanceSelectionPolicy().iterator();
+        Iterator<SidecarInstance> iterator = context.instanceSelectionPolicy()
+                                                    .iterator();
         CompletableFuture<T> resultFuture = new CompletableFuture<>();
         if (!iterator.hasNext())
         {
-            resultFuture.completeExceptionally(new IllegalStateException("InstanceSelectionPolicy " +
-                                                                         context.instanceSelectionPolicy()
-                                                                                .getClass()
-                                                                                .getSimpleName() +
-                                                                         " selects 0 instances"));
+            resultFuture.completeExceptionally(new IllegalStateException("InstanceSelectionPolicy " + context.instanceSelectionPolicy()
+                                                                                                             .getClass()
+                                                                                                             .getSimpleName()
+                    + " selects 0 instances"));
             return resultFuture;
         }
         SidecarInstance instance = iterator.next();
         CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         executeWithRetries(responseFuture, iterator, instance, context, 1);
 
-        responseFuture.whenComplete((response, retryThrowable) ->
-                                    processResponse(resultFuture, context.request(), response, retryThrowable));
+        responseFuture.whenComplete((response,
+                                     retryThrowable) -> processResponse(resultFuture, context.request(), response, retryThrowable));
 
         return resultFuture;
     }
@@ -124,27 +128,29 @@ public class RequestExecutor implements AutoCloseable
     /**
      * Streams the request from the context to the {@code streamConsumer}.
      *
-     * @param context        the request context
+     * @param context the request context
      * @param streamConsumer the object that consumes the stream
      */
-    public void streamRequest(RequestContext context, StreamConsumer streamConsumer)
+    public void streamRequest(RequestContext context,
+                              StreamConsumer streamConsumer)
     {
         Objects.requireNonNull(streamConsumer, "streamConsumer must be non-null");
-        Iterator<SidecarInstance> iterator = context.instanceSelectionPolicy().iterator();
+        Iterator<SidecarInstance> iterator = context.instanceSelectionPolicy()
+                                                    .iterator();
         if (!iterator.hasNext())
         {
-            streamConsumer.onError(new IllegalStateException("InstanceSelectionPolicy " +
-                                                             context.instanceSelectionPolicy()
-                                                                    .getClass()
-                                                                    .getSimpleName() +
-                                                             " selects 0 instances"));
+            streamConsumer.onError(new IllegalStateException("InstanceSelectionPolicy " + context.instanceSelectionPolicy()
+                                                                                                 .getClass()
+                                                                                                 .getSimpleName()
+                    + " selects 0 instances"));
             return;
         }
         SidecarInstance instance = iterator.next();
         CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         streamWithRetries(responseFuture, streamConsumer, iterator, instance, context, 1);
 
-        responseFuture.whenComplete(((response, throwable) -> {
+        responseFuture.whenComplete(((response,
+                                      throwable) -> {
             if (throwable != null)
             {
                 streamConsumer.onError(throwable);
@@ -162,14 +168,13 @@ public class RequestExecutor implements AutoCloseable
     }
 
     /**
-     * Executes the {@code request} from the {@code context} on the provided {@code sidecarInstance}, and applies the
-     * retry policy after complete.
+     * Executes the {@code request} from the {@code context} on the provided {@code sidecarInstance}, and applies the retry policy after complete.
      *
-     * @param future          a future for the {@link HttpResponse}
-     * @param iterator        the iterator of instances
+     * @param future a future for the {@link HttpResponse}
+     * @param iterator the iterator of instances
      * @param sidecarInstance the Sidecar instance where the request will be performed
-     * @param context         the request context
-     * @param attempt         the number of attempts for this request
+     * @param context the request context
+     * @param attempt the number of attempts for this request
      */
     protected void executeWithRetries(CompletableFuture<HttpResponse> future,
                                       Iterator<SidecarInstance> iterator,
@@ -177,40 +182,32 @@ public class RequestExecutor implements AutoCloseable
                                       RequestContext context,
                                       int attempt)
     {
-        logger.debug("Request from instance={}, request={}, attempt={}",
-                     sidecarInstance, context.request(), attempt);
+        logger.debug("Request from instance={}, request={}, attempt={}", sidecarInstance, context.request(), attempt);
 
         // execute the http request and process the response with the retry policy
         try
         {
             httpClient.execute(sidecarInstance, context)
-                      .whenComplete((HttpResponse response, Throwable throwable) ->
-                                    applyRetryPolicy(future,
-                                                     iterator,
-                                                     sidecarInstance,
-                                                     context,
-                                                     attempt,
-                                                     response,
-                                                     throwable));
+                      .whenComplete((HttpResponse response,
+                                     Throwable throwable) -> applyRetryPolicy(future, iterator, sidecarInstance, context, attempt, response, throwable));
         }
         catch (Throwable throwable)
         {
-            logger.error("Unexpected error while executing the request. instance={}, request={}, attempt={}",
-                         sidecarInstance, context.request(), attempt);
+            logger.error("Unexpected error while executing the request. instance={}, request={}, attempt={}", sidecarInstance, context.request(), attempt);
             future.completeExceptionally(throwable);
         }
     }
 
     /**
-     * Streams the request from the {@code context} to the {@code streamConsumer} from the provided
-     * {@code sidecarInstance}, and applies the retry policy after inspecting the response headers.
+     * Streams the request from the {@code context} to the {@code streamConsumer} from the provided {@code sidecarInstance}, and applies the retry policy after
+     * inspecting the response headers.
      *
-     * @param future          a future for the {@link HttpResponse}
-     * @param streamConsumer  the object that consumes the stream
-     * @param iterator        the iterator of instances
+     * @param future a future for the {@link HttpResponse}
+     * @param streamConsumer the object that consumes the stream
+     * @param iterator the iterator of instances
      * @param sidecarInstance the Sidecar instance where the request will be performed
-     * @param context         the request context
-     * @param attempt         the number of attempts for this request
+     * @param context the request context
+     * @param attempt the number of attempts for this request
      */
     private void streamWithRetries(CompletableFuture<HttpResponse> future,
                                    StreamConsumer streamConsumer,
@@ -219,26 +216,18 @@ public class RequestExecutor implements AutoCloseable
                                    RequestContext context,
                                    int attempt)
     {
-        logger.debug("Streaming from instance={}, request={}, attempt={}",
-                     sidecarInstance, context.request(), attempt);
+        logger.debug("Streaming from instance={}, request={}, attempt={}", sidecarInstance, context.request(), attempt);
 
         try
         {
             httpClient.stream(sidecarInstance, context, streamConsumer)
-                      .whenComplete((HttpResponse response, Throwable throwable) ->
-                                    applyRetryPolicy(future,
-                                                     streamConsumer,
-                                                     iterator,
-                                                     sidecarInstance,
-                                                     context,
-                                                     attempt,
-                                                     response,
-                                                     throwable));
+                      .whenComplete((HttpResponse response,
+                                     Throwable throwable) -> applyRetryPolicy(future, streamConsumer, iterator, sidecarInstance, context, attempt, response,
+                                             throwable));
         }
         catch (Throwable throwable)
         {
-            logger.error("Unexpected error while streaming. instance={}, request={}, attempt={}",
-                         sidecarInstance, context.request(), attempt);
+            logger.error("Unexpected error while streaming. instance={}, request={}, attempt={}", sidecarInstance, context.request(), attempt);
             future.completeExceptionally(throwable);
         }
     }
@@ -246,13 +235,13 @@ public class RequestExecutor implements AutoCloseable
     /**
      * Applies the {@code retryPolicy} to the response. The request will be retried based on the policy.
      *
-     * @param future          the future for the {@link HttpResponse}
-     * @param iterator        the iterator of instances
+     * @param future the future for the {@link HttpResponse}
+     * @param iterator the iterator of instances
      * @param sidecarInstance the Sidecar instance where the request was performed
-     * @param context         the request context
-     * @param attempt         the number of attempts for this request
-     * @param response        the {@link HttpResponse} received from the server
-     * @param throwable       the error encountered during the request, or null if no error was encountered
+     * @param context the request context
+     * @param attempt the number of attempts for this request
+     * @param response the {@link HttpResponse} received from the server
+     * @param throwable the error encountered during the request, or null if no error was encountered
      */
     private void applyRetryPolicy(CompletableFuture<HttpResponse> future,
                                   Iterator<SidecarInstance> iterator,
@@ -266,31 +255,30 @@ public class RequestExecutor implements AutoCloseable
         // check status code and apply retry policy on invalid status code
         Request request = context.request();
         context.retryPolicy()
-               .onResponse(future, request, response, throwable, attempt, retryOnNewHost, (nextAttempt, delay) -> {
-            String statusCode = response != null ? String.valueOf(response.statusCode()) : "<Not Available>";
-            SidecarInstance nextInstance = iterator.hasNext() ? iterator.next() : sidecarInstance;
-            if (response == null || response.statusCode() != HttpResponseStatus.ACCEPTED.code())
-            {
-                logger.warn("Retrying request on {} instance after {}ms. " +
-                            "Failed on instance={}, attempt={}, statusCode={}",
-                            nextInstance == sidecarInstance ? "same" : "next", delay,
-                            sidecarInstance, attempt, statusCode, throwable);
-            }
-            schedule(delay, () -> executeWithRetries(future, iterator, nextInstance, context, nextAttempt));
-        });
+               .onResponse(future, request, response, throwable, attempt, retryOnNewHost, (nextAttempt,
+                                                                                           delay) -> {
+                   String statusCode = response != null ? String.valueOf(response.statusCode()) : "<Not Available>";
+                   SidecarInstance nextInstance = iterator.hasNext() ? iterator.next() : sidecarInstance;
+                   if (response == null || response.statusCode() != HttpResponseStatus.ACCEPTED.code())
+                   {
+                       logger.warn("Retrying request on {} instance after {}ms. " + "Failed on instance={}, attempt={}, statusCode={}",
+                               nextInstance == sidecarInstance ? "same" : "next", delay, sidecarInstance, attempt, statusCode, throwable);
+                   }
+                   schedule(delay, () -> executeWithRetries(future, iterator, nextInstance, context, nextAttempt));
+               });
     }
 
     /**
      * Applies the {@code retryPolicy} to the stream. The stream will be retried based on the policy.
      *
-     * @param future          the future for the {@link HttpResponse}
-     * @param consumer        the object that consumes the stream
-     * @param iterator        the iterator of instances
+     * @param future the future for the {@link HttpResponse}
+     * @param consumer the object that consumes the stream
+     * @param iterator the iterator of instances
      * @param sidecarInstance the Sidecar instance where the request was performed
-     * @param context         the request context
-     * @param attempt         the number of attempts for this request
-     * @param response        the {@link HttpResponse} received from the server
-     * @param throwable       the error encountered during the request, or null if no error was encountered
+     * @param context the request context
+     * @param attempt the number of attempts for this request
+     * @param response the {@link HttpResponse} received from the server
+     * @param throwable the error encountered during the request, or null if no error was encountered
      */
     private void applyRetryPolicy(CompletableFuture<HttpResponse> future,
                                   StreamConsumer consumer,
@@ -305,29 +293,28 @@ public class RequestExecutor implements AutoCloseable
         // check status code and apply retry policy on invalid status code
         Request request = context.request();
         context.retryPolicy()
-               .onResponse(future, request, response, throwable, attempt, retryOnNewHost, (nextAttempt, delay) -> {
-            String statusCode = response != null ? String.valueOf(response.statusCode()) : "<Not Available>";
-            SidecarInstance nextInstance = iterator.hasNext() ? iterator.next() : sidecarInstance;
-            if (response == null || response.statusCode() != HttpResponseStatus.ACCEPTED.code())
-            {
-                logger.warn("Retrying stream on {} instance after {}ms. " +
-                            "Failed on instance={}, attempt={}, statusCode={}",
-                            nextInstance == sidecarInstance ? "same" : "next", delay,
-                            sidecarInstance, attempt, statusCode, throwable);
-            }
-            schedule(delay, () -> streamWithRetries(future, consumer, iterator, nextInstance, context, nextAttempt));
-        });
+               .onResponse(future, request, response, throwable, attempt, retryOnNewHost, (nextAttempt,
+                                                                                           delay) -> {
+                   String statusCode = response != null ? String.valueOf(response.statusCode()) : "<Not Available>";
+                   SidecarInstance nextInstance = iterator.hasNext() ? iterator.next() : sidecarInstance;
+                   if (response == null || response.statusCode() != HttpResponseStatus.ACCEPTED.code())
+                   {
+                       logger.warn("Retrying stream on {} instance after {}ms. " + "Failed on instance={}, attempt={}, statusCode={}",
+                               nextInstance == sidecarInstance ? "same" : "next", delay, sidecarInstance, attempt, statusCode, throwable);
+                   }
+                   schedule(delay, () -> streamWithRetries(future, consumer, iterator, nextInstance, context, nextAttempt));
+               });
     }
 
     /**
-     * Processes the {@code response} result and sets the future as a completed future or as a completed exceptionally
-     * future when an error occurred during processing.
+     * Processes the {@code response} result and sets the future as a completed future or as a completed exceptionally future when an error occurred during
+     * processing.
      *
-     * @param future    the future for the request
-     * @param request   the request
-     * @param response  the {@link HttpResponse} received from the server
+     * @param future the future for the request
+     * @param request the request
+     * @param response the {@link HttpResponse} received from the server
      * @param throwable the error encountered during the request, or null if no error was encountered
-     * @param <T>       the type expected by the requester
+     * @param <T> the type expected by the requester
      */
     @SuppressWarnings("unchecked")
     private <T> void processResponse(CompletableFuture<T> future,
@@ -364,9 +351,10 @@ public class RequestExecutor implements AutoCloseable
      * Schedule the {@code runnable} after {@code delayMillis} milliseconds.
      *
      * @param delayMillis the delay before retrying in milliseconds
-     * @param runnable    the code to execute
+     * @param runnable the code to execute
      */
-    protected void schedule(long delayMillis, Runnable runnable)
+    protected void schedule(long delayMillis,
+                            Runnable runnable)
     {
         if (delayMillis > 0)
         {

@@ -33,15 +33,16 @@ import static org.assertj.core.api.Assertions.fail;
 public final class ResourceUtils
 {
     /**
-     * Writes a resource with {@code resourceName} loaded from the {@link ClassLoader classLoader} into the
-     * {@code destinationPath}
+     * Writes a resource with {@code resourceName} loaded from the {@link ClassLoader classLoader} into the {@code destinationPath}
      *
-     * @param classLoader     the class loader for the resource
+     * @param classLoader the class loader for the resource
      * @param destinationPath the destination path to write the file
-     * @param resourceName    the name of the resource to be loaded
+     * @param resourceName the name of the resource to be loaded
      * @return the {@link Path} to the created resource
      */
-    public static Path writeResourceToPath(ClassLoader classLoader, Path destinationPath, String resourceName)
+    public static Path writeResourceToPath(ClassLoader classLoader,
+                                           Path destinationPath,
+                                           String resourceName)
     {
         try
         {
@@ -50,8 +51,7 @@ public final class ResourceUtils
             // ensure parent directory is created
             Files.createDirectories(resourcePath.getParent());
 
-            try (InputStream inputStream = classLoader.getResourceAsStream(resourceName);
-                 OutputStream outputStream = Files.newOutputStream(resourcePath))
+            try (InputStream inputStream = classLoader.getResourceAsStream(resourceName); OutputStream outputStream = Files.newOutputStream(resourcePath))
             {
                 assertThat(inputStream).isNotNull();
 

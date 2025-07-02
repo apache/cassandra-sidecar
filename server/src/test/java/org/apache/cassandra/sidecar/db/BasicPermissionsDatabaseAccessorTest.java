@@ -18,19 +18,16 @@
 
 package org.apache.cassandra.sidecar.db;
 
-import java.util.Collections;
-
-import org.junit.jupiter.api.Test;
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Statement;
+import java.util.Collections;
 import org.apache.cassandra.sidecar.acl.authorization.PermissionFactoryImpl;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema;
-
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -50,8 +47,7 @@ class BasicPermissionsDatabaseAccessorTest
         when(mockSchema.allRolesPermissions()).thenReturn(mockStmt);
 
         CQLSessionProvider mockSessionProvider = mock(CQLSessionProvider.class);
-        TestSidecarPermissionsDatabaseAccessor sidecarPermissionsDatabaseAccessor
-        = new TestSidecarPermissionsDatabaseAccessor(mockSchema, mockSessionProvider);
+        TestSidecarPermissionsDatabaseAccessor sidecarPermissionsDatabaseAccessor = new TestSidecarPermissionsDatabaseAccessor(mockSchema, mockSessionProvider);
 
         assertThat(sidecarPermissionsDatabaseAccessor.rolesToAuthorizations()).isEmpty();
     }
@@ -74,7 +70,8 @@ class BasicPermissionsDatabaseAccessorTest
             when(mockRow.getString("resource")).thenReturn("test_resource");
             // invalid wildcard permission set
             when(mockRow.getSet("permissions", String.class)).thenReturn(Collections.singleton(":"));
-            when(mockResultSet.iterator()).thenReturn(Collections.singletonList(mockRow).iterator());
+            when(mockResultSet.iterator()).thenReturn(Collections.singletonList(mockRow)
+                                                                 .iterator());
             return mockResultSet;
         }
     }

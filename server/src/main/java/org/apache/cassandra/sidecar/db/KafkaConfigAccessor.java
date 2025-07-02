@@ -24,9 +24,8 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
 /**
- * {@link KafkaConfigAccessor} is an accessor class for updating kafka configurations into
- * "configs" table in sidecar keyspace. All the kafka configurations required for CDC feature are
- * stored in this table using this class.
+ * {@link KafkaConfigAccessor} is an accessor class for updating kafka configurations into "configs" table in sidecar keyspace. All the kafka configurations
+ * required for CDC feature are stored in this table using this class.
  */
 @Singleton
 public class KafkaConfigAccessor extends ConfigAccessorImpl

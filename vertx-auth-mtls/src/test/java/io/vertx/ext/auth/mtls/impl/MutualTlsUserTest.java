@@ -19,9 +19,7 @@
 package io.vertx.ext.auth.mtls.impl;
 
 import java.util.Arrays;
-
 import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -33,8 +31,11 @@ public class MutualTlsUserTest
     public void testPrincipal()
     {
         MutualTlsUser mutualTlsUser = MutualTlsUser.fromIdentities(Arrays.asList("identity1", "identity2"));
-        assertThat(mutualTlsUser.identities().size()).isEqualTo(2);
-        assertThat(mutualTlsUser.principal().containsKey("identities")).isTrue();
-        assertThat(mutualTlsUser.principal().getString("identities")).isEqualTo("identity1,identity2");
+        assertThat(mutualTlsUser.identities()
+                                .size()).isEqualTo(2);
+        assertThat(mutualTlsUser.principal()
+                                .containsKey("identities")).isTrue();
+        assertThat(mutualTlsUser.principal()
+                                .getString("identities")).isEqualTo("identity1,identity2");
     }
 }

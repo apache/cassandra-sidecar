@@ -29,9 +29,9 @@ public class RetriesExhaustedException extends RuntimeException
     /**
      * Constructs an exception with the number of {@code attempts} performed for the request.
      *
-     * @param attempts      the number of attempts performed for the request
-     * @param request       the HTTP request
-     * @param lastResponse  the last failed HTTP response
+     * @param attempts the number of attempts performed for the request
+     * @param request the HTTP request
+     * @param lastResponse the last failed HTTP response
      * @return the constructed {@link RetriesExhaustedException exception}
      */
     public static RetriesExhaustedException of(int attempts,
@@ -44,10 +44,10 @@ public class RetriesExhaustedException extends RuntimeException
     /**
      * Constructs an exception with the number of {@code attempts} performed for the request.
      *
-     * @param attempts      the number of attempts performed for the request
-     * @param request       the HTTP request
-     * @param lastResponse  the last failed HTTP response
-     * @param throwable     the underlying exception
+     * @param attempts the number of attempts performed for the request
+     * @param request the HTTP request
+     * @param lastResponse the last failed HTTP response
+     * @param throwable the underlying exception
      * @return the constructed {@link RetriesExhaustedException exception}
      */
     public static RetriesExhaustedException of(int attempts,
@@ -61,22 +61,17 @@ public class RetriesExhaustedException extends RuntimeException
     /**
      * Constructs an exception with the number of {@code attempts} performed for the request.
      *
-     * @param attempts      the number of attempts performed for the request
-     * @param request       the HTTP request
-     * @param lastResponse  the last failed HTTP response
-     * @param throwable     the underlying exception
+     * @param attempts the number of attempts performed for the request
+     * @param request the HTTP request
+     * @param lastResponse the last failed HTTP response
+     * @param throwable the underlying exception
      */
     protected RetriesExhaustedException(int attempts,
                                         Request request,
                                         HttpResponse lastResponse,
                                         Throwable throwable)
     {
-        super(String.format("Unable to complete request '%s' after %d attempt%s; last response '%s' from server '%s'",
-                            request.requestURI(),
-                            attempts,
-                            attempts == 1 ? "" : "s",
-                            lastResponse,
-                            lastResponse != null ? lastResponse.sidecarInstance() : null),
-              throwable);
+        super(String.format("Unable to complete request '%s' after %d attempt%s; last response '%s' from server '%s'", request.requestURI(), attempts,
+                attempts == 1 ? "" : "s", lastResponse, lastResponse != null ? lastResponse.sidecarInstance() : null), throwable);
     }
 }

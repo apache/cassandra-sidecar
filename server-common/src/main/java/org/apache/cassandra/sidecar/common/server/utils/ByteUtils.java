@@ -56,8 +56,8 @@ public final class ByteUtils
     public static final long ONE_EIB = ONE_PIB << 10;
 
     /**
-     * Returns a human-readable representation of the number of {@code bytes} in the binary prefix format. A
-     * long input can only represent up to exbibytes units.
+     * Returns a human-readable representation of the number of {@code bytes} in the binary prefix format. A long input can only represent up to exbibytes
+     * units.
      *
      * @param bytes the non-negative number of bytes
      * @return a human-readable representation of the number of {@code bytes} in the binary prefix format
@@ -67,16 +67,24 @@ public final class ByteUtils
     {
         Preconditions.checkArgument(bytes >= 0, "bytes cannot be negative");
 
-        if (bytes >= ONE_EIB) return formatHelper(bytes, ONE_EIB, "EiB");
-        if (bytes >= ONE_PIB) return formatHelper(bytes, ONE_PIB, "PiB");
-        if (bytes >= ONE_TIB) return formatHelper(bytes, ONE_TIB, "TiB");
-        if (bytes >= ONE_GIB) return formatHelper(bytes, ONE_GIB, "GiB");
-        if (bytes >= ONE_MIB) return formatHelper(bytes, ONE_MIB, "MiB");
-        if (bytes >= ONE_KIB) return formatHelper(bytes, ONE_KIB, "KiB");
+        if (bytes >= ONE_EIB)
+            return formatHelper(bytes, ONE_EIB, "EiB");
+        if (bytes >= ONE_PIB)
+            return formatHelper(bytes, ONE_PIB, "PiB");
+        if (bytes >= ONE_TIB)
+            return formatHelper(bytes, ONE_TIB, "TiB");
+        if (bytes >= ONE_GIB)
+            return formatHelper(bytes, ONE_GIB, "GiB");
+        if (bytes >= ONE_MIB)
+            return formatHelper(bytes, ONE_MIB, "MiB");
+        if (bytes >= ONE_KIB)
+            return formatHelper(bytes, ONE_KIB, "KiB");
         return bytes + " B";
     }
 
-    static String formatHelper(double bytes, long baseUnit, String unitName)
+    static String formatHelper(double bytes,
+                               long baseUnit,
+                               String unitName)
     {
         return String.format("%.2f %s", bytes / baseUnit, unitName);
     }

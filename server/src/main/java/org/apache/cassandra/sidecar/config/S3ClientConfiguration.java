@@ -39,8 +39,9 @@ public interface S3ClientConfiguration
     SecondBoundConfiguration threadKeepAlive();
 
     /**
-     * Returns range bytes size to produce <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-range">Range header</a> for range-get object.
-     * The size should not be too large (long request) or too small (too many request). 5 to 10 MiB would be ideal to start with.
+     * Returns range bytes size to produce <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-range">Range header</a> for range-get object. The size
+     * should not be too large (long request) or too small (too many request). 5 to 10 MiB would be ideal to start with.
+     *
      * @return range bytes size.
      */
     int rangeGetObjectBytesSize();

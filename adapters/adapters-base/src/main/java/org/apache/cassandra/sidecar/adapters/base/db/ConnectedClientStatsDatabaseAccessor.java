@@ -18,11 +18,10 @@
 
 package org.apache.cassandra.sidecar.adapters.base.db;
 
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.DatabaseAccessor;
@@ -32,31 +31,36 @@ import org.apache.cassandra.sidecar.db.DatabaseAccessor;
  */
 public class ConnectedClientStatsDatabaseAccessor extends DatabaseAccessor<ConnectedClientsSchema>
 {
-    public ConnectedClientStatsDatabaseAccessor(CQLSessionProvider sessionProvider, ConnectedClientsSchema tableSchema)
+    public ConnectedClientStatsDatabaseAccessor(CQLSessionProvider sessionProvider,
+                                                ConnectedClientsSchema tableSchema)
     {
         super(tableSchema, sessionProvider);
     }
 
     /**
      * Query for a summary of the client connection stats
+     *
      * @return {@link ConnectedClientStatsSummary} with total connections and counts grouped by user
      */
     public ConnectedClientStatsSummary summary()
     {
         tableSchema.prepareStatements(session());
-        BoundStatement statement = tableSchema.connectionsByUser().bind();
+        BoundStatement statement = tableSchema.connectionsByUser()
+                                              .bind();
         ResultSet resultSet = execute(statement);
         return ConnectedClientStatsSummary.from(resultSet);
     }
 
     /**
      * Query for all the client connection stats with an entry per connection
+     *
      * @return {@link ConnectedClientStats} for each connection
      */
     public Stream<ConnectedClientStats> stats()
     {
         tableSchema.prepareStatements(session());
-        BoundStatement statement = tableSchema.stats().bind();
+        BoundStatement statement = tableSchema.stats()
+                                              .bind();
         ResultSet resultSet = execute(statement);
         return StreamSupport.stream(resultSet.spliterator(), false)
                             .map(ConnectedClientStats::from);

@@ -18,14 +18,13 @@
 
 package org.apache.cassandra.sidecar.common.request.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Date;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.data.ConsistencyConfig;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
@@ -34,7 +33,6 @@ import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.jetbrains.annotations.Nullable;
-
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_AGENT;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_CONSISTENCY_LEVEL;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_EXPIRE_AT;
@@ -59,12 +57,12 @@ public class CreateRestoreJobRequestPayload
     /**
      * Builder to build a CreateRestoreJobRequest
      *
-     * @param secrets          secrets for access objects on storage cloud
-     * @param expireAtInMillis time in future that the job expires,
-     *                         i.e. fail the restore job if it is not in a final {@link RestoreJobStatus} yet
+     * @param secrets secrets for access objects on storage cloud
+     * @param expireAtInMillis time in future that the job expires, i.e. fail the restore job if it is not in a final {@link RestoreJobStatus} yet
      * @return builder
      */
-    public static Builder builder(RestoreJobSecrets secrets, long expireAtInMillis)
+    public static Builder builder(RestoreJobSecrets secrets,
+                                  long expireAtInMillis)
     {
         return new Builder(secrets, expireAtInMillis);
     }
@@ -72,10 +70,10 @@ public class CreateRestoreJobRequestPayload
     /**
      * CreateRestoreJobRequest deserializer
      *
-     * @param jobId            job id of restore job
-     * @param jobAgent         arbitrary text a job can put, which can be used to identity itself during Http request
-     * @param secrets          secrets to be used by restore job to download data
-     * @param importOptions    the configured options for SSTable import
+     * @param jobId job id of restore job
+     * @param jobAgent arbitrary text a job can put, which can be used to identity itself during Http request
+     * @param secrets secrets to be used by restore job to download data
+     * @param importOptions the configured options for SSTable import
      * @param expireAtInMillis a timestamp in the future when the job is considered expired
      * @param consistencyLevel consistency level a job should satisfy
      */
@@ -88,30 +86,21 @@ public class CreateRestoreJobRequestPayload
                                           @JsonProperty(JOB_CONSISTENCY_LEVEL) String consistencyLevel,
                                           @JsonProperty(JOB_LOCAL_DATA_CENTER) String localDatacenter)
     {
-        Preconditions.checkArgument(jobId == null || jobId.version() == 1,
-                                    "Only time based UUIDs allowed for jobId");
-        Preconditions.checkArgument(expireAtInMillis != 0 && expireAtInMillis > System.currentTimeMillis(),
-                                    "expireAt cannot be absent or a time in past");
+        Preconditions.checkArgument(jobId == null || jobId.version() == 1, "Only time based UUIDs allowed for jobId");
+        Preconditions.checkArgument(expireAtInMillis != 0 && expireAtInMillis > System.currentTimeMillis(), "expireAt cannot be absent or a time in past");
         Objects.requireNonNull(secrets, "secrets cannot be null");
         this.jobId = jobId;
         this.jobAgent = jobAgent;
         this.secrets = secrets;
-        this.importOptions = importOptions == null
-                             ? SSTableImportOptions.defaults()
-                             : importOptions;
+        this.importOptions = importOptions == null ? SSTableImportOptions.defaults() : importOptions;
         this.expireAtInMillis = expireAtInMillis;
         this.consistencyConfig = ConsistencyConfig.parseString(consistencyLevel, localDatacenter);
     }
 
     private CreateRestoreJobRequestPayload(Builder builder)
     {
-        this(builder.jobId,
-             builder.jobAgent,
-             builder.secrets,
-             builder.importOptions,
-             builder.expireAtInMillis,
-             nameOrNull(builder.consistencyLevel),
-             builder.localDc);
+        this(builder.jobId, builder.jobAgent, builder.secrets, builder.importOptions, builder.expireAtInMillis, nameOrNull(builder.consistencyLevel),
+                builder.localDc);
     }
 
     /**
@@ -197,14 +186,9 @@ public class CreateRestoreJobRequestPayload
     @Override
     public String toString()
     {
-        return "CreateRestoreJobRequest{" +
-               JOB_ID + "='" + jobId + "', " +
-               JOB_AGENT + "='" + jobAgent + "', " +
-               JOB_SECRETS + "='" + secrets + "', " +
-               JOB_EXPIRE_AT + "='" + expireAtInMillis + "', " +
-               JOB_CONSISTENCY_LEVEL + "='" + consistencyLevel() + "', " +
-               JOB_LOCAL_DATA_CENTER + "='" + localDatacenter() + "', " +
-               JOB_IMPORT_OPTIONS + "='" + importOptions + "'}";
+        return "CreateRestoreJobRequest{" + JOB_ID + "='" + jobId + "', " + JOB_AGENT + "='" + jobAgent + "', " + JOB_SECRETS + "='" + secrets + "', "
+                + JOB_EXPIRE_AT + "='" + expireAtInMillis + "', " + JOB_CONSISTENCY_LEVEL + "='" + consistencyLevel() + "', " + JOB_LOCAL_DATA_CENTER + "='"
+                + localDatacenter() + "', " + JOB_IMPORT_OPTIONS + "='" + importOptions + "'}";
     }
 
     /**
@@ -221,7 +205,8 @@ public class CreateRestoreJobRequestPayload
         private ConsistencyLevel consistencyLevel = null;
         private String localDc = null;
 
-        Builder(RestoreJobSecrets secrets, long expireAtInMillis)
+        Builder(RestoreJobSecrets secrets,
+                long expireAtInMillis)
         {
             this.secrets = secrets;
             this.expireAtInMillis = expireAtInMillis;
@@ -247,7 +232,8 @@ public class CreateRestoreJobRequestPayload
             return consistencyLevel(consistencyLevel, null);
         }
 
-        public Builder consistencyLevel(ConsistencyLevel consistencyLevel, String localDc)
+        public Builder consistencyLevel(ConsistencyLevel consistencyLevel,
+                                        String localDc)
         {
             return update(b -> {
                 b.consistencyLevel = consistencyLevel;
@@ -263,10 +249,8 @@ public class CreateRestoreJobRequestPayload
 
         public CreateRestoreJobRequestPayload build()
         {
-            Preconditions.checkArgument(consistencyLevel == null
-                                        || !consistencyLevel.isLocalDcOnly
-                                        || (localDc != null && !localDc.isEmpty()),
-                                        "Must specify a non-empty " + JOB_LOCAL_DATA_CENTER + " for consistency level: " + consistencyLevel);
+            Preconditions.checkArgument(consistencyLevel == null || !consistencyLevel.isLocalDcOnly || (localDc != null && !localDc.isEmpty()),
+                    "Must specify a non-empty " + JOB_LOCAL_DATA_CENTER + " for consistency level: " + consistencyLevel);
             return new CreateRestoreJobRequestPayload(this);
         }
     }

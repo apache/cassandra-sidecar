@@ -68,8 +68,7 @@ public class SSTableCleanupHandlerTest extends BaseUploadsHandlerTest
                   assertThat(error.getInteger("code")).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
                   assertThat(error.getString("status")).isEqualTo(HttpResponseStatus.BAD_REQUEST.reasonPhrase());
                   // when enable dev mode, see build.gradle#test.systemProperty, the exception is attached
-                  assertThat(error.getString("message"))
-                  .isEqualTo("Invalid upload id is supplied, uploadId=1234");
+                  assertThat(error.getString("message")).isEqualTo("Invalid upload id is supplied, uploadId=1234");
                   // when dev mode is disabled, the response is {"status":"Bad Request", "code":400, "message":"..."}
                   context.completeNow();
               })));

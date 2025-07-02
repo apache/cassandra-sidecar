@@ -29,6 +29,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,7 +120,8 @@ public class SidecarSchemaTest
         interceptedPrepStmts.clear();
         CountDownLatch closeLatch = new CountDownLatch(1);
         TestResourceReaper.create()
-                          .with(server).with(vertx)
+                          .with(server)
+                          .with(vertx)
                           .close()
                           .onComplete(result -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
@@ -146,70 +148,67 @@ public class SidecarSchemaTest
                                             .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.role_permissions_v1"));
 
             List<String> expectedPrepStatements = Arrays.asList(
-            "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  keyspace_name,  table_name,  " +
-            "job_agent,  status,  blob_secrets,  import_options,  consistency_level,  local_datacenter,  expire_at) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  keyspace_name,  table_name,  "
+                            + "job_agent,  status,  blob_secrets,  import_options,  consistency_level,  local_datacenter,  expire_at) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  blob_secrets) VALUES (?, ? ,?)",
+                    "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  blob_secrets) VALUES (?, ? ,?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  status) VALUES (?, ?, ?)",
+                    "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  status) VALUES (?, ?, ?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  job_agent) VALUES (?, ?, ?)",
+                    "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  job_agent) VALUES (?, ?, ?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  expire_at) VALUES (?, ?, ?)",
+                    "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  expire_at) VALUES (?, ?, ?)",
 
-            "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  slice_count) VALUES (?, ?, ?)",
+                    "INSERT INTO sidecar_internal.restore_job_v4 (  created_at,  job_id,  slice_count) VALUES (?, ?, ?)",
 
-            "SELECT created_at, job_id, keyspace_name, table_name, job_agent, status, blob_secrets, import_options, " +
-            "consistency_level, local_datacenter, expire_at, slice_count FROM sidecar_internal.restore_job_v4 WHERE created_at = ? AND job_id = ?",
+                    "SELECT created_at, job_id, keyspace_name, table_name, job_agent, status, blob_secrets, import_options, "
+                            + "consistency_level, local_datacenter, expire_at, slice_count FROM sidecar_internal.restore_job_v4 WHERE created_at = ? AND job_id = ?",
 
-            "SELECT created_at, job_id, keyspace_name, table_name, job_agent, status, blob_secrets, import_options, " +
-            "consistency_level, local_datacenter, expire_at, slice_count FROM sidecar_internal.restore_job_v4 WHERE created_at = ?",
+                    "SELECT created_at, job_id, keyspace_name, table_name, job_agent, status, blob_secrets, import_options, "
+                            + "consistency_level, local_datacenter, expire_at, slice_count FROM sidecar_internal.restore_job_v4 WHERE created_at = ?",
 
-            "INSERT INTO sidecar_internal.restore_slice_v3 (  job_id,  bucket_id,  slice_id,  bucket,  key,  " +
-            "checksum,  start_token,  end_token,  compressed_size,  uncompressed_size) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO sidecar_internal.restore_slice_v3 (  job_id,  bucket_id,  slice_id,  bucket,  key,  "
+                            + "checksum,  start_token,  end_token,  compressed_size,  uncompressed_size) " + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 
-            "SELECT job_id, bucket_id, slice_id, bucket, key, checksum, start_token, end_token, compressed_size, " +
-            "uncompressed_size FROM sidecar_internal.restore_slice_v3 " +
-            "WHERE job_id = ? AND bucket_id = ? AND end_token > ? AND start_token < ? ALLOW FILTERING",
+                    "SELECT job_id, bucket_id, slice_id, bucket, key, checksum, start_token, end_token, compressed_size, "
+                            + "uncompressed_size FROM sidecar_internal.restore_slice_v3 "
+                            + "WHERE job_id = ? AND bucket_id = ? AND end_token > ? AND start_token < ? ALLOW FILTERING",
 
-            "UPDATE sidecar_internal.restore_range_v1 SET slice_id = ?, slice_bucket = ?, slice_key = ?, status_by_replica = status_by_replica + ? " +
-            "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND end_token = ?",
+                    "UPDATE sidecar_internal.restore_range_v1 SET slice_id = ?, slice_bucket = ?, slice_key = ?, status_by_replica = status_by_replica + ? "
+                            + "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND end_token = ?",
 
-            "SELECT job_id, bucket_id, slice_id, slice_bucket, slice_key, start_token, end_token, status_by_replica " +
-            "FROM sidecar_internal.restore_range_v1 WHERE job_id = ? AND bucket_id = ? ALLOW FILTERING",
+                    "SELECT job_id, bucket_id, slice_id, slice_bucket, slice_key, start_token, end_token, status_by_replica "
+                            + "FROM sidecar_internal.restore_range_v1 WHERE job_id = ? AND bucket_id = ? ALLOW FILTERING",
 
-            "UPDATE sidecar_internal.restore_range_v1 SET status_by_replica = status_by_replica + ? " +
-            "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND end_token = ?",
+                    "UPDATE sidecar_internal.restore_range_v1 SET status_by_replica = status_by_replica + ? "
+                            + "WHERE job_id = ? AND bucket_id = ? AND start_token = ? AND end_token = ?",
 
-            "INSERT INTO sidecar_internal.sidecar_lease_v1 (name,owner) " +
-            "VALUES ('cluster_lease_holder',?) IF NOT EXISTS USING TTL 300",
+                    "INSERT INTO sidecar_internal.sidecar_lease_v1 (name,owner) " + "VALUES ('cluster_lease_holder',?) IF NOT EXISTS USING TTL 300",
 
-            "UPDATE sidecar_internal.sidecar_lease_v1 USING TTL 300 SET owner = ? " +
-            "WHERE name = 'cluster_lease_holder' IF owner = ?",
+                    "UPDATE sidecar_internal.sidecar_lease_v1 USING TTL 300 SET owner = ? " + "WHERE name = 'cluster_lease_holder' IF owner = ?",
 
-            "SELECT * FROM sidecar_internal.role_permissions_v1",
+                    "SELECT * FROM sidecar_internal.role_permissions_v1",
 
-            "SELECT role, is_superuser, member_of FROM system_auth.roles",
+                    "SELECT role, is_superuser, member_of FROM system_auth.roles",
 
-            "SELECT * FROM system_auth.role_permissions",
+                    "SELECT * FROM system_auth.role_permissions",
 
-            "SELECT config from sidecar_internal.configs WHERE service=?",
+                    "SELECT config from sidecar_internal.configs WHERE service=?",
 
-            "INSERT INTO sidecar_internal.configs (service, config) VALUES (?, ?)",
+                    "INSERT INTO sidecar_internal.configs (service, config) VALUES (?, ?)",
 
-            "INSERT INTO sidecar_internal.configs (service, config) VALUES (?, ?) IF NOT EXISTS",
+                    "INSERT INTO sidecar_internal.configs (service, config) VALUES (?, ?) IF NOT EXISTS",
 
-            "DELETE FROM sidecar_internal.configs WHERE service=?",
+                    "DELETE FROM sidecar_internal.configs WHERE service=?",
 
-            "SELECT name, value FROM system_views.settings WHERE name IN ?"
-            );
+                    "SELECT name, value FROM system_views.settings WHERE name IN ?");
 
             assertThat(interceptedPrepStmts).as("Intercepted statements match expected statements")
                                             .containsExactlyInAnyOrderElementsOf(expectedPrepStatements);
 
-            assertThat(sidecarSchema.isInitialized()).as("Schema is successfully initialized").isTrue();
+            assertThat(sidecarSchema.isInitialized()).as("Schema is successfully initialized")
+                                                     .isTrue();
             assertTableSchema(sidecarSchema.tableSchema(RestoreJobsSchema.class), "sidecar_internal.restore_job_v4");
             assertTableSchema(sidecarSchema.tableSchema(RestoreRangesSchema.class), "sidecar_internal.restore_range_v1");
             assertTableSchema(sidecarSchema.tableSchema(RestoreSlicesSchema.class), "sidecar_internal.restore_slice_v3");
@@ -219,7 +218,8 @@ public class SidecarSchemaTest
         });
     }
 
-    private void assertTableSchema(TableSchema tableSchema, String expectedString)
+    private void assertTableSchema(TableSchema tableSchema,
+                                   String expectedString)
     {
         assertThat(tableSchema).isNotNull();
         assertThat(tableSchema.toString()).isEqualTo(expectedString);
@@ -253,12 +253,12 @@ public class SidecarSchemaTest
             when(session.getCluster()
                         .getMetadata()
                         .getKeyspace(anyString())).thenAnswer((Answer<KeyspaceMetadata>) invocation -> {
-                if (DEFAULT_SIDECAR_SCHEMA_KEYSPACE_NAME.equals(invocation.getArgument(0)))
-                {
-                    return null;
-                }
-                return ks;
-            });
+                            if (DEFAULT_SIDECAR_SCHEMA_KEYSPACE_NAME.equals(invocation.getArgument(0)))
+                            {
+                                return null;
+                            }
+                            return ks;
+                        });
             when(session.execute(any(String.class))).then(invocation -> {
                 if (intercept)
                 {

@@ -45,9 +45,7 @@ public class SslConfigurationImpl implements SslConfiguration
     public static final boolean DEFAULT_USE_OPEN_SSL = true;
     public static final SecondBoundConfiguration DEFAULT_HANDSHAKE_TIMEOUT = SecondBoundConfiguration.parse("10s");
     public static final String DEFAULT_CLIENT_AUTH = "NONE";
-    public static final List<String> DEFAULT_SECURE_TRANSPORT_PROTOCOLS
-    = Collections.unmodifiableList(Arrays.asList("TLSv1.2", "TLSv1.3"));
-
+    public static final List<String> DEFAULT_SECURE_TRANSPORT_PROTOCOLS = Collections.unmodifiableList(Arrays.asList("TLSv1.2", "TLSv1.3"));
 
     @JsonProperty("enabled")
     protected final boolean enabled;
@@ -155,15 +153,15 @@ public class SslConfigurationImpl implements SslConfiguration
         try
         {
             // forces a validation of the input
-            this.clientAuth = ClientAuth.valueOf(clientAuth).name();
+            this.clientAuth = ClientAuth.valueOf(clientAuth)
+                                        .name();
         }
         catch (IllegalArgumentException exception)
         {
-            String errorMessage = String.format("Invalid client_auth configuration=\"%s\", valid values are (%s)",
-                                                clientAuth,
-                                                Arrays.stream(ClientAuth.values())
-                                                      .map(Enum::name)
-                                                      .collect(Collectors.joining(",")));
+            String errorMessage = String.format("Invalid client_auth configuration=\"%s\", valid values are (%s)", clientAuth,
+                    Arrays.stream(ClientAuth.values())
+                          .map(Enum::name)
+                          .collect(Collectors.joining(",")));
             throw new IllegalArgumentException(errorMessage);
         }
     }

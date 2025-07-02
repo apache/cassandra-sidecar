@@ -27,17 +27,16 @@ import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 /**
- * Factory class to initialize the {@link org.apache.cassandra.sidecar.coordination.ElectorateMembership} instance
- * based on the configured strategy
+ * Factory class to initialize the {@link org.apache.cassandra.sidecar.coordination.ElectorateMembership} instance based on the configured strategy
  */
 public class ElectorateMembershipFactory
 {
     /**
      * Creates the {@link ElectorateMembership} based on the strategy configuration
      *
-     * @param fetcher         the interface to retrieve instance metadata
+     * @param fetcher the interface to retrieve instance metadata
      * @param sessionProvider the provider for the CQL session
-     * @param config          the configuration for running Sidecar
+     * @param config the configuration for running Sidecar
      * @return the created {@link ElectorateMembership} instance
      * @throws ConfigurationException when an invalid strategy is used
      */
@@ -51,11 +50,11 @@ public class ElectorateMembershipFactory
                                 .electorateMembershipStrategy();
         switch (strategy)
         {
-            case "MostReplicatedKeyspaceTokenZeroElectorateMembership":
+            case "MostReplicatedKeyspaceTokenZeroElectorateMembership" :
                 return new MostReplicatedKeyspaceTokenZeroElectorateMembership(fetcher, sessionProvider, config);
-            case "SidecarInternalTokenZeroElectorateMembership":
+            case "SidecarInternalTokenZeroElectorateMembership" :
                 return new SidecarInternalTokenZeroElectorateMembership(fetcher, config);
-            default:
+            default :
                 throw new ConfigurationException("Invalid electorate membership strategy value '" + strategy + "'");
         }
     }

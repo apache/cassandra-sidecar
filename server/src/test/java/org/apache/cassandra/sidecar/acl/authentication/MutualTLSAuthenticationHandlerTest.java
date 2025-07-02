@@ -18,26 +18,6 @@
 
 package org.apache.cassandra.sidecar.acl.authentication;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
@@ -51,6 +31,17 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
@@ -67,7 +58,13 @@ import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
 import org.apache.cassandra.testing.utils.tls.CertificateBundle;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -96,7 +93,8 @@ class MutualTLSAuthenticationHandlerTest
     void setUp() throws Exception
     {
         TestModule testModule = testModule();
-        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(testModule));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
+                                                        .with(testModule));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 
@@ -112,7 +110,8 @@ class MutualTLSAuthenticationHandlerTest
     void tearDown() throws InterruptedException
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             LOGGER.info("Close event received before timeout.");
         else
@@ -220,56 +219,59 @@ class MutualTLSAuthenticationHandlerTest
 
     TestMTLSModule testModule() throws Exception
     {
-        ca = new CertificateBuilder()
-             .subject("CN=Apache cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
-             .addSanIpAddress("127.0.0.1")
-             .addSanDnsName("localhost")
-             .isCertificateAuthority(true)
-             .buildSelfSigned();
-
-        truststorePath
-        = ca.toTempKeyStorePath(tempDir.toPath(), "password".toCharArray(), "password".toCharArray());
-
-        CertificateBundle keystore = new CertificateBuilder()
-                                     .subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                     .addSanDnsName("localhost")
+        ca = new CertificateBuilder().subject("CN=Apache cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
                                      .addSanIpAddress("127.0.0.1")
-                                     .buildIssuedBy(ca);
+                                     .addSanDnsName("localhost")
+                                     .isCertificateAuthority(true)
+                                     .buildSelfSigned();
 
-        Path serverKeystorePath = keystore.toTempKeyStorePath(tempDir.toPath(),
-                                                              "password".toCharArray(),
-                                                              "password".toCharArray());
+        truststorePath = ca.toTempKeyStorePath(tempDir.toPath(), "password".toCharArray(), "password".toCharArray());
+
+        CertificateBundle keystore = new CertificateBuilder().subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                             .addSanDnsName("localhost")
+                                                             .addSanIpAddress("127.0.0.1")
+                                                             .buildIssuedBy(ca);
+
+        Path serverKeystorePath = keystore.toTempKeyStorePath(tempDir.toPath(), "password".toCharArray(), "password".toCharArray());
         return new TestMTLSModule(serverKeystorePath, truststorePath, mockSystemAuthDatabaseAccessor);
     }
 
-    private WebClient client(Path clientKeystorePath, Path clientTruststorePath)
+    private WebClient client(Path clientKeystorePath,
+                             Path clientTruststorePath)
     {
         return WebClient.create(vertx, webClientOptions(clientKeystorePath, clientTruststorePath));
     }
 
-    private WebClientOptions webClientOptions(Path clientKeystorePath, Path clientTruststorePath)
+    private WebClientOptions webClientOptions(Path clientKeystorePath,
+                                              Path clientTruststorePath)
     {
         WebClientOptions options = new WebClientOptions();
         options.setSsl(true);
-        options.setKeyStoreOptions(new JksOptions().setPath(clientKeystorePath.toAbsolutePath().toString())
+        options.setKeyStoreOptions(new JksOptions().setPath(clientKeystorePath.toAbsolutePath()
+                                                                              .toString())
                                                    .setPassword("password"));
-        options.setTrustStoreOptions(new JksOptions().setPath(clientTruststorePath.toAbsolutePath().toString())
+        options.setTrustStoreOptions(new JksOptions().setPath(clientTruststorePath.toAbsolutePath()
+                                                                                  .toString())
                                                      .setPassword("password"));
         return options;
     }
 
-    private Path generateClientCertificate(String identity, CertificateBundle ca) throws Exception
+    private Path generateClientCertificate(String identity,
+                                           CertificateBundle ca)
+            throws Exception
     {
         return generateClientCertificate(identity, false, ca);
     }
 
-    private Path generateClientCertificate(String identity, boolean expired, CertificateBundle ca) throws Exception
+    private Path generateClientCertificate(String identity,
+                                           boolean expired,
+                                           CertificateBundle ca)
+            throws Exception
     {
-        CertificateBuilder builder
-        = new CertificateBuilder().subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                  .alias("spiffecert")
-                                  .addSanDnsName("localhost")
-                                  .addSanIpAddress("127.0.0.1");
+        CertificateBuilder builder = new CertificateBuilder().subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                             .alias("spiffecert")
+                                                             .addSanDnsName("localhost")
+                                                             .addSanIpAddress("127.0.0.1");
 
         if (identity != null)
         {
@@ -278,7 +280,8 @@ class MutualTLSAuthenticationHandlerTest
 
         if (expired)
         {
-            builder.notAfter(Instant.now().minus(1, ChronoUnit.DAYS));
+            builder.notAfter(Instant.now()
+                                    .minus(1, ChronoUnit.DAYS));
         }
         CertificateBundle ssc = builder.buildIssuedBy(ca);
         return ssc.toTempKeyStorePath(tempDir.toPath(), "password".toCharArray(), "password".toCharArray());
@@ -293,7 +296,9 @@ class MutualTLSAuthenticationHandlerTest
         private final Path truststorePath;
         private final SystemAuthDatabaseAccessor systemAuthDatabaseAccessor;
 
-        public TestMTLSModule(Path keystorePath, Path truststorePath, SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
+        public TestMTLSModule(Path keystorePath,
+                              Path truststorePath,
+                              SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
         {
             this.keystorePath = keystorePath;
             this.truststorePath = truststorePath;
@@ -312,26 +317,23 @@ class MutualTLSAuthenticationHandlerTest
                 LOGGER.error("Truststore file {} not found", keystorePath);
             }
 
-            SslConfiguration sslConfiguration =
-            SslConfigurationImpl.builder()
-                                .enabled(true)
-                                .useOpenSsl(true)
-                                .handshakeTimeout(SecondBoundConfiguration.parse("10s"))
-                                .clientAuth(ClientAuth.REQUEST.name())
-                                .keystore(new KeyStoreConfigurationImpl(keystorePath.toAbsolutePath().toString(),
-                                                                        "password"))
-                                .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(),
-                                                                          "password"))
-                                .build();
-
+            SslConfiguration sslConfiguration = SslConfigurationImpl.builder()
+                                                                    .enabled(true)
+                                                                    .useOpenSsl(true)
+                                                                    .handshakeTimeout(SecondBoundConfiguration.parse("10s"))
+                                                                    .clientAuth(ClientAuth.REQUEST.name())
+                                                                    .keystore(new KeyStoreConfigurationImpl(keystorePath.toAbsolutePath()
+                                                                                                                        .toString(),
+                                                                            "password"))
+                                                                    .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath()
+                                                                                                                            .toString(),
+                                                                            "password"))
+                                                                    .build();
 
             String className = "org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider";
-            AccessControlConfiguration accessControlConfiguration
-            = new AccessControlConfigurationImpl(true,
-                                                 authenticatorsConfiguration(),
-                                                 new ParameterizedClassConfigurationImpl(className, Collections.emptyMap()),
-                                                 Collections.singleton(ADMIN_IDENTITY),
-                                                 new CacheConfigurationImpl());
+            AccessControlConfiguration accessControlConfiguration = new AccessControlConfigurationImpl(true, authenticatorsConfiguration(),
+                    new ParameterizedClassConfigurationImpl(className, Collections.emptyMap()), Collections.singleton(ADMIN_IDENTITY),
+                    new CacheConfigurationImpl());
 
             return super.abstractConfig(sslConfiguration, builder -> builder.accessControlConfiguration(accessControlConfiguration));
         }
@@ -352,9 +354,8 @@ class MutualTLSAuthenticationHandlerTest
                     put("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
                 }
             };
-            ParameterizedClassConfiguration mTLSConfig
-            = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory",
-                                                      params);
+            ParameterizedClassConfiguration mTLSConfig = new ParameterizedClassConfigurationImpl(
+                    "org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory", params);
             return Collections.singletonList(mTLSConfig);
         }
     }

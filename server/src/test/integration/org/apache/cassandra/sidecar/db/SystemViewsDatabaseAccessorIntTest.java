@@ -33,13 +33,12 @@ class SystemViewsDatabaseAccessorIntTest extends IntegrationTestBase
     {
         long cdcSizeLimitInMiB = 5;
         cassandraTestContext.configureAndStartCluster(
-        builder ->
-        builder.appendConfig(config -> config.set("cdc_total_space_in_mb", String.valueOf(cdcSizeLimitInMiB)))
-        );
+                builder -> builder.appendConfig(config -> config.set("cdc_total_space_in_mb", String.valueOf(cdcSizeLimitInMiB))));
         waitForSchemaReady(10, TimeUnit.SECONDS);
 
         SystemViewsDatabaseAccessor accessor = injector.getInstance(SystemViewsDatabaseAccessor.class);
         Long cdcTotalSpaceSettings = accessor.getCdcTotalSpaceSetting();
-        assertThat(cdcTotalSpaceSettings).isNotNull().isEqualTo(cdcSizeLimitInMiB * 1024 * 1024);
+        assertThat(cdcTotalSpaceSettings).isNotNull()
+                                         .isEqualTo(cdcSizeLimitInMiB * 1024 * 1024);
     }
 }

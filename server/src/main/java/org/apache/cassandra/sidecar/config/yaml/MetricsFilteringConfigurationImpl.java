@@ -39,7 +39,8 @@ public class MetricsFilteringConfigurationImpl implements MetricsFilteringConfig
         this(DEFAULT_TYPE, DEFAULT_VALUE);
     }
 
-    public MetricsFilteringConfigurationImpl(String type, String value)
+    public MetricsFilteringConfigurationImpl(String type,
+                                             String value)
     {
         this.type = type;
         verifyType(type);
@@ -52,8 +53,7 @@ public class MetricsFilteringConfigurationImpl implements MetricsFilteringConfig
         {
             return;
         }
-        throw new IllegalArgumentException(type + " passed for metric filtering is not recognized. Expected types are "
-                                           + REGEX_TYPE + " or " + EQUALS_TYPE);
+        throw new IllegalArgumentException(type + " passed for metric filtering is not recognized. Expected types are " + REGEX_TYPE + " or " + EQUALS_TYPE);
     }
 
     /**

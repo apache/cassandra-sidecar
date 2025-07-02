@@ -37,8 +37,8 @@ import org.apache.cassandra.sidecar.routes.VertxRoute;
 /**
  * Provides the capability to access SSTables in the companion Cassandra node(s).
  * <ul>
- *     <li>Read capability: routes to take snapshots, list and download sstables from snapshots, remove snapshots</li>
- *     <li>Write capability: upload and import SSTables</li>
+ * <li>Read capability: routes to take snapshots, list and download sstables from snapshots, remove snapshots</li>
+ * <li>Write capability: upload and import SSTables</li>
  * </ul>
  */
 public class SSTablesAccessModule extends AbstractModule

@@ -46,7 +46,8 @@ class RestoreJobProgressCollectAllFailedAndPendingTest extends BaseRestoreJobPro
         createRangesAndCollect(5, ConsistencyVerificationResult.SATISFIED);
         createRangesAndCollect(1, ConsistencyVerificationResult.PENDING);
         createRangesAndCollect(1, ConsistencyVerificationResult.FAILED);
-        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress().toResponsePayload();
+        RestoreJobProgressResponsePayload payload = collector.toRestoreJobProgress()
+                                                             .toResponsePayload();
         assertThat(payload.message()).isEqualTo("One or more ranges have failed. Current job status: CREATED");
         assertJobSummary(payload.summary());
         assertThat(payload.failedRanges()).hasSize(1);

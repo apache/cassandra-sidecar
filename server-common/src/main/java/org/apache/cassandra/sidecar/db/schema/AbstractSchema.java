@@ -18,18 +18,16 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import java.util.function.Predicate;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
+import java.util.function.Predicate;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Abstract schema
@@ -39,7 +37,8 @@ public abstract class AbstractSchema
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
     private volatile boolean initialized = false;
 
-    public synchronized boolean initialize(@NotNull Session session, @NotNull Predicate<AbstractSchema> shouldCreateSchema)
+    public synchronized boolean initialize(@NotNull Session session,
+                                           @NotNull Predicate<AbstractSchema> shouldCreateSchema)
     {
         initialized = initialized || initializeInternal(session, shouldCreateSchema);
         return initialized;
@@ -53,22 +52,29 @@ public abstract class AbstractSchema
         return initialized;
     }
 
-    protected PreparedStatement prepare(PreparedStatement cached, Session session, String cqlLiteral)
+    protected PreparedStatement prepare(PreparedStatement cached,
+                                        Session session,
+                                        String cqlLiteral)
     {
-        return cached == null ? session.prepare(cqlLiteral).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM) : cached;
+        return cached == null
+                ? session.prepare(cqlLiteral)
+                         .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
+                : cached;
     }
 
     protected boolean initializeInternal(@NotNull Session session,
                                          @NotNull Predicate<AbstractSchema> shouldCreateSchema)
     {
-        if (!exists(session.getCluster().getMetadata()))
+        if (!exists(session.getCluster()
+                           .getMetadata()))
         {
             if (shouldCreateSchema.test(this))
             {
                 try
                 {
                     ResultSet res = session.execute(createSchemaStatement());
-                    if (!res.getExecutionInfo().isSchemaInAgreement())
+                    if (!res.getExecutionInfo()
+                            .isSchemaInAgreement())
                     {
                         logger.warn("Schema is not yet in agreement.");
                         return false;
@@ -76,7 +82,8 @@ public abstract class AbstractSchema
                 }
                 catch (Exception exception)
                 {
-                    String schemaName = this.getClass().getSimpleName();
+                    String schemaName = this.getClass()
+                                            .getSimpleName();
                     throw new SidecarSchemaModificationException("Failed to modify schema for " + schemaName, exception);
                 }
             }
@@ -88,7 +95,8 @@ public abstract class AbstractSchema
         }
 
         prepareStatements(session);
-        logger.debug("{} is initialized!", this.getClass().getSimpleName());
+        logger.debug("{} is initialized!", this.getClass()
+                                               .getSimpleName());
         return true;
     }
 

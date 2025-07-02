@@ -41,7 +41,8 @@ class RoutesIntegrationTest extends SharedClusterSidecarIntegrationTestBase
     void ensureGossipRunning()
     {
         // This is fast when it's already enabled (no-op on the Cassandra side)
-        assertThat(cluster.getFirstRunningInstance().nodetool("enablegossip")).isEqualTo(0);
+        assertThat(cluster.getFirstRunningInstance()
+                          .nodetool("enablegossip")).isEqualTo(0);
     }
 
     @Test
@@ -49,7 +50,8 @@ class RoutesIntegrationTest extends SharedClusterSidecarIntegrationTestBase
     {
         HttpResponse<Buffer> response = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", "/api/v1/__health")
                                                                    .send());
-        assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
+        assertThat(response.bodyAsJsonObject()
+                           .getString("status")).isEqualTo("OK");
     }
 
     @Test
@@ -62,24 +64,29 @@ class RoutesIntegrationTest extends SharedClusterSidecarIntegrationTestBase
         GossipInfoResponse gossipResponse = response.bodyAsJson(GossipInfoResponse.class);
         assertThat(gossipResponse).isNotNull()
                                   .hasSize(1);
-        GossipInfoResponse.GossipInfo gossipInfo = gossipResponse.values().iterator().next();
+        GossipInfoResponse.GossipInfo gossipInfo = gossipResponse.values()
+                                                                 .iterator()
+                                                                 .next();
         assertThat(gossipInfo).isNotEmpty();
         assertThat(gossipInfo.generation()).isNotNull();
         assertThat(gossipInfo.heartbeat()).isNotNull();
         assertThat(gossipInfo.hostId()).isNotNull();
-        String releaseVersion = cluster.getFirstRunningInstance().getReleaseVersionString();
+        String releaseVersion = cluster.getFirstRunningInstance()
+                                       .getReleaseVersionString();
         assertThat(gossipInfo.releaseVersion()).startsWith(releaseVersion);
     }
 
     @Test
     void testGossipHealth()
     {
-        int disableGossip = cluster.getFirstRunningInstance().nodetool("disablegossip");
+        int disableGossip = cluster.getFirstRunningInstance()
+                                   .nodetool("disablegossip");
         assertThat(disableGossip).isEqualTo(0);
 
         HealthResponse gossipHealth = getGossipHealth();
         assertThat(gossipHealth.status()).isEqualTo("NOT_OK");
-        assertThat(cluster.getFirstRunningInstance().nodetool("enablegossip")).isEqualTo(0);
+        assertThat(cluster.getFirstRunningInstance()
+                          .nodetool("enablegossip")).isEqualTo(0);
         gossipHealth = getGossipHealth();
         assertThat(gossipHealth.status()).isEqualTo("OK");
     }

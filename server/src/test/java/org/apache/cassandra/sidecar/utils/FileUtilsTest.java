@@ -19,11 +19,9 @@
 package org.apache.cassandra.sidecar.utils;
 
 import java.util.Objects;
-
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Unit tests for {@link FileUtils}
@@ -52,13 +50,21 @@ class FileUtilsTest
         assertEquals(1048576L, FileUtils.mbStringToBytes("1"));
         assertEquals(524288000L, FileUtils.mbStringToBytes("500"));
 
-        assertEquals(1L, Objects.requireNonNull(FileUtils.storageStringToBytes("1")).longValue());
-        assertEquals(1L, Objects.requireNonNull(FileUtils.storageStringToBytes("1B")).longValue());
-        assertEquals(500L, Objects.requireNonNull(FileUtils.storageStringToBytes("500B")).longValue());
-        assertEquals(1024, Objects.requireNonNull(FileUtils.storageStringToBytes("1KiB")).longValue());
-        assertEquals(1048576, Objects.requireNonNull(FileUtils.storageStringToBytes("1024KiB")).longValue());
-        assertEquals(1048576, Objects.requireNonNull(FileUtils.storageStringToBytes("1MiB")).longValue());
-        assertEquals(4294967296L, Objects.requireNonNull(FileUtils.storageStringToBytes("4096MiB")).longValue());
-        assertEquals(536870912000L, Objects.requireNonNull(FileUtils.storageStringToBytes("500GiB")).longValue());
+        assertEquals(1L, Objects.requireNonNull(FileUtils.storageStringToBytes("1"))
+                                .longValue());
+        assertEquals(1L, Objects.requireNonNull(FileUtils.storageStringToBytes("1B"))
+                                .longValue());
+        assertEquals(500L, Objects.requireNonNull(FileUtils.storageStringToBytes("500B"))
+                                  .longValue());
+        assertEquals(1024, Objects.requireNonNull(FileUtils.storageStringToBytes("1KiB"))
+                                  .longValue());
+        assertEquals(1048576, Objects.requireNonNull(FileUtils.storageStringToBytes("1024KiB"))
+                                     .longValue());
+        assertEquals(1048576, Objects.requireNonNull(FileUtils.storageStringToBytes("1MiB"))
+                                     .longValue());
+        assertEquals(4294967296L, Objects.requireNonNull(FileUtils.storageStringToBytes("4096MiB"))
+                                         .longValue());
+        assertEquals(536870912000L, Objects.requireNonNull(FileUtils.storageStringToBytes("500GiB"))
+                                           .longValue());
     }
 }

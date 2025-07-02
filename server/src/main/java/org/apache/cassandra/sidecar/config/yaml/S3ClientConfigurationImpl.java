@@ -70,12 +70,8 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
 
     public S3ClientConfigurationImpl()
     {
-        this(DEFAULT_THREAD_NAME_PREFIX,
-             DEFAULT_S3_CLIENT_CONCURRENCY,
-             DEFAULT_THREAD_KEEP_ALIVE,
-             DEFAULT_RANGE_GET_OBJECT_BYTES_SIZE,
-             DEFAULT_API_CALL_TIMEOUT,
-             new S3ProxyConfigurationImpl());
+        this(DEFAULT_THREAD_NAME_PREFIX, DEFAULT_S3_CLIENT_CONCURRENCY, DEFAULT_THREAD_KEEP_ALIVE, DEFAULT_RANGE_GET_OBJECT_BYTES_SIZE,
+                DEFAULT_API_CALL_TIMEOUT, new S3ProxyConfigurationImpl());
     }
 
     public S3ClientConfigurationImpl(String threadNamePrefix,
@@ -86,8 +82,7 @@ public class S3ClientConfigurationImpl implements S3ClientConfiguration
                                      S3ProxyConfiguration proxyConfig)
     {
         Preconditions.checkArgument(apiCallTimeout.compareTo(MINIMUM_API_CALL_TIMEOUT) > 0,
-                                    () -> String.format("apiCallTimeout cannot be smaller than %s. Configured: %s",
-                                                        MINIMUM_API_CALL_TIMEOUT, apiCallTimeout));
+                () -> String.format("apiCallTimeout cannot be smaller than %s. Configured: %s", MINIMUM_API_CALL_TIMEOUT, apiCallTimeout));
         this.threadNamePrefix = threadNamePrefix;
         this.concurrency = concurrency;
         this.threadKeepAlive = threadKeepAlive;

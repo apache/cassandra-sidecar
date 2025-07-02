@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,21 +63,25 @@ class SuperUserCacheTest
     @AfterEach
     void cleanup()
     {
-        TestResourceReaper.create().with(vertx).with(executorPools).close();
+        TestResourceReaper.create()
+                          .with(vertx)
+                          .with(executorPools)
+                          .close();
     }
 
     @Test
     void testBulkLoad()
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
-        when(mockDbAccessor.findAllRolesToSuperuserStatus()).thenReturn(ImmutableMap.of("test_role1", true,
-                                                                                        "test_role2", false));
+        when(mockDbAccessor.findAllRolesToSuperuserStatus()).thenReturn(ImmutableMap.of("test_role1", true, "test_role2", false));
         SidecarConfiguration mockConfig = mockConfig();
         SuperUserCache cache = new SuperUserCache(vertx, executorPools, mockConfig, mockDbAccessor);
-        assertThat(cache.getAll().size()).isZero();
+        assertThat(cache.getAll()
+                        .size()).isZero();
 
         // warming cache
-        vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
+        vertx.eventBus()
+             .publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
 
         // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
         loopAssert(3, 100, () -> {
@@ -96,11 +101,14 @@ class SuperUserCacheTest
         when(mockDbAccessor.isSuperUser("test_role")).thenReturn(true);
         when(mockDbAccessor.findAllRolesToSuperuserStatus()).thenReturn(superUserMap);
         SidecarConfiguration mockConfig = mockConfig();
-        when(mockConfig.accessControlConfiguration().permissionCacheConfiguration().enabled()).thenReturn(false);
+        when(mockConfig.accessControlConfiguration()
+                       .permissionCacheConfiguration()
+                       .enabled()).thenReturn(false);
         SuperUserCache superUserCache = new SuperUserCache(vertx, executorPools, mockConfig, mockDbAccessor);
         assertThat(superUserCache.get("test_role")).isTrue();
         assertThat(superUserCache.isSuperUser("test_role")).isTrue();
-        assertThat(superUserCache.getAll().size()).isEqualTo(2);
+        assertThat(superUserCache.getAll()
+                                 .size()).isEqualTo(2);
     }
 
     @Test
@@ -110,13 +118,16 @@ class SuperUserCacheTest
         when(mockDbAccessor.findAllRolesToSuperuserStatus()).thenReturn(Collections.emptyMap());
         SidecarConfiguration mockConfig = mockConfig();
         SuperUserCache cache = new SuperUserCache(vertx, executorPools, mockConfig, mockDbAccessor);
-        assertThat(cache.getAll().size()).isZero();
+        assertThat(cache.getAll()
+                        .size()).isZero();
 
         // warming cache
-        vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
+        vertx.eventBus()
+             .publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
 
         // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
-        loopAssert(3, 100, () -> assertThat(cache.getAll().size()).isZero());
+        loopAssert(3, 100, () -> assertThat(cache.getAll()
+                                                 .size()).isZero());
     }
 
     private SidecarConfiguration mockConfig()

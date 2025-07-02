@@ -40,9 +40,13 @@ public class ResourceMetrics
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
-        serviceTaskTime
-        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("ShortTaskTime").build();
-        internalTaskTime
-        = NamedMetric.builder(metricRegistry::timer).withDomain(DOMAIN).withName("LongTaskTime").build();
+        serviceTaskTime = NamedMetric.builder(metricRegistry::timer)
+                                     .withDomain(DOMAIN)
+                                     .withName("ShortTaskTime")
+                                     .build();
+        internalTaskTime = NamedMetric.builder(metricRegistry::timer)
+                                      .withDomain(DOMAIN)
+                                      .withName("LongTaskTime")
+                                      .build();
     }
 }

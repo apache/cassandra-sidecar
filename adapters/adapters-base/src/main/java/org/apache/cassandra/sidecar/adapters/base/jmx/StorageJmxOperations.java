@@ -31,16 +31,14 @@ public interface StorageJmxOperations
     String STORAGE_SERVICE_OBJ_NAME = "org.apache.cassandra.db:type=StorageService";
 
     /**
-     * Retrieve the list of live nodes in the cluster, where "liveness" is
-     * determined by the failure detector of the node being queried.
+     * Retrieve the list of live nodes in the cluster, where "liveness" is determined by the failure detector of the node being queried.
      *
      * @return set of IP addresses, as Strings
      */
     List<String> getLiveNodesWithPort();
 
     /**
-     * Retrieve the list of unreachable nodes in the cluster, as determined
-     * by this node's failure detector.
+     * Retrieve the list of unreachable nodes in the cluster, as determined by this node's failure detector.
      *
      * @return set of IP addresses, as Strings
      */
@@ -68,30 +66,26 @@ public interface StorageJmxOperations
     List<String> getMovingNodesWithPort();
 
     /**
-     * Human-readable load value.  Keys are IP addresses.
+     * Human-readable load value. Keys are IP addresses.
      */
     Map<String, String> getLoadMapWithPort();
 
     /**
-     * Retrieve a map of tokens to endpoints, including the bootstrapping
-     * ones.
+     * Retrieve a map of tokens to endpoints, including the bootstrapping ones.
      *
      * @return a map of tokens to endpoints in ascending order
      */
     Map<String, String> getTokenToEndpointWithPortMap();
 
     /**
-     * Effective ownership is % of the data each node owns given the keyspace
-     * we calculate the percentage using replication factor.
-     * If Keyspace == null, this method will try to verify if all the keyspaces
-     * in the cluster have the same replication strategies and if yes then we will
-     * use the first else an empty Map is returned.
+     * Effective ownership is % of the data each node owns given the keyspace we calculate the percentage using replication factor. If Keyspace == null, this
+     * method will try to verify if all the keyspaces in the cluster have the same replication strategies and if yes then we will use the first else an empty
+     * Map is returned.
      */
     Map<String, Float> effectiveOwnershipWithPort(String keyspace) throws IllegalStateException;
 
     /**
-     * given a list of tokens (representing the nodes in the cluster), returns
-     * a mapping from {@code "token -> %age of cluster owned by that token"}
+     * given a list of tokens (representing the nodes in the cluster), returns a mapping from {@code "token -> %age of cluster owned by that token"}
      */
     Map<String, Float> getOwnershipWithPort();
 
@@ -103,27 +97,30 @@ public interface StorageJmxOperations
     /**
      * Takes the snapshot of a multiple column family from different keyspaces. A snapshot name must be specified.
      *
-     * @param tag      the tag given to the snapshot; may not be null or empty
-     * @param options  map of options, for example ttl, skipFlush
+     * @param tag the tag given to the snapshot; may not be null or empty
+     * @param options map of options, for example ttl, skipFlush
      * @param entities list of keyspaces / tables in the form of empty | ks1 ks2 ... | ks1.cf1,ks2.cf2,...
      * @throws IOException in certain versions of Cassandra.
      */
-    void takeSnapshot(String tag, Map<String, String> options, String... entities) throws IOException;
+    void takeSnapshot(String tag,
+                      Map<String, String> options,
+                      String... entities)
+            throws IOException;
 
     /**
      * Remove the snapshot with the given name from the given keyspaces.
      *
-     * @param tag           the tag used to create the snapshot (name of the snapshot)
+     * @param tag the tag used to create the snapshot (name of the snapshot)
      * @param keyspaceNames an optional list of keyspaces
      */
-    void clearSnapshot(String tag, String... keyspaceNames);
+    void clearSnapshot(String tag,
+                       String... keyspaceNames);
 
     /**
      * Retrieve the list of node endpoints by token range for the given keyspace
      *
      * @param keyspace the keyspace in Cassandra
-     * @return Returns a mapping of token range (represented by the first two entries in the key) to
-     * a list of endpoints
+     * @return Returns a mapping of token range (represented by the first two entries in the key) to a list of endpoints
      */
     Map<List<String>, List<String>> getRangeToEndpointWithPortMap(String keyspace);
 
@@ -131,8 +128,7 @@ public interface StorageJmxOperations
      * Retrieve the list of pending node endpoints by token range for the given keyspace
      *
      * @param keyspace the keyspace in Cassandra
-     * @return Returns a mapping of token range (represented by the first two entries in the key) to
-     * a list of endpoints
+     * @return Returns a mapping of token range (represented by the first two entries in the key) to a list of endpoints
      */
     Map<List<String>, List<String>> getPendingRangeToEndpointWithPortMap(String keyspace);
 
@@ -150,6 +146,7 @@ public interface StorageJmxOperations
 
     /**
      * Force cleanup the data of the tables in the keyspace. All partitions that out of the range are removed
+     *
      * @param jobs job concurrency
      * @param keyspaceName keyspace of the table to clean
      * @param tables tables to clean
@@ -158,16 +155,21 @@ public interface StorageJmxOperations
      * @throws ExecutionException it does not really throw but declared in MBean
      * @throws InterruptedException it does not really throw but declared in MBean
      */
-    int forceKeyspaceCleanup(int jobs, String keyspaceName, String... tables) throws IOException, ExecutionException, InterruptedException;
+    int forceKeyspaceCleanup(int jobs,
+                             String keyspaceName,
+                             String... tables)
+            throws IOException, ExecutionException, InterruptedException;
 
     /**
      * Triggers the node decommission operation
+     *
      * @param force force decommission, bypassing RF checks, when this flag is set
      */
     void decommission(boolean force) throws IllegalStateException, IllegalArgumentException, UnsupportedOperationException;
 
     /**
      * Fetch the operation-mode of the node
+     *
      * @return string representation of the operation-mode
      */
     String getOperationMode();

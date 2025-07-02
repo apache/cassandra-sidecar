@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
 import javax.annotation.concurrent.ThreadSafe;
 
 import org.slf4j.Logger;
@@ -63,8 +64,8 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
- * Refreshes the Cassandra ring topology fetched via JMX periodically
- * // TODO: this class can be generalized to serve other Sidecar components that need to be aware of topology and topology change
+ * Refreshes the Cassandra ring topology fetched via JMX periodically // TODO: this class can be generalized to serve other Sidecar components that need to be
+ * aware of topology and topology change
  */
 @Singleton
 public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProvider
@@ -103,7 +104,9 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
     /**
      * Execute the periodic task to refresh the topology layout for all registered keyspaces
      *
-     * <p>It is synchronized as there is potential contention from {@link #localTokenRanges(String)}
+     * <p>
+     * It is synchronized as there is potential contention from {@link #localTokenRanges(String)}
+     *
      * @param promise a promise when the execution completes
      */
     @Override
@@ -118,13 +121,15 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
         return replicaByTokenRangePerKeyspace.jobsByKeyspace.get(keyspace);
     }
 
-    public void register(RestoreJob restoreJob, RingTopologyChangeListener listener)
+    public void register(RestoreJob restoreJob,
+                         RingTopologyChangeListener listener)
     {
         replicaByTokenRangePerKeyspace.register(restoreJob);
         addRingTopologyChangeListener(restoreJob.keyspaceName, listener);
     }
 
-    public void unregister(RestoreJob restoreJob, RingTopologyChangeListener listener)
+    public void unregister(RestoreJob restoreJob,
+                           RingTopologyChangeListener listener)
     {
         boolean allRemoved = replicaByTokenRangePerKeyspace.unregister(restoreJob);
         if (allRemoved)
@@ -133,15 +138,18 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
         }
     }
 
-    public void addRingTopologyChangeListener(String keyspace, RingTopologyChangeListener listener)
+    public void addRingTopologyChangeListener(String keyspace,
+                                              RingTopologyChangeListener listener)
     {
         listenersByKeyspace.computeIfAbsent(keyspace, key -> ConcurrentHashMap.newKeySet())
                            .add(listener);
     }
 
-    public void removeRingTopologyChangeListener(String keyspace, RingTopologyChangeListener listener)
+    public void removeRingTopologyChangeListener(String keyspace,
+                                                 RingTopologyChangeListener listener)
     {
-        listenersByKeyspace.computeIfPresent(keyspace, (k, v) -> {
+        listenersByKeyspace.computeIfPresent(keyspace, (k,
+                                                        v) -> {
             v.remove(listener);
             return v.isEmpty() ? null : v;
         });
@@ -155,21 +163,24 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
 
     /**
      * Fetch the latest topology view
-     * <p>It is synchronized when force refreshing as there is potential contention from {@link #execute(Promise)}
+     * <p>
+     * It is synchronized when force refreshing as there is potential contention from {@link #execute(Promise)}
      *
      * @param keyspace keyspace to determine replication
      * @param forceRefresh whether refresh the topology view forcibly or not
      * @return token ranges of the local Cassandra instances or an empty map of nothing is found
      */
     @Override
-    public Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace, boolean forceRefresh)
+    public Map<Integer, Set<TokenRange>> localTokenRanges(String keyspace,
+                                                          boolean forceRefresh)
     {
         TokenRangeReplicasResponse topology;
         if (forceRefresh) // fetch the latest topology and load into cache
         {
             synchronized (this)
             {
-                topology = prepareAndFetch((storageOperations, nodeSettings) -> {
+                topology = prepareAndFetch((storageOperations,
+                                            nodeSettings) -> {
                     String partitioner = nodeSettings.partitioner();
                     return replicaByTokenRangePerKeyspace.loadOne(keyspace, k -> storageOperations.tokenRangeReplicas(new Name(keyspace), partitioner));
                 });
@@ -185,7 +196,8 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
 
     // todo: refactor to a utility class _when_ refactoring TokenRangeReplicasResponse data structure (separate out server and http data representations)
     @NotNull
-    public static Map<Integer, Set<TokenRange>> calculateLocalTokenRanges(InstanceMetadataFetcher metadataFetcher, TokenRangeReplicasResponse topology)
+    public static Map<Integer, Set<TokenRange>> calculateLocalTokenRanges(InstanceMetadataFetcher metadataFetcher,
+                                                                          TokenRangeReplicasResponse topology)
     {
         if (topology == null)
         {
@@ -193,9 +205,11 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
         }
 
         // todo: this assumes one C* node per IP address
-        Map<String, Integer> allNodes = topology.replicaMetadata().values().stream()
+        Map<String, Integer> allNodes = topology.replicaMetadata()
+                                                .values()
+                                                .stream()
                                                 .collect(Collectors.toMap(TokenRangeReplicasResponse.ReplicaMetadata::address,
-                                                                          TokenRangeReplicasResponse.ReplicaMetadata::port));
+                                                        TokenRangeReplicasResponse.ReplicaMetadata::port));
 
         List<InstanceMetadata> localNodes = metadataFetcher.allLocalInstances();
         Map<String, InstanceMetadata> localEndpointsToMetadata = new HashMap<>(localNodes.size());
@@ -208,7 +222,8 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
         for (TokenRangeReplicasResponse.ReplicaInfo ri : topology.writeReplicas())
         {
             TokenRange range = new TokenRange(Token.from(ri.start()), Token.from(ri.end()));
-            for (List<String> instanceOfDc : ri.replicasByDatacenter().values())
+            for (List<String> instanceOfDc : ri.replicasByDatacenter()
+                                               .values())
             {
                 for (String instanceEndpoint : instanceOfDc)
                 {
@@ -227,9 +242,9 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
     }
 
     /**
-     * Retrieve {@link TokenRangeReplicasResponse} that matters to the input restoreJob asynchronously
-     * If {@link RingTopologyRefresher} has not retrieved anything yet, the returned future should reflect the initial
-     * {@link TokenRangeReplicasResponse} object present; otherwise, it returns the latest value, if changed
+     * Retrieve {@link TokenRangeReplicasResponse} that matters to the input restoreJob asynchronously If {@link RingTopologyRefresher} has not retrieved
+     * anything yet, the returned future should reflect the initial {@link TokenRangeReplicasResponse} object present; otherwise, it returns the latest value,
+     * if changed
      *
      * @return a future of TokenRangeReplicasResponse
      */
@@ -245,7 +260,8 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
     }
 
     // Declaring the Void return type to be compliant with the BiFunction parameter
-    private Void loadAll(StorageOperations storageOperations, NodeSettings nodeSettings)
+    private Void loadAll(StorageOperations storageOperations,
+                         NodeSettings nodeSettings)
     {
         replicaByTokenRangePerKeyspace.load(keyspace -> storageOperations.tokenRangeReplicas(new Name(keyspace), nodeSettings.partitioner()));
         return null;
@@ -261,14 +277,17 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
         });
     }
 
-    private void dispatchRingTopologyChangeAsync(String keyspace, TokenRangeReplicasResponse oldTopology, TokenRangeReplicasResponse newTopology)
+    private void dispatchRingTopologyChangeAsync(String keyspace,
+                                                 TokenRangeReplicasResponse oldTopology,
+                                                 TokenRangeReplicasResponse newTopology)
     {
         // Dispatch onRingTopologyChanged in another thread as it might block
         // This method cannot block, since it is invoked by org.apache.cassandra.sidecar.restore.RingTopologyRefresher.ReplicaByTokenRangePerKeyspace.loadOne
         // in the `compute` lambda.
-        listenersByKeyspace.getOrDefault(keyspace, Collections.emptySet()).forEach(listener -> {
-            executorPool.runBlocking(() -> listener.onRingTopologyChanged(keyspace, oldTopology, newTopology));
-        });
+        listenersByKeyspace.getOrDefault(keyspace, Collections.emptySet())
+                           .forEach(listener -> {
+                               executorPool.runBlocking(() -> listener.onRingTopologyChanged(keyspace, oldTopology, newTopology));
+                           });
     }
 
     private static void populateEndpointToMetadata(InstanceMetadata instanceMetadata,
@@ -304,8 +323,7 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
     }
 
     /**
-     * Core data class of the {@link RingTopologyRefresher}.
-     * It groups the ReplicaByTokenRange by keyspace and provides cache capability
+     * Core data class of the {@link RingTopologyRefresher}. It groups the ReplicaByTokenRange by keyspace and provides cache capability
      */
     @ThreadSafe
     static class ReplicaByTokenRangePerKeyspace
@@ -351,9 +369,7 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
             if (containsJob) // enter this block only once per jobId
             {
                 Set<UUID> jobIdsByKeyspace = jobsByKeyspace.get(restoreJob.keyspaceName);
-                if (jobIdsByKeyspace == null
-                    || jobIdsByKeyspace.isEmpty()
-                    || !jobIdsByKeyspace.remove(restoreJob.jobId))
+                if (jobIdsByKeyspace == null || jobIdsByKeyspace.isEmpty() || !jobIdsByKeyspace.remove(restoreJob.jobId))
                 {
                     LOGGER.warn("Unable to find the restore job id to unregister. jobId={}", restoreJob.jobId);
                     return true;
@@ -374,8 +390,7 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
                 if (p != null)
                 {
                     // try to finish the promise, if not yet.
-                    p.tryFail("Unable to retrieve topology for restoreJob. " +
-                              "jobId=" + restoreJob.jobId + " keyspace=" + restoreJob.keyspaceName);
+                    p.tryFail("Unable to retrieve topology for restoreJob. " + "jobId=" + restoreJob.jobId + " keyspace=" + restoreJob.keyspaceName);
                 }
             }
             return true;
@@ -385,7 +400,8 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
         Future<TokenRangeReplicasResponse> futureOf(RestoreJob restoreJob)
         {
             String keyspace = register(restoreJob);
-            return promises.computeIfAbsent(keyspace, k -> Promise.promise()).future();
+            return promises.computeIfAbsent(keyspace, k -> Promise.promise())
+                           .future();
         }
 
         @Nullable
@@ -406,26 +422,30 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
         }
 
         // suppress any Exception when loading topology of each keyspace and continue; returns null if fails to load
-        TokenRangeReplicasResponse loadOne(String keyspace, Function<String, TokenRangeReplicasResponse> loader)
+        TokenRangeReplicasResponse loadOne(String keyspace,
+                                           Function<String, TokenRangeReplicasResponse> loader)
         {
             try
             {
                 TokenRangeReplicasResponse topology = loader.apply(keyspace);
                 RingTopologyChangeContext context = new RingTopologyChangeContext(keyspace, topology);
-                mapping.compute(keyspace, (key, existing) -> {
+                mapping.compute(keyspace, (key,
+                                           existing) -> {
                     context.existing = existing;
                     if (existing == null)
                     {
                         // fulfill promise after retrieving the initial topology
                         // the promise for the job is made via `promise(RestoreJob)` method
-                        promises.computeIfPresent(keyspace, (k, promise) -> {
+                        promises.computeIfPresent(keyspace, (k,
+                                                             promise) -> {
                             promise.tryComplete(topology);
                             return promise;
                         });
                         context.shouldDispatch = true;
                         return topology;
                     }
-                    else if (existing.writeReplicas().equals(topology.writeReplicas()))
+                    else if (existing.writeReplicas()
+                                     .equals(topology.writeReplicas()))
                     {
                         LOGGER.debug("Ring topology of keyspace is unchanged. keyspace={}", keyspace);
                         return existing;
@@ -446,7 +466,8 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
             catch (Throwable cause)
             {
                 LOGGER.warn("Failure during load topology for keyspace. keyspace={}", keyspace, cause);
-                promises.computeIfPresent(keyspace, (k, promise) -> {
+                promises.computeIfPresent(keyspace, (k,
+                                                     promise) -> {
                     promise.tryFail(new IllegalStateException("Failed to load topology for keyspace: " + keyspace, cause));
                     // return null to remove the promise
                     return null;
@@ -492,7 +513,8 @@ public class RingTopologyRefresher implements PeriodicTask, LocalTokenRangesProv
             TokenRangeReplicasResponse existing;
             boolean shouldDispatch = false;
 
-            RingTopologyChangeContext(String keyspace, TokenRangeReplicasResponse current)
+            RingTopologyChangeContext(String keyspace,
+                                      TokenRangeReplicasResponse current)
             {
                 this.keyspace = keyspace;
                 this.current = current;

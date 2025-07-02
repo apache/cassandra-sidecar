@@ -78,8 +78,7 @@ public class RestoreSlice
     @Override
     public int hashCode()
     {
-        return Objects.hash(jobId, keyspace, table, sliceId, bucketId, bucket, key,
-                            checksum, startToken, endToken, compressedSize, uncompressedSize);
+        return Objects.hash(jobId, keyspace, table, sliceId, bucketId, bucket, key, checksum, startToken, endToken, compressedSize, uncompressedSize);
     }
 
     @Override
@@ -92,28 +91,21 @@ public class RestoreSlice
             return false;
 
         RestoreSlice that = (RestoreSlice) obj;
-        return Objects.equals(this.jobId, that.jobId)
-               && Objects.equals(this.keyspace, that.keyspace)
-               && Objects.equals(this.table, that.table)
-               && Objects.equals(this.sliceId, that.sliceId)
-               && Objects.equals(this.bucketId, that.bucketId)
-               && Objects.equals(this.bucket, that.bucket)
-               && Objects.equals(this.key, that.key)
-               && Objects.equals(this.checksum, that.checksum)
-               && Objects.equals(this.startToken, that.startToken)
-               && Objects.equals(this.endToken, that.endToken)
-               && this.compressedSize == that.compressedSize
-               && this.uncompressedSize == that.uncompressedSize;
+        return Objects.equals(this.jobId, that.jobId) && Objects.equals(this.keyspace, that.keyspace) && Objects.equals(this.table, that.table)
+                && Objects.equals(this.sliceId, that.sliceId) && Objects.equals(this.bucketId, that.bucketId) && Objects.equals(this.bucket, that.bucket)
+                && Objects.equals(this.key, that.key) && Objects.equals(this.checksum, that.checksum) && Objects.equals(this.startToken, that.startToken)
+                && Objects.equals(this.endToken, that.endToken) && this.compressedSize == that.compressedSize && this.uncompressedSize == that.uncompressedSize;
     }
 
     /**
      * Trim the slice based on the reference local token range.
      *
-     * <p>The range of the slice might not be entirely enclosed by the localTokenRange.
-     * In such case, the slice is trimmed to align with the localTokenRange. For example,
-     * the slice covers range {@code (1, 100])} and the localTokenRange covers {@code (50, 90]}.
-     * The slice is trimmed to match with the localTokenRange, updating the range to {@code (50, 90]}.
-     * <p>The trimmed slice still reference to the same s3 object, i.e. {@code <bucket/key/checksum>}
+     * <p>
+     * The range of the slice might not be entirely enclosed by the localTokenRange. In such case, the slice is trimmed to align with the localTokenRange. For
+     * example, the slice covers range {@code (1, 100])} and the localTokenRange covers {@code (50, 90]}. The slice is trimmed to match with the
+     * localTokenRange, updating the range to {@code (50, 90]}.
+     * <p>
+     * The trimmed slice still reference to the same s3 object, i.e. {@code <bucket/key/checksum>}
      *
      * @param localTokenRange local token range
      * @return a restore slice that might be trimmed
@@ -132,15 +124,15 @@ public class RestoreSlice
             // Adjust the slice range to match with localTokenRange
             // The object location remains the same as sidecar need to download the same object.
             // It only narrows the range of data within the slice
-            return unbuild()
-                   .startToken(intersection.start().toBigInteger())
-                   .endToken(intersection.end().toBigInteger())
-                   .build();
+            return unbuild().startToken(intersection.start()
+                                                    .toBigInteger())
+                            .endToken(intersection.end()
+                                                  .toBigInteger())
+                            .build();
         }
 
-        throw new IllegalStateException("Token range of the slice does not intersect with the local token range. " +
-                                        "slice_range: " + sliceRange +
-                                        ", local_range: " + localTokenRange);
+        throw new IllegalStateException("Token range of the slice does not intersect with the local token range. " + "slice_range: " + sliceRange
+                + ", local_range: " + localTokenRange);
     }
 
     // -- (self-explanatory) GETTERS --
@@ -212,7 +204,8 @@ public class RestoreSlice
 
     // -------------
 
-    public static RestoreSlice from(Row row, RestoreJob restoreJob)
+    public static RestoreSlice from(Row row,
+                                    RestoreJob restoreJob)
     {
         Builder builder = new Builder();
         builder.jobId(row.getUUID("job_id"));
@@ -348,7 +341,8 @@ public class RestoreSlice
                 b.bucket = payload.bucket();
                 b.key = payload.key();
                 b.checksum = payload.checksum();
-                b.startToken = payload.firstToken().subtract(BigInteger.ONE);
+                b.startToken = payload.firstToken()
+                                      .subtract(BigInteger.ONE);
                 b.endToken = payload.endToken();
                 b.compressedSize = payload.compressedSizeOrZero();
                 b.uncompressedSize = payload.uncompressedSizeOrZero();
@@ -368,4 +362,3 @@ public class RestoreSlice
         }
     }
 }
-

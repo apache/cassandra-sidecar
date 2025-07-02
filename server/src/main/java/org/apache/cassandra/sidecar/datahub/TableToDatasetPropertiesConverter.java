@@ -43,20 +43,21 @@ public class TableToDatasetPropertiesConverter extends TableToAspectConverter<Da
     {
         String urn = identifiers.urnDataset(table);
 
-        DatasetProperties aspect = new DatasetProperties()
-                .setName(table.getName())
-                .setQualifiedName(table.getKeyspace().getName() + DELIMITER + table.getName());
+        DatasetProperties aspect = new DatasetProperties().setName(table.getName())
+                                                          .setQualifiedName(table.getKeyspace()
+                                                                                 .getName()
+                                                                  + DELIMITER + table.getName());
 
-        String comment = table.getOptions().getComment();
+        String comment = table.getOptions()
+                              .getComment();
         if (comment != null)
         {
-            aspect = aspect
-                .setDescription(comment);
+            aspect = aspect.setDescription(comment);
         }
 
-        aspect = aspect  // It is desirable to obtain creation and modification timestamps, but the necessary permissions may be lacking
-                .setCreated(null, SetMode.REMOVE_IF_NULL)
-                .setLastModified(null, SetMode.REMOVE_IF_NULL);
+        aspect = aspect // It is desirable to obtain creation and modification timestamps, but the necessary permissions may be lacking
+                       .setCreated(null, SetMode.REMOVE_IF_NULL)
+                       .setLastModified(null, SetMode.REMOVE_IF_NULL);
 
         return wrap(urn, aspect);
     }
@@ -65,7 +66,6 @@ public class TableToDatasetPropertiesConverter extends TableToAspectConverter<Da
     @SuppressWarnings("unused")
     protected static TimeStamp convertTime(@NotNull Instant javaTime)
     {
-        return new TimeStamp()
-                .setTime(javaTime.toEpochMilli());
+        return new TimeStamp().setTime(javaTime.toEpochMilli());
     }
 }

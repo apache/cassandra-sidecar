@@ -18,19 +18,15 @@
 
 package io.vertx.ext.auth.authentication;
 
+import io.vertx.core.http.HttpConnection;
+import io.vertx.core.http.HttpServerRequest;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
-
-import javax.net.ssl.SSLPeerUnverifiedException;
-
-import org.junit.jupiter.api.Test;
-
-import io.vertx.core.http.HttpConnection;
-import io.vertx.core.http.HttpServerRequest;
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
-
+import javax.net.ssl.SSLPeerUnverifiedException;
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -52,8 +48,7 @@ public class CertificateCredentialsTest
     void testEmptyCertificateChain()
     {
         List<Certificate> certificateChain = Collections.emptyList();
-        assertThatThrownBy(() -> new CertificateCredentials(certificateChain).checkValid())
-        .isInstanceOf(CredentialValidationException.class);
+        assertThatThrownBy(() -> new CertificateCredentials(certificateChain).checkValid()).isInstanceOf(CredentialValidationException.class);
     }
 
     @Test
@@ -71,8 +66,7 @@ public class CertificateCredentialsTest
     {
         Certificate certificate = mock(Certificate.class);
         CertificateCredentials credentials = new CertificateCredentials(certificate);
-        assertThatThrownBy(credentials::toJson)
-        .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(credentials::toJson).isInstanceOf(UnsupportedOperationException.class);
     }
 
     public static CertificateCredentials createTestCredentials()

@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.acl.authentication;
 
-import java.util.Map;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
@@ -29,6 +27,7 @@ import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
 import io.vertx.ext.auth.mtls.impl.MutualTlsAuthenticationImpl;
 import io.vertx.ext.auth.mtls.impl.SpiffeIdentityExtractor;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerInternal;
+import java.util.Map;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
@@ -56,7 +55,8 @@ public class MutualTlsAuthenticationHandlerFactory implements AuthenticationHand
     @Override
     public AuthenticationHandlerInternal create(Vertx vertx,
                                                 AccessControlConfiguration accessControlConfiguration,
-                                                Map<String, String> parameters) throws ConfigurationException
+                                                Map<String, String> parameters)
+            throws ConfigurationException
     {
         validate(parameters);
         try
@@ -78,24 +78,27 @@ public class MutualTlsAuthenticationHandlerFactory implements AuthenticationHand
 
         if (!parameters.containsKey(CERTIFICATE_VALIDATOR_PARAM_KEY))
         {
-            throw new ConfigurationException(String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation",
-                                                           CERTIFICATE_VALIDATOR_PARAM_KEY));
+            throw new ConfigurationException(
+                    String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation", CERTIFICATE_VALIDATOR_PARAM_KEY));
         }
 
         if (!parameters.containsKey(CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY))
         {
-            throw new ConfigurationException(String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation",
-                                                           CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY));
+            throw new ConfigurationException(
+                    String.format("Missing %s parameter for MutualTlsAuthenticationHandler creation", CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY));
         }
     }
 
     private MutualTlsAuthenticationHandler createInternal(Vertx vertx,
                                                           AccessControlConfiguration accessControlConfiguration,
-                                                          Map<String, String> parameters) throws Exception
+                                                          Map<String, String> parameters)
+            throws Exception
     {
-        CertificateValidator certificateValidator = (CertificateValidator) Class.forName(parameters.get(CERTIFICATE_VALIDATOR_PARAM_KEY)).newInstance();
+        CertificateValidator certificateValidator = (CertificateValidator) Class.forName(parameters.get(CERTIFICATE_VALIDATOR_PARAM_KEY))
+                                                                                .newInstance();
         CertificateIdentityExtractor certificateIdentityExtractor;
-        if (parameters.get(CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY).equalsIgnoreCase(CassandraIdentityExtractor.class.getName()))
+        if (parameters.get(CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY)
+                      .equalsIgnoreCase(CassandraIdentityExtractor.class.getName()))
         {
             certificateIdentityExtractor = new CassandraIdentityExtractor(adminIdentityResolver, identityToRoleCache);
         }

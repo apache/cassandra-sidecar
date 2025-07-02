@@ -26,14 +26,14 @@ public interface Partitioner
     /**
      * @return the minimum token of the partitioner
      *
-     * Note that the minimum token is not assigned to any data, i.e. excluded from the token ring
+     *         Note that the minimum token is not assigned to any data, i.e. excluded from the token ring
      */
     Token minimumToken();
 
     /**
      * @return the maximum token of the partitioner
      *
-     * Note that the maximum token is included in the token ring
+     *         Note that the maximum token is included in the token ring
      */
     Token maximumToken();
 
@@ -42,6 +42,7 @@ public interface Partitioner
      */
     default String name()
     {
-        return this.getClass().getSimpleName();
+        return this.getClass()
+                   .getSimpleName();
     }
 }

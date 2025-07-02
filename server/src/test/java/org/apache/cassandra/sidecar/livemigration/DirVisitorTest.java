@@ -24,12 +24,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
-
+import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
-import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
-
 import static org.apache.cassandra.sidecar.livemigration.InstanceFileInfoTestUtil.findInstanceFileInfo;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.createDirectory;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.createFile;
@@ -61,19 +58,15 @@ class DirVisitorTest
         assertThat(files.size()).isEqualTo(4); // Two directories and two files
 
         assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1")).isNotNull();
-        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1").size)
-        .isEqualTo(-1);
+        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1").size).isEqualTo(-1);
 
         assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1")).isNotNull();
-        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1").size)
-        .isEqualTo(-1);
+        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1").size).isEqualTo(-1);
 
         assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1/data1.db")).isNotNull();
-        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1/data1.db").size)
-        .isEqualTo(4);
+        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1/data1.db").size).isEqualTo(4);
 
         assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1/data2.db")).isNotNull();
-        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1/data2.db").size)
-        .isEqualTo(5);
+        assertThat(findInstanceFileInfo(files, pathPrefix + "/ks1/t1/data2.db").size).isEqualTo(5);
     }
 }

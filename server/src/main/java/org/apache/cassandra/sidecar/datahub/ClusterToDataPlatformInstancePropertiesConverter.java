@@ -18,14 +18,13 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
-import com.google.common.collect.ImmutableMap;
-
 import com.datastax.driver.core.Metadata;
 import com.linkedin.data.template.SetMode;
 import com.linkedin.data.template.StringMap;
 import com.linkedin.dataplatforminstance.DataPlatformInstanceProperties;
 import datahub.event.MetadataChangeProposalWrapper;
 import org.jetbrains.annotations.NotNull;
+import com.google.common.collect.ImmutableMap;
 
 /**
  * Converter class for preparing the Data Platform Instance Properties aspect for a given Cassandra cluster
@@ -34,7 +33,7 @@ public class ClusterToDataPlatformInstancePropertiesConverter extends ClusterToA
 {
     protected static final String ENVIRONMENT = "environment";
     protected static final String APPLICATION = "application";
-    protected static final String CLUSTER     = "cluster";
+    protected static final String CLUSTER = "cluster";
 
     public ClusterToDataPlatformInstancePropertiesConverter(@NotNull IdentifiersProvider identifiers)
     {
@@ -49,13 +48,13 @@ public class ClusterToDataPlatformInstancePropertiesConverter extends ClusterToA
 
         String urn = identifiers.urnDataPlatformInstance();
 
-        DataPlatformInstanceProperties aspect = new DataPlatformInstanceProperties()
-                .setName(identifiers.identifier().toString())
-                .setDescription(null, SetMode.REMOVE_IF_NULL)  // Cluster-level comments are not supported by Cassandra
-                .setCustomProperties(new StringMap(ImmutableMap.of(
-                        ENVIRONMENT, identifiers.environment(),
-                        APPLICATION, identifiers.application(),
-                        CLUSTER,     identifiers.cluster())));
+        DataPlatformInstanceProperties aspect = new DataPlatformInstanceProperties().setName(identifiers.identifier()
+                                                                                                        .toString())
+                                                                                    .setDescription(null, SetMode.REMOVE_IF_NULL) // Cluster-level comments are
+                                                                                                                                  // not supported by Cassandra
+                                                                                    .setCustomProperties(new StringMap(ImmutableMap.of(ENVIRONMENT,
+                                                                                            identifiers.environment(), APPLICATION, identifiers.application(),
+                                                                                            CLUSTER, identifiers.cluster())));
 
         return wrap(type, urn, aspect);
     }

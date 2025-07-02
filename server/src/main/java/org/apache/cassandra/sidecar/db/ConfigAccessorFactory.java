@@ -17,8 +17,8 @@
  */
 package org.apache.cassandra.sidecar.db;
 
-import java.util.Map;
 import com.google.inject.Inject;
+import java.util.Map;
 import org.apache.cassandra.sidecar.common.request.Service;
 
 /**

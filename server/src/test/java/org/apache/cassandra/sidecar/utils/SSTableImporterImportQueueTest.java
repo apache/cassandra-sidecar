@@ -29,8 +29,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests to make sure locking the {@link org.apache.cassandra.sidecar.utils.SSTableImporter.ImportQueue}
- * class works as expected
+ * Unit tests to make sure locking the {@link org.apache.cassandra.sidecar.utils.SSTableImporter.ImportQueue} class works as expected
  */
 class SSTableImporterImportQueueTest
 {

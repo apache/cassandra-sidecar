@@ -28,13 +28,15 @@ public class RestoreJobException extends Exception
         super(message);
     }
 
-    public RestoreJobException(String message, Throwable cause)
+    public RestoreJobException(String message,
+                               Throwable cause)
     {
         super(message, cause);
     }
 
     /**
      * Indicate whether the failed operation is retryable
+     *
      * @return true
      */
     public boolean retryable()

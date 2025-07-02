@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.adapters.base.jmx;
 
 import java.util.Set;
+
 import javax.management.openmbean.CompositeData;
 
 /**
@@ -31,6 +32,7 @@ public interface StreamManagerJmxOperations
 
     /**
      * Returns the current snapshot of the progress of all ongoing streams.
+     *
      * @return the current state of streams as a set of JMX {@link CompositeData} instances.
      */
     Set<CompositeData> getCurrentStreams();

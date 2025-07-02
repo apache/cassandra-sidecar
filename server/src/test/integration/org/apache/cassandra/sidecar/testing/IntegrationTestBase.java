@@ -18,6 +18,21 @@
 
 package org.apache.cassandra.sidecar.testing;
 
+import com.datastax.driver.core.Metadata;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Session;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.util.Modules;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.JksOptions;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
+import io.vertx.junit5.VertxTestContext;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -35,30 +50,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import com.google.common.util.concurrent.Uninterruptibles;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Module;
-import com.google.inject.util.Modules;
-import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.Message;
-import io.vertx.core.eventbus.MessageConsumer;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.JksOptions;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
-import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -76,24 +67,27 @@ import org.apache.cassandra.testing.AuthMode;
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
 import org.apache.cassandra.testing.utils.tls.CertificateBundle;
 import org.jetbrains.annotations.NotNull;
-
+import com.google.common.util.concurrent.Uninterruptibles;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.testing.IntegrationTestModule.ADMIN_IDENTITY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Base class for integration test.
- * Start an in-jvm dtest cluster at the beginning of each test, and
- * teardown the cluster after each test.
+ * Base class for integration test. Start an in-jvm dtest cluster at the beginning of each test, and teardown the cluster after each test.
  */
 public abstract class IntegrationTestBase
 {
     private static final String IF_NOT_EXISTS = "IF NOT EXISTS";
     protected static final String TEST_KEYSPACE = "testkeyspace";
     protected static final int DEFAULT_RF = 3;
-    protected static final String WITH_COMPACTION_DISABLED = " WITH COMPACTION = {\n" +
-                                                             "   'class': 'SizeTieredCompactionStrategy', \n" +
-                                                             "   'enabled': 'false' }";
+    protected static final String WITH_COMPACTION_DISABLED = " WITH COMPACTION = {\n" + "   'class': 'SizeTieredCompactionStrategy', \n"
+            + "   'enabled': 'false' }";
     protected static final String TEST_TABLE_PREFIX = "testtable";
     protected static final String TEST_CLUSTER_PREFIX = "cluster";
     protected static final String DATA_CENTER_PREFIX = "datacenter";
@@ -117,7 +111,9 @@ public abstract class IntegrationTestBase
     private CountDownLatch schemaInitialized = new CountDownLatch(1);;
 
     @BeforeEach
-    void setup(AbstractCassandraTestContext cassandraTestContext, TestInfo testInfo) throws Exception
+    void setup(AbstractCassandraTestContext cassandraTestContext,
+               TestInfo testInfo)
+            throws Exception
     {
         testExceptions.clear();
 
@@ -131,7 +127,9 @@ public abstract class IntegrationTestBase
         IntegrationTestModule integrationTestModule = new IntegrationTestModule();
         integrationTestModule.setServerKeystorePath(serverKeystorePath);
         integrationTestModule.setTruststorePath(truststorePath);
-        System.setProperty("cassandra.testtag", testInfo.getTestClass().get().getCanonicalName());
+        System.setProperty("cassandra.testtag", testInfo.getTestClass()
+                                                        .get()
+                                                        .getCanonicalName());
         System.setProperty("suitename", testInfo.getDisplayName() + ": " + cassandraTestContext.version);
         int clusterSize = cassandraTestContext.clusterSize();
         // list of modules that override the priors; hence order matters
@@ -141,24 +139,27 @@ public abstract class IntegrationTestBase
         {
             modules.add(testSpecificModule);
         }
-        Module mergedModule = modules.stream().reduce((m1, m2) -> Modules.override(m1).with(m2)).get();
+        Module mergedModule = modules.stream()
+                                     .reduce((m1,
+                                              m2) -> Modules.override(m1)
+                                                            .with(m2))
+                                     .get();
         injector = Guice.createInjector(mergedModule);
         vertx = injector.getInstance(Vertx.class);
         // register the handler for ON_SIDECAR_SCHEMA_INITIALIZED the earliest
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(),
-                                       msg -> schemaInitialized.countDown());
-        SslConfiguration sslConfig = cassandraTestContext.annotation.authMode().equals(AuthMode.MUTUAL_TLS)
-                                     ? sslConfigWithClientKeystoreTruststore() : null;
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(), msg -> schemaInitialized.countDown());
+        SslConfiguration sslConfig = cassandraTestContext.annotation.authMode()
+                                                                    .equals(AuthMode.MUTUAL_TLS) ? sslConfigWithClientKeystoreTruststore() : null;
 
         // When only SSL is enabled and mTLS is not enabled, we should not set keystore in SslConfig. Set a keystore
         // when mTLS is enabled
-        if (cassandraTestContext.annotation.enableSsl() &&
-            !cassandraTestContext.annotation.authMode().equals(AuthMode.MUTUAL_TLS))
+        if (cassandraTestContext.annotation.enableSsl() && !cassandraTestContext.annotation.authMode()
+                                                                                           .equals(AuthMode.MUTUAL_TLS))
         {
             sslConfig = sslConfigWithTruststore();
         }
-        sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolvers.DEFAULT,
-                                                              getInstancesToManage(clusterSize), sslConfig);
+        sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolvers.DEFAULT, getInstancesToManage(clusterSize), sslConfig);
         integrationTestModule.setCassandraSidecarTestContext(sidecarTestContext);
 
         server = injector.getInstance(Server.class);
@@ -202,7 +203,8 @@ public abstract class IntegrationTestBase
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
         client.close();
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.info("Close event received before timeout.");
         else
@@ -223,16 +225,15 @@ public abstract class IntegrationTestBase
         this.testSpecificModule = testSpecificModule;
     }
 
-    protected void waitForSchemaReady(long timeout, TimeUnit timeUnit)
+    protected void waitForSchemaReady(long timeout,
+                                      TimeUnit timeUnit)
     {
         awaitLatchOrTimeout(schemaInitialized, timeout, timeUnit, "Wait for schema initialization");
     }
 
     /**
-     * Some tests may want to "manage" fewer instances than the complete cluster.
-     * Therefore, override this if your test wants to manage fewer than the complete cluster size.
-     * The Sidecar will be configured to manage the first N instances in the cluster by instance number.
-     * Defaults to the entire cluster.
+     * Some tests may want to "manage" fewer instances than the complete cluster. Therefore, override this if your test wants to manage fewer than the complete
+     * cluster size. The Sidecar will be configured to manage the first N instances in the cluster by instance number. Defaults to the entire cluster.
      *
      * @param clusterSize the size of the cluster as defined by the integration test
      * @return the instances to manage; or null to let test framework to determine the cluster size at the runtime
@@ -247,7 +248,9 @@ public abstract class IntegrationTestBase
         testWithClient(true, tester);
     }
 
-    protected void testWithClient(VertxTestContext context, Consumer<WebClient> tester) throws Exception
+    protected void testWithClient(VertxTestContext context,
+                                  Consumer<WebClient> tester)
+            throws Exception
     {
         testWithClient(context, true, tester);
     }
@@ -255,10 +258,10 @@ public abstract class IntegrationTestBase
     protected void testWithClient(VertxTestContext context,
                                   boolean waitForCluster,
                                   Consumer<WebClient> tester)
-    throws Exception
+            throws Exception
     {
         testWithClient(waitForCluster, tester);
-         // wait until the test completes
+        // wait until the test completes
         assertThat(context.awaitCompletion(2, TimeUnit.MINUTES)).isTrue();
     }
 
@@ -276,12 +279,14 @@ public abstract class IntegrationTestBase
         }
         else
         {
-            vertx.eventBus().localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
-                if (message.body().getInteger("cassandraInstanceId") == 1)
-                {
-                    tester.accept(client);
-                }
-            });
+            vertx.eventBus()
+                 .localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
+                     if (message.body()
+                                .getInteger("cassandraInstanceId") == 1)
+                     {
+                         tester.accept(client);
+                     }
+                 });
         }
     }
 
@@ -295,7 +300,8 @@ public abstract class IntegrationTestBase
         createKeyspace(TEST_KEYSPACE, rf);
     }
 
-    protected void createKeyspace(String keyspaceName, Map<String, Integer> rf)
+    protected void createKeyspace(String keyspaceName,
+                                  Map<String, Integer> rf)
     {
         int attempts = 1;
         List<Throwable> thrown = new ArrayList<>(5);
@@ -306,10 +312,10 @@ public abstract class IntegrationTestBase
                 Session session = maybeGetSession();
 
                 ResultSet rs = session.execute("CREATE KEYSPACE " + IF_NOT_EXISTS + " " + keyspaceName
-                                               + " WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', " + generateRfString(rf) + " };");
-                assertThat(rs.getExecutionInfo().isSchemaInAgreement())
-                .describedAs("Schema agreement is not reached")
-                .isTrue();
+                        + " WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', " + generateRfString(rf) + " };");
+                assertThat(rs.getExecutionInfo()
+                             .isSchemaInAgreement()).describedAs("Schema agreement is not reached")
+                                                    .isTrue();
                 return;
             }
             catch (Throwable t)
@@ -327,7 +333,9 @@ public abstract class IntegrationTestBase
 
     private String generateRfString(Map<String, Integer> dcToRf)
     {
-        return dcToRf.entrySet().stream().map(e -> String.format("'%s':%d", e.getKey(), e.getValue()))
+        return dcToRf.entrySet()
+                     .stream()
+                     .map(e -> String.format("'%s':%d", e.getKey(), e.getValue()))
                      .collect(Collectors.joining(","));
     }
 
@@ -336,7 +344,8 @@ public abstract class IntegrationTestBase
         return createTestTable(TEST_TABLE_PREFIX, createTableStatement);
     }
 
-    protected QualifiedTableName createTestTable(String tablePrefix, String createTableStatement)
+    protected QualifiedTableName createTestTable(String tablePrefix,
+                                                 String createTableStatement)
     {
         Session session = maybeGetSession();
         QualifiedTableName tableName = uniqueTestTableFullName(tablePrefix);
@@ -370,7 +379,7 @@ public abstract class IntegrationTestBase
     {
         String udt = TEST_KEYSPACE + "." + name;
 
-        StringBuilder statement = new StringBuilder(1024);  // Specify capacity to prevent unnecessary resizing
+        StringBuilder statement = new StringBuilder(1024); // Specify capacity to prevent unnecessary resizing
         statement.append("CREATE TYPE ");
         statement.append(udt);
         if (ifNotExists)
@@ -382,25 +391,31 @@ public abstract class IntegrationTestBase
         statement.append(schema);
         statement.append(");");
 
-        Session session = maybeGetSession();  // Leave session open to enable its subsequent use by the test
+        Session session = maybeGetSession(); // Leave session open to enable its subsequent use by the test
         session.execute(statement.toString());
 
         return udt;
     }
 
-    protected void createRole(String role, boolean superUser)
+    protected void createRole(String role,
+                              boolean superUser)
     {
         createRole(role, "password", superUser);
     }
 
-    protected void createRole(String role, String password, boolean superUser)
+    protected void createRole(String role,
+                              String password,
+                              boolean superUser)
     {
         Session session = maybeGetSession();
         session.execute("CREATE ROLE \"" + role + "\" WITH PASSWORD ='" + password + "' AND SUPERUSER = " + superUser + " AND LOGIN = true;");
     }
 
     // similar to awaitLatchOrTimeout, it throws either test exceptions (due to startAsync failures) or timeout exception
-    public void awaitLatchOrThrow(CountDownLatch latch, long duration, TimeUnit timeUnit, String latchName)
+    public void awaitLatchOrThrow(CountDownLatch latch,
+                                  long duration,
+                                  TimeUnit timeUnit,
+                                  String latchName)
     {
         String hint = latchName == null ? "" : '(' + latchName + ')';
         boolean completed = Uninterruptibles.awaitUninterruptibly(latch, duration, timeUnit);
@@ -413,15 +428,21 @@ public abstract class IntegrationTestBase
         throw new AssertionError("Latch " + hint + " times out after " + duration + ' ' + timeUnit.name());
     }
 
-    public static void awaitLatchOrTimeout(CountDownLatch latch, long duration, TimeUnit timeUnit, String latchName)
+    public static void awaitLatchOrTimeout(CountDownLatch latch,
+                                           long duration,
+                                           TimeUnit timeUnit,
+                                           String latchName)
     {
         String hint = latchName == null ? "" : '(' + latchName + ')';
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, duration, timeUnit))
-        .describedAs("Latch " + hint + " times out after " + duration + ' ' + timeUnit.name())
-        .isTrue();
+                                                                                    .describedAs("Latch " + hint + " times out after " + duration + ' '
+                                                                                            + timeUnit.name())
+                                                                                    .isTrue();
     }
 
-    public static void awaitLatchOrTimeout(CountDownLatch latch, long duration, TimeUnit timeUnit)
+    public static void awaitLatchOrTimeout(CountDownLatch latch,
+                                           long duration,
+                                           TimeUnit timeUnit)
     {
         awaitLatchOrTimeout(latch, duration, timeUnit, null);
     }
@@ -439,7 +460,8 @@ public abstract class IntegrationTestBase
         return createClient(clientKeystorePath, truststorePath);
     }
 
-    protected void startAsync(String hints, Runnable runnable)
+    protected void startAsync(String hints,
+                              Runnable runnable)
     {
         new Thread(() -> {
             try
@@ -475,17 +497,20 @@ public abstract class IntegrationTestBase
     private static QualifiedTableName uniqueTestTableFullName(String tablePrefix)
     {
         String uniqueTableName = tablePrefix + TEST_TABLE_ID.getAndIncrement();
-        return new QualifiedTableName(new Name(Metadata.quoteIfNecessary(TEST_KEYSPACE)),
-                                      new Name(Metadata.quoteIfNecessary(uniqueTableName)));
+        return new QualifiedTableName(new Name(Metadata.quoteIfNecessary(TEST_KEYSPACE)), new Name(Metadata.quoteIfNecessary(uniqueTableName)));
     }
 
     /**
-     * Note: must disable compaction, otherwise the file tree can be mutated while walking and test becomes flaky
-     * Append WITH_COMPACTION_DISABLED to the table create statement
+     * Note: must disable compaction, otherwise the file tree can be mutated while walking and test becomes flaky Append WITH_COMPACTION_DISABLED to the table
+     * create statement
      */
-    public List<Path> findChildFile(CassandraSidecarTestContext context, String hostname, String keyspaceName, String target)
+    public List<Path> findChildFile(CassandraSidecarTestContext context,
+                                    String hostname,
+                                    String keyspaceName,
+                                    String target)
     {
-        InstanceMetadata instanceConfig = context.instancesMetadata().instanceFromHost(hostname);
+        InstanceMetadata instanceConfig = context.instancesMetadata()
+                                                 .instanceFromHost(hostname);
         List<String> parentDirectories = instanceConfig.dataDirs();
 
         return parentDirectories.stream()
@@ -493,12 +518,15 @@ public abstract class IntegrationTestBase
                                 .collect(Collectors.toList());
     }
 
-    private List<Path> findChildFile(Path path, String target)
+    private List<Path> findChildFile(Path path,
+                                     String target)
     {
         try (Stream<Path> walkStream = Files.walk(path))
         {
-            return walkStream.filter(p -> p.toString().endsWith(target)
-                                          || p.toString().contains("/" + target + "/"))
+            return walkStream.filter(p -> p.toString()
+                                           .endsWith(target)
+                    || p.toString()
+                        .contains("/" + target + "/"))
                              .collect(Collectors.toList());
         }
         catch (IOException e)
@@ -510,7 +538,8 @@ public abstract class IntegrationTestBase
     private void healthCheck(InstancesMetadata instancesMetadata)
     {
         instancesMetadata.instances()
-                         .forEach(instanceMetadata -> instanceMetadata.delegate().healthCheck());
+                         .forEach(instanceMetadata -> instanceMetadata.delegate()
+                                                                      .healthCheck());
     }
 
     protected Path clientKeystorePath(String identity) throws Exception
@@ -518,16 +547,18 @@ public abstract class IntegrationTestBase
         return clientKeystorePath(identity, false);
     }
 
-    protected Path clientKeystorePath(String identity, boolean expired) throws Exception
+    protected Path clientKeystorePath(String identity,
+                                      boolean expired)
+            throws Exception
     {
-        CertificateBuilder builder = new CertificateBuilder()
-                            .subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                            .addSanDnsName("localhost")
-                            .addSanIpAddress(subjectAlternativeNameIpAddress())
-                            .addSanUriName(identity);
+        CertificateBuilder builder = new CertificateBuilder().subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                                             .addSanDnsName("localhost")
+                                                             .addSanIpAddress(subjectAlternativeNameIpAddress())
+                                                             .addSanUriName(identity);
         if (expired)
         {
-            builder.notAfter(Instant.now().minus(1, ChronoUnit.DAYS));
+            builder.notAfter(Instant.now()
+                                    .minus(1, ChronoUnit.DAYS));
         }
         CertificateBundle clientKeystore = builder.buildIssuedBy(ca);
         return clientKeystore.toTempKeyStorePath(tempDir.toPath(), clientKeystorePassword.toCharArray(), clientKeystorePassword.toCharArray());
@@ -535,19 +566,24 @@ public abstract class IntegrationTestBase
 
     private SslConfiguration sslConfigWithClientKeystoreTruststore()
     {
-        return SslConfigurationImpl
-               .builder()
-               .enabled(true)
-               .keystore(new KeyStoreConfigurationImpl(clientKeystorePath.toAbsolutePath().toString(), clientKeystorePassword, "PKCS12"))
-               .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
-               .build();
+        return SslConfigurationImpl.builder()
+                                   .enabled(true)
+                                   .keystore(new KeyStoreConfigurationImpl(clientKeystorePath.toAbsolutePath()
+                                                                                             .toString(),
+                                           clientKeystorePassword, "PKCS12"))
+                                   .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath()
+                                                                                           .toString(),
+                                           truststorePassword, "PKCS12"))
+                                   .build();
     }
 
     private SslConfiguration sslConfigWithTruststore()
     {
         return SslConfigurationImpl.builder()
                                    .enabled(true)
-                                   .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath().toString(), truststorePassword, "PKCS12"))
+                                   .truststore(new KeyStoreConfigurationImpl(truststorePath.toAbsolutePath()
+                                                                                           .toString(),
+                                           truststorePassword, "PKCS12"))
                                    .build();
     }
 
@@ -556,12 +592,17 @@ public abstract class IntegrationTestBase
         return "127.0.0.1";
     }
 
-    protected WebClient createClient(Path clientKeystorePath, Path truststorePath)
+    protected WebClient createClient(Path clientKeystorePath,
+                                     Path truststorePath)
     {
         WebClientOptions options = new WebClientOptions();
         options.setSsl(true);
-        options.setKeyStoreOptions(new JksOptions().setPath(clientKeystorePath.toAbsolutePath().toString()).setPassword(clientKeystorePassword));
-        options.setTrustStoreOptions(new JksOptions().setPath(truststorePath.toAbsolutePath().toString()).setPassword(truststorePassword));
+        options.setKeyStoreOptions(new JksOptions().setPath(clientKeystorePath.toAbsolutePath()
+                                                                              .toString())
+                                                   .setPassword(clientKeystorePassword));
+        options.setTrustStoreOptions(new JksOptions().setPath(truststorePath.toAbsolutePath()
+                                                                            .toString())
+                                                     .setPassword(truststorePassword));
         return WebClient.create(vertx, options); // TODO: webclient is not closed
     }
 }

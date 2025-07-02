@@ -18,18 +18,15 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.Set;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.impl.PermissionBasedAuthorizationImpl;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-
+import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 /**
@@ -52,7 +49,8 @@ class AllowAllAuthorizationTest
         Authorization authorization = new PermissionBasedAuthorizationImpl("test_permission");
         User user = User.fromName("test_user");
         assertThat(authorization.match(user)).isFalse();
-        user.authorizations().add(provider.getId(), provider.authorization);
+        user.authorizations()
+            .add(provider.getId(), provider.authorization);
         assertThat(authorization.match(user)).isTrue();
         assertThat(provider.authorization.verify(authorization)).isTrue();
     }
@@ -64,10 +62,13 @@ class AllowAllAuthorizationTest
         provider.getAuthorizations(user)
                 .onComplete(v -> {
                     Authorization authorization = new PermissionBasedAuthorizationImpl("test_permission");
-                    Set<Authorization> found = user.authorizations().get(provider.getId());
+                    Set<Authorization> found = user.authorizations()
+                                                   .get(provider.getId());
                     assertThat(found.size()).isOne();
                     assertThat(found.contains(provider.authorization)).isTrue();
-                    assertThat(found.iterator().next().verify(authorization)).isTrue();
+                    assertThat(found.iterator()
+                                    .next()
+                                    .verify(authorization)).isTrue();
                     testContext.completeNow();
                 });
     }

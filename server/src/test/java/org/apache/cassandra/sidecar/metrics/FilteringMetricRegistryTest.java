@@ -18,17 +18,6 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.UUID;
-import java.util.regex.Pattern;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
-
 import com.codahale.metrics.DefaultSettableGauge;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.NoopMetricRegistry;
@@ -40,10 +29,18 @@ import io.vertx.ext.dropwizard.ThroughputMeter;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.UUID;
+import java.util.regex.Pattern;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.server.SidecarServerEvents;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -68,9 +65,8 @@ class FilteringMetricRegistryTest
     void testNoopInstanceRetrieved()
     {
         MetricFilter.Regex testFilter = new MetricFilter.Regex("testMetric.*");
-        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                          Collections.emptyList(),
-                                                                          Collections.singletonList(testFilter));
+        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(), Collections.emptyList(),
+                Collections.singletonList(testFilter));
         FilteringMetricRegistry metricRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
 
         assertThat(metricRegistry.timer("testMetricTimer")).isSameAs(NO_OP_METRIC_REGISTRY.timer("any"));
@@ -87,30 +83,25 @@ class FilteringMetricRegistryTest
     {
         MetricRegistry metricRegistry = new MetricRegistry();
         assertThat(metricRegistry.timer("testMetric")).isNotNull();
-        assertThatThrownBy(() -> metricRegistry.meter("testMetric"))
-        .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> metricRegistry.meter("testMetric")).isInstanceOf(IllegalArgumentException.class);
 
-        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                          Collections.emptyList(),
-                                                                          Collections.emptyList());
+        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(), Collections.emptyList(),
+                Collections.emptyList());
         FilteringMetricRegistry filteringMetricRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
 
         filteringMetricRegistry.timer("testMetric");
-        assertThatThrownBy(() -> filteringMetricRegistry.meter("testMetric"))
-        .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> filteringMetricRegistry.meter("testMetric")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void testGaugeMetricExclusion()
     {
         MetricFilter.Regex testFilter = new MetricFilter.Regex("testMetric.*");
-        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                          Collections.emptyList(),
-                                                                          Collections.singletonList(testFilter));
+        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(), Collections.emptyList(),
+                Collections.singletonList(testFilter));
         FilteringMetricRegistry metricRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
 
-        assertThat(metricRegistry.gauge("testMetricGauge", () -> new DefaultSettableGauge<>(0L)))
-        .isInstanceOf(DefaultSettableGauge.class);
+        assertThat(metricRegistry.gauge("testMetricGauge", () -> new DefaultSettableGauge<>(0L))).isInstanceOf(DefaultSettableGauge.class);
         assertThat(metricRegistry.getIncludedMetrics()).doesNotContainKey("testMetricGauge");
 
         metricRegistry.register("testMetricDefaultSettableGaugeLong", new DefaultSettableGauge<>(0L));
@@ -125,9 +116,8 @@ class FilteringMetricRegistryTest
     {
         MetricFilter.Equals exactFilter = new MetricFilter.Equals("sidecar.metric.exact");
         MetricFilter.Regex regexFilter = new MetricFilter.Regex("vertx.*");
-        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                          Collections.singletonList(exactFilter),
-                                                                          Collections.singletonList(regexFilter));
+        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(), Collections.singletonList(exactFilter),
+                Collections.singletonList(regexFilter));
         FilteringMetricRegistry metricRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
 
         metricRegistry.meter("sidecar.metric.exact");
@@ -139,9 +129,8 @@ class FilteringMetricRegistryTest
     {
         MetricFilter.Equals exactFilter = new MetricFilter.Equals("sidecar.metric.exact");
         MetricFilter.Regex regexFilter = new MetricFilter.Regex("sidecar.*");
-        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                          Arrays.asList(exactFilter, regexFilter),
-                                                                          Collections.emptyList());
+        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(), Arrays.asList(exactFilter, regexFilter),
+                Collections.emptyList());
         FilteringMetricRegistry metricRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
 
         metricRegistry.meter("sidecar.metric.exact");
@@ -152,9 +141,8 @@ class FilteringMetricRegistryTest
     void testExcludingEqualsMetricFilter()
     {
         MetricFilter.Equals exactFilter = new MetricFilter.Equals("sidecar.metric.exact");
-        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                          Collections.emptyList(),
-                                                                          Collections.singletonList(exactFilter));
+        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(), Collections.emptyList(),
+                Collections.singletonList(exactFilter));
         FilteringMetricRegistry metricRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
 
         metricRegistry.meter("sidecar.metric.exact");
@@ -166,9 +154,8 @@ class FilteringMetricRegistryTest
     {
         MetricFilter.Regex vertxFilter = new MetricFilter.Regex("vertx.*");
         MetricFilter.Regex sidecarFilter = new MetricFilter.Regex("sidecar.*");
-        MetricRegistryFactory registryProvider = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                           Collections.singletonList(sidecarFilter),
-                                                                           Collections.singletonList(vertxFilter));
+        MetricRegistryFactory registryProvider = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(), Collections.singletonList(sidecarFilter),
+                Collections.singletonList(vertxFilter));
         FilteringMetricRegistry metricRegistry = (FilteringMetricRegistry) registryProvider.getOrCreate();
 
         metricRegistry.meter("sidecar.metric.exact");
@@ -182,9 +169,8 @@ class FilteringMetricRegistryTest
     {
         MetricFilter.Equals exactFilter = new MetricFilter.Equals("sidecar.metric.exact");
         MetricFilter.Regex regexFilter = new MetricFilter.Regex("sidecar.*");
-        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(),
-                                                                          Collections.singletonList(regexFilter),
-                                                                          Collections.singletonList(exactFilter));
+        MetricRegistryFactory registryFactory = new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(), Collections.singletonList(regexFilter),
+                Collections.singletonList(exactFilter));
         FilteringMetricRegistry metricRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
 
         metricRegistry.meter("sidecar.metric.exact");
@@ -203,7 +189,8 @@ class FilteringMetricRegistryTest
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint waitUntilCheck = context.checkpoint();
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
 
         server.start()
               .onFailure(context::failNow)
@@ -211,9 +198,13 @@ class FilteringMetricRegistryTest
                   MetricRegistryFactory registryFactory = injector.getInstance(MetricRegistryFactory.class);
                   Pattern excludedPattern = Pattern.compile("vertx.eventbus.*");
                   FilteringMetricRegistry globalRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
-                  assertThat(globalRegistry.getIncludedMetrics().size()).isGreaterThanOrEqualTo(1);
-                  assertThat(globalRegistry.getIncludedMetrics().keySet().stream())
-                  .noneMatch(key -> excludedPattern.matcher(key).matches());
+                  assertThat(globalRegistry.getIncludedMetrics()
+                                           .size()).isGreaterThanOrEqualTo(1);
+                  assertThat(globalRegistry.getIncludedMetrics()
+                                           .keySet()
+                                           .stream()).noneMatch(
+                                                   key -> excludedPattern.matcher(key)
+                                                                         .matches());
                   waitUntilCheck.flag();
                   context.completeNow();
               });
@@ -231,14 +222,16 @@ class FilteringMetricRegistryTest
         Checkpoint serverStarted = context.checkpoint();
         Checkpoint waitUntilCheck = context.checkpoint();
 
-        vertx.eventBus().localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
+        vertx.eventBus()
+             .localConsumer(SidecarServerEvents.ON_SERVER_START.address(), message -> serverStarted.flag());
 
         server.start()
               .onFailure(context::failNow)
               .onSuccess(v -> {
                   MetricRegistryFactory registryFactory = injector.getInstance(MetricRegistryFactory.class);
                   FilteringMetricRegistry globalRegistry = (FilteringMetricRegistry) registryFactory.getOrCreate();
-                  assertThat(globalRegistry.getIncludedMetrics().size()).isGreaterThanOrEqualTo(1);
+                  assertThat(globalRegistry.getIncludedMetrics()
+                                           .size()).isGreaterThanOrEqualTo(1);
                   waitUntilCheck.flag();
                   context.completeNow();
               });

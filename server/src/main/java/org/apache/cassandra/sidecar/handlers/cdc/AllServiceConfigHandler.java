@@ -18,16 +18,16 @@
  */
 package org.apache.cassandra.sidecar.handlers.cdc;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload;
@@ -62,7 +62,8 @@ public class AllServiceConfigHandler implements Handler<RoutingContext>, AccessP
         for (Service service : Service.values())
         {
             ConfigAccessor accessor = configAccessorFactory.configAccessor(service);
-            Map<String, String> config = accessor.getConfig().getConfigs();
+            Map<String, String> config = accessor.getConfig()
+                                                 .getConfigs();
 
             AllServicesConfigPayload.Service serviceConfig = new AllServicesConfigPayload.Service(service.serviceName, config);
 

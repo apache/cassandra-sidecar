@@ -16,7 +16,6 @@
 
 package org.apache.cassandra.sidecar.common.response.data;
 
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -90,13 +89,7 @@ public class RestoreJobProgressResponsePayload
 
     private RestoreJobProgressResponsePayload(Builder builder)
     {
-        this(builder.message,
-             builder.status,
-             builder.summary,
-             builder.failedRanges,
-             builder.abortedRanges,
-             builder.pendingRanges,
-             builder.succeededRanges);
+        this(builder.message, builder.status, builder.summary, builder.failedRanges, builder.abortedRanges, builder.pendingRanges, builder.succeededRanges);
     }
 
     @NotNull

@@ -27,6 +27,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +67,8 @@ public class ThrottleTest
     @BeforeEach
     void setUp() throws InterruptedException
     {
-        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(new TestModule()));
+        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
+                                                        .with(new TestModule()));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 
@@ -82,7 +84,8 @@ public class ThrottleTest
     {
         CountDownLatch closeLatch = new CountDownLatch(1);
         SharedMetricRegistries.clear();
-        server.close().onSuccess(res -> closeLatch.countDown());
+        server.close()
+              .onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, SECONDS))
             logger.info("Close event received before timeout.");
         else
@@ -92,8 +95,8 @@ public class ThrottleTest
     @Test
     void testStreamRequestsThrottled(VertxTestContext context) throws Exception
     {
-        String testRoute = "/keyspaces/TestKeyspace/tables/TestTable-54ea95cebba24e0aa9bee428e5d7160b/snapshots" +
-                           "/TestSnapshot/components/nb-1-big-Data.db?dataDirectoryIndex=0";
+        String testRoute = "/keyspaces/TestKeyspace/tables/TestTable-54ea95cebba24e0aa9bee428e5d7160b/snapshots"
+                + "/TestSnapshot/components/nb-1-big-Data.db?dataDirectoryIndex=0";
 
         long startTime = System.nanoTime();
         List<Future<HttpResponse<Buffer>>> responseFutures = IntStream.range(0, 50)
@@ -104,7 +107,8 @@ public class ThrottleTest
               .onComplete(context.succeeding(combinedResp -> {
                   long elapsedNanos = System.nanoTime() - startTime;
                   long okResponse = responseFutures.stream()
-                                                   .filter(resp -> resp.result() != null && resp.result().statusCode() == HttpResponseStatus.OK.code())
+                                                   .filter(resp -> resp.result() != null && resp.result()
+                                                                                                .statusCode() == HttpResponseStatus.OK.code())
                                                    .count();
                   double rate = okResponse * SECONDS.toNanos(1) / (double) elapsedNanos;
                   assertThat(rate).as("Rate is expected to be 5 requests per second. rate=" + rate + " RPS")

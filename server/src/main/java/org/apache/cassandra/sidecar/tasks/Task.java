@@ -23,16 +23,17 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * An interface that defines a task that will be executed during the lifecycle of Cassandra Sidecar
+ *
  * @param <T> result value type
  */
 public interface Task<T>
 {
     /**
-     * Defines the task body.
-     * The method can be considered as executing in a single thread.
+     * Defines the task body. The method can be considered as executing in a single thread.
      *
-     * <br><b>NOTE:</b> the {@code promise} must be completed (as either succeeded or failed) at the end of the run.
-     * Failing to do so, the executor will not be able to trigger a new run.
+     * <br>
+     * <b>NOTE:</b> the {@code promise} must be completed (as either succeeded or failed) at the end of the run. Failing to do so, the executor will not be able
+     * to trigger a new run.
      *
      * @param promise a promise when the execution completes
      */
@@ -45,20 +46,22 @@ public interface Task<T>
     T result();
 
     /**
-     * Close any resources it opened.
-     * Implementation note: it is encouraged to handle the exceptions during close()
+     * Close any resources it opened. Implementation note: it is encouraged to handle the exceptions during close()
      */
     default void close()
     {
     }
 
     /**
-     * @return descriptive name of the task. It prefers simple class name, if it is non-empty;
-     * otherwise, it returns the full class name
+     * @return descriptive name of the task. It prefers simple class name, if it is non-empty; otherwise, it returns the full class name
      */
     default String name()
     {
-        String simpleName = this.getClass().getSimpleName();
-        return simpleName.isEmpty() ? this.getClass().getName() : simpleName;
+        String simpleName = this.getClass()
+                                .getSimpleName();
+        return simpleName.isEmpty()
+                ? this.getClass()
+                      .getName()
+                : simpleName;
     }
 }

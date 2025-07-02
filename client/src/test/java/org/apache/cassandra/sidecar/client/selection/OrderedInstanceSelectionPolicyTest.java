@@ -22,14 +22,11 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.client.SidecarInstancesProvider;
 import org.apache.cassandra.sidecar.client.SimpleSidecarInstancesProvider;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
@@ -63,8 +60,10 @@ class OrderedInstanceSelectionPolicyTest
         InstanceSelectionPolicy instanceSelectionPolicy = new OrderedInstanceSelectionPolicy(provider);
         Iterator<SidecarInstance> iterator = instanceSelectionPolicy.iterator();
 
-        assertThat(iterator.hasNext()).isTrue().as("Expected to be true");
-        assertThat(iterator.hasNext()).isTrue().as("Test idempotency of hasNext by running it again");
+        assertThat(iterator.hasNext()).isTrue()
+                                      .as("Expected to be true");
+        assertThat(iterator.hasNext()).isTrue()
+                                      .as("Test idempotency of hasNext by running it again");
         assertThat(iterator.next()).isSameAs(mockInstance1);
         assertThat(iterator.hasNext()).isTrue();
         assertThat(iterator.next()).isSameAs(mockInstance2);
@@ -72,8 +71,10 @@ class OrderedInstanceSelectionPolicyTest
         assertThat(iterator.next()).isSameAs(mockInstance3);
         assertThat(iterator.hasNext()).isTrue();
         assertThat(iterator.next()).isSameAs(mockInstance4);
-        assertThat(iterator.hasNext()).isFalse().as("Expected to be false");
-        assertThat(iterator.hasNext()).isFalse().as("Test idempotency of hasNext by running it again");
+        assertThat(iterator.hasNext()).isFalse()
+                                      .as("Expected to be false");
+        assertThat(iterator.hasNext()).isFalse()
+                                      .as("Test idempotency of hasNext by running it again");
         assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(iterator::next);
     }
 }

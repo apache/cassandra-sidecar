@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.tasks;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import io.vertx.core.Promise;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -33,13 +36,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import com.google.common.collect.Sets;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
-import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -54,14 +50,16 @@ import org.apache.cassandra.sidecar.utils.FileUtils;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
+import com.google.common.collect.Sets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.cassandra.sidecar.utils.CdcUtil.isLogFile;
 import static org.apache.cassandra.sidecar.utils.CdcUtil.parseSegmentId;
 
 /**
- * PeriodTask to monitor and remove the oldest commit log segments in the `cdc_raw` directory
- * when the space used hits the `cdc_total_space` limit set in the yaml file.
+ * PeriodTask to monitor and remove the oldest commit log segments in the `cdc_raw` directory when the space used hits the `cdc_total_space` limit set in the
+ * yaml file.
  */
 @Singleton
 public class CdcRawDirectorySpaceCleaner implements PeriodicTask
@@ -95,7 +93,8 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
         this.systemViewsDatabaseAccessor = systemViewsDatabaseAccessor;
         this.cdcConfiguration = serviceConfiguration.cdcConfiguration();
         this.instancesMetadata = instancesMetadata;
-        this.cdcMetrics = metrics.server().cdc();
+        this.cdcMetrics = metrics.server()
+                                 .cdc();
     }
 
     @Override
@@ -125,17 +124,16 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
      */
     protected boolean shouldRefreshCachedMaxUsage()
     {
-        return maxUsageLastReadNanos == null ||
-               (timeProvider.nanoTime() - maxUsageLastReadNanos) >=
-               TimeUnit.MILLISECONDS.toNanos(cdcConfiguration.cacheMaxUsage().toMillis());
+        return maxUsageLastReadNanos == null
+                || (timeProvider.nanoTime() - maxUsageLastReadNanos) >= TimeUnit.MILLISECONDS.toNanos(cdcConfiguration.cacheMaxUsage()
+                                                                                                                      .toMillis());
     }
 
     protected long maxUsage()
     {
         if (!shouldRefreshCachedMaxUsage())
         {
-            return Objects.requireNonNull(maxUsageBytes,
-                                          "maxUsageBytes cannot be null if maxUsageLastReadNanos is non-null");
+            return Objects.requireNonNull(maxUsageBytes, "maxUsageBytes cannot be null if maxUsageLastReadNanos is non-null");
         }
 
         try
@@ -145,9 +143,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
             {
                 if (!newValue.equals(maxUsageBytes))
                 {
-                    LOGGER.info(
-                    "Change in cdc_total_space from system_views.settings prev={} latest={}",
-                    maxUsageBytes, newValue);
+                    LOGGER.info("Change in cdc_total_space from system_views.settings prev={} latest={}", maxUsageBytes, newValue);
                     this.maxUsageBytes = newValue;
                     this.maxUsageLastReadNanos = timeProvider.nanoTime();
                     return newValue;
@@ -209,16 +205,12 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
             return;
         }
 
-        List<CdcRawSegmentFile> segmentFiles = Optional
-                                               .ofNullable(
-                                               cdcRawDirectory.listFiles(this::validSegmentFilter))
-                                               .map(files -> Arrays.stream(files)
-                                                                   .map(CdcRawSegmentFile::new)
-                                                                   .filter(
-                                                                   CdcRawSegmentFile::indexExists)
-                                                                   .collect(Collectors.toList())
-                                               )
-                                               .orElseGet(List::of);
+        List<CdcRawSegmentFile> segmentFiles = Optional.ofNullable(cdcRawDirectory.listFiles(this::validSegmentFilter))
+                                                       .map(files -> Arrays.stream(files)
+                                                                           .map(CdcRawSegmentFile::new)
+                                                                           .filter(CdcRawSegmentFile::indexExists)
+                                                                           .collect(Collectors.toList()))
+                                                       .orElseGet(List::of);
         publishCdcStats(segmentFiles);
         if (segmentFiles.size() < 2)
         {
@@ -227,27 +219,27 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
         }
 
         long directorySize = FileUtils.directorySize(cdcRawDirectory);
-        long upperLimitBytes =
-        (long) (maxUsage() * cdcConfiguration.cdcRawDirectoryMaxPercentUsage());
+        long upperLimitBytes = (long) (maxUsage() * cdcConfiguration.cdcRawDirectoryMaxPercentUsage());
         // Sort the files by segmentId to delete commit log segments in write order
         // The latest file is the current active segment, but it could be created before the retention duration, e.g. slow data ingress
         Collections.sort(segmentFiles);
         long nowInMillis = timeProvider.currentTimeMillis();
 
         // track the age of the oldest commit log segment to give indication of the time-window buffer available
-        cdcMetrics.oldestSegmentAge.metric.setValue(
-        (int) MILLISECONDS.toSeconds(nowInMillis - segmentFiles.get(0).lastModified()));
+        cdcMetrics.oldestSegmentAge.metric.setValue((int) MILLISECONDS.toSeconds(nowInMillis - segmentFiles.get(0)
+                                                                                                           .lastModified()));
 
         if (directorySize > upperLimitBytes)
         {
             if (segmentFiles.get(0).segmentId > segmentFiles.get(1).segmentId)
             {
-                LOGGER.error("Cdc segments sorted incorrectly {} before {}",
-                             segmentFiles.get(0).segmentId, segmentFiles.get(1).segmentId);
+                LOGGER.error("Cdc segments sorted incorrectly {} before {}", segmentFiles.get(0).segmentId, segmentFiles.get(1).segmentId);
             }
 
-            long criticalMillis = cdcConfiguration.cdcRawDirectoryCriticalBufferWindow().toMillis();
-            long lowMillis = cdcConfiguration.cdcRawDirectoryLowBufferWindow().toMillis();
+            long criticalMillis = cdcConfiguration.cdcRawDirectoryCriticalBufferWindow()
+                                                  .toMillis();
+            long lowMillis = cdcConfiguration.cdcRawDirectoryLowBufferWindow()
+                                             .toMillis();
 
             // we keep the last commit log segment as it may still be actively written to
             int i = 0;
@@ -259,15 +251,13 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
                 if (ageMillis < criticalMillis)
                 {
                     LOGGER.error("Insufficient Cdc buffer size to maintain {}-minute window segment={} maxSize={} ageMinutes={}",
-                                 MILLISECONDS.toMinutes(criticalMillis), segment, upperLimitBytes,
-                                 MILLISECONDS.toMinutes(ageMillis));
+                            MILLISECONDS.toMinutes(criticalMillis), segment, upperLimitBytes, MILLISECONDS.toMinutes(ageMillis));
                     cdcMetrics.criticalCdcRawSpace.metric.update(1);
                 }
                 else if (ageMillis < lowMillis)
                 {
                     LOGGER.warn("Insufficient Cdc buffer size to maintain {}-minute window segment={} maxSize={} ageMinutes={}",
-                                MILLISECONDS.toMinutes(lowMillis), segment, upperLimitBytes,
-                                MILLISECONDS.toMinutes(ageMillis));
+                            MILLISECONDS.toMinutes(lowMillis), segment, upperLimitBytes, MILLISECONDS.toMinutes(ageMillis));
                     cdcMetrics.lowCdcRawSpace.metric.update(1);
                 }
                 long length = 0;
@@ -303,8 +293,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
     protected long deleteSegment(CdcRawSegmentFile segment) throws IOException
     {
         final long numBytes = segment.length() + segment.indexLength();
-        LOGGER.info("Deleting Cdc segment path={} lastModified={} numBytes={}", segment,
-                    segment.lastModified(), numBytes);
+        LOGGER.info("Deleting Cdc segment path={} lastModified={} numBytes={}", segment, segment.lastModified(), numBytes);
         Files.deleteIfExists(segment.path());
         Files.deleteIfExists(segment.indexPath());
         return numBytes;
@@ -313,13 +302,11 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
     // runs optionally if detects orphaned and old index files
     private void cleanupOrphanedIdxFiles(File cdcDir) throws IOException
     {
-        final File[] indexFiles =
-        cdcDir.listFiles(f -> f.isFile() && CdcUtil.isValidIdxFile(f.getName()));
+        final File[] indexFiles = cdcDir.listFiles(f -> f.isFile() && CdcUtil.isValidIdxFile(f.getName()));
         if (indexFiles == null || indexFiles.length == 0)
             return; // exit early when finding no index files
 
-        final File[] cdcSegments =
-        cdcDir.listFiles(f -> f.isFile() && CdcUtil.isLogFile(f.getName()));
+        final File[] cdcSegments = cdcDir.listFiles(f -> f.isFile() && CdcUtil.isLogFile(f.getName()));
         Set<String> cdcFileNames = Set.of();
         if (cdcSegments != null)
         {
@@ -335,9 +322,8 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
         {
             final String cdcFileName = CdcUtil.idxToLogFileName(idxFile.getName());
             if (!cdcFileNames.contains(cdcFileName))
-            {  // found an orphaned index file
-                LOGGER.warn("Orphaned Cdc idx file found with no corresponding Cdc segment path={}",
-                            idxFile.toPath());
+            { // found an orphaned index file
+                LOGGER.warn("Orphaned Cdc idx file found with no corresponding Cdc segment path={}", idxFile.toPath());
                 cdcMetrics.orphanedIdx.metric.update(1L);
                 Files.deleteIfExists(idxFile.toPath());
             }
@@ -379,10 +365,10 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
         }
 
         // consumed files is the files exist in the prior round but now are deleted.
-        Set<CdcRawSegmentFile> consumedFiles =
-        Sets.difference(priorCdcFiles.keySet(), currentFiles.keySet());
-        long totalConsumedBytes =
-        consumedFiles.stream().map(priorCdcFiles::get).reduce(0L, Long::sum);
+        Set<CdcRawSegmentFile> consumedFiles = Sets.difference(priorCdcFiles.keySet(), currentFiles.keySet());
+        long totalConsumedBytes = consumedFiles.stream()
+                                               .map(priorCdcFiles::get)
+                                               .reduce(0L, Long::sum);
         priorCdcFiles.clear();
         priorCdcFiles = currentFiles;
         cdcMetrics.totalConsumedCdcBytes.metric.update(totalConsumedBytes);

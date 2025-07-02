@@ -19,12 +19,10 @@
 package org.apache.cassandra.sidecar.config;
 
 import java.util.Map;
-
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Encapsulates configuration needed for classes that can be initialized with a given class name using the
- * configured optional parameters
+ * Encapsulates configuration needed for classes that can be initialized with a given class name using the configured optional parameters
  */
 public interface ParameterizedClassConfiguration
 {

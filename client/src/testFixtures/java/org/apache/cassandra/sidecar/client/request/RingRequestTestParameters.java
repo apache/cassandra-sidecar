@@ -42,16 +42,15 @@ public class RingRequestTestParameters implements RequestTestParameters<RingResp
     @Override
     public String okResponseBody()
     {
-        return "[{\"datacenter\":\"dc1\",\"address\":\"172.17.0.2\",\"port\":7000,\"rack\":\"101000101\"," +
-               "\"status\":\"Up\",\"state\":\"Normal\",\"load\":\"81.74 KiB\",\"owns\":\"66.67%\"," +
-               "\"token\":\"-9223372036854775808\",\"fqdn\":\"172.17.0.2\",\"hostId\":" +
-               "\"33cae238-8203-41c1-880f-8cdf98ee6720\"},{\"datacenter\":\"dc1\",\"address\":\"127.0.0.2\"," +
-               "\"port\":7000,\"rack\":\"101000201\",\"status\":\"Up\",\"state\":\"Normal\",\"load\":\"81.74 KiB\"," +
-               "\"owns\":\"66.67%\",\"token\":\"-3074457345618258603\",\"fqdn\":\"127.0.0.2\",\"hostId\":" +
-               "\"dba02656-ea8c-4a1d-8011-cbc0dab5f411\"},{\"datacenter\":\"dc1\",\"address\":\"127.0.0.3\"," +
-               "\"port\":7000,\"rack\":\"101000301\",\"status\":\"Up\",\"state\":\"Normal\",\"load\":\"81.74 KiB\"," +
-               "\"owns\":\"66.67%\",\"token\":\"3074457345618258602\",\"fqdn\":\"127.0.0.3\"," +
-               "\"hostId\":\"be19c254-becb-40b9-8951-30c589c7028e\"}]";
+        return "[{\"datacenter\":\"dc1\",\"address\":\"172.17.0.2\",\"port\":7000,\"rack\":\"101000101\","
+                + "\"status\":\"Up\",\"state\":\"Normal\",\"load\":\"81.74 KiB\",\"owns\":\"66.67%\","
+                + "\"token\":\"-9223372036854775808\",\"fqdn\":\"172.17.0.2\",\"hostId\":"
+                + "\"33cae238-8203-41c1-880f-8cdf98ee6720\"},{\"datacenter\":\"dc1\",\"address\":\"127.0.0.2\","
+                + "\"port\":7000,\"rack\":\"101000201\",\"status\":\"Up\",\"state\":\"Normal\",\"load\":\"81.74 KiB\","
+                + "\"owns\":\"66.67%\",\"token\":\"-3074457345618258603\",\"fqdn\":\"127.0.0.2\",\"hostId\":"
+                + "\"dba02656-ea8c-4a1d-8011-cbc0dab5f411\"},{\"datacenter\":\"dc1\",\"address\":\"127.0.0.3\","
+                + "\"port\":7000,\"rack\":\"101000301\",\"status\":\"Up\",\"state\":\"Normal\",\"load\":\"81.74 KiB\","
+                + "\"owns\":\"66.67%\",\"token\":\"3074457345618258602\",\"fqdn\":\"127.0.0.3\"," + "\"hostId\":\"be19c254-becb-40b9-8951-30c589c7028e\"}]";
     }
 
     @Override
@@ -65,18 +64,29 @@ public class RingRequestTestParameters implements RequestTestParameters<RingResp
     {
         assertThat(response.size()).isEqualTo(3);
         List<RingEntry> ringEntryList = new ArrayList<>(response);
-        assertThat(ringEntryList.get(0).datacenter()).isEqualTo("dc1");
-        assertThat(ringEntryList.get(0).address()).isEqualTo("172.17.0.2");
-        assertThat(ringEntryList.get(0).port()).isEqualTo(7000);
-        assertThat(ringEntryList.get(0).rack()).isEqualTo("101000101");
+        assertThat(ringEntryList.get(0)
+                                .datacenter()).isEqualTo("dc1");
+        assertThat(ringEntryList.get(0)
+                                .address()).isEqualTo("172.17.0.2");
+        assertThat(ringEntryList.get(0)
+                                .port()).isEqualTo(7000);
+        assertThat(ringEntryList.get(0)
+                                .rack()).isEqualTo("101000101");
 
-        assertThat(ringEntryList.get(1).status()).isEqualTo("Up");
-        assertThat(ringEntryList.get(1).load()).isEqualTo("81.74 KiB");
-        assertThat(ringEntryList.get(1).owns()).isEqualTo("66.67%");
-        assertThat(ringEntryList.get(1).hostId()).isEqualTo("dba02656-ea8c-4a1d-8011-cbc0dab5f411");
+        assertThat(ringEntryList.get(1)
+                                .status()).isEqualTo("Up");
+        assertThat(ringEntryList.get(1)
+                                .load()).isEqualTo("81.74 KiB");
+        assertThat(ringEntryList.get(1)
+                                .owns()).isEqualTo("66.67%");
+        assertThat(ringEntryList.get(1)
+                                .hostId()).isEqualTo("dba02656-ea8c-4a1d-8011-cbc0dab5f411");
 
-        assertThat(ringEntryList.get(2).token()).isEqualTo("3074457345618258602");
-        assertThat(ringEntryList.get(2).fqdn()).isEqualTo("127.0.0.3");
-        assertThat(ringEntryList.get(2).state()).isEqualTo("Normal");
+        assertThat(ringEntryList.get(2)
+                                .token()).isEqualTo("3074457345618258602");
+        assertThat(ringEntryList.get(2)
+                                .fqdn()).isEqualTo("127.0.0.3");
+        assertThat(ringEntryList.get(2)
+                                .state()).isEqualTo("Normal");
     }
 }

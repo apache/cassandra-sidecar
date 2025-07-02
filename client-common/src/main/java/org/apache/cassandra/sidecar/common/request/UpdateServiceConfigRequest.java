@@ -22,14 +22,14 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.request.data.UpdateCdcServiceConfigPayload;
 
 /**
- * Request class for updating the config of a given service.
- * Ex: updating kafka configs or updating cdc configs
+ * Request class for updating the config of a given service. Ex: updating kafka configs or updating cdc configs
  */
 public class UpdateServiceConfigRequest extends JsonRequest<UpdateCdcServiceConfigPayload>
 {
     final UpdateCdcServiceConfigPayload payload;
 
-    public UpdateServiceConfigRequest(Service service, UpdateCdcServiceConfigPayload payload)
+    public UpdateServiceConfigRequest(Service service,
+                                      UpdateCdcServiceConfigPayload payload)
     {
         super(ApiEndpointsV1.SERVICE_CONFIG_ROUTE.replaceAll(ApiEndpointsV1.SERVICE_PARAM, service.serviceName));
         this.payload = payload;

@@ -18,20 +18,17 @@
 
 package org.apache.cassandra.sidecar.cluster.locator;
 
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.AuthMode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
-
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.apache.cassandra.sidecar.testing.IntegrationTestModule.ADMIN_IDENTITY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
@@ -70,12 +67,13 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testWithMTLS(VertxTestContext context, CassandraTestContext cassandraTestContext) throws Exception
+    void testWithMTLS(VertxTestContext context,
+                      CassandraTestContext cassandraTestContext)
+            throws Exception
     {
         // mTLS authentication was added in Cassandra starting 5.0 version
-        assumeThat(cassandraTestContext.version.major)
-        .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
-        .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
+        assumeThat(cassandraTestContext.version.major).withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
+                                                      .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
 
         insertIdentityRole(cassandraTestContext, ADMIN_IDENTITY, "cassandra");
         waitForSchemaReady(30, TimeUnit.SECONDS);
@@ -83,7 +81,10 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
         retrieveClientStats(context, "cassandra", true);
     }
 
-    private void retrieveClientStats(VertxTestContext context, String expectedUsername, boolean checkSsl) throws Exception
+    private void retrieveClientStats(VertxTestContext context,
+                                     String expectedUsername,
+                                     boolean checkSsl)
+            throws Exception
     {
         String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
         WebClient client = mTLSClient();
@@ -113,20 +114,22 @@ class CqlSessionProviderIntegrationTest extends IntegrationTestBase
               }));
     }
 
-    private void assertSslConnectionIfNeeded(boolean checkSsl, boolean seeSslConnection)
+    private void assertSslConnectionIfNeeded(boolean checkSsl,
+                                             boolean seeSslConnection)
     {
         if (checkSsl)
         {
-            assertThat(seeSslConnection)
-            .describedAs("Did not see any SSL connection")
-            .isTrue();
+            assertThat(seeSslConnection).describedAs("Did not see any SSL connection")
+                                        .isTrue();
         }
     }
 
-    private void insertIdentityRole(CassandraTestContext cassandraContext, String identity, String role)
+    private void insertIdentityRole(CassandraTestContext cassandraContext,
+                                    String identity,
+                                    String role)
     {
-        String statement = String.format("INSERT INTO system_auth.identity_to_role (identity, role) VALUES ('%s','%s')",
-                                         identity, role);
-        cassandraContext.cluster().schemaChangeIgnoringStoppedInstances(statement);
+        String statement = String.format("INSERT INTO system_auth.identity_to_role (identity, role) VALUES ('%s','%s')", identity, role);
+        cassandraContext.cluster()
+                        .schemaChangeIgnoringStoppedInstances(statement);
     }
 }

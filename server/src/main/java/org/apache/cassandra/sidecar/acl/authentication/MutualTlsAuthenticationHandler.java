@@ -18,12 +18,6 @@
 
 package org.apache.cassandra.sidecar.acl.authentication;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -33,8 +27,11 @@ import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerImpl;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.AUTH_ROLE;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
@@ -43,8 +40,8 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * Handler for verifying user certificates for Mutual TLS authentication. {@link MutualTlsAuthenticationHandler} can be
- * chained with other {@link io.vertx.ext.web.handler.AuthenticationHandler} implementations.
+ * Handler for verifying user certificates for Mutual TLS authentication. {@link MutualTlsAuthenticationHandler} can be chained with other
+ * {@link io.vertx.ext.web.handler.AuthenticationHandler} implementations.
  */
 public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<MutualTlsAuthentication>
 {
@@ -59,11 +56,15 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
     }
 
     @Override
-    public void authenticate(RoutingContext ctx, Handler<AsyncResult<User>> handler)
+    public void authenticate(RoutingContext ctx,
+                             Handler<AsyncResult<User>> handler)
     {
-        if (!ctx.request().isSSL())
+        if (!ctx.request()
+                .isSSL())
         {
-            ctx.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
+            ctx.response()
+               .setStatusCode(HttpResponseStatus.BAD_REQUEST.code())
+               .end();
             return;
         }
 
@@ -81,7 +82,7 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
                     .recover(cause -> { // converts any exception to unauthorized http exception
                         throw wrapHttpException(UNAUTHORIZED, cause);
                     })
-                    .andThen(authN-> {
+                    .andThen(authN -> {
                         if (authN.failed())
                         {
                             handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, authN.cause())));
@@ -90,18 +91,20 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
 
                         List<String> identities = extractIdentities(authN.result());
                         List<String> roles = extractCassandraRoles(identities);
-                        String roleIntended = ctx.request().getHeader(AUTH_ROLE);
+                        String roleIntended = ctx.request()
+                                                 .getHeader(AUTH_ROLE);
 
                         if (isNotEmpty(roleIntended) && !roles.contains(roleIntended))
                         {
-                            String errMsg = String.format("None of the identities %s are authorized for role %s",
-                                                          identities, roleIntended);
+                            String errMsg = String.format("None of the identities %s are authorized for role %s", identities, roleIntended);
                             handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, errMsg)));
                             return;
                         }
 
                         List<String> rolesToAdd = isNotEmpty(roleIntended) ? List.of(roleIntended) : roles;
-                        authN.result().attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
+                        authN.result()
+                             .attributes()
+                             .put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
                         handler.handle(authN);
                     });
     }

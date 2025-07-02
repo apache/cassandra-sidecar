@@ -18,20 +18,17 @@
 
 package org.apache.cassandra.sidecar.cluster;
 
+import com.codahale.metrics.MetricRegistry;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -80,48 +77,56 @@ class InstancesMetadataImplTest
     @Test
     void testLookupByHostName()
     {
-        List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1"),
-                                                         instance(2, "127.0.0.2"),
-                                                         instance(3, "127.0.0.3"));
+        List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1"), instance(2, "127.0.0.2"), instance(3, "127.0.0.3"));
         InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, localhostResolver);
-        assertThat(instancesMetadata.instanceFromHost("localhost").id()).isEqualTo(1);
-        assertThat(instancesMetadata.instanceFromHost("localhost1").id()).isEqualTo(1);
-        assertThat(instancesMetadata.instanceFromHost("localhost2").id()).isEqualTo(2);
-        assertThat(instancesMetadata.instanceFromHost("localhost3").id()).isEqualTo(3);
-        assertThat(instancesMetadata.instanceFromHost("127.0.0.1").id()).isEqualTo(1);
-        assertThat(instancesMetadata.instanceFromHost("127.0.0.2").id()).isEqualTo(2);
-        assertThat(instancesMetadata.instanceFromHost("127.0.0.3").id()).isEqualTo(3);
+        assertThat(instancesMetadata.instanceFromHost("localhost")
+                                    .id()).isEqualTo(1);
+        assertThat(instancesMetadata.instanceFromHost("localhost1")
+                                    .id()).isEqualTo(1);
+        assertThat(instancesMetadata.instanceFromHost("localhost2")
+                                    .id()).isEqualTo(2);
+        assertThat(instancesMetadata.instanceFromHost("localhost3")
+                                    .id()).isEqualTo(3);
+        assertThat(instancesMetadata.instanceFromHost("127.0.0.1")
+                                    .id()).isEqualTo(1);
+        assertThat(instancesMetadata.instanceFromHost("127.0.0.2")
+                                    .id()).isEqualTo(2);
+        assertThat(instancesMetadata.instanceFromHost("127.0.0.3")
+                                    .id()).isEqualTo(3);
 
-        assertThatThrownBy(() -> instancesMetadata.instanceFromHost("localhost999"))
-        .isExactlyInstanceOf(NoSuchCassandraInstanceException.class)
-        .hasMessage("Instance with host address 'localhost999' not found");
+        assertThatThrownBy(() -> instancesMetadata.instanceFromHost("localhost999")).isExactlyInstanceOf(NoSuchCassandraInstanceException.class)
+                                                                                    .hasMessage("Instance with host address 'localhost999' not found");
     }
 
     @Test
     void testLookupByIPAddress()
     {
-        List<InstanceMetadata> instances = Arrays.asList(instance(1, "localhost1"),
-                                                         instance(2, "localhost2"),
-                                                         instance(3, "localhost3"));
+        List<InstanceMetadata> instances = Arrays.asList(instance(1, "localhost1"), instance(2, "localhost2"), instance(3, "localhost3"));
         InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, localhostResolver);
-        assertThat(instancesMetadata.instanceFromHost("localhost1").id()).isEqualTo(1);
-        assertThat(instancesMetadata.instanceFromHost("localhost2").id()).isEqualTo(2);
-        assertThat(instancesMetadata.instanceFromHost("localhost3").id()).isEqualTo(3);
-        assertThat(instancesMetadata.instanceFromHost("127.0.0.1").id()).isEqualTo(1);
-        assertThat(instancesMetadata.instanceFromHost("127.0.0.2").id()).isEqualTo(2);
-        assertThat(instancesMetadata.instanceFromHost("127.0.0.3").id()).isEqualTo(3);
+        assertThat(instancesMetadata.instanceFromHost("localhost1")
+                                    .id()).isEqualTo(1);
+        assertThat(instancesMetadata.instanceFromHost("localhost2")
+                                    .id()).isEqualTo(2);
+        assertThat(instancesMetadata.instanceFromHost("localhost3")
+                                    .id()).isEqualTo(3);
+        assertThat(instancesMetadata.instanceFromHost("127.0.0.1")
+                                    .id()).isEqualTo(1);
+        assertThat(instancesMetadata.instanceFromHost("127.0.0.2")
+                                    .id()).isEqualTo(2);
+        assertThat(instancesMetadata.instanceFromHost("127.0.0.3")
+                                    .id()).isEqualTo(3);
 
         String newIp = "127.1.2.3";
-        assertThatThrownBy(() -> instancesMetadata.instanceFromHost(newIp))
-        .isExactlyInstanceOf(NoSuchCassandraInstanceException.class)
-        .hasMessage("Instance with host address '127.1.2.3' not found");
+        assertThatThrownBy(() -> instancesMetadata.instanceFromHost(newIp)).isExactlyInstanceOf(NoSuchCassandraInstanceException.class)
+                                                                           .hasMessage("Instance with host address '127.1.2.3' not found");
 
         localhost1NewIp.set(newIp);
         loopAssert(2, 100, () -> {
             // wait for the cache to be updated
             try
             {
-                assertThat(instancesMetadata.instanceFromHost(newIp).id()).isEqualTo(1);
+                assertThat(instancesMetadata.instanceFromHost(newIp)
+                                            .id()).isEqualTo(1);
             }
             catch (NoSuchCassandraInstanceException e)
             {
@@ -134,20 +139,21 @@ class InstancesMetadataImplTest
     @Test
     void testLookupById()
     {
-        List<InstanceMetadata> instances = Arrays.asList(instance(1, "localhost1"),
-                                                         instance(2, "localhost2"),
-                                                         instance(3, "localhost3"));
+        List<InstanceMetadata> instances = Arrays.asList(instance(1, "localhost1"), instance(2, "localhost2"), instance(3, "localhost3"));
         InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, localhostResolver);
-        assertThat(instancesMetadata.instanceFromId(1).host()).isEqualTo("localhost1");
-        assertThat(instancesMetadata.instanceFromId(2).host()).isEqualTo("localhost2");
-        assertThat(instancesMetadata.instanceFromId(3).host()).isEqualTo("localhost3");
+        assertThat(instancesMetadata.instanceFromId(1)
+                                    .host()).isEqualTo("localhost1");
+        assertThat(instancesMetadata.instanceFromId(2)
+                                    .host()).isEqualTo("localhost2");
+        assertThat(instancesMetadata.instanceFromId(3)
+                                    .host()).isEqualTo("localhost3");
 
-        assertThatThrownBy(() -> instancesMetadata.instanceFromId(123))
-        .isExactlyInstanceOf(NoSuchCassandraInstanceException.class)
-        .hasMessage("Instance id '123' not found");
+        assertThatThrownBy(() -> instancesMetadata.instanceFromId(123)).isExactlyInstanceOf(NoSuchCassandraInstanceException.class)
+                                                                       .hasMessage("Instance id '123' not found");
     }
 
-    InstanceMetadata instance(int id, String hostNameOrIp)
+    InstanceMetadata instance(int id,
+                              String hostNameOrIp)
     {
         String root = tempDir.toString();
         return InstanceMetadataImpl.builder()

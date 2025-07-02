@@ -35,8 +35,7 @@ import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
 /**
- * {@link RestoreSliceDatabaseAccessor} is a data accessor to Cassandra.
- * It encapsulates the CRUD operations for restore_range table
+ * {@link RestoreSliceDatabaseAccessor} is a data accessor to Cassandra. It encapsulates the CRUD operations for restore_range table
  */
 @Singleton
 public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRangesSchema>
@@ -58,14 +57,8 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
         sidecarSchema.ensureInitialized();
 
         BoundStatement statement = tableSchema.createRange()
-                                              .bind(range.sliceId(),
-                                                    range.sliceBucket(),
-                                                    range.sliceKey(),
-                                                    range.statusTextByReplica(),
-                                                    range.jobId(),
-                                                    range.bucketId(),
-                                                    range.startToken(),
-                                                    range.endToken());
+                                              .bind(range.sliceId(), range.sliceBucket(), range.sliceKey(), range.statusTextByReplica(), range.jobId(),
+                                                      range.bucketId(), range.startToken(), range.endToken());
         execute(statement);
         LOGGER.debug("Created range={}", range);
         return range;
@@ -76,24 +69,20 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
         sidecarSchema.ensureInitialized();
 
         BoundStatement statement = tableSchema.updateStatus()
-                                              .bind(range.statusTextByReplica(),
-                                                    range.jobId(),
-                                                    range.bucketId(),
-                                                    range.startToken(),
-                                                    range.endToken());
+                                              .bind(range.statusTextByReplica(), range.jobId(), range.bucketId(), range.startToken(), range.endToken());
         execute(statement);
         LOGGER.debug("Updated range={}", range);
         return range;
     }
 
     // todo: change to stream api and paginate
-    public List<RestoreRange> findAll(UUID jobId, short bucketId)
+    public List<RestoreRange> findAll(UUID jobId,
+                                      short bucketId)
     {
         sidecarSchema.ensureInitialized();
 
         BoundStatement statement = tableSchema.findAll()
-                                              .bind(jobId,
-                                                    bucketId);
+                                              .bind(jobId, bucketId);
         ResultSet result = execute(statement);
         List<RestoreRange> ranges = new ArrayList<>();
         for (Row row : result)

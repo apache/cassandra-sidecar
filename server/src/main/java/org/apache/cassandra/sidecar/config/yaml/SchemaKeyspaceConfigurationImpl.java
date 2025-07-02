@@ -151,8 +151,7 @@ public class SchemaKeyspaceConfigurationImpl implements SchemaKeyspaceConfigurat
 
     static ConfigurationException leaseTTLConfigurationException(SecondBoundConfiguration leaseSchemaTTL)
     {
-        String message = String.format("Lease schema TTL value of %s is less than the minimum allowed value of %s",
-                                       leaseSchemaTTL, MINIMUM_LEASE_SCHEMA_TTL);
+        String message = String.format("Lease schema TTL value of %s is less than the minimum allowed value of %s", leaseSchemaTTL, MINIMUM_LEASE_SCHEMA_TTL);
         return new ConfigurationException(message);
     }
 

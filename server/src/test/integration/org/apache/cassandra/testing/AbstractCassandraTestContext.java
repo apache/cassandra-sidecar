@@ -23,13 +23,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.shared.ShutdownException;
 import org.apache.cassandra.testing.utils.tls.CertificateBundle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The base class for all CassandraTestContext implementations
@@ -112,7 +110,9 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
             // `catch (ShutdownException)` won't always work - compare the canonical names instead.
             catch (Throwable t)
             {
-                if (Objects.equals(t.getClass().getCanonicalName(), ShutdownException.class.getCanonicalName()))
+                if (Objects.equals(t.getClass()
+                                    .getCanonicalName(),
+                        ShutdownException.class.getCanonicalName()))
                 {
                     LOGGER.warn("Encountered shutdown exception which closing the cluster", t);
                 }
@@ -132,7 +132,8 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
     private void restoreSystemProperties()
     {
         Map<String, String> currentProps = systemStringProperties();
-        currentProps.forEach((k, v) -> {
+        currentProps.forEach((k,
+                              v) -> {
             String initialValue = initialProperties.get(k);
             if (initialValue == null)
             {
@@ -158,12 +159,14 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
     private Map<String, String> systemStringProperties()
     {
         Map<String, String> props = new HashMap<>();
-        System.getProperties().forEach((k, v) -> {
-            if (k instanceof String && v instanceof String)
-            {
-                props.put((String) k, (String) v);
-            }
-        });
+        System.getProperties()
+              .forEach((k,
+                        v) -> {
+                  if (k instanceof String && v instanceof String)
+                  {
+                      props.put((String) k, (String) v);
+                  }
+              });
         return props;
     }
 }

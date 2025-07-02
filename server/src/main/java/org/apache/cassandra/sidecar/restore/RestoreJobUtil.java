@@ -69,12 +69,15 @@ public class RestoreJobUtil
 
     /**
      * Unzip a restore slice zip
+     *
      * @param zipFile source zip file
      * @param targetDir directory to keep the unzipped files
      * @throws IOException I/O exceptions during unzip
      * @throws RestoreJobException the zip file is malicious
      */
-    public static void unzip(File zipFile, File targetDir) throws IOException, RestoreJobException
+    public static void unzip(File zipFile,
+                             File targetDir)
+            throws IOException, RestoreJobException
     {
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile.toPath())))
         {
@@ -85,7 +88,8 @@ public class RestoreJobUtil
                 // Encounters a directory inside the zip file
                 // It is not expected. The zip file should have the directory depth of 1.
                 // The reason of not using isDirectory(): in test, it gets 'dir/file' directly, instead of 'dir/'
-                if (zipEntry.getName().contains(File.separator))
+                if (zipEntry.getName()
+                            .contains(File.separator))
                 {
                     throw new RestoreJobFatalException("Unexpected directory in slice zip file. File: " + zipFile);
                 }
@@ -99,6 +103,7 @@ public class RestoreJobUtil
 
     /**
      * Resolve a prefixed job id for path
+     *
      * @param jobId restore job id
      * @return prefixed job id string
      */
@@ -107,13 +112,16 @@ public class RestoreJobUtil
         return RESTORE_JOB_PREFIX + jobId;
     }
 
-    public static String generateUniqueUploadId(UUID jobId, String sliceId)
+    public static String generateUniqueUploadId(UUID jobId,
+                                                String sliceId)
     {
-        return prefixedJobId(jobId) + '-' + sliceId + '-' + ThreadLocalRandom.current().nextInt(10000);
+        return prefixedJobId(jobId) + '-' + sliceId + '-' + ThreadLocalRandom.current()
+                                                                             .nextInt(10000);
     }
 
     /**
      * Extract the timestamp from the restore job directory name.
+     *
      * @param fileName directory file name
      * @return unix timestamp epoch; otherwise, return -1 if no timestamp can be extracted
      */
@@ -135,6 +143,7 @@ public class RestoreJobUtil
 
     /**
      * Cleans given directory path without deleting it
+     *
      * @param path directory path to be cleaned
      * @throws IOException when I/O error occurs
      */
@@ -168,14 +177,16 @@ public class RestoreJobUtil
 
     /**
      * Create a file that is protected from zip slip attack (https://security.snyk.io/research/zip-slip-vulnerability)
+     *
      * @param zipEntry zip entry to be extracted
      * @param targetDir directory to keep the unzipped files
      * @return a new file
      * @throws IOException failed to resolving path
      * @throws RestoreJobException if the zip file is malicious
      */
-    private static File newProtectedTargetFile(ZipEntry zipEntry, File targetDir)
-    throws IOException, RestoreJobException
+    private static File newProtectedTargetFile(ZipEntry zipEntry,
+                                               File targetDir)
+            throws IOException, RestoreJobException
     {
         File targetFile = new File(targetDir, zipEntry.getName());
 
@@ -205,7 +216,9 @@ public class RestoreJobUtil
      * @param seed the seed to use for the hasher
      * @return the checksum hex string of the file's content. XXHash32 is employed as the hash algorithm.
      */
-    public String checksum(File file, int seed) throws IOException
+    public String checksum(File file,
+                           int seed)
+            throws IOException
     {
         try (InputStream fis = Files.newInputStream(file.toPath()))
         {

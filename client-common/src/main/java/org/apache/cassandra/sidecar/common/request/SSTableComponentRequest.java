@@ -34,11 +34,11 @@ public class SSTableComponentRequest extends Request
     /**
      * Constructs a Sidecar request with the given {@code requestURI}. Defaults to {@code ssl} enabled.
      *
-     * @param keyspace      the keyspace in Cassandra
-     * @param tableName     the table name in Cassandra
-     * @param snapshotName  the name of the snapshot
+     * @param keyspace the keyspace in Cassandra
+     * @param tableName the table name in Cassandra
+     * @param snapshotName the name of the snapshot
      * @param componentName the name of the SSTable component
-     * @param range         the HTTP range for the request
+     * @param range the HTTP range for the request
      */
     public SSTableComponentRequest(String keyspace,
                                    String tableName,
@@ -54,9 +54,10 @@ public class SSTableComponentRequest extends Request
      * Constructs a Sidecar request with the given {@code requestURI}. Defaults to {@code ssl} enabled.
      *
      * @param fileInfo contains information about the file to stream
-     * @param range    the HTTP range for the request
+     * @param range the HTTP range for the request
      */
-    public SSTableComponentRequest(ListSnapshotFilesResponse.FileInfo fileInfo, HttpRange range)
+    public SSTableComponentRequest(ListSnapshotFilesResponse.FileInfo fileInfo,
+                                   HttpRange range)
     {
         super(fileInfo.componentDownloadUrl());
         this.range = range;
@@ -86,18 +87,17 @@ public class SSTableComponentRequest extends Request
     @Override
     public String toString()
     {
-        return "SSTableComponentRequest{" +
-               "range=" + range +
-               ", requestURI='" + requestURI + '\'' +
-               '}';
+        return "SSTableComponentRequest{" + "range=" + range + ", requestURI='" + requestURI + '\'' + '}';
     }
 
-    static String requestURI(String keyspace, String table, String snapshot, String component)
+    static String requestURI(String keyspace,
+                             String table,
+                             String snapshot,
+                             String component)
     {
-        return ApiEndpointsV1.COMPONENTS_ROUTE
-               .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
-               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table)
-               .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, snapshot)
-               .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, component);
+        return ApiEndpointsV1.COMPONENTS_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
+                                              .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table)
+                                              .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, snapshot)
+                                              .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, component);
     }
 }

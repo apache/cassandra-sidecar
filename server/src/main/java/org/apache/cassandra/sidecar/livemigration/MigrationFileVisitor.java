@@ -28,11 +28,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.jetbrains.annotations.NotNull;
 
 /**
  * File visitor to walk through given directory.
@@ -58,24 +56,29 @@ public class MigrationFileVisitor extends SimpleFileVisitor<Path>
     private boolean shouldExcludeDir(Path dir)
     {
         Objects.requireNonNull(dir);
-        return directoriesToExclude.stream().anyMatch(matcher -> matcher.matches(dir));
+        return directoriesToExclude.stream()
+                                   .anyMatch(matcher -> matcher.matches(dir));
     }
 
     private boolean shouldExcludeFile(Path file)
     {
         Objects.requireNonNull(file);
-        return filesToExclude.stream().anyMatch(matcher -> matcher.matches(file));
+        return filesToExclude.stream()
+                             .anyMatch(matcher -> matcher.matches(file));
     }
 
     @Override
-    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+    public FileVisitResult preVisitDirectory(Path dir,
+                                             BasicFileAttributes attrs)
     {
         if (shouldExcludeDir(dir))
         {
             return FileVisitResult.SKIP_SUBTREE;
         }
 
-        if (!dir.toAbsolutePath().toString().equals(homeDir))
+        if (!dir.toAbsolutePath()
+                .toString()
+                .equals(homeDir))
         {
             validFiles.add(dir);
         }
@@ -83,7 +86,8 @@ public class MigrationFileVisitor extends SimpleFileVisitor<Path>
     }
 
     @Override
-    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+    public FileVisitResult visitFile(Path file,
+                                     BasicFileAttributes attrs)
     {
         Objects.requireNonNull(file);
         Objects.requireNonNull(attrs);
@@ -96,16 +100,19 @@ public class MigrationFileVisitor extends SimpleFileVisitor<Path>
     }
 
     @Override
-    public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException
+    public FileVisitResult visitFileFailed(Path file,
+                                           IOException exc)
+            throws IOException
     {
         // SimpleFileVisitor is checking if the file is null. Hence, checking the same condition here.
         Objects.requireNonNull(file);
         boolean isDirectory = Files.isDirectory(file);
-        final String absolutePath = file.toFile().getAbsolutePath();
+        final String absolutePath = file.toFile()
+                                        .getAbsolutePath();
         if ((isDirectory && shouldExcludeDir(file)) || (!isDirectory && shouldExcludeFile(file)))
         {
-            LOGGER.info("Got the exception wile trying to visit: {}. However, it's a part of the exclude list. " +
-                        "Hence ignoring the exception.", absolutePath, exc);
+            LOGGER.info("Got the exception wile trying to visit: {}. However, it's a part of the exclude list. " + "Hence ignoring the exception.",
+                    absolutePath, exc);
             return FileVisitResult.CONTINUE;
         }
         else

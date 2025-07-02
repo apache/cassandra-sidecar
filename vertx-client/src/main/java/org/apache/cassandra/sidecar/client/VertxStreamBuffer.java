@@ -43,7 +43,9 @@ public class VertxStreamBuffer implements StreamBuffer
      * {@inheritDoc}
      */
     @Override
-    public void copyBytes(int sourceOffset, ByteBuffer destination, int length)
+    public void copyBytes(int sourceOffset,
+                          ByteBuffer destination,
+                          int length)
     {
         destination.put(buffer.getBytes(sourceOffset, sourceOffset + length));
         destination.flip();
@@ -53,7 +55,10 @@ public class VertxStreamBuffer implements StreamBuffer
      * {@inheritDoc}
      */
     @Override
-    public void copyBytes(int sourceOffset, byte[] destination, int destinationIndex, int length)
+    public void copyBytes(int sourceOffset,
+                          byte[] destination,
+                          int destinationIndex,
+                          int length)
     {
         buffer.getBytes(sourceOffset, sourceOffset + length, destination, destinationIndex);
     }

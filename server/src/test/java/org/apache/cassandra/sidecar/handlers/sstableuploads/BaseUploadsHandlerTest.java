@@ -18,22 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.sstableuploads;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
-
-import com.google.common.util.concurrent.SidecarRateLimiter;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.codahale.metrics.SharedMetricRegistries;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
@@ -49,6 +33,14 @@ import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import org.apache.cassandra.sidecar.TestCassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.adapters.base.CassandraTableOperations;
@@ -64,7 +56,12 @@ import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
-
+import com.google.common.util.concurrent.SidecarRateLimiter;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_CHECK_INTERVAL;
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT;
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_MAX_DELAY_TIME;
@@ -76,8 +73,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Common functionality for the SSTable Uploads {@link SSTableUploadHandler}, {@link SSTableImportHandler},
- * and {@link SSTableCleanupHandler} tests.
+ * Common functionality for the SSTable Uploads {@link SSTableUploadHandler}, {@link SSTableImportHandler}, and {@link SSTableCleanupHandler} tests.
  */
 class BaseUploadsHandlerTest
 {
@@ -95,32 +91,28 @@ class BaseUploadsHandlerTest
     protected SidecarRateLimiter ingressFileRateLimiter;
     protected CassandraTableOperations mockCFOperations;
 
-
     @BeforeEach
     void setup() throws InterruptedException, IOException
     {
-        canonicalTemporaryPath = temporaryPath.toFile().getCanonicalPath();
+        canonicalTemporaryPath = temporaryPath.toFile()
+                                              .getCanonicalPath();
         mockSSTableUploadConfiguration = mock(SSTableUploadConfiguration.class);
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(3);
         when(mockSSTableUploadConfiguration.minimumSpacePercentageRequired()).thenReturn(0F);
         trafficShapingConfiguration = mock(TrafficShapingConfiguration.class);
         when(trafficShapingConfiguration.inboundGlobalBandwidthBytesPerSecond()).thenReturn(512 * 1024L);
-        when(trafficShapingConfiguration.outboundGlobalBandwidthBytesPerSecond())
-        .thenReturn(DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT);
-        when(trafficShapingConfiguration.peakOutboundGlobalBandwidthBytesPerSecond())
-        .thenReturn(DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT);
+        when(trafficShapingConfiguration.outboundGlobalBandwidthBytesPerSecond()).thenReturn(DEFAULT_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT);
+        when(trafficShapingConfiguration.peakOutboundGlobalBandwidthBytesPerSecond()).thenReturn(DEFAULT_PEAK_OUTBOUND_GLOBAL_BANDWIDTH_LIMIT);
         when(trafficShapingConfiguration.maxDelayToWait()).thenReturn(DEFAULT_MAX_DELAY_TIME);
         when(trafficShapingConfiguration.checkIntervalForStats()).thenReturn(DEFAULT_CHECK_INTERVAL);
-        when(trafficShapingConfiguration.inboundGlobalFileBandwidthBytesPerSecond())
-        .thenReturn(DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT);
-        ServiceConfiguration serviceConfiguration =
-        TestServiceConfiguration.builder()
-                                .requestIdleTimeout(MillisecondBoundConfiguration.parse("500ms"))
-                                .requestTimeout(MillisecondBoundConfiguration.parse("30s"))
-                                .sstableUploadConfiguration(mockSSTableUploadConfiguration)
-                                .trafficShapingConfiguration(trafficShapingConfiguration)
-                                .port(0) // use a dynamic port for the server
-                                .build();
+        when(trafficShapingConfiguration.inboundGlobalFileBandwidthBytesPerSecond()).thenReturn(DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT);
+        ServiceConfiguration serviceConfiguration = TestServiceConfiguration.builder()
+                                                                            .requestIdleTimeout(MillisecondBoundConfiguration.parse("500ms"))
+                                                                            .requestTimeout(MillisecondBoundConfiguration.parse("30s"))
+                                                                            .sstableUploadConfiguration(mockSSTableUploadConfiguration)
+                                                                            .trafficShapingConfiguration(trafficShapingConfiguration)
+                                                                            .port(0) // use a dynamic port for the server
+                                                                            .build();
         sidecarConfiguration = SidecarConfigurationImpl.builder()
                                                        .serviceConfiguration(serviceConfiguration)
                                                        .build();
@@ -134,14 +126,14 @@ class BaseUploadsHandlerTest
         vertx = injector.getInstance(Vertx.class);
         testDelegate = (TestCassandraAdapterDelegate) injector.getInstance(CassandraAdapterDelegate.class);
         client = WebClient.create(vertx);
-        ingressFileRateLimiter = injector.getInstance(Key.get(SidecarRateLimiter.class,
-                                                              Names.named("IngressFileRateLimiter")));
+        ingressFileRateLimiter = injector.getInstance(Key.get(SidecarRateLimiter.class, Names.named("IngressFileRateLimiter")));
 
         Metadata mockMetadata = mock(Metadata.class);
         KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
         TableMetadata mockTableMetadata = mock(TableMetadata.class);
         when(mockMetadata.getKeyspace("ks")).thenReturn(mockKeyspaceMetadata);
-        when(mockMetadata.getKeyspace("ks").getTable("tbl")).thenReturn(mockTableMetadata);
+        when(mockMetadata.getKeyspace("ks")
+                         .getTable("tbl")).thenReturn(mockTableMetadata);
         testDelegate.setMetadata(mockMetadata);
 
         mockCFOperations = mock(CassandraTableOperations.class);
@@ -161,7 +153,8 @@ class BaseUploadsHandlerTest
         final CountDownLatch closeLatch = new CountDownLatch(1);
         SharedMetricRegistries.clear();
         client.close();
-        server.close().onComplete(res -> closeLatch.countDown());
+        server.close()
+              .onComplete(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
             logger.debug("Close event received before timeout.");
         else
@@ -169,8 +162,8 @@ class BaseUploadsHandlerTest
     }
 
     /**
-     * Create files for the upload under the staging directory. The directory structure looks like the following
-     * staging:
+     * Create files for the upload under the staging directory. The directory structure looks like the following staging:
+     *
      * <pre>
      * |- uuid
      *    |- files
@@ -195,10 +188,10 @@ class BaseUploadsHandlerTest
 
         try (Stream<Path> list = Files.list(stagedUpload))
         {
-            String[] files = list
-                             .map(Path::toString)
-                             .toArray(String[]::new);
-            assertThat(files).isNotNull().hasSize(filesCount);
+            String[] files = list.map(Path::toString)
+                                 .toArray(String[]::new);
+            assertThat(files).isNotNull()
+                             .hasSize(filesCount);
             return stagedUpload;
         }
     }
@@ -207,7 +200,8 @@ class BaseUploadsHandlerTest
     {
         @Provides
         @Singleton
-        public InstancesMetadata instancesMetadata(Vertx vertx, CassandraAdapterDelegate delegate)
+        public InstancesMetadata instancesMetadata(Vertx vertx,
+                                                   CassandraAdapterDelegate delegate)
         {
             return mockInstancesMetadata(vertx, canonicalTemporaryPath, delegate, null);
         }

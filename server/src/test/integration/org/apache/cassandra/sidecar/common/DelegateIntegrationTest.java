@@ -18,16 +18,6 @@
 
 package org.apache.cassandra.sidecar.common;
 
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.IntStream;
-
-import com.google.common.collect.ImmutableSet;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -43,6 +33,11 @@ import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.IntStream;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.IUpgradeableInstance;
@@ -52,7 +47,9 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
-
+import com.google.common.collect.ImmutableSet;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_ALL_CASSANDRA_CQL_READY;
@@ -80,7 +77,8 @@ class DelegateIntegrationTest extends IntegrationTestBase
     @Override
     protected void beforeServerStart()
     {
-        vertx.eventBus().localConsumer(ON_ALL_CASSANDRA_CQL_READY.address(), allCassandraCqlReadyMessage::set);
+        vertx.eventBus()
+             .localConsumer(ON_ALL_CASSANDRA_CQL_READY.address(), allCassandraCqlReadyMessage::set);
     }
 
     @CassandraIntegrationTest()
@@ -108,27 +106,34 @@ class DelegateIntegrationTest extends IntegrationTestBase
                                                                      .instanceFromId(1)
                                                                      .delegate();
         assertThat(adapterDelegate).isNotNull();
-        assertThat(adapterDelegate.isJmxUp()).as("jmx health check succeeds").isTrue();
-        assertThat(adapterDelegate.isNativeUp()).as("native health check succeeds").isTrue();
+        assertThat(adapterDelegate.isJmxUp()).as("jmx health check succeeds")
+                                             .isTrue();
+        assertThat(adapterDelegate.isNativeUp()).as("native health check succeeds")
+                                                .isTrue();
 
         // Set up test listeners before disabling/enabling binary to avoid race conditions
         // where the event happens before the consumer is registered.
         eventBus.localConsumer(ON_CASSANDRA_CQL_DISCONNECTED.address(), (Message<JsonObject> message) -> {
-            int instanceId = message.body().getInteger("cassandraInstanceId");
+            int instanceId = message.body()
+                                    .getInteger("cassandraInstanceId");
             CassandraAdapterDelegate delegate = sidecarTestContext.instancesMetadata()
                                                                   .instanceFromId(instanceId)
                                                                   .delegate();
 
             context.verify(() -> {
                 assertThat(delegate).isNotNull();
-                assertThat(delegate.isNativeUp()).as("health check fails after binary has been disabled").isFalse();
+                assertThat(delegate.isNativeUp()).as("health check fails after binary has been disabled")
+                                                 .isFalse();
             });
             cqlDisconnected.flag();
-            sidecarTestContext.cluster().get(1).nodetool("enablebinary");
+            sidecarTestContext.cluster()
+                              .get(1)
+                              .nodetool("enablebinary");
         });
 
         eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> reconnectMessage) -> {
-            int instanceId = reconnectMessage.body().getInteger("cassandraInstanceId");
+            int instanceId = reconnectMessage.body()
+                                             .getInteger("cassandraInstanceId");
             CassandraAdapterDelegate delegate = sidecarTestContext.instancesMetadata()
                                                                   .instanceFromId(instanceId)
                                                                   .delegate();
@@ -142,11 +147,13 @@ class DelegateIntegrationTest extends IntegrationTestBase
         });
 
         // Disable binary
-        NodeToolResult nodetoolResult = sidecarTestContext.cluster().get(1).nodetoolResult("disablebinary");
+        NodeToolResult nodetoolResult = sidecarTestContext.cluster()
+                                                          .get(1)
+                                                          .nodetoolResult("disablebinary");
         assertThat(nodetoolResult.getRc())
-        .withFailMessage("Failed to disable binary:\nstdout:" + nodetoolResult.getStdout()
-                         + "\nstderr: " + nodetoolResult.getStderr())
-        .isEqualTo(0);
+                                          .withFailMessage(
+                                                  "Failed to disable binary:\nstdout:" + nodetoolResult.getStdout() + "\nstderr: " + nodetoolResult.getStderr())
+                                          .isEqualTo(0);
         // NOTE: enable binary happens inside the disable binary handler above, which then will trigger the
         // cqlReady flag.
     }
@@ -158,10 +165,10 @@ class DelegateIntegrationTest extends IntegrationTestBase
         loopAssert(30, 1000, () -> {
             Message<JsonObject> message = allCassandraCqlReadyMessage.get();
             assertThat(message).isNotNull();
-            JsonArray cassandraInstanceIds = message.body().getJsonArray("cassandraInstanceIds");
+            JsonArray cassandraInstanceIds = message.body()
+                                                    .getJsonArray("cassandraInstanceIds");
             assertThat(cassandraInstanceIds).hasSize(3);
-            assertThat(IntStream.rangeClosed(1, cassandraInstanceIds.size()))
-            .allMatch(expectedCassandraInstanceIds::contains);
+            assertThat(IntStream.rangeClosed(1, cassandraInstanceIds.size())).allMatch(expectedCassandraInstanceIds::contains);
         });
     }
 
@@ -176,7 +183,8 @@ class DelegateIntegrationTest extends IntegrationTestBase
         Set<Integer> expectedCassandraInstanceIds = ImmutableSet.of(1, 2, 3);
         eventBus.localConsumer(ON_CASSANDRA_CQL_DISCONNECTED.address(), (Message<JsonObject> message) -> {
             context.verify(() -> {
-                Integer instanceId = message.body().getInteger("cassandraInstanceId");
+                Integer instanceId = message.body()
+                                            .getInteger("cassandraInstanceId");
                 assertThat(instanceId).isEqualTo(2);
 
                 buildNativeHealthRequest(client, instanceId).send(assertHealthCheckNotOk(context, cqlDisconnected));
@@ -185,7 +193,8 @@ class DelegateIntegrationTest extends IntegrationTestBase
 
         eventBus.localConsumer(ON_CASSANDRA_JMX_DISCONNECTED.address(), (Message<JsonObject> message) -> {
             context.verify(() -> {
-                Integer instanceId = message.body().getInteger("cassandraInstanceId");
+                Integer instanceId = message.body()
+                                            .getInteger("cassandraInstanceId");
                 assertThat(instanceId).isEqualTo(2);
 
                 buildJmxHealthRequest(client, instanceId).send(assertHealthCheckNotOk(context, jmxDisconnected));
@@ -195,14 +204,15 @@ class DelegateIntegrationTest extends IntegrationTestBase
         loopAssert(30, 1000, () -> {
             Message<JsonObject> message = allCassandraCqlReadyMessage.get();
             assertThat(message).isNotNull();
-            JsonArray cassandraInstanceIds = message.body().getJsonArray("cassandraInstanceIds");
+            JsonArray cassandraInstanceIds = message.body()
+                                                    .getJsonArray("cassandraInstanceIds");
             assertThat(cassandraInstanceIds).hasSize(3);
-            assertThat(IntStream.rangeClosed(1, cassandraInstanceIds.size()))
-            .allMatch(expectedCassandraInstanceIds::contains);
+            assertThat(IntStream.rangeClosed(1, cassandraInstanceIds.size())).allMatch(expectedCassandraInstanceIds::contains);
 
             allCqlReady.flag();
             // Stop instance 2
-            ClusterUtils.stopUnchecked(sidecarTestContext.cluster().get(2));
+            ClusterUtils.stopUnchecked(sidecarTestContext.cluster()
+                                                         .get(2));
         });
 
     }
@@ -227,7 +237,8 @@ class DelegateIntegrationTest extends IntegrationTestBase
         Set<Integer> jmxConnectedInstances = new ConcurrentHashSet<>();
 
         eventBus.localConsumer(ON_CASSANDRA_JMX_READY.address(), (Message<JsonObject> message) -> {
-            Integer instanceId = message.body().getInteger("cassandraInstanceId");
+            Integer instanceId = message.body()
+                                        .getInteger("cassandraInstanceId");
             logger.info("DBG: Received JMX connection notification for {}", instanceId);
             // make sure the instance wasn't already in the set before validating
             if (jmxConnectedInstances.add(instanceId))
@@ -238,7 +249,8 @@ class DelegateIntegrationTest extends IntegrationTestBase
         });
 
         eventBus.localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
-            Integer instanceId = message.body().getInteger("cassandraInstanceId");
+            Integer instanceId = message.body()
+                                        .getInteger("cassandraInstanceId");
             logger.info("DBG: Received native connection notification for {}", instanceId);
             buildNativeHealthRequest(client, instanceId).send(assertHealthCheckOk(context, nativeConnected));
             // make sure the instance wasn't already in the set before validating/flagging
@@ -250,7 +262,8 @@ class DelegateIntegrationTest extends IntegrationTestBase
         });
 
         // Now that the event listeners are set up, start the cluster
-        sidecarTestContext.cluster().startup();
+        sidecarTestContext.cluster()
+                          .startup();
 
         // Wait for the first two instances to get connected
         assertThat(firstTwoConnected.await(2, TimeUnit.MINUTES)).isTrue();
@@ -259,8 +272,10 @@ class DelegateIntegrationTest extends IntegrationTestBase
         addNewInstance();
     }
 
-    private void validateJmxConnections(VertxTestContext context, Set<Integer> jmxConnectedInstances,
-                                        Checkpoint notOkCheckpoint, CountDownLatch firstTwoConnected)
+    private void validateJmxConnections(VertxTestContext context,
+                                        Set<Integer> jmxConnectedInstances,
+                                        Checkpoint notOkCheckpoint,
+                                        CountDownLatch firstTwoConnected)
     {
         int upInstanceCount = jmxConnectedInstances.size();
         if (upInstanceCount == 2)
@@ -299,7 +314,8 @@ class DelegateIntegrationTest extends IntegrationTestBase
     {
         return context.succeeding(response -> context.verify(() -> {
             assertThat(response.statusCode()).isEqualTo(OK.code());
-            assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
+            assertThat(response.bodyAsJsonObject()
+                               .getString("status")).isEqualTo("OK");
         }));
     }
 
@@ -308,34 +324,33 @@ class DelegateIntegrationTest extends IntegrationTestBase
     {
         return context.succeeding(response -> context.verify(() -> {
             assertThat(response.statusCode()).isEqualTo(SERVICE_UNAVAILABLE.code());
-            assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("NOT_OK");
+            assertThat(response.bodyAsJsonObject()
+                               .getString("status")).isEqualTo("NOT_OK");
             checkpoint.flag();
         }));
     }
 
-    private HttpRequest<Buffer> buildNativeHealthRequest(WebClient webClient, int instanceId)
+    private HttpRequest<Buffer> buildNativeHealthRequest(WebClient webClient,
+                                                         int instanceId)
     {
-        return webClient.get(server.actualPort(),
-                             "localhost",
-                             "/api/v1/cassandra/native/__health?instanceId=" + instanceId);
+        return webClient.get(server.actualPort(), "localhost", "/api/v1/cassandra/native/__health?instanceId=" + instanceId);
     }
 
-    private HttpRequest<Buffer> buildJmxHealthRequest(WebClient webClient, int instanceId)
+    private HttpRequest<Buffer> buildJmxHealthRequest(WebClient webClient,
+                                                      int instanceId)
     {
-        return webClient.get(server.actualPort(),
-                             "localhost",
-                             "/api/v1/cassandra/jmx/__health?instanceId=" + instanceId);
+        return webClient.get(server.actualPort(), "localhost", "/api/v1/cassandra/jmx/__health?instanceId=" + instanceId);
     }
 
     private void addNewInstance()
     {
         UpgradeableCluster cluster = sidecarTestContext.cluster();
-        IUpgradeableInstance newInstance = ClusterUtils.addInstance(cluster, cluster.get(1).config(), config -> {
-            config.set("auto_bootstrap", true);
-            config.with(Feature.GOSSIP,
-                        Feature.JMX,
-                        Feature.NATIVE_PROTOCOL);
-        });
+        IUpgradeableInstance newInstance = ClusterUtils.addInstance(cluster, cluster.get(1)
+                                                                                    .config(),
+                config -> {
+                    config.set("auto_bootstrap", true);
+                    config.with(Feature.GOSSIP, Feature.JMX, Feature.NATIVE_PROTOCOL);
+                });
         newInstance.startup(cluster);
     }
 }

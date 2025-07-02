@@ -48,8 +48,8 @@ public interface SidecarClientConfiguration
     int connectionPoolMaxSize();
 
     /**
-     * @return the connection pool cleaner period, a non-positive value disables expiration checks and connections
-     * will remain in the pool until they are closed.
+     * @return the connection pool cleaner period, a non-positive value disables expiration checks and connections will remain in the pool until they are
+     *         closed.
      */
     MillisecondBoundConfiguration connectionPoolCleanerPeriod();
 
@@ -57,8 +57,8 @@ public interface SidecarClientConfiguration
      * Return the configured number of event-loop the pool use.
      *
      * <ul>
-     *   <li>when the size is {@code 0}, the client pool will use the current event-loop</li>
-     *   <li>otherwise the client will create and use its own event loop</li>
+     * <li>when the size is {@code 0}, the client pool will use the current event-loop</li>
+     * <li>otherwise the client will create and use its own event loop</li>
      * </ul>
      *
      * @return the configured number of event-loop the pool use
@@ -66,8 +66,8 @@ public interface SidecarClientConfiguration
     int connectionPoolEventLoopSize();
 
     /**
-     * @return the maximum requests allowed in the wait queue, any requests beyond the max size will result in
-     * a ConnectionPoolTooBusyException.  If the value is set to a negative number then the queue will be unbounded.
+     * @return the maximum requests allowed in the wait queue, any requests beyond the max size will result in a ConnectionPoolTooBusyException. If the value is
+     *         set to a negative number then the queue will be unbounded.
      */
     int connectionPoolMaxWaitQueueSize();
 

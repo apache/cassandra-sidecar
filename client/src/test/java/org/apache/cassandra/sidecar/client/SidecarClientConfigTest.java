@@ -31,7 +31,8 @@ class SidecarClientConfigTest
     @Test
     void testDefaults()
     {
-        SidecarClientConfig config = SidecarClientConfigImpl.builder().build();
+        SidecarClientConfig config = SidecarClientConfigImpl.builder()
+                                                            .build();
         assertThat(config.maxRetries()).isEqualTo(3);
         assertThat(config.retryDelayMillis()).isEqualTo(500L);
         assertThat(config.maxRetryDelayMillis()).isEqualTo(60_000L);
@@ -40,21 +41,27 @@ class SidecarClientConfigTest
     @Test
     void testMaxRetries()
     {
-        SidecarClientConfig config = SidecarClientConfigImpl.builder().maxRetries(10).build();
+        SidecarClientConfig config = SidecarClientConfigImpl.builder()
+                                                            .maxRetries(10)
+                                                            .build();
         assertThat(config.maxRetries()).isEqualTo(10);
     }
 
     @Test
     void testRetryDelayMillis()
     {
-        SidecarClientConfig config = SidecarClientConfigImpl.builder().retryDelayMillis(100).build();
+        SidecarClientConfig config = SidecarClientConfigImpl.builder()
+                                                            .retryDelayMillis(100)
+                                                            .build();
         assertThat(config.retryDelayMillis()).isEqualTo(100L);
     }
 
     @Test
     void testMaxRetryDelayMillis()
     {
-        SidecarClientConfig config = SidecarClientConfigImpl.builder().maxRetryDelayMillis(5_100).build();
+        SidecarClientConfig config = SidecarClientConfigImpl.builder()
+                                                            .maxRetryDelayMillis(5_100)
+                                                            .build();
         assertThat(config.maxRetryDelayMillis()).isEqualTo(5_100L);
     }
 

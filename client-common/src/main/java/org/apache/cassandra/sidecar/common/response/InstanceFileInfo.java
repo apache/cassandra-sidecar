@@ -18,11 +18,10 @@
 
 package org.apache.cassandra.sidecar.common.response;
 
-import java.util.Objects;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Objects;
 
 /**
  * Class for holding information of a downloadable file during Live Migration.
@@ -56,19 +55,16 @@ public class InstanceFileInfo
      */
     public enum FileType
     {
-        FILE,
-        DIRECTORY
+        FILE, DIRECTORY
     }
 
     @Override
     public boolean equals(Object o)
     {
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || getClass() != o.getClass())
+            return false;
         InstanceFileInfo that = (InstanceFileInfo) o;
-        return size == that.size
-               && lastModifiedTime == that.lastModifiedTime
-               && Objects.equals(fileUrl, that.fileUrl)
-               && fileType == that.fileType;
+        return size == that.size && lastModifiedTime == that.lastModifiedTime && Objects.equals(fileUrl, that.fileUrl) && fileType == that.fileType;
     }
 
     @Override

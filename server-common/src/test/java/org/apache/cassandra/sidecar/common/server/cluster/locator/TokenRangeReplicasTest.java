@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,19 +64,11 @@ public class TokenRangeReplicasTest
         assertThat(rangeList).hasSize(subRangeList.size() + 1);
 
         // Validate that there is a merged range with 20-30 with hosts h4-h7
-        List<TokenRangeReplicas> expectedExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"),
-                                                      Token.from("30"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h4", "h5", "h6", "h7")));
+        List<TokenRangeReplicas> expectedExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"), Token.from("30"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h4", "h5", "h6", "h7")));
         // Validate absence of larger list
-        List<TokenRangeReplicas> expectedNotExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("40"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h4", "h5")));
+        List<TokenRangeReplicas> expectedNotExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("40"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h4", "h5")));
 
         assertThat(isPartOfRanges(expectedExists.get(0), rangeList)).isTrue();
         assertThat(isPartOfRanges(expectedNotExists.get(0), rangeList)).isFalse();
@@ -91,33 +84,18 @@ public class TokenRangeReplicasTest
         TokenRangeReplicas next = iter.next();
         assertThat(hasIntersects(subRangeList)).isTrue();
         LOGGER.info("Input:" + subRangeList);
-        TokenRangeReplicas.processIntersectingRanges(output,
-                                                     iter,
-                                                     curr,
-                                                     next);
+        TokenRangeReplicas.processIntersectingRanges(output, iter, curr, next);
         LOGGER.info("Result:" + output);
         assertThat(hasIntersects(output)).isFalse();
         assertThat(output).hasSize(6);
-        List<TokenRangeReplicas> expectedExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("20"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h1", "h2", "h3")));
+        List<TokenRangeReplicas> expectedExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("20"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h1", "h2", "h3")));
 
-        List<TokenRangeReplicas> expectedExists2 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"),
-                                                      Token.from("30"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h1", "h2", "h3", "h4", "h5")));
+        List<TokenRangeReplicas> expectedExists2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"), Token.from("30"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h1", "h2", "h3", "h4", "h5")));
 
-        List<TokenRangeReplicas> expectedExists3 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"),
-                                                      Token.from("40"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h1", "h2", "h3", "h4", "h5", "h6", "h7")));
+        List<TokenRangeReplicas> expectedExists3 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"), Token.from("40"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h1", "h2", "h3", "h4", "h5", "h6", "h7")));
 
         assertThat(isPartOfRanges(expectedExists.get(0), output)).isTrue();
         assertThat(isPartOfRanges(expectedExists2.get(0), output)).isTrue();
@@ -134,33 +112,18 @@ public class TokenRangeReplicasTest
         TokenRangeReplicas next = iter.next();
         assertThat(hasIntersects(subRangeList)).isTrue();
         LOGGER.info("Input:" + subRangeList);
-        TokenRangeReplicas.processIntersectingRanges(output,
-                                                     iter,
-                                                     curr,
-                                                     next);
+        TokenRangeReplicas.processIntersectingRanges(output, iter, curr, next);
         LOGGER.info("Result:" + output);
         assertThat(hasIntersects(output)).isFalse();
         assertThat(output).hasSize(5);
-        List<TokenRangeReplicas> expectedExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("20"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h1", "h2", "h3")));
+        List<TokenRangeReplicas> expectedExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("20"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h1", "h2", "h3")));
 
-        List<TokenRangeReplicas> expectedExists2 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"),
-                                                      Token.from("30"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h1", "h2", "h3", "h4", "h5")));
+        List<TokenRangeReplicas> expectedExists2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"), Token.from("30"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h1", "h2", "h3", "h4", "h5")));
 
-        List<TokenRangeReplicas> expectedExists3 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"),
-                                                      Token.from("40"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h1", "h2", "h3", "h6", "h7")));
+        List<TokenRangeReplicas> expectedExists3 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"), Token.from("40"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h1", "h2", "h3", "h6", "h7")));
 
         assertThat(isPartOfRanges(expectedExists.get(0), output)).isTrue();
         assertThat(isPartOfRanges(expectedExists2.get(0), output)).isTrue();
@@ -177,33 +140,18 @@ public class TokenRangeReplicasTest
         TokenRangeReplicas next = iter.next();
         assertThat(hasIntersects(subRangeList)).isTrue();
         LOGGER.info("Input:" + subRangeList);
-        TokenRangeReplicas.processIntersectingRanges(output,
-                                                     iter,
-                                                     curr,
-                                                     next);
+        TokenRangeReplicas.processIntersectingRanges(output, iter, curr, next);
         LOGGER.info("Result:" + output);
         assertThat(hasIntersects(output)).isFalse();
         assertThat(output).hasSize(6);
-        List<TokenRangeReplicas> expectedExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("15"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h1", "h2", "h3")));
+        List<TokenRangeReplicas> expectedExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("15"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h1", "h2", "h3")));
 
-        List<TokenRangeReplicas> expectedExists2 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"),
-                                                      Token.from("20"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h1", "h2", "h3", "h4", "h5")));
+        List<TokenRangeReplicas> expectedExists2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"), Token.from("20"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h1", "h2", "h3", "h4", "h5")));
 
-        List<TokenRangeReplicas> expectedExists3 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"),
-                                                      Token.from("35"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h9", "h1", "h2", "h3", "h4", "h5")));
+        List<TokenRangeReplicas> expectedExists3 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"), Token.from("35"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h9", "h1", "h2", "h3", "h4", "h5")));
 
         assertThat(isPartOfRanges(expectedExists.get(0), output)).isTrue();
         assertThat(isPartOfRanges(expectedExists2.get(0), output)).isTrue();
@@ -222,32 +170,16 @@ public class TokenRangeReplicasTest
         // Validate that we have 1 additional list as a result of the splits
         assertThat(rangeList).hasSize(partialOverlapList.size() + 1);
 
-        List<TokenRangeReplicas> expectedExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("15"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h4", "h5")));
-        List<TokenRangeReplicas> expectedExists2 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"),
-                                                      Token.from("20"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h4", "h5", "h6", "h7")));
-        List<TokenRangeReplicas> expectedExists3 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"),
-                                                      Token.from("30"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h6", "h7")));
-        List<TokenRangeReplicas> expectedNotExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("20"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h4", "h5")));
-        List<TokenRangeReplicas> expectedNotExists2 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"),
-                                                      Token.from("30"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h6", "h7")));
+        List<TokenRangeReplicas> expectedExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("15"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h4", "h5")));
+        List<TokenRangeReplicas> expectedExists2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"), Token.from("20"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h4", "h5", "h6", "h7")));
+        List<TokenRangeReplicas> expectedExists3 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"), Token.from("30"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h6", "h7")));
+        List<TokenRangeReplicas> expectedNotExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("20"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h4", "h5")));
+        List<TokenRangeReplicas> expectedNotExists2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"), Token.from("30"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h6", "h7")));
 
         assertThat(checkContains(rangeList, expectedExists.get(0))).isTrue();
         assertThat(checkContains(rangeList, expectedExists2.get(0))).isTrue();
@@ -268,30 +200,19 @@ public class TokenRangeReplicasTest
         // Validate that we have 1 additional list as a result of the splits
         assertThat(rangeList).hasSize(multiOverlapList.size() + 1);
 
-        List<TokenRangeReplicas> expectedExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("15"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h1", "h2", "h3", "h4", "h5")));
-        List<TokenRangeReplicas> expectedExists2 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"),
-                                                      Token.from("25"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h4", "h5", "h6", "h7")));
-        List<TokenRangeReplicas> expectedNotExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("25"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h4", "h5")));
+        List<TokenRangeReplicas> expectedExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("15"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h1", "h2", "h3", "h4", "h5")));
+        List<TokenRangeReplicas> expectedExists2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"), Token.from("25"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h4", "h5", "h6", "h7")));
+        List<TokenRangeReplicas> expectedNotExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("25"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h4", "h5")));
 
         assertThat(checkContains(rangeList, expectedExists.get(0))).isTrue();
         assertThat(checkContains(rangeList, expectedExists2.get(0))).isTrue();
         assertThat(checkContains(rangeList, expectedNotExists.get(0))).isFalse();
     }
 
-    //     Validate merge-split from wrapped overlapping ranges
+    // Validate merge-split from wrapped overlapping ranges
     @Test
     public void wrappedMultiOverlapTest()
     {
@@ -304,27 +225,14 @@ public class TokenRangeReplicasTest
         // Validate that we have 1 additional ranges as a result of the merges and splits
         assertThat(rangeList).hasSize(overlapList.size() + 1);
 
-        List<TokenRangeReplicas> expectedExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(),
-                                                      Token.from("10"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h9", "h1", "h2", "h3")));
-        List<TokenRangeReplicas> expectedExists2 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"),
-                                                      Token.from("35"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9", "h6", "h7")));
-        List<TokenRangeReplicas> expectedExists3 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("35"),
-                                                      Partitioners.RANDOM.maximumToken(),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9")));
-        List<TokenRangeReplicas> expectedNotExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"),
-                                                      Token.from("10"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9")));
+        List<TokenRangeReplicas> expectedExists = TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(), Token.from("10"),
+                Partitioners.RANDOM, new HashSet<>(Arrays.asList("h9", "h1", "h2", "h3")));
+        List<TokenRangeReplicas> expectedExists2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"), Token.from("35"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h9", "h6", "h7")));
+        List<TokenRangeReplicas> expectedExists3 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("35"), Partitioners.RANDOM.maximumToken(),
+                Partitioners.RANDOM, new HashSet<>(Arrays.asList("h9")));
+        List<TokenRangeReplicas> expectedNotExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"), Token.from("10"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h9")));
 
         assertThat(checkContains(rangeList, expectedExists.get(0))).isTrue();
         assertThat(checkContains(rangeList, expectedExists2.get(0))).isTrue();
@@ -346,27 +254,14 @@ public class TokenRangeReplicasTest
         // (35, max] and (40, mx] results in (35, 40] and (40, max]
         assertThat(rangeList).hasSize(wrappedOverlapList.size());
 
-        List<TokenRangeReplicas> expectedExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"),
-                                                      Partitioners.RANDOM.maximumToken(),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h9", "h1", "h2", "h3")));
-        List<TokenRangeReplicas> expectedExists2 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("35"),
-                                                      Token.from("40"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9")));
-        List<TokenRangeReplicas> expectedExists3 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(),
-                                                      Token.from("10"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9", "h4", "h5")));
-        List<TokenRangeReplicas> expectedNotExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(),
-                                                      Token.from("20"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h4", "h5")));
+        List<TokenRangeReplicas> expectedExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"), Partitioners.RANDOM.maximumToken(),
+                Partitioners.RANDOM, new HashSet<>(Arrays.asList("h9", "h1", "h2", "h3")));
+        List<TokenRangeReplicas> expectedExists2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("35"), Token.from("40"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h9")));
+        List<TokenRangeReplicas> expectedExists3 = TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(), Token.from("10"),
+                Partitioners.RANDOM, new HashSet<>(Arrays.asList("h9", "h4", "h5")));
+        List<TokenRangeReplicas> expectedNotExists = TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(), Token.from("20"),
+                Partitioners.RANDOM, new HashSet<>(Arrays.asList("h4", "h5")));
 
         assertThat(checkContains(rangeList, expectedExists.get(0))).isTrue();
         assertThat(checkContains(rangeList, expectedExists2.get(0))).isTrue();
@@ -390,35 +285,18 @@ public class TokenRangeReplicasTest
         // (35, max] and (40, mx] results in (35, 40] and (40, max]
         assertThat(rangeList).hasSize(wrappedOverlapList.size());
 
-        List<TokenRangeReplicas> expectedExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"),
-                                                      Partitioners.RANDOM.maximumToken(),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h9", "h1", "h2", "h3")));
+        List<TokenRangeReplicas> expectedExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"), Partitioners.RANDOM.maximumToken(),
+                Partitioners.RANDOM, new HashSet<>(Arrays.asList("h9", "h1", "h2", "h3")));
         // New Token range resulting from non-matching min token
-        List<TokenRangeReplicas> expectedExistsNew =
-        TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(),
-                                                      Token.from("5"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(
-                                                      Arrays.asList("h9", "h1", "h2", "h3")));
-        List<TokenRangeReplicas> expectedExists2 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("35"),
-                                                      Token.from("40"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Collections.singletonList("h9")));
+        List<TokenRangeReplicas> expectedExistsNew = TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(), Token.from("5"),
+                Partitioners.RANDOM, new HashSet<>(Arrays.asList("h9", "h1", "h2", "h3")));
+        List<TokenRangeReplicas> expectedExists2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("35"), Token.from("40"), Partitioners.RANDOM,
+                new HashSet<>(Collections.singletonList("h9")));
         // Other split resulting from new range
-        List<TokenRangeReplicas> expectedExists3 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("5"),
-                                                      Token.from("10"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9", "h4", "h5")));
-        List<TokenRangeReplicas> expectedNotExists =
-        TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(),
-                                                      Token.from("20"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h4", "h5")));
+        List<TokenRangeReplicas> expectedExists3 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("5"), Token.from("10"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h9", "h4", "h5")));
+        List<TokenRangeReplicas> expectedNotExists = TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(), Token.from("20"),
+                Partitioners.RANDOM, new HashSet<>(Arrays.asList("h4", "h5")));
 
         assertThat(checkContains(rangeList, expectedExists.get(0))).isTrue();
         assertThat(checkContains(rangeList, expectedExistsNew.get(0))).isTrue();
@@ -432,36 +310,18 @@ public class TokenRangeReplicasTest
     public void wrappedActualOverlapTest()
     {
         List<TokenRangeReplicas> createdList = new ArrayList<>();
-        createdList.addAll(
-        TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.MURMUR3.minimumToken(),
-                                                      Token.from("-3074457345618258603"),
-                                                      Partitioners.MURMUR3,
-                                                      new HashSet<>(Arrays.asList("h2", "h3", "h1"))));
-        createdList.addAll(
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-3074457345618258603"),
-                                                      Token.from("3074457345618258602"),
-                                                      Partitioners.MURMUR3,
-                                                      new HashSet<>(Arrays.asList("h3", "h1", "h2"))));
-        createdList.addAll(
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("3074457345618258602"),
-                                                      Token.from("6148914691236517204"),
-                                                      Partitioners.MURMUR3,
-                                                      new HashSet<>(Arrays.asList("h9"))));
-        createdList.addAll(
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-6148914691236517204"),
-                                                      Token.from("3074457345618258602"),
-                                                      Partitioners.MURMUR3,
-                                                      new HashSet<>(Arrays.asList("h9"))));
-        createdList.addAll(
-        TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.MURMUR3.minimumToken(),
-                                                      Token.from("-3074457345618258603"),
-                                                      Partitioners.MURMUR3,
-                                                      new HashSet<>(Arrays.asList("h10"))));
-        createdList.addAll(
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("6148914691236517204"),
-                                                      Partitioners.MURMUR3.minimumToken(),
-                                                      Partitioners.MURMUR3,
-                                                      new HashSet<>(Arrays.asList("h1", "h2", "h3"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.MURMUR3.minimumToken(), Token.from("-3074457345618258603"),
+                Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h2", "h3", "h1"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-3074457345618258603"), Token.from("3074457345618258602"),
+                Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h3", "h1", "h2"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("3074457345618258602"), Token.from("6148914691236517204"),
+                Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h9"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-6148914691236517204"), Token.from("3074457345618258602"),
+                Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h9"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.MURMUR3.minimumToken(), Token.from("-3074457345618258603"),
+                Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h10"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("6148914691236517204"), Partitioners.MURMUR3.minimumToken(),
+                Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h1", "h2", "h3"))));
 
         LOGGER.info("Input:" + createdList);
         List<TokenRangeReplicas> rangeList = TokenRangeReplicas.normalize(createdList);
@@ -469,21 +329,16 @@ public class TokenRangeReplicasTest
         assertThat(hasIntersects(rangeList)).isFalse();
         assertThat(rangeList).hasSize(5);
 
-        List<TokenRangeReplicas> expectedExists = TokenRangeReplicas.generateTokenRangeReplicas(
-        Partitioners.MURMUR3.minimumToken(), Token.from("-6148914691236517204"),
-        Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h10", "h1", "h2", "h3")));
-        List<TokenRangeReplicas> expectedExists2 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from("-3074457345618258603"), Token.from("3074457345618258602"),
-        Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h9", "h1", "h2", "h3")));
-        List<TokenRangeReplicas> expectedExists3 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from("3074457345618258602"), Token.from("6148914691236517204"),
-        Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h9")));
-        List<TokenRangeReplicas> expectedExists4 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from("6148914691236517204"), Partitioners.MURMUR3.maximumToken(),
-        Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h1", "h2", "h3")));
-        List<TokenRangeReplicas> expectedNotExists = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from("3074457345618258602"), Partitioners.MURMUR3.minimumToken(),
-        Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h1", "h2", "h3")));
+        List<TokenRangeReplicas> expectedExists = TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.MURMUR3.minimumToken(),
+                Token.from("-6148914691236517204"), Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h10", "h1", "h2", "h3")));
+        List<TokenRangeReplicas> expectedExists2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-3074457345618258603"),
+                Token.from("3074457345618258602"), Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h9", "h1", "h2", "h3")));
+        List<TokenRangeReplicas> expectedExists3 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("3074457345618258602"),
+                Token.from("6148914691236517204"), Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h9")));
+        List<TokenRangeReplicas> expectedExists4 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("6148914691236517204"),
+                Partitioners.MURMUR3.maximumToken(), Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h1", "h2", "h3")));
+        List<TokenRangeReplicas> expectedNotExists = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("3074457345618258602"),
+                Partitioners.MURMUR3.minimumToken(), Partitioners.MURMUR3, new HashSet<>(Arrays.asList("h1", "h2", "h3")));
 
         assertThat(checkContains(rangeList, expectedExists.get(0))).isTrue();
         assertThat(checkContains(rangeList, expectedExists2.get(0))).isTrue();
@@ -496,14 +351,14 @@ public class TokenRangeReplicasTest
     void testSubsetRelationship()
     {
         // wraps around
-        List<TokenRangeReplicas> range1 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from(100), Token.from(-100), Partitioners.MURMUR3, new HashSet<>());
-        List<TokenRangeReplicas> range2 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from(100), Partitioners.MURMUR3.maximumToken(), Partitioners.MURMUR3, new HashSet<>());
-        List<TokenRangeReplicas> range3 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from(100), Token.from(150), Partitioners.MURMUR3, new HashSet<>());
-        List<TokenRangeReplicas> range4 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from(120), Token.from(150), Partitioners.MURMUR3, new HashSet<>());
+        List<TokenRangeReplicas> range1 =
+                                        TokenRangeReplicas.generateTokenRangeReplicas(Token.from(100), Token.from(-100), Partitioners.MURMUR3, new HashSet<>());
+        List<TokenRangeReplicas> range2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from(100), Partitioners.MURMUR3.maximumToken(),
+                Partitioners.MURMUR3, new HashSet<>());
+        List<TokenRangeReplicas> range3 =
+                                        TokenRangeReplicas.generateTokenRangeReplicas(Token.from(100), Token.from(150), Partitioners.MURMUR3, new HashSet<>());
+        List<TokenRangeReplicas> range4 =
+                                        TokenRangeReplicas.generateTokenRangeReplicas(Token.from(120), Token.from(150), Partitioners.MURMUR3, new HashSet<>());
         assertThat(range1).hasSize(2);
         assertThat(range2).hasSize(1);
         assertThat(range3).hasSize(1);
@@ -519,30 +374,25 @@ public class TokenRangeReplicasTest
     void testIntersectRanges()
     {
         // Simple Intersection
-        List<TokenRangeReplicas> range1 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from(1), Token.from(10), Partitioners.MURMUR3, new HashSet<>());
-        List<TokenRangeReplicas> range2 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from(9), Token.from(12), Partitioners.MURMUR3, new HashSet<>());
+        List<TokenRangeReplicas> range1 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from(1), Token.from(10), Partitioners.MURMUR3, new HashSet<>());
+        List<TokenRangeReplicas> range2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from(9), Token.from(12), Partitioners.MURMUR3, new HashSet<>());
         assertThat(intersectsWithRanges(range2.get(0), range1)).isTrue();
         // intersect check with out-of-order ranges
         assertThat(intersectsWithRanges(range1.get(0), range2)).isTrue();
 
         // Intersection at border
-        List<TokenRangeReplicas> range3 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from(1), Token.from(10), Partitioners.MURMUR3, new HashSet<>());
-        List<TokenRangeReplicas> range4 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from(11), Token.from(20), Partitioners.MURMUR3, new HashSet<>());
-
+        List<TokenRangeReplicas> range3 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from(1), Token.from(10), Partitioners.MURMUR3, new HashSet<>());
+        List<TokenRangeReplicas> range4 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from(11), Token.from(20), Partitioners.MURMUR3, new HashSet<>());
 
         assertThat(intersectsWithRanges(range4.get(0), range3)).isFalse();
         // intersect check with out-of-order ranges
         assertThat(intersectsWithRanges(range3.get(0), range4)).isFalse();
 
         // Intersection as superset
-        List<TokenRangeReplicas> range5 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from(1000), Partitioners.MURMUR3.maximumToken(), Partitioners.MURMUR3, new HashSet<>());
-        List<TokenRangeReplicas> range6 = TokenRangeReplicas.generateTokenRangeReplicas(
-        Token.from(200000), Token.from(300000), Partitioners.MURMUR3, new HashSet<>());
+        List<TokenRangeReplicas> range5 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from(1000), Partitioners.MURMUR3.maximumToken(),
+                Partitioners.MURMUR3, new HashSet<>());
+        List<TokenRangeReplicas> range6 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from(200000), Token.from(300000), Partitioners.MURMUR3,
+                new HashSet<>());
 
         assertThat(intersectsWithRanges(range6.get(0), range5)).isTrue();
     }
@@ -552,44 +402,48 @@ public class TokenRangeReplicasTest
         Collections.sort(rangeList);
         for (int c = 0, i = 1; i < rangeList.size(); i++)
         {
-            if (rangeList.get(c++).end().compareTo(rangeList.get(i).start()) > 0) return true;
+            if (rangeList.get(c++)
+                         .end()
+                         .compareTo(rangeList.get(i)
+                                             .start()) > 0)
+                return true;
         }
         return false;
     }
 
-    private boolean checkContains(List<TokenRangeReplicas> resultList, TokenRangeReplicas expected)
+    private boolean checkContains(List<TokenRangeReplicas> resultList,
+                                  TokenRangeReplicas expected)
     {
         return resultList.stream()
                          .map(TokenRangeReplicas::toString)
                          .anyMatch(r -> r.equals(expected.toString()));
     }
 
-    private boolean isPartOfRanges(TokenRangeReplicas range, List<TokenRangeReplicas> rangeList)
+    private boolean isPartOfRanges(TokenRangeReplicas range,
+                                   List<TokenRangeReplicas> rangeList)
     {
-        return rangeList.stream().anyMatch(r -> r.contains(range));
+        return rangeList.stream()
+                        .anyMatch(r -> r.contains(range));
     }
 
-    private boolean intersectsWithRanges(TokenRangeReplicas range, List<TokenRangeReplicas> rangeList)
+    private boolean intersectsWithRanges(TokenRangeReplicas range,
+                                         List<TokenRangeReplicas> rangeList)
     {
-        return rangeList.stream().anyMatch(r -> r.intersects(range));
+        return rangeList.stream()
+                        .anyMatch(r -> r.intersects(range));
     }
 
     private List<TokenRangeReplicas> createSimpleTokenRangeReplicaList()
     {
         List<TokenRangeReplicas> simpleList = Arrays.asList(
-        TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(),
-                                                      Token.from("10"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h1", "h2", "h3"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("20"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h4", "h5"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"),
-                                                      Partitioners.RANDOM.minimumToken(),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h6", "h7"))).get(0)
-        );
+                TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(), Token.from("10"), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h1", "h2", "h3")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("20"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h4", "h5")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"), Partitioners.RANDOM.minimumToken(), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h6", "h7")))
+                                  .get(0));
         assertThat(hasIntersects(simpleList)).isFalse();
         return simpleList;
     }
@@ -598,23 +452,16 @@ public class TokenRangeReplicasTest
     private List<TokenRangeReplicas> createOverlappingTokenRangeReplicaList()
     {
         List<TokenRangeReplicas> rangeWithOverlaps = Arrays.asList(
-        TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(),
-                                                      Token.from("10"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h1", "h2", "h3"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("40"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h4", "h5"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"),
-                                                      Token.from("30"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h6", "h7"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"),
-                                                      Partitioners.RANDOM.maximumToken(),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9"))).get(0)
-        );
+                TokenRangeReplicas.generateTokenRangeReplicas(Partitioners.RANDOM.minimumToken(), Token.from("10"), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h1", "h2", "h3")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("40"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h4", "h5")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"), Token.from("30"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h6", "h7")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"), Partitioners.RANDOM.maximumToken(), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h9")))
+                                  .get(0));
         assertThat(hasIntersects(rangeWithOverlaps)).isTrue();
         return rangeWithOverlaps;
     }
@@ -623,23 +470,16 @@ public class TokenRangeReplicasTest
     private List<TokenRangeReplicas> createPartialOverlappingTokenRangeReplicaList()
     {
         List<TokenRangeReplicas> rangeWithOverlaps = Arrays.asList(
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-1"),
-                                                      Token.from("10"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h1", "h2", "h3"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("20"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h4", "h5"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"),
-                                                      Token.from("30"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h6", "h7"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"),
-                                                      Partitioners.RANDOM.maximumToken(),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9"))).get(0)
-        );
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-1"), Token.from("10"), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h1", "h2", "h3")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("20"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h4", "h5")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"), Token.from("30"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h6", "h7")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"), Partitioners.RANDOM.maximumToken(), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h9")))
+                                  .get(0));
         assertThat(hasIntersects(rangeWithOverlaps)).isTrue();
         return rangeWithOverlaps;
     }
@@ -648,26 +488,19 @@ public class TokenRangeReplicasTest
     private List<TokenRangeReplicas> createMultipleOverlappingTokenRangeReplicaList()
     {
         List<TokenRangeReplicas> rangeWithOverlaps = Arrays.asList(
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-1"),
-                                                      Token.from("15"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h1", "h2", "h3"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("25"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h4", "h5"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"),
-                                                      Token.from("30"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h6", "h7"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"),
-                                                      Partitioners.RANDOM.maximumToken(),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9"))).get(0)
-        );
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-1"), Token.from("15"), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h1", "h2", "h3")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("25"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h4", "h5")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"), Token.from("30"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h6", "h7")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"), Partitioners.RANDOM.maximumToken(), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h9")))
+                                  .get(0));
         assertThat(hasIntersects(rangeWithOverlaps)).isTrue();
         return rangeWithOverlaps;
-        
+
     }
 
     // 5. Overlaps w/ wrap-around
@@ -675,29 +508,18 @@ public class TokenRangeReplicasTest
     {
 
         List<TokenRangeReplicas> createdList = new ArrayList<>();
-        createdList.addAll(
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-1"),
-                                                      Token.from("15"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h1", "h2", "h3"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-1"), Token.from("15"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h1", "h2", "h3"))));
 
-        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"),
-                                                                         Token.from("20"),
-                                                                         Partitioners.RANDOM,
-                                                                         new HashSet<>(Arrays.asList("h4", "h5"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"), Token.from("20"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h4", "h5"))));
 
-        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"),
-                                                                         Token.from("35"),
-                                                                         Partitioners.RANDOM,
-                                                                         new HashSet<>(Arrays.asList("h6", "h7"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"), Token.from("35"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h6", "h7"))));
 
-        List<TokenRangeReplicas> wrappedList =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"),
-                                                      Token.from("10"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9")));
+        List<TokenRangeReplicas> wrappedList = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"), Token.from("10"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h9")));
         assertThat(wrappedList).hasSize(2);
-
 
         createdList.addAll(wrappedList);
         assertThat(hasWrappedRange(createdList)).isFalse();
@@ -707,29 +529,24 @@ public class TokenRangeReplicasTest
 
     private boolean hasWrappedRange(List<TokenRangeReplicas> createdList)
     {
-        return createdList.stream().anyMatch(r -> r.start().compareTo(r.end()) > 0);
+        return createdList.stream()
+                          .anyMatch(r -> r.start()
+                                          .compareTo(r.end()) > 0);
     }
 
     private List<TokenRangeReplicas> createIntersectingTokenRangeReplicaList()
     {
         List<TokenRangeReplicas> rangeWithOverlaps = Arrays.asList(
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("40"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h1", "h2", "h3"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"),
-                                                      Token.from("60"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h4", "h5"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"),
-                                                      Token.from("80"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h6", "h7"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"),
-                                                      Partitioners.RANDOM.maximumToken(),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9"))).get(0)
-        );
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("40"), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h1", "h2", "h3")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"), Token.from("60"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h4", "h5")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"), Token.from("80"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h6", "h7")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"), Partitioners.RANDOM.maximumToken(), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h9")))
+                                  .get(0));
         assertThat(hasIntersects(rangeWithOverlaps)).isTrue();
         return rangeWithOverlaps;
     }
@@ -737,23 +554,16 @@ public class TokenRangeReplicasTest
     private List<TokenRangeReplicas> createIntersectingTokenRangeReplicaList2()
     {
         List<TokenRangeReplicas> rangeWithOverlaps = Arrays.asList(
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("40"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h1", "h2", "h3"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"),
-                                                      Token.from("30"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h4", "h5"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"),
-                                                      Token.from("80"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h6", "h7"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"),
-                                                      Partitioners.RANDOM.maximumToken(),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9"))).get(0)
-        );
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("40"), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h1", "h2", "h3")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"), Token.from("30"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h4", "h5")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"), Token.from("80"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h6", "h7")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"), Partitioners.RANDOM.maximumToken(), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h9")))
+                                  .get(0));
         assertThat(hasIntersects(rangeWithOverlaps)).isTrue();
         return rangeWithOverlaps;
 
@@ -762,53 +572,34 @@ public class TokenRangeReplicasTest
     private List<TokenRangeReplicas> createIntersectingTokenRangeReplicaList3()
     {
         List<TokenRangeReplicas> rangeWithOverlaps = Arrays.asList(
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"),
-                                                      Token.from("40"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h1", "h2", "h3"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"),
-                                                      Token.from("35"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h4", "h5"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"),
-                                                      Token.from("30"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h6", "h7"))).get(0),
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"),
-                                                      Partitioners.RANDOM.maximumToken(),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9"))).get(0)
-        );
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("10"), Token.from("40"), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h1", "h2", "h3")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("15"), Token.from("35"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h4", "h5")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"), Token.from("30"), Partitioners.RANDOM, new HashSet<>(Arrays.asList("h6", "h7")))
+                                  .get(0),
+                TokenRangeReplicas.generateTokenRangeReplicas(Token.from("30"), Partitioners.RANDOM.maximumToken(), Partitioners.RANDOM,
+                        new HashSet<>(Arrays.asList("h9")))
+                                  .get(0));
         assertThat(hasIntersects(rangeWithOverlaps)).isTrue();
         return rangeWithOverlaps;
 
     }
 
-
     private List<TokenRangeReplicas> createWrappedOverlappingTokenRangeReplicaList()
     {
         List<TokenRangeReplicas> createdList = new ArrayList<>();
 
-        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-1"),
-                                                                         Token.from("20"),
-                                                                         Partitioners.RANDOM,
-                                                                         new HashSet<>(Arrays.asList("h4", "h5"))));
-        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"),
-                                                                         Token.from("35"),
-                                                                         Partitioners.RANDOM,
-                                                                         new HashSet<>(Arrays.asList("h6", "h7"))));
-        createdList.addAll(
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"),
-                                                      Token.from("-1"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h1", "h2", "h3"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("-1"), Token.from("20"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h4", "h5"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"), Token.from("35"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h6", "h7"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"), Token.from("-1"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h1", "h2", "h3"))));
 
-
-        List<TokenRangeReplicas> wrappedRange =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("35"),
-                                                      Token.from("10"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9")));
+        List<TokenRangeReplicas> wrappedRange = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("35"), Token.from("10"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h9")));
         createdList.addAll(wrappedRange);
         assertThat(wrappedRange).hasSize(2);
         // We should not have wrapped ranges as generateTokenRangeReplicas unwraps them, and we validate this below
@@ -821,26 +612,16 @@ public class TokenRangeReplicasTest
     {
         List<TokenRangeReplicas> createdList = new ArrayList<>();
 
-        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("5"),
-                                                                         Token.from("20"),
-                                                                         Partitioners.RANDOM,
-                                                                         new HashSet<>(Arrays.asList("h4", "h5"))));
-        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"),
-                                                                         Token.from("35"),
-                                                                         Partitioners.RANDOM,
-                                                                         new HashSet<>(Arrays.asList("h6", "h7"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("5"), Token.from("20"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h4", "h5"))));
+        createdList.addAll(TokenRangeReplicas.generateTokenRangeReplicas(Token.from("20"), Token.from("35"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h6", "h7"))));
 
-        List<TokenRangeReplicas> wrappedRange1 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"),
-                                                      Token.from("5"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h1", "h2", "h3")));
+        List<TokenRangeReplicas> wrappedRange1 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("40"), Token.from("5"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h1", "h2", "h3")));
 
-        List<TokenRangeReplicas> wrappedRange2 =
-        TokenRangeReplicas.generateTokenRangeReplicas(Token.from("35"),
-                                                      Token.from("10"),
-                                                      Partitioners.RANDOM,
-                                                      new HashSet<>(Arrays.asList("h9")));
+        List<TokenRangeReplicas> wrappedRange2 = TokenRangeReplicas.generateTokenRangeReplicas(Token.from("35"), Token.from("10"), Partitioners.RANDOM,
+                new HashSet<>(Arrays.asList("h9")));
         createdList.addAll(wrappedRange1);
         assertThat(wrappedRange1).hasSize(2);
         createdList.addAll(wrappedRange2);

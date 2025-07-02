@@ -61,38 +61,44 @@ public class RestoreJobTestUtils
         throw new UnsupportedOperationException("Do not instantiate me");
     }
 
-    public static RestoreJobClient client(WebClient client, String host, int port)
+    public static RestoreJobClient client(WebClient client,
+                                          String host,
+                                          int port)
     {
         return new RestoreJobClient(client, host, port);
     }
 
-    public static void assertRestoreRange(RestoreRange range, long startToken, long endToken)
+    public static void assertRestoreRange(RestoreRange range,
+                                          long startToken,
+                                          long endToken)
     {
         assertRestoreRange(range, startToken, endToken, null);
     }
 
-    public static void assertRestoreRange(RestoreRange range, long startToken, long endToken, Consumer<RestoreRange> additionalAssertions)
+    public static void assertRestoreRange(RestoreRange range,
+                                          long startToken,
+                                          long endToken,
+                                          Consumer<RestoreRange> additionalAssertions)
     {
-        assertThat(range.startToken())
-        .describedAs("startTokens do not match")
-        .isEqualTo(BigInteger.valueOf(startToken));
-        assertThat(range.endToken())
-        .describedAs("endTokens do not match")
-        .isEqualTo(BigInteger.valueOf(endToken));
+        assertThat(range.startToken()).describedAs("startTokens do not match")
+                                      .isEqualTo(BigInteger.valueOf(startToken));
+        assertThat(range.endToken()).describedAs("endTokens do not match")
+                                    .isEqualTo(BigInteger.valueOf(endToken));
         if (additionalAssertions != null)
         {
             additionalAssertions.accept(range);
         }
     }
 
-    public static UUID createJob(RestoreJobTestUtils.RestoreJobClient testClient, QualifiedTableName tableName)
+    public static UUID createJob(RestoreJobTestUtils.RestoreJobClient testClient,
+                                 QualifiedTableName tableName)
     {
         UUID jobId = UUIDs.timeBased();
         long expireAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(2);
-        CreateRestoreJobRequestPayload payload = CreateRestoreJobRequestPayload
-                                                 .builder(RestoreJobSecretsGen.genRestoreJobSecrets(), expireAt)
-                                                 .jobId(jobId)
-                                                 .consistencyLevel(ConsistencyLevel.LOCAL_QUORUM, "datacenter1").build();
+        CreateRestoreJobRequestPayload payload = CreateRestoreJobRequestPayload.builder(RestoreJobSecretsGen.genRestoreJobSecrets(), expireAt)
+                                                                               .jobId(jobId)
+                                                                               .consistencyLevel(ConsistencyLevel.LOCAL_QUORUM, "datacenter1")
+                                                                               .build();
         testClient.createRestoreJob(tableName, payload);
         return jobId;
     }
@@ -113,9 +119,8 @@ public class RestoreJobTestUtils
                                               LocalTokenRangesProvider localTokenRangesProvider,
                                               SidecarMetrics metrics)
             {
-                return new RestoreProcessor(executorPools, config, sidecarSchema,
-                                            s3ClientPool, importer, rangeDatabaseAccessor,
-                                            restoreJobUtil, localTokenRangesProvider, metrics)
+                return new RestoreProcessor(executorPools, config, sidecarSchema, s3ClientPool, importer, rangeDatabaseAccessor, restoreJobUtil,
+                        localTokenRangesProvider, metrics)
                 {
                     @Override
                     public ScheduleDecision scheduleDecision()
@@ -136,37 +141,44 @@ public class RestoreJobTestUtils
         String host;
         int port;
 
-        private RestoreJobClient(WebClient client, String host, int port)
+        private RestoreJobClient(WebClient client,
+                                 String host,
+                                 int port)
         {
             this.client = client;
             this.host = host;
             this.port = port;
         }
 
-        public void createRestoreJob(QualifiedTableName qtn, CreateRestoreJobRequestPayload payload)
+        public void createRestoreJob(QualifiedTableName qtn,
+                                     CreateRestoreJobRequestPayload payload)
         {
             String testRoute = "/api/v1/keyspaces/" + qtn.keyspace() + "/tables/" + qtn.tableName() + "/restore-jobs";
-            HttpResponse<Buffer> response = getBlocking(client.post(port, host, testRoute).sendJson(payload),
-                                                        10, TimeUnit.SECONDS,
-                                                        "Create RestoreJob");
+            HttpResponse<Buffer> response = getBlocking(client.post(port, host, testRoute)
+                                                              .sendJson(payload),
+                    10, TimeUnit.SECONDS, "Create RestoreJob");
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
         }
 
-        public void updateRestoreJob(QualifiedTableName qtn, UUID jobId, UpdateRestoreJobRequestPayload payload)
+        public void updateRestoreJob(QualifiedTableName qtn,
+                                     UUID jobId,
+                                     UpdateRestoreJobRequestPayload payload)
         {
             String testRoute = "/api/v1/keyspaces/" + qtn.keyspace() + "/tables/" + qtn.tableName() + "/restore-jobs/" + jobId;
-            HttpResponse<Buffer> response = getBlocking(client.patch(port, host, testRoute).sendJson(payload),
-                                                        10, TimeUnit.SECONDS,
-                                                        "Update RestoreJob");
+            HttpResponse<Buffer> response = getBlocking(client.patch(port, host, testRoute)
+                                                              .sendJson(payload),
+                    10, TimeUnit.SECONDS, "Update RestoreJob");
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
         }
 
-        public void createRestoreSlice(QualifiedTableName qtn, UUID jobId, CreateSliceRequestPayload payload)
+        public void createRestoreSlice(QualifiedTableName qtn,
+                                       UUID jobId,
+                                       CreateSliceRequestPayload payload)
         {
             String testRoute = "/api/v1/keyspaces/" + qtn.keyspace() + "/tables/" + qtn.tableName() + "/restore-jobs/" + jobId + "/slices";
-            HttpResponse<Buffer> response = getBlocking(client.post(port, host, testRoute).sendJson(payload),
-                                                        10, TimeUnit.SECONDS,
-                                                        "Create RestoreSlice");
+            HttpResponse<Buffer> response = getBlocking(client.post(port, host, testRoute)
+                                                              .sendJson(payload),
+                    10, TimeUnit.SECONDS, "Create RestoreSlice");
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.CREATED.code());
         }
     }

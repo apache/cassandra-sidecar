@@ -26,8 +26,7 @@ import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNotEmpty;
 import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
 
 /**
- * {@link StandardPermission} needs an exact match between permission. If resource is set, exact match between
- * resources if also required.
+ * {@link StandardPermission} needs an exact match between permission. If resource is set, exact match between resources if also required.
  */
 public class StandardPermission implements Permission
 {
@@ -42,10 +41,11 @@ public class StandardPermission implements Permission
     /**
      * Creates an instance of {@link StandardPermission} with given permission name and resource scope.
      *
-     * @param name      permission name
-     * @param scope     resource scope for permission
+     * @param name permission name
+     * @param scope resource scope for permission
      */
-    public StandardPermission(String name, ResourceScope scope)
+    public StandardPermission(String name,
+                              ResourceScope scope)
     {
         if (isNullOrEmpty(name))
         {

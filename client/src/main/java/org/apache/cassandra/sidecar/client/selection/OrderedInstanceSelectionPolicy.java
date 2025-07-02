@@ -19,14 +19,13 @@
 package org.apache.cassandra.sidecar.client.selection;
 
 import java.util.Iterator;
-
 import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.client.SidecarInstancesProvider;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A selection policy for multiple Cassandra Sidecar instances where the iterator returns in the order specified
- * by the underlying {@link Iterator} for the {@link SidecarInstancesProvider#instances()}.
+ * A selection policy for multiple Cassandra Sidecar instances where the iterator returns in the order specified by the underlying {@link Iterator} for the
+ * {@link SidecarInstancesProvider#instances()}.
  */
 public class OrderedInstanceSelectionPolicy implements InstanceSelectionPolicy
 {
@@ -51,6 +50,7 @@ public class OrderedInstanceSelectionPolicy implements InstanceSelectionPolicy
     @NotNull
     public Iterator<SidecarInstance> iterator()
     {
-        return instancesProvider.instances().iterator();
+        return instancesProvider.instances()
+                                .iterator();
     }
 }

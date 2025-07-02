@@ -18,9 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.restore;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
@@ -28,7 +25,8 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
-
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(VertxExtension.class)
@@ -40,54 +38,49 @@ class AbortRestoreJobHandlerTest extends BaseRestoreJobTests
     void testValidRequest(VertxTestContext context) throws Throwable
     {
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
-        sendAbortRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                            context, HttpResponseStatus.OK.code());
+        sendAbortRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", context, HttpResponseStatus.OK.code());
     }
 
     @Test
     void testInvalidJobId(VertxTestContext context) throws Throwable
     {
-        sendAbortRestoreJobRequestAndVerify("ks", "table", "12951f25-d393-4158-9e90-ec0cbe05af21",
-                                            context, HttpResponseStatus.BAD_REQUEST.code());
+        sendAbortRestoreJobRequestAndVerify("ks", "table", "12951f25-d393-4158-9e90-ec0cbe05af21", context, HttpResponseStatus.BAD_REQUEST.code());
     }
 
     @Test
     void testInvalidKeyspace(VertxTestContext context) throws Throwable
     {
-        sendAbortRestoreJobRequestAndVerify("sidecar_internal", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                            context, HttpResponseStatus.FORBIDDEN.code());
+        sendAbortRestoreJobRequestAndVerify("sidecar_internal", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", context, HttpResponseStatus.FORBIDDEN.code());
     }
 
     @Test
     void testJobAbsent(VertxTestContext context) throws Throwable
     {
         mockLookupRestoreJob(id -> null);
-        sendAbortRestoreJobRequestAndVerify("ks", "table", "7cd82ff9-d276-11ed-93e5-7fce0df1306f",
-                                            context, HttpResponseStatus.NOT_FOUND.code());
+        sendAbortRestoreJobRequestAndVerify("ks", "table", "7cd82ff9-d276-11ed-93e5-7fce0df1306f", context, HttpResponseStatus.NOT_FOUND.code());
     }
 
     @Test
     void testAbortJobInFinalState(VertxTestContext context) throws Throwable
     {
         mockLookupRestoreJob(id -> RestoreJobTest.createTestingJob(id, RestoreJobStatus.SUCCEEDED));
-        sendAbortRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                            context, HttpResponseStatus.CONFLICT.code());
+        sendAbortRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", context, HttpResponseStatus.CONFLICT.code());
     }
 
     @Test
     void testAbortJobWithReason(VertxTestContext context) throws Throwable
     {
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
-        sendAbortRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
-                                            context, HttpResponseStatus.OK.code(),
-                                            new AbortRestoreJobRequestPayload("Analytics job has failed"));
+        sendAbortRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056", context, HttpResponseStatus.OK.code(),
+                new AbortRestoreJobRequestPayload("Analytics job has failed"));
     }
 
     private void sendAbortRestoreJobRequestAndVerify(String keyspace,
                                                      String table,
                                                      String jobId,
                                                      VertxTestContext context,
-                                                     int expectedStatusCode) throws Throwable
+                                                     int expectedStatusCode)
+            throws Throwable
     {
         sendAbortRestoreJobRequestAndVerify(keyspace, table, jobId, context, expectedStatusCode, null);
     }
@@ -100,7 +93,8 @@ class AbortRestoreJobHandlerTest extends BaseRestoreJobTests
                                                      AbortRestoreJobRequestPayload requestPayload)
     {
         JsonObject jsonPayload = requestPayload == null ? null : JsonObject.mapFrom(requestPayload);
-        postThenComplete(context, String.format(RESTORE_JOB_ABORT_ENDPOINT, keyspace, table, jobId), jsonPayload,
-                         resp -> assertThat(resp.result().statusCode()).isEqualTo(expectedStatusCode));
+        postThenComplete(context, String.format(RESTORE_JOB_ABORT_ENDPOINT, keyspace, table, jobId), jsonPayload, resp -> assertThat(resp.result()
+                                                                                                                                         .statusCode()).isEqualTo(
+                                                                                                                                                 expectedStatusCode));
     }
 }

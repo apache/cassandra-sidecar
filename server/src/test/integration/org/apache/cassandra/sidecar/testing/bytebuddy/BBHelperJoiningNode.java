@@ -21,23 +21,22 @@ package org.apache.cassandra.sidecar.testing.bytebuddy;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import org.apache.cassandra.db.SystemKeyspace;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
-
 import static org.apache.cassandra.sidecar.testing.IntegrationTestBase.awaitLatchOrTimeout;
 
 /**
- * ByteBuddy Helper for a single node joining
- * Note that the helper cannot be used by multiple tests simultaneously in the same JVM
+ * ByteBuddy Helper for a single node joining Note that the helper cannot be used by multiple tests simultaneously in the same JVM
  */
 public class BBHelperJoiningNode
 {
     public static CountDownLatch transientStateStart = new CountDownLatch(1);
     public static CountDownLatch transientStateEnd = new CountDownLatch(1);
 
-    public static void install(ClassLoader cl, int nodeNumber, int joiningNodeIndex)
+    public static void install(ClassLoader cl,
+                               int nodeNumber,
+                               int joiningNodeIndex)
     {
         if (nodeNumber == joiningNodeIndex)
         {
@@ -45,7 +44,9 @@ public class BBHelperJoiningNode
         }
     }
 
-    public static void setBootstrapState(SystemKeyspace.BootstrapState state, @SuperCall Callable<Void> orig) throws Exception
+    public static void setBootstrapState(SystemKeyspace.BootstrapState state,
+                                         @SuperCall Callable<Void> orig)
+            throws Exception
     {
         if (state == SystemKeyspace.BootstrapState.COMPLETED)
         {

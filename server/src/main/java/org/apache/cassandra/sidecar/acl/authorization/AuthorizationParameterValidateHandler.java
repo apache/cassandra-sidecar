@@ -34,8 +34,7 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Simple handler that extracts authorization parameters keyspace/table parameters from the path, validates them,
- * and then adds them to the context.
+ * Simple handler that extracts authorization parameters keyspace/table parameters from the path, validates them, and then adds them to the context.
  */
 @Singleton
 public class AuthorizationParameterValidateHandler extends AbstractHandler<QualifiedTableName>
@@ -46,8 +45,8 @@ public class AuthorizationParameterValidateHandler extends AbstractHandler<Quali
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the interface to retrieve instance metadata
-     * @param executorPools   the executor pools for blocking executions
-     * @param validator       a validator instance to validate Cassandra-specific input
+     * @param executorPools the executor pools for blocking executions
+     * @param validator a validator instance to validate Cassandra-specific input
      * @param snapshotPathBuilder snapshot path builder
      */
     @Inject

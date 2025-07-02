@@ -71,16 +71,16 @@ public class VertxHttpClient implements HttpClient
     protected final WebClient webClient;
     protected final HttpClientConfig config;
 
-    public VertxHttpClient(Vertx vertx, HttpClientConfig config)
+    public VertxHttpClient(Vertx vertx,
+                           HttpClientConfig config)
     {
-        WebClientOptions options = new WebClientOptions()
-                                   .setMaxPoolSize(config.maxPoolSize())
-                                   .setIdleTimeout(config.idleTimeoutMillis())
-                                   .setIdleTimeoutUnit(TimeUnit.MILLISECONDS)
-                                   .setMaxChunkSize(config.maxChunkSize())
-                                   .setReceiveBufferSize(config.receiveBufferSize())
-                                   .setConnectTimeout((int) config.timeoutMillis())
-                                   .setUserAgent(config.userAgent());
+        WebClientOptions options = new WebClientOptions().setMaxPoolSize(config.maxPoolSize())
+                                                         .setIdleTimeout(config.idleTimeoutMillis())
+                                                         .setIdleTimeoutUnit(TimeUnit.MILLISECONDS)
+                                                         .setMaxChunkSize(config.maxChunkSize())
+                                                         .setReceiveBufferSize(config.receiveBufferSize())
+                                                         .setConnectTimeout((int) config.timeoutMillis())
+                                                         .setUserAgent(config.userAgent());
 
         options = applySSLOptions(options, config);
 
@@ -89,7 +89,9 @@ public class VertxHttpClient implements HttpClient
         this.config = config;
     }
 
-    public VertxHttpClient(Vertx vertx, WebClient webClient, HttpClientConfig config)
+    public VertxHttpClient(Vertx vertx,
+                           WebClient webClient,
+                           HttpClientConfig config)
     {
         this.vertx = vertx;
         this.webClient = webClient;
@@ -114,14 +116,14 @@ public class VertxHttpClient implements HttpClient
      * {@inheritDoc}
      */
     @Override
-    public CompletableFuture<HttpResponse> execute(SidecarInstance sidecarInstance, RequestContext context)
+    public CompletableFuture<HttpResponse> execute(SidecarInstance sidecarInstance,
+                                                   RequestContext context)
     {
         if (context.request() instanceof UploadableRequest)
         {
             HttpRequest<Buffer> vertxRequest = vertxRequest(sidecarInstance, context);
             UploadableRequest uploadableRequest = (UploadableRequest) context.request();
-            LOGGER.debug("Uploading file={}, for request={}, instance={}",
-                         uploadableRequest.filename(), context.request(), sidecarInstance);
+            LOGGER.debug("Uploading file={}, for request={}, instance={}", uploadableRequest.filename(), context.request(), sidecarInstance);
             return executeUploadFileInternal(sidecarInstance, vertxRequest, uploadableRequest.filename());
         }
         else
@@ -131,31 +133,30 @@ public class VertxHttpClient implements HttpClient
         }
     }
 
-    protected CompletableFuture<HttpResponse> executeInternal(SidecarInstance sidecarInstance, RequestContext context)
+    protected CompletableFuture<HttpResponse> executeInternal(SidecarInstance sidecarInstance,
+                                                              RequestContext context)
     {
-        Future<HttpRequest<Buffer>> future = Future.future(promise -> promise.complete(vertxRequest(sidecarInstance, context)
-                                                                                       .ssl(config.ssl())
-                                                                                       .timeout(config.timeoutMillis())));
+        Future<HttpRequest<Buffer>> future = Future.future(promise -> promise.complete(vertxRequest(sidecarInstance, context).ssl(config.ssl())
+                                                                                                                             .timeout(config.timeoutMillis())));
 
-        return future
-               .compose(vertxRequest -> {
-                   Request request = context.request();
-                   if (request.requestBody() != null)
-                   {
-                       return vertxRequest.sendJson(request.requestBody());
-                   }
-                   return vertxRequest.send();
-               })
-               .map(response -> {
-                   byte[] raw = response.body() != null ? response.body().getBytes() : null;
-                   return (HttpResponse) new HttpResponseImpl(response.statusCode(),
-                                                              response.statusMessage(),
-                                                              raw,
-                                                              mapHeaders(response.headers()),
-                                                              sidecarInstance
-                   );
-               })
-               .toCompletionStage().toCompletableFuture();
+        return future.compose(vertxRequest -> {
+            Request request = context.request();
+            if (request.requestBody() != null)
+            {
+                return vertxRequest.sendJson(request.requestBody());
+            }
+            return vertxRequest.send();
+        })
+                     .map(response -> {
+                         byte[] raw = response.body() != null
+                                 ? response.body()
+                                           .getBytes()
+                                 : null;
+                         return (HttpResponse) new HttpResponseImpl(response.statusCode(), response.statusMessage(), raw, mapHeaders(response.headers()),
+                                 sidecarInstance);
+                     })
+                     .toCompletionStage()
+                     .toCompletableFuture();
     }
 
     protected CompletableFuture<HttpResponse> executeUploadFileInternal(SidecarInstance sidecarInstance,
@@ -164,24 +165,24 @@ public class VertxHttpClient implements HttpClient
     {
         Promise<HttpResponse> promise = Promise.promise();
         // open the local file
-        openFileForRead(vertx.fileSystem(), filename)
-        .compose(pair -> vertxRequest.ssl(config.ssl())
-                                     .putHeader(HttpHeaderNames.CONTENT_LENGTH.toString(),
-                                                String.valueOf(pair.getKey()))
-                                     .sendStream(pair.getValue()
-                                                     .setReadBufferSize(config.sendReadBufferSize())))
-        .onFailure(promise::fail)
-        .onSuccess(response -> {
-            byte[] raw = response.body() != null ? response.body().getBytes() : null;
-            promise.complete(new HttpResponseImpl(response.statusCode(),
-                                                  response.statusMessage(),
-                                                  raw,
-                                                  mapHeaders(response.headers()),
-                                                  sidecarInstance
-            ));
-        });
+        openFileForRead(vertx.fileSystem(), filename).compose(pair -> vertxRequest.ssl(config.ssl())
+                                                                                  .putHeader(HttpHeaderNames.CONTENT_LENGTH.toString(),
+                                                                                          String.valueOf(pair.getKey()))
+                                                                                  .sendStream(pair.getValue()
+                                                                                                  .setReadBufferSize(config.sendReadBufferSize())))
+                                                     .onFailure(promise::fail)
+                                                     .onSuccess(response -> {
+                                                         byte[] raw = response.body() != null
+                                                                 ? response.body()
+                                                                           .getBytes()
+                                                                 : null;
+                                                         promise.complete(new HttpResponseImpl(response.statusCode(), response.statusMessage(), raw,
+                                                                 mapHeaders(response.headers()), sidecarInstance));
+                                                     });
 
-        return promise.future().toCompletionStage().toCompletableFuture();
+        return promise.future()
+                      .toCompletionStage()
+                      .toCompletableFuture();
     }
 
     /**
@@ -203,22 +204,17 @@ public class VertxHttpClient implements HttpClient
                     .expect(response -> {
 
                         // fulfill the promise with the response
-                        promise.complete(new HttpResponseImpl(response.statusCode(),
-                                                              response.statusMessage(),
-                                                              mapHeaders(response.headers()),
-                                                              sidecarInstance));
+                        promise.complete(
+                                new HttpResponseImpl(response.statusCode(), response.statusMessage(), mapHeaders(response.headers()), sidecarInstance));
 
-                        if (response.statusCode() == HttpResponseStatus.OK.code() ||
-                            response.statusCode() == HttpResponseStatus.PARTIAL_CONTENT.code())
+                        if (response.statusCode() == HttpResponseStatus.OK.code() || response.statusCode() == HttpResponseStatus.PARTIAL_CONTENT.code())
                         {
                             return ResponsePredicateResult.success();
                         }
                         else
                         {
-                            LOGGER.warn("Unexpected status code received statusCode={}, statusMessage={}",
-                                        response.statusCode(), response.statusMessage());
-                            return ResponsePredicateResult.failure("Unexpected status code: " +
-                                                                   response.statusCode());
+                            LOGGER.warn("Unexpected status code received statusCode={}, statusMessage={}", response.statusCode(), response.statusMessage());
+                            return ResponsePredicateResult.failure("Unexpected status code: " + response.statusCode());
                         }
                     })
                     .as(BodyCodec.pipe(new StreamConsumerWriteStream(streamConsumer)))
@@ -231,7 +227,9 @@ public class VertxHttpClient implements HttpClient
                             streamConsumer.onError(throwable);
                         }
                     });
-        return promise.future().toCompletionStage().toCompletableFuture();
+        return promise.future()
+                      .toCompletionStage()
+                      .toCompletableFuture();
     }
 
     /**
@@ -243,14 +241,13 @@ public class VertxHttpClient implements HttpClient
         webClient.close();
     }
 
-    protected HttpRequest<Buffer> vertxRequest(SidecarInstance sidecarInstance, RequestContext context)
+    protected HttpRequest<Buffer> vertxRequest(SidecarInstance sidecarInstance,
+                                               RequestContext context)
     {
         Request request = context.request();
-        HttpMethod method = HttpMethod.valueOf(request.method().name());
-        HttpRequest<Buffer> vertxRequest = webClient.request(method,
-                                                             sidecarInstance.port(),
-                                                             sidecarInstance.hostname(),
-                                                             request.requestURI());
+        HttpMethod method = HttpMethod.valueOf(request.method()
+                                                      .name());
+        HttpRequest<Buffer> vertxRequest = webClient.request(method, sidecarInstance.port(), sidecarInstance.hostname(), request.requestURI());
 
         vertxRequest = applyHeaders(vertxRequest, request.headers());
 
@@ -263,7 +260,8 @@ public class VertxHttpClient implements HttpClient
         return vertxRequest;
     }
 
-    protected HttpRequest<Buffer> applyHeaders(HttpRequest<Buffer> vertxRequest, Map<String, String> headers)
+    protected HttpRequest<Buffer> applyHeaders(HttpRequest<Buffer> vertxRequest,
+                                               Map<String, String> headers)
     {
         vertxRequest = applyAuthHeader(vertxRequest);
 
@@ -294,13 +292,14 @@ public class VertxHttpClient implements HttpClient
         {
             return Collections.emptyMap();
         }
-        return headers.entries().stream()
+        return headers.entries()
+                      .stream()
                       .filter(entry -> entry.getKey() != null && entry.getValue() != null)
-                      .collect(Collectors.toMap(Map.Entry::getKey,
-                                                entry -> Collections.singletonList(entry.getValue())));
+                      .collect(Collectors.toMap(Map.Entry::getKey, entry -> Collections.singletonList(entry.getValue())));
     }
 
-    protected static WebClientOptions applySSLOptions(WebClientOptions options, HttpClientConfig config)
+    protected static WebClientOptions applySSLOptions(WebClientOptions options,
+                                                      HttpClientConfig config)
     {
         if (!config.ssl())
         {
@@ -311,17 +310,13 @@ public class VertxHttpClient implements HttpClient
 
         if (config.trustStoreInputStream() != null && config.trustStorePassword() != null)
         {
-            TrustOptions trustOptions = buildKeyCertOptions(config.trustStoreInputStream(),
-                                                            config.trustStorePassword(),
-                                                            config.trustStoreType());
+            TrustOptions trustOptions = buildKeyCertOptions(config.trustStoreInputStream(), config.trustStorePassword(), config.trustStoreType());
             options = options.setTrustOptions(trustOptions);
         }
 
         if (config.keyStoreInputStream() != null && config.keyStorePassword() != null)
         {
-            KeyCertOptions keyCertOptions = buildKeyCertOptions(config.keyStoreInputStream(),
-                                                                config.keyStorePassword(),
-                                                                config.keyStoreType());
+            KeyCertOptions keyCertOptions = buildKeyCertOptions(config.keyStoreInputStream(), config.keyStorePassword(), config.keyStoreType());
             options = options.setKeyCertOptions(keyCertOptions);
         }
 
@@ -338,7 +333,9 @@ public class VertxHttpClient implements HttpClient
         return options;
     }
 
-    protected static KeyStoreOptions buildKeyCertOptions(InputStream storeStream, String storePass, String storeType)
+    protected static KeyStoreOptions buildKeyCertOptions(InputStream storeStream,
+                                                         String storePass,
+                                                         String storeType)
     {
         try (InputStream inputStream = storeStream)
         {
@@ -365,7 +362,8 @@ public class VertxHttpClient implements HttpClient
         return bos.toByteArray();
     }
 
-    protected Future<AbstractMap.SimpleEntry<Long, AsyncFile>> openFileForRead(FileSystem fs, String filename)
+    protected Future<AbstractMap.SimpleEntry<Long, AsyncFile>> openFileForRead(FileSystem fs,
+                                                                               String filename)
     {
         Promise<AbstractMap.SimpleEntry<Long, AsyncFile>> promise = Promise.promise();
         fs.exists(filename)
@@ -377,10 +375,11 @@ public class VertxHttpClient implements HttpClient
               }
               return fs.props(filename);
           })
-          .onSuccess(props -> fs.open(filename, new OpenOptions().setWrite(false).setCreate(false).setRead(true))
+          .onSuccess(props -> fs.open(filename, new OpenOptions().setWrite(false)
+                                                                 .setCreate(false)
+                                                                 .setRead(true))
                                 .onFailure(promise::tryFail)
-                                .onSuccess(asyncFile -> promise.complete(new AbstractMap.SimpleEntry<>(props.size(),
-                                                                                                       asyncFile))))
+                                .onSuccess(asyncFile -> promise.complete(new AbstractMap.SimpleEntry<>(props.size(), asyncFile))))
           .onFailure(promise::tryFail);
         return promise.future();
     }

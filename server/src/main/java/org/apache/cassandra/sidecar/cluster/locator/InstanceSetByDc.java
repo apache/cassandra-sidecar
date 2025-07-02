@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
-
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -34,7 +33,8 @@ public class InstanceSetByDc
     @NotNull
     public Map<String, Set<String>> mapping;
 
-    public InstanceSetByDc(String dcName, Set<String> localDcInstances)
+    public InstanceSetByDc(String dcName,
+                           Set<String> localDcInstances)
     {
         this.mapping = new HashMap<>(1);
         mapping.put(dcName, localDcInstances);

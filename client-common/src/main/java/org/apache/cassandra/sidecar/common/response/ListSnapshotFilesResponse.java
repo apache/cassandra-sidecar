@@ -18,18 +18,15 @@
 
 package org.apache.cassandra.sidecar.common.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
+import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import com.google.common.annotations.Beta;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
-
 /**
- * A class representing a response for the {@code SnapshotRequest}.
- * This class is expected to evolve and has been mark with the {@link Beta} annotation.
+ * A class representing a response for the {@code SnapshotRequest}. This class is expected to evolve and has been mark with the {@link Beta} annotation.
  */
 @Beta
 public class ListSnapshotFilesResponse
@@ -90,12 +87,11 @@ public class ListSnapshotFilesResponse
         {
             if (componentDownloadUrl == null)
             {
-                componentDownloadUrl = ApiEndpointsV1.COMPONENTS_ROUTE
-                                       .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keySpaceName)
-                                       .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName)
-                                       .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, snapshotName)
-                                       .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, fileName)
-                                       + "?dataDirectoryIndex=" + dataDirIndex;
+                componentDownloadUrl = ApiEndpointsV1.COMPONENTS_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keySpaceName)
+                                                                      .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, tableName)
+                                                                      .replaceAll(ApiEndpointsV1.SNAPSHOT_PATH_PARAM, snapshotName)
+                                                                      .replaceAll(ApiEndpointsV1.COMPONENT_PATH_PARAM, fileName)
+                        + "?dataDirectoryIndex=" + dataDirIndex;
             }
             return componentDownloadUrl;
         }
@@ -103,17 +99,14 @@ public class ListSnapshotFilesResponse
         @Override
         public boolean equals(Object o)
         {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
             FileInfo fileInfo = (FileInfo) o;
-            return size == fileInfo.size &&
-                   port == fileInfo.port &&
-                   dataDirIndex == fileInfo.dataDirIndex &&
-                   Objects.equals(host, fileInfo.host) &&
-                   Objects.equals(snapshotName, fileInfo.snapshotName) &&
-                   Objects.equals(keySpaceName, fileInfo.keySpaceName) &&
-                   Objects.equals(tableName, fileInfo.tableName) &&
-                   Objects.equals(fileName, fileInfo.fileName);
+            return size == fileInfo.size && port == fileInfo.port && dataDirIndex == fileInfo.dataDirIndex && Objects.equals(host, fileInfo.host)
+                    && Objects.equals(snapshotName, fileInfo.snapshotName) && Objects.equals(keySpaceName, fileInfo.keySpaceName)
+                    && Objects.equals(tableName, fileInfo.tableName) && Objects.equals(fileName, fileInfo.fileName);
         }
 
         @Override
@@ -126,8 +119,10 @@ public class ListSnapshotFilesResponse
     @Override
     public boolean equals(Object o)
     {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         ListSnapshotFilesResponse that = (ListSnapshotFilesResponse) o;
         return Objects.equals(snapshotFilesInfo, that.snapshotFilesInfo);
     }

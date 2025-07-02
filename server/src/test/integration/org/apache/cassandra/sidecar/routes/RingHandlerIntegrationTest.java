@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -47,8 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RingHandlerIntegrationTest extends IntegrationTestBase
 {
     @CassandraIntegrationTest(gossip = true)
-    void retrieveRingWithoutKeyspace(VertxTestContext context)
-    throws Exception
+    void retrieveRingWithoutKeyspace(VertxTestContext context) throws Exception
     {
         String testRoute = "/api/v1/cassandra/ring";
         testWithClient(context, client -> {
@@ -76,9 +74,13 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest(gossip = true)
-    void ringFailsWhenGossipIsDisabled(CassandraTestContext context, VertxTestContext testContext) throws Exception
+    void ringFailsWhenGossipIsDisabled(CassandraTestContext context,
+                                       VertxTestContext testContext)
+            throws Exception
     {
-        int disableGossip = context.cluster().getFirstRunningInstance().nodetool("disablegossip");
+        int disableGossip = context.cluster()
+                                   .getFirstRunningInstance()
+                                   .nodetool("disablegossip");
         assertThat(disableGossip).isEqualTo(0);
         String testRoute = "/api/v1/cassandra/ring";
         testWithClient(testContext, client -> {
@@ -88,8 +90,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
                       JsonObject payload = response.bodyAsJsonObject();
                       assertThat(payload.getString("status")).isEqualTo("Service Unavailable");
                       assertThat(payload.getInteger("code")).isEqualTo(503);
-                      assertThat(payload.getString("message"))
-                      .isEqualTo("Gossip is required for the operation but it is disabled");
+                      assertThat(payload.getString("message")).isEqualTo("Gossip is required for the operation but it is disabled");
                       testContext.completeNow();
                   }));
         });
@@ -105,8 +106,10 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
         });
     }
 
-    void retrieveRingWithKeyspace(VertxTestContext context, String keyspace,
-                                  Handler<HttpResponse<Buffer>> verifier) throws Exception
+    void retrieveRingWithKeyspace(VertxTestContext context,
+                                  String keyspace,
+                                  Handler<HttpResponse<Buffer>> verifier)
+            throws Exception
     {
         String testRoute = "/api/v1/cassandra/ring/keyspaces/" + keyspace;
         testWithClient(context, client -> {
@@ -115,9 +118,11 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
         });
     }
 
-    void assertRingResponseOK(HttpResponse<Buffer> response, CassandraSidecarTestContext cassandraTestContext)
+    void assertRingResponseOK(HttpResponse<Buffer> response,
+                              CassandraSidecarTestContext cassandraTestContext)
     {
-        IInstance instance = cassandraTestContext.cluster().getFirstRunningInstance();
+        IInstance instance = cassandraTestContext.cluster()
+                                                 .getFirstRunningInstance();
         IInstanceConfig config = instance.config();
         RingResponse ringResponse = response.bodyAsJson(RingResponse.class);
         assertThat(ringResponse).isNotNull()
@@ -125,8 +130,11 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
         RingEntry entry = ringResponse.poll();
         assertThat(entry).isNotNull();
         assertThat(entry.datacenter()).isEqualTo(config.localDatacenter());
-        assertThat(entry.address()).isEqualTo(config.broadcastAddress().getAddress().getHostAddress());
-        assertThat(entry.port()).isEqualTo(config.broadcastAddress().getPort());
+        assertThat(entry.address()).isEqualTo(config.broadcastAddress()
+                                                    .getAddress()
+                                                    .getHostAddress());
+        assertThat(entry.port()).isEqualTo(config.broadcastAddress()
+                                                 .getPort());
         assertThat(entry.status()).isEqualTo("Up");
         assertThat(entry.state()).isEqualTo("Normal");
         assertThat(entry.load()).isNotEmpty();

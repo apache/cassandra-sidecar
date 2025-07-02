@@ -47,11 +47,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
- * This class is in charge of performing SSTable imports into the desired Cassandra instance.
- * Since imports are synchronized in the Cassandra side on a per table-basis, we only perform one import per
- * Cassandra instance's keyspace/table, and we queue the rest of the import requests.
+ * This class is in charge of performing SSTable imports into the desired Cassandra instance. Since imports are synchronized in the Cassandra side on a per
+ * table-basis, we only perform one import per Cassandra instance's keyspace/table, and we queue the rest of the import requests.
  *
- * <p>TODO: Consider making SSTableImporter a PeriodicTask</p>
+ * <p>
+ * TODO: Consider making SSTableImporter a PeriodicTask
+ * </p>
  */
 @Singleton
 public class SSTableImporter
@@ -74,10 +75,10 @@ public class SSTableImporter
     /**
      * Constructs a new instance of the SSTableImporter class
      *
-     * @param vertx             the vertx instance
-     * @param metadataFetcher   a class for fetching InstanceMetadata
-     * @param configuration     the configuration for Sidecar
-     * @param executorPools     the executor pool
+     * @param vertx the vertx instance
+     * @param metadataFetcher a class for fetching InstanceMetadata
+     * @param configuration the configuration for Sidecar
+     * @param executorPools the executor pool
      * @param uploadPathBuilder a class that provides SSTableUploads directories
      */
     @Inject
@@ -93,13 +94,14 @@ public class SSTableImporter
         this.uploadPathBuilder = uploadPathBuilder;
         this.importQueuePerHost = new ConcurrentHashMap<>();
         executorPools.internal()
-                     .setPeriodic(configuration.sstableImportConfiguration().executeInterval().toMillis(),
-                                  this::processPendingImports);
+                     .setPeriodic(configuration.sstableImportConfiguration()
+                                               .executeInterval()
+                                               .toMillis(),
+                             this::processPendingImports);
     }
 
     /**
-     * Queues an import with the provided import {@code options} to be processed asynchronously. The imports
-     * are queued in a FIFO queue.
+     * Queues an import with the provided import {@code options} to be processed asynchronously. The imports are queued in a FIFO queue.
      *
      * @param options import options
      * @return a future for the result of the import
@@ -113,8 +115,8 @@ public class SSTableImporter
     }
 
     /**
-     * Attempts to cancel an import for the provided {@code options}. This is a best-effort attempt, and
-     * if the import has been started, it will not be cancelled.
+     * Attempts to cancel an import for the provided {@code options}. This is a best-effort attempt, and if the import has been started, it will not be
+     * cancelled.
      *
      * @param options import options
      * @return true if the options were removed from the queue, false otherwise
@@ -174,8 +176,7 @@ public class SSTableImporter
     }
 
     /**
-     * Tries to lock the queue to perform the draining. If the queue is already being drained, then it will
-     * not perform any operation.
+     * Tries to lock the queue to perform the draining. If the queue is already being drained, then it will not perform any operation.
      *
      * @param queue a queue of import tasks
      */
@@ -196,8 +197,7 @@ public class SSTableImporter
     }
 
     /**
-     * This blocking operation will drain the {@code queue}. It will utilize a single thread
-     * to import the pending import requests on that host.
+     * This blocking operation will drain the {@code queue}. It will utilize a single thread to import the pending import requests on that host.
      *
      * @param queue a queue of import tasks
      */
@@ -219,35 +219,26 @@ public class SSTableImporter
             }
             try
             {
-                TableOperations tableOperations = instance.delegate().tableOperations();
+                TableOperations tableOperations = instance.delegate()
+                                                          .tableOperations();
                 long startTime = System.nanoTime();
-                List<String> failedDirectories =
-                tableOperations.importNewSSTables(options.keyspace,
-                                                  options.tableName,
-                                                  options.directory,
-                                                  options.resetLevel,
-                                                  options.clearRepaired,
-                                                  options.verifySSTables,
-                                                  options.verifyTokens,
-                                                  options.invalidateCaches,
-                                                  options.extendedVerify,
-                                                  options.copyData);
+                List<String> failedDirectories = tableOperations.importNewSSTables(options.keyspace, options.tableName, options.directory, options.resetLevel,
+                        options.clearRepaired, options.verifySSTables, options.verifyTokens, options.invalidateCaches, options.extendedVerify,
+                        options.copyData);
                 long serviceTimeNanos = System.nanoTime() - startTime;
                 if (!failedDirectories.isEmpty())
                 {
                     failureCount++;
-                    LOGGER.error("Failed to import SSTables with options={}, serviceTimeMillis={}, " +
-                                 "failedDirectories={}", options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos),
-                                 failedDirectories);
+                    LOGGER.error("Failed to import SSTables with options={}, serviceTimeMillis={}, " + "failedDirectories={}", options,
+                            TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos), failedDirectories);
                     // TODO: HttpException should not be thrown by importer, as it is not at the transport layer
-                    promise.fail(new HttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
-                                                   "Failed to import from directories: " + failedDirectories));
+                    promise.fail(new HttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), "Failed to import from directories: " + failedDirectories));
                 }
                 else
                 {
                     successCount++;
-                    LOGGER.info("Successfully imported SSTables with options={}, serviceTimeMillis={}",
-                                options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos));
+                    LOGGER.info("Successfully imported SSTables with options={}, serviceTimeMillis={}", options,
+                            TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos));
                     promise.complete();
                     cleanup(options);
                 }
@@ -262,8 +253,7 @@ public class SSTableImporter
 
         if (successCount > 0 || failureCount > 0)
         {
-            LOGGER.info("Finished SSTable import session with successCount={}, failureCount={}",
-                        successCount, failureCount);
+            LOGGER.info("Finished SSTable import session with successCount={}, failureCount={}", successCount, failureCount);
             instanceMetrics.sstableImport().successfulImports.metric.update(successCount);
             instanceMetrics.sstableImport().failedImports.metric.update(failureCount);
         }
@@ -280,13 +270,10 @@ public class SSTableImporter
                          .compose(uploadPathBuilder::isValidDirectory)
                          .compose(stagingDirectory -> vertx.fileSystem()
                                                            .deleteRecursive(stagingDirectory, true))
-                         .onSuccess(v ->
-                                    LOGGER.debug("Successfully removed staging directory for uploadId={}, " +
-                                                 "instance={}, options={}", options.uploadId, options.host, options))
-                         .onFailure(cause ->
-                                    LOGGER.error("Failed to remove staging directory for uploadId={}, " +
-                                                 "instance={}, options={}", options.uploadId, options.host, options,
-                                                 cause));
+                         .onSuccess(v -> LOGGER.debug("Successfully removed staging directory for uploadId={}, " + "instance={}, options={}", options.uploadId,
+                                 options.host, options))
+                         .onFailure(cause -> LOGGER.error("Failed to remove staging directory for uploadId={}, " + "instance={}, options={}", options.uploadId,
+                                 options.host, options, cause));
     }
 
     /**
@@ -297,15 +284,20 @@ public class SSTableImporter
         Map<String, Integer> aggregates = new HashMap<>();
         for (Map.Entry<ImportId, ImportQueue> entry : importQueuePerHost.entrySet())
         {
-            aggregates.compute(entry.getKey().host, (k, v) -> entry.getValue().size() + (v == null ? 0 : v));
+            aggregates.compute(entry.getKey().host, (k,
+                                                     v) -> entry.getValue()
+                                                                .size()
+                                                             + (v == null ? 0 : v));
         }
 
-        aggregates.forEach((host, count) -> {
+        aggregates.forEach((host,
+                            count) -> {
             try
             {
                 // Report aggregate metrics for the queues
                 InstanceMetadata instance = metadataFetcher.instance(host);
-                instance.metrics().sstableImport().pendingImports.metric.setValue(count);
+                instance.metrics()
+                        .sstableImport().pendingImports.metric.setValue(count);
             }
             catch (Exception e)
             {
@@ -315,8 +307,7 @@ public class SSTableImporter
     }
 
     /**
-     * A {@link ConcurrentLinkedQueue} that allows for locking the queue while operating on it. The queue
-     * must be unlocked once the operations are complete.
+     * A {@link ConcurrentLinkedQueue} that allows for locking the queue while operating on it. The queue must be unlocked once the operations are complete.
      */
     static class ImportQueue extends ConcurrentLinkedQueue<AbstractMap.SimpleEntry<Promise<Void>, ImportOptions>>
     {
@@ -407,21 +398,15 @@ public class SSTableImporter
          */
         public boolean equals(Object o)
         {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
             ImportOptions options = (ImportOptions) o;
-            return resetLevel == options.resetLevel
-                   && clearRepaired == options.clearRepaired
-                   && verifySSTables == options.verifySSTables
-                   && verifyTokens == options.verifyTokens
-                   && invalidateCaches == options.invalidateCaches
-                   && extendedVerify == options.extendedVerify
-                   && copyData == options.copyData
-                   && host.equals(options.host)
-                   && keyspace.equals(options.keyspace)
-                   && tableName.equals(options.tableName)
-                   && directory.equals(options.directory)
-                   && uploadId.equals(options.uploadId);
+            return resetLevel == options.resetLevel && clearRepaired == options.clearRepaired && verifySSTables == options.verifySSTables
+                    && verifyTokens == options.verifyTokens && invalidateCaches == options.invalidateCaches && extendedVerify == options.extendedVerify
+                    && copyData == options.copyData && host.equals(options.host) && keyspace.equals(options.keyspace) && tableName.equals(options.tableName)
+                    && directory.equals(options.directory) && uploadId.equals(options.uploadId);
         }
 
         /**
@@ -429,8 +414,8 @@ public class SSTableImporter
          */
         public int hashCode()
         {
-            return Objects.hash(host, keyspace, tableName, directory, uploadId, resetLevel, clearRepaired,
-                                verifySSTables, verifyTokens, invalidateCaches, extendedVerify, copyData);
+            return Objects.hash(host, keyspace, tableName, directory, uploadId, resetLevel, clearRepaired, verifySSTables, verifyTokens, invalidateCaches,
+                    extendedVerify, copyData);
         }
 
         /**
@@ -438,20 +423,10 @@ public class SSTableImporter
          */
         public String toString()
         {
-            return "ImportOptions{" +
-                   "host='" + host + '\'' +
-                   ", keyspace='" + keyspace + '\'' +
-                   ", tableName='" + tableName + '\'' +
-                   ", directory='" + directory + '\'' +
-                   ", uploadId='" + uploadId + '\'' +
-                   ", resetLevel=" + resetLevel +
-                   ", clearRepaired=" + clearRepaired +
-                   ", verifySSTables=" + verifySSTables +
-                   ", verifyTokens=" + verifyTokens +
-                   ", invalidateCaches=" + invalidateCaches +
-                   ", extendedVerify=" + extendedVerify +
-                   ", copyData=" + copyData +
-                   '}';
+            return "ImportOptions{" + "host='" + host + '\'' + ", keyspace='" + keyspace + '\'' + ", tableName='" + tableName + '\'' + ", directory='"
+                    + directory + '\'' + ", uploadId='" + uploadId + '\'' + ", resetLevel=" + resetLevel + ", clearRepaired=" + clearRepaired
+                    + ", verifySSTables=" + verifySSTables + ", verifyTokens=" + verifyTokens + ", invalidateCaches=" + invalidateCaches + ", extendedVerify="
+                    + extendedVerify + ", copyData=" + copyData + '}';
         }
 
         /**
@@ -637,7 +612,9 @@ public class SSTableImporter
         private final String host;
         private final int hashCode;
 
-        public ImportId(String host, String keyspace, String table)
+        public ImportId(String host,
+                        String keyspace,
+                        String table)
         {
             this.host = host;
             this.hashCode = Objects.hash(host, keyspace, table);
@@ -646,11 +623,12 @@ public class SSTableImporter
         @Override
         public boolean equals(Object o)
         {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
             ImportId importId = (ImportId) o;
-            return hashCode == importId.hashCode
-                   && Objects.equals(host, importId.host);
+            return hashCode == importId.hashCode && Objects.equals(host, importId.host);
         }
 
         @Override

@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.common;
 
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
@@ -33,7 +31,7 @@ import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
-
+import org.junit.jupiter.api.extension.ExtendWith;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
@@ -52,102 +50,95 @@ public class CQLSessionProviderTest extends IntegrationTestBase
     @Override
     protected int[] getInstancesToManage(int clusterSize)
     {
-        return new int[] {1, 2};
+        return new int[] { 1, 2};
     }
 
     @CassandraIntegrationTest(nodesPerDc = 2, startCluster = false)
-    void testCqlSessionProviderWorksAsExpected(VertxTestContext context, CassandraTestContext cassandraTestContext)
-    throws Exception
+    void testCqlSessionProviderWorksAsExpected(VertxTestContext context,
+                                               CassandraTestContext cassandraTestContext)
+            throws Exception
     {
         UpgradeableCluster cluster = cassandraTestContext.cluster();
         testWithClient(context, false, webClient -> {
-                           // To start, both instances are stopped, so we should get 503s for both
-                           buildInstanceHealthRequest(webClient, "1")
-                           .send()
-                           .onSuccess(response -> assertHealthCheckFailed(response, context))
-                           .compose(_ignored ->
-                                    buildInstanceHealthRequest(webClient, "2")
-                                    .send()
-                                    .onSuccess(response -> assertHealthCheckFailed(response, context)))
-                           .compose(_ignored ->
-                                    buildKeyspaceRequest(webClient)
-                                    .send()
-                                    // With no instances available in the cluster, keyspace requests should fail
-                                    .onSuccess(response -> assertKeyspaceFailed(response, context)))
-                           .compose(_ignored -> {
-                               // Start instance 1 and check both again
-                               return Future.future(promise -> {
-                                   vertx.eventBus()
-                                        .localConsumer(ON_CASSANDRA_CQL_READY.address(),
-                                                       (Message<JsonObject> message) -> {
-                                                           if (message.body().getInteger("cassandraInstanceId") == 1)
-                                                           {
-                                                               promise.complete();
-                                                           }
-                                                       });
-                                   cluster.get(1).startup();
-                               });
-                           })
-                           .compose(_ignored ->
-                                    buildInstanceHealthRequest(webClient, "1")
-                                    .send()
-                                    .onSuccess(response -> assertHealthCheckOk(response, context)))
-                           .compose(_ignored ->
-                                    buildInstanceHealthRequest(webClient, "2")
-                                    .send()
-                                    .onSuccess(response -> assertHealthCheckFailed(response, context))
-                           )
-                           .compose(_ignored ->
-                                    // Even with only 1 instance connected/up, we should still have keyspace metadata
-                                    buildKeyspaceRequest(webClient)
-                                    .send()
-                                    .onSuccess(response -> assertKeyspaceOk(response, context)))
-                           .compose(_ignored -> {
-                               // Start instance 2 and check both again
-                               return Future.future(promise -> {
-                                   vertx.eventBus()
-                                        .localConsumer(ON_CASSANDRA_CQL_READY.address(),
-                                                       (Message<JsonObject> message) -> {
-                                                           if (message.body().getInteger("cassandraInstanceId") == 2)
-                                                           {
-                                                               promise.complete();
-                                                           }
-                                                       });
-                                   cluster.get(2).startup();
-                               });
-                           })
-                           .compose(_ignored ->
-                                    buildInstanceHealthRequest(webClient, "1")
-                                    .send()
-                                    .onSuccess(response -> assertHealthCheckOk(response, context)))
-                           .compose(_ignored ->
-                                    buildInstanceHealthRequest(webClient, "2")
-                                    .send()
-                                    .onSuccess(response -> assertHealthCheckOk(response, context))
-                           )
-                           .onSuccess(_ignored -> context.completeNow())
-                           .onFailure(context::failNow);
-                       }
-        );
+            // To start, both instances are stopped, so we should get 503s for both
+            buildInstanceHealthRequest(webClient, "1").send()
+                                                      .onSuccess(response -> assertHealthCheckFailed(response, context))
+                                                      .compose(_ignored -> buildInstanceHealthRequest(webClient, "2").send()
+                                                                                                                     .onSuccess(
+                                                                                                                             response -> assertHealthCheckFailed(
+                                                                                                                                     response, context)))
+                                                      .compose(_ignored -> buildKeyspaceRequest(webClient).send()
+                                                                                                          // With no instances available in the cluster,
+                                                                                                          // keyspace requests should fail
+                                                                                                          .onSuccess(response -> assertKeyspaceFailed(response,
+                                                                                                                  context)))
+                                                      .compose(_ignored -> {
+                                                          // Start instance 1 and check both again
+                                                          return Future.future(promise -> {
+                                                              vertx.eventBus()
+                                                                   .localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
+                                                                       if (message.body()
+                                                                                  .getInteger("cassandraInstanceId") == 1)
+                                                                       {
+                                                                           promise.complete();
+                                                                       }
+                                                                   });
+                                                              cluster.get(1)
+                                                                     .startup();
+                                                          });
+                                                      })
+                                                      .compose(_ignored -> buildInstanceHealthRequest(webClient, "1").send()
+                                                                                                                     .onSuccess(response -> assertHealthCheckOk(
+                                                                                                                             response, context)))
+                                                      .compose(_ignored -> buildInstanceHealthRequest(webClient, "2").send()
+                                                                                                                     .onSuccess(
+                                                                                                                             response -> assertHealthCheckFailed(
+                                                                                                                                     response, context)))
+                                                      .compose(_ignored ->
+            // Even with only 1 instance connected/up, we should still have keyspace metadata
+            buildKeyspaceRequest(webClient).send()
+                                           .onSuccess(response -> assertKeyspaceOk(response, context)))
+                                                      .compose(_ignored -> {
+                                                          // Start instance 2 and check both again
+                                                          return Future.future(promise -> {
+                                                              vertx.eventBus()
+                                                                   .localConsumer(ON_CASSANDRA_CQL_READY.address(), (Message<JsonObject> message) -> {
+                                                                       if (message.body()
+                                                                                  .getInteger("cassandraInstanceId") == 2)
+                                                                       {
+                                                                           promise.complete();
+                                                                       }
+                                                                   });
+                                                              cluster.get(2)
+                                                                     .startup();
+                                                          });
+                                                      })
+                                                      .compose(_ignored -> buildInstanceHealthRequest(webClient, "1").send()
+                                                                                                                     .onSuccess(response -> assertHealthCheckOk(
+                                                                                                                             response, context)))
+                                                      .compose(_ignored -> buildInstanceHealthRequest(webClient, "2").send()
+                                                                                                                     .onSuccess(response -> assertHealthCheckOk(
+                                                                                                                             response, context)))
+                                                      .onSuccess(_ignored -> context.completeNow())
+                                                      .onFailure(context::failNow);
+        });
     }
 
-    private HttpRequest<String> buildInstanceHealthRequest(WebClient webClient, String instanceId)
+    private HttpRequest<String> buildInstanceHealthRequest(WebClient webClient,
+                                                           String instanceId)
     {
-        return webClient.get(server.actualPort(),
-                             "localhost",
-                             "/api/v1/cassandra/native/__health?instanceId=" + instanceId)
+        return webClient.get(server.actualPort(), "localhost", "/api/v1/cassandra/native/__health?instanceId=" + instanceId)
                         .as(BodyCodec.string());
     }
 
     private HttpRequest<String> buildKeyspaceRequest(WebClient webClient)
     {
-        return webClient.get(server.actualPort(),
-                             "localhost",
-                             "/api/v1/schema/keyspaces")
+        return webClient.get(server.actualPort(), "localhost", "/api/v1/schema/keyspaces")
                         .as(BodyCodec.string());
     }
 
-    private void assertHealthCheckOk(HttpResponse<String> response, VertxTestContext context)
+    private void assertHealthCheckOk(HttpResponse<String> response,
+                                     VertxTestContext context)
     {
         context.verify(() -> {
             assertThat(response.statusCode()).isEqualTo(OK.code());
@@ -155,7 +146,8 @@ public class CQLSessionProviderTest extends IntegrationTestBase
         });
     }
 
-    private void assertHealthCheckFailed(HttpResponse<String> response, VertxTestContext context)
+    private void assertHealthCheckFailed(HttpResponse<String> response,
+                                         VertxTestContext context)
     {
         context.verify(() -> {
             assertThat(response.statusCode()).isEqualTo(SERVICE_UNAVAILABLE.code());
@@ -163,7 +155,8 @@ public class CQLSessionProviderTest extends IntegrationTestBase
         });
     }
 
-    private void assertKeyspaceOk(HttpResponse<String> response, VertxTestContext context)
+    private void assertKeyspaceOk(HttpResponse<String> response,
+                                  VertxTestContext context)
     {
         context.verify(() -> {
             assertThat(response.statusCode()).isEqualTo(OK.code());
@@ -171,7 +164,8 @@ public class CQLSessionProviderTest extends IntegrationTestBase
         });
     }
 
-    private void assertKeyspaceFailed(HttpResponse<String> response, VertxTestContext context)
+    private void assertKeyspaceFailed(HttpResponse<String> response,
+                                      VertxTestContext context)
     {
         context.verify(() -> {
             assertThat(response.statusCode()).isEqualTo(SERVICE_UNAVAILABLE.code());

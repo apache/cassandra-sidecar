@@ -25,7 +25,6 @@ import net.bytebuddy.dynamic.TypeResolutionStrategy;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.pool.TypePool;
-
 import static net.bytebuddy.matcher.ElementMatchers.named;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
@@ -35,10 +34,11 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 public class BootstrapBBUtils
 {
     /**
-     * Note that the test class _must_ define the `setBootstrapState` method in order for the installed intercepter to be effective.
-     * See {@code ReplacementTest.BBHelperReplacementsNode} for example
+     * Note that the test class _must_ define the `setBootstrapState` method in order for the installed intercepter to be effective. See
+     * {@code ReplacementTest.BBHelperReplacementsNode} for example
      */
-    public static void installSetBoostrapStateInterceptor(ClassLoader cl, Class<?> interceptor)
+    public static void installSetBoostrapStateInterceptor(ClassLoader cl,
+                                                          Class<?> interceptor)
     {
         TypePool typePool = TypePool.Default.of(cl);
         TypeDescription description = typePool.describe("org.apache.cassandra.db.SystemKeyspace")
@@ -51,11 +51,12 @@ public class BootstrapBBUtils
                        .load(cl, ClassLoadingStrategy.Default.INJECTION);
     }
 
-    public static void installDecommissionIntercepter(ClassLoader cl, Class<?> interceptor)
+    public static void installDecommissionIntercepter(ClassLoader cl,
+                                                      Class<?> interceptor)
     {
 
-        // "org.apache.cassandra.service.StorageService"  "operationMode"
-        //  "org.apache.cassandra.tcm.sequences.InProgressSequences" "isLeave"
+        // "org.apache.cassandra.service.StorageService" "operationMode"
+        // "org.apache.cassandra.tcm.sequences.InProgressSequences" "isLeave"
         TypePool typePool = TypePool.Default.of(cl);
         TypeDescription description = typePool.describe("org.apache.cassandra.service.StorageService")
                                               .resolve();

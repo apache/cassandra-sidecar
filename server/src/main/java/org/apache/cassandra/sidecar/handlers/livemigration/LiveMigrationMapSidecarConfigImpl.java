@@ -18,10 +18,9 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
-import java.util.Map;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.util.Map;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -44,13 +43,15 @@ public class LiveMigrationMapSidecarConfigImpl implements LiveMigrationMap
     @Override
     public boolean isSource(@NotNull InstanceMetadata instanceMeta)
     {
-        return liveMigrationConfiguration.migrationMap().containsKey(instanceMeta.host());
+        return liveMigrationConfiguration.migrationMap()
+                                         .containsKey(instanceMeta.host());
     }
 
     @Override
     public boolean isDestination(@NotNull InstanceMetadata instanceMeta)
     {
-        return liveMigrationConfiguration.migrationMap().containsValue(instanceMeta.host());
+        return liveMigrationConfiguration.migrationMap()
+                                         .containsValue(instanceMeta.host());
     }
 
     @Override

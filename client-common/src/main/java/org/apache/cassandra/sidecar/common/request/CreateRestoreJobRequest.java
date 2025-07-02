@@ -33,11 +33,13 @@ public class CreateRestoreJobRequest extends JsonRequest<CreateRestoreJobRespons
     /**
      * Constructs a decodable request with the provided parameters
      *
-     * @param keyspace       name of the keyspace in the cluster
-     * @param table          name of the table in the cluster
+     * @param keyspace name of the keyspace in the cluster
+     * @param table name of the table in the cluster
      * @param requestPayload request payload
      */
-    public CreateRestoreJobRequest(String keyspace, String table, CreateRestoreJobRequestPayload requestPayload)
+    public CreateRestoreJobRequest(String keyspace,
+                                   String table,
+                                   CreateRestoreJobRequestPayload requestPayload)
     {
         super(requestURI(keyspace, table));
         this.requestPayload = requestPayload;
@@ -55,10 +57,10 @@ public class CreateRestoreJobRequest extends JsonRequest<CreateRestoreJobRespons
         return requestPayload;
     }
 
-    static String requestURI(String keyspace, String table)
+    static String requestURI(String keyspace,
+                             String table)
     {
-        return ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE
-               .replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
-               .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table);
+        return ApiEndpointsV1.CREATE_RESTORE_JOB_ROUTE.replaceAll(ApiEndpointsV1.KEYSPACE_PATH_PARAM, keyspace)
+                                                      .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, table);
     }
 }

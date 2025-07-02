@@ -18,14 +18,6 @@
 
 package org.apache.cassandra.sidecar.acl;
 
-import java.nio.file.Path;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import javax.net.ssl.SSLHandshakeException;
-
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import com.datastax.driver.core.Session;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
@@ -33,12 +25,16 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.AuthMode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
-
+import javax.net.ssl.SSLHandshakeException;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.apache.cassandra.sidecar.acl.RoleBasedAuthorizationIntegrationTest.MIN_VERSION_WITH_MTLS;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.AUTH_ROLE;
 import static org.apache.cassandra.sidecar.testing.IntegrationTestModule.ADMIN_IDENTITY;
@@ -65,11 +61,12 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testAssociatingRoleWithNonAdminIdentity(VertxTestContext context, CassandraTestContext cassandraTestContext) throws Exception
+    void testAssociatingRoleWithNonAdminIdentity(VertxTestContext context,
+                                                 CassandraTestContext cassandraTestContext)
+            throws Exception
     {
-        assumeThat(cassandraTestContext.version.major)
-        .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
-        .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
+        assumeThat(cassandraTestContext.version.major).withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
+                                                      .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
 
         prepareForTest(cassandraTestContext);
 
@@ -139,11 +136,12 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testTransitiveSuperUser(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
+    void testTransitiveSuperUser(VertxTestContext context,
+                                 CassandraTestContext cassandraContext)
+            throws Exception
     {
-        assumeThat(cassandraContext.version.major)
-        .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
-        .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
+        assumeThat(cassandraContext.version.major).withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
+                                                  .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
 
         prepareForTest(cassandraContext);
 
@@ -178,11 +176,12 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest(authMode = AuthMode.MUTUAL_TLS)
-    void testRoleIntended(VertxTestContext context, CassandraTestContext cassandraContext) throws Exception
+    void testRoleIntended(VertxTestContext context,
+                          CassandraTestContext cassandraContext)
+            throws Exception
     {
-        assumeThat(cassandraContext.version.major)
-        .withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
-        .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
+        assumeThat(cassandraContext.version.major).withFailMessage("mTLS authentication is not supported in 4.0 Cassandra version")
+                                                  .isGreaterThanOrEqualTo(MIN_VERSION_WITH_MTLS);
 
         prepareForTest(cassandraContext);
 
@@ -218,12 +217,19 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         waitForSchemaReady(30, TimeUnit.SECONDS);
     }
 
-    private void verifyAccess(WebClient client, boolean expectForbidden, VertxTestContext context, CountDownLatch latch)
+    private void verifyAccess(WebClient client,
+                              boolean expectForbidden,
+                              VertxTestContext context,
+                              CountDownLatch latch)
     {
         verifyAccess(client, null, expectForbidden, context, latch);
     }
 
-    private void verifyAccess(WebClient client, String role, boolean expectForbidden, VertxTestContext context, CountDownLatch latch)
+    private void verifyAccess(WebClient client,
+                              String role,
+                              boolean expectForbidden,
+                              VertxTestContext context,
+                              CountDownLatch latch)
     {
         String testRoute = "/api/v1/schema/keyspaces";
         HttpRequest<Buffer> request = client.get(server.actualPort(), "127.0.0.1", testRoute);
@@ -240,12 +246,15 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
 
             if (expectForbidden)
             {
-                assertThat(response.result().statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
+                assertThat(response.result()
+                                   .statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
             }
             else
             {
-                assertThat(response.result().statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                SchemaResponse schemaResponse = response.result().bodyAsJson(SchemaResponse.class);
+                assertThat(response.result()
+                                   .statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                SchemaResponse schemaResponse = response.result()
+                                                        .bodyAsJson(SchemaResponse.class);
                 assertThat(schemaResponse).isNotNull();
                 assertThat(schemaResponse.keyspace()).isNull();
                 assertThat(schemaResponse.schema()).isNotNull();
@@ -254,21 +263,26 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         });
     }
 
-    private void insertIdentityRole(CassandraTestContext cassandraContext, String identity, String role)
+    private void insertIdentityRole(CassandraTestContext cassandraContext,
+                                    String identity,
+                                    String role)
     {
-        String statement = String.format("INSERT INTO system_auth.identity_to_role (identity, role) VALUES ('%s','%s')",
-                                         identity, role);
-        cassandraContext.cluster().schemaChangeIgnoringStoppedInstances(statement);
+        String statement = String.format("INSERT INTO system_auth.identity_to_role (identity, role) VALUES ('%s','%s')", identity, role);
+        cassandraContext.cluster()
+                        .schemaChangeIgnoringStoppedInstances(statement);
     }
 
-    private void grantSidecarPermission(String role, String resource, String permission)
+    private void grantSidecarPermission(String role,
+                                        String resource,
+                                        String permission)
     {
         Session session = maybeGetSession();
-        session.execute(String.format("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
-                                      "VALUES ('%s', '%s', {'%s'})", role, resource, permission));
+        session.execute(String.format("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " + "VALUES ('%s', '%s', {'%s'})", role,
+                resource, permission));
     }
 
-    private void grantRole(String role, String roleToAssign)
+    private void grantRole(String role,
+                           String roleToAssign)
     {
         Session session = maybeGetSession();
         session.execute(String.format("GRANT %s TO %s", roleToAssign, role));

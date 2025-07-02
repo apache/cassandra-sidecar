@@ -32,8 +32,7 @@ import org.apache.cassandra.sidecar.common.response.data.RestoreJobProgressRespo
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobSummaryResponsePayload;
 
 /**
- * An extension to sidecar client interface.
- * It includes the APIs for invoking blob based restore.
+ * An extension to sidecar client interface. It includes the APIs for invoking blob based restore.
  */
 public interface SidecarClientBlobRestoreExtension
 {
@@ -41,42 +40,48 @@ public interface SidecarClientBlobRestoreExtension
      * Create a new restore job
      *
      * @param keyspace name of the keyspace in the cluster
-     * @param table    name of the table in the cluster
-     * @param payload  request payload
+     * @param table name of the table in the cluster
+     * @param payload request payload
      * @return a completable future of {@link CreateRestoreJobResponsePayload}
      */
-    CompletableFuture<CreateRestoreJobResponsePayload> createRestoreJob(String keyspace, String table,
+    CompletableFuture<CreateRestoreJobResponsePayload> createRestoreJob(String keyspace,
+                                                                        String table,
                                                                         CreateRestoreJobRequestPayload payload);
 
     /**
      * Update an existing restore job
      *
      * @param keyspace name of the keyspace in the cluster
-     * @param table    name of the table in the cluster
-     * @param jobId    job ID of the restore job to be updated
-     * @param payload  request payload
+     * @param table name of the table in the cluster
+     * @param jobId job ID of the restore job to be updated
+     * @param payload request payload
      * @return a completable future
      */
-    CompletableFuture<Void> updateRestoreJob(String keyspace, String table, UUID jobId,
+    CompletableFuture<Void> updateRestoreJob(String keyspace,
+                                             String table,
+                                             UUID jobId,
                                              UpdateRestoreJobRequestPayload payload);
 
     /**
      * Abort an existing restore job
      *
      * @param keyspace name of the keyspace in the cluster
-     * @param table    name of the table in the cluster
-     * @param jobId    job ID of the restore job to be updated
-     * @param payload  request payload
+     * @param table name of the table in the cluster
+     * @param jobId job ID of the restore job to be updated
+     * @param payload request payload
      * @return a completable future
      */
-    CompletableFuture<Void> abortRestoreJob(String keyspace, String table, UUID jobId,
+    CompletableFuture<Void> abortRestoreJob(String keyspace,
+                                            String table,
+                                            UUID jobId,
                                             AbortRestoreJobRequestPayload payload);
 
     /**
-     * Abort an existing restore job with no reason
-     * See {@link #abortRestoreJob(String, String, UUID, AbortRestoreJobRequestPayload)}
+     * Abort an existing restore job with no reason See {@link #abortRestoreJob(String, String, UUID, AbortRestoreJobRequestPayload)}
      */
-    default CompletableFuture<Void> abortRestoreJob(String keyspace, String table, UUID jobId)
+    default CompletableFuture<Void> abortRestoreJob(String keyspace,
+                                                    String table,
+                                                    UUID jobId)
     {
         return abortRestoreJob(keyspace, table, jobId, null);
     }
@@ -85,21 +90,22 @@ public interface SidecarClientBlobRestoreExtension
      * Get the summary of an existing restore job
      *
      * @param keyspace name of the keyspace in the cluster
-     * @param table    name of the table in the cluster
-     * @param jobId    job ID of the restore job to be updated
+     * @param table name of the table in the cluster
+     * @param jobId job ID of the restore job to be updated
      * @return a completable future of {@link RestoreJobSummaryResponsePayload}
      */
-    CompletableFuture<RestoreJobSummaryResponsePayload> restoreJobSummary(String keyspace, String table, UUID jobId);
+    CompletableFuture<RestoreJobSummaryResponsePayload> restoreJobSummary(String keyspace,
+                                                                          String table,
+                                                                          UUID jobId);
 
     /**
-     * Create a new slice in the restore job
-     * or check the status of restore of an existing slice identified by the {@link CreateSliceRequestPayload}
+     * Create a new slice in the restore job or check the status of restore of an existing slice identified by the {@link CreateSliceRequestPayload}
      *
      * @param instance the instance where the request will be executed
      * @param keyspace name of the keyspace in the cluster
-     * @param table    name of the table in the cluster
-     * @param jobId    job ID of the restore job to create slice
-     * @param payload  request payload
+     * @param table name of the table in the cluster
+     * @param jobId job ID of the restore job to create slice
+     * @param payload request payload
      * @return a completable future
      */
     CompletableFuture<Void> createRestoreJobSlice(SidecarInstance instance,
@@ -109,14 +115,14 @@ public interface SidecarClientBlobRestoreExtension
                                                   CreateSliceRequestPayload payload);
 
     /**
-     * Create a new slice in the restore job on any sidecar instance.
-     * Unlike {@link SidecarClientBlobRestoreExtension#createRestoreJobSlice(SidecarInstance, String, String, UUID, CreateSliceRequestPayload)},
-     * it does _not_ check the status of the indicated slice. Instead, use {@code #restoreJobStatus} to fetch the job status.
+     * Create a new slice in the restore job on any sidecar instance. Unlike
+     * {@link SidecarClientBlobRestoreExtension#createRestoreJobSlice(SidecarInstance, String, String, UUID, CreateSliceRequestPayload)}, it does _not_ check
+     * the status of the indicated slice. Instead, use {@code #restoreJobStatus} to fetch the job status.
      *
      * @param keyspace name of the keyspace in the cluster
-     * @param table    name of the table in the cluster
-     * @param jobId    job ID of the restore job to create slice
-     * @param payload  request payload
+     * @param table name of the table in the cluster
+     * @param jobId job ID of the restore job to create slice
+     * @param payload request payload
      * @return a completable future
      */
     CompletableFuture<Void> createRestoreJobSlice(String keyspace,

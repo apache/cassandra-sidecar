@@ -18,23 +18,20 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
-
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
 import static org.apache.cassandra.sidecar.metrics.SidecarMetrics.APP_PREFIX;
 
 /**
- * A {@link StatsCounter} implementation that accumulates statistics during the operation
- * of a {@link Cache}
+ * A {@link StatsCounter} implementation that accumulates statistics during the operation of a {@link Cache}
  */
 public class CacheStatsCounter implements StatsCounter
 {
@@ -48,7 +45,8 @@ public class CacheStatsCounter implements StatsCounter
     protected final NamedMetric<DeltaGauge> evictions;
     protected final LongAdder totalLoadTimeNanos = new LongAdder();
 
-    public CacheStatsCounter(MetricRegistry metricRegistry, String cacheName)
+    public CacheStatsCounter(MetricRegistry metricRegistry,
+                             String cacheName)
     {
         this.metricRegistry = Objects.requireNonNull(metricRegistry, "Metric registry can not be null");
 
@@ -119,9 +117,8 @@ public class CacheStatsCounter implements StatsCounter
     @Override
     public @NonNull CacheStats snapshot()
     {
-        return CacheStats.of(hits.metric.getValue(), misses.metric.getValue(),
-                             loadSuccess.metric.getCount(), loadFailure.metric.getCount(),
-                             totalLoadTimeNanos.sum(), evictions.metric.getValue(), 0);
+        return CacheStats.of(hits.metric.getValue(), misses.metric.getValue(), loadSuccess.metric.getCount(), loadFailure.metric.getCount(),
+                totalLoadTimeNanos.sum(), evictions.metric.getValue(), 0);
     }
 
     @Override
