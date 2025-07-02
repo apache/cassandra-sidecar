@@ -431,7 +431,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         }
 
         // when job should restore to local datacenter only, but the target datacenter is not the local one
-        return Objects.equals(localDatacenter, job.localDatacenter);
+        return !Objects.equals(localDatacenter, job.localDatacenter);
     }
 
     private boolean shouldFindSlicesAndSubmit(RestoreJob job)
