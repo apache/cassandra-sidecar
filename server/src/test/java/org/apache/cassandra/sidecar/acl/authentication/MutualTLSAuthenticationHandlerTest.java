@@ -271,7 +271,7 @@ class MutualTLSAuthenticationHandlerTest
             assertThat(res.failed()).isTrue();
             waitForResponse.countDown();
         });
-        waitForResponse.await(1, TimeUnit.MINUTES);
+        assertThat(waitForResponse.await(1, TimeUnit.MINUTES)).isTrue();
     }
 
     TestMTLSModule testModule() throws Exception
