@@ -917,13 +917,12 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      * @param targetFilePath destination file path to save file coming from remote
      * @return a CompletableFuture representing the completion of the operation
      */
-    public CompletableFuture<Boolean> liveMigrationStreamFileAsync(SidecarInstance instance, String reqPath, String targetFilePath)
+    public CompletableFuture<Void> liveMigrationStreamFileAsync(SidecarInstance instance, String reqPath, String targetFilePath)
     {
         return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
                                                             .request(new StreamFileRequest(reqPath, targetFilePath))
                                                             .retryPolicy(new LiveMigrationDownloadRetryPolicy(defaultRetryPolicy, targetFilePath))
-                                                            .build())
-                       .thenApply(v -> true);
+                                                            .build());
     }
 
     /**

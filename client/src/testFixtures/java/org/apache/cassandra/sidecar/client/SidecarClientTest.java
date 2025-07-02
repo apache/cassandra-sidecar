@@ -1817,7 +1817,7 @@ abstract class SidecarClientTest
     }
 
     @Test
-    public void testLiveMigrationListInstanceFiles() throws ExecutionException, InterruptedException, JsonProcessingException
+    void testLiveMigrationListInstanceFiles() throws ExecutionException, InterruptedException, JsonProcessingException
     {
         List<InstanceFileInfo> fileInfoList = Arrays.asList(new InstanceFileInfo("commit-log1", 100, FILE, System.currentTimeMillis()),
                                                             new InstanceFileInfo("commit-log2", 100, DIRECTORY, System.currentTimeMillis()));
@@ -1838,7 +1838,7 @@ abstract class SidecarClientTest
     }
 
     @Test
-    public void testLiveMigrationStreamFileAsync(@TempDir Path tempDirectory) throws ExecutionException, InterruptedException, IOException
+    void testLiveMigrationStreamFileAsync(@TempDir Path tempDirectory) throws ExecutionException, InterruptedException, IOException
     {
         String dummyFileContent = "Some dummy file content";
         MockResponse response = new MockResponse();
@@ -1851,17 +1851,15 @@ abstract class SidecarClientTest
         SidecarInstance instance = instances.get(0);
         String fileUrl = LIVE_MIGRATION_FILES_API + "/data/0/test_file.text";
 
-        Boolean result = client.liveMigrationStreamFileAsync(instance, fileUrl, filePath.toString()).get();
+        client.liveMigrationStreamFileAsync(instance, fileUrl, filePath.toString()).get();
 
-        assertThat(result).isNotNull();
-        assertThat(result).isTrue();
         assertThat(Files.exists(filePath)).isTrue();
         assertThat(new String(Files.readAllBytes(filePath), StandardCharsets.UTF_8)).isEqualTo(dummyFileContent);
         validateResponseServed(fileUrl);
     }
 
     @Test
-    public void testLiveMigrationStreamFileAsyncFileNotFound(@TempDir Path tempDirectory) throws ExecutionException, InterruptedException
+    void testLiveMigrationStreamFileAsyncFileNotFound(@TempDir Path tempDirectory) throws ExecutionException, InterruptedException
     {
         MockResponse response = new MockResponse();
         response.setResponseCode(404);
@@ -1871,16 +1869,14 @@ abstract class SidecarClientTest
         SidecarInstance instance = instances.get(0);
         String fileUrl = LIVE_MIGRATION_FILES_API + "/data/0/test_file.text";
 
-        Boolean result = client.liveMigrationStreamFileAsync(instance, fileUrl, filePath.toString()).get();
+        client.liveMigrationStreamFileAsync(instance, fileUrl, filePath.toString()).get();
 
-        assertThat(result).isNotNull();
-        assertThat(result).isTrue(); // File not found is treated as success for LiveMigration
         assertThat(Files.exists(filePath)).isFalse();
         validateResponseServed(fileUrl);
     }
 
     @Test
-    public void testLiveMigrationStreamFileAsyncBadRequest(@TempDir Path tempDirectory) throws InterruptedException
+    void testLiveMigrationStreamFileAsyncBadRequest(@TempDir Path tempDirectory) throws InterruptedException
     {
         MockResponse response = new MockResponse();
         response.setResponseCode(400);
@@ -1890,11 +1886,9 @@ abstract class SidecarClientTest
         SidecarInstance instance = instances.get(0);
         String fileUrl = LIVE_MIGRATION_FILES_API + "/data/0/test_file.text";
 
-        CompletableFuture<Boolean> result = client.liveMigrationStreamFileAsync(instance, fileUrl, filePath.toString());
+        CompletableFuture<Void> result = client.liveMigrationStreamFileAsync(instance, fileUrl, filePath.toString());
 
         assertThatExceptionOfType(ExecutionException.class).isThrownBy(result::get);
-        assertThat(result).isNotNull();
-        assertThat(result.isDone()).isTrue();
         assertThat(result.isCompletedExceptionally()).isTrue();
         assertThat(Files.exists(filePath)).isFalse();
         validateResponseServed(fileUrl);
