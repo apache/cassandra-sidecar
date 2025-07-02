@@ -254,6 +254,6 @@ class CreateRestoreJobRequestPayloadTest
                                  .restoreToLocalDatacenterOnly(true)
                                  .build())
         .isExactlyInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Must specify a non-empty localDatacenter when restoreToLocalDatacenterOnly is configured to true");
+        .hasMessage("Must specify a localDatacenter when restoreToLocalDatacenterOnly is true");
     }
 }
