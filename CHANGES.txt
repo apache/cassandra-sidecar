@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Avoid ending response in authentication handler, doesn't allow chaining of auth handlers (CASSSIDECAR-270)
  * Enhanced Sidecarclient to list Cassandra instance files and to download them for Live Migration (CASSSIDECAR-224)
  * Fix CdcRawDirectorySpaceCleaner (CASSSIDECAR-267)
  * Add API that allows downloading of files listed by Live Migration (CASSSIDECAR-223)

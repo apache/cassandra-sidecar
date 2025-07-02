@@ -32,6 +32,7 @@ import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.mtls.MutualTlsAuthentication;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerImpl;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
@@ -63,18 +64,13 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
     {
         if (!ctx.request().isSSL())
         {
-            ctx.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
-            return;
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "SSL connection expected for mTLS auth");
         }
 
         CertificateCredentials certificateCredentials = CertificateCredentials.fromHttpRequest(ctx.request());
         if (certificateCredentials == null)
         {
-            ctx.response()
-               .setStatusCode(UNAUTHORIZED.code())
-               .setStatusMessage("Could not extract certificates from request")
-               .end();
-            return;
+            throw wrapHttpException(UNAUTHORIZED, "Could not extract certificates from request");
         }
 
         authProvider.authenticate(certificateCredentials)
