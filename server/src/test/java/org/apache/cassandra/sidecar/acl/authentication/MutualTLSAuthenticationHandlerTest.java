@@ -44,17 +44,31 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.ClientAuth;
+import io.vertx.core.http.HttpConnection;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.JksOptions;
+import io.vertx.ext.auth.User;
+import io.vertx.ext.auth.authentication.AuthenticationProvider;
+import io.vertx.ext.auth.authentication.Credentials;
+import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
+import io.vertx.ext.web.handler.ChainAuthHandler;
+import io.vertx.ext.web.handler.impl.AuthenticationHandlerImpl;
+import io.vertx.ext.web.handler.impl.ChainAuthHandlerImpl;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.AccessControlConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
@@ -86,6 +100,7 @@ class MutualTLSAuthenticationHandlerTest
     @TempDir
     File tempDir;
 
+    private Injector injector;
     private Server server;
     private Vertx vertx;
     private CertificateBundle ca;
@@ -96,7 +111,7 @@ class MutualTLSAuthenticationHandlerTest
     void setUp() throws Exception
     {
         TestModule testModule = testModule();
-        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(testModule));
+        injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(testModule));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
 
@@ -216,6 +231,47 @@ class MutualTLSAuthenticationHandlerTest
                       testContext.completeNow();
                   });
               }));
+    }
+
+    @Test
+    void testAuthHandlerChaining() throws Exception
+    {
+        Map<String, String> params = new HashMap<>()
+        {
+            {
+                put("certificate_validator", "io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl");
+                put("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
+            }
+        };
+        ChainAuthHandlerImpl chainAuthHandlerSucceeds = (ChainAuthHandlerImpl) ChainAuthHandler.any();
+        MutualTlsAuthenticationHandlerFactory mTLSAuthFactory = injector.getInstance(MutualTlsAuthenticationHandlerFactory.class);
+        SidecarConfiguration config = injector.getInstance(SidecarConfiguration.class);
+        chainAuthHandlerSucceeds.add(mTLSAuthFactory.create(vertx, config.accessControlConfiguration(), params));
+        chainAuthHandlerSucceeds.add(new TestAuthHandler(new NoOpAuthentication(), true));
+
+        RoutingContext mockContext = mock(RoutingContext.class);
+        HttpServerRequest mockServerRequest = mock(HttpServerRequest.class);
+        HttpConnection mockHttpConnection = mock(HttpConnection.class);
+        when(mockServerRequest.connection()).thenReturn(mockHttpConnection);
+        when(mockContext.request()).thenReturn(mockServerRequest);
+
+        ChainAuthHandlerImpl chainAuthHandlerFails = (ChainAuthHandlerImpl) ChainAuthHandler.any();
+        chainAuthHandlerFails.add(mTLSAuthFactory.create(vertx, config.accessControlConfiguration(), params));
+        chainAuthHandlerFails.add(new TestAuthHandler(new NoOpAuthentication(), false));
+
+        CountDownLatch waitForResponse = new CountDownLatch(2);
+        // mTLS handler will fail without SSL, results succeeds with TestAuthHandler
+        chainAuthHandlerSucceeds.authenticate(mockContext, res -> {
+            assertThat(res.succeeded()).isTrue();
+            waitForResponse.countDown();
+        });
+
+        // response fails when TestAuthHandler fails too
+        chainAuthHandlerFails.authenticate(mockContext, res -> {
+            assertThat(res.failed()).isFalse();
+            waitForResponse.countDown();
+        });
+        waitForResponse.await(1, TimeUnit.MINUTES);
     }
 
     TestMTLSModule testModule() throws Exception
@@ -356,6 +412,43 @@ class MutualTLSAuthenticationHandlerTest
             = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory",
                                                       params);
             return Collections.singletonList(mTLSConfig);
+        }
+    }
+
+    public static class TestAuthHandler extends AuthenticationHandlerImpl<NoOpAuthentication>
+    {
+        private boolean authResponse;
+
+        public TestAuthHandler(NoOpAuthentication authProvider, boolean authResponse)
+        {
+            super(authProvider);
+            this.authResponse = authResponse;
+        }
+
+        public void authenticate(RoutingContext routingContext, Handler<AsyncResult<User>> handler)
+        {
+            if (authResponse)
+            {
+                handler.handle(Future.succeededFuture(User.fromName("dummy")));
+                return;
+            }
+            handler.handle(Future.failedFuture(new RuntimeException("dummy")));
+        }
+    }
+
+    public static class NoOpAuthentication implements AuthenticationProvider
+    {
+        @Override
+        public Future<User> authenticate(Credentials credentials)
+        {
+            return Future.succeededFuture(User.fromName("dummy"));
+        }
+
+        @Override
+        @Deprecated
+        public void authenticate(JsonObject credentials, Handler<AsyncResult<User>> resultHandler)
+        {
+            throw new UnsupportedOperationException();
         }
     }
 }
