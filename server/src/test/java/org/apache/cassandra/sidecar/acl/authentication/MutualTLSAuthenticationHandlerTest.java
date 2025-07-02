@@ -268,7 +268,7 @@ class MutualTLSAuthenticationHandlerTest
 
         // response fails when TestAuthHandler fails too
         chainAuthHandlerFails.authenticate(mockContext, res -> {
-            assertThat(res.failed()).isFalse();
+            assertThat(res.failed()).isTrue();
             waitForResponse.countDown();
         });
         waitForResponse.await(1, TimeUnit.MINUTES);
