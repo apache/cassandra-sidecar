@@ -55,6 +55,9 @@ plugins {
     id("org.nosphere.apache.rat") version "0.8.0"
 
     id 'jacoco'
+
+    // format
+    id 'com.diffplug.spotless' version "5.8.2" apply false
 }
 
 ext {
@@ -428,3 +431,6 @@ signing {
     sign buildDeb
     sign buildRpm
 }
+
+apply from: file('gradle/validation/spotless.gradle')
+apply plugin: 'eclipse'
