@@ -236,13 +236,8 @@ class MutualTLSAuthenticationHandlerTest
     @Test
     void testAuthHandlerChaining() throws Exception
     {
-        Map<String, String> params = new HashMap<>()
-        {
-            {
-                put("certificate_validator", "io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl");
-                put("certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
-            }
-        };
+        Map<String, String> params = Map.of("certificate_validator", "io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl",
+                                            "certificate_identity_extractor", "org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor");
         ChainAuthHandlerImpl chainAuthHandlerSucceeds = (ChainAuthHandlerImpl) ChainAuthHandler.any();
         MutualTlsAuthenticationHandlerFactory mTLSAuthFactory = injector.getInstance(MutualTlsAuthenticationHandlerFactory.class);
         SidecarConfiguration config = injector.getInstance(SidecarConfiguration.class);
