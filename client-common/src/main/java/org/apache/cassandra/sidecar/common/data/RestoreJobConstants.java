@@ -42,9 +42,9 @@ public class RestoreJobConstants
      * of the belonging keyspace.
      * The option should be used with caution. To help build an educated decision, when only restoring to the local
      * datacenter, but the table replicates to multiple datacenters, it could cause a large amount of repair streaming
-     * traffic. Argurably, you might want to leverage the intra-node repair feature, then you can enable this option.
-     * Another use case that could justify the option is runing distinct restore jobs, one per datacenter, concurrently.
-     * In this case, there is an external coordinator that manges the resotre job in each datacenter.
+     * traffic. Arguably, you might want to leverage the intra-node repair feature, then you can enable this option.
+     * Another use case that could justify the option is running distinct restore jobs, one per datacenter, concurrently.
+     * In this case, there is an external coordinator that manges the restore job in each datacenter.
      */
     public static final String JOB_RESTORE_TO_LOCAL_DATA_CENTER_ONLY = "restoreToLocalDatacenterOnly";
     public static final String SLICE_ID = "sliceId";

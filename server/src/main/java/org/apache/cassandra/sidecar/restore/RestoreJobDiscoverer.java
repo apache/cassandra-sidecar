@@ -426,12 +426,12 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
 
         if (localDatacenter == null)
         {
-            LOGGER.debug("The restore job should restore only to the local datacenter, but the local datacetner is undetermined yet; skip this run");
+            LOGGER.debug("The restore job should restore only to the local datacenter, but the local datacenter is undetermined yet; skip this run");
             return true;
         }
 
         // when job should restore to local datacenter only, but the target datacenter is not the local one
-        return !localDatacenter.equalsIgnoreCase(job.localDatacenter);
+        return Objects.equals(localDatacenter, job.localDatacenter);
     }
 
     private boolean shouldFindSlicesAndSubmit(RestoreJob job)

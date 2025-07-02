@@ -81,6 +81,8 @@ public class CreateRestoreJobRequestPayload
      * @param importOptions    the configured options for SSTable import
      * @param expireAtInMillis a timestamp in the future when the job is considered expired
      * @param consistencyLevel consistency level a job should satisfy
+     * @param localDatacenter  the local datacenter name; required if using local consistency level and localDatacenterOnly is specified
+     * @param localDatacenterOnly whether the job should restore to the specified local datacenter only
      */
     @JsonCreator
     public CreateRestoreJobRequestPayload(@JsonProperty(JOB_ID) UUID jobId,
@@ -106,7 +108,7 @@ public class CreateRestoreJobRequestPayload
         this.expireAtInMillis = expireAtInMillis;
         this.consistencyConfig = ConsistencyConfig.parseString(consistencyLevel, localDatacenter);
         Preconditions.checkArgument(!localDatacenterOnly || StringUtils.isNotEmpty(localDatacenter),
-                                    "Must specify a non-empty localDatacenter when restoreToLocalDatacenterOnly is configured to true");
+                                    "Must specify a localDatacenter when restoreToLocalDatacenterOnly is true");
         this.localDatacenterOnly = localDatacenterOnly;
     }
 

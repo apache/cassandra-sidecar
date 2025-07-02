@@ -406,10 +406,10 @@ class RestoreJobDiscovererTest
     }
 
     @Test
-    void testRestoreToLocalDatacenterOnlyJobIsOnHoldWhenLocalDatacenterInUndetermined()
+    void testRestoreToLocalDatacenterOnlyJobIsOnHoldWhenLocalDatacenterIsUndetermined()
     {
         // local datacenter is undetermined and the restore job is configured to restore to local datacenter only.
-        // the job is on hold until local datacenter is resolved in dicoverer.
+        // the job is on hold until local datacenter is resolved in discoverer.
         when(instanceMetadataFetcher.callOnFirstAvailableInstance(any())).thenThrow(new CassandraUnavailableException(JMX, "NodeSettings unavailable"));
         UUID jobId = UUIDs.timeBased();
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
