@@ -63,6 +63,8 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
     {
         if (!ctx.request().isSSL())
         {
+            // We fail the handler instead of throwing an exception. Directly throwing exception
+            // stops chain authentication
             handler.handle(Future.failedFuture(wrapHttpException(HttpResponseStatus.BAD_REQUEST,
                                                                  "SSL connection expected for mTLS auth")));
             return;
