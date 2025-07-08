@@ -19,8 +19,10 @@
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -69,4 +71,37 @@ public interface LiveMigrationMap
      * @return map of source and destination
      */
     Map<String, String> getMigrationMap();
+
+
+    /**
+     * Retrieves the source instance host for a given destination host in the live migration mapping.
+     * This method performs a reverse lookup in the migration map to find which source host
+     * corresponds to the specified destination host.
+     *
+     * @param destination the destination host address for which to find the corresponding source host.
+     *                    Must not be null.
+     * @return the source host address mapped to the given destination host
+     * @throws LiveMigrationInvalidRequestException if live migration is not configured (migration map is null)
+     *                                              or if no source host is found for the given destination host
+     */
+    default String getSource(String destination)
+    {
+        Objects.requireNonNull(destination);
+        Map<String, String> migrationMap = getMigrationMap();
+        if (null == migrationMap)
+        {
+            throw new LiveMigrationInvalidRequestException("Live migration not configured.");
+        }
+
+        for (Map.Entry<String, String> entry : migrationMap.entrySet())
+        {
+            if (entry.getValue().equals(destination))
+            {
+                return entry.getKey();
+            }
+        }
+
+        throw new LiveMigrationInvalidRequestException("No source for destination " + destination + " is present " +
+                                                       "in the migration map");
+    }
 }

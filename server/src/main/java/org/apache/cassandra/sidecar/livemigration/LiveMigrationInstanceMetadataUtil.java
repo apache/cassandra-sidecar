@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.livemigration;
 
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,7 +37,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.CDC_RAW_DIR;
 import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.COMMIT_LOG_DIR;
-import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.DATA_FIlE_DIR;
+import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.DATA_FILE_DIR;
 import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.HINTS_DIR;
 import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.LOCAL_SYSTEM_DATA_FILE_DIR;
 import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.SAVED_CACHES_DIR;
@@ -55,17 +56,21 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholde
 public class LiveMigrationInstanceMetadataUtil
 {
 
-    public static final String LIVE_MIGRATION_CDC_RAW_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + CDC_RAW_DIR.dirType;
-    public static final String LIVE_MIGRATION_COMMITLOG_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + COMMIT_LOG_DIR.dirType;
-    public static final String LIVE_MIGRATION_DATA_FILE_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + DATA_FIlE_DIR.dirType;
-    public static final String LIVE_MIGRATION_HINTS_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + HINTS_DIR.dirType;
-    public static final String LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API
+    public static final String LIVE_MIGRATION_CDC_RAW_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE + "/" + CDC_RAW_DIR.dirType;
+    public static final String LIVE_MIGRATION_COMMITLOG_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE + "/" + COMMIT_LOG_DIR.dirType;
+    public static final String LIVE_MIGRATION_DATA_FILE_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE + "/" + DATA_FILE_DIR.dirType;
+    public static final String LIVE_MIGRATION_HINTS_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE + "/" + HINTS_DIR.dirType;
+    public static final String LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE
                                                                                 + "/" + LOCAL_SYSTEM_DATA_FILE_DIR.dirType;
-    public static final String LIVE_MIGRATION_SAVED_CACHES_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_API + "/" + SAVED_CACHES_DIR.dirType;
+    public static final String LIVE_MIGRATION_SAVED_CACHES_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE + "/" + SAVED_CACHES_DIR.dirType;
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationInstanceMetadataUtil.class);
 
     /**
-     * List of directories Live Migration considers to transfer between source and destination.
+     * Returns all directories that need to be copied during live migration.
+     * Includes hints, commit log, saved caches, CDC, local system data, and data directories.
+     * 
+     * @param instanceMetadata the Cassandra instance metadata containing directory paths
+     * @return an unmodifiable list of directory paths to be copied during live migration
      */
     public static List<String> dirsToCopy(InstanceMetadata instanceMetadata)
     {
@@ -197,8 +202,8 @@ public class LiveMigrationInstanceMetadataUtil
      * @param metadata Cassandra instance metadata
      * @return local path for given live migration file download URL
      */
-    public static String localPath(@NotNull String fileUrl,
-                                   @NotNull InstanceMetadata metadata)
+    public static Path localPath(@NotNull String fileUrl,
+                                 @NotNull InstanceMetadata metadata)
     {
 
         if (fileUrl.contains("/../") || fileUrl.endsWith("/.."))
@@ -215,13 +220,12 @@ public class LiveMigrationInstanceMetadataUtil
             {
                 Objects.requireNonNull(entry.getValue(), () -> "No local path found for url " + fileUrl);
                 String relativePath = fileUrl.substring(entry.getKey().length());
-                return Paths.get(entry.getValue(), relativePath).toAbsolutePath().toString();
+                return Paths.get(entry.getValue(), relativePath).toAbsolutePath();
             }
         }
 
         throw new IllegalArgumentException("File url " + fileUrl + " is unknown.");
     }
-
     private static Map<String, String> migrationUrlLocalDirMap(InstanceMetadata instanceMetadata)
     {
         Map<String, String> urlToLocalDirMap = new HashMap<>();

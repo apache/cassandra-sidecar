@@ -208,15 +208,35 @@ public interface VertxRouteMapKeys
         HttpMethod HTTP_METHOD = HttpMethod.GET;
         String ROUTE_URI = ApiEndpointsV1.OPENAPI_HTML_ROUTE;
     }
+    interface LiveMigrationCancelDataCopyTaskRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PATCH;
+        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_DATA_COPY_TASK_ROUTE;
+    }
+    interface LiveMigrationCreateDataCopyTaskRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.POST;
+        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE;
+    }
+    interface LiveMigrationGetAllDataCopyTasksRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE;
+    }
+    interface LiveMigrationGetDataCopyTaskRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_DATA_COPY_TASK_ROUTE;
+    }
     interface LiveMigrationFileStreamHandlerRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.GET;
-        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_FILE_TRANSFER_API;
+        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_FILE_TRANSFER_ROUTE;
     }
     interface LiveMigrationListInstanceFilesRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.GET;
-        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_FILES_API;
+        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE;
     }
     interface SSTableCleanupRouteKey extends RouteClassKey
     {

@@ -40,9 +40,9 @@ public class DirVisitor
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(DirVisitor.class);
     private final String homeDir;
-    private final Path homeDirPath;
+    final Path homeDirPath;
     private final String pathPrefix;
-    private final MigrationFileVisitor fileVisitor;
+    final MigrationFileVisitor fileVisitor;
 
     public DirVisitor(String homeDir,
                       String pathPrefix,

@@ -327,7 +327,7 @@ class LiveMigrationInstanceMetadataUtilTest
         String cassandraHomeDir = tempDir.resolve("testLocalPathInvalidDownloadUrls").toString();
         InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
 
-        Function<String, String> localPath = (url) -> localPath(url, instanceMetadata);
+        Function<String, String> localPath = (url) -> localPath(url, instanceMetadata).toString();
 
         assertThatIllegalArgumentException()
         .isThrownBy(() -> localPath.apply(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/2/" + FILE_NAME));
@@ -349,7 +349,7 @@ class LiveMigrationInstanceMetadataUtilTest
 
     void validateLocalPath(String expectedPath, String fileDownloadUrl, InstanceMetadata instanceMetadata)
     {
-        assertThat(localPath(fileDownloadUrl, instanceMetadata)).isEqualTo(expectedPath);
+        assertThat(localPath(fileDownloadUrl, instanceMetadata).toString()).isEqualTo(expectedPath);
     }
 
     void validateIllegalLocalPath(String fileDownloadUrl, InstanceMetadata instanceMetadata)

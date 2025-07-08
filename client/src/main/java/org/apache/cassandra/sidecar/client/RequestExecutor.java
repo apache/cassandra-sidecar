@@ -254,7 +254,7 @@ public class RequestExecutor implements AutoCloseable
      * @param response        the {@link HttpResponse} received from the server
      * @param throwable       the error encountered during the request, or null if no error was encountered
      */
-    private void applyRetryPolicy(CompletableFuture<HttpResponse> future,
+    void applyRetryPolicy(CompletableFuture<HttpResponse> future,
                                   Iterator<SidecarInstance> iterator,
                                   SidecarInstance sidecarInstance,
                                   RequestContext context,

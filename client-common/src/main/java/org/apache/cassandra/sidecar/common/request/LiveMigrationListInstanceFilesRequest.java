@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.common.request;
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
 
-import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_FILES_API;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE;
 
 /**
  * Request class for Live Migration list instance files.
@@ -33,7 +33,7 @@ public class LiveMigrationListInstanceFilesRequest extends JsonRequest<InstanceF
      */
     public LiveMigrationListInstanceFilesRequest()
     {
-        super(LIVE_MIGRATION_FILES_API);
+        super(LIVE_MIGRATION_FILES_ROUTE);
     }
 
     @Override

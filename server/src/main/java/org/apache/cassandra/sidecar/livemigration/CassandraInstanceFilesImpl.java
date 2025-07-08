@@ -83,6 +83,15 @@ public class CassandraInstanceFilesImpl implements CassandraInstanceFiles
         return instanceFileInfos;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<DirVisitor> dirVisitorList()
+    {
+        return dirVisitorList(configuration.filesToExclude(), configuration.directoriesToExclude());
+    }
+
     private List<DirVisitor> dirVisitorList(Set<String> filesToExclude,
                                             Set<String> dirsToExclude)
     {

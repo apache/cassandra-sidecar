@@ -211,3 +211,4 @@ live_migration:
     - ${DATA_FILE_DIR}/*/*/snapshots
   migration_map:
     localhost1: localhost4
+  max_concurrent_downloads: 20

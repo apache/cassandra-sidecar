@@ -29,12 +29,14 @@ public interface LiveMigrationConfiguration
 
     /**
      * Files to be excluded from Live Migration.
+     *
      * @return set of file exclusion patterns.
      */
     Set<String> filesToExclude();
 
     /**
      * Directories to be excluded from Live Migration.
+     *
      * @return set of directory exclusion patterns.
      */
     Set<String> directoriesToExclude();
@@ -45,4 +47,9 @@ public interface LiveMigrationConfiguration
      * @return Map of strings where key is the source instance hostname and value is the destination instance hostname.
      */
     Map<String, String> migrationMap();
+
+    /**
+     * Maximum number of concurrent downloads allowed.
+     */
+    int maxConcurrentDownloads();
 }

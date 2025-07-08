@@ -28,7 +28,7 @@ public enum LiveMigrationDirType
 {
     CDC_RAW_DIR("cdc_raw"),
     COMMIT_LOG_DIR("commitlog"),
-    DATA_FIlE_DIR("data"),
+    DATA_FILE_DIR("data"),
     HINTS_DIR("hints"),
     LOCAL_SYSTEM_DATA_FILE_DIR("local_system_data"),
     SAVED_CACHES_DIR("saved_caches");

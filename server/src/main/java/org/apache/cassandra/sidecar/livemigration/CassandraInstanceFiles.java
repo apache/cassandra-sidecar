@@ -38,4 +38,11 @@ public interface CassandraInstanceFiles
      * @throws IOException when failed to read any file or folder.
      */
     List<InstanceFileInfo> files() throws IOException;
+
+    /**
+     * Returns a list of directory visitors available for traversing the Cassandra instance's directories.
+     *
+     * @return list of DirVisitor instances, one for each Cassandra directory to be explored
+     */
+    List<DirVisitor> dirVisitorList();
 }

@@ -295,6 +295,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         return schemaReportingConfiguration;
     }
 
+    @Override
     public LiveMigrationConfiguration liveMigrationConfiguration()
     {
         return liveMigrationConfiguration;

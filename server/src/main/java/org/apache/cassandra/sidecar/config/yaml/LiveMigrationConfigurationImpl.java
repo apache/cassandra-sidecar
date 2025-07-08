@@ -32,23 +32,34 @@ import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 public class LiveMigrationConfigurationImpl implements LiveMigrationConfiguration
 {
 
+    public static final int DEFAULT_MAX_CONCURRENT_DOWNLOADS = 20;
+
     private final Set<String> filesToExclude;
     private final Set<String> directoriesToExclude;
     private final Map<String, String> migrationMap;
+    private final int maxConcurrentDownloads;
 
     public LiveMigrationConfigurationImpl()
     {
-        this(Collections.emptySet(), Collections.emptySet(), Collections.emptyMap());
+        this(Collections.emptySet(), Collections.emptySet(), Collections.emptyMap(), DEFAULT_MAX_CONCURRENT_DOWNLOADS);
     }
 
     @JsonCreator
     public LiveMigrationConfigurationImpl(@JsonProperty("files_to_exclude") Set<String> filesToExclude,
                                           @JsonProperty("dirs_to_exclude") Set<String> directoriesToExclude,
-                                          @JsonProperty("migration_map") Map<String, String> migrationMap)
+                                          @JsonProperty("migration_map") Map<String, String> migrationMap,
+                                          @JsonProperty("max_concurrent_downloads") int maxConcurrentDownloads)
     {
         this.filesToExclude = filesToExclude;
         this.directoriesToExclude = directoriesToExclude;
         this.migrationMap = migrationMap == null ? Collections.emptyMap() : Collections.unmodifiableMap(migrationMap);
+
+        if (maxConcurrentDownloads < 1)
+        {
+            throw new IllegalArgumentException("Invalid max_concurrent_downloads " + maxConcurrentDownloads +
+                                               ". It must be >= 1");
+        }
+        this.maxConcurrentDownloads = maxConcurrentDownloads;
     }
 
     @Override
@@ -70,5 +81,12 @@ public class LiveMigrationConfigurationImpl implements LiveMigrationConfiguratio
     public Map<String, String> migrationMap()
     {
         return migrationMap;
+    }
+
+    @Override
+    @JsonProperty("max_concurrent_downloads")
+    public int maxConcurrentDownloads()
+    {
+        return maxConcurrentDownloads;
     }
 }

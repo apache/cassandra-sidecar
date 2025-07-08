@@ -146,7 +146,7 @@ public final class ApiEndpointsV1
     // Live Migration APIs
     public static final String LIVE_MIGRATION_API_PREFIX = API_V1 + "/live-migration";
 
-    public static final String LIVE_MIGRATION_FILES_API = LIVE_MIGRATION_API_PREFIX + "/files";
+    public static final String LIVE_MIGRATION_FILES_ROUTE = LIVE_MIGRATION_API_PREFIX + "/files";
 
     public static final String DIR_TYPE_PARAM = "dirType";
     public static final String DIR_INDEX_PARAM = "dirIndex";
@@ -154,8 +154,11 @@ public final class ApiEndpointsV1
     // dirType path parameter    : The type of directory (data, commitlog, etc.)
     // dirIndex path parameter   : The index of the directory
     // The remaining path ('/*') : Represents the relative path within the specified directory
-    public static final String LIVE_MIGRATION_FILE_TRANSFER_API = LIVE_MIGRATION_FILES_API + "/:" + DIR_TYPE_PARAM
-                                                                  + "/:" + DIR_INDEX_PARAM + "/*";
+    public static final String LIVE_MIGRATION_FILE_TRANSFER_ROUTE = LIVE_MIGRATION_FILES_ROUTE + "/:" + DIR_TYPE_PARAM
+                                                                    + "/:" + DIR_INDEX_PARAM + "/*";
+
+    public static final String LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE = LIVE_MIGRATION_API_PREFIX + "/data-copy-tasks";
+    public static final String LIVE_MIGRATION_DATA_COPY_TASK_ROUTE = LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE + "/:taskId";
 
     public static final String OPENAPI_JSON_ROUTE = "/spec/openapi.json";
     public static final String OPENAPI_YAML_ROUTE = "/spec/openapi.yaml";

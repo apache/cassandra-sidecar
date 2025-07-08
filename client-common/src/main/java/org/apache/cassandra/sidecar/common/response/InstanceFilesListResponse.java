@@ -28,7 +28,7 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Class representing response for {@link ApiEndpointsV1#LIVE_MIGRATION_FILES_API}.
+ * Class representing response for {@link ApiEndpointsV1#LIVE_MIGRATION_FILES_ROUTE}.
  * Holds list of file urls (with their individual sizes) + total size of files
  * <p>
  * Sample format:

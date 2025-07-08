@@ -18,11 +18,15 @@
 
 package org.apache.cassandra.sidecar.client;
 
+import java.util.Iterator;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.file.FileSystemException;
+import org.apache.cassandra.sidecar.common.request.DownloadableRequest;
 
 import static java.util.Objects.requireNonNull;
 
@@ -70,5 +74,19 @@ public class VertxRequestExecutor extends RequestExecutor
         {
             logger.warn("Failed to close vertx after 1 minute", exception);
         }
+    }
+
+    @Override
+    void applyRetryPolicy(CompletableFuture<HttpResponse> future, Iterator<SidecarInstance> iterator, SidecarInstance sidecarInstance, RequestContext context, int attempt, HttpResponse response, Throwable throwable)
+    {
+        if (context.request() instanceof DownloadableRequest && throwable instanceof FileSystemException)
+        {
+            // If the request is a downloadable request and the exception is a FileSystemException,
+            // then it is an issue with local file system. In this case, we should not retry the request.
+            future.completeExceptionally(throwable);
+            return;
+        }
+
+        super.applyRetryPolicy(future, iterator, sidecarInstance, context, attempt, response, throwable);
     }
 }

@@ -135,7 +135,7 @@ public class LiveMigrationFileStreamHandler extends AbstractHandler<Void> implem
 
         try
         {
-            localFile = LiveMigrationInstanceMetadataUtil.localPath(normalizedPath, instanceMeta);
+            localFile = LiveMigrationInstanceMetadataUtil.localPath(normalizedPath, instanceMeta).toString();
         }
         catch (IllegalArgumentException e)
         {
