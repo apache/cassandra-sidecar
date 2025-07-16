@@ -301,8 +301,7 @@ class ServerTest
     {
         assertThatThrownBy(() -> configureServer("config/sidecar_unrecognized_authenticator.yaml"))
         .hasCauseInstanceOf(RuntimeException.class)
-        .hasMessageContaining("Implementation for class org.apache.cassandra.sidecar.acl.authentication." +
-                              "UnrecognizedAuthenticationHandler has not been registered");
+        .hasMessageContaining("Implementation for class UnrecognizedAuthenticationHandler has not been registered");
     }
 
     @Test
@@ -311,8 +310,7 @@ class ServerTest
     {
         assertThatThrownBy(() -> configureServer("config/sidecar_unrecognized_authorizer.yaml"))
         .hasCauseInstanceOf(ConfigurationException.class)
-        .hasMessageContaining("Unrecognized authorization provider org.apache.cassandra.sidecar.acl." +
-                              "authorization.UnrecognizedAuthorizationProvider set");
+        .hasMessageContaining("Unrecognized authorization provider UnrecognizedAuthorizationProvider set");
     }
 
     Future<String> validateHealthEndpoint(String deploymentId)
