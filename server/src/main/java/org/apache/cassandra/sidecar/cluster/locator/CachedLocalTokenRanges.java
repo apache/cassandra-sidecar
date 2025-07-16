@@ -205,7 +205,9 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
             if (isClusterTheSame && localTokenRangesCache != null && localTokenRangesCache.containsKey(ks.getName()))
             {
                 // we don't need to rebuild if already cached
-                perKeyspaceBuilder.put(ks.getName(), localTokenRangesCache.get(ks.getName()));
+                Map<Integer, Set<TokenRange>> value = localTokenRangesCache.get(ks.getName());
+                if (value != null)
+                    perKeyspaceBuilder.put(ks.getName(), value);
             }
             else
             {
