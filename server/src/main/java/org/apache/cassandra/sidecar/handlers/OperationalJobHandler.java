@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.handlers;
 import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
-import javax.inject.Inject;
+import com.google.inject.Inject;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
