@@ -227,8 +227,8 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
         }
 
         long directorySizeBytes = FileUtils.directorySizeBytes(cdcRawDirectory);
-        long maxedUsageBytes = maxUsageBytes();
-        long upperLimitBytes = (long) (maxedUsageBytes * cdcConfiguration.cdcRawDirectoryMaxPercentUsage());
+        long maxUsageBytes = maxUsageBytes();
+        long upperLimitBytes = (long) (maxUsageBytes * cdcConfiguration.cdcRawDirectoryMaxPercentUsage());
         // Sort the files by segmentId to delete commit log segments in write order
         // The latest file is the current active segment, but it could be created before the retention duration, e.g. slow data ingress
         Collections.sort(segmentFiles);
@@ -238,7 +238,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
         cdcMetrics.oldestSegmentAge.metric.setValue((int) MILLISECONDS.toSeconds(nowInMillis - segmentFiles.get(0).lastModified()));
 
         LOGGER.debug("Cdc data cleaner directorySizeBytes={} maxedUsageBytes={} upperLimitBytes={}",
-                     directorySizeBytes, maxedUsageBytes, upperLimitBytes);
+                     directorySizeBytes, maxUsageBytes, upperLimitBytes);
 
         if (directorySizeBytes > upperLimitBytes)
         {

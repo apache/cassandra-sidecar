@@ -62,9 +62,7 @@ public class SidecarSchemaModule extends AbstractModule
             }
             catch (Throwable cause)
             {
-                String message = "Failed to register table schema: " + tableSchema;
-                LOGGER.error(message);
-                throw new RuntimeException(message, cause);
+                throw new RuntimeException("Failed to register table schema: " + tableSchema, cause);
             }
         });
         return new SidecarSchema(vertx, configuration, sidecarInternalKeyspace);
