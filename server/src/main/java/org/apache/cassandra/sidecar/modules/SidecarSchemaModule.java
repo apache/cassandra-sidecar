@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.modules;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -41,6 +44,8 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTask;
  */
 public class SidecarSchemaModule extends AbstractModule
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SidecarSchemaModule.class);
+
     @Provides
     @Singleton
     public SidecarSchema sidecarSchema(Vertx vertx,
@@ -50,13 +55,16 @@ public class SidecarSchemaModule extends AbstractModule
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
         // register table schema when enabled
         resolver.resolve().values().forEach(tableSchema -> {
+            LOGGER.info("Registering table schema: {}", tableSchema);
             try
             {
                 sidecarInternalKeyspace.registerTableSchema(tableSchema);
             }
             catch (Throwable cause)
             {
-                throw new RuntimeException("Failed to register table schema: " + tableSchema, cause);
+                String message = "Failed to register table schema: " + tableSchema;
+                LOGGER.error(message);
+                throw new RuntimeException(message, cause);
             }
         });
         return new SidecarSchema(vertx, configuration, sidecarInternalKeyspace);

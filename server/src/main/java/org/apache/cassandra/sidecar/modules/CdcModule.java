@@ -81,7 +81,7 @@ public class CdcModule extends AbstractModule
 
     @ProvidesIntoMap
     @KeyClassMapKey(TableSchemaMapKeys.SystemViewsSchemaKey.class)
-    TableSchema systemViewssSchema(SystemViewsSchema schema)
+    TableSchema systemViewsSchema(SystemViewsSchema schema)
     {
         return schema;
     }

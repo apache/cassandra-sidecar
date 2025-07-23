@@ -88,7 +88,7 @@ public abstract class AbstractSchema
         }
 
         prepareStatements(session);
-        logger.debug("{} is initialized!", this.getClass().getSimpleName());
+        logger.info("{} table schema is initialized", this.getClass().getSimpleName());
         return true;
     }
 

@@ -39,7 +39,7 @@ class SystemViewsDatabaseAccessorIntTest extends IntegrationTestBase
         waitForSchemaReady(10, TimeUnit.SECONDS);
 
         SystemViewsDatabaseAccessor accessor = injector.getInstance(SystemViewsDatabaseAccessor.class);
-        Long cdcTotalSpaceSettings = accessor.getCdcTotalSpaceSetting();
+        Long cdcTotalSpaceSettings = accessor.cdcTotalSpaceBytesSetting();
         assertThat(cdcTotalSpaceSettings).isNotNull().isEqualTo(cdcSizeLimitInMiB * 1024 * 1024);
     }
 }

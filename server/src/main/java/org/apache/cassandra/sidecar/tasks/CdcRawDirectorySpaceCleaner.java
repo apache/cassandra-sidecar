@@ -33,6 +33,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
 import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,7 +131,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
                TimeUnit.MILLISECONDS.toNanos(cdcConfiguration.cacheMaxUsage().toMillis());
     }
 
-    protected long maxUsage()
+    protected long maxUsageBytes()
     {
         if (!shouldRefreshCachedMaxUsage())
         {
@@ -140,18 +141,17 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
 
         try
         {
-            Long newValue = systemViewsDatabaseAccessor.getCdcTotalSpaceSetting();
+            Long newValue = systemViewsDatabaseAccessor.cdcTotalSpaceBytesSetting();
             if (newValue != null)
             {
                 if (!newValue.equals(maxUsageBytes))
                 {
-                    LOGGER.info(
-                    "Change in cdc_total_space from system_views.settings prev={} latest={}",
-                    maxUsageBytes, newValue);
+                    LOGGER.info("Change in cdc_total_space from system_views.settings prev={} latest={}",
+                                maxUsageBytes, newValue);
                     this.maxUsageBytes = newValue;
-                    this.maxUsageLastReadNanos = timeProvider.nanoTime();
-                    return newValue;
                 }
+                this.maxUsageLastReadNanos = timeProvider.nanoTime();
+                return this.maxUsageBytes;
             }
         }
         catch (SchemaUnavailableException e)
@@ -160,7 +160,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
         }
         catch (Throwable t)
         {
-            LOGGER.warn("Error reading cdc_total_space from system_views.settings", t);
+            LOGGER.error("Error reading cdc_total_space from system_views.settings", t);
         }
 
         LOGGER.warn("Could not read cdc_total_space from system_views.settings, falling back to props");
@@ -226,19 +226,21 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
             return;
         }
 
-        long directorySize = FileUtils.directorySize(cdcRawDirectory);
-        long upperLimitBytes =
-        (long) (maxUsage() * cdcConfiguration.cdcRawDirectoryMaxPercentUsage());
+        long directorySizeBytes = FileUtils.directorySizeBytes(cdcRawDirectory);
+        long maxedUsageBytes = maxUsageBytes();
+        long upperLimitBytes = (long) (maxedUsageBytes * cdcConfiguration.cdcRawDirectoryMaxPercentUsage());
         // Sort the files by segmentId to delete commit log segments in write order
         // The latest file is the current active segment, but it could be created before the retention duration, e.g. slow data ingress
         Collections.sort(segmentFiles);
         long nowInMillis = timeProvider.currentTimeMillis();
 
         // track the age of the oldest commit log segment to give indication of the time-window buffer available
-        cdcMetrics.oldestSegmentAge.metric.setValue(
-        (int) MILLISECONDS.toSeconds(nowInMillis - segmentFiles.get(0).lastModified()));
+        cdcMetrics.oldestSegmentAge.metric.setValue((int) MILLISECONDS.toSeconds(nowInMillis - segmentFiles.get(0).lastModified()));
 
-        if (directorySize > upperLimitBytes)
+        LOGGER.debug("Cdc data cleaner directorySizeBytes={} maxedUsageBytes={} upperLimitBytes={}",
+                     directorySizeBytes, maxedUsageBytes, upperLimitBytes);
+
+        if (directorySizeBytes > upperLimitBytes)
         {
             if (segmentFiles.get(0).segmentId > segmentFiles.get(1).segmentId)
             {
@@ -251,7 +253,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
 
             // we keep the last commit log segment as it may still be actively written to
             int i = 0;
-            while (i < segmentFiles.size() - 1 && directorySize > upperLimitBytes)
+            while (i < segmentFiles.size() - 1 && directorySizeBytes > upperLimitBytes)
             {
                 CdcRawSegmentFile segment = segmentFiles.get(i);
                 long ageMillis = nowInMillis - segment.lastModified();
@@ -280,7 +282,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
                 {
                     LOGGER.warn("Failed to delete cdc segment", e);
                 }
-                directorySize -= length;
+                directorySizeBytes -= length;
                 i++;
             }
         }

@@ -22,6 +22,9 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.google.inject.Inject;
@@ -34,11 +37,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Database Accessor that queries cassandra to get information maintained under system_auth keyspace.
+ * Database Accessor that queries cassandra to get information maintained under system_views keyspace.
  */
 @Singleton
 public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSchema>
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SystemViewsDatabaseAccessor.class);
+
     private static final String YAML_PROP_IN_MB = "cdc_total_space_in_mb";
     private static final String YAML_PROP_WITH_UNIT = "cdc_total_space"; // expects value with units e.g. "5MiB"
 
@@ -49,11 +54,16 @@ public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSch
         super(systemViewsSchema, sessionProvider);
     }
 
+    /**
+     * @return the value of the cdc_total_space setting in bytes
+     * @throws SchemaUnavailableException when the schema is not initialized
+     */
     @Nullable
-    public Long getCdcTotalSpaceSetting() throws SchemaUnavailableException
+    public Long cdcTotalSpaceBytesSetting() throws SchemaUnavailableException
     {
         // attempt to parse Cassandra v4.0 'cdc_total_space_in_mb' yaml prop
-        Map<String, String> settings = getSettings(YAML_PROP_IN_MB, YAML_PROP_WITH_UNIT);
+        String[] cdcTotalSpaceSettingNames = { YAML_PROP_IN_MB, YAML_PROP_WITH_UNIT };
+        Map<String, String> settings = getSettings(cdcTotalSpaceSettingNames);
         String cdcTotalSpaceInMb = settings.get(YAML_PROP_IN_MB);
         if (cdcTotalSpaceInMb != null)
         {
@@ -67,11 +77,15 @@ public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSch
             return FileUtils.storageStringToBytes(storageStringToBytes);
         }
 
+        // This is not expected to ever be logged, but adding the log entry for completeness
+        // in case debugging is needed for this unexpected case.
+        LOGGER.warn("Unable to determine the CDC total space value from setting names {}",
+                    (Object) cdcTotalSpaceSettingNames);
         return null;
     }
 
     /**
-     * Load a setting values from the `system_views.settings` table.
+     * Load a setting values from the `system_views.settings` virtual table.
      *
      * @param names names of settings
      * @return map of setting values keyed on `name` loaded from the `system_views.settings` table.

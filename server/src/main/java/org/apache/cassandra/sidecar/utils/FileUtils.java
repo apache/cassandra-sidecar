@@ -48,7 +48,7 @@ public class FileUtils
      * @param directory the directory
      * @return the size in bytes of all files in a directory, non-recursively.
      */
-    public static long directorySize(File directory)
+    public static long directorySizeBytes(File directory)
     {
         long size = 0;
         final File[] files = directory.listFiles();

@@ -40,6 +40,7 @@ public abstract class CassandraSystemTableSchema extends TableSchema
                                          @NotNull Predicate<AbstractSchema> shouldCreateSchema)
     {
         prepareStatements(session);
+        logger.info("{} Cassandra system table schema is initialized", this.getClass().getSimpleName());
         return true;
     }
 
