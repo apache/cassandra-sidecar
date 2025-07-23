@@ -24,17 +24,19 @@ import java.util.stream.StreamSupport;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
-import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
-import org.apache.cassandra.sidecar.db.DatabaseAccessor;
+import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.apache.cassandra.sidecar.db.LocalDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 
 /**
  * DataAccessor implementation to read client connection stats from the table represented in {@link ConnectedClientsSchema}
  */
-public class ConnectedClientStatsDatabaseAccessor extends DatabaseAccessor<ConnectedClientsSchema>
+public class ConnectedClientStatsDatabaseAccessor extends LocalDatabaseAccessor<ConnectedClientsSchema>
 {
-    public ConnectedClientStatsDatabaseAccessor(CQLSessionProvider sessionProvider, ConnectedClientsSchema tableSchema)
+    public ConnectedClientStatsDatabaseAccessor(TableSchemaFetcher tableSchemaFetcher, ICassandraAdapter cassandraAdapter)
     {
-        super(tableSchema, sessionProvider);
+        super(tableSchemaFetcher.tableSchema(ConnectedClientsSchema.class), cassandraAdapter);
     }
 
     /**
@@ -43,7 +45,7 @@ public class ConnectedClientStatsDatabaseAccessor extends DatabaseAccessor<Conne
      */
     public ConnectedClientStatsSummary summary()
     {
-        tableSchema.prepareStatements(session());
+        Preconditions.checkState(tableSchema.isInitialized(), tableSchema.getClass().getSimpleName() + " is not initialized yet");
         BoundStatement statement = tableSchema.connectionsByUser().bind();
         ResultSet resultSet = execute(statement);
         return ConnectedClientStatsSummary.from(resultSet);
@@ -55,7 +57,7 @@ public class ConnectedClientStatsDatabaseAccessor extends DatabaseAccessor<Conne
      */
     public Stream<ConnectedClientStats> stats()
     {
-        tableSchema.prepareStatements(session());
+        Preconditions.checkState(tableSchema.isInitialized(), tableSchema.getClass().getSimpleName() + " is not initialized yet");
         BoundStatement statement = tableSchema.stats().bind();
         ResultSet resultSet = execute(statement);
         return StreamSupport.stream(resultSet.spliterator(), false)

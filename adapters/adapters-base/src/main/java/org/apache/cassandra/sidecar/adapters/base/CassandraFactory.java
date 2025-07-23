@@ -27,6 +27,7 @@ import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.MinimumVersion;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 
 /**
  * Factory to produce the 4.0 adapter
@@ -34,13 +35,15 @@ import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 @MinimumVersion("4.0.0")
 public class CassandraFactory implements ICassandraFactory
 {
-    protected final DnsResolver dnsResolver;
-    protected final DriverUtils driverUtils;
+    private final DnsResolver dnsResolver;
+    private final DriverUtils driverUtils;
+    private final TableSchemaFetcher tableSchemaFetcher;
 
-    public CassandraFactory(DnsResolver dnsResolver, DriverUtils driverUtils)
+    public CassandraFactory(DnsResolver dnsResolver, DriverUtils driverUtils, TableSchemaFetcher tableSchemaFetcher)
     {
         this.dnsResolver = dnsResolver;
         this.driverUtils = driverUtils;
+        this.tableSchemaFetcher = tableSchemaFetcher;
     }
 
     /**
@@ -56,6 +59,6 @@ public class CassandraFactory implements ICassandraFactory
                                     JmxClient jmxClient,
                                     InetSocketAddress localNativeTransportAddress)
     {
-        return new CassandraAdapter(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils);
+        return new CassandraAdapter(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils, tableSchemaFetcher);
     }
 }

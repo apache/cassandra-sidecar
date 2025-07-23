@@ -37,7 +37,7 @@ import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestP
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_CONSISTENCY_LEVEL;
-import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_LOCAL_DATA_CENTER;
+import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_RESTORE_TO_LOCAL_DATA_CENTER_ONLY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -54,12 +54,13 @@ class CreateRestoreJobRequestPayloadTest
         Date date = Date.from(Instant.ofEpochMilli(expireAt));
         CreateRestoreJobRequestPayload req = CreateRestoreJobRequestPayload.builder(secrets, expireAt)
                                                                            .jobId(UUID.fromString(id))
-                                                                           .consistencyLevel(ConsistencyLevel.QUORUM)
+                                                                           .consistencyLevel(ConsistencyLevel.LOCAL_QUORUM, "DC1")
                                                                            .jobAgent("agent")
                                                                            .build();
         String json = MAPPER.writeValueAsString(req);
-        assertThat(json).describedAs("Null value fields should be excluded").doesNotContain(JOB_LOCAL_DATA_CENTER)
-                        .describedAs("Non-null value fields should be included").contains(JOB_CONSISTENCY_LEVEL)
+        // Check out the javadoc com.fasterxml.jackson.annotation.JsonInclude.Include.NON_DEFAULT for definition
+        assertThat(json).describedAs("Default value fields should be excluded").doesNotContain(JOB_RESTORE_TO_LOCAL_DATA_CENTER_ONLY)
+                        .describedAs("Non-default value fields should be included").contains(JOB_CONSISTENCY_LEVEL)
                         .isEqualTo("{\"jobId\":\"e870e5dc-d25e-11ed-afa1-0242ac120002\"," +
                                    "\"jobAgent\":\"agent\"," +
                                    "\"secrets\":" + MAPPER.writeValueAsString(secrets) + "," +
@@ -72,8 +73,8 @@ class CreateRestoreJobRequestPayloadTest
                                    "\"invalidateCaches\":\"true\"," +
                                    "\"copyData\":\"false\"}," +
                                    "\"expireAt\":" + expireAt + "," +
-                                   "\"consistencyLevel\":\"QUORUM\"," +
-                                   "\"restoreToLocalDatacenterOnly\":false}");
+                                   "\"consistencyLevel\":\"LOCAL_QUORUM\"," +
+                                   "\"localDatacenter\":\"DC1\"}");
         CreateRestoreJobRequestPayload test = MAPPER.readValue(json, CreateRestoreJobRequestPayload.class);
         assertThat(test.jobId()).hasToString(id);
         assertThat(test.jobAgent()).isEqualTo("agent");
@@ -81,8 +82,8 @@ class CreateRestoreJobRequestPayloadTest
         assertThat(test.expireAtInMillis()).isEqualTo(expireAt);
         assertThat(test.expireAtAsDate()).isEqualTo(date);
         assertThat(test.importOptions()).isEqualTo(SSTableImportOptions.defaults());
-        assertThat(test.consistencyLevel()).isEqualTo("QUORUM");
-        assertThat(test.localDatacenter()).isNull();
+        assertThat(test.consistencyLevel()).isEqualTo("LOCAL_QUORUM");
+        assertThat(test.localDatacenter()).isEqualTo("DC1");
         assertThat(test.shouldRestoreToLocalDatacenterOnly()).isFalse();
     }
 

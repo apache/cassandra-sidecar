@@ -33,7 +33,7 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
 /**
  * Encapsulates all related operations for features provided by Sidecar
  */
-public class SidecarSchema
+public class SidecarSchema implements TableSchemaFetcher
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarSchema.class);
 
@@ -77,6 +77,7 @@ public class SidecarSchema
         return sidecarInternalKeyspace;
     }
 
+    @Override
     public <T extends TableSchema> T tableSchema(Class<T> type)
     {
         return sidecarInternalKeyspace.tableSchema(type);

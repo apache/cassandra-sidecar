@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.modules;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.ProvidesIntoMap;
+import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
+import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.handlers.ConnectedClientStatsHandler;
 import org.apache.cassandra.sidecar.handlers.GossipInfoHandler;
 import org.apache.cassandra.sidecar.handlers.GossipUpdateHandler;
@@ -37,6 +39,7 @@ import org.apache.cassandra.sidecar.handlers.TokenRangeReplicaMapHandler;
 import org.apache.cassandra.sidecar.handlers.cassandra.NodeSettingsHandler;
 import org.apache.cassandra.sidecar.handlers.validations.ValidateTableExistenceHandler;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
+import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
 import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
@@ -46,6 +49,13 @@ import org.apache.cassandra.sidecar.routes.VertxRoute;
  */
 public class CassandraOperationsModule extends AbstractModule
 {
+    @ProvidesIntoMap
+    @KeyClassMapKey(TableSchemaMapKeys.SystemViewsClientsSchemaKey.class)
+    TableSchema systemViewsClientsSchema(ConnectedClientsSchema connectedClientsSchema)
+    {
+        return connectedClientsSchema;
+    }
+
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.CassandraConnectedClientStatsRouteKey.class)
     VertxRoute cassandraConnectedClientStatsRoute(RouteBuilder.Factory factory,

@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Fix system_views client table access and make CreateRestoreJobRequestPayload serialization backward compatible (CASSSIDECAR-326)
  * CdcRawDirectorySpaceCleaner always uses fallback after the first time it is queried from system_views.settings (CASSSIDECAR-325)
  * Allow restore jobs to restore to the local datacenter only (CASSSIDECAR-269)
  * Avoid ending response in authentication handler, doesn't allow chaining of auth handlers (CASSSIDECAR-270)

@@ -125,8 +125,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
     {
         DriverUtils driverUtils = new DriverUtils();
         return new CassandraVersionProvider.Builder()
-               .add(new CassandraFactory(dnsResolver, driverUtils))
-               .add(new Cassandra41Factory(dnsResolver, driverUtils))
+               .add(new CassandraFactory(dnsResolver, driverUtils, null))
+               .add(new Cassandra41Factory(dnsResolver, driverUtils, null))
                .build();
     }
 

@@ -48,7 +48,7 @@ import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_S
 /**
  * Request payload for creating restore jobs.
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class CreateRestoreJobRequestPayload
 {
     private final UUID jobId;

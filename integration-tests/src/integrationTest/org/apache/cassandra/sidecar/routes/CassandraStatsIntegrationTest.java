@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,13 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
                         "  rank int, \n" +
                         "  PRIMARY KEY ((race_year, race_name), rank) \n" +
                         ");");
+    }
+
+    @Override
+    protected void beforeTestStart()
+    {
+        // wait for the schema initialization
+        waitForSchemaReady(30, TimeUnit.SECONDS);
     }
 
     @Test

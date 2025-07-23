@@ -36,6 +36,7 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.jetbrains.annotations.NotNull;
 
@@ -51,19 +52,22 @@ public class CassandraAdapter implements ICassandraAdapter
     protected final CQLSessionProvider cqlSessionProvider;
     protected final InetSocketAddress localNativeTransportAddress;
     protected final DriverUtils driverUtils;
+    private final TableSchemaFetcher tableSchemaFetcher;
     private volatile Host host;
 
     public CassandraAdapter(DnsResolver dnsResolver,
                             JmxClient jmxClient,
                             CQLSessionProvider cqlSessionProvider,
                             InetSocketAddress localNativeTransportAddress,
-                            DriverUtils driverUtils)
+                            DriverUtils driverUtils,
+                            TableSchemaFetcher tableSchemaFetcher)
     {
         this.dnsResolver = dnsResolver;
         this.jmxClient = jmxClient;
         this.cqlSessionProvider = cqlSessionProvider;
         this.localNativeTransportAddress = localNativeTransportAddress;
         this.driverUtils = driverUtils;
+        this.tableSchemaFetcher = tableSchemaFetcher;
     }
 
     /**
@@ -127,7 +131,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public MetricsOperations metricsOperations()
     {
-        return new CassandraMetricsOperations(jmxClient, cqlSessionProvider);
+        return new CassandraMetricsOperations(jmxClient, tableSchemaFetcher, this);
     }
 
     /**

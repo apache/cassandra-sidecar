@@ -53,6 +53,7 @@ import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
@@ -126,11 +127,11 @@ public class ConfigurationModule extends AbstractModule
 
     @Provides
     @Singleton
-    CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver, DriverUtils driverUtils)
+    CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver, DriverUtils driverUtils, TableSchemaFetcher tableSchemaFetcher)
     {
         return new CassandraVersionProvider.Builder()
-               .add(new CassandraFactory(dnsResolver, driverUtils))
-               .add(new Cassandra41Factory(dnsResolver, driverUtils))
+               .add(new CassandraFactory(dnsResolver, driverUtils, tableSchemaFetcher))
+               .add(new Cassandra41Factory(dnsResolver, driverUtils, tableSchemaFetcher))
                .build();
     }
 

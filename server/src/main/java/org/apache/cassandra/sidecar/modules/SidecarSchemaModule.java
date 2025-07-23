@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
+import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.MultiBindingTypeResolver;
@@ -66,6 +67,13 @@ public class SidecarSchemaModule extends AbstractModule
             }
         });
         return new SidecarSchema(vertx, configuration, sidecarInternalKeyspace);
+    }
+
+    @Provides
+    @Singleton
+    public TableSchemaFetcher tableSchemaFetcher(SidecarSchema sidecarSchema)
+    {
+        return sidecarSchema;
     }
 
     @ProvidesIntoMap

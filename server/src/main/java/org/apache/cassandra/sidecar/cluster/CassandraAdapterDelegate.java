@@ -137,7 +137,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         this.cqlSessionProvider = session;
         this.jmxClient = jmxClient;
         this.healthMetrics = healthMetrics;
-        notificationListener = initializeJmxListener();
+        this.notificationListener = initializeJmxListener();
     }
 
     // TODO: re-organize the methods in the class to group the public/protected/private methods together

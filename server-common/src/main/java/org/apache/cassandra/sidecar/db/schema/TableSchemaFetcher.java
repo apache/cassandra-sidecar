@@ -16,20 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.modules.multibindings;
+package org.apache.cassandra.sidecar.db.schema;
 
 /**
- * Class keys in the {@link com.google.inject.multibindings.MapBinder} to {@link org.apache.cassandra.sidecar.db.schema.TableSchema} objects
+ * Fetches table schema by its {@link Class}
+ * There should be one {@link TableSchema} per type
  */
-public interface TableSchemaMapKeys
+public interface TableSchemaFetcher
 {
-    interface ConfigsSchemaKey extends ClassKey {}
-    interface RestoreJobsSchemaKey extends ClassKey {}
-    interface RestoreRangesSchemaKey extends ClassKey {}
-    interface RestoreSlicesSchemaKey extends ClassKey {}
-    interface SidecarLeaseSchemaKey extends ClassKey {}
-    interface SidecarRolePermissionsSchemaKey extends ClassKey {}
-    interface SystemAuthSchemaKey extends ClassKey {}
-    interface SystemViewsSchemaKey extends ClassKey {}
-    interface SystemViewsClientsSchemaKey extends ClassKey {}
+    /**
+     * Get the {@link TableSchema} by its {@link Class}
+     * @param type class of the table schema
+     * @return table schema instance if found or null if not found
+     * @param <T> {@link TableSchema} subclass
+     */
+    <T extends TableSchema> T tableSchema(Class<T> type);
 }

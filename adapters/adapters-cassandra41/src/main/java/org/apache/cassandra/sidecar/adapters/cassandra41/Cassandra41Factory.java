@@ -27,6 +27,7 @@ import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.MinimumVersion;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 
 /**
  * Factory to produce the 4.1 adapter
@@ -34,13 +35,15 @@ import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 @MinimumVersion("4.1.0")
 public class Cassandra41Factory implements ICassandraFactory
 {
-    protected final DnsResolver dnsResolver;
+    private final DnsResolver dnsResolver;
     private final DriverUtils driverUtils;
+    private final TableSchemaFetcher tableSchemaFetcher;
 
-    public Cassandra41Factory(DnsResolver dnsResolver, DriverUtils driverUtils)
+    public Cassandra41Factory(DnsResolver dnsResolver, DriverUtils driverUtils, TableSchemaFetcher tableSchemaFetcher)
     {
         this.dnsResolver = dnsResolver;
         this.driverUtils = driverUtils;
+        this.tableSchemaFetcher = tableSchemaFetcher;
     }
 
     /**
@@ -55,6 +58,6 @@ public class Cassandra41Factory implements ICassandraFactory
     public ICassandraAdapter create(CQLSessionProvider session, JmxClient jmxClient,
                                     InetSocketAddress localNativeTransportAddress)
     {
-        return new Cassandra41Adapter(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils);
+        return new Cassandra41Adapter(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils, tableSchemaFetcher);
     }
 }

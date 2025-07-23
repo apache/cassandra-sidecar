@@ -27,6 +27,7 @@ import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -38,9 +39,10 @@ public class Cassandra41Adapter extends CassandraAdapter
                               JmxClient jmxClient,
                               CQLSessionProvider session,
                               InetSocketAddress localNativeTransportAddress,
-                              DriverUtils driverUtils)
+                              DriverUtils driverUtils,
+                              TableSchemaFetcher tableSchemaFetcher)
     {
-        super(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils);
+        super(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils, tableSchemaFetcher);
     }
 
     /**
