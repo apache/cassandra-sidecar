@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.adapters.base.db.schema;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.db.schema.CassandraSystemTableSchema;
 import org.jetbrains.annotations.NotNull;
 
@@ -28,7 +27,6 @@ import org.jetbrains.annotations.NotNull;
  * Holds the prepared statements for operations related to client connection stats retrieved from
  * the "clients" virtual table
  */
-@Singleton
 public class ConnectedClientsSchema extends CassandraSystemTableSchema
 {
     private static final String TABLE_NAME = "clients";

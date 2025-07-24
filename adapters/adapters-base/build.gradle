@@ -52,7 +52,6 @@ dependencies {
     compileOnly('org.jetbrains:annotations:23.0.0')
     compileOnly('com.datastax.cassandra:cassandra-driver-core:3.11.3')
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
-    implementation("com.google.inject:guice:${guiceVersion}")
 
     testImplementation('com.datastax.cassandra:cassandra-driver-core:3.11.3')
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"

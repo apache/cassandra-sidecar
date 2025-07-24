@@ -51,9 +51,9 @@ public class CassandraOperationsModule extends AbstractModule
 {
     @ProvidesIntoMap
     @KeyClassMapKey(TableSchemaMapKeys.SystemViewsClientsSchemaKey.class)
-    TableSchema systemViewsClientsSchema(ConnectedClientsSchema connectedClientsSchema)
+    TableSchema systemViewsClientsSchema()
     {
-        return connectedClientsSchema;
+        return new ConnectedClientsSchema();
     }
 
     @ProvidesIntoMap
