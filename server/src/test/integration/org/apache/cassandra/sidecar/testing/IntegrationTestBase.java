@@ -68,6 +68,7 @@ import org.apache.cassandra.sidecar.common.server.dns.DnsResolvers;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
+import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.server.SidecarServerEvents;
@@ -157,8 +158,9 @@ public abstract class IntegrationTestBase
         {
             sslConfig = sslConfigWithTruststore();
         }
+        TableSchemaFetcher tableSchemaFetcher = injector.getInstance(TableSchemaFetcher.class);
         sidecarTestContext = CassandraSidecarTestContext.from(vertx, cassandraTestContext, DnsResolvers.DEFAULT,
-                                                              getInstancesToManage(clusterSize), sslConfig);
+                                                              getInstancesToManage(clusterSize), sslConfig, tableSchemaFetcher);
         integrationTestModule.setCassandraSidecarTestContext(sidecarTestContext);
 
         server = injector.getInstance(Server.class);

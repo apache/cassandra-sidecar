@@ -51,6 +51,7 @@ import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
+import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
@@ -105,13 +106,14 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                                    AbstractCassandraTestContext cassandraTestContext,
                                                    DnsResolver dnsResolver,
                                                    int[] instancesToManage,
-                                                   SslConfiguration sslConfiguration)
+                                                   SslConfiguration sslConfiguration,
+                                                   TableSchemaFetcher tableSchemaFetcher)
     {
         org.apache.cassandra.testing.SimpleCassandraVersion rootVersion = cassandraTestContext.version;
         SimpleCassandraVersion versionParsed = SimpleCassandraVersion.create(rootVersion.major,
                                                                              rootVersion.minor,
                                                                              rootVersion.patch);
-        CassandraVersionProvider versionProvider = cassandraVersionProvider(dnsResolver);
+        CassandraVersionProvider versionProvider = cassandraVersionProvider(dnsResolver, tableSchemaFetcher);
         return new CassandraSidecarTestContext(vertx,
                                                cassandraTestContext,
                                                versionParsed,
@@ -121,12 +123,12 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                                sslConfiguration);
     }
 
-    public static CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver)
+    public static CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver, TableSchemaFetcher tableSchemaFetcher)
     {
         DriverUtils driverUtils = new DriverUtils();
         return new CassandraVersionProvider.Builder()
-               .add(new CassandraFactory(dnsResolver, driverUtils, null))
-               .add(new Cassandra41Factory(dnsResolver, driverUtils, null))
+               .add(new CassandraFactory(dnsResolver, driverUtils, tableSchemaFetcher))
+               .add(new Cassandra41Factory(dnsResolver, driverUtils, tableSchemaFetcher))
                .build();
     }
 
