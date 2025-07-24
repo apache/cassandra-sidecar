@@ -205,7 +205,11 @@ public class SidecarSchemaTest
 
             "DELETE FROM sidecar_internal.configs WHERE service=?",
 
-            "SELECT name, value FROM system_views.settings WHERE name IN ?"
+            "SELECT name, value FROM system_views.settings WHERE name IN ?",
+
+            "SELECT * FROM system_views.clients",
+
+            "SELECT username, COUNT(*) AS connection_count FROM system_views.clients"
             );
 
             assertThat(interceptedPrepStmts).as("Intercepted statements match expected statements")

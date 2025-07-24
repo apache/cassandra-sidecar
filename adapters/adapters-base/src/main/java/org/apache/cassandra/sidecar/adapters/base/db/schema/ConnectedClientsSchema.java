@@ -68,13 +68,13 @@ public class ConnectedClientsSchema extends CassandraSystemTableSchema
 
     static String statsStatement()
     {
-        return String.format("SELECT * FROM %s.%s;", KEYSPACE_NAME, TABLE_NAME);
+        return String.format("SELECT * FROM %s.%s", KEYSPACE_NAME, TABLE_NAME);
     }
 
     static String selectConnectionsByUserStatement()
     {
         return String.format("SELECT username, COUNT(*) AS connection_count " +
-                             "FROM %s.%s;",
+                             "FROM %s.%s",
                              KEYSPACE_NAME,
                              TABLE_NAME);
     }
