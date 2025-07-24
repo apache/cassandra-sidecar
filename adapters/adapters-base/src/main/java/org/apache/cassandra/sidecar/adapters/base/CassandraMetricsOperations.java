@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import javax.management.openmbean.CompositeData;
 
 import org.slf4j.Logger;
@@ -36,7 +35,6 @@ import org.apache.cassandra.sidecar.adapters.base.data.StreamState;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStats;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsDatabaseAccessor;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsSummary;
-import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
 import org.apache.cassandra.sidecar.adapters.base.jmx.MetricsJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.StreamManagerJmxOperations;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;

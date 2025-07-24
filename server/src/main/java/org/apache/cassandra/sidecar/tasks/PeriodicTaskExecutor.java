@@ -297,19 +297,19 @@ public class PeriodicTaskExecutor implements Closeable
     // which is not necessary for the actual ExecutionLoops to implement
     static class PeriodicTaskKey
     {
-        private final String fqcnAndName;
+        private final String identifier;
         private final PeriodicTask task;
 
         PeriodicTaskKey(PeriodicTask task)
         {
-            this.fqcnAndName = task.getClass().getCanonicalName() + task.name();
+            this.identifier = task.identifier();
             this.task = task;
         }
 
         @Override
         public int hashCode()
         {
-            return fqcnAndName.hashCode();
+            return identifier.hashCode();
         }
 
         @Override
@@ -320,7 +320,7 @@ public class PeriodicTaskExecutor implements Closeable
 
             if (obj instanceof PeriodicTaskKey)
             {
-                return ((PeriodicTaskKey) obj).fqcnAndName.equals(this.fqcnAndName);
+                return ((PeriodicTaskKey) obj).identifier.equals(this.identifier);
             }
 
             return false;
@@ -329,7 +329,7 @@ public class PeriodicTaskExecutor implements Closeable
         @Override
         public String toString()
         {
-            return fqcnAndName;
+            return identifier;
         }
     }
 

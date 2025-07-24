@@ -61,4 +61,14 @@ public interface Task<T>
         String simpleName = this.getClass().getSimpleName();
         return simpleName.isEmpty() ? this.getClass().getName() : simpleName;
     }
+
+    /**
+     * @return the identifier of the task instance. The implementation should ensure the uniqueness
+     * per task instance. By default, it returns the combination of canonical class name and task name,
+     * which provides no uniqueness guarantee.
+     */
+    default String identifier()
+    {
+        return this.getClass().getCanonicalName() + '[' + name() + ']';
+    }
 }
