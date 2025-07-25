@@ -866,7 +866,7 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      * @param instance the instance where the request will be executed
      * @param keyspace keyspace for which the repair is being performed
      * @param payload the repair request options as payload
-     * @return a completable future of the jobs list
+     * @return a completable future of the repair operation job response
      */
     public CompletableFuture<OperationalJobResponse> repair(SidecarInstance instance,
                                                             String keyspace,

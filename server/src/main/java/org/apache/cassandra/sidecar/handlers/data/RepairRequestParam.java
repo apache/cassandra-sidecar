@@ -31,10 +31,7 @@ public class RepairRequestParam
     private final Name keyspace;
     private final RepairPayload repairRequestPayload;
 
-    /**
-     * Constructor for holder class
-     */
-    public RepairRequestParam(Name keyspace, RepairPayload requestpayload)
+    private RepairRequestParam(Name keyspace, RepairPayload requestpayload)
     {
 
         this.keyspace = keyspace;

@@ -18,7 +18,9 @@
 
 package org.apache.cassandra.sidecar.common.request.data;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -27,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Request payload for a repair job
@@ -49,8 +52,8 @@ public class RepairPayload
     private final Boolean isPrimaryRange;
     private final String datacenter;
     private final List<String> hosts;
-    private final Long startToken;
-    private final Long endToken;
+    private final String startToken;
+    private final String endToken;
     private RepairType repairType;
     private final Boolean force;
     private final Boolean validate;
@@ -86,7 +89,7 @@ public class RepairPayload
         validate = builder.validate;
     }
 
-    @JsonProperty(TABLES)
+    @Nullable @JsonProperty(TABLES)
     public List<String> tables()
     {
         return tables;
@@ -111,13 +114,13 @@ public class RepairPayload
     }
 
     @JsonProperty(START_TOKEN)
-    public Long startToken()
+    public String startToken()
     {
         return startToken;
     }
 
     @JsonProperty(END_TOKEN)
-    public Long endToken()
+    public String endToken()
     {
         return endToken;
     }
@@ -128,15 +131,11 @@ public class RepairPayload
         return repairType;
     }
 
-    @JsonProperty(FORCE)
+    @Nullable @JsonProperty(FORCE)
     public Boolean force()
     {
         return force;
     }
-
-    /**
-     * {@code NodeSettings} builder static inner class.
-     */
 
     @JsonProperty(VALIDATE)
     public Boolean isValidate()
@@ -168,20 +167,16 @@ public class RepairPayload
         @JsonCreator
         public static RepairType fromValue(String text)
         {
-            if (text == null || text.trim().isEmpty())
-            {
-                return null;
-            }
+            String normalized = Optional.ofNullable(text)
+                                        .map(String::trim)
+                                        .filter(s -> !s.isEmpty())
+                                        .map(String::toLowerCase)
+                                        .orElse(null);
 
-            String normalized = text.toLowerCase();
-            for (RepairType type : RepairType.values())
-            {
-                if (type.getValue().equals(normalized))
-                {
-                    return type;
-                }
-            }
-            throw new IllegalArgumentException("Unexpected value: " + text);
+            return Arrays.stream(RepairType.values())
+                         .filter(type -> type.getValue().equals(normalized))
+                         .findFirst()
+                         .orElseThrow(() -> new IllegalArgumentException("Unexpected value: " + text));
         }
     }
 
@@ -195,8 +190,8 @@ public class RepairPayload
         private Boolean isPrimaryRange;
         private String datacenter;
         private List<String> hosts;
-        private Long startToken;
-        private Long endToken;
+        private String startToken;
+        private String endToken;
         private RepairType repairType;
         private Boolean force;
         private Boolean validate;
@@ -242,13 +237,13 @@ public class RepairPayload
         }
 
         @JsonProperty(START_TOKEN)
-        public RepairPayload.Builder startToken(long startToken)
+        public RepairPayload.Builder startToken(String startToken)
         {
             return update(b -> b.startToken = startToken);
         }
 
         @JsonProperty(END_TOKEN)
-        public RepairPayload.Builder endToken(long endToken)
+        public RepairPayload.Builder endToken(String endToken)
         {
             return update(b -> b.endToken = endToken);
         }

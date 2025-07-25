@@ -166,8 +166,8 @@ public class RepairHandlerTest
         String expectedRanges = 0L + ":" + Integer.MAX_VALUE;
         ArgumentCaptor<Map<String, String>> jobCapture = ArgumentCaptor.forClass(Map.class);
         RepairPayload payload = RepairPayload.builder()
-                                             .startToken(0L)
-                                             .endToken(Integer.MAX_VALUE)
+                                             .startToken("0")
+                                             .endToken(Integer.toString(Integer.MAX_VALUE))
                                              .tables(List.of("test_table"))
                                              .build();
 

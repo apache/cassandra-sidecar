@@ -35,7 +35,7 @@ import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
-import org.apache.cassandra.sidecar.config.RepairConfiguration;
+import org.apache.cassandra.sidecar.config.RepairJobsConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
@@ -146,7 +146,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     protected final TrafficShapingConfiguration trafficShapingConfiguration;
 
     @JsonProperty(value = REPAIR_PROPERTY)
-    protected final RepairConfiguration repairConfiguration;
+    protected final RepairJobsConfiguration repairJobsConfiguration;
 
     @JsonProperty(value = SCHEMA)
     protected final SchemaKeyspaceConfiguration schemaKeyspaceConfiguration;
@@ -185,7 +185,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         serverVerticleInstances = builder.serverVerticleInstances;
         operationalJobTrackerSize = builder.operationalJobTrackerSize;
         operationalJobExecutionMaxWaitTime = builder.operationalJobExecutionMaxWaitTime;
-        repairConfiguration = builder.repairConfiguration;
+        repairJobsConfiguration = builder.repairJobsConfiguration;
         throttleConfiguration = builder.throttleConfiguration;
         sstableUploadConfiguration = builder.sstableUploadConfiguration;
         sstableImportConfiguration = builder.sstableImportConfiguration;
@@ -439,9 +439,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      */
     @Override
     @JsonProperty(value = REPAIR_PROPERTY)
-    public RepairConfiguration repairConfiguration()
+    public RepairJobsConfiguration repairConfiguration()
     {
-        return repairConfiguration;
+        return repairJobsConfiguration;
     }
 
     /**
@@ -499,7 +499,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected int serverVerticleInstances = DEFAULT_SERVER_VERTICLE_INSTANCES;
         protected int operationalJobTrackerSize = DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE;
         protected MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime = DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME;
-        protected RepairConfiguration repairConfiguration = new RepairConfigurationImpl();
+        protected RepairJobsConfiguration repairJobsConfiguration = new RepairJobsConfigurationImpl();
         protected ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl();
         protected SSTableUploadConfiguration sstableUploadConfiguration = new SSTableUploadConfigurationImpl();
         protected SSTableImportConfiguration sstableImportConfiguration = new SSTableImportConfigurationImpl();
@@ -729,12 +729,12 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
          * Sets the {@code repairConfiguration} and returns a reference to this Builder enabling method
          * chaining.
          *
-         * @param repairConfiguration the {@code repairConfiguration} to set
+         * @param repairJobsConfiguration the {@code repairConfiguration} to set
          * @return a reference to this Builder
          */
-        public Builder repairConfiguration(RepairConfiguration repairConfiguration)
+        public Builder repairConfiguration(RepairJobsConfiguration repairJobsConfiguration)
         {
-            return update(b -> b.repairConfiguration = repairConfiguration);
+            return update(b -> b.repairJobsConfiguration = repairJobsConfiguration);
         }
 
         /**

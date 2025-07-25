@@ -21,7 +21,9 @@ package org.apache.cassandra.sidecar.job;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,8 +37,9 @@ import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.RepairConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.RepairConfigurationImpl;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
+import org.apache.cassandra.sidecar.config.RepairJobsConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.RepairJobsConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.handlers.data.RepairRequestParam;
 import org.mockito.AdditionalAnswers;
@@ -74,9 +77,6 @@ public class RepairJobTest
     @Test
     void testRepairJob()
     {
-        OperationalJobTracker tracker = new OperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
-
         StorageOperations storageOperations = mock(StorageOperations.class);
         when(storageOperations.getParentRepairStatus(anyInt())).thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.COMPLETED.name()));
         when(storageOperations.repair(any(), any())).thenReturn(1);
@@ -85,23 +85,19 @@ public class RepairJobTest
                                              .isPrimaryRange(true)
                                              .tables(List.of("testtable"))
                                              .build();
-        RepairRequestParam repairParams = new RepairRequestParam(new Name("testkeyspace"), payload);
+        RepairRequestParam repairParams = RepairRequestParam.from(new Name("testkeyspace"), payload);
 
-        RepairConfiguration config = new RepairConfigurationImpl(2_000, 1_000);
-        RepairJob testJob = new RepairJob(vertx, config, UUIDs.timeBased(), storageOperations, repairParams);
-        manager.trySubmitJob(testJob);
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(2_000, 1_000);
+        TaskExecutorPool internalPool = executorPool.internal();
+        RepairJob testJob = new RepairJob(internalPool, config, UUIDs.timeBased(), storageOperations, repairParams);
         testJob.execute(Promise.promise());
         assertThat(testJob.asyncResult().isComplete()).isTrue();
         assertThat(testJob.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
-        assertThat(tracker.get(testJob.jobId())).isNotNull();
     }
 
     @Test
     void testLongRunningRepairJob()
     {
-        OperationalJobTracker tracker = new OperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
-
         StorageOperations storageOperations = mock(StorageOperations.class);
         when(storageOperations.getParentRepairStatus(anyInt()))
         .thenReturn(Collections.singletonList(RepairJob.ParentRepairStatus.IN_PROGRESS.name()))
@@ -111,24 +107,20 @@ public class RepairJobTest
                                              .isPrimaryRange(true)
                                              .tables(List.of("testtable"))
                                              .build();
-        RepairRequestParam repairParams = new RepairRequestParam(new Name("testkeyspace"), payload);
+        RepairRequestParam repairParams = RepairRequestParam.from(new Name("testkeyspace"), payload);
 
-        RepairConfiguration config = new RepairConfigurationImpl(20_000, 5_000);
-        RepairJob testJob = new RepairJob(vertx, config, UUIDs.timeBased(), storageOperations, repairParams);
-        manager.trySubmitJob(testJob);
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(20_000, 2_000);
+        RepairJob testJob = new RepairJob(executorPool.internal(), config, UUIDs.timeBased(), storageOperations, repairParams);
         testJob.execute(Promise.promise());
+        Uninterruptibles.sleepUninterruptibly(4, TimeUnit.SECONDS);
         assertThat(testJob.asyncResult().isComplete()).isTrue();
         assertThat(testJob.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
-        assertThat(tracker.get(testJob.jobId())).isNotNull();
         Mockito.verify(storageOperations, atLeast(2)).getParentRepairStatus(anyInt());
     }
 
     @Test
     void testLongRunningRepairJobTimeout()
     {
-        OperationalJobTracker tracker = new OperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
-
         StorageOperations storageOperations = mock(StorageOperations.class);
         when(storageOperations.getParentRepairStatus(anyInt())).thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.IN_PROGRESS.name()));
         doAnswer(AdditionalAnswers.answersWithDelay(6000, invocation -> 1))
@@ -138,14 +130,138 @@ public class RepairJobTest
                                              .isPrimaryRange(true)
                                              .tables(List.of("testtable"))
                                              .build();
-        RepairRequestParam repairParams = new RepairRequestParam(new Name("testkeyspace"), payload);
+        RepairRequestParam repairParams = RepairRequestParam.from(new Name("testkeyspace"), payload);
 
-        RepairConfiguration config = new RepairConfigurationImpl(2_000, 1_000);
-        RepairJob testJob = new RepairJob(vertx, config, UUIDs.timeBased(), storageOperations, repairParams);
-        manager.trySubmitJob(testJob);
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(2_000, 1_000);
+        RepairJob testJob = new RepairJob(executorPool.internal(), config, UUIDs.timeBased(), storageOperations, repairParams);
         testJob.execute(Promise.promise());
+        Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
         assertThat(testJob.asyncResult().isComplete()).isTrue();
         assertThat(testJob.status()).isEqualTo(OperationalJobStatus.FAILED);
-        assertThat(tracker.get(testJob.jobId())).isNotNull();
+    }
+
+    @Test
+    void testTimersOnCompletion() throws Exception
+    {
+        TaskExecutorPool spyTaskExecutorPool = Mockito.spy(executorPool.internal());
+
+        StorageOperations storageOperations = mock(StorageOperations.class);
+        when(storageOperations.getParentRepairStatus(anyInt()))
+            .thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.IN_PROGRESS.name(), "Repair in progress"))
+            .thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.COMPLETED.name(), "Repair completed successfully"));
+        when(storageOperations.repair(any(), any())).thenReturn(1);
+
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(5_000, 100); // Short poll interval for quick test
+        RepairPayload payload = RepairPayload.builder()
+                                           .isPrimaryRange(true)
+                                           .tables(List.of("testtable"))
+                                           .build();
+        RepairRequestParam repairParams = RepairRequestParam.from(new Name("testkeyspace"), payload);
+
+        RepairJob testJob = new RepairJob(spyTaskExecutorPool, config, UUIDs.timeBased(), storageOperations, repairParams);
+
+        Promise<Void> promise = Promise.promise();
+        testJob.execute(promise);
+
+        if (!promise.future().isComplete())
+        {
+            promise.future().toCompletionStage().toCompletableFuture().get(5, java.util.concurrent.TimeUnit.SECONDS);
+        }
+
+        assertThat(testJob.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
+        Mockito.verify(spyTaskExecutorPool, Mockito.atLeast(1)).setTimer(Mockito.anyLong(), Mockito.any());
+        Mockito.verify(spyTaskExecutorPool, Mockito.atLeast(2)).cancelTimer(Mockito.anyLong());
+    }
+
+    @Test
+    void testTimersOnFailure() throws Exception
+    {
+        TaskExecutorPool spyTaskExecutorPool = Mockito.spy(executorPool.internal());
+
+        StorageOperations storageOperations = mock(StorageOperations.class);
+        when(storageOperations.getParentRepairStatus(anyInt()))
+            .thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.IN_PROGRESS.name(), "Repair in progress"))
+            .thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.FAILED.name(), "Repair failed with error"));
+        when(storageOperations.repair(any(), any())).thenReturn(1);
+
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(5_000, 100); // Short poll interval for quick test
+        RepairPayload payload = RepairPayload.builder()
+                                           .isPrimaryRange(true)
+                                           .tables(List.of("testtable"))
+                                           .build();
+        RepairRequestParam repairParams = RepairRequestParam.from(new Name("testkeyspace"), payload);
+        RepairJob testJob = new RepairJob(spyTaskExecutorPool, config, UUIDs.timeBased(), storageOperations, repairParams);
+
+        Promise<Void> promise = Promise.promise();
+        testJob.execute(promise);
+
+        try
+        {
+            promise.future().toCompletionStage().toCompletableFuture().get(5, java.util.concurrent.TimeUnit.SECONDS);
+        }
+        catch (java.util.concurrent.ExecutionException e)
+        {
+            // Expected since the job should fail
+        }
+
+        assertThat(testJob.status()).isEqualTo(OperationalJobStatus.FAILED);
+        Mockito.verify(spyTaskExecutorPool, Mockito.atLeast(1)).setTimer(Mockito.anyLong(), Mockito.any());
+    }
+
+    @Test
+    void testMultipleRepairJobsRunningInParallel()
+    {
+        // Create a job tracker and manager
+        OperationalJobTracker tracker = new OperationalJobTracker(10);
+        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+
+        // Mock the storage operations
+        StorageOperations storageOperations = mock(StorageOperations.class);
+        when(storageOperations.getParentRepairStatus(anyInt())).thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.COMPLETED.name()));
+        when(storageOperations.repair(any(), any())).thenReturn(1);
+
+        // Create configuration for repair jobs
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(5_000, 1_000);
+
+        // Create multiple repair jobs with different parameters
+        RepairJob job1 = createRepairJob(config, storageOperations, "keyspace1", "table1");
+        RepairJob job2 = createRepairJob(config, storageOperations, "keyspace1", "table2");
+        RepairJob job3 = createRepairJob(config, storageOperations, "keyspace2", "table1");
+
+        // Submit all jobs to the manager
+        manager.trySubmitJob(job1);
+        manager.trySubmitJob(job2);
+        manager.trySubmitJob(job3);
+
+        Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
+        // Verify all jobs completed successfully
+        assertThat(job1.asyncResult().isComplete()).isTrue();
+        assertThat(job1.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
+        assertThat(tracker.get(job1.jobId())).isNotNull();
+
+        assertThat(job2.asyncResult().isComplete()).isTrue();
+        assertThat(job2.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
+        assertThat(tracker.get(job2.jobId())).isNotNull();
+
+        assertThat(job3.asyncResult().isComplete()).isTrue();
+        assertThat(job3.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
+        assertThat(tracker.get(job3.jobId())).isNotNull();
+
+        // Verify that all jobs were tracked
+        assertThat(tracker.jobsView().size()).isEqualTo(3);
+    }
+
+    /**
+     * Helper method to create a repair job with specific parameters
+     */
+    private RepairJob createRepairJob(RepairJobsConfiguration config, StorageOperations storageOperations, 
+                                     String keyspace, String table)
+    {
+        RepairPayload payload = RepairPayload.builder()
+                                            .isPrimaryRange(true)
+                                            .tables(List.of(table))
+                                            .build();
+        RepairRequestParam repairParams = RepairRequestParam.from(new Name(keyspace), payload);
+        return new RepairJob(executorPool.internal(), config, UUIDs.timeBased(), storageOperations, repairParams);
     }
 }

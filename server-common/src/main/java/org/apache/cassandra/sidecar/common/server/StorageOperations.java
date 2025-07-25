@@ -140,14 +140,15 @@ public interface StorageOperations
      *
      * @param keyspace keyspace for the repair ioeration
      * @param options  repair options
-     * @return
+     * @return an integer value representing the status of the repair operation
+     * which can be used as a reference to check for the status of the repair session via  {@link #getParentRepairStatus(int)}.
      */
     int repair(String keyspace, Map<String, String> options);
 
     /**
      * Get the status of a given parent repair session.
      *
-     * @param cmd the int reference returned when issuing the repair
+     * @param cmd the integer value representing a reference to a repair session`
      * @return status of parent repair
      */
     List<String> getParentRepairStatus(int cmd);

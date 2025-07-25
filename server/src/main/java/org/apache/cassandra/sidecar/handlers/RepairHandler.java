@@ -126,7 +126,7 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
                                   RepairRequestParam repairRequestParam)
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
-        RepairJob job = new RepairJob(vertx, config.repairConfiguration(), UUIDs.timeBased(), operations, repairRequestParam);
+        RepairJob job = new RepairJob(executorPools.internal(), config.repairConfiguration(), UUIDs.timeBased(), operations, repairRequestParam);
         try
         {
             jobManager.trySubmitJob(job);
@@ -134,7 +134,7 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
         catch (OperationalJobConflictException oje)
         {
             String reason = oje.getMessage();
-            logger.error("Conflicting job encountered. reason={}", reason);
+            logger.warn("Conflicting job encountered for keyspace {}. reason={}", repairRequestParam.keyspace(), reason);
             context.response().setStatusCode(HttpResponseStatus.CONFLICT.code());
             context.json(new OperationalJobResponse(job.jobId(), OperationalJobStatus.FAILED, job.name(), reason));
             return;

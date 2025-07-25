@@ -51,7 +51,7 @@ import org.apache.cassandra.sidecar.config.yaml.CoordinationConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ParameterizedClassConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.PeriodicTaskConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.RepairConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.RepairJobsConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SSTableUploadConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
@@ -116,7 +116,7 @@ public class IntegrationTestModule extends AbstractModule
                                                                                               .build())
                                   .coordinationConfiguration(clusterLeaseClaimTaskConfiguration)
                                   .sstableUploadConfiguration(new SSTableUploadConfigurationImpl(0F))
-                                  .repairConfiguration(new RepairConfigurationImpl())
+                                  .repairConfiguration(new RepairJobsConfigurationImpl())
                                   .build();
         PeriodicTaskConfiguration healthCheckConfiguration
         = new PeriodicTaskConfigurationImpl(true,

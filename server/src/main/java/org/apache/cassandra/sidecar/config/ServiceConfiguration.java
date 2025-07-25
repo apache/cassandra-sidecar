@@ -123,7 +123,7 @@ public interface ServiceConfiguration
     /**
      * @return the configuration for repair
      */
-    RepairConfiguration repairConfiguration();
+    RepairJobsConfiguration repairConfiguration();
 
     /**
      * @return the configuration for SSTable component uploads on this service

@@ -18,18 +18,20 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+
 /**
  * Configuration for Repair jobs
  */
-public interface RepairConfiguration
+public interface RepairJobsConfiguration
 {
     /**
      * @return the max runtime (in milliseconds) of a repair job tracked by the Sidecar
      */
-    long maxRepairJobRuntimeMillis();
+    MillisecondBoundConfiguration maxRepairJobRuntime();
 
     /**
      * @return the polling interval (in milliseconds) that checks for the completion of the repair job
      */
-    long repairPollIntervalMillis();
+    MillisecondBoundConfiguration repairPollInterval();
 }
