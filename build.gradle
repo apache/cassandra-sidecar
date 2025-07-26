@@ -102,6 +102,8 @@ ext {
                             // Sign artifacts if the version is not a snapshot, and we are uploading them to maven.
                             && !version.endsWith("SNAPSHOT")
                             && project.gradle.startParameter.taskNames.any { it.contains("upload") })
+    // either specify -x integrationTest or a property/environment variable skipIntegrationTest
+    skipIntegrationTest = propertyExists("skipIntegrationTest") || "integrationTest" in project.gradle.startParameter.excludedTaskNames
 
 }
 
@@ -321,6 +323,33 @@ tasks.register('copyDocs', Copy) {
     }
     into "build/docs/"
     exclude "tmp"
+}
+
+// Exclude some tasks to speed up running ./gradlew run
+if ("run" in gradle.startParameter.taskNames) {
+    project.gradle.startParameter.excludedTaskNames.add("codeCheckTasks")
+    project.gradle.startParameter.excludedTaskNames.add("asciidoctor")
+}
+
+gradle.taskGraph.whenReady { taskGraph ->
+    if ("run" in gradle.startParameter.taskNames) {
+        def exclusionTasks = tasks.findAll {
+            // integration tests
+            it.name == "integrationTest" ||
+                    // distribution plugin tasks
+                    it.name.startsWith('dist') || it.name.startsWith('assembleDist') ||
+                    // tar, deb, zip, rpm tasks
+                    it.name.endsWith("Tar") || it.name.endsWith("Deb") || it.name.endsWith("Rpm") || it.name.endsWith("Zip") ||
+                    // docs
+                    it.name.contains("asciidoctor") || it.name == "copyDocs" ||
+                    // other tasks
+                    it.name.startsWith("spotbugs") || it.name == "rat"
+        }
+        exclusionTasks.each { task ->
+            task.enabled = false
+            println "Excluding task: ${task.name} because 'run' task is invoked."
+        }
+    }
 }
 
 /**

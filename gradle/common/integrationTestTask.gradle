@@ -94,5 +94,5 @@ apply from: "${project.rootDir}/gradle/common/java11Options.gradle"
 
 task("integrationTest").dependsOn integrationTestLightWeight, integrationTestHeavyWeight
 
-compileIntegrationTestJava.onlyIf { !propertyExists('skipIntegrationTest') }
-checkstyleIntegrationTest.onlyIf { !propertyExists('skipIntegrationTest') }
+compileIntegrationTestJava.onlyIf { !skipIntegrationTest }
+checkstyleIntegrationTest.onlyIf { !skipIntegrationTest }

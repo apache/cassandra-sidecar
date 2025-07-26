@@ -80,6 +80,6 @@ dependencies {
     api(project(path: ":server-common"))
 }
 
-compileJava.onlyIf { !propertyExists('skipIntegrationTest') }
-compileTestJava.onlyIf { !propertyExists('skipIntegrationTest') }
-javadoc.onlyIf { !propertyExists('skipIntegrationTest') }
+compileJava.onlyIf { !skipIntegrationTest }
+compileTestJava.onlyIf { !skipIntegrationTest }
+javadoc.onlyIf { !skipIntegrationTest }

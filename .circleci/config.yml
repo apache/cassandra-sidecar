@@ -54,8 +54,6 @@ jobs:
   client_only_unit_java8:
     docker:
       - image: cimg/openjdk:8.0
-    environment:
-      skipIntegrationTest: true
     steps:
       - install_common
       - setup_remote_docker
@@ -77,8 +75,6 @@ jobs:
   unit_java11:
     docker:
       - image: cimg/openjdk:11.0
-    environment:
-      skipIntegrationTest: true
     resource_class: large
     steps:
       - setup_remote_docker
