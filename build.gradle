@@ -336,14 +336,14 @@ gradle.taskGraph.whenReady { taskGraph ->
         def exclusionTasks = tasks.findAll {
             // integration tests
             it.name == "integrationTest" ||
-                    // distribution plugin tasks
-                    it.name.startsWith('dist') || it.name.startsWith('assembleDist') ||
-                    // tar, deb, zip, rpm tasks
-                    it.name.endsWith("Tar") || it.name.endsWith("Deb") || it.name.endsWith("Rpm") || it.name.endsWith("Zip") ||
-                    // docs
-                    it.name.contains("asciidoctor") || it.name == "copyDocs" ||
-                    // other tasks
-                    it.name.startsWith("spotbugs") || it.name == "rat"
+            // distribution plugin tasks
+            it.name.startsWith('dist') || it.name.startsWith('assembleDist') ||
+            // tar, deb, zip, rpm tasks
+            it.name.endsWith("Tar") || it.name.endsWith("Deb") || it.name.endsWith("Rpm") || it.name.endsWith("Zip") ||
+            // docs
+            it.name.contains("asciidoctor") || it.name == "copyDocs" ||
+            // other tasks
+            it.name.startsWith("spotbugs") || it.name == "rat"
         }
         exclusionTasks.each { task ->
             task.enabled = false
