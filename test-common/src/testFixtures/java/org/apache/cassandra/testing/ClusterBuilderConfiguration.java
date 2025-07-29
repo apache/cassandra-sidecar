@@ -22,10 +22,13 @@ package org.apache.cassandra.testing;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import com.google.common.base.Preconditions;
 
 import org.apache.cassandra.distributed.api.Feature;
+import org.apache.cassandra.distributed.api.TokenSupplier;
+import org.apache.cassandra.distributed.shared.AbstractBuilder;
 
 /**
  * Defines the configuration to build the {@link IClusterExtension} cluster
@@ -42,6 +45,9 @@ public class ClusterBuilderConfiguration
     public String partitioner;
     public Map<String, Object> additionalInstanceConfig = null;
     public int tokenCount = 1;
+    public boolean startCluster = true;
+    public TokenSupplier tokenSupplier = null;
+    public Consumer<AbstractBuilder<?, ?, ?>> clusterBuilderUpdater = null;
 
     /**
      * Adds a features to the list of default features.
@@ -174,6 +180,40 @@ public class ClusterBuilderConfiguration
     public ClusterBuilderConfiguration tokenCount(int tokenCount)
     {
         this.tokenCount = tokenCount;
+        return this;
+    }
+
+    /**
+     * Whether the cluster should be started when loaded
+     *
+     * @param startCluster {@code true} to start the cluster, {@code false} otherwise
+     * @return a reference to this Builder
+     */
+    public ClusterBuilderConfiguration startCluster(boolean startCluster)
+    {
+        this.startCluster = startCluster;
+        return this;
+    }
+
+    /**
+     * A token supplier used during the cluster build
+     *
+     * @param tokenSupplier the instance of the token supplier
+     * @return a reference to this Builder
+     */
+    public ClusterBuilderConfiguration tokenSupplier(TokenSupplier tokenSupplier)
+    {
+        this.tokenSupplier = tokenSupplier;
+        return this;
+    }
+
+    /**
+     * @param clusterBuilderUpdater a consumer that can update the cluster builder configuration with custom options
+     * @return a reference to this Builder
+     */
+    public ClusterBuilderConfiguration clusterBuilderUpdater(Consumer<AbstractBuilder<?, ?, ?>> clusterBuilderUpdater)
+    {
+        this.clusterBuilderUpdater = clusterBuilderUpdater;
         return this;
     }
 }

@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.routes.tokenrange;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -35,14 +36,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import org.apache.cassandra.db.SystemKeyspace;
-import org.apache.cassandra.distributed.UpgradeableCluster;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
 import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 /**
  * Host replacement scenario integration tests for token range replica mapping endpoint with the in-jvm dtest framework.
@@ -78,12 +78,12 @@ class ReplacementTest extends ReplacementBaseTest
                                                                                 annotation.newNodesPerDc(),
                                                                                 annotation.numDcs(),
                                                                                 1);
-        UpgradeableCluster cluster = cassandraTestContext.configureAndStartCluster(builder -> {
-            builder.withInstanceInitializer(instanceInitializer);
-            builder.withTokenSupplier(tokenSupplier);
+        IClusterExtension<? extends IInstance> cluster = cassandraTestContext.configureAndStartCluster(builder -> {
+            builder.instanceInitializer(instanceInitializer);
+            builder.tokenSupplier(tokenSupplier);
         });
 
-        List<IUpgradeableInstance> nodesToRemove = Collections.singletonList(cluster.get(cluster.size()));
+        List<IInstance> nodesToRemove = Collections.singletonList(cluster.get(cluster.size()));
         runReplacementTestScenario(context,
                                    nodeStart,
                                    transientStateStart,
@@ -151,19 +151,16 @@ class ReplacementTest extends ReplacementBaseTest
             // We intercept the bootstrap of the replacement (6th) node to validate token ranges
             if (nodeNumber == 6)
             {
-                BootstrapBBUtils.installSetBoostrapStateInterceptor(cl, BBHelperReplacementsNode.class);
+                BootstrapBBUtils.installFinishJoiningRingInterceptor(cl, BBHelperReplacementsNode.class);
             }
         }
 
-        public static void setBootstrapState(SystemKeyspace.BootstrapState state, @SuperCall Callable<Void> orig) throws Exception
+        public static void finishJoiningRing(boolean didBootstrap, Collection<?> tokens, @SuperCall Callable<Void> orig) throws Exception
         {
-            if (state == SystemKeyspace.BootstrapState.COMPLETED)
-            {
-                nodeStart.countDown();
-                // trigger bootstrap start and wait until bootstrap is ready from test
-                transientStateStart.countDown();
-                awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
-            }
+            nodeStart.countDown();
+            // trigger bootstrap start and wait until bootstrap is ready from test
+            transientStateStart.countDown();
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
             orig.call();
         }
 

@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.routes.tokenrange;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,22 +35,22 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import org.apache.cassandra.db.SystemKeyspace;
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 /**
  * Multi-DC Cluster expansion scenarios integration tests for token range replica mapping endpoint with the in-jvm
  * dtest framework.
  *
- * Note: Some related test classes are broken down to have a single test case to parallelize test execution and
+ * <p>Note: Some related test classes are broken down to have a single test case to parallelize test execution and
  * therefore limit the instance size required to run the tests from CircleCI as the in-jvm-dtests tests are memory bound
  */
 @Tag("heavy")
 @ExtendWith(VertxExtension.class)
-public class JoiningTestMultiDC extends JoiningBaseTest
+class JoiningMultiDCTest extends JoiningBaseTest
 {
     @CassandraIntegrationTest(
     nodesPerDc = 3, newNodesPerDc = 3, numDcs = 2, network = true, buildCluster = false)
@@ -58,7 +59,7 @@ public class JoiningTestMultiDC extends JoiningBaseTest
     throws Exception
     {
         BBHelperDoubleClusterMultiDC.reset();
-        UpgradeableCluster cluster = getMultiDCCluster(BBHelperDoubleClusterMultiDC::install, cassandraTestContext);
+        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperDoubleClusterMultiDC::install, cassandraTestContext);
 
         runJoiningTestScenario(context,
                                BBHelperDoubleClusterMultiDC.transientStateStart,
@@ -209,13 +210,8 @@ public class JoiningTestMultiDC extends JoiningBaseTest
         dc2Mapping.put(expectedRanges.get(12), Arrays.asList("127.0.0.4", "127.0.0.6", "127.0.0.2", "127.0.0.10",
                                                              "127.0.0.8"));
 
-        return new HashMap<String, Map<Range<BigInteger>, List<String>>>()
-        {
-            {
-                put("datacenter1", dc1Mapping);
-                put("datacenter2", dc2Mapping);
-            }
-        };
+        return Map.of("datacenter1", dc1Mapping,
+                      "datacenter2", dc2Mapping);
     }
 
     /**
@@ -232,18 +228,15 @@ public class JoiningTestMultiDC extends JoiningBaseTest
             // We intercept the bootstrap of nodes (7-12) to validate token ranges
             if (nodeNumber > 6)
             {
-                BootstrapBBUtils.installSetBoostrapStateInterceptor(cl, BBHelperDoubleClusterMultiDC.class);
+                BootstrapBBUtils.installFinishJoiningRingInterceptor(cl, BBHelperDoubleClusterMultiDC.class);
             }
         }
 
-        public static void setBootstrapState(SystemKeyspace.BootstrapState state, @SuperCall Callable<Void> orig) throws Exception
+        public static void finishJoiningRing(boolean didBootstrap, Collection<?> tokens, @SuperCall Callable<Void> orig) throws Exception
         {
-            if (state == SystemKeyspace.BootstrapState.COMPLETED)
-            {
-                // trigger bootstrap start and wait until bootstrap is ready from test
-                transientStateStart.countDown();
-                awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
-            }
+            // trigger bootstrap start and wait until bootstrap is ready from test
+            transientStateStart.countDown();
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
             orig.call();
         }
 

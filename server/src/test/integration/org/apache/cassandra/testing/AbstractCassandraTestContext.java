@@ -27,8 +27,7 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.cassandra.distributed.UpgradeableCluster;
-import org.apache.cassandra.distributed.shared.ShutdownException;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.testing.utils.tls.CertificateBundle;
 
 /**
@@ -40,8 +39,8 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
 
     public final SimpleCassandraVersion version;
     private final Map<String, String> initialProperties;
-    private UpgradeableCluster cluster;
-    private Consumer<UpgradeableCluster> onClusterBuilt;
+    private IClusterExtension<? extends IInstance> cluster;
+    private Consumer<IClusterExtension<? extends IInstance>> onClusterBuilt;
 
     // certificates created when cluster is started with auth
     public final CertificateBundle ca;
@@ -51,7 +50,7 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
     public CassandraIntegrationTest annotation;
 
     public AbstractCassandraTestContext(SimpleCassandraVersion version,
-                                        UpgradeableCluster cluster,
+                                        IClusterExtension<? extends IInstance> cluster,
                                         CertificateBundle ca,
                                         Path serverKeystorePath,
                                         Path truststorePath,
@@ -75,12 +74,12 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
         this(version, null, ca, serverKeystorePath, truststorePath, annotation);
     }
 
-    public UpgradeableCluster cluster()
+    public IClusterExtension<? extends IInstance> cluster()
     {
         return cluster;
     }
 
-    public void setClusterBuiltListener(Consumer<UpgradeableCluster> listener)
+    public void setClusterBuiltListener(Consumer<IClusterExtension<? extends IInstance>> listener)
     {
         this.onClusterBuilt = listener;
         if (cluster != null)
@@ -89,7 +88,7 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
         }
     }
 
-    protected void setCluster(UpgradeableCluster cluster)
+    protected void setCluster(IClusterExtension<? extends IInstance> cluster)
     {
         this.cluster = cluster;
         if (onClusterBuilt != null)
@@ -99,7 +98,7 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
     }
 
     @Override
-    public void close()
+    public void close() throws Exception
     {
         if (cluster != null)
         {
@@ -112,7 +111,8 @@ public abstract class AbstractCassandraTestContext implements AutoCloseable
             // `catch (ShutdownException)` won't always work - compare the canonical names instead.
             catch (Throwable t)
             {
-                if (Objects.equals(t.getClass().getCanonicalName(), ShutdownException.class.getCanonicalName()))
+                if (Objects.equals(t.getClass().getCanonicalName(),
+                                   "org.apache.cassandra.distributed.shared.ShutdownException"))
                 {
                     LOGGER.warn("Encountered shutdown exception which closing the cluster", t);
                 }

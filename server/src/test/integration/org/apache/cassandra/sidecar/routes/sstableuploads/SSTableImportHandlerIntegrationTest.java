@@ -43,13 +43,14 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.handlers.sstableuploads.SSTableImportHandler;
 import org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
@@ -81,7 +82,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         QualifiedTableName tableName = createTestTableAndPopulate(sidecarTestContext, Arrays.asList("a", "b"));
 
         // create a snapshot called <tableName>-snapshot for tbl1
-        UpgradeableCluster cluster = sidecarTestContext.cluster();
+        IClusterExtension<? extends IInstance> cluster = sidecarTestContext.cluster();
         final String snapshotStdout = cluster.get(1).nodetoolResult("snapshot",
                                                                     "--tag", tableName.tableName() + "-snapshot",
                                                                     "--table", tableName.tableName(),

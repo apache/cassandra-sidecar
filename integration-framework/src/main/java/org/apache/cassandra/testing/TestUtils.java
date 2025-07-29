@@ -24,7 +24,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.ImmutableMap;
 
+import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
+import org.apache.cassandra.sidecar.adapters.cassandra41.Cassandra41Factory;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
+import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 
 /**
  * Helper class for integration testing functionality
@@ -96,6 +102,20 @@ public final class TestUtils
     public static QualifiedName uniqueTestQuotedKeyspaceTableFullName(String keyspace)
     {
         return new QualifiedName(keyspace, TEST_TABLE_PREFIX + TEST_TABLE_ID.getAndIncrement(), true, false);
+    }
+
+    /**
+     * @param dnsResolver        the DNS resolver instance to use
+     * @param tableSchemaFetcher the table schema fetcher instance to use
+     * @return the Cassandra Version provider configured with all existing factories
+     */
+    public static CassandraVersionProvider cassandraVersionProvider(DnsResolver dnsResolver, TableSchemaFetcher tableSchemaFetcher)
+    {
+        DriverUtils driverUtils = new DriverUtils();
+        return new CassandraVersionProvider.Builder()
+               .add(new CassandraFactory(dnsResolver, driverUtils, tableSchemaFetcher))
+               .add(new Cassandra41Factory(dnsResolver, driverUtils, tableSchemaFetcher))
+               .build();
     }
 
     /**

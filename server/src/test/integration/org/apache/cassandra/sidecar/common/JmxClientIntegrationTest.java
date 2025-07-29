@@ -21,13 +21,13 @@ package org.apache.cassandra.sidecar.common;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.utils.GossipInfoParser;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -58,14 +58,14 @@ public class JmxClientIntegrationTest
         }
     }
 
-    private void testGetOperationMode(JmxClient jmxClient, UpgradeableCluster cluster)
+    private void testGetOperationMode(JmxClient jmxClient, IClusterExtension<? extends IInstance> cluster)
     {
         String opMode = jmxClient.proxy(SSProxy.class, SS_OBJ_NAME)
                                  .getOperationMode();
         assertThat(opMode).isNotNull();
         assertThat(opMode).isIn("LEAVING", "JOINING", "NORMAL", "DECOMMISSIONED", "CLIENT");
 
-        IUpgradeableInstance instance = cluster.getFirstRunningInstance();
+        IInstance instance = cluster.getFirstRunningInstance();
         IInstanceConfig config = instance.config();
         assertThat(jmxClient.host()).isEqualTo(config.broadcastAddress().getAddress().getHostAddress());
         assertThat(jmxClient.port()).isEqualTo(config.jmxPort());
@@ -90,7 +90,7 @@ public class JmxClientIntegrationTest
     }
 
     // a test to ensure the jmx client can invoke the MBean method
-    private void testTableCleanup(JmxClient jmxClient, UpgradeableCluster cluster)
+    private void testTableCleanup(JmxClient jmxClient, IClusterExtension<? extends IInstance> cluster)
     {
         cluster.schemaChange("CREATE KEYSPACE jmx_client_test WITH REPLICATION = {'class' : 'SimpleStrategy', 'replication_factor' : 1}");
         cluster.schemaChange("CREATE TABLE jmx_client_test.table_cleanup ( a int PRIMARY KEY, b int)");
@@ -137,7 +137,7 @@ public class JmxClientIntegrationTest
 
     private static JmxClient createJmxClient(CassandraTestContext context)
     {
-        IUpgradeableInstance instance = context.cluster().getFirstRunningInstance();
+        IInstance instance = context.cluster().getFirstRunningInstance();
         IInstanceConfig config = instance.config();
         return JmxClient.builder()
                         .host(config.broadcastAddress().getAddress().getHostAddress())

@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -33,9 +32,8 @@ import java.util.stream.IntStream;
 import com.codahale.metrics.MetricRegistry;
 import com.datastax.driver.core.Session;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
-import org.apache.cassandra.distributed.impl.AbstractClusterUtils;
 import org.apache.cassandra.distributed.shared.JMXUtil;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.adapters.cassandra41.Cassandra41Factory;
@@ -57,8 +55,11 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.testing.utils.IInstanceUtils.buildContactList;
+import static org.apache.cassandra.testing.utils.IInstanceUtils.tryGetIntConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -132,18 +133,6 @@ public class CassandraSidecarTestContext implements AutoCloseable
                .build();
     }
 
-    public static int tryGetIntConfig(IInstanceConfig config, String configName, int defaultValue)
-    {
-        try
-        {
-            return config.getInt(configName);
-        }
-        catch (NullPointerException npe)
-        {
-            return defaultValue;
-        }
-    }
-
     public void registerInstanceConfigListener(InstancesMetadataListener listener)
     {
         this.instancesMetadataListeners.add(listener);
@@ -159,9 +148,9 @@ public class CassandraSidecarTestContext implements AutoCloseable
         return abstractCassandraTestContext.cluster() != null;
     }
 
-    public UpgradeableCluster cluster()
+    public IClusterExtension<? extends IInstance> cluster()
     {
-        UpgradeableCluster cluster = abstractCassandraTestContext.cluster();
+        IClusterExtension<? extends IInstance> cluster = abstractCassandraTestContext.cluster();
         if (cluster == null)
         {
             throw new RuntimeException("The cluster must be built before it can be used");
@@ -245,7 +234,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
 
     public CQLSessionProviderImpl buildNewCqlSessionProvider()
     {
-        UpgradeableCluster cluster = cluster();
+        IClusterExtension<? extends IInstance> cluster = cluster();
         List<IInstanceConfig> configs = buildInstanceConfigs(cluster);
         List<InetSocketAddress> addresses = buildContactList(configs);
         return new CQLSessionProviderImpl(addresses, addresses, 500, null,
@@ -256,7 +245,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
     private synchronized InstancesMetadata buildInstancesMetadata(CassandraVersionProvider versionProvider,
                                                                   DnsResolver dnsResolver)
     {
-        UpgradeableCluster cluster = cluster();
+        IClusterExtension<? extends IInstance> cluster = cluster();
         List<InstanceMetadata> metadata = new ArrayList<>();
         jmxClients = new ArrayList<>();
         List<IInstanceConfig> configs = buildInstanceConfigs(cluster);
@@ -319,19 +308,8 @@ public class CassandraSidecarTestContext implements AutoCloseable
         return new InstancesMetadataImpl(metadata, dnsResolver);
     }
 
-    private static List<InetSocketAddress> buildContactList(List<IInstanceConfig> configs)
-    {
-        // Always return the complete list of addresses even if the cluster isn't yet that large
-        // this way, we populate the entire local instance list
-        return configs.stream()
-                      .filter(Objects::nonNull)
-                      .map(config -> new InetSocketAddress(config.broadcastAddress().getAddress(),
-                                                           tryGetIntConfig(config, "native_transport_port", 9042)))
-                      .collect(Collectors.toList());
-    }
-
     @NotNull
-    private List<IInstanceConfig> buildInstanceConfigs(UpgradeableCluster cluster)
+    private List<IInstanceConfig> buildInstanceConfigs(IClusterExtension<? extends IInstance> cluster)
     {
         Set<Integer> testManagedInstances;
         int maxNodeNum;
@@ -361,7 +339,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
                             }
 
                             // The node should be managed by sidecar
-                            return AbstractClusterUtils.createInstanceConfig(cluster, nodeNum);
+                            return cluster.createInstanceConfig(nodeNum);
                         })
                         .collect(Collectors.toList());
     }

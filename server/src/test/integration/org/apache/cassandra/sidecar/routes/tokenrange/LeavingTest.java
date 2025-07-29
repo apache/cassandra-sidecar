@@ -42,13 +42,13 @@ import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.pool.TypePool;
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperLeavingNode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
-import org.apache.cassandra.utils.Shared;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
@@ -117,9 +117,9 @@ class LeavingTest extends LeavingBaseTest
                                                                                 annotation.numDcs(),
                                                                                 1);
 
-        UpgradeableCluster cluster = cassandraTestContext.configureAndStartCluster(builder -> {
-            builder.withInstanceInitializer(instanceInitializer);
-            builder.withTokenSupplier(tokenSupplier);
+        IClusterExtension<? extends IInstance> cluster = cassandraTestContext.configureAndStartCluster(builder -> {
+            builder.instanceInitializer(instanceInitializer);
+            builder.tokenSupplier(tokenSupplier);
         });
         runLeavingTestScenario(context,
                                leavingNodesPerDC,
@@ -146,7 +146,7 @@ class LeavingTest extends LeavingBaseTest
      * Range 2 - B, C, D (with D being the leaving node)
      * Expected Range 2 - B, C, D, A (With A taking over the range of the leaving node)
      */
-    private HashMap<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingSingleLeavingNode()
+    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingSingleLeavingNode()
     {
         List<Range<BigInteger>> expectedRanges = generateExpectedRanges();
         Map<Range<BigInteger>, List<String>> mapping = new HashMap<>();
@@ -162,12 +162,7 @@ class LeavingTest extends LeavingBaseTest
 
         mapping.put(expectedRanges.get(5), Arrays.asList("127.0.0.1", "127.0.0.2", "127.0.0.3"));
 
-        return new HashMap<String, Map<Range<BigInteger>, List<String>>>()
-        {
-            {
-                put("datacenter1", mapping);
-            }
-        };
+        return Map.of("datacenter1", mapping);
     }
 
     /**
@@ -188,7 +183,7 @@ class LeavingTest extends LeavingBaseTest
      * Expected Range 2 - B, C, D, A (With A taking over the range of the leaving node)
      */
 
-    private HashMap<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingMultipleLeavingNodes()
+    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingMultipleLeavingNodes()
     {
         List<Range<BigInteger>> expectedRanges = generateExpectedRanges();
         Map<Range<BigInteger>, List<String>> mapping = new HashMap<>();
@@ -206,12 +201,7 @@ class LeavingTest extends LeavingBaseTest
         Arrays.asList("127.0.0.5", "127.0.0.1", "127.0.0.2", "127.0.0.3"));
         mapping.put(expectedRanges.get(5), Arrays.asList("127.0.0.1", "127.0.0.2", "127.0.0.3"));
 
-        return new HashMap<String, Map<Range<BigInteger>, List<String>>>()
-        {
-            {
-                put("datacenter1", mapping);
-            }
-        };
+        return Map.of("datacenter1", mapping);
     }
 
     /**
@@ -253,18 +243,12 @@ class LeavingTest extends LeavingBaseTest
         expectedRanges.get(5), Arrays.asList("127.0.0.6", "127.0.0.1", "127.0.0.2", "127.0.0.3"));
         mapping.put(expectedRanges.get(6), Arrays.asList("127.0.0.1", "127.0.0.2", "127.0.0.3"));
 
-        return new HashMap<String, Map<Range<BigInteger>, List<String>>>()
-        {
-            {
-                put("datacenter1", mapping);
-            }
-        };
+        return Map.of("datacenter1", mapping);
     }
 
     /**
      * ByteBuddy helper for multiple leaving nodes
      */
-    @Shared
     public static class BBHelperMultipleLeavingNodes
     {
         static CountDownLatch transientStateStart = new CountDownLatch(2);
@@ -306,7 +290,6 @@ class LeavingTest extends LeavingBaseTest
     /**
      * ByteBuddy helper for shrinking cluster by half its size
      */
-    @Shared
     public static class BBHelperHalveClusterSize
     {
         static CountDownLatch transientStateStart = new CountDownLatch(3);

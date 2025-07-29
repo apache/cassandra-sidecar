@@ -24,10 +24,27 @@ plugins {
 
 version project.version
 
+ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-4.1.8.jar" // latest supported Cassandra build is 4.1
+def dtestJarFullPath = "${dependencyLocation}${ext.dtestJar}"
+File dtestJarFile = new File(dtestJarFullPath)
+println("Using DTest jar: " + dtestJarFullPath + "; present? " + dtestJarFile.exists())
+
 sourceCompatibility = JavaVersion.VERSION_11
 dependencies {
     testFixturesCompileOnly(group: 'io.vertx', name: 'vertx-core', version: "${project.vertxVersion}")
     testFixturesCompileOnly(group: 'com.google.guava', name: 'guava', version: "${project.guavaVersion}")
+
+    testFixturesCompileOnly('com.datastax.cassandra:cassandra-driver-core:3.11.3')
+    testFixturesCompileOnly(group: 'com.intellij', name: 'annotations', version: '12.0')
+    testFixturesApi("org.assertj:assertj-core:${assertjCoreVersion}")
+
+    // The dtest jar must be a compile only dependency. We want to avoid having this jar in the
+    // classpath while running integration tests. Instead, a dedicated classloader will load the
+    // dtest jar while provisioning the in-jvm dtest Cassandra cluster
+    testFixturesCompileOnly(files("${dtestJarFullPath}"))
+    testFixturesApi("org.apache.cassandra:dtest-api:0.0.16")
+    // required by in-jvm-dtest class loader, specifically for dtest-4.0.*
+    testFixturesImplementation('org.javassist:javassist:3.28.0-GA')
 
     // Bouncycastle dependencies for test certificate provisioning
     testFixturesImplementation(group: 'org.bouncycastle', name: 'bcprov-jdk18on', version: '1.78')

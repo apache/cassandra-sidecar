@@ -35,32 +35,19 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 public class BootstrapBBUtils
 {
     /**
-     * Note that the test class _must_ define the `setBootstrapState` method in order for the installed intercepter to be effective.
+     * Note that the test class _must_ define the `setBootstrapState` method in order for the installed interceptor to be effective.
      * See {@code ReplacementTest.BBHelperReplacementsNode} for example
+     *
+     * @param cl          the class loader
+     * @param interceptor the interceptor class
      */
-    public static void installSetBoostrapStateInterceptor(ClassLoader cl, Class<?> interceptor)
+    public static void installFinishJoiningRingInterceptor(ClassLoader cl, Class<?> interceptor)
     {
-        TypePool typePool = TypePool.Default.of(cl);
-        TypeDescription description = typePool.describe("org.apache.cassandra.db.SystemKeyspace")
-                                              .resolve();
-        new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
-                       .method(named("setBootstrapState").and(takesArguments(1)))
-                       .intercept(MethodDelegation.to(interceptor))
-                       // Defer class loading until all dependencies are loaded
-                       .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
-                       .load(cl, ClassLoadingStrategy.Default.INJECTION);
-    }
-
-    public static void installDecommissionIntercepter(ClassLoader cl, Class<?> interceptor)
-    {
-
-        // "org.apache.cassandra.service.StorageService"  "operationMode"
-        //  "org.apache.cassandra.tcm.sequences.InProgressSequences" "isLeave"
         TypePool typePool = TypePool.Default.of(cl);
         TypeDescription description = typePool.describe("org.apache.cassandra.service.StorageService")
                                               .resolve();
         new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
-                       .method(named("operationMode"))
+                       .method(named("finishJoiningRing").and(takesArguments(2)))
                        .intercept(MethodDelegation.to(interceptor))
                        // Defer class loading until all dependencies are loaded
                        .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)

@@ -18,12 +18,12 @@
 
 package org.apache.cassandra.sidecar.testing.bytebuddy;
 
+import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import org.apache.cassandra.db.SystemKeyspace;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
 
 import static org.apache.cassandra.sidecar.testing.IntegrationTestBase.awaitLatchOrTimeout;
@@ -41,18 +41,15 @@ public class BBHelperJoiningNode
     {
         if (nodeNumber == joiningNodeIndex)
         {
-            BootstrapBBUtils.installSetBoostrapStateInterceptor(cl, BBHelperJoiningNode.class);
+            BootstrapBBUtils.installFinishJoiningRingInterceptor(cl, BBHelperJoiningNode.class);
         }
     }
 
-    public static void setBootstrapState(SystemKeyspace.BootstrapState state, @SuperCall Callable<Void> orig) throws Exception
+    public static void finishJoiningRing(boolean didBootstrap, Collection<?> tokens, @SuperCall Callable<Void> orig) throws Exception
     {
-        if (state == SystemKeyspace.BootstrapState.COMPLETED)
-        {
-            // trigger bootstrap start and wait until bootstrap is ready from test
-            transientStateStart.countDown();
-            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
-        }
+        // trigger bootstrap start and wait until bootstrap is ready from test
+        transientStateStart.countDown();
+        awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
         orig.call();
     }
 

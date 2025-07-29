@@ -29,10 +29,8 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import org.apache.cassandra.distributed.UpgradeableCluster;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
-import org.apache.cassandra.distributed.shared.ClusterUtils;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
@@ -48,6 +46,7 @@ import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperLeavingNode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.assertRestoreRange;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.createJob;
@@ -71,7 +70,7 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
     {
         TokenSupplier tokenSupplier = TestTokenSupplier.staticTokens(0, 1000L, 2000L);
         int leavingNodeNum = 3;
-        UpgradeableCluster cluster = startCluster(tokenSupplier, cassandraTestContext, leavingNodeNum);
+        IClusterExtension<? extends IInstance> cluster = startCluster(tokenSupplier, cassandraTestContext, leavingNodeNum);
         try
         {
             test(BBHelperLeavingNode.transientStateStart, cluster, leavingNodeNum);
@@ -85,10 +84,10 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
     @Override
     protected int[] getInstancesToManage(int clusterSize)
     {
-        return new int[] { MANAGED_CASSANDRA_NODE_NUM };
+        return new int[]{ MANAGED_CASSANDRA_NODE_NUM };
     }
 
-    private void test(CountDownLatch transientStateStart, UpgradeableCluster cluster, int leavingNodeNum)
+    private void test(CountDownLatch transientStateStart, IClusterExtension<? extends IInstance> cluster, int leavingNodeNum)
     {
         // prepare schema
         waitForSchemaReady(30, TimeUnit.SECONDS);
@@ -130,15 +129,15 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
         .isEmpty();
 
         // start move in the background
-        IUpgradeableInstance seed = cluster.get(1);
-        IUpgradeableInstance node = cluster.get(leavingNodeNum);
+        IInstance seed = cluster.get(1);
+        IInstance node = cluster.get(leavingNodeNum);
         startAsync("Decommission node" + node.config().num(),
                    // testing keyspace has RF == 2. Using --force does not hurt fault tolerance.
                    () -> node.nodetoolResult("decommission", "--force").asserts().success());
 
         // Wait until nodes have reached expected state
         awaitLatchOrThrow(transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
-        ClusterUtils.awaitRingState(seed, node, "Leaving");
+        cluster.awaitRingState(seed, node, "Leaving");
 
         // Fetch the local token ranges again;
         // RingTopologyRefresher should detect the topology change and notify RestoreJobDiscover via #onRingTopologyChanged
@@ -167,12 +166,12 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
         return MANAGED_CASSANDRA_NODE_IP;
     }
 
-    private static UpgradeableCluster startCluster(TokenSupplier tokenSupplier, ConfigurableCassandraTestContext cassandraTestContext, int leavingNodeNum)
+    private static IClusterExtension<? extends IInstance> startCluster(TokenSupplier tokenSupplier, ConfigurableCassandraTestContext cassandraTestContext, int leavingNodeNum)
     {
         BBHelperLeavingNode.reset();
         return cassandraTestContext.configureAndStartCluster(builder -> {
-            builder.withInstanceInitializer((cl, num) -> BBHelperLeavingNode.install(cl, num, leavingNodeNum));
-            builder.withTokenSupplier(tokenSupplier);
+            builder.instanceInitializer((cl, num) -> BBHelperLeavingNode.install(cl, num, leavingNodeNum))
+                   .tokenSupplier(tokenSupplier);
         });
     }
 }

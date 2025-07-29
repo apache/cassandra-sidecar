@@ -31,11 +31,11 @@ import org.junit.jupiter.api.Assertions;
 
 import com.datastax.driver.core.DriverUtils;
 import com.datastax.driver.core.Host;
-import org.apache.cassandra.distributed.UpgradeableCluster;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -57,7 +57,7 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
     @Override
     protected int[] getInstancesToManage(int clusterSize)
     {
-        return new int[] {1, 2}; // we only want to manage the first 2 instances in the "cluster"
+        return new int[]{ 1, 2 }; // we only want to manage the first 2 instances in the "cluster"
     }
 
     @CassandraIntegrationTest(nodesPerDc = 6)
@@ -70,8 +70,8 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
         int expectedConnections = SIDECAR_MANAGED_INSTANCES + SidecarLoadBalancingPolicy.MIN_NON_LOCAL_CONNECTIONS;
         assertThat(connectedHosts.size()).isEqualTo(expectedConnections);
         // Now, shut down one of the hosts and make sure that we connect to a different node
-        UpgradeableCluster cluster = sidecarTestContext.cluster();
-        IUpgradeableInstance inst = shutDownNonLocalInstance(cluster, sidecarTestContext.instancesMetadata().instances());
+        IClusterExtension<? extends IInstance> cluster = sidecarTestContext.cluster();
+        IInstance inst = shutDownNonLocalInstance(cluster, sidecarTestContext.instancesMetadata().instances());
         assertThat(inst.isShutdown()).isTrue();
         InetSocketAddress downInstanceAddress = new InetSocketAddress(inst.broadcastAddress().getAddress(),
                                                                       inst.config().getInt("native_transport_port"));
@@ -114,13 +114,13 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
                              .collect(Collectors.toList());
     }
 
-    private IUpgradeableInstance shutDownNonLocalInstance(UpgradeableCluster cluster,
-                                                          List<InstanceMetadata> instances)
+    private IInstance shutDownNonLocalInstance(IClusterExtension<? extends IInstance> cluster,
+                                               List<InstanceMetadata> instances)
     throws ExecutionException, InterruptedException
     {
         Set<InetSocketAddress> localInstances = instances.stream().map(i -> new InetSocketAddress(i.host(), i.port()))
                                                          .collect(Collectors.toSet());
-        for (IUpgradeableInstance inst : cluster)
+        for (IInstance inst : cluster)
         {
             InetSocketAddress nativeAddress = new InetSocketAddress(inst.config().broadcastAddress().getAddress(),
                                                                     inst.config().getInt("native_transport_port"));

@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.routes.tokenrange;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,16 +35,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import org.apache.cassandra.db.SystemKeyspace;
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 /**
  * Multi-DC Cluster expansion scenarios integration tests for token range replica mapping endpoint with the in-jvm
  * dtest framework.
- *
+ * <p>
  * Note: Some related test classes are broken down to have a single test case to parallelize test execution and
  * therefore limit the instance size required to run the tests from CircleCI as the in-jvm-dtests tests are memory bound
  */
@@ -58,7 +59,7 @@ public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
     throws Exception
     {
         BBHelperMultiDC.reset();
-        UpgradeableCluster cluster = getMultiDCCluster(BBHelperMultiDC::install, cassandraTestContext);
+        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperMultiDC::install, cassandraTestContext);
 
         runJoiningTestScenario(context,
                                BBHelperMultiDC.transientStateStart,
@@ -161,18 +162,15 @@ public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
             // We intercept the bootstrap of nodes (11,12) to validate token ranges
             if (nodeNumber > 10)
             {
-                BootstrapBBUtils.installSetBoostrapStateInterceptor(cl, BBHelperMultiDC.class);
+                BootstrapBBUtils.installFinishJoiningRingInterceptor(cl, BBHelperMultiDC.class);
             }
         }
 
-        public static void setBootstrapState(SystemKeyspace.BootstrapState state, @SuperCall Callable<Void> orig) throws Exception
+        public static void finishJoiningRing(boolean didBootstrap, Collection<?> tokens, @SuperCall Callable<Void> orig) throws Exception
         {
-            if (state == SystemKeyspace.BootstrapState.COMPLETED)
-            {
-                // trigger bootstrap start and wait until bootstrap is ready from test
-                transientStateStart.countDown();
-                awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
-            }
+            // trigger bootstrap start and wait until bootstrap is ready from test
+            transientStateStart.countDown();
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
             orig.call();
         }
 

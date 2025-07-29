@@ -38,14 +38,13 @@ import com.google.common.collect.Sets;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.distributed.UpgradeableCluster;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
-import org.apache.cassandra.distributed.shared.ClusterUtils;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -60,7 +59,7 @@ class MovingBaseTest extends BaseTokenRangeIntegrationTest
     void runMovingTestScenario(VertxTestContext context,
                                CountDownLatch transientStateStart,
                                CountDownLatch transientStateEnd,
-                               UpgradeableCluster cluster,
+                               IClusterExtension<? extends IInstance> cluster,
                                Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings,
                                long moveTargetToken) throws Exception
     {
@@ -79,10 +78,10 @@ class MovingBaseTest extends BaseTokenRangeIntegrationTest
                 dcReplication = Collections.singleton("datacenter1");
             }
 
-            IUpgradeableInstance seed = cluster.get(1);
+            IInstance seed = cluster.get(1);
             int movingNodeIndex = (annotation.numDcs() > 1) ? MULTIDC_MOVING_NODE_IDX : MOVING_NODE_IDX;
 
-            IUpgradeableInstance movingNode = cluster.get(movingNodeIndex);
+            IInstance movingNode = cluster.get(movingNodeIndex);
             startAsync("move token of node" + movingNode.config().num() + " to " + moveTargetToken,
                        () -> movingNode.nodetoolResult("move", "--", Long.toString(moveTargetToken))
                                        .asserts()
@@ -90,7 +89,7 @@ class MovingBaseTest extends BaseTokenRangeIntegrationTest
 
             // Wait until nodes have reached expected state
             awaitLatchOrThrow(transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
-            ClusterUtils.awaitRingState(seed, movingNode, "Moving");
+            cluster.awaitRingState(seed, movingNode, "Moving");
 
             retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
                 assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
@@ -119,7 +118,7 @@ class MovingBaseTest extends BaseTokenRangeIntegrationTest
 
 
     private void validateReplicaMapping(TokenRangeReplicasResponse mappingResponse,
-                                        IUpgradeableInstance movingNode,
+                                        IInstance movingNode,
                                         long moveTo,
                                         Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings)
     {
@@ -187,10 +186,10 @@ class MovingBaseTest extends BaseTokenRangeIntegrationTest
         return expectedRanges;
     }
 
-    protected long getMoveTargetToken(UpgradeableCluster cluster)
+    protected long getMoveTargetToken(IClusterExtension<? extends IInstance> cluster)
     {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
-        IUpgradeableInstance seed = cluster.get(1);
+        IInstance seed = cluster.get(1);
         // The target token to move the node to is calculated by adding an offset to the seed node token which
         // is half of the range between 2 tokens.
         // For multi-DC case (specifically 2 DCs), since neighbouring tokens can be consecutive, we use tokens 1

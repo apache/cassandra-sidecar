@@ -23,20 +23,18 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.util.concurrent.Uninterruptibles;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
-import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.IInstance;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
@@ -52,7 +50,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
     @CassandraIntegrationTest(nodesPerDc = 2, network = true)
     void streamStatsTest(CassandraTestContext cassandraTestContext)
     {
-        UpgradeableCluster cluster = cassandraTestContext.cluster();
+        IClusterExtension<? extends IInstance> cluster = cassandraTestContext.cluster();
 
         createTestKeyspace(Map.of("datacenter1", 2));
         QualifiedTableName tableName = createTestTable(
@@ -68,7 +66,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
 
         // Poll stream stats while repair is running in the background.
         CountDownLatch testStart = new CountDownLatch(1);
-        IUpgradeableInstance node = cluster.get(1);
+        IInstance node = cluster.get(1);
         AtomicReference<RuntimeException> nodetoolError = new AtomicReference<>();
         startRepairAsync(node, testStart, tableName, nodetoolError);
 
@@ -84,7 +82,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         });
     }
 
-    private void startRepairAsync(IUpgradeableInstance node,
+    private void startRepairAsync(IInstance node,
                                   CountDownLatch testStart,
                                   QualifiedTableName tableName,
                                   AtomicReference<RuntimeException> nodetoolError)
@@ -147,7 +145,7 @@ public class StreamStatsIntegrationTest extends IntegrationTestBase
         }
     }
 
-    void populateDataAtNode2Only(UpgradeableCluster cluster, QualifiedTableName tableName)
+    void populateDataAtNode2Only(IClusterExtension<? extends IInstance> cluster, QualifiedTableName tableName)
     {
         // disable compaction for the table to have more files to stream
         cluster.stream()

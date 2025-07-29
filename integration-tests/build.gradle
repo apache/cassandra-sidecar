@@ -72,6 +72,8 @@ dependencies {
     integrationTestImplementation(project(path: ":integration-framework"))
     integrationTestImplementation("com.google.inject:guice:${guiceVersion}")
     testRuntimeOnly 'com.fasterxml.jackson.core:jackson-annotations:2.14.2'
+
+    integrationTestCompileOnly(group: 'com.intellij', name: 'annotations', version: '12.0')
 }
 
 apply from: "${project.rootDir}/gradle/common/integrationTestTask.gradle"

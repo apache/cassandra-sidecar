@@ -35,12 +35,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.vdurmont.semver4j.Semver;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.shared.Versions;
-import org.apache.cassandra.sidecar.testing.SharedClusterIntegrationTestBase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Wraps functionality for the DTestJarClassLoader to be shared with the {@link SharedClusterIntegrationTestBase}
+ * Wraps functionality for the DTestJarClassLoader
  */
 public class IsolatedDTestClassLoaderWrapper
 {
@@ -56,7 +55,9 @@ public class IsolatedDTestClassLoaderWrapper
     {
         ClassLoader parent = Thread.currentThread().getContextClassLoader();
         Semver version = new Semver(testVersion.version(), Semver.SemverType.LOOSE);
-        List<URL> urlList = new ArrayList<>(Arrays.asList(Versions.find().getLatest(version).classpath));
+        Versions versions = Versions.find();
+        assertThat(versions).as("No dtest jar versions found").isNotNull();
+        List<URL> urlList = new ArrayList<>(Arrays.asList(versions.getLatest(version).classpath));
         URL classUrl = urlOfClass(clazz);
         urlList.add(classUrl);
         dtestJarClassLoader =
@@ -87,22 +88,6 @@ public class IsolatedDTestClassLoaderWrapper
         {
             currentThread.setContextClassLoader(dtestJarClassLoader);
             return action.run();
-        }
-        finally
-        {
-            currentThread.setContextClassLoader(originalClassLoader);
-        }
-    }
-
-    public <T> void executeExceptionableActionOnDTestClassLoader(ExecutableExceptionableAction<T> action) throws IOException
-    {
-        Thread currentThread = Thread.currentThread();
-        ClassLoader originalClassLoader = currentThread.getContextClassLoader();
-
-        try
-        {
-            currentThread.setContextClassLoader(dtestJarClassLoader);
-            action.run();
         }
         finally
         {

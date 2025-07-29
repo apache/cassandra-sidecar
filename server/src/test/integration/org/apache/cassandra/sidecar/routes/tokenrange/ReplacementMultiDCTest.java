@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.routes.tokenrange;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,12 +35,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import org.apache.cassandra.db.SystemKeyspace;
-import org.apache.cassandra.distributed.UpgradeableCluster;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 /**
  * Multi-DC Host replacement scenario integration tests for token range replica mapping endpoint with the in-jvm
@@ -56,9 +56,9 @@ class ReplacementMultiDCTest extends ReplacementBaseTest
     throws Exception
     {
         BBHelperReplacementsMultiDC.reset();
-        UpgradeableCluster cluster = getMultiDCCluster(BBHelperReplacementsMultiDC::install, cassandraTestContext);
+        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperReplacementsMultiDC::install, cassandraTestContext);
 
-        List<IUpgradeableInstance> nodesToRemove = Arrays.asList(cluster.get(3), cluster.get(cluster.size()));
+        List<IInstance> nodesToRemove = Arrays.asList(cluster.get(3), cluster.get(cluster.size()));
         runReplacementTestScenario(context,
                                    BBHelperReplacementsMultiDC.nodeStart,
                                    BBHelperReplacementsMultiDC.transientStateStart,
@@ -170,19 +170,16 @@ class ReplacementMultiDCTest extends ReplacementBaseTest
             // We intercept the bootstrap of the replacement nodes to validate token ranges
             if (nodeNumber > 10)
             {
-                BootstrapBBUtils.installSetBoostrapStateInterceptor(cl, BBHelperReplacementsMultiDC.class);
+                BootstrapBBUtils.installFinishJoiningRingInterceptor(cl, BBHelperReplacementsMultiDC.class);
             }
         }
 
-        public static void setBootstrapState(SystemKeyspace.BootstrapState state, @SuperCall Callable<Void> orig) throws Exception
+        public static void finishJoiningRing(boolean didBootstrap, Collection<?> tokens, @SuperCall Callable<Void> orig) throws Exception
         {
-            if (state == SystemKeyspace.BootstrapState.COMPLETED)
-            {
-                nodeStart.countDown();
-                // trigger bootstrap start and wait until bootstrap is ready from test
-                transientStateStart.countDown();
-                awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
-            }
+            nodeStart.countDown();
+            // trigger bootstrap start and wait until bootstrap is ready from test
+            transientStateStart.countDown();
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
             orig.call();
         }
 

@@ -28,7 +28,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.Range;
-
 import org.junit.jupiter.api.Disabled;
 
 import io.vertx.junit5.VertxTestContext;
@@ -40,8 +39,9 @@ import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.pool.TypePool;
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
@@ -65,7 +65,7 @@ class LeavingTestMultiDCHalveCluster extends LeavingBaseTest
     {
         BBHelperHalveClusterMultiDC.reset();
         int leavingNodesPerDC = 3;
-        UpgradeableCluster cluster = getMultiDCCluster(BBHelperHalveClusterMultiDC::install, cassandraTestContext);
+        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperHalveClusterMultiDC::install, cassandraTestContext);
 
         Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings
         = generateExpectedRangeHalveClusterSizeMultiDC();

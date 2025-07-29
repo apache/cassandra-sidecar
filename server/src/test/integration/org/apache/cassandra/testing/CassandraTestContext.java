@@ -20,7 +20,7 @@ package org.apache.cassandra.testing;
 
 import java.nio.file.Path;
 
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.testing.utils.tls.CertificateBundle;
 
 /**
@@ -31,7 +31,7 @@ import org.apache.cassandra.testing.utils.tls.CertificateBundle;
 public class CassandraTestContext extends AbstractCassandraTestContext
 {
     public CassandraTestContext(SimpleCassandraVersion version,
-                                UpgradeableCluster cluster,
+                                IClusterExtension<? extends IInstance> cluster,
                                 CertificateBundle ca,
                                 Path serverKeystorePath,
                                 Path truststorePath,

@@ -29,8 +29,7 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import org.apache.cassandra.distributed.UpgradeableCluster;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
@@ -46,6 +45,7 @@ import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.createJob;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.disableRestoreProcessor;
@@ -73,12 +73,12 @@ class RestoreJobDiscovererNodeLeftIntTest extends IntegrationTestBase
     void testUpdateRestoreRangesWhenNodeMoved(ConfigurableCassandraTestContext cassandraTestContext)
     {
         TokenSupplier tokenSupplier = TestTokenSupplier.staticTokens(0, 1000L, 2000L);
-        UpgradeableCluster cluster = startCluster(tokenSupplier, cassandraTestContext);
+        IClusterExtension<? extends IInstance> cluster = startCluster(tokenSupplier, cassandraTestContext);
         RestoreJobTestUtils.RestoreJobClient testClient = RestoreJobTestUtils.client(client, "127.0.0.1", server.actualPort());
         test(testClient, cluster);
     }
 
-    private void test(RestoreJobTestUtils.RestoreJobClient testClient, UpgradeableCluster cluster)
+    private void test(RestoreJobTestUtils.RestoreJobClient testClient, IClusterExtension<? extends IInstance> cluster)
     {
         // prepare schema
         waitForSchemaReady(30, TimeUnit.SECONDS);
@@ -122,7 +122,7 @@ class RestoreJobDiscovererNodeLeftIntTest extends IntegrationTestBase
         assertThat(ranges.get(1).tokenRange()).isEqualTo(new TokenRange(1000, 1600)); // node 1
 
         // Decommission
-        IUpgradeableInstance node = cluster.get(NODE_LEFT);
+        IInstance node = cluster.get(NODE_LEFT);
         // testing keyspace has RF == 2. Using --force does not hurt fault tolerance.
         node.nodetoolResult("decommission", "--force").asserts().success();
 
@@ -146,10 +146,8 @@ class RestoreJobDiscovererNodeLeftIntTest extends IntegrationTestBase
         });
     }
 
-    private static UpgradeableCluster startCluster(TokenSupplier tokenSupplier, ConfigurableCassandraTestContext cassandraTestContext)
+    private static IClusterExtension<? extends IInstance> startCluster(TokenSupplier tokenSupplier, ConfigurableCassandraTestContext cassandraTestContext)
     {
-        return cassandraTestContext.configureAndStartCluster(builder -> {
-            builder.withTokenSupplier(tokenSupplier);
-        });
+        return cassandraTestContext.configureAndStartCluster(builder -> builder.tokenSupplier(tokenSupplier));
     }
 }

@@ -20,13 +20,19 @@
 package org.apache.cassandra.distributed.impl;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Spliterator;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.base.Preconditions;
@@ -45,6 +51,7 @@ import org.apache.cassandra.distributed.shared.ClusterUtils;
 import org.apache.cassandra.distributed.shared.Versions;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import org.apache.cassandra.testing.IClusterExtension;
+import org.apache.cassandra.testing.IRingEntry;
 import org.apache.cassandra.testing.Partitioner;
 import org.apache.cassandra.testing.TestTokenSupplier;
 import org.jetbrains.annotations.NotNull;
@@ -70,7 +77,7 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
         return className.equals("org.apache.cassandra.utils.concurrent.Ref$OnLeak")
                || className.startsWith("org.apache.cassandra.metrics.RestorableMeter")
                || className.equals("org.apache.logging.slf4j.EventDataConverter")
-               || (className.startsWith("org.apache.cassandra.analytics.") && className.contains("BBHelper"));
+               || (className.startsWith("org.apache.cassandra.sidecar.") && className.contains("BBHelper"));
     };
 
     public CassandraCluster(String versionString, ClusterBuilderConfiguration configuration) throws IOException
@@ -101,12 +108,14 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
                       .withTokenCount(configuration.tokenCount)
                       .withDataDirCount(configuration.numDataDirsPerInstance);
 
-        TokenSupplier tokenSupplier;
+        TokenSupplier tokenSupplier = configuration.tokenSupplier;
         Consumer<IInstanceConfig> instanceConfigUpdater;
         if (configuration.partitioner != null)
         {
-            tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(Partitioner.fromClassName(configuration.partitioner),
-                                                                      nodesPerDc, newNodesPerDc, dcCount, 1);
+            tokenSupplier = tokenSupplier != null
+                            ? tokenSupplier
+                            : TestTokenSupplier.evenlyDistributedTokens(Partitioner.fromClassName(configuration.partitioner),
+                                                                        nodesPerDc, newNodesPerDc, dcCount, 1);
             instanceConfigUpdater = instanceConfig -> {
                 instanceConfig.set("partitioner", configuration.partitioner);
                 configuration.features.forEach(instanceConfig::with);
@@ -114,7 +123,9 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
         }
         else
         {
-            tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(nodesPerDc, newNodesPerDc, dcCount, 1);
+            tokenSupplier = tokenSupplier != null
+                            ? tokenSupplier
+                            : TestTokenSupplier.evenlyDistributedTokens(nodesPerDc, newNodesPerDc, dcCount, 1);
             instanceConfigUpdater = config -> configuration.features.forEach(config::with);
         }
         if (configuration.additionalInstanceConfig != null)
@@ -137,13 +148,24 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
             clusterBuilder.withInstanceInitializer(configuration.instanceInitializer);
         }
 
-        UpgradeableCluster cluster = clusterBuilder.start();
-        if (cluster.size() > 1)
+        if (configuration.clusterBuilderUpdater != null)
         {
-            waitForHealthyRing(cluster);
-            fixDistributedSchemas((AbstractCluster<I>) cluster);
+            configuration.clusterBuilderUpdater.accept(clusterBuilder);
         }
-        return (AbstractCluster<I>) cluster;
+
+        AbstractCluster<I> cluster = (AbstractCluster<I>) clusterBuilder.createWithoutStarting();
+        maybeSetSharedPredicate(cluster);
+
+        if (configuration.startCluster)
+        {
+            cluster.startup();
+            if (cluster.size() > 1)
+            {
+                waitForHealthyRing(cluster);
+                fixDistributedSchemas(cluster);
+            }
+        }
+        return cluster;
     }
 
     // IClusterExtension methods
@@ -200,6 +222,59 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
     public void stopUnchecked(IInstance instance)
     {
         ClusterUtils.stopUnchecked(instance);
+    }
+
+    @Override
+    public IInstanceConfig createInstanceConfig(int nodeNum)
+    {
+        try
+        {
+            // Use reflection here because in Cassandra 4.0 the createInstanceConfig method is private.
+            Method createInstanceConfigMethod =
+            org.apache.cassandra.distributed.impl.AbstractCluster.class.getDeclaredMethod("createInstanceConfig", int.class);
+            createInstanceConfigMethod.setAccessible(true);
+            return (IInstanceConfig) createInstanceConfigMethod.invoke(delegate, nodeNum);
+        }
+        catch (Throwable e)
+        {
+            throw new RuntimeException("Unable to call createInstanceConfig(" + nodeNum + ")");
+        }
+    }
+
+    @Override
+    public List<IRingEntry> ring(IInstance instance)
+    {
+        return ClusterUtils.ring(instance)
+                           .stream()
+                           .map(details -> new RingEntry(details.getAddress(), details.getToken()))
+                           .collect(Collectors.toUnmodifiableList());
+    }
+
+    @Override
+    public IInstance start(IInstance instance, Map<String, String> systemProperties)
+    {
+        return ClusterUtils.start(instance, withProperties -> {
+            if (systemProperties != null)
+            {
+                try
+                {
+                    // Using reflection here because the org.apache.cassandra.distributed.shared.WithProperties.with(java.lang.String, java.lang.String)
+                    // method was changed from public to private in trunk after CASSANDRA-17797. Ideally we should
+                    // make the method public (no reason why we wouldn't want to make it public), but for now we use
+                    // reflection to use it in all versions of Cassandra that we are testing.
+                    Method withMethod = withProperties.getClass().getDeclaredMethod("with", String.class, String.class);
+                    withMethod.setAccessible(true);
+                    for (Map.Entry<String, String> property : systemProperties.entrySet())
+                    {
+                        withMethod.invoke(withProperties, property.getKey(), property.getValue());
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new RuntimeException("Failed to set system properties using reflection", e);
+                }
+            }
+        });
     }
 
     // ICluster methods
@@ -355,6 +430,48 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
         for (IInstance inst : cluster)
         {
             ClusterUtils.awaitRingHealthy(inst);
+        }
+    }
+
+    // In Cassandra 4.0, the predicate set in the cluster builder with
+    // org.apache.cassandra.distributed.shared.AbstractBuilder.withSharedClasses does not take effect.
+    // Cassandra 4.0 uses a hardcoded org.apache.cassandra.distributed.impl.AbstractCluster.SHARED_PREDICATE
+    // and there is no way to configure it. This hack allows us to set the SHARED_PREDICATE and the shared
+    // byte buddy classes are now honored by the in-jvm dtests.
+    @SuppressWarnings("unchecked")
+    private void maybeSetSharedPredicate(AbstractCluster<I> cluster)
+    {
+        try
+        {
+            Class<?> clusterClass = org.apache.cassandra.distributed.impl.AbstractCluster.class;
+            Field sharedClassesField = clusterClass.getDeclaredField("SHARED_PREDICATE");
+            sharedClassesField.setAccessible(true);
+
+            // Optional: Remove final modifier for older JDKs
+            try
+            {
+                Field modifiersField = Field.class.getDeclaredField("modifiers");
+                modifiersField.setAccessible(true);
+                modifiersField.setInt(sharedClassesField, sharedClassesField.getModifiers() & ~Modifier.FINAL);
+            }
+            catch (NoSuchFieldException e)
+            {
+                // Modifiers field might not exist or be accessible in newer JDKs
+            }
+
+            // Replace with our own predicate that combines EXTRA with any existing shared classes predicate
+            Predicate<String> existingPredicate = (Predicate<String>) sharedClassesField.get(cluster);
+            Predicate<String> combinedPredicate = existingPredicate != null ? EXTRA.or(existingPredicate) : EXTRA;
+            sharedClassesField.set(null, combinedPredicate);
+        }
+        catch (NoSuchFieldException e)
+        {
+            // SHARED_CLASSES field doesn't exist, nothing to do
+        }
+        catch (IllegalAccessException e)
+        {
+            // Unable to access the field, log or handle as needed
+            throw new RuntimeException("Unable to access SHARED_CLASSES field", e);
         }
     }
 }

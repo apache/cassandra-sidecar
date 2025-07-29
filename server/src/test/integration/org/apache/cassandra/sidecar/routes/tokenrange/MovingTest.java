@@ -29,12 +29,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperMovingNode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 /**
  * Node movement scenarios integration tests for token range replica mapping endpoint with the in-jvm dtest framework.
@@ -42,7 +43,6 @@ import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 @ExtendWith(VertxExtension.class)
 public class MovingTest extends MovingBaseTest
 {
-
     @CassandraIntegrationTest(nodesPerDc = 5, network = true, buildCluster = false)
     void retrieveMappingWithKeyspaceMovingNode(VertxTestContext context,
                                                ConfigurableCassandraTestContext cassandraTestContext) throws Exception
@@ -54,9 +54,9 @@ public class MovingTest extends MovingBaseTest
                                                                                 annotation.numDcs(),
                                                                                 1);
 
-        UpgradeableCluster cluster = cassandraTestContext.configureAndStartCluster(builder -> {
-            builder.withInstanceInitializer((cl, num) -> BBHelperMovingNode.install(cl, num, MOVING_NODE_IDX));
-            builder.withTokenSupplier(tokenSupplier);
+        IClusterExtension<? extends IInstance> cluster = cassandraTestContext.configureAndStartCluster(configuration -> {
+            configuration.instanceInitializer((cl, num) -> BBHelperMovingNode.install(cl, num, MOVING_NODE_IDX));
+            configuration.tokenSupplier(tokenSupplier);
         });
 
         long moveTarget = getMoveTargetToken(cluster);
@@ -67,7 +67,6 @@ public class MovingTest extends MovingBaseTest
                               generateExpectedRangeMappingMovingNode(moveTarget),
                               moveTarget);
     }
-
 
     /**
      * Generates expected token range and replica mappings specific to the test case involving a 5 node cluster
@@ -109,11 +108,6 @@ public class MovingTest extends MovingBaseTest
         mapping.put(expectedRanges.get(6), Arrays.asList("127.0.0.1", "127.0.0.2", "127.0.0.3",
                                                          "127.0.0.5"));
 
-        return new HashMap<String, Map<Range<BigInteger>, List<String>>>()
-        {
-            {
-                put("datacenter1", mapping);
-            }
-        };
+        return Map.of("datacenter1", mapping);
     }
 }

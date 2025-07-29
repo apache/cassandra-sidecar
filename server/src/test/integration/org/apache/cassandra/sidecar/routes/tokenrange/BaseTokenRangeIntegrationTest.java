@@ -36,8 +36,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.dht.Murmur3Partitioner;
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
@@ -46,7 +45,9 @@ import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 import org.assertj.core.api.InstanceOfAssertFactories;
 
 import static org.apache.cassandra.distributed.shared.NetworkTopology.dcAndRack;
@@ -119,15 +120,15 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
         }
     }
 
-    protected UpgradeableCluster getMultiDCCluster(BiConsumer<ClassLoader, Integer> initializer,
-                                                   ConfigurableCassandraTestContext cassandraTestContext)
+    protected IClusterExtension<? extends IInstance> getMultiDCCluster(BiConsumer<ClassLoader, Integer> initializer,
+                                                                       ConfigurableCassandraTestContext cassandraTestContext)
     {
         return getMultiDCCluster(initializer, cassandraTestContext, null);
     }
 
-    protected UpgradeableCluster getMultiDCCluster(BiConsumer<ClassLoader, Integer> initializer,
-                                                   ConfigurableCassandraTestContext cassandraTestContext,
-                                                   Consumer<UpgradeableCluster.Builder> additionalConfigurator)
+    protected IClusterExtension<? extends IInstance> getMultiDCCluster(BiConsumer<ClassLoader, Integer> initializer,
+                                                                       ConfigurableCassandraTestContext cassandraTestContext,
+                                                                       Consumer<ClusterBuilderConfiguration> additionalConfigurator)
     {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         TokenSupplier mdcTokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
@@ -136,17 +137,17 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
                                                                                    1);
 
         int totalNodeCount = (annotation.nodesPerDc() + annotation.newNodesPerDc()) * annotation.numDcs();
-        return cassandraTestContext.configureAndStartCluster(builder -> {
-            builder.withInstanceInitializer(initializer);
-            builder.withTokenSupplier(mdcTokenSupplier);
-            builder.withNodeIdTopology(networkTopology(totalNodeCount,
-                                                       (nodeId) -> nodeId % 2 != 0 ?
-                                                                   dcAndRack("datacenter1", "rack1") :
-                                                                   dcAndRack("datacenter2", "rack2")));
+        return cassandraTestContext.configureAndStartCluster(configuration -> {
+            configuration.clusterBuilderUpdater = clusterBuilder -> clusterBuilder.withInstanceInitializer(initializer)
+                                                                                  .withTokenSupplier(mdcTokenSupplier)
+                                                                                  .withNodeIdTopology(networkTopology(totalNodeCount,
+                                                                                                                      (nodeId) -> nodeId % 2 != 0 ?
+                                                                                                                                  dcAndRack("datacenter1", "rack1") :
+                                                                                                                                  dcAndRack("datacenter2", "rack2")));
 
             if (additionalConfigurator != null)
             {
-                additionalConfigurator.accept(builder);
+                additionalConfigurator.accept(configuration);
             }
         });
     }
@@ -299,9 +300,9 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
         // Ranges should include partitioner start and end
         assertThat(replicaRanges.stream()
                                 .map(TokenRangeReplicasResponse.ReplicaInfo::start)
-                                .anyMatch(s -> s.equals(Murmur3Partitioner.MINIMUM.toString()))).isTrue();
+                                .anyMatch(s -> s.equals("-9223372036854775808"))).isTrue();
         assertThat(replicaRanges.stream()
                                 .map(TokenRangeReplicasResponse.ReplicaInfo::end)
-                                .anyMatch(s -> s.equals(Long.toString(Murmur3Partitioner.MAXIMUM)))).isTrue();
+                                .anyMatch(s -> s.equals("9223372036854775807"))).isTrue();
     }
 }

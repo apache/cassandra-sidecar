@@ -36,11 +36,10 @@ import com.google.common.collect.Sets;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.distributed.UpgradeableCluster;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
-import org.apache.cassandra.distributed.shared.ClusterUtils;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -53,7 +52,7 @@ class LeavingBaseTest extends BaseTokenRangeIntegrationTest
                                 int leavingNodesPerDC,
                                 CountDownLatch transientStateStart,
                                 CountDownLatch transientStateEnd,
-                                UpgradeableCluster cluster,
+                                IClusterExtension<? extends IInstance> cluster,
                                 Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings)
     throws Exception
     {
@@ -73,12 +72,12 @@ class LeavingBaseTest extends BaseTokenRangeIntegrationTest
                 dcReplication = Collections.singleton("datacenter1");
             }
 
-            IUpgradeableInstance seed = cluster.get(1);
+            IInstance seed = cluster.get(1);
 
-            List<IUpgradeableInstance> leavingNodes = new ArrayList<>();
+            List<IInstance> leavingNodes = new ArrayList<>();
             for (int i = 0; i < leavingNodesPerDC * annotation.numDcs(); i++)
             {
-                IUpgradeableInstance node = cluster.get(cluster.size() - i);
+                IInstance node = cluster.get(cluster.size() - i);
                 startAsync("Decommission node" + node.config().num(),
                            () -> node.nodetoolResult("decommission").asserts().success());
                 leavingNodes.add(node);
@@ -87,9 +86,9 @@ class LeavingBaseTest extends BaseTokenRangeIntegrationTest
             // Wait until nodes have reached expected state
             awaitLatchOrThrow(transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
 
-            for (IUpgradeableInstance node : leavingNodes)
+            for (IInstance node : leavingNodes)
             {
-                ClusterUtils.awaitRingState(seed, node, "Leaving");
+                cluster.awaitRingState(seed, node, "Leaving");
             }
 
             retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
@@ -122,7 +121,7 @@ class LeavingBaseTest extends BaseTokenRangeIntegrationTest
     }
 
     private void validateReplicaMapping(TokenRangeReplicasResponse mappingResponse,
-                                        List<IUpgradeableInstance> leavingNodes,
+                                        List<IInstance> leavingNodes,
                                         Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings)
     {
         List<String> transientNodeAddresses = leavingNodes.stream().map(i -> {

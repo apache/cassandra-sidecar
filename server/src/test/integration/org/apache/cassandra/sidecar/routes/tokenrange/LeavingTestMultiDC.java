@@ -41,9 +41,10 @@ import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.pool.TypePool;
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
@@ -63,7 +64,7 @@ class LeavingTestMultiDC extends LeavingBaseTest
     {
         BBHelperLeavingNodesMultiDC.reset();
         int leavingNodesPerDC = 1;
-        UpgradeableCluster cluster = getMultiDCCluster(BBHelperLeavingNodesMultiDC::install, cassandraTestContext);
+        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperLeavingNodesMultiDC::install, cassandraTestContext);
 
         runLeavingTestScenario(context,
                                leavingNodesPerDC,

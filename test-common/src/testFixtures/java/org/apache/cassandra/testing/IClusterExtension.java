@@ -19,6 +19,8 @@
 
 package org.apache.cassandra.testing;
 
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.cassandra.distributed.api.ICluster;
@@ -102,4 +104,28 @@ public interface IClusterExtension<I extends IInstance> extends ICluster<I>
      * @param instance instance to stop
      */
     void stopUnchecked(IInstance instance);
+
+    /**
+     * Creates an {@link IInstanceConfig} for the given {@code nodeNum}. The configuration is ready to be used
+     * in the cluster.
+     *
+     * @param nodeNum the 1-index based node number
+     * @return the {@link IInstanceConfig}
+     */
+    IInstanceConfig createInstanceConfig(int nodeNum);
+
+    /**
+     * @param instance the instance where ring will be executed
+     * @return a list of {@link IRingEntry} that represent the ring view of the provided {@code instance}
+     */
+    List<IRingEntry> ring(IInstance instance);
+
+    /**
+     * Start the instance with the given system properties; after the instance has started,
+     * the properties will be cleared.
+     *
+     * @param instance         the instance to start
+     * @param systemProperties the system properties used during startup of the instance
+     */
+    IInstance start(IInstance instance, Map<String, String> systemProperties);
 }

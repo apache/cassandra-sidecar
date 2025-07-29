@@ -29,11 +29,9 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
-import org.apache.cassandra.distributed.shared.ClusterUtils;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
@@ -48,8 +46,8 @@ import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
-import static org.apache.cassandra.distributed.shared.ClusterUtils.addInstance;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.createJob;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.disableRestoreProcessor;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
@@ -76,12 +74,12 @@ class RestoreJobDiscovererNodeJoinedIntTest extends IntegrationTestBase
     void testUpdateRestoreRangesWhenNodeMoved(ConfigurableCassandraTestContext cassandraTestContext)
     {
         TokenSupplier tokenSupplier = TestTokenSupplier.staticTokens(0, 1000L, 1500L, 2000L);
-        UpgradeableCluster cluster = startCluster(tokenSupplier, cassandraTestContext);
+        IClusterExtension<? extends IInstance> cluster = startCluster(tokenSupplier, cassandraTestContext);
         RestoreJobTestUtils.RestoreJobClient testClient = RestoreJobTestUtils.client(client, "127.0.0." + NODE, server.actualPort());
         test(testClient, cluster);
     }
 
-    private void test(RestoreJobTestUtils.RestoreJobClient testClient, UpgradeableCluster cluster)
+    private void test(RestoreJobTestUtils.RestoreJobClient testClient, IClusterExtension<? extends IInstance> cluster)
     {
         // prepare schema
         waitForSchemaReady(30, TimeUnit.SECONDS);
@@ -122,18 +120,17 @@ class RestoreJobDiscovererNodeJoinedIntTest extends IntegrationTestBase
         assertThat(ranges.get(1).tokenRange()).isEqualTo(new TokenRange(1000, 1500));
 
         // Decommission
-        IUpgradeableInstance seed = cluster.get(1);
-        IUpgradeableInstance joiningNode = addInstance(cluster,
-                                                       seed.config().localDatacenter(),
-                                                       seed.config().localRack(),
-                                                       inst -> {
-                                                           inst.set("auto_bootstrap", true);
-                                                           inst.with(Feature.GOSSIP,
-                                                                     Feature.JMX,
-                                                                     Feature.NATIVE_PROTOCOL);
-                                                       });
-        joiningNode.startup(cluster);
-        ClusterUtils.awaitRingState(seed, joiningNode, "Normal");
+        IInstance seed = cluster.get(1);
+        IInstance joiningNode = cluster.addInstance(seed.config().localDatacenter(),
+                                                    seed.config().localRack(),
+                                                    inst -> {
+                                                        inst.set("auto_bootstrap", true);
+                                                        inst.with(Feature.GOSSIP,
+                                                                  Feature.JMX,
+                                                                  Feature.NATIVE_PROTOCOL);
+                                                    });
+        joiningNode.startup(cluster.delegate());
+        cluster.awaitRingState(seed, joiningNode, "Normal");
 
         // Using loopAssert because #onRingTopologyChanged runs in another thread. It takes some time to reflect the RestoreRange update
         loopAssert(60, 1000, () -> {
@@ -155,10 +152,8 @@ class RestoreJobDiscovererNodeJoinedIntTest extends IntegrationTestBase
         });
     }
 
-    private static UpgradeableCluster startCluster(TokenSupplier tokenSupplier, ConfigurableCassandraTestContext cassandraTestContext)
+    private static IClusterExtension<? extends IInstance> startCluster(TokenSupplier tokenSupplier, ConfigurableCassandraTestContext cassandraTestContext)
     {
-        return cassandraTestContext.configureAndStartCluster(builder -> {
-            builder.withTokenSupplier(tokenSupplier);
-        });
+        return cassandraTestContext.configureAndStartCluster(builder -> builder.tokenSupplier(tokenSupplier));
     }
 }

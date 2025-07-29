@@ -19,7 +19,6 @@
 
 package org.apache.cassandra.sidecar.testing;
 
-import java.io.IOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -106,6 +105,7 @@ import org.apache.cassandra.testing.TestVersionSupplier;
 
 import static org.apache.cassandra.sidecar.config.yaml.S3ClientConfigurationImpl.DEFAULT_API_CALL_TIMEOUT;
 import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS;
+import static org.apache.cassandra.testing.utils.IInstanceUtils.tryGetIntConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -363,7 +363,7 @@ public abstract class SharedClusterIntegrationTestBase
     protected ServerWrapper startSidecarWithInstances(Iterable<? extends IInstance> instances, AbstractModule customModule) throws InterruptedException
     {
         VertxTestContext context = new VertxTestContext();
-        AbstractModule testModule = new IntegrationTestModule(instances, classLoaderWrapper, mtlsTestHelper,
+        AbstractModule testModule = new IntegrationTestModule(instances, mtlsTestHelper,
                                                               dnsResolver, configurationOverrides());
         Module module = testModule;
         if (customModule != null)
@@ -569,20 +569,17 @@ public abstract class SharedClusterIntegrationTestBase
     {
         private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestModule.class);
         private final Iterable<? extends IInstance> instances;
-        private final IsolatedDTestClassLoaderWrapper wrapper;
         private final MtlsTestHelper mtlsTestHelper;
         private final DnsResolver dnsResolver;
         private final SidecarVersionProvider sidecarVersionProvider = new SidecarVersionProvider();
         private final Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configurationOverrides;
 
         public IntegrationTestModule(Iterable<? extends IInstance> instances,
-                                     IsolatedDTestClassLoaderWrapper wrapper,
                                      MtlsTestHelper mtlsTestHelper,
                                      DnsResolver dnsResolver,
                                      Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configurationOverrides)
         {
             this.instances = instances;
-            this.wrapper = wrapper;
             this.mtlsTestHelper = mtlsTestHelper;
             this.configurationOverrides = configurationOverrides;
             this.dnsResolver = dnsResolver;
@@ -622,8 +619,7 @@ public abstract class SharedClusterIntegrationTestBase
                                                                 sidecarVersionProvider.sidecarVersion(),
                                                                 jmxConfiguration,
                                                                 cqlSessionProvider,
-                                                                dnsResolver,
-                                                                wrapper))
+                                                                dnsResolver))
                          .collect(Collectors.toList());
             return new InstancesMetadataImpl(instanceMetadataList, dnsResolver);
         }
@@ -653,12 +649,12 @@ public abstract class SharedClusterIntegrationTestBase
         {
             return StreamSupport.stream(instances.spliterator(), false)
                                 .map(instance -> new InetSocketAddress(instance.config().broadcastAddress().getAddress(),
-                                                                       tryGetIntConfig(instance.config(), "native_transport_port", 9042)))
+                                                                       tryGetIntConfig(instance, "native_transport_port", 9042)))
                                 .collect(Collectors.toList());
         }
 
-        public static SidecarConfigurationImpl.Builder defaultConfigurationBuilder(MtlsTestHelper mtlsTestHelper,
-                                                                                   Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configurationOverrides)
+        public static SidecarConfigurationImpl.Builder defaultConfigurationBuilder(
+        MtlsTestHelper mtlsTestHelper, Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configurationOverrides)
         {
             ServiceConfiguration conf = ServiceConfigurationImpl.builder()
                                                                 .host("0.0.0.0") // binds to all interfaces, potential security issue if left running for long
@@ -742,18 +738,6 @@ public abstract class SharedClusterIntegrationTestBase
             };
         }
 
-        static int tryGetIntConfig(IInstanceConfig config, String configName, int defaultValue)
-        {
-            try
-            {
-                return config.getInt(configName);
-            }
-            catch (NullPointerException npe)
-            {
-                return defaultValue;
-            }
-        }
-
         public static String cassandraInstanceHostname(IInstance cassandraInstance, DnsResolver dnsResolver)
         {
             IInstanceConfig config = cassandraInstance.config();
@@ -774,8 +758,7 @@ public abstract class SharedClusterIntegrationTestBase
                                                       String sidecarVersion,
                                                       JmxConfiguration jmxConfiguration,
                                                       CQLSessionProvider session,
-                                                      DnsResolver dnsResolver,
-                                                      IsolatedDTestClassLoaderWrapper wrapper)
+                                                      DnsResolver dnsResolver)
         {
             IInstanceConfig config = cassandraInstance.config();
             String ipAddress = JMXUtil.getJmxHost(config);
@@ -792,12 +775,12 @@ public abstract class SharedClusterIntegrationTestBase
             String[] dataDirectories = (String[]) config.get("data_file_directories");
             String stagingDir = stagingDir(dataDirectories);
 
-            JmxClient jmxClient = new JmxClientProxy(wrapper,
-                                                     JmxClient.builder()
-                                                              .host(ipAddress)
-                                                              .port(config.jmxPort())
-                                                              .connectionMaxRetries(jmxConfiguration.maxRetries())
-                                                              .connectionRetryDelay(jmxConfiguration.retryDelay()));
+            JmxClient jmxClient = JmxClient.builder()
+                                           .host(ipAddress)
+                                           .port(config.jmxPort())
+                                           .connectionMaxRetries(jmxConfiguration.maxRetries())
+                                           .connectionRetryDelay(jmxConfiguration.retryDelay())
+                                           .build();
             MetricRegistry metricRegistry = new MetricRegistry();
             CassandraAdapterDelegate delegate = new CassandraAdapterDelegate(vertx,
                                                                              config.num(),
@@ -832,41 +815,6 @@ public abstract class SharedClusterIntegrationTestBase
             assertThat(dataDirParentPath).isNotNull();
             Path stagingPath = dataDirParentPath.resolve("staging");
             return stagingPath.toFile().getAbsolutePath();
-        }
-    }
-
-    protected JmxClient wrapJmxClient(JmxClient.Builder builder)
-    {
-        return new JmxClientProxy(classLoaderWrapper, builder);
-    }
-
-    /**
-     * Runs JMXClient calls with the dtest classloader
-     */
-    static class JmxClientProxy extends JmxClient
-    {
-        private final IsolatedDTestClassLoaderWrapper wrapper;
-
-        protected JmxClientProxy(IsolatedDTestClassLoaderWrapper wrapper, Builder builder)
-        {
-            super(Objects.requireNonNull(builder, "builder must be provided"));
-            this.wrapper = wrapper;
-        }
-
-        /**
-         * Connects to JMX by running inside the wrapped classloader. The connection to JMX must be established in the
-         * dtest classloader to be able to communicate to Cassandra's JMX.
-         *
-         * @param currentAttempt the current attempt to connect
-         * @throws IOException if the underlying operation throws an IOException
-         */
-        @Override
-        protected void connectInternal(int currentAttempt) throws IOException
-        {
-            wrapper.executeExceptionableActionOnDTestClassLoader(() -> {
-                super.connectInternal(currentAttempt);
-                return null;
-            });
         }
     }
 }

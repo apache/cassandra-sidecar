@@ -29,11 +29,9 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
-import org.apache.cassandra.distributed.shared.ClusterUtils;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
@@ -49,8 +47,8 @@ import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperJoiningNode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
-import static org.apache.cassandra.distributed.shared.ClusterUtils.addInstance;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.assertRestoreRange;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.createJob;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.disableRestoreProcessor;
@@ -72,7 +70,7 @@ class RestoreJobDiscovererNodeJoiningIntTest extends IntegrationTestBase
     void testUpdateRestoreRangesWhenNewNodeJoining(ConfigurableCassandraTestContext cassandraTestContext)
     {
         TokenSupplier tokenSupplier = TestTokenSupplier.staticTokens(0, 1000L, 1500L, 2000L);
-        UpgradeableCluster cluster = startCluster(tokenSupplier, cassandraTestContext, 4);
+        IClusterExtension<? extends IInstance> cluster = startCluster(tokenSupplier, cassandraTestContext, 4);
         try
         {
             test(BBHelperJoiningNode.transientStateStart, cluster);
@@ -86,10 +84,10 @@ class RestoreJobDiscovererNodeJoiningIntTest extends IntegrationTestBase
     @Override
     protected int[] getInstancesToManage(int clusterSize)
     {
-        return new int[] { MANAGED_CASSANDRA_NODE_NUM };
+        return new int[]{ MANAGED_CASSANDRA_NODE_NUM };
     }
 
-    private void test(CountDownLatch transientStateStart, UpgradeableCluster cluster)
+    private void test(CountDownLatch transientStateStart, IClusterExtension<? extends IInstance> cluster)
     {
         // prepare schema
         waitForSchemaReady(30, TimeUnit.SECONDS);
@@ -130,22 +128,21 @@ class RestoreJobDiscovererNodeJoiningIntTest extends IntegrationTestBase
         assertRestoreRange(ranges.get(0), 1500L, 1600L);
 
         // start move in the background
-        IUpgradeableInstance seed = cluster.get(1);
-        IUpgradeableInstance joiningNode = addInstance(cluster,
-                                                       seed.config().localDatacenter(),
-                                                       seed.config().localRack(),
-                                                       inst -> {
-                                                           inst.set("auto_bootstrap", true);
-                                                           inst.with(Feature.GOSSIP,
-                                                                     Feature.JMX,
-                                                                     Feature.NATIVE_PROTOCOL);
-                                                       });
+        IInstance seed = cluster.get(1);
+        IInstance joiningNode = cluster.addInstance(seed.config().localDatacenter(),
+                                                    seed.config().localRack(),
+                                                    inst -> {
+                                                        inst.set("auto_bootstrap", true);
+                                                        inst.with(Feature.GOSSIP,
+                                                                  Feature.JMX,
+                                                                  Feature.NATIVE_PROTOCOL);
+                                                    });
         startAsync("Start new node node" + joiningNode.config().num(),
-                   () -> joiningNode.startup(cluster));
+                   () -> joiningNode.startup(cluster.delegate()));
 
         // Wait until nodes have reached expected state
         awaitLatchOrThrow(transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
-        ClusterUtils.awaitRingState(seed, joiningNode, "Joining");
+        cluster.awaitRingState(seed, joiningNode, "Joining");
 
         // Fetch the local token ranges again;
         // RingTopologyRefresher should detect the topology change and notify RestoreJobDiscover via #onRingTopologyChanged
@@ -177,14 +174,14 @@ class RestoreJobDiscovererNodeJoiningIntTest extends IntegrationTestBase
         return MANAGED_CASSANDRA_NODE_IP;
     }
 
-    private static UpgradeableCluster startCluster(TokenSupplier tokenSupplier,
-                                                   ConfigurableCassandraTestContext cassandraTestContext,
-                                                   int joiningNodeNum)
+    private static IClusterExtension<? extends IInstance> startCluster(TokenSupplier tokenSupplier,
+                                                                       ConfigurableCassandraTestContext cassandraTestContext,
+                                                                       int joiningNodeNum)
     {
         BBHelperJoiningNode.reset();
         return cassandraTestContext.configureAndStartCluster(builder -> {
-            builder.withInstanceInitializer((cl, num) -> BBHelperJoiningNode.install(cl, num, joiningNodeNum));
-            builder.withTokenSupplier(tokenSupplier);
+            builder.instanceInitializer((cl, num) -> BBHelperJoiningNode.install(cl, num, joiningNodeNum))
+                   .tokenSupplier(tokenSupplier);
         });
     }
 }

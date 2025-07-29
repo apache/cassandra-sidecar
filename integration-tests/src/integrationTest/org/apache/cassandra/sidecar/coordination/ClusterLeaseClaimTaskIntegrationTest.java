@@ -18,10 +18,8 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -43,17 +41,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Session;
-import com.vdurmont.semver4j.Semver;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.ConsistencyLevel;
 import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.IInstance;
-import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.SimpleQueryResult;
-import org.apache.cassandra.distributed.impl.AbstractCluster;
-import org.apache.cassandra.distributed.shared.Versions;
-import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
@@ -70,6 +62,10 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.server.CoordinationMetrics;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
+import org.apache.cassandra.sidecar.utils.TestMetricUtils;
+import org.apache.cassandra.testing.ClusterBuilderConfiguration;
+import org.apache.cassandra.testing.IClusterExtension;
+import org.apache.cassandra.testing.IsolatedDTestClassLoaderWrapper;
 import org.apache.cassandra.testing.TestVersion;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -77,9 +73,9 @@ import org.jetbrains.annotations.Nullable;
 import static com.google.common.util.concurrent.Uninterruptibles.awaitUninterruptibly;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
-import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.tryGetIntConfig;
-import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
+import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
+import static org.apache.cassandra.testing.utils.IInstanceUtils.buildContactList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.fail;
@@ -115,32 +111,35 @@ class ClusterLeaseClaimTaskIntegrationTest
     @AfterAll
     static void cleanup()
     {
-        TestResourceReaper.create().with(vertx).close();
+        getBlocking(vertx.close(), 10, TimeUnit.SECONDS, "Close vertx");
     }
 
     @ParameterizedTest(name = "{index} => version {0}")
     @MethodSource("org.apache.cassandra.testing.TestVersionSupplier#testVersions")
-    void test(TestVersion version) throws IOException
+    void test(TestVersion version) throws Exception
     {
-        Versions versions = Versions.find();
-        assertThat(versions).as("No dtest jar versions found").isNotNull();
-        Versions.Version requestedVersion = versions.getLatest(new Semver(version.version(), Semver.SemverType.LOOSE));
-
+        IsolatedDTestClassLoaderWrapper classLoaderWrapper = new IsolatedDTestClassLoaderWrapper();
+        classLoaderWrapper.initializeDTestJarClassLoader(version, TestVersion.class);
         // Spin up a 3-node cluster
-        try (AbstractCluster<?> cluster = UpgradeableCluster.build(3)
-                                                            .withDynamicPortAllocation(true) // to allow parallel test runs
-                                                            .withVersion(requestedVersion)
-                                                            .withConfig(config -> config.with(Feature.NATIVE_PROTOCOL))
-                                                            .start())
+        ClusterBuilderConfiguration testClusterConfiguration
+        = new ClusterBuilderConfiguration().dynamicPortAllocation(true) // to allow parallel test runs
+                                           .nodesPerDc(3)
+                                           .dcCount(1)
+                                           .requestFeature(Feature.NATIVE_PROTOCOL);
+        try (IClusterExtension<? extends IInstance> cluster = classLoaderWrapper.loadCluster(version.version(), testClusterConfiguration))
         {
             // initialize internal sidecar schema for testing
             initializeSchemas(cluster, new SidecarLeaseSchema(mockSchemaConfig));
             // Run different scenarios for selection of best-effort single conditional executor
             simulate(cluster);
         }
+        finally
+        {
+            classLoaderWrapper.closeDTestJarClassLoader();
+        }
     }
 
-    private void simulate(AbstractCluster<?> cluster)
+    private void simulate(IClusterExtension<? extends IInstance> cluster)
     {
         // The following simulates that we have 1 Sidecar instance managing
         // 1 Cassandra instance. All Sidecar instances participate in the
@@ -322,7 +321,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         assertThat(awaitUninterruptibly(completedLatch, 1, TimeUnit.MINUTES)).isTrue();
     }
 
-    void initializeSchemas(AbstractCluster<?> cluster, SidecarLeaseSchema tableSchema)
+    void initializeSchemas(IClusterExtension<? extends IInstance> cluster, SidecarLeaseSchema tableSchema)
     {
         String createKeyspaceStatement = String.format("CREATE KEYSPACE %s WITH REPLICATION = { " +
                                                        "   'class' : 'NetworkTopologyStrategy', " +
@@ -334,7 +333,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         LOGGER.info("Creating table with DDL: {}", tableSchema.createSchemaStatement());
     }
 
-    List<TestInstanceWrapper> buildSimulatedInstances(AbstractCluster<?> cluster)
+    List<TestInstanceWrapper> buildSimulatedInstances(IClusterExtension<? extends IInstance> cluster)
     {
         List<InetSocketAddress> address = buildContactList(cluster.get(1));
         List<TestInstanceWrapper> processes = new ArrayList<>();
@@ -364,7 +363,7 @@ class ClusterLeaseClaimTaskIntegrationTest
     private SidecarMetrics buildMetrics()
     {
         MetricRegistryFactory mockRegistryFactory = mock(MetricRegistryFactory.class);
-        when(mockRegistryFactory.getOrCreate()).thenReturn(registry());
+        when(mockRegistryFactory.getOrCreate()).thenReturn(TestMetricUtils.registry());
         return new SidecarMetricsImpl(mockRegistryFactory, null);
     }
 
@@ -386,13 +385,6 @@ class ClusterLeaseClaimTaskIntegrationTest
         SidecarLeaseSchema tableSchema = new SidecarLeaseSchema(mockSchemaConfig);
         tableSchema.prepareStatements(session);
         return new SidecarLeaseDatabaseAccessor(tableSchema, sessionProvider);
-    }
-
-    static List<InetSocketAddress> buildContactList(IInstance instance)
-    {
-        IInstanceConfig config = instance.config();
-        return Collections.singletonList(new InetSocketAddress(config.broadcastAddress().getAddress(),
-                                                               tryGetIntConfig(config, "native_transport_port", 9042)));
     }
 
     static int simulateDisableBinaryOfLeaseholder(List<TestInstanceWrapper> simulatedInstances)
@@ -440,7 +432,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         return instances;
     }
 
-    static long rowCountInLeaseTable(AbstractCluster<?> cluster)
+    static long rowCountInLeaseTable(IClusterExtension<? extends IInstance> cluster)
     {
         SimpleQueryResult rows = cluster.getFirstRunningInstance()
                                         .coordinator()
@@ -449,7 +441,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         return StreamSupport.stream(rows.spliterator(), false).count();
     }
 
-    static Object[][] queryCurrentLeaseholders(AbstractCluster<?> cluster)
+    static Object[][] queryCurrentLeaseholders(IClusterExtension<? extends IInstance> cluster)
     {
         Object[][] result =
         cluster.getFirstRunningInstance()
@@ -461,7 +453,7 @@ class ClusterLeaseClaimTaskIntegrationTest
         return result;
     }
 
-    void removeLeaseholderFromDatabase(AbstractCluster<?> cluster)
+    void removeLeaseholderFromDatabase(IClusterExtension<? extends IInstance> cluster)
     {
         LOGGER.info("Removing current leaseholder from the database");
         for (int retry = 1; retry <= 20; retry++)

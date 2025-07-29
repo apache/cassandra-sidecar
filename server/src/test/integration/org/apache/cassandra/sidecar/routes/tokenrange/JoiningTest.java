@@ -26,12 +26,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
-import org.apache.cassandra.distributed.shared.ClusterUtils;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -46,17 +45,16 @@ public class JoiningTest extends JoiningBaseTest
     void retrieveMappingWithKeyspaceWithAddNode(VertxTestContext context) throws Exception
     {
         createTestKeyspace(ImmutableMap.of("replication_factor", DEFAULT_RF));
-        UpgradeableCluster cluster = sidecarTestContext.cluster();
-        IUpgradeableInstance instance = cluster.get(1);
-        IUpgradeableInstance newInstance = ClusterUtils.addInstance(cluster,
-                                                                    instance.config().localDatacenter(),
-                                                                    instance.config().localRack(),
-                                                                    inst -> inst.with(Feature.NETWORK,
-                                                                                      Feature.GOSSIP,
-                                                                                      Feature.JMX,
-                                                                                      Feature.NATIVE_PROTOCOL));
-        cluster.get(4).startup(cluster);
-        ClusterUtils.awaitRingState(instance, newInstance, "Normal");
+        IClusterExtension<? extends IInstance> cluster = sidecarTestContext.cluster();
+        IInstance instance = cluster.get(1);
+        IInstance newInstance = cluster.addInstance(instance.config().localDatacenter(),
+                                                    instance.config().localRack(),
+                                                    inst -> inst.with(Feature.NETWORK,
+                                                                      Feature.GOSSIP,
+                                                                      Feature.JMX,
+                                                                      Feature.NATIVE_PROTOCOL));
+        cluster.get(4).startup(cluster.delegate());
+        cluster.awaitRingState(instance, newInstance, "Normal");
 
         retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());

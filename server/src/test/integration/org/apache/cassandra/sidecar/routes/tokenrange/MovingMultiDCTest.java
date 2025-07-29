@@ -42,9 +42,10 @@ import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.pool.TypePool;
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
@@ -61,7 +62,7 @@ class MovingMultiDCTest extends MovingBaseTest
                                                ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {
         BBHelperMovingNodeMultiDC.reset();
-        UpgradeableCluster cluster = getMultiDCCluster(BBHelperMovingNodeMultiDC::install, cassandraTestContext);
+        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperMovingNodeMultiDC::install, cassandraTestContext);
 
         long moveTarget = getMoveTargetToken(cluster);
         runMovingTestScenario(context,

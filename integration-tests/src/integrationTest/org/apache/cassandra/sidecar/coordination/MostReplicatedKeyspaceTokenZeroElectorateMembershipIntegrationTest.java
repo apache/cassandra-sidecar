@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.coordination;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -34,15 +33,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.MetricRegistry;
-import com.vdurmont.semver4j.Semver;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
-import org.apache.cassandra.distributed.impl.AbstractCluster;
 import org.apache.cassandra.distributed.shared.JMXUtil;
-import org.apache.cassandra.distributed.shared.Versions;
 import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
@@ -61,12 +56,15 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.testing.ClusterBuilderConfiguration;
+import org.apache.cassandra.testing.IClusterExtension;
+import org.apache.cassandra.testing.IsolatedDTestClassLoaderWrapper;
+import org.apache.cassandra.testing.TestUtils;
 import org.apache.cassandra.testing.TestVersion;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static org.apache.cassandra.sidecar.coordination.ClusterLeaseClaimTaskIntegrationTest.buildContactList;
-import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.cassandraVersionProvider;
-import static org.apache.cassandra.sidecar.testing.CassandraSidecarTestContext.tryGetIntConfig;
+import static org.apache.cassandra.testing.utils.IInstanceUtils.buildContactList;
+import static org.apache.cassandra.testing.utils.IInstanceUtils.tryGetIntConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -79,35 +77,36 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
     private static final SidecarConfigurationImpl CONFIG = new SidecarConfigurationImpl();
     Vertx vertx = Vertx.vertx();
     DriverUtils driverUtils = new DriverUtils();
-    CassandraVersionProvider cassandraVersionProvider = cassandraVersionProvider(DnsResolvers.DEFAULT, null);
+    CassandraVersionProvider cassandraVersionProvider = TestUtils.cassandraVersionProvider(DnsResolvers.DEFAULT, null);
     MetricRegistryFactory metricRegistryProvider = new MetricRegistryFactory("cassandra_sidecar", List.of(), List.of());
 
     @ParameterizedTest(name = "{index} => version {0}")
     @MethodSource("org.apache.cassandra.testing.TestVersionSupplier#testVersions")
-    void test(TestVersion version) throws IOException
+    void test(TestVersion version) throws Exception
     {
-        Versions versions = Versions.find();
-        assertThat(versions).as("No dtest jar versions found").isNotNull();
-        Versions.Version requestedVersion = versions.getLatest(new Semver(version.version(), Semver.SemverType.LOOSE));
-
+        IsolatedDTestClassLoaderWrapper classLoaderWrapper = new IsolatedDTestClassLoaderWrapper();
+        classLoaderWrapper.initializeDTestJarClassLoader(version, TestVersion.class);
         // Spin up a 12 node cluster with 2 DCs
-        try (AbstractCluster<?> cluster = UpgradeableCluster.build()
-                                                            .withDynamicPortAllocation(true) // to allow parallel test runs
-                                                            .withVersion(requestedVersion)
-                                                            .withDC("dc0", 6)
-                                                            .withDC("dc1", 6)
-                                                            .withConfig(config -> config.with(Feature.NATIVE_PROTOCOL)
-                                                                                        .with(Feature.JMX)
-                                                                                        .with(Feature.NETWORK)
-                                                                                        .with(Feature.GOSSIP))
-                                                            .start())
+        ClusterBuilderConfiguration testClusterConfiguration
+        = new ClusterBuilderConfiguration().dynamicPortAllocation(true) // to allow parallel test runs
+                                           .nodesPerDc(6)
+                                           .dcCount(2)
+                                           .requestFeature(Feature.NATIVE_PROTOCOL)
+                                           .requestFeature(Feature.JMX)
+                                           .requestFeature(Feature.NETWORK)
+                                           .requestFeature(Feature.GOSSIP);
+        try (IClusterExtension<? extends IInstance> cluster = classLoaderWrapper.loadCluster(version.version(), testClusterConfiguration))
         {
             initializeSchema(cluster);
             runTestScenario(cluster);
         }
+        finally
+        {
+            classLoaderWrapper.closeDTestJarClassLoader();
+        }
     }
 
-    private void runTestScenario(AbstractCluster<?> cluster)
+    private void runTestScenario(IClusterExtension<? extends IInstance> cluster)
     {
         AbstractMap.SimpleEntry<List<? extends ElectorateMembership>, List<? extends ElectorateMembership>> pair
         = buildElectorateMembershipPerCassandraInstance(cluster);
@@ -123,10 +122,10 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
         assertMembership(sidecarInternalMemberships, 1);
 
         // Now let's create keyspaces with RF 1-3 replicated in a single DC and validate
-        String dc0 = "dc0";
+        String dc1 = "datacenter1";
         for (int rf = 1; rf <= 3; rf++)
         {
-            cluster.schemaChange(String.format("CREATE KEYSPACE ks_dc0_%d WITH REPLICATION={'class':'NetworkTopologyStrategy','%s':%d}", rf, dc0, rf));
+            cluster.schemaChange(String.format("CREATE KEYSPACE ks_dc1_%d WITH REPLICATION={'class':'NetworkTopologyStrategy','%s':%d}", rf, dc1, rf));
             // introduce delay until schema change information propagates
             sleepUninterruptibly(10, TimeUnit.SECONDS);
             assertMembership(mostReplicatedMemberships, rf);
@@ -135,13 +134,13 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
             assertMembership(sidecarInternalMemberships, 1);
         }
 
-        // Now let's create keyspaces with RF 1-4 replicated in DC2 and validate
+        // Now let's create keyspaces with RF 1-4 replicated in DC1 and validate
         // that we only increase the membership count once the keyspace in DC2
         // has a higher replication factor than the keyspaces created in the first DC
-        String dc1 = "dc1";
+        String dc2 = "datacenter2";
         for (int rf = 1; rf <= 4; rf++)
         {
-            cluster.schemaChange(String.format("CREATE KEYSPACE ks_dc1_%d WITH REPLICATION={'class':'NetworkTopologyStrategy','%s':%d}", rf, dc1, rf));
+            cluster.schemaChange(String.format("CREATE KEYSPACE ks_dc2_%d WITH REPLICATION={'class':'NetworkTopologyStrategy','%s':%d}", rf, dc2, rf));
             // introduce delay until schema change information propagates
             sleepUninterruptibly(10, TimeUnit.SECONDS);
             assertMembership(mostReplicatedMemberships, Math.max(3, rf));
@@ -178,7 +177,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
     }
 
     AbstractMap.SimpleEntry<List<? extends ElectorateMembership>, List<? extends ElectorateMembership>>
-    buildElectorateMembershipPerCassandraInstance(AbstractCluster<?> cluster)
+    buildElectorateMembershipPerCassandraInstance(IClusterExtension<? extends IInstance> cluster)
     {
         List<MostReplicatedKeyspaceTokenZeroElectorateMembership> r1 = new ArrayList<>();
         List<SidecarInternalTokenZeroElectorateMembership> r2 = new ArrayList<>();
@@ -206,7 +205,6 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
         String hostName = JMXUtil.getJmxHost(config);
         int nativeTransportPort = tryGetIntConfig(config, "native_transport_port", 9042);
         String[] dataDirectories = (String[]) config.get("data_file_directories");
-
 
         JmxClient jmxClient = JmxClient.builder()
                                        .host(hostName)
@@ -247,7 +245,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
         return new InstancesMetadataImpl(metadata, DnsResolvers.DEFAULT);
     }
 
-    void initializeSchema(AbstractCluster<?> cluster)
+    void initializeSchema(IClusterExtension<? extends IInstance> cluster)
     {
         SchemaKeyspaceConfiguration config = CONFIG.serviceConfiguration().schemaKeyspaceConfiguration();
         String createKeyspaceStatement = String.format("CREATE KEYSPACE %s WITH REPLICATION = %s ;",

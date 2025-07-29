@@ -29,10 +29,11 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
@@ -59,7 +60,7 @@ public class CQLSessionProviderTest extends IntegrationTestBase
     void testCqlSessionProviderWorksAsExpected(VertxTestContext context, CassandraTestContext cassandraTestContext)
     throws Exception
     {
-        UpgradeableCluster cluster = cassandraTestContext.cluster();
+        IClusterExtension<? extends IInstance> cluster = cassandraTestContext.cluster();
         testWithClient(context, false, webClient -> {
                            // To start, both instances are stopped, so we should get 503s for both
                            buildInstanceHealthRequest(webClient, "1")

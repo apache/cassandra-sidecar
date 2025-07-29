@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.routes.tokenrange;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import org.apache.cassandra.db.SystemKeyspace;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
@@ -43,12 +43,12 @@ import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
  * Cluster expansion scenarios integration tests for token range replica mapping endpoint with the in-jvm
  * dtest framework.
  *
- * Note: Some related test classes are broken down to have a single test case to parallelize test execution and
+ * <p>Note: Some related test classes are broken down to have a single test case to parallelize test execution and
  * therefore limit the instance size required to run the tests from CircleCI as the in-jvm-dtests tests are memory bound
  */
 @Tag("heavy")
 @ExtendWith(VertxExtension.class)
-public class JoiningTestDoubleCluster extends JoiningBaseTest
+public class JoiningDoubleClusterTest extends JoiningBaseTest
 {
     @CassandraIntegrationTest(nodesPerDc = 5, newNodesPerDc = 5, network = true, buildCluster = false)
     void retrieveMappingWithDoubleClusterSize(VertxTestContext context,
@@ -176,18 +176,15 @@ public class JoiningTestDoubleCluster extends JoiningBaseTest
             // We intercept the bootstrap of the new nodes (6-10) to validate token ranges
             if (nodeNumber > 5)
             {
-                BootstrapBBUtils.installSetBoostrapStateInterceptor(cl, BBHelperDoubleClusterSize.class);
+                BootstrapBBUtils.installFinishJoiningRingInterceptor(cl, BBHelperDoubleClusterSize.class);
             }
         }
 
-        public static void setBootstrapState(SystemKeyspace.BootstrapState state, @SuperCall Callable<Void> orig) throws Exception
+        public static void finishJoiningRing(boolean didBootstrap, Collection<?> tokens, @SuperCall Callable<Void> orig) throws Exception
         {
-            if (state == SystemKeyspace.BootstrapState.COMPLETED)
-            {
-                // trigger bootstrap start and wait until bootstrap is ready from test
-                transientStateStart.countDown();
-                awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
-            }
+            // trigger bootstrap start and wait until bootstrap is ready from test
+            transientStateStart.countDown();
+            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
             orig.call();
         }
 

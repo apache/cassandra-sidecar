@@ -45,7 +45,7 @@ public final class TestVersionSupplier
     public static Stream<TestVersion> testVersions()
     {
         // By default, we test 2 versions that will exercise oldest and newest supported versions
-        String versions = System.getProperty("cassandra.sidecar.versions_to_test", "4.1");
+        String versions = System.getProperty("cassandra.sidecar.versions_to_test", "4.1,5.1");
         LOGGER.info("Testing with versions={}", versions);
         return Arrays.stream(versions.split(",")).map(String::trim).map(TestVersion::new);
     }

@@ -38,15 +38,14 @@ import com.google.common.collect.Sets;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
-import org.apache.cassandra.distributed.shared.ClusterUtils;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -58,7 +57,7 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
     void runJoiningTestScenario(VertxTestContext context,
                                 CountDownLatch transientStateStart,
                                 CountDownLatch transientStateEnd,
-                                UpgradeableCluster cluster,
+                                IClusterExtension<? extends IInstance> cluster,
                                 List<Range<BigInteger>> expectedRanges,
                                 Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings,
                                 boolean isCrossDCKeyspace)
@@ -79,36 +78,35 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
                 dcReplication = Collections.singleton("datacenter1");
             }
 
-            IUpgradeableInstance seed = cluster.get(1);
+            IInstance seed = cluster.get(1);
 
-            List<IUpgradeableInstance> newInstances = new ArrayList<>();
+            List<IInstance> newInstances = new ArrayList<>();
             // Go over new nodes and add them once for each DC
             for (int i = 0; i < annotation.newNodesPerDc(); i++)
             {
                 int dcNodeIdx = 1; // Use node 2's DC
                 for (int dc = 1; dc <= annotation.numDcs(); dc++)
                 {
-                    IUpgradeableInstance dcNode = cluster.get(dcNodeIdx++);
-                    IUpgradeableInstance newInstance = ClusterUtils.addInstance(cluster,
-                                                                                dcNode.config().localDatacenter(),
-                                                                                dcNode.config().localRack(),
-                                                                                inst -> {
-                                                                                    inst.set("auto_bootstrap", true);
-                                                                                    inst.with(Feature.GOSSIP,
-                                                                                              Feature.JMX,
-                                                                                              Feature.NATIVE_PROTOCOL);
-                                                                                });
+                    IInstance dcNode = cluster.get(dcNodeIdx++);
+                    IInstance newInstance = cluster.addInstance(dcNode.config().localDatacenter(),
+                                                                dcNode.config().localRack(),
+                                                                inst -> {
+                                                                    inst.set("auto_bootstrap", true);
+                                                                    inst.with(Feature.GOSSIP,
+                                                                              Feature.JMX,
+                                                                              Feature.NATIVE_PROTOCOL);
+                                                                });
                     startAsync("Start new node node" + newInstance.config().num(),
-                               () -> newInstance.startup(cluster));
+                               () -> newInstance.startup(cluster.delegate()));
                     newInstances.add(newInstance);
                 }
             }
 
             awaitLatchOrThrow(transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
 
-            for (IUpgradeableInstance newInstance : newInstances)
+            for (IInstance newInstance : newInstances)
             {
-                ClusterUtils.awaitRingState(seed, newInstance, "Joining");
+                cluster.awaitRingState(seed, newInstance, "Joining");
             }
 
             retrieveMappingWithKeyspace(context, TEST_KEYSPACE, response -> {
@@ -155,7 +153,7 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
     }
 
     private void validateReplicaMapping(TokenRangeReplicasResponse mappingResponse,
-                                        List<IUpgradeableInstance> newInstances,
+                                        List<IInstance> newInstances,
                                         boolean isCrossDCKeyspace,
                                         List<Range<BigInteger>> splitRanges,
                                         Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings)
@@ -238,9 +236,9 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
                                                                                 annotation.numDcs(),
                                                                                 1);
 
-        UpgradeableCluster cluster = cassandraTestContext.configureAndStartCluster(builder -> {
-            builder.withInstanceInitializer(instanceInitializer);
-            builder.withTokenSupplier(tokenSupplier);
+        IClusterExtension<? extends IInstance> cluster = cassandraTestContext.configureAndStartCluster(builder -> {
+            builder.instanceInitializer(instanceInitializer);
+            builder.tokenSupplier(tokenSupplier);
         });
 
         runJoiningTestScenario(context,

@@ -21,7 +21,7 @@ package org.apache.cassandra.testing;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
-import org.apache.cassandra.distributed.UpgradeableCluster;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.testing.utils.tls.CertificateBundle;
 
 /**
@@ -30,23 +30,29 @@ import org.apache.cassandra.testing.utils.tls.CertificateBundle;
  */
 public class ConfigurableCassandraTestContext extends AbstractCassandraTestContext
 {
-    private final UpgradeableCluster.Builder builder;
+    private final ClusterBuilderConfiguration clusterConfiguration;
+    private final IsolatedDTestClassLoaderWrapper classLoaderWrapper;
+    private final String versionString;
 
     public ConfigurableCassandraTestContext(SimpleCassandraVersion version,
-                                            UpgradeableCluster.Builder builder,
+                                            ClusterBuilderConfiguration clusterConfiguration,
                                             CertificateBundle ca,
                                             Path serverKeystorePath,
                                             Path truststorePath,
-                                            CassandraIntegrationTest annotation)
+                                            CassandraIntegrationTest annotation,
+                                            IsolatedDTestClassLoaderWrapper classLoaderWrapper,
+                                            String versionString)
     {
         super(version, ca, serverKeystorePath, truststorePath, annotation);
-        this.builder = builder;
+        this.clusterConfiguration = clusterConfiguration;
+        this.classLoaderWrapper = classLoaderWrapper;
+        this.versionString = versionString;
     }
 
-    public UpgradeableCluster configureAndStartCluster(Consumer<UpgradeableCluster.Builder> configurator)
+    public IClusterExtension<? extends IInstance> configureAndStartCluster(Consumer<ClusterBuilderConfiguration> configurator)
     {
-        configurator.accept(builder);
-        UpgradeableCluster cluster = CassandraTestTemplate.retriableStartCluster(builder, 3);
+        configurator.accept(clusterConfiguration);
+        IClusterExtension<? extends IInstance> cluster = CassandraTestTemplate.retriableStartCluster(classLoaderWrapper, versionString, clusterConfiguration, 3);
         setCluster(cluster);
         return cluster;
     }
@@ -57,7 +63,7 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
         return "ConfigurableCassandraTestContext{"
                + ", version=" + version
                + ", cluster=" + cluster()
-               + ", builder=" + builder
+               + ", builder=" + clusterConfiguration
                + '}';
     }
 }

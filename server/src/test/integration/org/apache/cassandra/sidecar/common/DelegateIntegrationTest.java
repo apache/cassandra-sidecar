@@ -43,15 +43,15 @@ import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.Feature;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.api.IInstance;
+import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.NodeToolResult;
-import org.apache.cassandra.distributed.shared.ClusterUtils;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
@@ -202,9 +202,8 @@ class DelegateIntegrationTest extends IntegrationTestBase
 
             allCqlReady.flag();
             // Stop instance 2
-            ClusterUtils.stopUnchecked(sidecarTestContext.cluster().get(2));
+            sidecarTestContext.cluster().stopUnchecked(sidecarTestContext.cluster().get(2));
         });
-
     }
 
     @Timeout(value = 2, timeUnit = TimeUnit.MINUTES)
@@ -329,13 +328,14 @@ class DelegateIntegrationTest extends IntegrationTestBase
 
     private void addNewInstance()
     {
-        UpgradeableCluster cluster = sidecarTestContext.cluster();
-        IUpgradeableInstance newInstance = ClusterUtils.addInstance(cluster, cluster.get(1).config(), config -> {
+        IClusterExtension<? extends IInstance> cluster = sidecarTestContext.cluster();
+        IInstanceConfig instanceConfig = cluster.get(1).config();
+        IInstance newInstance = cluster.addInstance(instanceConfig.localDatacenter(), instanceConfig.localRack(), config -> {
             config.set("auto_bootstrap", true);
             config.with(Feature.GOSSIP,
                         Feature.JMX,
                         Feature.NATIVE_PROTOCOL);
         });
-        newInstance.startup(cluster);
+        newInstance.startup(cluster.delegate());
     }
 }

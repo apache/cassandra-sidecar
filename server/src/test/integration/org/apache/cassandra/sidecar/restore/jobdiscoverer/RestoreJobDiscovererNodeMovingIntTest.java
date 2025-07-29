@@ -29,10 +29,8 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import org.apache.cassandra.distributed.UpgradeableCluster;
-import org.apache.cassandra.distributed.api.IUpgradeableInstance;
+import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
-import org.apache.cassandra.distributed.shared.ClusterUtils;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
@@ -48,6 +46,7 @@ import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperMovingNode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
+import org.apache.cassandra.testing.IClusterExtension;
 
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.assertRestoreRange;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.createJob;
@@ -73,7 +72,7 @@ class RestoreJobDiscovererNodeMovingIntTest extends IntegrationTestBase
     void testUpdateRestoreRangesWhenNodeMoving(ConfigurableCassandraTestContext cassandraTestContext)
     {
         TokenSupplier tokenSupplier = TestTokenSupplier.staticTokens(0, 1000L, 2000L);
-        UpgradeableCluster cluster = startCluster(tokenSupplier, cassandraTestContext);
+        IClusterExtension<? extends IInstance> cluster = startCluster(tokenSupplier, cassandraTestContext);
         long newToken = 1500L;
         try
         {
@@ -88,10 +87,10 @@ class RestoreJobDiscovererNodeMovingIntTest extends IntegrationTestBase
     @Override
     protected int[] getInstancesToManage(int clusterSize)
     {
-        return new int[] { MANAGED_CASSANDRA_NODE_NUM };
+        return new int[]{ MANAGED_CASSANDRA_NODE_NUM };
     }
 
-    private void test(CountDownLatch transientStateStart, UpgradeableCluster cluster, long moveTargetToken)
+    private void test(CountDownLatch transientStateStart, IClusterExtension<? extends IInstance> cluster, long moveTargetToken)
     {
         // prepare schema
         waitForSchemaReady(30, TimeUnit.SECONDS);
@@ -133,8 +132,8 @@ class RestoreJobDiscovererNodeMovingIntTest extends IntegrationTestBase
         .isEmpty();
 
         // start move in the background
-        IUpgradeableInstance seed = cluster.get(1);
-        IUpgradeableInstance movingNode = cluster.get(MANAGED_CASSANDRA_NODE_NUM);
+        IInstance seed = cluster.get(1);
+        IInstance movingNode = cluster.get(MANAGED_CASSANDRA_NODE_NUM);
         startAsync("move token of node" + movingNode.config().num() + " to " + moveTargetToken,
                    () -> movingNode.nodetoolResult("move", "--", Long.toString(moveTargetToken))
                                    .asserts()
@@ -142,7 +141,7 @@ class RestoreJobDiscovererNodeMovingIntTest extends IntegrationTestBase
 
         // Wait until nodes have reached expected state
         awaitLatchOrThrow(transientStateStart, 2, TimeUnit.MINUTES, "transientStateStart");
-        ClusterUtils.awaitRingState(seed, movingNode, "Moving");
+        cluster.awaitRingState(seed, movingNode, "Moving");
 
         // Fetch the local token ranges again;
         // RingTopologyRefresher should detect the topology change and notify RestoreJobDiscover via #onRingTopologyChanged
@@ -171,12 +170,12 @@ class RestoreJobDiscovererNodeMovingIntTest extends IntegrationTestBase
         return MANAGED_CASSANDRA_NODE_IP;
     }
 
-    private static UpgradeableCluster startCluster(TokenSupplier tokenSupplier, ConfigurableCassandraTestContext cassandraTestContext)
+    private static IClusterExtension<? extends IInstance> startCluster(TokenSupplier tokenSupplier, ConfigurableCassandraTestContext cassandraTestContext)
     {
         BBHelperMovingNode.reset();
         return cassandraTestContext.configureAndStartCluster(builder -> {
-            builder.withInstanceInitializer((cl, num) -> BBHelperMovingNode.install(cl, num, 2));
-            builder.withTokenSupplier(tokenSupplier);
+            builder.instanceInitializer((cl, num) -> BBHelperMovingNode.install(cl, num, 2));
+            builder.tokenSupplier(tokenSupplier);
         });
     }
 }

@@ -35,8 +35,6 @@ apply from: "$rootDir/gradle/common/publishing.gradle"
 
 sourceCompatibility = JavaVersion.VERSION_11
 
-println("Using DTest jar: ${dtestVersion}")
-
 // add additional test source set
 sourceSets {
     integrationTest {
@@ -165,8 +163,6 @@ dependencies {
         exclude group: 'junit', module: 'junit'
     }
     integrationTestImplementation(testFixtures(project(":test-common")))
-    integrationTestImplementation(group: 'org.apache.cassandra', name: "${dtestDependencyName}", version: "${dtestVersion}")
-    integrationTestImplementation(group: 'org.apache.cassandra', name: 'dtest-api', version: "${dtestApiVersion}")
     integrationTestImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
     // Needed by the Cassandra dtest framework
     integrationTestImplementation("org.junit.vintage:junit-vintage-engine:${junitVersion}")
