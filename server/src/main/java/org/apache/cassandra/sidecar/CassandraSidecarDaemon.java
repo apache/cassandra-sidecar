@@ -73,7 +73,7 @@ public class CassandraSidecarDaemon
             app.close()
                .toCompletionStage()
                .toCompletableFuture()
-               .get(1, TimeUnit.MINUTES);
+               .get(2, TimeUnit.MINUTES);
             return true;
         }
         catch (Exception ex)

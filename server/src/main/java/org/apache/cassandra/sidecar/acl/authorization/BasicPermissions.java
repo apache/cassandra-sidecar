@@ -84,4 +84,8 @@ public class BasicPermissions
     // Live Migration permissions
     public static final Permission LIST_FILES = new DomainAwarePermission("LIVE_MIGRATION:LIST_FILES", CLUSTER_SCOPE);
     public static final Permission STREAM_FILES = new DomainAwarePermission("LIVE_MIGRATION:STREAM", CLUSTER_SCOPE);
+
+    // Cassandra Settings Permissions
+    // Caller must have been granted SELECT on `system_view.settings` to hit the /api/v2/cassandra/settings API.
+    public static final Permission READ_SETTINGS = new StandardPermission("SELECT", TABLE_SCOPE);
 }

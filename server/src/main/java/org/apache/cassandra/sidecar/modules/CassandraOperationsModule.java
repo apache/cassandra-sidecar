@@ -50,6 +50,7 @@ import org.apache.cassandra.sidecar.handlers.StreamStatsHandler;
 import org.apache.cassandra.sidecar.handlers.TableStatsHandler;
 import org.apache.cassandra.sidecar.handlers.TokenRangeReplicaMapHandler;
 import org.apache.cassandra.sidecar.handlers.cassandra.NodeSettingsHandler;
+import org.apache.cassandra.sidecar.handlers.v2.cassandra.V2NodeSettingsHandler;
 import org.apache.cassandra.sidecar.handlers.validations.ValidateTableExistenceHandler;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
@@ -183,6 +184,13 @@ public class CassandraOperationsModule extends AbstractModule
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(implementation = SchemaResponse.class)))
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.V2CassandraNodeSettingsRouteKey.class)
+    VertxRoute v2CassandraNodeSettings(RouteBuilder.Factory factory, V2NodeSettingsHandler v2NodeSettingsHandler)
+    {
+        return factory.buildRouteWithHandler(v2NodeSettingsHandler);
+    }
+
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.AllKeyspacesSchemaRouteKey.class)
     VertxRoute cassandraSchemaRoute(RouteBuilder.Factory factory,

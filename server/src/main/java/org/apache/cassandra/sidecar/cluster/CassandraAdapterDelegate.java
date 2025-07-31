@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -55,6 +56,8 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.apache.cassandra.sidecar.db.SystemViewsDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.schema.SystemViewsSchema;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
@@ -63,6 +66,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.adapters.base.jmx.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.JMX;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_DISCONNECTED;
@@ -96,13 +100,16 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private volatile ICassandraAdapter adapter;
     private final AtomicBoolean isNativeUp = new AtomicBoolean(false);
     private volatile NodeSettings nodeSettingsFromJmx = null;
+    private volatile Map<String, String> nodeSettingsFromCql = null;
     private final AtomicBoolean registered = new AtomicBoolean(false);
     private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
     private final InetSocketAddress localNativeTransportAddress;
     private final InstanceHealthMetrics healthMetrics;
     private volatile Host host;
     private volatile boolean closed = false;
-
+    private final SystemViewsSchema systemViewsSchema;
+    private final AtomicBoolean isSystemViewSchemaInitialized = new AtomicBoolean(false);
+    private final SystemViewsDatabaseAccessor systemViewsDatabaseAccessor;
     /**
      * Constructs a new {@link CassandraAdapterDelegate} for the given {@code cassandraInstance}
      *
@@ -138,6 +145,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         this.jmxClient = jmxClient;
         this.healthMetrics = healthMetrics;
         this.notificationListener = initializeJmxListener();
+        this.systemViewsSchema = new SystemViewsSchema();
+        this.systemViewsDatabaseAccessor = new SystemViewsDatabaseAccessor(systemViewsSchema, session);
     }
 
     // TODO: re-organize the methods in the class to group the public/protected/private methods together
@@ -240,7 +249,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     /**
      * Performs health checks by utilizing the native protocol
      */
-    protected void nativeProtocolHealthCheck()
+    protected synchronized void nativeProtocolHealthCheck()
     {
         Session activeSession;
         try
@@ -267,6 +276,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             {
                 LOGGER.warn("Could not find host in cluster metadata by address and port {}",
                             localNativeTransportAddress);
+                nodeSettingsFromCql = null;
                 return;
             }
             healthCheckStatement.setHost(host);
@@ -278,6 +288,26 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             if (isNativeUp.compareAndSet(false, true))
             {
                 notifyNativeConnection();
+                try
+                {
+                    // Once CQL is confirmed alive for the first time, we'll initialize systemViewsSchema.
+                    if (!isSystemViewSchemaInitialized.get())
+                    {
+                        systemViewsSchema.initialize(activeSession, b -> false);
+                        isSystemViewSchemaInitialized.compareAndSet(false, true);
+                    }
+                    nodeSettingsFromCql = systemViewsDatabaseAccessor.getSettings();
+                }
+                catch (RuntimeException e)
+                {
+                    LOGGER.warn("Unable to retrieve node settings from Cassandra instance {}. Node settings will be null",
+                                cassandraInstanceId, e);
+                    nodeSettingsFromCql = null;
+                }
+            }
+            else
+            {
+                nodeSettingsFromCql = null;
             }
         }
         catch (IllegalArgumentException | NoHostAvailableException e)
@@ -287,6 +317,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             markNativeDownAndMaybeNotifyDisconnection();
             // Unregister the host listener.
             maybeUnregisterHostListener(activeSession);
+            nodeSettingsFromCql = null;
         }
     }
 
@@ -376,6 +407,23 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             throw new CassandraUnavailableException(JMX, "NodeSettings unavailable");
         }
         return nodeSettingsFromJmx;
+    }
+
+    /**
+     * Returns the cached node settings read from the system_views.settings table. These are retrieved after a successful
+     * health check for native transport.
+     * @return Cached node settings from system_view.settings.
+     * @throws CassandraUnavailableException Thrown when native transport is not available. 
+     */
+    @Override
+    @NotNull
+    public Map<String, String> cqlNodeSettings() throws CassandraUnavailableException
+    {
+        if (nodeSettingsFromCql == null)
+        {
+            throw new CassandraUnavailableException(CQL, "CQL NodeSettings unavailable");
+        }
+        return nodeSettingsFromCql;
     }
 
     @Override

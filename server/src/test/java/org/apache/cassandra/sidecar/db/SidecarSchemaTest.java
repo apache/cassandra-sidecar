@@ -207,6 +207,8 @@ public class SidecarSchemaTest
 
             "SELECT name, value FROM system_views.settings WHERE name IN ?",
 
+            "SELECT name, value FROM system_views.settings",
+
             "SELECT * FROM system_views.clients",
 
             "SELECT username, COUNT(*) AS connection_count FROM system_views.clients"
