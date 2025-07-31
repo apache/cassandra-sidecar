@@ -364,7 +364,7 @@ ospackage {
     version = project.version
     // ospackage puts packages into /opt/[package] by default
     // which is _technically_ the right spot for packages
-    link("/usr/local/bin/cassandra-sidecar", "/opt/cassandra-sidecar/bin/cassandra-sidecar")
+    link("/usr/local/bin/cassandra-sidecar", "/opt/${packageName}/bin/cassandra-sidecar")
     license = "Apache License 2.0"
     summary = "Sidecar Management Tool for Apache Cassandra"
     description = "Sidecar Management Tool for Apache Cassandra"
