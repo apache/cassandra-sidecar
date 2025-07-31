@@ -19,14 +19,15 @@
 package org.apache.cassandra.sidecar.db;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -94,12 +95,24 @@ public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSch
     public Map<String, String> getSettings(String... names) throws SchemaUnavailableException
     {
         BoundStatement statement = tableSchema.selectSettings().bind(Arrays.asList(names));
+        return querySettings(statement);
+    }
+
+    @NotNull
+    public Map<String, String> getSettings() throws SchemaUnavailableException
+    {
+        BoundStatement statement = tableSchema.selectAllSettings().bind();
+        return querySettings(statement);
+    }
+
+    private @NotNull Map<String, String> querySettings(BoundStatement statement)
+    {
         ResultSet result = execute(statement);
-        return result.all()
-                     .stream()
-                     .collect(Collectors.toMap(
-                              row -> row.getString(0),
-                              row -> row.getString(1))
-                     );
+        Map<String, String> nodeSettings = new HashMap<>();
+        for (Row setting : result.all())
+        {
+            nodeSettings.put(setting.getString("name"), setting.getString("value"));
+        }
+        return nodeSettings;
     }
 }

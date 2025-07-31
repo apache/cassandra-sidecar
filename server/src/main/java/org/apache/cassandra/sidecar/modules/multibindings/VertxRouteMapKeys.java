@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.modules.multibindings;
 
 import io.vertx.core.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.ApiEndpointsV2;
 
 /**
  * Class keys in the {@link com.google.inject.multibindings.MapBinder} to {@link org.apache.cassandra.sidecar.routes.VertxRoute} objects
@@ -92,6 +93,11 @@ public interface VertxRouteMapKeys
     {
         HttpMethod HTTP_METHOD = HttpMethod.GET;
         String ROUTE_URI = ApiEndpointsV1.NODE_SETTINGS_ROUTE;
+    }
+    interface V2CassandraNodeSettingsRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV2.NODE_SETTINGS_ROUTE;
     }
     interface CassandraOperationalJobRouteKey extends RouteClassKey
     {

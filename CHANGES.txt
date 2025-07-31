@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Add /api/v2/cassandra/settings which will return Cassandra configurations stored in system_views.settings (CASSSIDECAR-272)
  * Fast Cassandra Input Validator (CASSSIDECAR-361)
  * Upgrade caffeine dependency (CASSSIDECAR-332)
  * Add Live Migration Status endpoint to persist Live Migration status and for safety (CASSSIDECAR-345)

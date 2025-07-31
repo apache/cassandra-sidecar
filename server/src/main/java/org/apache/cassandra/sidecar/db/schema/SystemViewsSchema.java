@@ -33,6 +33,7 @@ public class SystemViewsSchema extends CassandraSystemTableSchema
     protected static final String SYSTEM_VIEWS_KEYSPACE_NAME = "system_views";
     protected static final String SYSTEM_VIEWS_SETTINGS_TABLE_NAME = "settings";
     private PreparedStatement selectSettings;
+    private PreparedStatement selectAllSettings;
 
     @Override
     protected String keyspaceName()
@@ -52,15 +53,22 @@ public class SystemViewsSchema extends CassandraSystemTableSchema
         return selectSettings;
     }
 
+    public PreparedStatement selectAllSettings() throws SchemaUnavailableException
+    {
+        ensureSchemaAvailable();
+        return selectAllSettings;
+    }
+
     @Override
     protected void prepareStatements(@NotNull Session session)
     {
         this.selectSettings = session.prepare("SELECT name, value FROM system_views.settings WHERE name IN ?");
+        this.selectAllSettings = session.prepare("SELECT name, value FROM system_views.settings");
     }
 
     protected void ensureSchemaAvailable() throws SchemaUnavailableException
     {
-        if (selectSettings == null)
+        if (selectSettings == null || selectAllSettings == null)
         {
             throw new SchemaUnavailableException(keyspaceName(), tableName());
         }
