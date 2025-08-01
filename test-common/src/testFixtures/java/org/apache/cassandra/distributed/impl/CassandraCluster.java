@@ -80,6 +80,11 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
                || (className.startsWith("org.apache.cassandra.sidecar.") && className.contains("BBHelper"));
     };
 
+    static
+    {
+        maybeSetSharedPredicate();
+    }
+
     public CassandraCluster(String versionString, ClusterBuilderConfiguration configuration) throws IOException
     {
         delegate = initializeCluster(versionString, configuration);
@@ -154,7 +159,6 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
         }
 
         AbstractCluster<I> cluster = (AbstractCluster<I>) clusterBuilder.createWithoutStarting();
-        maybeSetSharedPredicate(cluster);
 
         if (configuration.startCluster)
         {
@@ -438,8 +442,9 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
     // Cassandra 4.0 uses a hardcoded org.apache.cassandra.distributed.impl.AbstractCluster.SHARED_PREDICATE
     // and there is no way to configure it. This hack allows us to set the SHARED_PREDICATE and the shared
     // byte buddy classes are now honored by the in-jvm dtests.
+    // TODO: this hack can be removed once 4.0 supports wiring the shared classes from the builder
     @SuppressWarnings("unchecked")
-    private void maybeSetSharedPredicate(AbstractCluster<I> cluster)
+    private static void maybeSetSharedPredicate()
     {
         try
         {
@@ -460,7 +465,7 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
             }
 
             // Replace with our own predicate that combines EXTRA with any existing shared classes predicate
-            Predicate<String> existingPredicate = (Predicate<String>) sharedClassesField.get(cluster);
+            Predicate<String> existingPredicate = (Predicate<String>) sharedClassesField.get(null);
             Predicate<String> combinedPredicate = existingPredicate != null ? EXTRA.or(existingPredicate) : EXTRA;
             sharedClassesField.set(null, combinedPredicate);
         }
