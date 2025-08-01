@@ -52,4 +52,18 @@ public interface JwtParameters
      * dynamically retrieve configuration information of an OpenID provider.
      */
     SecondBoundConfiguration configDiscoverInterval();
+
+    /**
+     * @return The configured method of JWT authentication to use. Defaults to oauth if not supplied.
+     */
+    AuthType jwtAuthType();
+
+    /**
+     * Supported types of JWT authentication. Today Oauth and Stateless JWT token authentication methods are supported.
+     */
+    enum AuthType
+    {
+        OAUTH,
+        STATELESS
+    }
 }

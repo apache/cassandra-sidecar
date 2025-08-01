@@ -161,6 +161,7 @@ dependencies {
     testImplementation('org.mockito:mockito-core:4.10.0')
     testImplementation('org.mockito:mockito-inline:4.10.0')
     testImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
+    testImplementation("com.auth0:java-jwt:4.4.0")
     testImplementation(testFixtures(project(":client-common")))
     testImplementation(testFixtures(project(":server-common")))
     testImplementation(testFixtures(project(":test-common")))

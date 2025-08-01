@@ -93,4 +93,43 @@ class JwtParameterExtractorTest
         assertThat(parameterExtractor.site()).isEqualTo("www.apache.org");
         assertThat(parameterExtractor.clientId()).isEqualTo("id");
     }
+
+    @Test
+    void testJwtAuthTypeWhenNotSpecifiedSetsToOauth()
+    {
+        JwtParameters params = new JwtParameterExtractor(Map.of("enabled", "true",
+                                                                "site", "www.apache.org",
+                                                                "client_id", "id"));
+        assertThat(params.jwtAuthType()).isEqualTo(JwtParameters.AuthType.OAUTH);
+    }
+
+    @Test
+    void testJwtAuthTypeWhenOauthSetsToOauth()
+    {
+        JwtParameters params = new JwtParameterExtractor(Map.of("enabled", "true",
+                                                                "site", "www.apache.org",
+                                                                "client_id", "id",
+                                                                "jwt_auth_type", JwtParameters.AuthType.OAUTH.toString().toLowerCase()));
+        assertThat(params.jwtAuthType()).isEqualTo(JwtParameters.AuthType.OAUTH);
+    }
+
+    @Test
+    void testJwtAuthTypeWhenStatelessSetsToStateless()
+    {
+        JwtParameters params = new JwtParameterExtractor(Map.of("enabled", "true",
+                                                                "site", "www.apache.org",
+                                                                "jwt_auth_type", JwtParameters.AuthType.STATELESS.toString().toLowerCase()));
+        assertThat(params.jwtAuthType()).isEqualTo(JwtParameters.AuthType.STATELESS);
+    }
+
+
+    @Test
+    void testJwtAuthTypeWhenInvalidThrowsIllegalArgumentException()
+    {
+        assertThatThrownBy(() -> new JwtParameterExtractor(Map.of("enabled", "true",
+                                                                  "site", "www.apache.org",
+                                                                  "jwt_auth_type", "bear")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid JWT authentication type: bear. Supported types are: [");
+    }
 }

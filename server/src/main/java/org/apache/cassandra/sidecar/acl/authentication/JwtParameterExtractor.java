@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,12 +51,18 @@ public class JwtParameterExtractor implements JwtParameters
     private static final String CONFIG_DISCOVER_INTERVAL_PARAM_KEY = "config_discover_interval";
     private static final SecondBoundConfiguration DEFAULT_CONFIG_DISCOVER_INTERVAL
     = SecondBoundConfiguration.parse("1h");
+    private static final String JWT_AUTH_TYPE_PARAM_KEY = "jwt_auth_type";
+    private static final String DEFAULT_JWT_AUTH_TYPE = "oauth";
+    private static final Set<String> SUPPORTED_JWT_AUTH_TYPES = Arrays.stream(JwtParameters.AuthType.values())
+                                                                       .map(authType -> authType.name().toLowerCase())
+                                                                       .collect(Collectors.toSet());
 
     private final boolean enabled;
     private final String site;
     private final String clientId;
     private final SecondBoundConfiguration configDiscoverInterval;
     private final List<String> scopes;
+    private final AuthType jwtAuthType;
 
     public JwtParameterExtractor(Map<String, String> parameters)
     {
@@ -66,6 +74,7 @@ public class JwtParameterExtractor implements JwtParameters
         this.configDiscoverInterval = parameters.containsKey(CONFIG_DISCOVER_INTERVAL_PARAM_KEY)
                                       ? SecondBoundConfiguration.parse(parameters.get(CONFIG_DISCOVER_INTERVAL_PARAM_KEY))
                                       : DEFAULT_CONFIG_DISCOVER_INTERVAL;
+        this.jwtAuthType = JwtParameters.AuthType.valueOf(parameters.getOrDefault(JWT_AUTH_TYPE_PARAM_KEY, DEFAULT_JWT_AUTH_TYPE).toUpperCase());
     }
 
     @Override
@@ -98,15 +107,29 @@ public class JwtParameterExtractor implements JwtParameters
         return configDiscoverInterval;
     }
 
+    @Override
+    public AuthType jwtAuthType()
+    {
+        return jwtAuthType;
+    }
+
     private void validate(Map<String, String> parameters)
     {
         if (parameters == null)
         {
             throw new IllegalArgumentException("JWT parameters can not be null");
         }
-
+        String configuredJwtAuthType = parameters.getOrDefault(JWT_AUTH_TYPE_PARAM_KEY, DEFAULT_JWT_AUTH_TYPE);
+        if (!SUPPORTED_JWT_AUTH_TYPES.contains(configuredJwtAuthType))
+        {
+            throw new IllegalArgumentException("Invalid JWT authentication type: " + configuredJwtAuthType +
+                                               ". Supported types are: " + SUPPORTED_JWT_AUTH_TYPES);
+        }
         validateParameterPresence(parameters, SITE_PARAM_KEY);
-        validateParameterPresence(parameters, CLIENT_ID_PARAM_KEY);
+        if (AuthType.valueOf(configuredJwtAuthType.toUpperCase()) == AuthType.OAUTH)
+        {
+            validateParameterPresence(parameters, CLIENT_ID_PARAM_KEY);
+        }
     }
 
     private void validateParameterPresence(Map<String, String> parameters, String paramKey)

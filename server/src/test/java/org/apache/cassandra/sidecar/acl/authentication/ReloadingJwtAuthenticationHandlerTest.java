@@ -18,14 +18,34 @@
 
 package org.apache.cassandra.sidecar.acl.authentication;
 
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.interfaces.RSAPrivateKey;
+import java.util.Base64;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonArray;
+import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.jetbrains.annotations.NotNull;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -74,5 +94,103 @@ class ReloadingJwtAuthenticationHandlerTest
             assertThat(result.failed()).isTrue();
             assertThat(result.cause()).hasMessage("Service Unavailable");
         });
+    }
+
+    @Test
+    void testStatelessJwtAuthenticationWithValidToken() throws Exception
+    {
+        // Generate a test RSA key pair and PEM
+        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+        keyGen.initialize(2048);
+        KeyPair keyPair = keyGen.generateKeyPair();
+
+        String publicKeyPem = "-----BEGIN PUBLIC KEY-----\n" +
+                              Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded()) +
+                              "\n-----END PUBLIC KEY-----";
+
+        Vertx vertx = Vertx.vertx();
+        try
+        {
+            // Mock HTTP server to serve the PEM
+            HttpServer mockServer = vertx.createHttpServer();
+            CountDownLatch serverLatch = new CountDownLatch(1);
+
+            mockServer.requestHandler(request -> {
+                request.response()
+                       .putHeader("Content-Type", "text/plain")
+                       .end(publicKeyPem);
+            }).listen(8080, result -> serverLatch.countDown());
+
+            serverLatch.await(5, TimeUnit.SECONDS);
+
+            // Configure for stateless authentication
+            JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("enabled", "true",
+                                                                                        "site", "http://localhost:8080/jwks",
+                                                                                        "jwt_auth_type", JwtParameters.AuthType.STATELESS.toString().toLowerCase()));
+            JwtRoleProcessor mockRoleProcessor = mock(JwtRoleProcessor.class);
+            when(mockRoleProcessor.processRoles(any())).thenReturn(List.of("test_role"));
+            ReloadingJwtAuthenticationHandler handler = getReloadingJwtAuthenticationHandler(vertx, parameterExtractor, mockRoleProcessor);
+
+            // Wait a bit for the handler to be set
+            Thread.sleep(1000);
+
+            // Test authentication with valid token - create proper mocks
+            RoutingContext mockCtx = mock(RoutingContext.class);
+            HttpServerRequest mockRequest = mock(HttpServerRequest.class);
+
+            // Mock the request properly for JWT parsing
+            when(mockCtx.request()).thenReturn(mockRequest);
+            // Create a valid JWT token using the private key
+            String validToken = createTestJwtToken(keyPair.getPrivate());
+            when(mockRequest.getHeader("Authorization")).thenReturn("Bearer " + validToken);
+            when(mockRequest.headers()).thenReturn(io.vertx.core.MultiMap.caseInsensitiveMultiMap()
+                                                                         .add("Authorization", "Bearer " + validToken));
+
+            CountDownLatch authLatch = new CountDownLatch(1);
+            AtomicReference<AsyncResult<User>> authResult = new AtomicReference<>();
+
+            handler.authenticate(mockCtx, result -> {
+                authResult.set(result);
+                authLatch.countDown();
+            });
+
+            authLatch.await(5, TimeUnit.SECONDS);
+
+            // The authentication should process (may succeed or fail based on token validation)
+            assertThat(authResult.get()).isNotNull();
+            // Ensure that user and role context was properly passed oto the next step.
+            assertThat(authResult.get().result().attributes().getString("sub")).isEqualTo("test-user");
+            assertThat(authResult.get().result().attributes().getJsonArray("cassandra_roles")).isEqualTo(new JsonArray(List.of("test_role")));
+            mockServer.close();
+        }
+        finally
+        {
+            vertx.close();
+        }
+    }
+
+    private static @NotNull ReloadingJwtAuthenticationHandler getReloadingJwtAuthenticationHandler(Vertx vertx, JwtParameterExtractor parameterExtractor, JwtRoleProcessor mockRoleProcessor)
+    {
+        ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
+        ClusterLease clusterLease = new ClusterLease();
+        PeriodicTaskExecutor executor = new PeriodicTaskExecutor(executorPools, clusterLease);
+        ReloadingJwtAuthenticationHandler handler = new ReloadingJwtAuthenticationHandler(vertx,
+                                                                                          parameterExtractor,
+                                                                                          mockRoleProcessor,
+                                                                                          executor
+        );
+        return handler;
+    }
+
+    private String createTestJwtToken(PrivateKey privateKey)
+    {
+        Algorithm algorithm = Algorithm.RSA256(null, (RSAPrivateKey) privateKey);
+
+        return JWT.create()
+                  .withIssuer("test-issuer")
+                  .withSubject("test-user")
+                  .withExpiresAt(new Date(System.currentTimeMillis() + 3600000)) // 1 hour
+                  .withClaim("roles", List.of("test_role"))
+                  .sign(algorithm);
     }
 }

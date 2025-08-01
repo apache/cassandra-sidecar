@@ -30,14 +30,22 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authentication.AuthenticationProvider;
+import io.vertx.ext.auth.jwt.JWTAuth;
+import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.auth.oauth2.OAuth2Options;
 import io.vertx.ext.auth.oauth2.providers.OpenIDConnectAuth;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerImpl;
+import io.vertx.ext.web.handler.impl.AuthenticationHandlerInternal;
+import io.vertx.ext.web.handler.impl.JWTAuthHandlerImpl;
 import io.vertx.ext.web.handler.impl.OAuth2AuthHandlerImpl;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 
@@ -58,7 +66,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReloadingJwtAuthenticationHandler.class);
 
-    private final AtomicReference<OAuth2AuthHandlerImpl> delegateHandler = new AtomicReference<>();
+    private final AtomicReference<AuthenticationHandlerInternal> delegateHandler = new AtomicReference<>();
     private final Vertx vertx;
     private final JwtParameters jwtParameters;
     private final JwtRoleProcessor roleProcessor;
@@ -72,14 +80,24 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         this.vertx = vertx;
         this.jwtParameters = jwtParameters;
         this.roleProcessor = roleProcessor;
-
-        periodicTaskExecutor.schedule(new OAuth2AuthHandlerGenerateTask());
+        if (jwtParameters.jwtAuthType().equals(JwtParameters.AuthType.STATELESS))
+        {
+            periodicTaskExecutor.schedule(new PeriodicStatelessJwtRefreshTask());
+        }
+        else if (jwtParameters.jwtAuthType().equals(JwtParameters.AuthType.OAUTH))
+        {
+            periodicTaskExecutor.schedule(new OAuth2AuthHandlerGenerateTask());
+        }
+        else
+        {
+            throw new IllegalStateException("Unsupported JWT Auth Type: " + jwtParameters.jwtAuthType());
+        }
     }
 
     @Override
     public void authenticate(RoutingContext context, Handler<AsyncResult<User>> handler)
     {
-        OAuth2AuthHandlerImpl oAuth2AuthHandler = delegateHandler.get();
+        AuthenticationHandlerInternal oAuth2AuthHandler = delegateHandler.get();
         if (oAuth2AuthHandler == null)
         {
             handler.handle(Future.failedFuture(wrapHttpException(SERVICE_UNAVAILABLE,
@@ -171,6 +189,12 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         }
 
         @Override
+        public DurationSpec initialDelay()
+        {
+            return SecondBoundConfiguration.ZERO;
+        }
+
+        @Override
         public String name()
         {
             return taskName;
@@ -203,6 +227,57 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
                                  LOGGER.error("Error encountered during OpenID discovery", cause);
                                  promise.fail(cause);
                              });
+        }
+    }
+
+    private class PeriodicStatelessJwtRefreshTask implements PeriodicTask
+    {
+        private final String taskName = String.format("PeriodicStatelessJwtRefreshTask_%s", jwtParameters.site());
+        @Override
+        public DurationSpec delay()
+        {
+            return jwtParameters.configDiscoverInterval();
+        }
+
+        @Override
+        public DurationSpec initialDelay()
+        {
+            return SecondBoundConfiguration.ZERO;
+        }
+
+
+        @Override
+        public void execute(Promise<Void> promise)
+        {
+            WebClient webClient = WebClient.create(vertx, new WebClientOptions().setSsl(true));
+            if (!jwtParameters.enabled())
+            {
+                delegateHandler.set(null);
+                promise.complete();
+                return;
+            }
+            String jwtPemUri = jwtParameters.site();
+            webClient.getAbs(jwtPemUri).send()
+                     .onSuccess(ar -> {
+                        String pem = ar.bodyAsString();
+                        JWTAuthOptions jwtAuthOptions = new JWTAuthOptions()
+                                                        .addPubSecKey(new PubSecKeyOptions()
+                                                                      .setAlgorithm("RS256")
+                                                                      .setBuffer(pem));
+                        JWTAuth auth = JWTAuth.create(vertx, jwtAuthOptions);
+                        AuthenticationHandlerInternal jwtAuthHandlerDelegate = new JWTAuthHandlerImpl(auth, null);
+                        delegateHandler.set(jwtAuthHandlerDelegate);
+                        promise.complete();
+                    }).onFailure(cause -> {
+                        LOGGER.error("Error encountered when refreshing stateless JWT PEM material.", cause);
+                        promise.fail(cause);
+                    });
+        }
+
+        @Override
+        public String name()
+        {
+            return taskName;
         }
     }
 }
