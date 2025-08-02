@@ -71,10 +71,11 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
         assertThat(connectedHosts.size()).isEqualTo(expectedConnections);
         // Now, shut down one of the hosts and make sure that we connect to a different node
         IClusterExtension<? extends IInstance> cluster = sidecarTestContext.cluster();
-        IInstance inst = shutDownNonLocalInstance(cluster, sidecarTestContext.instancesMetadata().instances());
-        assertThat(inst.isShutdown()).isTrue();
+        IInstance inst = instanceToShutdown(cluster, sidecarTestContext.instancesMetadata().instances());
         InetSocketAddress downInstanceAddress = new InetSocketAddress(inst.broadcastAddress().getAddress(),
                                                                       inst.config().getInt("native_transport_port"));
+        inst.shutdown(true).get();
+        assertThat(inst.isShutdown()).isTrue();
         assertConnectionsWithRetry(downInstanceAddress, expectedConnections);
     }
 
@@ -114,9 +115,8 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
                              .collect(Collectors.toList());
     }
 
-    private IInstance shutDownNonLocalInstance(IClusterExtension<? extends IInstance> cluster,
-                                               List<InstanceMetadata> instances)
-    throws ExecutionException, InterruptedException
+    private IInstance instanceToShutdown(IClusterExtension<? extends IInstance> cluster,
+                                         List<InstanceMetadata> instances)
     {
         Set<InetSocketAddress> localInstances = instances.stream().map(i -> new InetSocketAddress(i.host(), i.port()))
                                                          .collect(Collectors.toSet());
@@ -128,7 +128,6 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
             {
                 continue;
             }
-            inst.shutdown(true).get();
             return inst;
         }
         throw new RuntimeException("Could not find instance to shut down");
