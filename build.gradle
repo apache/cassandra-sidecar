@@ -187,8 +187,7 @@ startScripts {
         def defaultJvmOpts = ["-Dsidecar.logdir=" + logDir,
                               "-Dsidecar.config=" + confFile,
                               "-Dlogback.configurationFile=" + logbackConfFile,
-                              "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
-                              "-javaagent:\${APP_HOME}/agents/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost"]
+                              "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory"]
         unixScript.text = unixScript.text.replace("DEFAULT_JVM_OPTS='\"PLACEHOLDER\"'",
                 "DEFAULT_JVM_OPTS=\"${defaultJvmOpts.join(" ")}\"")
         windowsScript.delete()
@@ -201,8 +200,7 @@ run {
     jvmArgs = ["-Dsidecar.logdir=./logs",
                "-Dsidecar.config=" + confFile,
                "-Dlogback.configurationFile=./conf/logback.xml",
-               "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
-               "-javaagent:$projectDir/agents/jolokia-jvm-1.6.0-agent.jar=port=7777,host=localhost"]
+               "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory"]
 }
 
 distributions {
@@ -210,10 +208,6 @@ distributions {
         distributionBaseName = 'apache-cassandra-sidecar'
         contents {
             from 'LICENSE.txt'
-            // Include the "agents" directory in the distribution
-            from('agents') {
-                into('agents')
-            }
             // Include the "conf" directory in the distribution
             from('conf') {
                 into('conf')
@@ -230,7 +224,6 @@ distributions {
             include '**/*.*'
             exclude '**.gradle/**'
             exclude '**.idea/**'
-            exclude 'agents/**'
             exclude 'bin/**'
             exclude 'dtest-jars/**'
             exclude '**lib/**'
@@ -243,8 +236,6 @@ distributions {
 }
 
 configurations {
-    jolokia
-
     runtime.exclude(group: "com.google.code.findbugs", module: "jsr305")
     runtime.exclude(group: "org.codehaus.mojo", module: "animal-sniffer-annotations")
     runtime.exclude(group: "com.google.guava", module: "listenablefuture")
@@ -257,7 +248,6 @@ configurations {
 if (JavaVersion.current().isJava11Compatible()) {
     dependencies {
         runtimeOnly(project(':server'))
-        jolokia 'org.jolokia:jolokia-jvm:1.6.0:agent'
     }
 }
 
@@ -280,23 +270,9 @@ tasks.named('idea').configure {
     dependsOn copyIdeaSettings
 }
 
-tasks.register('copyJolokia') {
-    doLast {
-        copy {
-            into "$projectDir"
-            into("agents") {
-                from configurations.jolokia
-            }
-        }
-    }
-}
 
 // Lets clean distribution directories along with default build directories.
 clean.doLast {
-    ["agents"].each {
-        println "Deleting directory $projectDir/$it"
-        delete "$projectDir/$it"
-    }
     println "Deleting generated docs $projectDir/server/src/main/resources/docs"
     delete "$projectDir/server/src/main/resources/docs"
 }
@@ -422,12 +398,9 @@ rat {
     reportDir.set(file("build/reports/rat"))
 }
 
-distZip.dependsOn copyJolokia
-distTar.dependsOn copyJolokia
-installDist.dependsOn copyJolokia
 check.dependsOn codeCheckTasks
 if (JavaVersion.current().isJava11Compatible()) {
-    build.dependsOn codeCheckTasks, copyJolokia, copyDocs
+    build.dependsOn codeCheckTasks, copyDocs
 }
 run.dependsOn build
 
