@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.handlers.restore;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Set;
-import javax.inject.Inject;
+import com.google.inject.Inject;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;

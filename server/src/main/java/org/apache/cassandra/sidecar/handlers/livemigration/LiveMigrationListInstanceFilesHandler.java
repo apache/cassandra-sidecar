@@ -20,11 +20,11 @@ package org.apache.cassandra.sidecar.handlers.livemigration;
 
 import java.io.IOException;
 import java.util.Set;
-import javax.inject.Inject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;

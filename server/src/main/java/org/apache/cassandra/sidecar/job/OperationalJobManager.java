@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.job;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import javax.inject.Inject;
+import com.google.inject.Inject;
 
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;

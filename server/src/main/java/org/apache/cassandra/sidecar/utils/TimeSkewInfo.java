@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar.utils;
 
 import java.util.concurrent.TimeUnit;
-import javax.inject.Inject;
+import com.google.inject.Inject;
 
 import org.apache.cassandra.sidecar.common.response.TimeSkewResponse;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;

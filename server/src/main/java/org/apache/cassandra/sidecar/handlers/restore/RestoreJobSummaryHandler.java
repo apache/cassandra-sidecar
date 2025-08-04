@@ -20,8 +20,8 @@ package org.apache.cassandra.sidecar.handlers.restore;
 
 import java.util.Collections;
 import java.util.Set;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
