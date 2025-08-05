@@ -111,36 +111,46 @@ public class RepairJob extends OperationalJob
             LOGGER.info("Repair is not applicable for the provided options and keyspace '{}' jobId '{}'", keyspace, this.jobId());
             return Future.succeededFuture();
         }
-        Promise<Void> repairPromise = Promise.promise();
+        final Promise<Void> repairPromise = Promise.promise();
+        final Promise<Boolean> maxWaitTimePromise = Promise.promise();
+        final long timerId = internalPool.setTimer(config.maxRepairJobRuntime().toMillis(),
+                                             d -> maxWaitTimePromise.tryComplete(true));
+
         queryForCompletedRepair(repairPromise, cmd);
-
-        if (!repairPromise.future().isComplete())
+        final boolean repairCompleted = repairPromise.future().isComplete();
+        
+        final Long periodicId;
+        if (!repairCompleted)
         {
-            Promise<Boolean> maxWaitTimePromise = Promise.promise();
-            long timerId = internalPool.setTimer(config.maxRepairJobRuntime().toMillis(),
-                                                 d -> maxWaitTimePromise.tryComplete(true));
-
-            long periodicId = internalPool.setPeriodic(config.repairPollInterval().toMillis(),
-                                                       id -> queryForCompletedRepair(repairPromise, cmd));
-
-            repairPromise.future().onComplete(ar -> {
-                internalPool.cancelTimer(timerId);
-                internalPool.cancelTimer(periodicId);
-                maxWaitTimePromise.tryComplete(false);
-            });
-
-            return Future.any(maxWaitTimePromise.future(), repairPromise.future())
-                         .compose(f -> {
-                             boolean isTimeout = maxWaitTimePromise.future().result();
-                             if (isTimeout)
-                             {
-                                 LOGGER.error("Timer ran out before the repair job completed. Repair took too long");
-                                 return Future.failedFuture("Repair job taking too long");
-                             }
-                             return repairPromise.future();
-                         });
+            periodicId = internalPool.setPeriodic(config.repairPollInterval().toMillis(),
+                                                id -> queryForCompletedRepair(repairPromise, cmd));
+            LOGGER.debug("Setting up periodic polling for repair job {}", this.jobId());
         }
-        return repairPromise.future();
+        else
+        {
+            periodicId = null;
+            LOGGER.info("Repair job {} completed from eager status check", this.jobId());
+        }
+
+        repairPromise.future().onComplete(ar -> {
+            internalPool.cancelTimer(timerId);
+            if (periodicId != null)
+            {
+                internalPool.cancelTimer(periodicId);
+            }
+            maxWaitTimePromise.tryComplete(false);
+        });
+
+        return Future.any(maxWaitTimePromise.future(), repairPromise.future())
+                     .compose(f -> {
+                         boolean isTimeout = maxWaitTimePromise.future().result();
+                         if (isTimeout)
+                         {
+                             LOGGER.error("Timer ran out before the repair job completed. Repair took too long");
+                             return Future.failedFuture("Repair job taking too long");
+                         }
+                         return repairPromise.future();
+                     });
     }
 
 
@@ -218,18 +228,35 @@ public class RepairJob extends OperationalJob
         return options;
     }
 
-    private void queryForCompletedRepair(Promise<Void> promise, int cmd)
+    private int missingJobStatusAttempt = 0;
+    private static final int MAX_MISSING_JOB_RETRIES = 5;
+    
+    private synchronized void queryForCompletedRepair(Promise<Void> promise, int cmd)
     {
         LOGGER.info("Polling repair operation for jobId={} status={}", this.jobId(), promise.future().isComplete());
         List<String> status = storageOperations.getParentRepairStatus(cmd);
         String queriedString = "queried for parent session status and";
+        
         if (status == null || status.isEmpty())
         {
-            LOGGER.error("{} couldn't find repair status for cmd: {}", queriedString, cmd);
-            promise.tryFail("Couldn't find repair status for cmd: " + cmd);
+            missingJobStatusAttempt++;
+            if (missingJobStatusAttempt >= MAX_MISSING_JOB_RETRIES)
+            {
+                // If we've seen too many consecutive empty statuses, assume the job doesn't exist
+                LOGGER.error("{} couldn't find repair status for cmd: {} after {} consecutive attempts",
+                             queriedString, cmd, MAX_MISSING_JOB_RETRIES);
+                promise.tryFail("Couldn't find repair status for cmd: " + cmd +
+                                " after " + MAX_MISSING_JOB_RETRIES + " consecutive attempts");
+                return;
+            }
+            
+            // Status can be empty if repair has not yet started - treat as "in progress" rather than failure
+            LOGGER.info("{} found empty status for cmd: {} - repair may be initializing (attempt {})",
+                        queriedString, cmd, missingJobStatusAttempt);
         }
         else
         {
+            missingJobStatusAttempt = 0;
             ParentRepairStatus parentRepairStatus = ParentRepairStatus.valueOf(status.get(0));
             List<String> messages = status.subList(1, status.size());
             switch (parentRepairStatus)

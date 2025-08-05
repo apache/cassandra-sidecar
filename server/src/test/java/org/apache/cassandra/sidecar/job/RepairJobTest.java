@@ -250,6 +250,46 @@ public class RepairJobTest
         // Verify that all jobs were tracked
         assertThat(tracker.jobsView().size()).isEqualTo(3);
     }
+    
+    @Test
+    void testEmptyRepairStatusHandling() throws Exception
+    {
+        StorageOperations storageOperations = mock(StorageOperations.class);
+        
+        // Return empty status (repair not started), then return IN_PROGRESS, then COMPLETED
+        when(storageOperations.getParentRepairStatus(anyInt()))
+            .thenReturn(Collections.emptyList())
+            .thenReturn(Collections.emptyList())
+            .thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.IN_PROGRESS.name()))
+            .thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.COMPLETED.name()));
+            
+        when(storageOperations.repair(any(), any())).thenReturn(1);
+
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(5_000, 100);
+        RepairPayload payload = RepairPayload.builder()
+                                           .isPrimaryRange(true)
+                                           .tables(List.of("testtable"))
+                                           .build();
+        RepairRequestParam repairParams = RepairRequestParam.from(new Name("testkeyspace"), payload);
+        
+        TaskExecutorPool spyTaskExecutorPool = Mockito.spy(executorPool.internal());
+        RepairJob testJob = new RepairJob(spyTaskExecutorPool, config, UUIDs.timeBased(), storageOperations, repairParams);
+        Promise<Void> promise = Promise.promise();
+        testJob.execute(promise);
+        
+        if (!promise.future().isComplete())
+        {
+            promise.future().toCompletionStage().toCompletableFuture().get(5, java.util.concurrent.TimeUnit.SECONDS);
+        }
+        
+        assertThat(testJob.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
+        // Verify the repair status was queried at least 4 times
+        Mockito.verify(storageOperations, Mockito.atLeast(4)).getParentRepairStatus(anyInt());
+        
+        // Verify timers were set and canceled appropriately
+        Mockito.verify(spyTaskExecutorPool, Mockito.atLeast(1)).setTimer(Mockito.anyLong(), Mockito.any());
+        Mockito.verify(spyTaskExecutorPool, Mockito.atLeast(1)).cancelTimer(Mockito.anyLong());
+    }
 
     /**
      * Helper method to create a repair job with specific parameters
