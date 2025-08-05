@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.LongAdder;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 import org.checkerframework.checker.index.qual.NonNegative;
@@ -102,16 +103,7 @@ public class CacheStatsCounter implements StatsCounter
     }
 
     @Override
-    public void recordEviction()
-    {
-        recordEviction(1);
-    }
-
-    /**
-     * @deprecated
-     */
-    @Deprecated
-    public void recordEviction(int weight)
+    public void recordEviction(int weight, RemovalCause cause)
     {
         evictions.metric.update(weight);
     }
