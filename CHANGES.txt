@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Fix type used for reading member_of column in SystemAuthDatabaseAccessor (CASSSIDECAR-333)
  * Remove Jolokia agent (CASSSIDECAR-330)
  * Update Google Guice to 7.0.0 (CASSSIDECAR-89)
  * Fix rpm broken symlink (CASSSIDECAR-327)
