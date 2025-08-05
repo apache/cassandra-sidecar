@@ -54,7 +54,7 @@ public class RepairRequestParam
     /**
      * @return the Repair request payload
      */
-    public RepairPayload requestpayload()
+    public RepairPayload requestPayload()
     {
         return repairRequestPayload;
     }

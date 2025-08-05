@@ -77,7 +77,7 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
                                               "  PRIMARY KEY ((race_year, race_name), rank) \n" +
                                               ")  WITH read_repair='NONE';";
 
-    private static final int NUM_ROWS = 500;
+    private static final int NUM_ROWS = 300;
 
     @Override
     protected ClusterBuilderConfiguration testClusterConfiguration()

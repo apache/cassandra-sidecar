@@ -203,7 +203,7 @@ public abstract class OperationalJob implements Task<Void>
     {
         isExecuting = true;
         LOGGER.info("Executing job. jobId={}", jobId);
-        promise.future().onComplete(executionPromise);
+           promise.future().onComplete(executionPromise);
         try
         {
             Future<Void> internalFuture = executeInternal();

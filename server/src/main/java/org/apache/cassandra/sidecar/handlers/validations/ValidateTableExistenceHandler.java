@@ -23,7 +23,6 @@ import com.datastax.driver.core.TableMetadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
@@ -76,45 +75,41 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
             return;
         }
 
-        getKeyspaceMetadata(host, input.maybeQuotedKeyspace())
-        .onFailure(context::fail) // fail the request with the internal server error thrown from getKeyspaceMetadata
-        .onSuccess(keyspaceMetadata -> {
-            if (keyspaceMetadata == null)
+        ValidationUtils.validateKeyspaceExists(context, metadataFetcher, executorPools, host, input.keyspace())
+        .onComplete(ar -> {
+            // If validation failed, the context has already been failed by the utility method
+            if (ar.failed() || context.failed())
             {
-                context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND,
-                                               "Keyspace " + input.keyspace() + " was not found"));
                 return;
             }
 
-            RoutingContextUtils.put(context, RoutingContextUtils.SC_KEYSPACE_METADATA, keyspaceMetadata);
-
-            String table = input.maybeQuotedTableName();
+            String table = input.tableName();
             if (table == null)
             {
                 context.next();
                 return;
             }
 
-            TableMetadata tableMetadata = keyspaceMetadata.getTable(table);
-            if (tableMetadata == null)
+            try
             {
-                String errMsg = "Table " + input.tableName() + " was not found for keyspace " + input.keyspace();
-                context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, errMsg));
+                KeyspaceMetadata keyspaceMetadata = RoutingContextUtils.get(context, RoutingContextUtils.SC_KEYSPACE_METADATA);
+                TableMetadata tableMetadata = keyspaceMetadata.getTable(table);
+                if (tableMetadata == null)
+                {
+                    String errMsg = "Table " + input.tableName() + " was not found for keyspace " + input.keyspace();
+                    context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, errMsg));
+                }
+                else
+                {
+                    RoutingContextUtils.put(context, RoutingContextUtils.SC_TABLE_METADATA, tableMetadata);
+                    context.next();
+                }
             }
-            else
+            catch (Exception e)
             {
-                RoutingContextUtils.put(context, RoutingContextUtils.SC_TABLE_METADATA, tableMetadata);
-                // keyspace / [table] exists
-                context.next();
+                context.fail(wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                              "Error validating table existence", e));
             }
         });
-    }
-
-    private Future<KeyspaceMetadata> getKeyspaceMetadata(String host, String keyspace)
-    {
-        return executorPools.service().executeBlocking(() -> metadataFetcher.instance(host)
-                                                                            .delegate()
-                                                                            .metadata()
-                                                                            .getKeyspace(keyspace));
     }
 }

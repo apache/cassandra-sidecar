@@ -56,7 +56,7 @@ public class RepairJob extends OperationalJob
      */
     public enum ParentRepairStatus
     {
-        IN_PROGRESS, COMPLETED, FAILED
+        IN_PROGRESS, COMPLETED, FAILED, NEW_STATUS
     }
 
     /**
@@ -98,7 +98,7 @@ public class RepairJob extends OperationalJob
     @Override
     protected Future<Void> executeInternal()
     {
-        Map<String, String> options = generateRepairOptions(repairParams.requestpayload());
+        Map<String, String> options = generateRepairOptions(repairParams.requestPayload());
         String keyspace = repairParams.keyspace().name();
 
         LOGGER.info("Executing repair operation for keyspace {} jobId={} maxRuntime={}",
@@ -184,7 +184,21 @@ public class RepairJob extends OperationalJob
 
         if (repairPayload.startToken() != null && repairPayload.endToken() != null)
         {
-            options.put(RepairOptions.RANGES.getValue(), repairPayload.startToken() + ":" + repairPayload.endToken());
+            try
+            {
+                long startToken = Long.parseLong(repairPayload.startToken());
+                long endToken = Long.parseLong(repairPayload.endToken());
+                if (startToken >= endToken)
+                {
+                    throw new IllegalArgumentException("Start token must be less than end token. " +
+                                                      "Got start: " + startToken + ", end: " + endToken);
+                }
+                options.put(RepairOptions.RANGES.getValue(), repairPayload.startToken() + ":" + repairPayload.endToken());
+            }
+            catch (NumberFormatException e)
+            {
+                throw new IllegalArgumentException("Invalid token format. Tokens must be numeric values.", e);
+            }
         }
 
         if (repairPayload.repairType() == RepairPayload.RepairType.INCREMENTAL)
@@ -197,7 +211,7 @@ public class RepairJob extends OperationalJob
             options.put(RepairOptions.FORCE_REPAIR.getValue(), String.valueOf(repairPayload.force()));
         }
 
-        if (repairPayload.isValidate() != null)
+        if (repairPayload.shouldValidate() != null)
         {
             options.put(RepairOptions.PREVIEW.getValue(), PREVIEW_KIND_REPAIRED);
         }
@@ -212,7 +226,7 @@ public class RepairJob extends OperationalJob
         if (status == null || status.isEmpty())
         {
             LOGGER.error("{} couldn't find repair status for cmd: {}", queriedString, cmd);
-            promise.fail("Couldn't find repair status for cmd: " + cmd);
+            promise.tryFail("Couldn't find repair status for cmd: " + cmd);
         }
         else
         {
@@ -223,9 +237,9 @@ public class RepairJob extends OperationalJob
                 case COMPLETED:
                 case FAILED:
                     LOGGER.info("{} discovered repair {}", queriedString, parentRepairStatus.name().toLowerCase());
-                    if (parentRepairStatus == ParentRepairStatus.FAILED)
+                    if (parentRepairStatus == ParentRepairStatus.FAILED && !messages.isEmpty())
                     {
-                        promise.fail(new IOException(messages.get(0)));
+                        promise.tryFail(new IOException(messages.get(0)));
                     }
                     LOGGER.info("Repair {} Messages: {}", parentRepairStatus.name().toLowerCase(), String.join("\n", messages));
                     promise.tryComplete();
@@ -236,7 +250,7 @@ public class RepairJob extends OperationalJob
                 default:
                     String message = String.format("Encountered unexpected repair status: %s Messages: %s", parentRepairStatus, String.join("\n", messages));
                     LOGGER.error(message);
-                    promise.fail(message);
+                    promise.tryFail(message);
                     break;
             }
         }

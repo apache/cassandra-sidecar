@@ -30,7 +30,8 @@ import org.apache.cassandra.sidecar.config.RepairJobsConfiguration;
  */
 public class RepairJobsConfigurationImpl implements RepairJobsConfiguration
 {
-    public static final long DEFAULT_MAX_REPAIR_RUNTIME_MILLIS = 100_000L;
+    // 1 day in milliseconds
+    public static final long DEFAULT_MAX_REPAIR_RUNTIME_MILLIS = 24 * 60 * 60 * 1000L;
     public static final long DEFAULT_REPAIR_POLLING_INTERVAL_MILLIS = 2_000L;
 
     @JsonProperty(value = "max_repair_runtime", defaultValue = DEFAULT_MAX_REPAIR_RUNTIME_MILLIS + "")

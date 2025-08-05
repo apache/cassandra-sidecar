@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -32,12 +31,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Metadata;
+import com.datastax.driver.core.TableMetadata;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
@@ -45,13 +44,13 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.mockito.AdditionalAnswers;
 import org.mockito.ArgumentCaptor;
 
@@ -81,15 +80,44 @@ public class RepairHandlerTest
     Vertx vertx;
     Server server;
     StorageOperations mockStorageOperations = mock(StorageOperations.class);
+    InstanceMetadataFetcher mockMetadataFetcher = mock(InstanceMetadataFetcher.class);
 
     @BeforeEach
     void before() throws InterruptedException
     {
-        Injector injector;
-        Module testOverride = Modules.override(new TestModule())
-                                     .with(new RepairTestModule());
-        injector = Guice.createInjector(Modules.override(SidecarModules.all())
-                                               .with(testOverride));
+        // Set up the mock metadata chain
+        InstanceMetadata mockInstanceMetadata = mock(InstanceMetadata.class);
+        CassandraAdapterDelegate mockDelegate = mock(CassandraAdapterDelegate.class);
+        Metadata mockMetadata = mock(Metadata.class);
+        KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
+        TableMetadata mockTableMetadata = mock(TableMetadata.class);
+        
+        // Configure the mock chain
+        when(mockMetadataFetcher.instance(anyString())).thenReturn(mockInstanceMetadata);
+        when(mockMetadataFetcher.delegate(anyString())).thenReturn(mockDelegate); // Add this line to fix the NPE
+        when(mockInstanceMetadata.delegate()).thenReturn(mockDelegate);
+        when(mockDelegate.metadata()).thenReturn(mockMetadata);
+        when(mockDelegate.storageOperations()).thenReturn(mockStorageOperations);
+        when(mockMetadata.getKeyspace(anyString())).thenReturn(mockKeyspaceMetadata);
+        when(mockKeyspaceMetadata.getTable(anyString())).thenReturn(mockTableMetadata);
+        
+        AbstractModule repairTestModule = new AbstractModule()
+        {
+            @Override
+            protected void configure()
+            {
+                // Bind the mocks needed for the test
+                bind(StorageOperations.class).toInstance(mockStorageOperations);
+                bind(InstanceMetadataFetcher.class).toInstance(mockMetadataFetcher);
+            }
+        };
+        
+        // Create the injector with the proper module overrides
+        Injector injector = Guice.createInjector(
+            Modules.override(SidecarModules.all())
+                  .with(Modules.override(new TestModule())
+                              .with(new CommonTest.CommonTestModule(mockStorageOperations), repairTestModule))
+        );
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);
         VertxTestContext context = new VertxTestContext();
@@ -119,7 +147,6 @@ public class RepairHandlerTest
                                              .repairType(RepairPayload.RepairType.INCREMENTAL)
                                              .tables(List.of("test_table"))
                                              .build();
-
         client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
               .putHeader("Content-Type", "application/json")
               .sendJson(payload, context.succeeding(response -> {
@@ -272,36 +299,5 @@ public class RepairHandlerTest
                   assertThat(repairResponse.status()).isEqualTo(FAILED);
                   context.completeNow();
               }));
-    }
-
-    /**
-     * Test guice module for Node Decommission handler tests
-     */
-    class RepairTestModule extends AbstractModule
-    {
-        @Provides
-        @Singleton
-        public InstancesMetadata instanceMetadata()
-        {
-            final int instanceId = 100;
-            final String host = "127.0.0.1";
-            final InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
-            when(instanceMetadata.host()).thenReturn(host);
-            when(instanceMetadata.port()).thenReturn(9042);
-            when(instanceMetadata.id()).thenReturn(instanceId);
-            when(instanceMetadata.stagingDir()).thenReturn("");
-
-            CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
-
-            when(delegate.storageOperations()).thenReturn(mockStorageOperations);
-            when(instanceMetadata.delegate()).thenReturn(delegate);
-
-            InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
-            when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
-            when(mockInstancesMetadata.instanceFromId(instanceId)).thenReturn(instanceMetadata);
-            when(mockInstancesMetadata.instanceFromHost(host)).thenReturn(instanceMetadata);
-
-            return mockInstancesMetadata;
-        }
     }
 }

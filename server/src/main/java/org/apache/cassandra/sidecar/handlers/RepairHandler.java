@@ -24,7 +24,6 @@ import java.util.Set;
 import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
@@ -57,12 +56,10 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
 {
     private final ServiceConfiguration config;
     private final OperationalJobManager jobManager;
-    private final Vertx vertx;
 
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
      *
-     * @param vertx                the vertx instance
      * @param metadataFetcher      the metadata fetcher
      * @param executorPools        executor pools for blocking executions
      * @param serviceConfiguration configuration object holding config details of Sidecar
@@ -70,15 +67,13 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
      * @param jobManager           manager for long-running operational jobs
      */
     @Inject
-    protected RepairHandler(Vertx vertx,
-                            InstanceMetadataFetcher metadataFetcher,
+    protected RepairHandler(InstanceMetadataFetcher metadataFetcher,
                             ExecutorPools executorPools,
                             ServiceConfiguration serviceConfiguration,
                             CassandraInputValidator validator,
                             OperationalJobManager jobManager)
     {
         super(metadataFetcher, executorPools, validator);
-        this.vertx = vertx;
         this.jobManager = jobManager;
         this.config = serviceConfiguration;
     }

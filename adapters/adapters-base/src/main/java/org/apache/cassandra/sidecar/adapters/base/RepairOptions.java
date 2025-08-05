@@ -19,7 +19,10 @@
 package org.apache.cassandra.sidecar.adapters.base;
 
 /**
- * Enum representing the repair options supported
+ * Enum representing the repair options supported.
+ * This class mimics the options supported by the repair operation in Apache Cassandra
+ * as defined in org.apache.cassandra.repair.messages.RepairOption
+ * (<a href="https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/repair/messages/RepairOption.java">...</a>)
  */
 public enum RepairOptions
 {

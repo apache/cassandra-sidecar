@@ -60,6 +60,7 @@ import org.apache.cassandra.sidecar.handlers.TableStatsHandler;
 import org.apache.cassandra.sidecar.handlers.TokenRangeReplicaMapHandler;
 import org.apache.cassandra.sidecar.handlers.cassandra.NodeSettingsHandler;
 import org.apache.cassandra.sidecar.handlers.v2.cassandra.V2NodeSettingsHandler;
+import org.apache.cassandra.sidecar.handlers.validations.ValidateKeyspaceExistenceHandler;
 import org.apache.cassandra.sidecar.handlers.validations.ValidateTableExistenceHandler;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
@@ -243,9 +244,14 @@ public class CassandraOperationsModule extends AbstractModule
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.CassandraRepairRouteKey.class)
     VertxRoute cassandraRepairRoute(RouteBuilder.Factory factory,
+                                    ValidateKeyspaceExistenceHandler validateKeyspaceExistence,
                                     RepairHandler repairhandler)
     {
-        return factory.builderForRoute().setBodyHandler(true).handler(repairhandler).build();
+        return factory.builderForRoute()
+                      .setBodyHandler(true)
+                      .handler(validateKeyspaceExistence)
+                      .handler(repairhandler)
+                      .build();
     }
 
     @ProvidesIntoMap

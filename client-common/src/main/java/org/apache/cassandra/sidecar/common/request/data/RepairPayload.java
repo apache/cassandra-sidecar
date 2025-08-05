@@ -138,7 +138,7 @@ public class RepairPayload
     }
 
     @JsonProperty(VALIDATE)
-    public Boolean isValidate()
+    public Boolean shouldValidate()
     {
         return validate;
     }
@@ -255,7 +255,7 @@ public class RepairPayload
         }
 
         @JsonProperty(VALIDATE)
-        public RepairPayload.Builder validate(boolean validate)
+        public RepairPayload.Builder shouldValidate(boolean validate)
         {
             return update(b -> b.validate = validate);
         }
