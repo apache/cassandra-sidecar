@@ -550,12 +550,6 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         session.execute("CREATE KEYSPACE IF NOT EXISTS " + keyspace + " WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor':'3'}");
     }
 
-    private void grantRole(String role, String grantedRole)
-    {
-        Session session = maybeGetSession();
-        session.execute("GRANT " + grantedRole + " TO " + role + ";");
-    }
-
     private void createTable(String keyspace, String table)
     {
         Session session = maybeGetSession();

@@ -401,6 +401,12 @@ public abstract class IntegrationTestBase
         session.execute("CREATE ROLE \"" + role + "\" WITH PASSWORD ='" + password + "' AND SUPERUSER = " + superUser + " AND LOGIN = true;");
     }
 
+    protected void grantRole(String role, String roleToAssign)
+    {
+        Session session = maybeGetSession();
+        session.execute("GRANT " + roleToAssign + " TO " + role + ";");
+    }
+
     // similar to awaitLatchOrTimeout, it throws either test exceptions (due to startAsync failures) or timeout exception
     public void awaitLatchOrThrow(CountDownLatch latch, long duration, TimeUnit timeUnit, String latchName)
     {

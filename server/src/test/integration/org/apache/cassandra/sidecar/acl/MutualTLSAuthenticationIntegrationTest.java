@@ -267,10 +267,4 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         session.execute(String.format("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
                                       "VALUES ('%s', '%s', {'%s'})", role, resource, permission));
     }
-
-    private void grantRole(String role, String roleToAssign)
-    {
-        Session session = maybeGetSession();
-        session.execute(String.format("GRANT %s TO %s", roleToAssign, role));
-    }
 }

@@ -46,7 +46,7 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
  */
 public abstract class AuthCache<K, V>
 {
-    protected final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final String name;
     private final Function<K, V> loadFunction;
     private final Supplier<Map<K, V>> bulkLoadFunction;
