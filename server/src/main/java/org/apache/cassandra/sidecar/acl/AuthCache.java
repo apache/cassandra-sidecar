@@ -46,7 +46,7 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
  */
 public abstract class AuthCache<K, V>
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AuthCache.class);
+    protected final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final String name;
     private final Function<K, V> loadFunction;
     private final Supplier<Map<K, V>> bulkLoadFunction;
@@ -150,27 +150,29 @@ public abstract class AuthCache<K, V>
     {
         if (!config.enabled())
         {
-            LOGGER.info("Cache={} not enabled, skipping pre-warming", name);
+            logger.info("Cache={} not enabled, skipping pre-warming", name);
             return;
         }
 
         if (availableRetries < 1)
         {
-            LOGGER.warn("Retries exhausted, unexpected error pre-warming cache={}", name);
+            logger.warn("Retries exhausted, unexpected error pre-warming cache={}", name);
             return;
         }
 
         try
         {
+            long startTimeNanos = System.nanoTime();
             cache.putAll(bulkLoadFunction.get());
+            logger.info("Cache warm completed successfully in {} nanoseconds", System.nanoTime() - startTimeNanos);
         }
         catch (SchemaUnavailableException sue)
         {
-            LOGGER.warn("system_auth schema is unavailable. Skip warming up cache", sue);
+            logger.warn("system_auth schema is unavailable. Skip warming up cache", sue);
         }
         catch (Exception e)
         {
-            LOGGER.warn("Unexpected error encountered during pre-warming of cache={} ", name, e);
+            logger.warn("Unexpected error encountered during pre-warming of cache={} ", name, e);
             vertx.setTimer(config.warmupRetryInterval().toMillis(), t -> warmUpAsync(availableRetries - 1));
         }
     }

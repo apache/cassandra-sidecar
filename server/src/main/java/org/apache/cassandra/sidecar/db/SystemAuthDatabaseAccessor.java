@@ -172,11 +172,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
 
             // check if superuser status has been granted indirectly to this user
             Set<String> memberOf = row.getSet("member_of", String.class);
-            if (memberOf == null || memberOf.isEmpty())
-            {
-                continue;
-            }
-            if (memberOf.stream().anyMatch(roleToSuperUser::get))
+            if (memberOf != null && !memberOf.isEmpty() && memberOf.stream().anyMatch(roleToSuperUser::get))
             {
                 roleToSuperUser.put(row.getString("role"), true);
             }

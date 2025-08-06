@@ -69,13 +69,14 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         // wait for cache refreshes
         Thread.sleep(3000);
 
-        testCompleteLatch = new CountDownLatch(35);
+        testCompleteLatch = new CountDownLatch(36);
 
         // permissions for test cases below are granted during prepareForTest to save cache refresh time. Please
         // refer to grantRequiredPermissions to check permissions granted for a test to understand verifications done in
         // test
         testForAdmin(context);
         testForSuperUser(context);
+        testForTransitiveSuperUser(context);
         testForNonAdmin(context);
         testGrantingForTable(context);
         testGrantingForKeyspace(context);
@@ -108,6 +109,15 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "test_keyspace");
         // uses client keystore with superuser identity
         Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/super_user_test_user");
+
+        verifyAccess(context, testCompleteLatch, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, false);
+    }
+
+    void testForTransitiveSuperUser(VertxTestContext context) throws Exception
+    {
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "test_keyspace");
+        // uses client keystore with superuser identity
+        Path clientKeystorePath = clientKeystorePath("spiffe://cassandra/sidecar/non_super_user_with_transitive_super_user");
 
         verifyAccess(context, testCompleteLatch, HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, false);
     }
@@ -447,6 +457,10 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
         createRole("super_user_test_role", true);
         insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/super_user_test_user", "super_user_test_role");
 
+        createRole("non_super_user_with_transitive_super_user_role", false);
+        grantRole("non_super_user_with_transitive_super_user_role", "super_user_test_role");
+        insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/non_super_user_with_transitive_super_user", "non_super_user_with_transitive_super_user_role");
+
         createRole("non_admin_test_role", false);
         insertIdentityRole(cassandraContext, "spiffe://cassandra/sidecar/non_admin_test_user", "non_admin_test_role");
 
@@ -534,6 +548,12 @@ class RoleBasedAuthorizationIntegrationTest extends IntegrationTestBase
     {
         Session session = maybeGetSession();
         session.execute("CREATE KEYSPACE IF NOT EXISTS " + keyspace + " WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor':'3'}");
+    }
+
+    private void grantRole(String role, String grantedRole)
+    {
+        Session session = maybeGetSession();
+        session.execute("GRANT " + grantedRole + " TO " + role + ";");
     }
 
     private void createTable(String keyspace, String table)
