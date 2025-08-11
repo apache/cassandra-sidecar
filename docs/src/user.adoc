@@ -70,7 +70,6 @@ Cassandra Sidecar's root directory will contain the following directories:
 * bin: This contains the script to start Cassandra Sidecar
 * conf: This is the location of the Cassandra Sidecar configuration
 * lib: This directory contains the JAR files which comprise the Cassandra Sidecar application
-* agents: This directory contains JAR files for JVM agents which attach to Cassandra Sidecar (such as Jolokia)
 
 After installing Cassandra Sidecar, you can view these directories by running `ls /opt/apache-cassandra-sidecar` (for Debian and RPM installs) or `ls apache-cassandra-sidecar-{project-version}` (for tarball installs). In this document, we will refer to Cassandra Sidecar's root directory as `CASSANDRA_SIDECAR_HOME`.
 
@@ -270,8 +269,8 @@ The `sidecar` section of the `sidecar.yaml` file is used to configure the Cassan
 This section of the `sidecar.yaml` file is used configure Vert.x, which powers Cassandra Sidecar. The following properties are defined:
 
 * `filesystem_options`: This object defines the configuration used by Vert.x it defines the following fields:
-** `classpath_resolving_enabled`: When vert.x cannot find the file on the filesystem it tries to resolve the file from the classpath when this is set to `true`. Otherwise, vert.x will not attempt to resolve the file on the classpath. Default value is `false`.
-** `file_caching_enabled`: Defines whether or not to enable caching files on the real file system when the filesystem performs class path resolving. Set to `false` to disable caching. Default value is `false`.
+** `classpath_resolving_enabled`: When vert.x cannot find the file on the filesystem it tries to resolve the file from the classpath when this is set to `true`. Otherwise, vert.x will not attempt to resolve the file on the classpath. Default value is `true`.
+** `file_caching_enabled`: Defines whether or not to enable caching files on the real file system when the filesystem performs class path resolving. Set to `false` to disable caching. Default value is `true`.
 
 [[schema-reporting]]
 ### schema_reporting
