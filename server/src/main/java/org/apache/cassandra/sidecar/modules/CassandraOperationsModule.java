@@ -25,6 +25,7 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.ApiEndpointsV2;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
@@ -34,6 +35,7 @@ import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.response.v2.V2NodeSettings;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.handlers.ConnectedClientStatsHandler;
 import org.apache.cassandra.sidecar.handlers.GossipInfoHandler;
@@ -176,6 +178,22 @@ public class CassandraOperationsModule extends AbstractModule
                       .build();
     }
 
+
+    @GET
+    @Path(ApiEndpointsV2.NODE_SETTINGS_ROUTE)
+    @Operation(summary = "Get node settings",
+                description = "Returns configuration settings for the Cassandra node.")
+    @APIResponse(description = "Node settings retrieved successfully",
+                 responseCode = "200",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = V2NodeSettings.class)))
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.V2CassandraNodeSettingsRouteKey.class)
+    VertxRoute v2CassandraNodeSettings(RouteBuilder.Factory factory, V2NodeSettingsHandler v2NodeSettingsHandler)
+    {
+        return factory.buildRouteWithHandler(v2NodeSettingsHandler);
+    }
+
     @GET
     @Path(ApiEndpointsV1.ALL_KEYSPACES_SCHEMA_ROUTE)
     @Operation(summary = "Get all keyspaces schema",
@@ -184,13 +202,6 @@ public class CassandraOperationsModule extends AbstractModule
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(implementation = SchemaResponse.class)))
-    @ProvidesIntoMap
-    @KeyClassMapKey(VertxRouteMapKeys.V2CassandraNodeSettingsRouteKey.class)
-    VertxRoute v2CassandraNodeSettings(RouteBuilder.Factory factory, V2NodeSettingsHandler v2NodeSettingsHandler)
-    {
-        return factory.buildRouteWithHandler(v2NodeSettingsHandler);
-    }
-
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.AllKeyspacesSchemaRouteKey.class)
     VertxRoute cassandraSchemaRoute(RouteBuilder.Factory factory,
