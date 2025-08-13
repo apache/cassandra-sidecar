@@ -288,6 +288,10 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             if (isNativeUp.compareAndSet(false, true))
             {
                 notifyNativeConnection();
+            }
+
+            if (isNativeUp.get())
+            {
                 try
                 {
                     // Once CQL is confirmed alive for the first time, we'll initialize systemViewsSchema.
@@ -304,10 +308,6 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                                 cassandraInstanceId, e);
                     nodeSettingsFromCql = null;
                 }
-            }
-            else
-            {
-                nodeSettingsFromCql = null;
             }
         }
         catch (IllegalArgumentException | NoHostAvailableException e)

@@ -48,6 +48,38 @@ public class V2NodeSettingsIntegrationTest extends SharedClusterSidecarIntegrati
     @Test
     public void testV2NodeSettings()
     {
+        ensureSettingsAvailable();
+
+        // Disabling NTR should make CQL settings become unavailable
+        cluster.getFirstRunningInstance().nodetool("disablebinary");
+        ensureSettingsBecomeUnavailable("CQL NodeSettings unavailable");
+
+        // Re-enable NTR, settings should become available again.
+        cluster.getFirstRunningInstance().nodetool("enablebinary");
+        ensureSettingsAvailable();
+
+        // Changing a configuration should eventually reflect in settings API.
+        cluster.getFirstRunningInstance().nodetool("setconcurrency", "READ", "10");
+        ensureSettingsAvailable();
+
+        cluster.stopUnchecked(cluster.getFirstRunningInstance());
+        ensureSettingsBecomeUnavailable("NodeSettings unavailable");
+    }
+
+    private void ensureSettingsBecomeUnavailable(String errorMessage)
+    {
+        loopAssert(60, () -> {
+            HttpResponse<Buffer> responseAfterStop = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", "/api/v2/cassandra/settings")
+                                                                                .send()
+                                                                                .expecting(HttpResponseExpectation.SC_SERVICE_UNAVAILABLE));
+            assertThat(responseAfterStop).isNotNull();
+            assertThat(responseAfterStop.statusCode()).isEqualTo(SERVICE_UNAVAILABLE.code());
+            assertThat(responseAfterStop.bodyAsJsonObject().getString("message")).contains(errorMessage);
+        });
+    }
+
+    private void ensureSettingsAvailable()
+    {
         loopAssert(60, () -> {
             HttpResponse<Buffer> response = null;
             try
@@ -69,26 +101,6 @@ public class V2NodeSettingsIntegrationTest extends SharedClusterSidecarIntegrati
                    .executeInternalWithResult("SELECT name, value FROM system_views.settings;")
                    .forEach(row -> cqlSettings.put(row.getString("name"), row.getString("value")));
             assertThat(nodeSettings.cassandra()).isEqualTo(cqlSettings);
-        });
-
-        cluster.getFirstRunningInstance().nodetool("disablebinary");
-        loopAssert(60, () -> {
-            HttpResponse<Buffer> responseAfterStop = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", "/api/v2/cassandra/settings")
-                                                                                .send()
-                                                                                .expecting(HttpResponseExpectation.SC_SERVICE_UNAVAILABLE));
-            assertThat(responseAfterStop).isNotNull();
-            assertThat(responseAfterStop.statusCode()).isEqualTo(SERVICE_UNAVAILABLE.code());
-            assertThat(responseAfterStop.bodyAsJsonObject().getString("message")).contains("CQL NodeSettings unavailable");
-        });
-
-        cluster.stopUnchecked(cluster.getFirstRunningInstance());
-        loopAssert(60, () -> {
-            HttpResponse<Buffer> responseAfterStop = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", "/api/v2/cassandra/settings")
-                                                                                .send()
-                                                                                .expecting(HttpResponseExpectation.SC_SERVICE_UNAVAILABLE));
-            assertThat(responseAfterStop).isNotNull();
-            assertThat(responseAfterStop.statusCode()).isEqualTo(SERVICE_UNAVAILABLE.code());
-            assertThat(responseAfterStop.bodyAsJsonObject().getString("message")).contains("NodeSettings unavailable");
         });
     }
 
