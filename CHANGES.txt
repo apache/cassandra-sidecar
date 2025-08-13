@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Do not log whole exception when schema is not found (CASSSIDECAR-250)
  * Add comprehensive OpenAPI documentation (CASSSIDECAR-176)
  * Fix type used for reading member_of column in SystemAuthDatabaseAccessor (CASSSIDECAR-333)
  * Remove Jolokia agent (CASSSIDECAR-330)
