@@ -18,22 +18,31 @@
 
 package org.apache.cassandra.sidecar.adapters.base.jmx;
 
+import java.util.List;
+import java.util.Map;
+
 /**
- * An interface that pulls methods from the Cassandra Metrics Proxy
+ * An interface that pulls methods from the Cassandra CompactionManager JMX proxy
  */
-public interface MetricsJmxOperations
+public interface CompactionManagerJmxOperations
 {
-    String METRICS_OBJ_TYPE_KEYSPACE_TABLE_FORMAT = "org.apache.cassandra.metrics:type=Table,keyspace=%s,scope=%s,name=%s";
+    String COMPACTION_MANAGER_OBJ_NAME = "org.apache.cassandra.db:type=CompactionManager";
 
     /**
-     * Retrieves the value of the metric of type {@link com.codahale.metrics.Gauge}
-     * @return the value of the Gauge metric
+     * Returns the number of concurrent compactors configured for the node.
+     * @return number of concurrent compactors
      */
-    Object getValue();
+    int getCoreCompactorThreads();
 
     /**
-     * Retrieves the value of the metric of type {@link com.codahale.metrics.Counter}
-     * @return the value of the Counter metric
+     * Returns active compactions as a list of compaction info maps
+     * @return list of compaction info maps
      */
-    long getCount();
+    List<Map<String, String>> getCompactions();
+
+    /**
+     * Returns compaction throughput in bytes per second
+     * @return compaction throughput in bytes per second
+     */
+    long getCompactionThroughputMbPerSec();
 }

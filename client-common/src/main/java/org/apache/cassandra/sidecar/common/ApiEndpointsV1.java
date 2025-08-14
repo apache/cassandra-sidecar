@@ -133,6 +133,7 @@ public final class ApiEndpointsV1
     public static final String SERVICES_CONFIG_ROUTE = API_V1 + SERVICES_PATH;
 
     public static final String CONNECTED_CLIENT_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/connected-clients";
+    public static final String COMPACTION_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/compaction";
 
     private static final String OPERATIONAL_JOBS = "/operational-jobs";
     private static final String PER_OPERATIONAL_JOB = OPERATIONAL_JOBS + '/' + OPERATIONAL_JOB_ID_PATH_PARAM;

@@ -25,6 +25,7 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
@@ -36,6 +37,7 @@ import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.handlers.ConnectedClientStatsHandler;
+import org.apache.cassandra.sidecar.handlers.CompactionStatsHandler;
 import org.apache.cassandra.sidecar.handlers.GossipInfoHandler;
 import org.apache.cassandra.sidecar.handlers.GossipUpdateHandler;
 import org.apache.cassandra.sidecar.handlers.KeyspaceRingHandler;
@@ -88,6 +90,22 @@ public class CassandraOperationsModule extends AbstractModule
                                                   ConnectedClientStatsHandler connectedClientStatsHandler)
     {
         return factory.buildRouteWithHandler(connectedClientStatsHandler);
+    }
+
+    @GET
+    @Path(ApiEndpointsV1.COMPACTION_STATS_ROUTE)
+    @Operation(summary = "Get compaction statistics",
+               description = "Returns compaction statistics for the Cassandra node")
+    @APIResponse(description = "Compaction statistics retrieved successfully",
+                 responseCode = "200",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = CompactionStatsResponse.class)))
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.CassandraCompactionStatsRouteKey.class)
+    VertxRoute cassandraCompactionStatsRoute(RouteBuilder.Factory factory,
+                                             CompactionStatsHandler compactionStatsHandler)
+    {
+        return factory.buildRouteWithHandler(compactionStatsHandler);
     }
 
     @GET

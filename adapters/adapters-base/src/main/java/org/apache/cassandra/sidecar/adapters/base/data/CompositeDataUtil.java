@@ -50,4 +50,55 @@ public class CompositeDataUtil
             throw new RuntimeException("Value type mismatched of key: " + key, cce);
         }
     }
+
+    /**
+     * Safely casts an object to the specified type with descriptive error handling.
+     * This method performs a runtime type check before casting to prevent ClassCastException
+     * and provides meaningful error messages when the cast fails.
+     *
+     * @param value the object to be cast
+     * @param expectedType the expected type to cast to
+     * @param contextDescription descriptive context for error messages (e.g., "keyspace name", "table data")
+     * @param <T> the target type
+     * @return the cast object of type T
+     * @throws IllegalStateException if the value is not an instance of the expected type,
+     *         with a descriptive message indicating what was expected vs what was received
+     */
+    public static <T> T safeCast(Object value, Class<T> expectedType, String contextDescription)
+    {
+        if (!expectedType.isInstance(value))
+        {
+            throw new IllegalStateException("Expected " + expectedType.getSimpleName() + " for " + contextDescription + " but got: " +
+                    (value == null ? "null" : value.getClass().getSimpleName()));
+        }
+        return expectedType.cast(value);
+    }
+
+    /**
+     * Safely parses a string to a long with descriptive error handling.
+     * This method handles null values and provides meaningful error messages when parsing fails.
+     *
+     * @param value the string value to be parsed
+     * @param contextDescription descriptive context for error messages (e.g., "completed bytes", "total bytes")
+     * @return the parsed long value
+     * @throws IllegalStateException if the value cannot be parsed as a long,
+     *         with a descriptive message indicating what failed to parse
+     */
+    public static long safeParseLong(final String value, final String contextDescription)
+    {
+        if (value == null)
+        {
+            throw new IllegalStateException("Cannot parse null value for " + contextDescription);
+        }
+        
+        try
+        {
+            return Long.parseLong(value);
+        }
+        catch (NumberFormatException e)
+        {
+            throw new IllegalStateException("Failed to parse long value '" + value + "' for " + contextDescription + ": " + e.getMessage(), e);
+        }
+    }
+
 }

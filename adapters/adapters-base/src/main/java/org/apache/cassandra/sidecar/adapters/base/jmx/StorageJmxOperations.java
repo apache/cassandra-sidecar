@@ -198,4 +198,37 @@ public interface StorageJmxOperations
      * Triggers start gossip
      */
     void startGossiping();
+
+    /**
+     * Returns the number of concurrent compactors configured for the node
+     * @return number of concurrent compactors
+     */
+    int getConcurrentCompactors();
+
+    /**
+     * Returns the compaction throughput limit in MiB per second as a double
+     * @return compaction throughput limit
+     */
+    double getCompactionThroughputMbPerSec();
+
+    /**
+     * Returns the compaction throughput limit in MiB per second as a double (alternative method name)
+     * @return compaction throughput limit
+     */
+    double getCompactionThroughtputMibPerSecAsDouble();
+
+    /**
+     * Returns current compaction throughput measurements in MiB per second for different time windows
+     * @return map of time windows to throughput measurements
+     */
+    Map<String, String> getCurrentCompactionThroughputMebibytesPerSec();
+
+    /**
+     * Returns the current compaction throughput in bytes per second.
+     * This method provides the throughput measurement in bytes per second, which is useful
+     * for calculating estimated completion times and remaining work for active compactions.
+     * 
+     * @return the current compaction throughput in bytes per second, or 0 if throughput cannot be determined
+     */
+    long getCompactionThroughtputBytesPerSec();
 }

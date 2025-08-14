@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.common.server;
 
+import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
@@ -47,5 +48,11 @@ public interface MetricsOperations
      * @return the requested table stats
      */
     TableStatsResponse tableStats(QualifiedTableName tableName);
+
+    /**
+     * Retrieve compaction statistics from the cluster
+     * @return the requested compaction stats
+     */
+    CompactionStatsResponse compactionStats();
 
 }
