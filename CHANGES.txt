@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * NullPointerException When Authentication Is Enabled but sidecar_internal Schema Is Disabled (CASSSIDECAR-331)
  * Update logging dependencies (CASSSIDECAR-337)
 
 0.2.0

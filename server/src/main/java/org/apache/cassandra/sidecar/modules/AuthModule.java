@@ -141,6 +141,7 @@ public class AuthModule extends AbstractModule
                 throw new RuntimeException(String.format("Implementation for class %s has not been registered",
                                                          config.className()));
             }
+            factory.validatePrerequisites(sidecarConfiguration);
             chainAuthHandler.add(factory.create(vertx, accessControlConfiguration, config.namedParameters()));
         }
 
@@ -180,6 +181,10 @@ public class AuthModule extends AbstractModule
         }
         if (config.className().equalsIgnoreCase(RoleBasedAuthorizationProvider.class.getName()))
         {
+            if (!sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration().isEnabled())
+            {
+                throw new ConfigurationException(config.className() + " requires sidecar schema to be enabled for role permissions storage");
+            }
             return new RoleBasedAuthorizationProvider(roleAuthorizationsCache);
         }
         throw new ConfigurationException("Unrecognized authorization provider " + config.className() + " set");

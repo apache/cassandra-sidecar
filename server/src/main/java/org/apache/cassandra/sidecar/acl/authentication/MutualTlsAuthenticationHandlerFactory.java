@@ -32,6 +32,7 @@ import io.vertx.ext.web.handler.impl.AuthenticationHandlerInternal;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
 /**
@@ -105,5 +106,17 @@ public class MutualTlsAuthenticationHandlerFactory implements AuthenticationHand
         }
         MutualTlsAuthentication mTLSAuthProvider = new MutualTlsAuthenticationImpl(vertx, certificateValidator, certificateIdentityExtractor);
         return new MutualTlsAuthenticationHandler(mTLSAuthProvider, identityToRoleCache);
+    }
+
+    @Override
+    public void validatePrerequisites(SidecarConfiguration sidecarConfiguration) throws ConfigurationException
+    {
+        boolean isSidecarSchemaEnabled = sidecarConfiguration.serviceConfiguration()
+                                                             .schemaKeyspaceConfiguration()
+                                                             .isEnabled();
+        if (!isSidecarSchemaEnabled)
+        {
+            throw new ConfigurationException("mTLS auth requires sidecar schema to be enabled for role processing");
+        }
     }
 }
