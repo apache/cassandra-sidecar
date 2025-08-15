@@ -58,7 +58,7 @@ class AuthModuleTest
     void testRoleBasedAuthorizationProviderWithSchemaDisabled()
     {
         AuthModule authModule = new AuthModule();
-        SidecarConfiguration mockSidecarConfig = createSidecarConfiguration(true, true,false);
+        SidecarConfiguration mockSidecarConfig = createSidecarConfiguration(true, true, false);
         
         // Should throw when RoleBasedAuthorizationProvider is used but schema is disabled
         assertThatThrownBy(() -> authModule.authorizationProvider(mockSidecarConfig, null))
