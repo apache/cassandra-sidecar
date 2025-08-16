@@ -116,7 +116,7 @@ public class MutualTlsAuthenticationHandlerFactory implements AuthenticationHand
                                                              .isEnabled();
         if (!isSidecarSchemaEnabled)
         {
-            throw new ConfigurationException("mTLS auth requires sidecar schema to be enabled for role processing");
+            throw new ConfigurationException("MutualTlsAuthenticationHandlerFactory requires Sidecar schema to be enabled for role processing");
         }
     }
 }
