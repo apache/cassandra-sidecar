@@ -75,7 +75,7 @@ public class JwtAuthenticationHandlerFactory implements AuthenticationHandlerFac
                                                              .isEnabled();
         if (!isSidecarSchemaEnabled)
         {
-            throw new ConfigurationException("JWT auth requires sidecar schema to be enabled for role processing");
+            throw new ConfigurationException("JwtAuthenticationHandlerFactory requires Sidecar schema to be enabled for role processing");
         }
     }
 }
