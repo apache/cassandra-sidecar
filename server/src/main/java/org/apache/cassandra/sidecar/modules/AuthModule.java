@@ -183,7 +183,7 @@ public class AuthModule extends AbstractModule
         {
             if (!sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration().isEnabled())
             {
-                throw new ConfigurationException(config.className() + " requires sidecar schema to be enabled for role permissions storage");
+                throw new ConfigurationException(config.className() + " requires Sidecar schema to be enabled for role permissions used by Sidecar");
             }
             return new RoleBasedAuthorizationProvider(roleAuthorizationsCache);
         }
