@@ -78,6 +78,6 @@ class JWTAuthenticationHandlerFactoryTest
         // Should throw exception when schema is disabled
         assertThatThrownBy(() -> factory.validatePrerequisites(mockSidecarConfig))
         .isInstanceOf(ConfigurationException.class)
-        .hasMessage("JWT auth requires sidecar schema to be enabled for role processing");
+        .hasMessage("JwtAuthenticationHandlerFactory requires Sidecar schema to be enabled for role processing");
     }
 }

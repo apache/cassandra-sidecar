@@ -64,7 +64,7 @@ class AuthModuleTest
         assertThatThrownBy(() -> authModule.authorizationProvider(mockSidecarConfig, null))
         .isInstanceOf(ConfigurationException.class)
         .hasMessage(RoleBasedAuthorizationProvider.class.getName() + 
-                   " requires sidecar schema to be enabled for role permissions storage");
+                   " requires Sidecar schema to be enabled for role permissions used by Sidecar");
     }
 
     @Test
@@ -82,7 +82,7 @@ class AuthModuleTest
         // Should throw ConfigurationException when factory validates prerequisites
         assertThatThrownBy(() -> authModule.chainAuthHandler(mockVertx, mockSidecarConfig, mockRegistry))
         .isInstanceOf(ConfigurationException.class)
-        .hasMessage("mTLS auth requires sidecar schema to be enabled for role processing");
+        .hasMessage("MutualTlsAuthenticationHandlerFactory requires Sidecar schema to be enabled for role processing");
     }
 
     private SidecarConfiguration createSidecarConfiguration(boolean authenticationEnabled,
