@@ -49,6 +49,8 @@ public interface AuthenticationHandlerFactory
     
     /**
      * Validates that this authentication handler factory can be used with the given configuration.
+     * This gives the implementation flexibility to establish pre-requisites in order to properly function
+     * correctly.
      *
      * @param sidecarConfiguration the sidecar configuration to validate against
      * @throws ConfigurationException if the authentication handler factory cannot be used with the given configuration
