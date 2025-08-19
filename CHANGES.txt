@@ -1,5 +1,6 @@
 0.2.0
 -----
+ * Create API for Creating Live Migration Tasks & fetch the status (CASSSIDECAR-225)
  * Fix logging regression in Sidecar after CASSSIDECAR-176 (CASSSIDECAR-336)
  * Do not log whole exception when schema is not found (CASSSIDECAR-250)
  * Add comprehensive OpenAPI documentation (CASSSIDECAR-176)
