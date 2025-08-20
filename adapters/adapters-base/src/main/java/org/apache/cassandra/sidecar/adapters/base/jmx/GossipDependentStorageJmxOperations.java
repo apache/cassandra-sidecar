@@ -203,27 +203,14 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
     }
 
     @Override
-    public int getConcurrentCompactors() {
+    public int getConcurrentCompactors()
+    {
         return delegate.getConcurrentCompactors();
     }
 
     @Override
-    public double getCompactionThroughputMbPerSec() {
-        return delegate.getCompactionThroughputMbPerSec();
-    }
-
-    @Override
-    public double getCompactionThroughtputMibPerSecAsDouble() {
-        return delegate.getCompactionThroughtputMibPerSecAsDouble();
-    }
-
-    @Override
-    public Map<String, String> getCurrentCompactionThroughputMebibytesPerSec() {
-        return delegate.getCurrentCompactionThroughputMebibytesPerSec();
-    }
-
-    @Override
-    public long getCompactionThroughtputBytesPerSec() {
+    public long getCompactionThroughtputBytesPerSec()
+    {
         return delegate.getCompactionThroughtputBytesPerSec();
     }
 }

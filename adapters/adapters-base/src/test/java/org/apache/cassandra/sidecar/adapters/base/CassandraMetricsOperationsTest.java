@@ -57,7 +57,8 @@ class CassandraMetricsOperationsTest
     private MeterMetricsJmxOperations mockMeterMetrics;
 
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         mockJmxClient = mock(JmxClient.class);
         mockTableSchemaFetcher = mock(TableSchemaFetcher.class);
         mockCassandraAdapter = mock(ICassandraAdapter.class);
@@ -71,7 +72,8 @@ class CassandraMetricsOperationsTest
     }
 
     @Test
-    void testCompactionStatsHappyPath() {
+    void testCompactionStatsHappyPath()
+    {
         // Happy path with all data present
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);
@@ -118,7 +120,8 @@ class CassandraMetricsOperationsTest
     }
 
     @Test
-    void testCompactionStatsStorageServiceException() {
+    void testCompactionStatsStorageServiceException()
+    {
         // storageService.getConcurrentCompactors() throws exception
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);
@@ -131,7 +134,8 @@ class CassandraMetricsOperationsTest
     }
 
     @Test
-    void testCompactionStatsParsePendingTasksMapFailure() {
+    void testCompactionStatsParsePendingTasksMapFailure()
+    {
         // Parsing and casting failures in parsePendingTasksMap
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);
@@ -141,12 +145,13 @@ class CassandraMetricsOperationsTest
         when(mockGaugeMetrics.getValue()).thenReturn("invalid_type");
 
         assertThatThrownBy(() -> metricsOperations.compactionStats())
-            .isInstanceOf(IllegalStateException.class)
+            .isInstanceOf(ClassCastException.class)
             .hasMessageContaining("Expected Map for pending tasks but got: String");
     }
 
     @Test
-    void testCompactionStatsEmptyPendingTasks() {
+    void testCompactionStatsEmptyPendingTasks()
+    {
         // Empty pendingTasks
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);
@@ -171,7 +176,8 @@ class CassandraMetricsOperationsTest
     }
 
     @Test
-    void testCompactionStatsGetCompletedCompactionsRateException() {
+    void testCompactionStatsGetCompletedCompactionsRateException()
+    {
         // Exception in getCompletedCompactionsRate JMX
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);
@@ -190,7 +196,8 @@ class CassandraMetricsOperationsTest
     }
 
     @Test
-    void testCompactionStatsGetActiveCompactionsEmptyMap() {
+    void testCompactionStatsGetActiveCompactionsEmptyMap()
+    {
         // getActiveCompactions returns empty map
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);
@@ -213,7 +220,8 @@ class CassandraMetricsOperationsTest
     }
 
     @Test
-    void testCompactionStatsSafeParseLongFailure() {
+    void testCompactionStatsSafeParseLongFailure()
+    {
         // safeParseLong failure due to invalid value in compactionInfo
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);
@@ -234,12 +242,13 @@ class CassandraMetricsOperationsTest
         when(mockCompactionManager.getCompactions()).thenReturn(activeCompactions);
 
         assertThatThrownBy(() -> metricsOperations.compactionStats())
-            .isInstanceOf(IllegalStateException.class)
+            .isInstanceOf(NumberFormatException.class)
             .hasMessageContaining("completed bytes");
     }
 
     @Test
-    void testCompactionStatsTotalBytesMinusOne() {
+    void testCompactionStatsTotalBytesMinusOne()
+    {
         // totalBytes is -1
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);
@@ -268,7 +277,8 @@ class CassandraMetricsOperationsTest
     }
 
     @Test
-    void testCompactionStatsSsTablesStrEmpty() {
+    void testCompactionStatsSsTablesStrEmpty()
+    {
         // ssTablesStr empty
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);
@@ -296,7 +306,8 @@ class CassandraMetricsOperationsTest
     }
 
     @Test
-    void testCompactionStatsSsTablesStrSingleString() {
+    void testCompactionStatsSsTablesStrSingleString()
+    {
         // ssTablesStr with single string (no commas)
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);
@@ -325,7 +336,8 @@ class CassandraMetricsOperationsTest
     }
 
     @Test
-    void testCompactionStatsCompletedBytesZero() {
+    void testCompactionStatsCompletedBytesZero()
+    {
         // completedBytes is 0
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);
@@ -357,7 +369,8 @@ class CassandraMetricsOperationsTest
     }
 
     @Test
-    void testCompactionStatsTotalRemainingBytesNegative() {
+    void testCompactionStatsTotalRemainingBytesNegative()
+    {
         // totalRemainingBytes < 0 (completedBytes > totalBytes)
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);
@@ -388,7 +401,8 @@ class CassandraMetricsOperationsTest
     }
 
     @Test
-    void testCompactionStatsThroughputBytesPerSecZero() {
+    void testCompactionStatsThroughputBytesPerSecZero()
+    {
         // throughputBytesPerSec is 0
         when(mockJmxClient.proxy(CompactionManagerJmxOperations.class, "org.apache.cassandra.db:type=CompactionManager")).thenReturn(mockCompactionManager);
         when(mockJmxClient.proxy(StorageJmxOperations.class, "org.apache.cassandra.db:type=StorageService")).thenReturn(mockStorageService);

@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
@@ -58,6 +57,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CompactionStatsIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
     private static final String COMPACTION_STATS_ROUTE = "/api/v1/cassandra/stats/compaction";
+    private static final int MAX_POLL_ATTEMPTS = 10;
     private static final List<QualifiedName> TEST_TABLES = new ArrayList<>();
     private static final int TABLE_COUNT = 5;
 
@@ -66,12 +66,14 @@ class CompactionStatsIntegrationTest extends SharedClusterSidecarIntegrationTest
     {
         createTestKeyspace(TEST_KEYSPACE, DC1_RF1);
 
-        for (int i = 1; i <= TABLE_COUNT; i++) {
+        for (int i = 1; i <= TABLE_COUNT; i++)
+        {
             TEST_TABLES.add(new QualifiedName(TEST_KEYSPACE, TEST_TABLE_PREFIX + "_compaction_" + i));
         }
         
         // Create test tables for compaction activity
-        for (QualifiedName tableName : TEST_TABLES) {
+        for (QualifiedName tableName : TEST_TABLES)
+        {
             createTestTable(tableName,
                             "CREATE TABLE %s ( \n" +
                             "  id int PRIMARY KEY, \n" +
@@ -81,23 +83,27 @@ class CompactionStatsIntegrationTest extends SharedClusterSidecarIntegrationTest
     }
 
     @Test
-    void testCompactionStatsRetrieval() {
+    void testCompactionStatsRetrieval()
+    {
         logger.info("Starting compaction stats test with {} tables", TEST_TABLES.size());
         
         // Generate SSTables for all test tables
-        for (QualifiedName tableName : TEST_TABLES) {
+        for (QualifiedName tableName : TEST_TABLES)
+        {
             generateSSTables(tableName, 100);
         }
         
         // Create threads to trigger compaction on all tables
         List<Thread> compactionThreads = new ArrayList<>();
-        for (QualifiedName tableName : TEST_TABLES) {
+        for (QualifiedName tableName : TEST_TABLES)
+        {
             Thread thread = new Thread(() -> triggerCompactionForTable(tableName));
             compactionThreads.add(thread);
         }
         
         // Start all compaction threads
-        for (Thread thread : compactionThreads) {
+        for (Thread thread : compactionThreads)
+        {
             thread.start();
         }
         
@@ -106,8 +112,10 @@ class CompactionStatsIntegrationTest extends SharedClusterSidecarIntegrationTest
         HttpResponse<Buffer> response;
         boolean foundActiveCompactions;
         
-        for (int attempt = 0; attempt < 10; attempt++) {
-            try {
+        for (int attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++)
+        {
+            try
+            {
                 response = getBlocking(
                     trustedClient().get(serverWrapper.serverPort, "localhost", COMPACTION_STATS_ROUTE)
                         .send()
@@ -116,26 +124,35 @@ class CompactionStatsIntegrationTest extends SharedClusterSidecarIntegrationTest
                 stats = response.bodyAsJson(CompactionStatsResponse.class);
                 foundActiveCompactions = !stats.activeCompactions().isEmpty();
 
-                if (foundActiveCompactions) {
+                if (foundActiveCompactions)
+                {
                     logger.info("SUCCESS: Found {} active compactions on attempt {}",
                                stats.activeCompactionsCount(), attempt + 1);
                     break;
-                } else {
+                }
+                else
+                {
                     logger.info("Attempt {}: No active compactions yet", attempt + 1);
                 }
 
                 Thread.sleep(100); // Short sleep between attempts
-            } catch (InterruptedException e) {
+            }
+            catch (InterruptedException e)
+            {
                 Thread.currentThread().interrupt();
                 break;
             }
         }
         
         // Wait for all compaction threads to complete
-        for (Thread thread : compactionThreads) {
-            try {
+        for (Thread thread : compactionThreads)
+        {
+            try
+            {
                 thread.join(5000);
-            } catch (InterruptedException e) {
+            }
+            catch (InterruptedException e)
+            {
                 Thread.currentThread().interrupt();
                 break;
             }
@@ -146,9 +163,12 @@ class CompactionStatsIntegrationTest extends SharedClusterSidecarIntegrationTest
     }
 
     
-    private void generateSSTables(QualifiedName tableName, int numSSTables) {
-        for (int batch = 0; batch < numSSTables; batch++) {
-            for (int i = batch * 1000; i < (batch + 1) * 1000; i++) {
+    private void generateSSTables(QualifiedName tableName, int numSSTables)
+    {
+        for (int batch = 0; batch < numSSTables; batch++)
+        {
+            for (int i = batch * 1000; i < (batch + 1) * 1000; i++)
+            {
                 String statement = String.format("INSERT INTO %s (id, data) VALUES (%d, '%s');",
                                                 tableName, i, "data" + i);
                 cluster.schemaChangeIgnoringStoppedInstances(statement);
@@ -157,17 +177,23 @@ class CompactionStatsIntegrationTest extends SharedClusterSidecarIntegrationTest
         }
     }
     
-    private void triggerCompactionForTable(QualifiedName tableName) {
-        cluster.stream().forEach(instance -> {
-            try {
+    private void triggerCompactionForTable(QualifiedName tableName)
+    {
+        cluster.stream().forEach(instance ->
+        {
+            try
+            {
                 instance.nodetool("compact", tableName.keyspace(), tableName.table());
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 logger.warn("Failed to trigger compaction for {}: {}", tableName, e.getMessage());
             }
         });
     }
     
-    private void validateCompactionStatsResponse(CompactionStatsResponse stats) {
+    private void validateCompactionStatsResponse(CompactionStatsResponse stats)
+    {
         assertThat(stats).isNotNull();
         
         // Basic counters validation
@@ -183,7 +209,8 @@ class CompactionStatsIntegrationTest extends SharedClusterSidecarIntegrationTest
         assertThat(stats.pendingTasks()).isNotNull();
         
         // Validate each pending task entry if there are any
-        if (!stats.pendingTasks().isEmpty()) {
+        if (!stats.pendingTasks().isEmpty())
+        {
             validatePendingTasks(stats);
         }
         
@@ -208,11 +235,14 @@ class CompactionStatsIntegrationTest extends SharedClusterSidecarIntegrationTest
         assertThat(stats.activeCompactionsRemainingTime()).isNotNull();
         
         // Detailed active compaction validation when compactions are found
-        if (!stats.activeCompactions().isEmpty()) {
+        if (!stats.activeCompactions().isEmpty())
+        {
             validateActiveCompactions(stats);
 
             logger.info("All {} active compactions validated successfully", stats.activeCompactionsCount());
-        } else {
+        }
+        else
+        {
             logger.info("No active compactions to validate - basic structure validation completed");
         }
         
@@ -220,7 +250,8 @@ class CompactionStatsIntegrationTest extends SharedClusterSidecarIntegrationTest
                    stats.activeCompactionsCount(), stats.completedCompactions(), stats.totalPendingTasks());
     }
 
-    private void validatePendingTasks(CompactionStatsResponse stats) {
+    private void validatePendingTasks(CompactionStatsResponse stats)
+    {
         stats.pendingTasks().forEach((keyspace, tableMap) -> {
             assertThat(keyspace)
                 .as("Pending task keyspace should not be blank")
@@ -241,10 +272,12 @@ class CompactionStatsIntegrationTest extends SharedClusterSidecarIntegrationTest
         logger.info("Validated {} pending task keyspaces", stats.pendingTasks().size());
     }
 
-    private void validateActiveCompactions(CompactionStatsResponse stats) {
+    private void validateActiveCompactions(CompactionStatsResponse stats)
+    {
         logger.info("Validating {} active compaction entries", stats.activeCompactionsCount());
 
-        for (int i = 0; i < stats.activeCompactions().size(); i++) {
+        for (int i = 0; i < stats.activeCompactions().size(); i++)
+        {
             ActiveCompactionEntry compaction = stats.activeCompactions().get(i);
             logger.info("Validating active compaction {}: {}", i + 1, compaction.id());
 
@@ -297,8 +330,10 @@ class CompactionStatsIntegrationTest extends SharedClusterSidecarIntegrationTest
                 .as("SSTables list should not be null")
                 .isNotNull();
 
-            if (!compaction.ssTables().isEmpty()) {
-                for (String ssTable : compaction.ssTables()) {
+            if (!compaction.ssTables().isEmpty())
+            {
+                for (String ssTable : compaction.ssTables())
+                {
                     assertThat(ssTable)
                         .as("SSTable name should not be null or blank")
                         .isNotNull()

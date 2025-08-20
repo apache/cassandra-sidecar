@@ -54,15 +54,15 @@ public class ActiveCompactionEntry
      * @param targetDirectory  target directory for output
      */
     @JsonCreator
-    public ActiveCompactionEntry(@JsonProperty("id") final String id,
-                                 @JsonProperty("keyspace") final String keyspace,
-                                 @JsonProperty("columnFamily") final String columnFamily,
-                                 @JsonProperty("taskType") final String taskType,
-                                 @JsonProperty("completedBytes") final long completedBytes,
-                                 @JsonProperty("totalBytes") final long totalBytes,
-                                 @JsonProperty("percentCompleted") final double percentCompleted,
-                                 @JsonProperty("ssTables") final List<String> ssTables,
-                                 @JsonProperty("targetDirectory") final String targetDirectory)
+    public ActiveCompactionEntry(@JsonProperty("id") String id,
+                                 @JsonProperty("keyspace") String keyspace,
+                                 @JsonProperty("columnFamily") String columnFamily,
+                                 @JsonProperty("taskType") String taskType,
+                                 @JsonProperty("completedBytes") long completedBytes,
+                                 @JsonProperty("totalBytes") long totalBytes,
+                                 @JsonProperty("percentCompleted") double percentCompleted,
+                                 @JsonProperty("ssTables") List<String> ssTables,
+                                 @JsonProperty("targetDirectory") String targetDirectory)
     {
         this.id = id;
         this.keyspace = keyspace;

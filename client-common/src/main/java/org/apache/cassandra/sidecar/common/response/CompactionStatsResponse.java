@@ -92,18 +92,18 @@ public class CompactionStatsResponse
      * @param activeCompactionsRemainingTime    estimated remaining time for active compactions formatted as "XhYYmZZs"
      */
     @JsonCreator
-    public CompactionStatsResponse(@JsonProperty("concurrentCompactors") final long concurrentCompactors,
-                                   @JsonProperty("pendingTasks") final Map<String, Map<String, Integer>> pendingTasks,
-                                   @JsonProperty("totalPendingTasks") final long totalPendingTasks,
-                                   @JsonProperty("completedCompactions") final long completedCompactions,
-                                   @JsonProperty("dataCompacted") final long dataCompacted,
-                                   @JsonProperty("abortedCompactions") final long abortedCompactions,
-                                   @JsonProperty("reducedCompactions") final long reducedCompactions,
-                                   @JsonProperty("sstablesDroppedFromCompaction") final long sstablesDroppedFromCompaction,
-                                   @JsonProperty("completedCompactionsRate") final CompletedCompactionsRate completedCompactionsRate,
-                                   @JsonProperty("activeCompactions") final List<ActiveCompactionEntry> activeCompactions,
-                                   @JsonProperty("activeCompactionsCount") final long activeCompactionsCount,
-                                   @JsonProperty("activeCompactionsRemainingTime") final String activeCompactionsRemainingTime)
+    public CompactionStatsResponse(@JsonProperty("concurrentCompactors") long concurrentCompactors,
+                                   @JsonProperty("pendingTasks") Map<String, Map<String, Integer>> pendingTasks,
+                                   @JsonProperty("totalPendingTasks") long totalPendingTasks,
+                                   @JsonProperty("completedCompactions") long completedCompactions,
+                                   @JsonProperty("dataCompacted") long dataCompacted,
+                                   @JsonProperty("abortedCompactions") long abortedCompactions,
+                                   @JsonProperty("reducedCompactions") long reducedCompactions,
+                                   @JsonProperty("sstablesDroppedFromCompaction") long sstablesDroppedFromCompaction,
+                                   @JsonProperty("completedCompactionsRate") CompletedCompactionsRate completedCompactionsRate,
+                                   @JsonProperty("activeCompactions") List<ActiveCompactionEntry> activeCompactions,
+                                   @JsonProperty("activeCompactionsCount") long activeCompactionsCount,
+                                   @JsonProperty("activeCompactionsRemainingTime") String activeCompactionsRemainingTime)
     {
         this.concurrentCompactors = concurrentCompactors;
         this.pendingTasks = pendingTasks;

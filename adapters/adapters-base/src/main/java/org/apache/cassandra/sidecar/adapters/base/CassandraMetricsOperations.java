@@ -28,18 +28,20 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.management.openmbean.CompositeData;
 
-import org.apache.cassandra.sidecar.adapters.base.jmx.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.cassandra.sidecar.adapters.base.data.CompositeDataUtil.safeCast;
-import static org.apache.cassandra.sidecar.adapters.base.data.CompositeDataUtil.safeParseLong;
 
 import org.apache.cassandra.sidecar.adapters.base.data.SessionInfo;
 import org.apache.cassandra.sidecar.adapters.base.data.StreamState;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStats;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsDatabaseAccessor;
 import org.apache.cassandra.sidecar.adapters.base.db.ConnectedClientStatsSummary;
+import org.apache.cassandra.sidecar.adapters.base.jmx.CompactionManagerJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.CounterMetricsJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.GaugeMetricsJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.MeterMetricsJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.StreamManagerJmxOperations;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
@@ -54,9 +56,11 @@ import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.adapters.base.data.CompositeDataUtil.safeCast;
+import static org.apache.cassandra.sidecar.adapters.base.data.CompositeDataUtil.safeParseLong;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.CompactionManagerJmxOperations.COMPACTION_MANAGER_OBJ_NAME;
-import static org.apache.cassandra.sidecar.adapters.base.jmx.StreamManagerJmxOperations.STREAM_MANAGER_OBJ_NAME;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.jmx.StreamManagerJmxOperations.STREAM_MANAGER_OBJ_NAME;
 
 /**
  * Default implementation that pulls methods from the Cassandra Metrics Proxy
@@ -71,22 +75,35 @@ public class CassandraMetricsOperations implements MetricsOperations
     private static final String METRICS_OBJ_TYPE_COMPACTION = "org.apache.cassandra.metrics:type=Compaction,name=%s";
 
     // Constants for compaction info map keys
+    // Unique identifier for the compaction session
     public static final String ID = "id";
+    // Keyspace name being compacted
     public static final String KEYSPACE = "keyspace";
+    // Column family (table) name being compacted
     public static final String COLUMNFAMILY = "columnfamily";
+    // Number of bytes already processed in the compaction
     public static final String COMPLETED = "completed";
+    // Total number of bytes to be processed in the compaction
     public static final String TOTAL = "total";
+    // Type of compaction task (e.g., COMPACTION, VALIDATION, etc.)
     public static final String TASK_TYPE = "taskType";
+    // Unique compaction identifier
     public static final String COMPACTION_ID = "compactionId";
+    // Comma-separated list of SSTable names involved in the compaction
     public static final String SSTABLES = "sstables";
+    // Directory where compaction output will be written
     public static final String TARGET_DIRECTORY = "targetDirectory";
 
+    // Time format for displaying hours, minutes, and seconds
     public static final String TIME_FORMAT = "%dh%02dm%02ds";
 
     // Default values
-    public static final String DEFAULTVAL_STRING = "unknown";
-    public static final String DEFAULTVAL_NUMBER = "-1";
-    public static final String DEFAULTVAL_N_A = "n/a";
+    // Default string value when actual value is unavailable
+    public static final String DEFAULT_STRING_VALUE = "";
+    // Default numeric value when actual value is unavailable
+    public static final String DEFAULT_NUMBER_VALUE = "-1";
+    // Default value indicating not applicable or unavailable
+    public static final String DEFAULT_N_A_VALUE = "n/a";
 
     /**
      * Creates a new instance with the provided {@link CQLSessionProvider}
@@ -391,7 +408,7 @@ public class CassandraMetricsOperations implements MetricsOperations
         String metricObjectType = String.format(METRICS_OBJ_TYPE_COMPACTION, "TotalCompactionsCompleted");
         MeterMetricsJmxOperations metricsProxy = jmxClient.proxy(MeterMetricsJmxOperations.class, metricObjectType);
 
-        // Convert rates according to specification:
+        // Convert per-second rates to the specification:
         // meanRate: compactions per hour
         // fifteenMinuteRate: compactions per minute for last 15 minutes
         double meanRateValue = metricsProxy.getMeanRate() * 3600; // Convert per second to per hour
@@ -404,28 +421,27 @@ public class CassandraMetricsOperations implements MetricsOperations
     }
 
 
-    private List<ActiveCompactionEntry> getActiveCompactions(final List<Map<String, String>> compactions)
+    private List<ActiveCompactionEntry> getActiveCompactions(List<Map<String, String>> compactions)
     {
         return compactions.stream().map(compactionInfo -> {
             // Extract fields according to specification
-            String id = compactionInfo.getOrDefault(COMPACTION_ID, DEFAULTVAL_STRING);
-            String keyspace = compactionInfo.getOrDefault(KEYSPACE, DEFAULTVAL_STRING);
-            String columnFamily = compactionInfo.getOrDefault(COLUMNFAMILY, DEFAULTVAL_STRING);
-            String taskType = compactionInfo.getOrDefault(TASK_TYPE, DEFAULTVAL_STRING);
+            String id = compactionInfo.getOrDefault(COMPACTION_ID, DEFAULT_STRING_VALUE);
+            String keyspace = compactionInfo.getOrDefault(KEYSPACE, DEFAULT_STRING_VALUE);
+            String columnFamily = compactionInfo.getOrDefault(COLUMNFAMILY, DEFAULT_STRING_VALUE);
+            String taskType = compactionInfo.getOrDefault(TASK_TYPE, DEFAULT_STRING_VALUE);
             
             // Parse byte values
-            long completedBytes = safeParseLong(compactionInfo.getOrDefault(COMPLETED, DEFAULTVAL_NUMBER), "completed bytes");
-            long totalBytes = safeParseLong(compactionInfo.getOrDefault(TOTAL, DEFAULTVAL_NUMBER), "total bytes");
+            long completedBytes = safeParseLong(compactionInfo.getOrDefault(COMPLETED, DEFAULT_NUMBER_VALUE), "completed bytes");
+            long totalBytes = safeParseLong(compactionInfo.getOrDefault(TOTAL, DEFAULT_NUMBER_VALUE), "total bytes");
             
             // Calculate percentage completed
             double percentCompleted = totalBytes == -1 ? 0.0 : (double) completedBytes / totalBytes * 100.0;
             
             // Parse SSTables list
-            String ssTablesStr = compactionInfo.getOrDefault(SSTABLES, DEFAULTVAL_STRING);
-            List<String> ssTables = ssTablesStr.isEmpty() ?
-                List.of() : List.of(ssTablesStr.split(","));
+            String ssTablesStr = compactionInfo.getOrDefault(SSTABLES, DEFAULT_STRING_VALUE);
+            List<String> ssTables = ssTablesStr.isEmpty() ? List.of() : List.of(ssTablesStr.split(","));
             
-            String targetDirectory = compactionInfo.getOrDefault(TARGET_DIRECTORY, DEFAULTVAL_STRING);
+            String targetDirectory = compactionInfo.getOrDefault(TARGET_DIRECTORY, DEFAULT_STRING_VALUE);
             
             return new ActiveCompactionEntry(id, keyspace, columnFamily, taskType, 
                                              completedBytes, totalBytes, percentCompleted, 
@@ -438,7 +454,7 @@ public class CassandraMetricsOperations implements MetricsOperations
     {
         if (activeCompactions.isEmpty())
         {
-            return DEFAULTVAL_N_A;
+            return DEFAULT_N_A_VALUE;
         }
 
         // Calculate total remaining bytes across all active compactions
@@ -450,15 +466,15 @@ public class CassandraMetricsOperations implements MetricsOperations
         long throughputBytesPerSec = storageService.getCompactionThroughtputBytesPerSec();
         if (totalRemainingBytes < 0 || throughputBytesPerSec <= 0)
         {
-            return DEFAULTVAL_N_A;
+            return DEFAULT_N_A_VALUE;
         }
 
         // Calculate time in seconds (throughput is already in bytes/sec)
-        long remainingTimeInSecs = totalRemainingBytes / throughputBytesPerSec;
+        double remainingTimeInSecs = (double) totalRemainingBytes / throughputBytesPerSec;
 
         return String.format(TIME_FORMAT,
-                remainingTimeInSecs / 3600,
-                (remainingTimeInSecs % 3600) / 60,
-                (remainingTimeInSecs % 60));
+                Math.round(remainingTimeInSecs / 3600),
+                Math.round((remainingTimeInSecs % 3600) / 60),
+                Math.round(remainingTimeInSecs % 60));
     }
 }

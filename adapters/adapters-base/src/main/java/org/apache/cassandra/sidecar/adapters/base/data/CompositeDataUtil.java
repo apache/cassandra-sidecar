@@ -68,7 +68,7 @@ public class CompositeDataUtil
     {
         if (!expectedType.isInstance(value))
         {
-            throw new IllegalStateException("Expected " + expectedType.getSimpleName() + " for " + contextDescription + " but got: " +
+            throw new ClassCastException("Expected " + expectedType.getSimpleName() + " for " + contextDescription + " but got: " +
                     (value == null ? "null" : value.getClass().getSimpleName()));
         }
         return expectedType.cast(value);
@@ -84,20 +84,20 @@ public class CompositeDataUtil
      * @throws IllegalStateException if the value cannot be parsed as a long,
      *         with a descriptive message indicating what failed to parse
      */
-    public static long safeParseLong(final String value, final String contextDescription)
+    public static long safeParseLong(String value, String contextDescription)
     {
         if (value == null)
         {
-            throw new IllegalStateException("Cannot parse null value for " + contextDescription);
+            throw new NumberFormatException("Cannot parse null value for " + contextDescription);
         }
         
         try
         {
             return Long.parseLong(value);
         }
-        catch (NumberFormatException e)
+        catch (NumberFormatException ex)
         {
-            throw new IllegalStateException("Failed to parse long value '" + value + "' for " + contextDescription + ": " + e.getMessage(), e);
+            throw new NumberFormatException("Failed to parse long value '" + value + "' for " + contextDescription + ": " + ex.getMessage());
         }
     }
 
