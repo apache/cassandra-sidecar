@@ -16,36 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.response;
+package org.apache.cassandra.sidecar.common.server.data;
 
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
-import org.apache.cassandra.sidecar.common.response.data.ActiveCompactionEntry;
 
 /**
- * Response class for the CompactionStats API
+ * Data object representing compaction statistics
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class CompactionStatsResponse
+public class CompactionStatsData
 {
-    public static final String CONCURRENT_COMPACTORS = "concurrentCompactors";
-    public static final String PENDING_TASKS = "pendingTasks";
-    public static final String TOTAL_PENDING_TASKS = "totalPendingTasks";
-    public static final String COMPLETED_COMPACTIONS = "completedCompactions";
-    public static final String DATA_COMPACTED = "dataCompacted";
-    public static final String ABORTED_COMPACTIONS = "abortedCompactions";
-    public static final String REDUCED_COMPACTIONS = "reducedCompactions";
-    public static final String SSTABLES_DROPPED_FROM_COMPACTION = "sstablesDroppedFromCompaction";
-    public static final String COMPLETED_COMPACTIONS_RATE = "completedCompactionsRate";
-    public static final String ACTIVE_COMPACTIONS = "activeCompactions";
-    public static final String ACTIVE_COMPACTIONS_COUNT = "activeCompactionsCount";
-    public static final String ACTIVE_COMPACTIONS_REMAINING_TIME = "activeCompactionsRemainingTime";
-
     private final long concurrentCompactors;
     private final Map<String, Map<String, Integer>> pendingTasks;
     private final long totalPendingTasks;
@@ -54,108 +36,12 @@ public class CompactionStatsResponse
     private final long abortedCompactions;
     private final long reducedCompactions;
     private final long sstablesDroppedFromCompaction;
-    private final CompletedCompactionsRate completedCompactionsRate;
-    private final List<ActiveCompactionEntry> activeCompactions;
+    private final CompletedCompactionsRateData completedCompactionsRate;
+    private final List<ActiveCompactionEntryData> activeCompactions;
     private final long activeCompactionsCount;
     private final long activeCompactionsRemainingTime;
 
-    /**
-     * Represents the completed compactions rate
-     */
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class CompletedCompactionsRate
-    {
-        public static final String MEAN_RATE = "meanRate";
-        public static final String FIFTEEN_MINUTE_RATE = "fifteenMinuteRate";
-
-        private final String meanRate;
-        private final String fifteenMinuteRate;
-
-        private CompletedCompactionsRate(Builder builder)
-        {
-            this.meanRate = builder.meanRate;
-            this.fifteenMinuteRate = builder.fifteenMinuteRate;
-        }
-
-        @JsonCreator
-        public CompletedCompactionsRate(@JsonProperty(MEAN_RATE) final String meanRate,
-                                        @JsonProperty(FIFTEEN_MINUTE_RATE) final String fifteenMinuteRate)
-        {
-            this.meanRate = meanRate;
-            this.fifteenMinuteRate = fifteenMinuteRate;
-        }
-
-        @JsonProperty(MEAN_RATE)
-        public String meanRate()
-        {
-            return meanRate;
-        }
-
-        @JsonProperty(FIFTEEN_MINUTE_RATE)
-        public String fifteenMinuteRate()
-        {
-            return fifteenMinuteRate;
-        }
-
-        public static Builder builder()
-        {
-            return new Builder();
-        }
-
-        /**
-         * {@code CompletedCompactionsRate} builder static inner class.
-         */
-        public static final class Builder implements DataObjectBuilder<Builder, CompletedCompactionsRate>
-        {
-            private String meanRate;
-            private String fifteenMinuteRate;
-
-            private Builder()
-            {
-            }
-
-            @Override
-            public Builder self()
-            {
-                return this;
-            }
-
-            /**
-             * Sets the {@code meanRate} and returns a reference to this Builder enabling method chaining.
-             *
-             * @param meanRate the {@code meanRate} to set
-             * @return a reference to this Builder
-             */
-            public Builder meanRate(String meanRate)
-            {
-                return update(b -> b.meanRate = meanRate);
-            }
-
-            /**
-             * Sets the {@code fifteenMinuteRate} and returns a reference to this Builder enabling method chaining.
-             *
-             * @param fifteenMinuteRate the {@code fifteenMinuteRate} to set
-             * @return a reference to this Builder
-             */
-            public Builder fifteenMinuteRate(String fifteenMinuteRate)
-            {
-                return update(b -> b.fifteenMinuteRate = fifteenMinuteRate);
-            }
-
-            /**
-             * Returns a {@code CompletedCompactionsRate} built from the parameters previously set.
-             *
-             * @return a {@code CompletedCompactionsRate} built with parameters of this {@code CompletedCompactionsRate.Builder}
-             */
-            @Override
-            public CompletedCompactionsRate build()
-            {
-                return new CompletedCompactionsRate(this);
-            }
-        }
-    }
-
-    private CompactionStatsResponse(Builder builder)
+    private CompactionStatsData(Builder builder)
     {
         this.concurrentCompactors = builder.concurrentCompactors;
         this.pendingTasks = builder.pendingTasks;
@@ -171,118 +57,61 @@ public class CompactionStatsResponse
         this.activeCompactionsRemainingTime = builder.activeCompactionsRemainingTime;
     }
 
-    /**
-     * Constructs a new {@link CompactionStatsResponse}.
-     *
-     * @param concurrentCompactors              number of concurrent compactors
-     * @param pendingTasks                      pending compaction tasks by keyspace and table
-     * @param totalPendingTasks                 total number of pending tasks
-     * @param completedCompactions              total compactions completed
-     * @param dataCompacted                     total data compacted in bytes
-     * @param abortedCompactions                total compactions aborted
-     * @param reducedCompactions                total compactions reduced
-     * @param sstablesDroppedFromCompaction     total SSTables dropped from compaction
-     * @param completedCompactionsRate          completed compactions rate statistics
-     * @param activeCompactions                 list of active compactions
-     * @param activeCompactionsCount            number of active compactions
-     * @param activeCompactionsRemainingTime    estimated remaining time for active compactions in seconds
-     */
-    @JsonCreator
-    public CompactionStatsResponse(@JsonProperty(CONCURRENT_COMPACTORS) long concurrentCompactors,
-                                   @JsonProperty(PENDING_TASKS) Map<String, Map<String, Integer>> pendingTasks,
-                                   @JsonProperty(TOTAL_PENDING_TASKS) long totalPendingTasks,
-                                   @JsonProperty(COMPLETED_COMPACTIONS) long completedCompactions,
-                                   @JsonProperty(DATA_COMPACTED) long dataCompacted,
-                                   @JsonProperty(ABORTED_COMPACTIONS) long abortedCompactions,
-                                   @JsonProperty(REDUCED_COMPACTIONS) long reducedCompactions,
-                                   @JsonProperty(SSTABLES_DROPPED_FROM_COMPACTION) long sstablesDroppedFromCompaction,
-                                   @JsonProperty(COMPLETED_COMPACTIONS_RATE) CompletedCompactionsRate completedCompactionsRate,
-                                   @JsonProperty(ACTIVE_COMPACTIONS) List<ActiveCompactionEntry> activeCompactions,
-                                   @JsonProperty(ACTIVE_COMPACTIONS_COUNT) long activeCompactionsCount,
-                                   @JsonProperty(ACTIVE_COMPACTIONS_REMAINING_TIME) long activeCompactionsRemainingTime)
-    {
-        this.concurrentCompactors = concurrentCompactors;
-        this.pendingTasks = pendingTasks;
-        this.totalPendingTasks = totalPendingTasks;
-        this.completedCompactions = completedCompactions;
-        this.dataCompacted = dataCompacted;
-        this.abortedCompactions = abortedCompactions;
-        this.reducedCompactions = reducedCompactions;
-        this.sstablesDroppedFromCompaction = sstablesDroppedFromCompaction;
-        this.completedCompactionsRate = completedCompactionsRate;
-        this.activeCompactions = activeCompactions;
-        this.activeCompactionsCount = activeCompactionsCount;
-        this.activeCompactionsRemainingTime = activeCompactionsRemainingTime;
-    }
-
-    @JsonProperty(CONCURRENT_COMPACTORS)
     public long concurrentCompactors()
     {
         return concurrentCompactors;
     }
 
-    @JsonProperty(PENDING_TASKS)
     public Map<String, Map<String, Integer>> pendingTasks()
     {
         return pendingTasks;
     }
 
-    @JsonProperty(TOTAL_PENDING_TASKS)
     public long totalPendingTasks()
     {
         return totalPendingTasks;
     }
 
-    @JsonProperty(COMPLETED_COMPACTIONS)
     public long completedCompactions()
     {
         return completedCompactions;
     }
 
-    @JsonProperty(DATA_COMPACTED)
     public long dataCompacted()
     {
         return dataCompacted;
     }
 
-    @JsonProperty(ABORTED_COMPACTIONS)
     public long abortedCompactions()
     {
         return abortedCompactions;
     }
 
-    @JsonProperty(REDUCED_COMPACTIONS)
     public long reducedCompactions()
     {
         return reducedCompactions;
     }
 
-    @JsonProperty(SSTABLES_DROPPED_FROM_COMPACTION)
     public long sstablesDroppedFromCompaction()
     {
         return sstablesDroppedFromCompaction;
     }
 
-    @JsonProperty(COMPLETED_COMPACTIONS_RATE)
-    public CompletedCompactionsRate completedCompactionsRate()
+    public CompletedCompactionsRateData completedCompactionsRate()
     {
         return completedCompactionsRate;
     }
 
-
-    @JsonProperty(ACTIVE_COMPACTIONS)
-    public List<ActiveCompactionEntry> activeCompactions()
+    public List<ActiveCompactionEntryData> activeCompactions()
     {
         return activeCompactions;
     }
 
-    @JsonProperty(ACTIVE_COMPACTIONS_COUNT)
     public long activeCompactionsCount()
     {
         return activeCompactionsCount;
     }
 
-    @JsonProperty(ACTIVE_COMPACTIONS_REMAINING_TIME)
     public long activeCompactionsRemainingTime()
     {
         return activeCompactionsRemainingTime;
@@ -294,9 +123,9 @@ public class CompactionStatsResponse
     }
 
     /**
-     * {@code CompactionStatsResponse} builder static inner class.
+     * {@code CompactionStatsData} builder static inner class.
      */
-    public static final class Builder implements DataObjectBuilder<Builder, CompactionStatsResponse>
+    public static final class Builder implements DataObjectBuilder<Builder, CompactionStatsData>
     {
         private long concurrentCompactors;
         private Map<String, Map<String, Integer>> pendingTasks;
@@ -306,8 +135,8 @@ public class CompactionStatsResponse
         private long abortedCompactions;
         private long reducedCompactions;
         private long sstablesDroppedFromCompaction;
-        private CompletedCompactionsRate completedCompactionsRate;
-        private List<ActiveCompactionEntry> activeCompactions;
+        private CompletedCompactionsRateData completedCompactionsRate;
+        private List<ActiveCompactionEntryData> activeCompactions;
         private long activeCompactionsCount;
         private long activeCompactionsRemainingTime;
 
@@ -415,7 +244,7 @@ public class CompactionStatsResponse
          * @param completedCompactionsRate the {@code completedCompactionsRate} to set
          * @return a reference to this Builder
          */
-        public Builder completedCompactionsRate(CompletedCompactionsRate completedCompactionsRate)
+        public Builder completedCompactionsRate(CompletedCompactionsRateData completedCompactionsRate)
         {
             return update(b -> b.completedCompactionsRate = completedCompactionsRate);
         }
@@ -426,7 +255,7 @@ public class CompactionStatsResponse
          * @param activeCompactions the {@code activeCompactions} to set
          * @return a reference to this Builder
          */
-        public Builder activeCompactions(List<ActiveCompactionEntry> activeCompactions)
+        public Builder activeCompactions(List<ActiveCompactionEntryData> activeCompactions)
         {
             return update(b -> b.activeCompactions = activeCompactions);
         }
@@ -454,14 +283,14 @@ public class CompactionStatsResponse
         }
 
         /**
-         * Returns a {@code CompactionStatsResponse} built from the parameters previously set.
+         * Returns a {@code CompactionStatsData} built from the parameters previously set.
          *
-         * @return a {@code CompactionStatsResponse} built with parameters of this {@code CompactionStatsResponse.Builder}
+         * @return a {@code CompactionStatsData} built with parameters of this {@code CompactionStatsData.Builder}
          */
         @Override
-        public CompactionStatsResponse build()
+        public CompactionStatsData build()
         {
-            return new CompactionStatsResponse(this);
+            return new CompactionStatsData(this);
         }
     }
 }

@@ -38,18 +38,6 @@ public interface MeterMetricsJmxOperations
     double getMeanRate();
 
     /**
-     * Returns the one-minute exponentially-weighted moving average rate.
-     * @return the one-minute rate in events per second
-     */
-    double getOneMinuteRate();
-
-    /**
-     * Returns the five-minute exponentially-weighted moving average rate.
-     * @return the five-minute rate in events per second
-     */
-    double getFiveMinuteRate();
-
-    /**
      * Returns the fifteen-minute exponentially-weighted moving average rate.
      * @return the fifteen-minute rate in events per second
      */

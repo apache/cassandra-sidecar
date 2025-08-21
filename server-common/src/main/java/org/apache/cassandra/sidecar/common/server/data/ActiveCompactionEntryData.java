@@ -16,31 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.response.data;
+package org.apache.cassandra.sidecar.common.server.data;
 
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 
 /**
- * Represents an active compaction entry
+ * Data object representing an active compaction entry
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class ActiveCompactionEntry
+public class ActiveCompactionEntryData
 {
-    public static final String ID = "id";
-    public static final String KEYSPACE = "keyspace";
-    public static final String TABLE = "table";
-    public static final String TASK_TYPE = "taskType";
-    public static final String COMPLETED_BYTES = "completedBytes";
-    public static final String TOTAL_BYTES = "totalBytes";
-    public static final String PERCENT_COMPLETED = "percentCompleted";
-    public static final String SS_TABLES = "ssTables";
-    public static final String TARGET_DIRECTORY = "targetDirectory";
-
     private final String id;
     private final String keyspace;
     private final String table;
@@ -51,7 +37,7 @@ public class ActiveCompactionEntry
     private final List<String> ssTables;
     private final String targetDirectory;
 
-    private ActiveCompactionEntry(Builder builder)
+    private ActiveCompactionEntryData(Builder builder)
     {
         this.id = builder.id;
         this.keyspace = builder.keyspace;
@@ -64,90 +50,46 @@ public class ActiveCompactionEntry
         this.targetDirectory = builder.targetDirectory;
     }
 
-    /**
-     * Constructs a new {@link ActiveCompactionEntry}.
-     *
-     * @param id               compaction ID
-     * @param keyspace         keyspace name
-     * @param table            table name
-     * @param taskType         type of compaction task
-     * @param completedBytes   completed compaction in bytes
-     * @param totalBytes       total compaction in bytes
-     * @param percentCompleted percentage of completed compactions
-     * @param ssTables         list of SSTables being compacted
-     * @param targetDirectory  target directory for output
-     */
-    @JsonCreator
-    public ActiveCompactionEntry(@JsonProperty(ID) String id,
-                                 @JsonProperty(KEYSPACE) String keyspace,
-                                 @JsonProperty(TABLE) String table,
-                                 @JsonProperty(TASK_TYPE) String taskType,
-                                 @JsonProperty(COMPLETED_BYTES) long completedBytes,
-                                 @JsonProperty(TOTAL_BYTES) long totalBytes,
-                                 @JsonProperty(PERCENT_COMPLETED) double percentCompleted,
-                                 @JsonProperty(SS_TABLES) List<String> ssTables,
-                                 @JsonProperty(TARGET_DIRECTORY) String targetDirectory)
-    {
-        this.id = id;
-        this.keyspace = keyspace;
-        this.table = table;
-        this.taskType = taskType;
-        this.completedBytes = completedBytes;
-        this.totalBytes = totalBytes;
-        this.percentCompleted = percentCompleted;
-        this.ssTables = ssTables;
-        this.targetDirectory = targetDirectory;
-    }
-
-    @JsonProperty(ID)
     public String id()
     {
         return id;
     }
 
-    @JsonProperty(KEYSPACE)
     public String keyspace()
     {
         return keyspace;
     }
 
-    @JsonProperty(TABLE)
     public String table()
     {
         return table;
     }
 
-    @JsonProperty(TASK_TYPE)
     public String taskType()
     {
         return taskType;
     }
 
-    @JsonProperty(COMPLETED_BYTES)
     public long completedBytes()
     {
         return completedBytes;
     }
 
-    @JsonProperty(TOTAL_BYTES)
     public long totalBytes()
     {
         return totalBytes;
     }
 
-    @JsonProperty(PERCENT_COMPLETED)
     public double percentCompleted()
     {
         return percentCompleted;
     }
 
-    @JsonProperty(SS_TABLES)
     public List<String> ssTables()
     {
         return ssTables;
     }
 
-    @JsonProperty(TARGET_DIRECTORY)
     public String targetDirectory()
     {
         return targetDirectory;
@@ -159,9 +101,9 @@ public class ActiveCompactionEntry
     }
 
     /**
-     * {@code ActiveCompactionEntry} builder static inner class.
+     * {@code ActiveCompactionEntryData} builder static inner class.
      */
-    public static final class Builder implements DataObjectBuilder<Builder, ActiveCompactionEntry>
+    public static final class Builder implements DataObjectBuilder<Builder, ActiveCompactionEntryData>
     {
         private String id;
         private String keyspace;
@@ -283,14 +225,14 @@ public class ActiveCompactionEntry
         }
 
         /**
-         * Returns a {@code ActiveCompactionEntry} built from the parameters previously set.
+         * Returns a {@code ActiveCompactionEntryData} built from the parameters previously set.
          *
-         * @return a {@code ActiveCompactionEntry} built with parameters of this {@code ActiveCompactionEntry.Builder}
+         * @return a {@code ActiveCompactionEntryData} built with parameters of this {@code ActiveCompactionEntryData.Builder}
          */
         @Override
-        public ActiveCompactionEntry build()
+        public ActiveCompactionEntryData build()
         {
-            return new ActiveCompactionEntry(this);
+            return new ActiveCompactionEntryData(this);
         }
     }
 }

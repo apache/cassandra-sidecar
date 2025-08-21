@@ -42,16 +42,17 @@ import org.apache.cassandra.sidecar.adapters.base.jmx.GaugeMetricsJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.MeterMetricsJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.StreamManagerJmxOperations;
-import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
-import org.apache.cassandra.sidecar.common.response.data.ActiveCompactionEntry;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.common.response.data.StreamsProgressStats;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
+import org.apache.cassandra.sidecar.common.server.data.ActiveCompactionEntryData;
+import org.apache.cassandra.sidecar.common.server.data.CompactionStatsData;
+import org.apache.cassandra.sidecar.common.server.data.CompletedCompactionsRateData;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.jetbrains.annotations.NotNull;
@@ -297,36 +298,10 @@ public class CassandraMetricsOperations implements MetricsOperations
     }
 
     /**
-     * Represents the metrics related to compaction stats that are supported by the Sidecar
-     */
-    public enum CompactionStatsMetrics
-    {
-        TOTAL_COMPACTIONS_COMPLETED("TotalCompactionsCompleted", MetricType.COUNTER),
-        BYTES_COMPACTED("BytesCompacted", MetricType.COUNTER),
-        COMPACTIONS_ABORTED("CompactionsAborted", MetricType.COUNTER),
-        COMPACTIONS_REDUCED("CompactionsReduced", MetricType.COUNTER),
-        SSTABLES_DROPPED_FROM_COMPACTION("SSTablesDroppedFromCompaction", MetricType.COUNTER),
-        PENDING_TASKS_BY_TABLE_NAME("PendingTasksByTableName", MetricType.GAUGE);
-
-        private final String metricName;
-        private final MetricType type;
-
-        CompactionStatsMetrics(String metricName, MetricType type)
-        {
-            this.metricName = metricName;
-            this.type = type;
-        }
-
-        String metricName()
-        {
-            return metricName;
-        }
-    }
-    /**
      * {@inheritDoc}
      */
     @Override
-    public CompactionStatsResponse compactionStats()
+    public CompactionStatsData compactionStats()
     {
         // Get compaction manager and storage service proxies
         CompactionManagerJmxOperations compactionManager = jmxClient.proxy(CompactionManagerJmxOperations.class, COMPACTION_MANAGER_OBJ_NAME);
@@ -342,27 +317,36 @@ public class CassandraMetricsOperations implements MetricsOperations
                                                    .sum();
 
         // Get compaction metrics from JMX counters and meters
-        long completedCompactions = getValueAsLong(getCompactionMetric(CompactionStatsMetrics.TOTAL_COMPACTIONS_COMPLETED));
-        long dataCompacted = getValueAsLong(getCompactionMetric(CompactionStatsMetrics.BYTES_COMPACTED));
-        long abortedCompactions = getValueAsLong(getCompactionMetric(CompactionStatsMetrics.COMPACTIONS_ABORTED));
-        long reducedCompactions = getValueAsLong(getCompactionMetric(CompactionStatsMetrics.COMPACTIONS_REDUCED));
-        long sstablesDroppedFromCompaction = getValueAsLong(getCompactionMetric(CompactionStatsMetrics.SSTABLES_DROPPED_FROM_COMPACTION));
+        long completedCompactionsCount = getValueAsLong(getCompactionMetric(CompactionStatsMetrics.TOTAL_COMPACTIONS_COMPLETED));
+        long dataCompactedBytes = getValueAsLong(getCompactionMetric(CompactionStatsMetrics.BYTES_COMPACTED));
+        long abortedCompactionsCount = getValueAsLong(getCompactionMetric(CompactionStatsMetrics.COMPACTIONS_ABORTED));
+        long reducedCompactionsCount = getValueAsLong(getCompactionMetric(CompactionStatsMetrics.COMPACTIONS_REDUCED));
+        long sstablesDroppedFromCompactionCount = getValueAsLong(getCompactionMetric(CompactionStatsMetrics.SSTABLES_DROPPED_FROM_COMPACTION));
 
         // Get completed compactions rate with proper time conversions
-        CompactionStatsResponse.CompletedCompactionsRate completedCompactionsRate = getCompletedCompactionsRate();
+        CompletedCompactionsRateData completedCompactionsRate = getCompletedCompactionsRate();
 
         // Get active compactions with all required fields
-        List<ActiveCompactionEntry> activeCompactions = getActiveCompactions(compactionManager.getCompactions());
+        List<ActiveCompactionEntryData> activeCompactions = getActiveCompactions(compactionManager.getCompactions());
         long activeCompactionsCount = activeCompactions.size();
         
         // Calculate remaining time in seconds based on throughput and remaining bytes
-        String activeCompactionsRemainingTime = calculateRemainingTimeSeconds(activeCompactions, storageService);
+        long activeCompactionsRemainingTime = calculateRemainingTimeSeconds(activeCompactions, storageService);
 
-        return new CompactionStatsResponse(concurrentCompactors, pendingTasks, totalPendingTasks,
-                                           completedCompactions, dataCompacted, abortedCompactions,
-                                           reducedCompactions, sstablesDroppedFromCompaction,
-                                           completedCompactionsRate,
-                                           activeCompactions, activeCompactionsCount, activeCompactionsRemainingTime);
+        return CompactionStatsData.builder()
+            .concurrentCompactors(concurrentCompactors)
+            .pendingTasks(pendingTasks)
+            .totalPendingTasks(totalPendingTasks)
+            .completedCompactions(completedCompactionsCount)
+            .dataCompacted(dataCompactedBytes)
+            .abortedCompactions(abortedCompactionsCount)
+            .reducedCompactions(reducedCompactionsCount)
+            .sstablesDroppedFromCompaction(sstablesDroppedFromCompactionCount)
+            .completedCompactionsRate(completedCompactionsRate)
+            .activeCompactions(activeCompactions)
+            .activeCompactionsCount(activeCompactionsCount)
+            .activeCompactionsRemainingTime(activeCompactionsRemainingTime)
+            .build();
     }
 
     private Map<String, Map<String, Integer>> getPendingCompactionTasksByTable()
@@ -372,7 +356,7 @@ public class CassandraMetricsOperations implements MetricsOperations
         return parsePendingTasksMap(value);
     }
 
-    private Map<String, Map<String, Integer>> parsePendingTasksMap(final Object value)
+    private Map<String, Map<String, Integer>> parsePendingTasksMap(Object value)
     {
         Map<?, ?> rawMap = safeCast(value, Map.class, "pending tasks");
         Map<String, Map<String, Integer>> result = new HashMap<>();
@@ -402,7 +386,7 @@ public class CassandraMetricsOperations implements MetricsOperations
         return queryMetric(metricObjectType, metric.type);
     }
 
-    private CompactionStatsResponse.CompletedCompactionsRate getCompletedCompactionsRate()
+    private CompletedCompactionsRateData getCompletedCompactionsRate()
     {
         // Get rates from meter metric for TotalCompactionsCompleted
         String metricObjectType = String.format(METRICS_OBJ_TYPE_COMPACTION, "TotalCompactionsCompleted");
@@ -411,23 +395,26 @@ public class CassandraMetricsOperations implements MetricsOperations
         // Convert per-second rates to the specification:
         // meanRate: compactions per hour
         // fifteenMinuteRate: compactions per minute for last 15 minutes
-        double meanRateValue = metricsProxy.getMeanRate() * 3600; // Convert per second to per hour
-        double fifteenMinuteRateValue = metricsProxy.getFifteenMinuteRate() * 60; // Convert per second to per minute
+        double meanRateValuePerHour = metricsProxy.getMeanRate() * 3600; // Convert per second to per hour
+        double fifteenMinuteRateValuePerMinute = metricsProxy.getFifteenMinuteRate() * 60; // Convert per second to per minute
 
-        String meanRate = String.format("%.2f/hour", meanRateValue);
-        String fifteenMinuteRate = String.format("%.2f/minute", fifteenMinuteRateValue);
+        String meanRate = String.format("%.2f/hour", meanRateValuePerHour);
+        String fifteenMinuteRate = String.format("%.2f/minute", fifteenMinuteRateValuePerMinute);
 
-        return new CompactionStatsResponse.CompletedCompactionsRate(meanRate, fifteenMinuteRate);
+        return CompletedCompactionsRateData.builder()
+            .meanRate(meanRate)
+            .fifteenMinuteRate(fifteenMinuteRate)
+            .build();
     }
 
 
-    private List<ActiveCompactionEntry> getActiveCompactions(List<Map<String, String>> compactions)
+    private List<ActiveCompactionEntryData> getActiveCompactions(List<Map<String, String>> compactions)
     {
         return compactions.stream().map(compactionInfo -> {
             // Extract fields according to specification
             String id = compactionInfo.getOrDefault(COMPACTION_ID, DEFAULT_STRING_VALUE);
             String keyspace = compactionInfo.getOrDefault(KEYSPACE, DEFAULT_STRING_VALUE);
-            String columnFamily = compactionInfo.getOrDefault(COLUMNFAMILY, DEFAULT_STRING_VALUE);
+            String table = compactionInfo.getOrDefault(COLUMNFAMILY, DEFAULT_STRING_VALUE);
             String taskType = compactionInfo.getOrDefault(TASK_TYPE, DEFAULT_STRING_VALUE);
             
             // Parse byte values
@@ -435,7 +422,11 @@ public class CassandraMetricsOperations implements MetricsOperations
             long totalBytes = safeParseLong(compactionInfo.getOrDefault(TOTAL, DEFAULT_NUMBER_VALUE), "total bytes");
             
             // Calculate percentage completed
-            double percentCompleted = totalBytes == -1 ? 0.0 : (double) completedBytes / totalBytes * 100.0;
+            double percentCompleted = 0.0;
+            if (totalBytes != 0 && totalBytes != -1)
+            {
+                percentCompleted = (double) completedBytes / totalBytes * 100.0;
+            }
             
             // Parse SSTables list
             String ssTablesStr = compactionInfo.getOrDefault(SSTABLES, DEFAULT_STRING_VALUE);
@@ -443,18 +434,26 @@ public class CassandraMetricsOperations implements MetricsOperations
             
             String targetDirectory = compactionInfo.getOrDefault(TARGET_DIRECTORY, DEFAULT_STRING_VALUE);
             
-            return new ActiveCompactionEntry(id, keyspace, columnFamily, taskType, 
-                                             completedBytes, totalBytes, percentCompleted, 
-                                             ssTables, targetDirectory);
+            return ActiveCompactionEntryData.builder()
+                .id(id)
+                .keyspace(keyspace)
+                .table(table)
+                .taskType(taskType)
+                .completedBytes(completedBytes)
+                .totalBytes(totalBytes)
+                .percentCompleted(percentCompleted)
+                .ssTables(ssTables)
+                .targetDirectory(targetDirectory)
+                .build();
         }).collect(Collectors.toList());
     }
 
-    private String calculateRemainingTimeSeconds(final List<ActiveCompactionEntry> activeCompactions,
-                                               final StorageJmxOperations storageService)
+    private long calculateRemainingTimeSeconds(List<ActiveCompactionEntryData> activeCompactions,
+                                               StorageJmxOperations storageService)
     {
         if (activeCompactions.isEmpty())
         {
-            return DEFAULT_N_A_VALUE;
+            return 0;
         }
 
         // Calculate total remaining bytes across all active compactions
@@ -466,15 +465,12 @@ public class CassandraMetricsOperations implements MetricsOperations
         long throughputBytesPerSec = storageService.getCompactionThroughtputBytesPerSec();
         if (totalRemainingBytes < 0 || throughputBytesPerSec <= 0)
         {
-            return DEFAULT_N_A_VALUE;
+            return 0;
         }
 
         // Calculate time in seconds (throughput is already in bytes/sec)
         double remainingTimeInSecs = (double) totalRemainingBytes / throughputBytesPerSec;
 
-        return String.format(TIME_FORMAT,
-                Math.round(remainingTimeInSecs / 3600),
-                Math.round((remainingTimeInSecs % 3600) / 60),
-                Math.round(remainingTimeInSecs % 60));
+        return Math.round(remainingTimeInSecs);
     }
 }

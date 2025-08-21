@@ -75,6 +75,7 @@ import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
 import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateCdcServiceConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
+import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
@@ -1604,6 +1605,76 @@ abstract class SidecarClientTest
                                    .replaceAll(KEYSPACE_PATH_PARAM, testKeyspace)
                                    .replaceAll(TABLE_PATH_PARAM, testTable),
                                    req -> {});
+        }
+    }
+
+    @Test
+    public void testCompactionStats() throws Exception
+    {
+        String compactionStatsResponseAsString = "{\"concurrentCompactors\":2," +
+                                                 "\"pendingTasks\":{}," +
+                                                 "\"totalPendingTasks\":0," +
+                                                 "\"completedCompactions\":42," +
+                                                 "\"dataCompacted\":1048576," +
+                                                 "\"abortedCompactions\":0," +
+                                                 "\"reducedCompactions\":0," +
+                                                 "\"sstablesDroppedFromCompaction\":5," +
+                                                 "\"completedCompactionsRate\":{\"meanRate\":\"1.23/hour\",\"fifteenMinuteRate\":\"0.45/minute\"}," +
+                                                 "\"activeCompactions\":[]," +
+                                                 "\"activeCompactionsCount\":0," +
+                                                 "\"activeCompactionsRemainingTime\":0}";
+
+        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(compactionStatsResponseAsString);
+        enqueue(response);
+
+        for (MockWebServer server : servers)
+        {
+            SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(server);
+            CompactionStatsResponse result = client.compactionStats(sidecarInstance).get(30, TimeUnit.SECONDS);
+
+            assertThat(result).isNotNull();
+            assertThat(result.concurrentCompactors()).isEqualTo(2);
+            assertThat(result.totalPendingTasks()).isEqualTo(0);
+            assertThat(result.completedCompactions()).isEqualTo(42);
+            assertThat(result.dataCompacted()).isEqualTo(1048576);
+            assertThat(result.abortedCompactions()).isEqualTo(0);
+            assertThat(result.reducedCompactions()).isEqualTo(0);
+            assertThat(result.sstablesDroppedFromCompaction()).isEqualTo(5);
+            assertThat(result.activeCompactions()).isEmpty();
+            assertThat(result.activeCompactionsCount()).isEqualTo(0);
+            assertThat(result.activeCompactionsRemainingTime()).isEqualTo(0);
+            assertThat(result.completedCompactionsRate()).isNotNull();
+            assertThat(result.completedCompactionsRate().meanRate()).isEqualTo("1.23/hour");
+            assertThat(result.completedCompactionsRate().fifteenMinuteRate()).isEqualTo("0.45/minute");
+            validateResponseServed(server, ApiEndpointsV1.COMPACTION_STATS_ROUTE, req -> {});
+        }
+    }
+
+    @Test
+    public void testCompactionStatsServerError() throws Exception
+    {
+        MockResponse response = new MockResponse()
+                                .setResponseCode(503)
+                                .setHeader("content-type", "application/json")
+                                .setBody("{\"error\":\"Internal server error\"}");
+        
+        // Enqueue enough error responses to handle retries
+        MockWebServer server = servers.get(0);
+        server.enqueue(response);
+        server.enqueue(response);
+        server.enqueue(response);
+        server.enqueue(response);
+
+        assertThatThrownBy(() -> client.compactionStats(instances.get(0)).get(30, TimeUnit.SECONDS))
+        .isInstanceOf(ExecutionException.class)
+        .hasCauseInstanceOf(RetriesExhaustedException.class);
+
+        // Validate that the server received the expected number of retry attempts
+        assertThat(server.getRequestCount()).isEqualTo(4);
+        for (int i = 0; i < 4; i++)
+        {
+            RecordedRequest request = server.takeRequest();
+            assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.COMPACTION_STATS_ROUTE);
         }
     }
 

@@ -48,8 +48,10 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
-import org.apache.cassandra.sidecar.common.response.data.ActiveCompactionEntry;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
+import org.apache.cassandra.sidecar.common.server.data.ActiveCompactionEntryData;
+import org.apache.cassandra.sidecar.common.server.data.CompactionStatsData;
+import org.apache.cassandra.sidecar.common.server.data.CompletedCompactionsRateData;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
@@ -69,13 +71,19 @@ public class CompactionStatsHandlerTest
     private static final long EXPECTED_DATA_COMPACTED = 2048000;
     private static final String EXPECTED_MEAN_RATE = "1800.00/hour";
     private static final String EXPECTED_FIFTEEN_MINUTE_RATE = "6.00/minute";
-    private static final String EXPECTED_REMAINING_TIME = "0h01m02s";
+    private static final long EXPECTED_REMAINING_TIME = 62;
     
-    private static final ActiveCompactionEntry EXPECTED_ACTIVE_COMPACTION = new ActiveCompactionEntry(
-        "comp-1", "test_keyspace", "test_table", "COMPACTION",
-        1024000L, 2048000L, 50.0,
-        List.of("sstable1.db", "sstable2.db"), "/var/lib/cassandra/data"
-    );
+    private static final ActiveCompactionEntryData EXPECTED_ACTIVE_COMPACTION = ActiveCompactionEntryData.builder()
+        .id("comp-1")
+        .keyspace("test_keyspace")
+        .table("test_table")
+        .taskType("COMPACTION")
+        .completedBytes(1024000L)
+        .totalBytes(2048000L)
+        .percentCompleted(50.0)
+        .ssTables(List.of("sstable1.db", "sstable2.db"))
+        .targetDirectory("/var/lib/cassandra/data")
+        .build();
     
     static final Logger LOGGER = LoggerFactory.getLogger(CompactionStatsHandlerTest.class);
     Vertx vertx;
@@ -139,14 +147,26 @@ public class CompactionStatsHandlerTest
         @Singleton
         public InstancesMetadata instanceConfig()
         {
-            CompactionStatsResponse.CompletedCompactionsRate rate = 
-                new CompactionStatsResponse.CompletedCompactionsRate(EXPECTED_MEAN_RATE, EXPECTED_FIFTEEN_MINUTE_RATE);
+            CompletedCompactionsRateData rate = 
+                CompletedCompactionsRateData.builder()
+                    .meanRate(EXPECTED_MEAN_RATE)
+                    .fifteenMinuteRate(EXPECTED_FIFTEEN_MINUTE_RATE)
+                    .build();
 
-            CompactionStatsResponse mockResponse = new CompactionStatsResponse(
-                EXPECTED_CONCURRENT_COMPACTORS, Collections.emptyMap(), 0, 
-                EXPECTED_COMPLETED_COMPACTIONS, EXPECTED_DATA_COMPACTED, 0, 0, 0,
-                rate, List.of(EXPECTED_ACTIVE_COMPACTION), 1, EXPECTED_REMAINING_TIME
-            );
+            CompactionStatsData mockResponse = CompactionStatsData.builder()
+                .concurrentCompactors(EXPECTED_CONCURRENT_COMPACTORS)
+                .pendingTasks(Collections.emptyMap())
+                .totalPendingTasks(0)
+                .completedCompactions(EXPECTED_COMPLETED_COMPACTIONS)
+                .dataCompacted(EXPECTED_DATA_COMPACTED)
+                .abortedCompactions(0)
+                .reducedCompactions(0)
+                .sstablesDroppedFromCompaction(0)
+                .completedCompactionsRate(rate)
+                .activeCompactions(List.of(EXPECTED_ACTIVE_COMPACTION))
+                .activeCompactionsCount(1)
+                .activeCompactionsRemainingTime(EXPECTED_REMAINING_TIME)
+                .build();
 
             final int instanceId = 100;
             final String host = "127.0.0.1";

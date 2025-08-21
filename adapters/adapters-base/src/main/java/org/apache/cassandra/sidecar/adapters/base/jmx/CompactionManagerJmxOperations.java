@@ -29,20 +29,8 @@ public interface CompactionManagerJmxOperations
     String COMPACTION_MANAGER_OBJ_NAME = "org.apache.cassandra.db:type=CompactionManager";
 
     /**
-     * Returns the number of concurrent compactors configured for the node.
-     * @return number of concurrent compactors
-     */
-    int getCoreCompactorThreads();
-
-    /**
      * Returns active compactions as a list of compaction info maps
      * @return list of compaction info maps
      */
     List<Map<String, String>> getCompactions();
-
-    /**
-     * Returns compaction throughput in bytes per second
-     * @return compaction throughput in bytes per second
-     */
-    long getCompactionThroughputMbPerSec();
 }

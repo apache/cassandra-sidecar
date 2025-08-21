@@ -31,10 +31,10 @@ import org.apache.cassandra.sidecar.adapters.base.jmx.CounterMetricsJmxOperation
 import org.apache.cassandra.sidecar.adapters.base.jmx.GaugeMetricsJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.MeterMetricsJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations;
-import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
-import org.apache.cassandra.sidecar.common.response.data.ActiveCompactionEntry;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
+import org.apache.cassandra.sidecar.common.server.data.ActiveCompactionEntryData;
+import org.apache.cassandra.sidecar.common.server.data.CompactionStatsData;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -82,7 +82,7 @@ class CassandraMetricsOperationsTest
         when(mockJmxClient.proxy(eq(MeterMetricsJmxOperations.class), anyString())).thenReturn(mockMeterMetrics);
 
         when(mockStorageService.getConcurrentCompactors()).thenReturn(4);
-        when(mockStorageService.getCompactionThroughtputBytesPerSec()).thenReturn(16777216L);
+        when(mockStorageService.getCompactionThroughtputBytesPerSec()).thenReturn(167772L);
 
         Map<String, Map<String, Integer>> pendingTasks = new HashMap<>();
         Map<String, Integer> tableMap = new HashMap<>();
@@ -102,7 +102,7 @@ class CassandraMetricsOperationsTest
         );
         when(mockCompactionManager.getCompactions()).thenReturn(activeCompactions);
 
-        CompactionStatsResponse response = metricsOperations.compactionStats();
+        CompactionStatsData response = metricsOperations.compactionStats();
 
         assertThat(response.concurrentCompactors()).isEqualTo(4L);
         assertThat(response.pendingTasks()).hasSize(1);
@@ -116,7 +116,7 @@ class CassandraMetricsOperationsTest
         assertThat(response.completedCompactionsRate().fifteenMinuteRate()).isEqualTo("6.00/minute");
         assertThat(response.activeCompactions()).hasSize(1);
         assertThat(response.activeCompactionsCount()).isEqualTo(1L);
-        assertThat(response.activeCompactionsRemainingTime()).matches("\\d+h\\d{2}m\\d{2}s");
+        assertThat(response.activeCompactionsRemainingTime()).isEqualTo(6L);
     }
 
     @Test
@@ -166,13 +166,13 @@ class CassandraMetricsOperationsTest
         when(mockMeterMetrics.getFifteenMinuteRate()).thenReturn(0.0);
         when(mockCompactionManager.getCompactions()).thenReturn(Collections.emptyList());
 
-        CompactionStatsResponse response = metricsOperations.compactionStats();
+        CompactionStatsData response = metricsOperations.compactionStats();
 
         assertThat(response.pendingTasks()).isEmpty();
         assertThat(response.totalPendingTasks()).isEqualTo(0L);
         assertThat(response.activeCompactions()).isEmpty();
         assertThat(response.activeCompactionsCount()).isEqualTo(0L);
-        assertThat(response.activeCompactionsRemainingTime()).isEqualTo("n/a");
+        assertThat(response.activeCompactionsRemainingTime()).isEqualTo(0L);
     }
 
     @Test
@@ -212,11 +212,11 @@ class CassandraMetricsOperationsTest
         when(mockMeterMetrics.getFifteenMinuteRate()).thenReturn(0.0);
         when(mockCompactionManager.getCompactions()).thenReturn(Collections.emptyList());
 
-        CompactionStatsResponse response = metricsOperations.compactionStats();
+        CompactionStatsData response = metricsOperations.compactionStats();
 
         assertThat(response.activeCompactions()).isEmpty();
         assertThat(response.activeCompactionsCount()).isEqualTo(0L);
-        assertThat(response.activeCompactionsRemainingTime()).isEqualTo("n/a");
+        assertThat(response.activeCompactionsRemainingTime()).isEqualTo(0L);
     }
 
     @Test
@@ -268,10 +268,10 @@ class CassandraMetricsOperationsTest
         );
         when(mockCompactionManager.getCompactions()).thenReturn(activeCompactions);
 
-        CompactionStatsResponse response = metricsOperations.compactionStats();
+        CompactionStatsData response = metricsOperations.compactionStats();
 
         assertThat(response.activeCompactions()).hasSize(1);
-        ActiveCompactionEntry compaction = response.activeCompactions().get(0);
+        ActiveCompactionEntryData compaction = response.activeCompactions().get(0);
         assertThat(compaction.totalBytes()).isEqualTo(-1L);
         assertThat(compaction.percentCompleted()).isEqualTo(0.0);
     }
@@ -298,10 +298,10 @@ class CassandraMetricsOperationsTest
         );
         when(mockCompactionManager.getCompactions()).thenReturn(activeCompactions);
 
-        CompactionStatsResponse response = metricsOperations.compactionStats();
+        CompactionStatsData response = metricsOperations.compactionStats();
 
         assertThat(response.activeCompactions()).hasSize(1);
-        ActiveCompactionEntry compaction = response.activeCompactions().get(0);
+        ActiveCompactionEntryData compaction = response.activeCompactions().get(0);
         assertThat(compaction.ssTables()).isEmpty();
     }
 
@@ -327,10 +327,10 @@ class CassandraMetricsOperationsTest
         );
         when(mockCompactionManager.getCompactions()).thenReturn(activeCompactions);
 
-        CompactionStatsResponse response = metricsOperations.compactionStats();
+        CompactionStatsData response = metricsOperations.compactionStats();
 
         assertThat(response.activeCompactions()).hasSize(1);
-        ActiveCompactionEntry compaction = response.activeCompactions().get(0);
+        ActiveCompactionEntryData compaction = response.activeCompactions().get(0);
         assertThat(compaction.ssTables()).hasSize(1);
         assertThat(compaction.ssTables().get(0)).isEqualTo("single_sstable.db");
     }
@@ -358,14 +358,14 @@ class CassandraMetricsOperationsTest
         );
         when(mockCompactionManager.getCompactions()).thenReturn(activeCompactions);
 
-        CompactionStatsResponse response = metricsOperations.compactionStats();
+        CompactionStatsData response = metricsOperations.compactionStats();
 
         assertThat(response.activeCompactions()).hasSize(1);
-        ActiveCompactionEntry compaction = response.activeCompactions().get(0);
+        ActiveCompactionEntryData compaction = response.activeCompactions().get(0);
         assertThat(compaction.completedBytes()).isEqualTo(0L);
         assertThat(compaction.totalBytes()).isEqualTo(2048000L);
         assertThat(compaction.percentCompleted()).isEqualTo(0.0);
-        assertThat(response.activeCompactionsRemainingTime()).matches("\\d+h\\d{2}m\\d{2}s");
+        assertThat(response.activeCompactionsRemainingTime()).isGreaterThanOrEqualTo(0L);
     }
 
     @Test
@@ -391,13 +391,13 @@ class CassandraMetricsOperationsTest
         );
         when(mockCompactionManager.getCompactions()).thenReturn(activeCompactions);
 
-        CompactionStatsResponse response = metricsOperations.compactionStats();
+        CompactionStatsData response = metricsOperations.compactionStats();
 
         assertThat(response.activeCompactions()).hasSize(1);
-        ActiveCompactionEntry compaction = response.activeCompactions().get(0);
+        ActiveCompactionEntryData compaction = response.activeCompactions().get(0);
         assertThat(compaction.completedBytes()).isEqualTo(3000000L);
         assertThat(compaction.totalBytes()).isEqualTo(2048000L);
-        assertThat(response.activeCompactionsRemainingTime()).isEqualTo("0h00m00s");
+        assertThat(response.activeCompactionsRemainingTime()).isEqualTo(0L);
     }
 
     @Test
@@ -423,9 +423,9 @@ class CassandraMetricsOperationsTest
         );
         when(mockCompactionManager.getCompactions()).thenReturn(activeCompactions);
 
-        CompactionStatsResponse response = metricsOperations.compactionStats();
+        CompactionStatsData response = metricsOperations.compactionStats();
 
         assertThat(response.activeCompactions()).hasSize(1);
-        assertThat(response.activeCompactionsRemainingTime()).isEqualTo("n/a");
+        assertThat(response.activeCompactionsRemainingTime()).isEqualTo(0L);
     }
 }
