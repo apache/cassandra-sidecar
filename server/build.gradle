@@ -143,10 +143,6 @@ dependencies {
     // OpenAPI support
     implementation("org.eclipse.microprofile.openapi:microprofile-openapi-api:${project.microprofileOpenApiVersion}")
     implementation("jakarta.ws.rs:jakarta.ws.rs-api:${project.jakartaWsRsVersion}")
-    implementation("io.swagger.core.v3:swagger-core:${project.swaggerVersion}")
-    implementation("io.swagger.core.v3:swagger-annotations:${project.swaggerVersion}")
-    implementation("io.swagger.core.v3:swagger-models:${project.swaggerVersion}")
-    implementation("io.swagger.core.v3:swagger-jaxrs2:${project.swaggerVersion}")
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
