@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,12 +26,13 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.io.TempDir;
 
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.HttpResponse;
@@ -49,14 +51,42 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  */
 class CassandraSidecarDaemonTest
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraSidecarDaemonTest.class);
-
     static final String[] NO_ARGS = {};
+
+    @TempDir
+    static Path testDir;
+
+    @BeforeAll
+    static void configureLogging() throws IOException
+    {
+        Path confDirectory = testDir.resolve("conf");
+        Path logbackConfigFile = testDir.resolve("conf/logback.xml");
+        Path logDirectory = testDir.resolve("logs");
+        Files.createDirectories(confDirectory);
+        Files.createDirectories(logDirectory);
+
+        Path sourceLogbackConfigFile = Paths.get("../conf/logback.xml");
+        assertThat(sourceLogbackConfigFile).exists();
+        Files.copy(sourceLogbackConfigFile, logbackConfigFile);
+
+        System.setProperty("sidecar.logdir", logDirectory.toString());
+        System.setProperty("logback.configurationFile", logbackConfigFile.toString());
+        System.setProperty("vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.SLF4JLogDelegateFactory");
+    }
+
+    @AfterAll
+    static void clearLoggingProperties()
+    {
+        System.clearProperty("sidecar.logdir");
+        System.clearProperty("logback.configurationFile");
+        System.clearProperty("vertx.logger-delegate-factory-class-name");
+    }
 
     @BeforeEach
     void setup()
     {
         System.clearProperty("sidecar.config");
+        clearLogDirectory();
     }
 
     @Test
@@ -141,7 +171,6 @@ class CassandraSidecarDaemonTest
         }
         finally
         {
-            LOGGER.debug("Tearing down");
             maybeStopCassandraSidecar();
             Files.deleteIfExists(targetFile);
 
@@ -152,6 +181,39 @@ class CassandraSidecarDaemonTest
                     Files.deleteIfExists(createdParent);
                 }
             }
+            TestResourceReaper.create().with(vertx).with(client).close();
+        }
+    }
+
+    @Test
+    void testLogbackConfiguration()
+    {
+        Path path = Paths.get("../conf/sidecar.yaml");
+        assertThat(path).exists();
+
+        System.setProperty("sidecar.config", path.toUri().toString());
+        Vertx vertx = Vertx.vertx();
+        WebClient client = WebClient.create(vertx);
+        try
+        {
+            CassandraSidecarDaemon.main(NO_ARGS);
+
+            loopAssert(10, () -> {
+                HttpResponse<String> response = getBlocking(client.get(9043, "localhost", "/api/v1/__health")
+                                                                  .as(BodyCodec.string())
+                                                                  .send(),
+                                                            2, TimeUnit.SECONDS,
+                                                            "Query for sidecar health");
+                assertThat(response.statusCode()).isEqualTo(OK.code());
+                assertThat(response.body()).isEqualTo("{\"status\":\"OK\"}");
+            });
+
+            assertThat(testDir.resolve("logs/debug.log")).exists().isNotEmptyFile();
+            assertThat(testDir.resolve("logs/system.log")).exists().isNotEmptyFile();
+        }
+        finally
+        {
+            maybeStopCassandraSidecar();
             TestResourceReaper.create().with(vertx).with(client).close();
         }
     }
@@ -182,5 +244,21 @@ class CassandraSidecarDaemonTest
         }
         Files.createDirectories(parentDirectory);
         return createdParents;
+    }
+
+    void clearLogDirectory()
+    {
+        Path logsDirectory = testDir.resolve("logs");
+        if (Files.exists(logsDirectory))
+        {
+            try (Stream<Path> logFiles = Files.walk(logsDirectory))
+            {
+                logFiles.map(Path::toFile).forEach(File::delete);
+            }
+            catch (Exception e)
+            {
+                throw new RuntimeException("Unable to clear all files in the log directory", e);
+            }
+        }
     }
 }
