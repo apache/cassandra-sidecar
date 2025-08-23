@@ -28,6 +28,7 @@ We warmly welcome and appreciate contributions from the community.
   * [Discuss](#discuss)
   * [Create a Ticket](#ticket)
   * [Integration with IntelliJ IDEA](#idea)
+  * [Testing](#testing)
 * [Source Code Best Practices](#best-practices)
   * [Introducing new APIs](#new-apis)
   * [Asynchronous Programming](#async-programming)
@@ -75,6 +76,17 @@ You can then use the provided configuration that adheres to the project source f
 
 > **NOTE**: Opening a newly cloned repository in IDEA before running the command above will result in the default code
 >           format settings being used instead; if that is the case, delete the `.idea` directory and start over.
+
+### Testing
+
+For comprehensive information about running tests, including unit tests, integration tests, and test configuration,
+please refer to the [Testing Guide](TESTING.md). This guide covers:
+
+- Test prerequisites and setup
+- Different types of tests (unit, integration, container)
+- Running tests with various configurations
+- Troubleshooting common testing issues
+- Development testing best practices
 
 ## <a name="best-practices"></a>Source Code Best Practices
 
