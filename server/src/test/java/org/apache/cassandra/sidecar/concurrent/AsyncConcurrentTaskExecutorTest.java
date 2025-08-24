@@ -397,7 +397,7 @@ class AsyncConcurrentTaskExecutorTest
         });
     }
 
-    private <T> Callable<Future<T>> getDummyFailedTask(final String failureMessage)
+    private <T> Callable<Future<T>> getDummyFailedTask(String failureMessage)
     {
         return () -> Future.failedFuture(failureMessage);
     }

@@ -18,9 +18,6 @@
 
 package org.apache.cassandra.sidecar.livemigration;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.junit.jupiter.api.Test;
 
 import org.assertj.core.api.ThrowableAssert;
@@ -42,44 +39,44 @@ class OperationStatusTest
     public void testSuccessfulFileDownloadPath()
     {
         // Happy path scenario
-        OperationStatus operationStatus = OperationStatus.getStartingState()
-                                                         .getCleaningState(128L, 1)
-                                                         .getPreparingState()
-                                                         .getDownloadingState(128L, 2)
-                                                         .getDownloadCompleteState();
-        assertThat(operationStatus.getState()).isEqualTo(DOWNLOAD_COMPLETE);
+        OperationStatus operationStatus = OperationStatus.startingState()
+                                                         .toCleaningState(128L, 1)
+                                                         .toPreparingState()
+                                                         .toDownloadingState(128L, 2)
+                                                         .toDownloadCompleteState();
+        assertThat(operationStatus.state()).isEqualTo(DOWNLOAD_COMPLETE);
     }
 
     @Test
     public void testNoFilesToDownloadPath()
     {
-        OperationStatus operationStatus = OperationStatus.getStartingState()
-                                                         .getCleaningState(128L, 1)
-                                                         .getPreparingState()
-                                                         .getSuccessState();
+        OperationStatus operationStatus = OperationStatus.startingState()
+                                                         .toCleaningState(128L, 1)
+                                                         .toPreparingState()
+                                                         .toSuccessState();
 
-        assertThat(operationStatus.getState()).isEqualTo(SUCCESS);
+        assertThat(operationStatus.state()).isEqualTo(SUCCESS);
     }
 
     @Test
     public void testDownloadsFailedPath()
     {
-        OperationStatus operationStatus = OperationStatus.getStartingState()
-                                                         .getCleaningState(128L, 1)
-                                                         .getPreparingState()
-                                                         .getDownloadingState(128L, 2)
+        OperationStatus operationStatus = OperationStatus.startingState()
+                                                         .toCleaningState(128L, 1)
+                                                         .toPreparingState()
+                                                         .toDownloadingState(128L, 2)
                                                          .tryFailureState();
-        assertThat(operationStatus.getState()).isEqualTo(FAILED);
+        assertThat(operationStatus.state()).isEqualTo(FAILED);
     }
 
     @Test
     public void testFailedStateCannotTransitionToOtherState()
     {
-        OperationStatus failureStatus = OperationStatus.getStartingState().tryFailureState();
-        assertIllegalStateTransition(() -> failureStatus.getCleaningState(0L, 0));
-        assertIllegalStateTransition(() -> failureStatus.getDownloadingState(0L, 0));
-        assertIllegalStateTransition(failureStatus::getDownloadCompleteState);
-        assertIllegalStateTransition(failureStatus::getSuccessState);
+        OperationStatus failureStatus = OperationStatus.startingState().tryFailureState();
+        assertIllegalStateTransition(() -> failureStatus.toCleaningState(0L, 0));
+        assertIllegalStateTransition(() -> failureStatus.toDownloadingState(0L, 0));
+        assertIllegalStateTransition(failureStatus::toDownloadCompleteState);
+        assertIllegalStateTransition(failureStatus::toSuccessState);
         assertIllegalStateTransition(failureStatus::tryFailureState);
         assertIllegalStateTransition(failureStatus::cancel);
     }
@@ -87,46 +84,46 @@ class OperationStatusTest
     @Test
     public void testSuccessStateCannotTransitionToOtherState()
     {
-        OperationStatus successStatus = OperationStatus.getStartingState()
-                                                       .getCleaningState(0L, 0)
-                                                       .getPreparingState()
-                                                       .getSuccessState();
-        assertIllegalStateTransition(successStatus::getPreparingState);
-        assertIllegalStateTransition(() -> successStatus.getDownloadingState(0L, 1));
-        assertIllegalStateTransition(successStatus::getDownloadCompleteState);
+        OperationStatus successStatus = OperationStatus.startingState()
+                                                       .toCleaningState(0L, 0)
+                                                       .toPreparingState()
+                                                       .toSuccessState();
+        assertIllegalStateTransition(successStatus::toPreparingState);
+        assertIllegalStateTransition(() -> successStatus.toDownloadingState(0L, 1));
+        assertIllegalStateTransition(successStatus::toDownloadCompleteState);
         assertIllegalStateTransition(successStatus::tryFailureState);
-        assertIllegalStateTransition(successStatus::getSuccessState);
+        assertIllegalStateTransition(successStatus::toSuccessState);
     }
 
     @Test
     public void testCancelledStateCannotTransitionToOtherState()
     {
-        OperationStatus cancelledStatus = OperationStatus.getStartingState().cancel();
-        assertIllegalStateTransition(cancelledStatus::getPreparingState);
-        assertIllegalStateTransition(() -> cancelledStatus.getCleaningState(0L, 0));
-        assertIllegalStateTransition(() -> cancelledStatus.getDownloadingState(0L, 1));
-        assertIllegalStateTransition(cancelledStatus::getDownloadCompleteState);
-        assertIllegalStateTransition(cancelledStatus::getSuccessState);
+        OperationStatus cancelledStatus = OperationStatus.startingState().cancel();
+        assertIllegalStateTransition(cancelledStatus::toPreparingState);
+        assertIllegalStateTransition(() -> cancelledStatus.toCleaningState(0L, 0));
+        assertIllegalStateTransition(() -> cancelledStatus.toDownloadingState(0L, 1));
+        assertIllegalStateTransition(cancelledStatus::toDownloadCompleteState);
+        assertIllegalStateTransition(cancelledStatus::toSuccessState);
         // Special case: CANCELLED -> FAILED is tolerated (returns CANCELLED)
-        assertThat(cancelledStatus.tryFailureState().getState()).isEqualTo(CANCELLED);
+        assertThat(cancelledStatus.tryFailureState().state()).isEqualTo(CANCELLED);
         assertIllegalStateTransition(cancelledStatus::cancel);
     }
 
     @Test
     public void testDownloadCompleteStateCannotTransitionToOtherState()
     {
-        OperationStatus downloadCompleteStatus = OperationStatus.getStartingState()
-                                                                .getCleaningState(100L, 2)
-                                                                .getPreparingState()
-                                                                .getDownloadingState(50L, 1)
-                                                                .getDownloadCompleteState();
-        assertThat(downloadCompleteStatus.getState()).isEqualTo(DOWNLOAD_COMPLETE);
+        OperationStatus downloadCompleteStatus = OperationStatus.startingState()
+                                                                .toCleaningState(100L, 2)
+                                                                .toPreparingState()
+                                                                .toDownloadingState(50L, 1)
+                                                                .toDownloadCompleteState();
+        assertThat(downloadCompleteStatus.state()).isEqualTo(DOWNLOAD_COMPLETE);
 
-        assertIllegalStateTransition(downloadCompleteStatus::getPreparingState);
-        assertIllegalStateTransition(() -> downloadCompleteStatus.getCleaningState(0L, 0));
-        assertIllegalStateTransition(() -> downloadCompleteStatus.getDownloadingState(0L, 1));
-        assertIllegalStateTransition(downloadCompleteStatus::getDownloadCompleteState);
-        assertIllegalStateTransition(downloadCompleteStatus::getSuccessState);
+        assertIllegalStateTransition(downloadCompleteStatus::toPreparingState);
+        assertIllegalStateTransition(() -> downloadCompleteStatus.toCleaningState(0L, 0));
+        assertIllegalStateTransition(() -> downloadCompleteStatus.toDownloadingState(0L, 1));
+        assertIllegalStateTransition(downloadCompleteStatus::toDownloadCompleteState);
+        assertIllegalStateTransition(downloadCompleteStatus::toSuccessState);
         assertIllegalStateTransition(downloadCompleteStatus::tryFailureState);
         assertIllegalStateTransition(downloadCompleteStatus::cancel);
     }
@@ -134,51 +131,51 @@ class OperationStatusTest
     @Test
     public void testDownloadingStateCannotTransitionToSuccess()
     {
-        OperationStatus downloadingStatus = OperationStatus.getStartingState()
-                                                           .getCleaningState(100L, 2)
-                                                           .getPreparingState()
-                                                           .getDownloadingState(50L, 1);
-        assertThat(downloadingStatus.getState()).isEqualTo(DOWNLOADING);
+        OperationStatus downloadingStatus = OperationStatus.startingState()
+                                                           .toCleaningState(100L, 2)
+                                                           .toPreparingState()
+                                                           .toDownloadingState(50L, 1);
+        assertThat(downloadingStatus.state()).isEqualTo(DOWNLOADING);
 
         // DOWNLOADING can only go to DOWNLOAD_COMPLETE, FAILED, or CANCELLED
-        assertIllegalStateTransition(downloadingStatus::getSuccessState);
-        assertIllegalStateTransition(downloadingStatus::getPreparingState);
-        assertIllegalStateTransition(() -> downloadingStatus.getCleaningState(0L, 0));
-        assertIllegalStateTransition(() -> downloadingStatus.getDownloadingState(0L, 1));
+        assertIllegalStateTransition(downloadingStatus::toSuccessState);
+        assertIllegalStateTransition(downloadingStatus::toPreparingState);
+        assertIllegalStateTransition(() -> downloadingStatus.toCleaningState(0L, 0));
+        assertIllegalStateTransition(() -> downloadingStatus.toDownloadingState(0L, 1));
     }
 
     @Test
     public void testInvalidStateTransitions()
     {
-        OperationStatus startingStatus = OperationStatus.getStartingState();
+        OperationStatus startingStatus = OperationStatus.startingState();
 
         // STARTING cannot go directly to DOWNLOADING, DOWNLOAD_COMPLETE, SUCCESS, or PREPARING
-        assertIllegalStateTransition(() -> startingStatus.getDownloadingState(0L, 1));
-        assertIllegalStateTransition(startingStatus::getDownloadCompleteState);
-        assertIllegalStateTransition(startingStatus::getSuccessState);
-        assertIllegalStateTransition(startingStatus::getPreparingState);
+        assertIllegalStateTransition(() -> startingStatus.toDownloadingState(0L, 1));
+        assertIllegalStateTransition(startingStatus::toDownloadCompleteState);
+        assertIllegalStateTransition(startingStatus::toSuccessState);
+        assertIllegalStateTransition(startingStatus::toPreparingState);
 
-        OperationStatus cleaningStatus = startingStatus.getCleaningState(100L, 2);
+        OperationStatus cleaningStatus = startingStatus.toCleaningState(100L, 2);
 
         // CLEANING cannot go directly to DOWNLOADING, DOWNLOAD_COMPLETE, SUCCESS
-        assertIllegalStateTransition(() -> cleaningStatus.getDownloadingState(0L, 1));
-        assertIllegalStateTransition(cleaningStatus::getDownloadCompleteState);
-        assertIllegalStateTransition(cleaningStatus::getSuccessState);
-        assertIllegalStateTransition(() -> cleaningStatus.getCleaningState(0L, 0));
+        assertIllegalStateTransition(() -> cleaningStatus.toDownloadingState(0L, 1));
+        assertIllegalStateTransition(cleaningStatus::toDownloadCompleteState);
+        assertIllegalStateTransition(cleaningStatus::toSuccessState);
+        assertIllegalStateTransition(() -> cleaningStatus.toCleaningState(0L, 0));
     }
 
     @Test
-    public void testGetStartingState()
+    public void testStartingState()
     {
-        OperationStatus startingStatus = OperationStatus.getStartingState();
-        assertThat(startingStatus.getState()).isEqualTo(STARTING);
+        OperationStatus startingStatus = OperationStatus.startingState();
+        assertThat(startingStatus.state()).isEqualTo(STARTING);
         assertThat(startingStatus.totalSize()).isEqualTo(-1);
         assertThat(startingStatus.totalFiles()).isEqualTo(-1);
         assertThat(startingStatus.bytesToDownload()).isEqualTo(-1);
         assertThat(startingStatus.filesToDownload()).isEqualTo(-1);
-        assertThat(startingStatus.filesDownloaded().get()).isEqualTo(0);
-        assertThat(startingStatus.downloadFailures().get()).isEqualTo(0);
-        assertThat(startingStatus.bytesDownloaded().get()).isEqualTo(0);
+        assertThat(startingStatus.filesDownloaded()).isEqualTo(0);
+        assertThat(startingStatus.downloadFailures()).isEqualTo(0);
+        assertThat(startingStatus.bytesDownloaded()).isEqualTo(0);
     }
 
     @Test
@@ -189,49 +186,18 @@ class OperationStatusTest
         long downloadSize = 500L;
         int filesToDownload = 3;
 
-        OperationStatus status = OperationStatus.getStartingState()
-                                                .getCleaningState(totalSize, totalFiles)
-                                                .getPreparingState()
-                                                .getDownloadingState(downloadSize, filesToDownload);
+        OperationStatus status = OperationStatus.startingState()
+                                                .toCleaningState(totalSize, totalFiles)
+                                                .toPreparingState()
+                                                .toDownloadingState(downloadSize, filesToDownload);
 
         assertThat(status.totalSize()).isEqualTo(totalSize);
         assertThat(status.totalFiles()).isEqualTo(totalFiles);
         assertThat(status.bytesToDownload()).isEqualTo(downloadSize);
         assertThat(status.filesToDownload()).isEqualTo(filesToDownload);
-        assertThat(status.filesDownloaded().get()).isEqualTo(0); // Reset during downloading state
-        assertThat(status.downloadFailures().get()).isEqualTo(0); // Reset during downloading state
-        assertThat(status.bytesDownloaded().get()).isEqualTo(0); // Reset during downloading state
-    }
-
-    @Test
-    public void testAtomicCounters()
-    {
-        OperationStatus status = OperationStatus.getStartingState()
-                                                .getCleaningState(1000L, 5)
-                                                .getPreparingState()
-                                                .getDownloadingState(500L, 3);
-
-        // Test that atomic fields are properly initialized and can be updated
-        AtomicInteger filesDownloaded = status.filesDownloaded();
-        AtomicInteger downloadFailures = status.downloadFailures();
-        AtomicLong bytesDownloaded = status.bytesDownloaded();
-
-        assertThat(filesDownloaded.get()).isEqualTo(0);
-        assertThat(downloadFailures.get()).isEqualTo(0);
-        assertThat(bytesDownloaded.get()).isEqualTo(0);
-
-        // Simulate progress updates
-        filesDownloaded.incrementAndGet();
-        downloadFailures.addAndGet(2);
-        bytesDownloaded.addAndGet(100L);
-
-        assertThat(status.filesDownloaded().get()).isEqualTo(1);
-        assertThat(status.downloadFailures().get()).isEqualTo(2);
-        assertThat(status.bytesDownloaded().get()).isEqualTo(100L);
-
-        // Test getter methods return same instances
-        assertThat(status.filesDownloaded()).isSameAs(filesDownloaded);
-        assertThat(status.bytesDownloaded()).isSameAs(bytesDownloaded);
+        assertThat(status.filesDownloaded()).isEqualTo(0); // Reset during downloading state
+        assertThat(status.downloadFailures()).isEqualTo(0); // Reset during downloading state
+        assertThat(status.bytesDownloaded()).isEqualTo(0); // Reset during downloading state
     }
 
     @Test
@@ -240,34 +206,34 @@ class OperationStatusTest
         // Test all valid transitions from each state
 
         // From STARTING
-        OperationStatus fromStarting = OperationStatus.getStartingState();
-        assertThat(fromStarting.getCleaningState(100L, 2).getState()).isEqualTo(CLEANING);
-        assertThat(fromStarting.tryFailureState().getState()).isEqualTo(FAILED);
-        assertThat(fromStarting.cancel().getState()).isEqualTo(CANCELLED);
+        OperationStatus fromStarting = OperationStatus.startingState();
+        assertThat(fromStarting.toCleaningState(100L, 2).state()).isEqualTo(CLEANING);
+        assertThat(fromStarting.tryFailureState().state()).isEqualTo(FAILED);
+        assertThat(fromStarting.cancel().state()).isEqualTo(CANCELLED);
 
         // From CLEANING
-        OperationStatus fromCleaning = OperationStatus.getStartingState().getCleaningState(100L, 2);
-        assertThat(fromCleaning.getPreparingState().getState()).isEqualTo(PREPARING);
-        assertThat(fromCleaning.tryFailureState().getState()).isEqualTo(FAILED);
-        assertThat(fromCleaning.cancel().getState()).isEqualTo(CANCELLED);
+        OperationStatus fromCleaning = OperationStatus.startingState().toCleaningState(100L, 2);
+        assertThat(fromCleaning.toPreparingState().state()).isEqualTo(PREPARING);
+        assertThat(fromCleaning.tryFailureState().state()).isEqualTo(FAILED);
+        assertThat(fromCleaning.cancel().state()).isEqualTo(CANCELLED);
 
         // From PREPARING
-        OperationStatus fromPreparing = OperationStatus.getStartingState()
-                                                       .getCleaningState(100L, 2)
-                                                       .getPreparingState();
-        assertThat(fromPreparing.getDownloadingState(50L, 1).getState()).isEqualTo(DOWNLOADING);
-        assertThat(fromPreparing.getSuccessState().getState()).isEqualTo(SUCCESS);
-        assertThat(fromPreparing.tryFailureState().getState()).isEqualTo(FAILED);
-        assertThat(fromPreparing.cancel().getState()).isEqualTo(CANCELLED);
+        OperationStatus fromPreparing = OperationStatus.startingState()
+                                                       .toCleaningState(100L, 2)
+                                                       .toPreparingState();
+        assertThat(fromPreparing.toDownloadingState(50L, 1).state()).isEqualTo(DOWNLOADING);
+        assertThat(fromPreparing.toSuccessState().state()).isEqualTo(SUCCESS);
+        assertThat(fromPreparing.tryFailureState().state()).isEqualTo(FAILED);
+        assertThat(fromPreparing.cancel().state()).isEqualTo(CANCELLED);
 
         // From DOWNLOADING
-        OperationStatus fromDownloading = OperationStatus.getStartingState()
-                                                         .getCleaningState(100L, 2)
-                                                         .getPreparingState()
-                                                         .getDownloadingState(50L, 1);
-        assertThat(fromDownloading.getDownloadCompleteState().getState()).isEqualTo(DOWNLOAD_COMPLETE);
-        assertThat(fromDownloading.tryFailureState().getState()).isEqualTo(FAILED);
-        assertThat(fromDownloading.cancel().getState()).isEqualTo(CANCELLED);
+        OperationStatus fromDownloading = OperationStatus.startingState()
+                                                         .toCleaningState(100L, 2)
+                                                         .toPreparingState()
+                                                         .toDownloadingState(50L, 1);
+        assertThat(fromDownloading.toDownloadCompleteState().state()).isEqualTo(DOWNLOAD_COMPLETE);
+        assertThat(fromDownloading.tryFailureState().state()).isEqualTo(FAILED);
+        assertThat(fromDownloading.cancel().state()).isEqualTo(CANCELLED);
     }
 
     @Test
@@ -276,17 +242,315 @@ class OperationStatusTest
         // Test the special case where CANCELLED -> FAILED transition is tolerated
         // This happens when a task is cancelled but some downloads are still in progress
         // and they subsequently fail
-        OperationStatus cancelledStatus = OperationStatus.getStartingState().cancel();
-        assertThat(cancelledStatus.getState()).isEqualTo(CANCELLED);
-        
+        OperationStatus cancelledStatus = OperationStatus.startingState().cancel();
+        assertThat(cancelledStatus.state()).isEqualTo(CANCELLED);
+
         // Attempting to transition from CANCELLED to FAILED should return CANCELLED state
         OperationStatus afterFailureAttempt = cancelledStatus.tryFailureState();
-        assertThat(afterFailureAttempt.getState()).isEqualTo(CANCELLED);
+        assertThat(afterFailureAttempt.state()).isEqualTo(CANCELLED);
 
         assertThat(afterFailureAttempt).isNotSameAs(cancelledStatus);
-        
+
         assertThat(afterFailureAttempt.totalSize()).isEqualTo(cancelledStatus.totalSize());
         assertThat(afterFailureAttempt.totalFiles()).isEqualTo(cancelledStatus.totalFiles());
+    }
+
+    @Test
+    public void testIncrementFilesDownloaded()
+    {
+        OperationStatus status = OperationStatus.startingState()
+                                                .toCleaningState(100L, 5)
+                                                .toPreparingState()
+                                                .toDownloadingState(50L, 2);
+
+        assertThat(status.filesDownloaded()).isEqualTo(0);
+
+        // Test incrementing files downloaded
+        status.incrementFilesDownloaded();
+        assertThat(status.filesDownloaded()).isEqualTo(1);
+
+        status.incrementFilesDownloaded();
+        assertThat(status.filesDownloaded()).isEqualTo(2);
+    }
+
+    @Test
+    public void testIncrementFilesDownloadedThrowsExceptionWhenCompleted()
+    {
+        OperationStatus successStatus = OperationStatus.startingState()
+                                                       .toCleaningState(100L, 5)
+                                                       .toPreparingState()
+                                                       .toSuccessState();
+
+        assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(successStatus::incrementFilesDownloaded)
+        .withMessage("Cannot increment files downloaded when operation is in state SUCCESS");
+
+        OperationStatus completeStatus = OperationStatus.startingState()
+                                                        .toCleaningState(100L, 5)
+                                                        .toPreparingState()
+                                                        .toDownloadingState(50L, 2)
+                                                        .toDownloadCompleteState();
+
+        assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(completeStatus::incrementFilesDownloaded)
+        .withMessage("Cannot increment files downloaded when operation is in state DOWNLOAD_COMPLETE");
+    }
+
+    @Test
+    public void testAddBytesDownloaded()
+    {
+        OperationStatus status = OperationStatus.startingState()
+                                                .toCleaningState(100L, 5)
+                                                .toPreparingState()
+                                                .toDownloadingState(50L, 2);
+
+        assertThat(status.bytesDownloaded()).isEqualTo(0L);
+
+        // Test adding bytes downloaded
+        status.addBytesDownloaded(25L);
+        assertThat(status.bytesDownloaded()).isEqualTo(25L);
+
+        status.addBytesDownloaded(15L);
+        assertThat(status.bytesDownloaded()).isEqualTo(40L);
+    }
+
+    @Test
+    public void testAddBytesDownloadedThrowsExceptionWhenCompleted()
+    {
+        OperationStatus successStatus = OperationStatus.startingState()
+                                                       .toCleaningState(100L, 5)
+                                                       .toPreparingState()
+                                                       .toSuccessState();
+
+        assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(() -> successStatus.addBytesDownloaded(10L))
+        .withMessage("Cannot increment bytes downloaded when operation is in state SUCCESS");
+
+        OperationStatus completeStatus = OperationStatus.startingState()
+                                                        .toCleaningState(100L, 5)
+                                                        .toPreparingState()
+                                                        .toDownloadingState(50L, 2)
+                                                        .toDownloadCompleteState();
+
+        assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(() -> completeStatus.addBytesDownloaded(10L))
+        .withMessage("Cannot increment bytes downloaded when operation is in state DOWNLOAD_COMPLETE");
+    }
+
+    @Test
+    public void testIncrementDownloadFailures()
+    {
+        OperationStatus status = OperationStatus.startingState()
+                                                .toCleaningState(100L, 5)
+                                                .toPreparingState()
+                                                .toDownloadingState(50L, 2);
+
+        assertThat(status.downloadFailures()).isEqualTo(0);
+
+        // Test incrementing download failures
+        status.incrementDownloadFailures();
+        assertThat(status.downloadFailures()).isEqualTo(1);
+
+        status.incrementDownloadFailures();
+        assertThat(status.downloadFailures()).isEqualTo(2);
+    }
+
+    @Test
+    public void testIncrementDownloadFailuresThrowsExceptionWhenCompleted()
+    {
+        OperationStatus successStatus = OperationStatus.startingState()
+                                                       .toCleaningState(100L, 5)
+                                                       .toPreparingState()
+                                                       .toSuccessState();
+
+        assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(successStatus::incrementDownloadFailures)
+        .withMessage("Cannot increment download failures when operation is in state SUCCESS");
+
+        OperationStatus completeStatus = OperationStatus.startingState()
+                                                        .toCleaningState(100L, 5)
+                                                        .toPreparingState()
+                                                        .toDownloadingState(50L, 2)
+                                                        .toDownloadCompleteState();
+
+        assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(completeStatus::incrementDownloadFailures)
+        .withMessage("Cannot increment download failures when operation is in state DOWNLOAD_COMPLETE");
+    }
+
+    @Test
+    public void testIncrementCountersInCancelledState()
+    {
+        // Test that counters can be incremented in CANCELLED state
+        // This is allowed because cancellation can happen while downloads are in progress
+        OperationStatus cancelledStatus = OperationStatus.startingState()
+                                                         .toCleaningState(100L, 5)
+                                                         .toPreparingState()
+                                                         .toDownloadingState(50L, 2)
+                                                         .cancel();
+
+        assertThat(cancelledStatus.state()).isEqualTo(CANCELLED);
+
+        // These should work without throwing exceptions
+        cancelledStatus.incrementFilesDownloaded();
+        assertThat(cancelledStatus.filesDownloaded()).isEqualTo(1);
+
+        cancelledStatus.addBytesDownloaded(10L);
+        assertThat(cancelledStatus.bytesDownloaded()).isEqualTo(10L);
+
+        cancelledStatus.incrementDownloadFailures();
+        assertThat(cancelledStatus.downloadFailures()).isEqualTo(1);
+    }
+
+    @Test
+    public void testIncrementCountersInFailedState()
+    {
+        // Test that counters cannot be incremented in FAILED state
+        OperationStatus failedStatus = OperationStatus.startingState()
+                                                      .toCleaningState(100L, 5)
+                                                      .toPreparingState()
+                                                      .toDownloadingState(50L, 2)
+                                                      .tryFailureState();
+
+        assertThat(failedStatus.state()).isEqualTo(FAILED);
+
+        // These should throw exceptions
+        assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(failedStatus::incrementFilesDownloaded)
+        .withMessage("Cannot increment files downloaded when operation is in state FAILED");
+
+        assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(() -> failedStatus.addBytesDownloaded(10L))
+        .withMessage("Cannot increment bytes downloaded when operation is in state FAILED");
+
+        assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(failedStatus::incrementDownloadFailures)
+        .withMessage("Cannot increment download failures when operation is in state FAILED");
+    }
+
+    @Test
+    public void testIncrementCountersInNonDownloadStates()
+    {
+        // Test that counters cannot be incremented in STARTING, CLEANING, PREPARING states
+        OperationStatus startingStatus = OperationStatus.startingState();
+
+        assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(startingStatus::incrementFilesDownloaded)
+        .withMessage("Cannot increment files downloaded when operation is in state STARTING");
+
+        OperationStatus cleaningStatus = startingStatus.toCleaningState(100L, 5);
+
+        assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(cleaningStatus::incrementFilesDownloaded)
+        .withMessage("Cannot increment files downloaded when operation is in state CLEANING");
+
+        OperationStatus preparingStatus = cleaningStatus.toPreparingState();
+
+        assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(preparingStatus::incrementFilesDownloaded)
+        .withMessage("Cannot increment files downloaded when operation is in state PREPARING");
+    }
+
+    @Test
+    public void testStartingStateTransitions()
+    {
+        // Test valid transitions from STARTING state
+        assertThat(STARTING.toCleaning()).isEqualTo(CLEANING);
+        assertThat(STARTING.toFailed()).isEqualTo(FAILED);
+        assertThat(STARTING.toCancelled()).isEqualTo(CANCELLED);
+
+        // Test invalid transitions from STARTING state
+        assertIllegalStateTransition(STARTING::toPreparing);
+        assertIllegalStateTransition(STARTING::toDownloading);
+        assertIllegalStateTransition(STARTING::toDownloadComplete);
+        assertIllegalStateTransition(STARTING::toSuccess);
+    }
+
+    @Test
+    public void testCleaningStateTransitions()
+    {
+        // Test valid transitions from CLEANING state
+        assertThat(CLEANING.toPreparing()).isEqualTo(PREPARING);
+        assertThat(CLEANING.toFailed()).isEqualTo(FAILED);
+        assertThat(CLEANING.toCancelled()).isEqualTo(CANCELLED);
+
+        // Test invalid transitions from CLEANING state
+        assertIllegalStateTransition(CLEANING::toCleaning);
+        assertIllegalStateTransition(CLEANING::toDownloading);
+        assertIllegalStateTransition(CLEANING::toDownloadComplete);
+        assertIllegalStateTransition(CLEANING::toSuccess);
+    }
+
+    @Test
+    public void testPreparingStateTransitions()
+    {
+        // Test valid transitions from PREPARING state
+        assertThat(PREPARING.toDownloading()).isEqualTo(DOWNLOADING);
+        assertThat(PREPARING.toSuccess()).isEqualTo(SUCCESS);
+        assertThat(PREPARING.toFailed()).isEqualTo(FAILED);
+        assertThat(PREPARING.toCancelled()).isEqualTo(CANCELLED);
+
+        // Test invalid transitions from PREPARING state
+        assertIllegalStateTransition(PREPARING::toCleaning);
+        assertIllegalStateTransition(PREPARING::toPreparing);
+        assertIllegalStateTransition(PREPARING::toDownloadComplete);
+    }
+
+    @Test
+    public void testDownloadingStateTransitions()
+    {
+        // Test valid transitions from DOWNLOADING state
+        assertThat(DOWNLOADING.toDownloadComplete()).isEqualTo(DOWNLOAD_COMPLETE);
+        assertThat(DOWNLOADING.toFailed()).isEqualTo(FAILED);
+        assertThat(DOWNLOADING.toCancelled()).isEqualTo(CANCELLED);
+
+        // Test invalid transitions from DOWNLOADING state
+        assertIllegalStateTransition(DOWNLOADING::toCleaning);
+        assertIllegalStateTransition(DOWNLOADING::toPreparing);
+        assertIllegalStateTransition(DOWNLOADING::toDownloading);
+        assertIllegalStateTransition(DOWNLOADING::toSuccess);
+    }
+
+    @Test
+    public void testTerminalStateTransitions()
+    {
+        // Test SUCCESS state - no valid transitions
+        assertIllegalStateTransition(SUCCESS::toCleaning);
+        assertIllegalStateTransition(SUCCESS::toPreparing);
+        assertIllegalStateTransition(SUCCESS::toDownloading);
+        assertIllegalStateTransition(SUCCESS::toDownloadComplete);
+        assertIllegalStateTransition(SUCCESS::toSuccess);
+        assertIllegalStateTransition(SUCCESS::toFailed);
+        assertIllegalStateTransition(SUCCESS::toCancelled);
+
+        // Test FAILED state - no valid transitions
+        assertIllegalStateTransition(FAILED::toCleaning);
+        assertIllegalStateTransition(FAILED::toPreparing);
+        assertIllegalStateTransition(FAILED::toDownloading);
+        assertIllegalStateTransition(FAILED::toDownloadComplete);
+        assertIllegalStateTransition(FAILED::toSuccess);
+        assertIllegalStateTransition(FAILED::toFailed);
+        assertIllegalStateTransition(FAILED::toCancelled);
+
+        // Test DOWNLOAD_COMPLETE state - no valid transitions
+        assertIllegalStateTransition(DOWNLOAD_COMPLETE::toCleaning);
+        assertIllegalStateTransition(DOWNLOAD_COMPLETE::toPreparing);
+        assertIllegalStateTransition(DOWNLOAD_COMPLETE::toDownloading);
+        assertIllegalStateTransition(DOWNLOAD_COMPLETE::toDownloadComplete);
+        assertIllegalStateTransition(DOWNLOAD_COMPLETE::toSuccess);
+        assertIllegalStateTransition(DOWNLOAD_COMPLETE::toFailed);
+        assertIllegalStateTransition(DOWNLOAD_COMPLETE::toCancelled);
+
+        // Test CANCELLED state - no valid transitions except special CANCELLED -> FAILED case
+        assertIllegalStateTransition(CANCELLED::toCleaning);
+        assertIllegalStateTransition(CANCELLED::toPreparing);
+        assertIllegalStateTransition(CANCELLED::toDownloading);
+        assertIllegalStateTransition(CANCELLED::toDownloadComplete);
+        assertIllegalStateTransition(CANCELLED::toSuccess);
+        assertIllegalStateTransition(CANCELLED::toCancelled);
+
+        // Special case: CANCELLED -> FAILED is tolerated (returns CANCELLED)
+        assertThat(CANCELLED.toFailed()).isEqualTo(CANCELLED);
     }
 
     public void assertIllegalStateTransition(ThrowableAssert.ThrowingCallable callable)

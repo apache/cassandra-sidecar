@@ -119,7 +119,7 @@ class LiveMigrationFileDownloaderTest
         assertThat(statusFuture.isComplete()).isTrue();
         OperationStatus operationStatus = statusFuture.result();
         assertThat(operationStatus).isNotNull();
-        assertThat(operationStatus.getState()).isEqualTo(OperationStatus.State.FAILED);
+        assertThat(operationStatus.state()).isEqualTo(OperationStatus.State.FAILED);
         verify(statusUpdater, times(1)).accept(any(OperationStatus.class));
     }
 
@@ -152,7 +152,7 @@ class LiveMigrationFileDownloaderTest
         awaitForFuture(operationStatus);
 
         assertThat(operationStatus.isComplete()).isTrue();
-        assertThat(operationStatus.result().getState()).isEqualTo(OperationStatus.State.FAILED);
+        assertThat(operationStatus.result().state()).isEqualTo(OperationStatus.State.FAILED);
         verify(sidecarClient, times(1)).liveMigrationListInstanceFilesAsync(any(SidecarInstance.class));
         verify(downloaderSpy, times(0))
         .shortlistDownloadFiles(any(InstanceFilesListResponse.class), anyDouble());
@@ -186,7 +186,7 @@ class LiveMigrationFileDownloaderTest
         awaitForFuture(statusFuture);
 
         assertThat(statusFuture.isComplete()).isTrue();
-        assertThat(statusFuture.result().getState()).isEqualTo(OperationStatus.State.SUCCESS);
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.SUCCESS);
     }
 
     @Test
@@ -214,7 +214,7 @@ class LiveMigrationFileDownloaderTest
         awaitForFuture(statusFuture);
 
         assertThat(statusFuture.isComplete()).isTrue();
-        assertThat(statusFuture.result().getState()).isEqualTo(OperationStatus.State.DOWNLOAD_COMPLETE);
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.DOWNLOAD_COMPLETE);
         assertThat(vertx.fileSystem().existsBlocking(emptyDir.getFilePath(storageDir))).isTrue();
         assertThat(vertx.fileSystem().existsBlocking(emptyFile.getFilePath(storageDir))).isTrue();
     }
@@ -246,7 +246,7 @@ class LiveMigrationFileDownloaderTest
         awaitForFuture(statusFuture);
 
         assertThat(statusFuture.isComplete()).isTrue();
-        assertThat(statusFuture.result().getState()).isEqualTo(OperationStatus.State.FAILED);
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.FAILED);
         assertThat(vertx.fileSystem().existsBlocking(emptyDir.getFilePath(storageDir))).isFalse();
         assertThat(vertx.fileSystem().existsBlocking(emptyFile.getFilePath(storageDir))).isFalse();
     }
@@ -289,7 +289,7 @@ class LiveMigrationFileDownloaderTest
         awaitForFuture(statusFuture);
 
         assertThat(statusFuture.isComplete()).isTrue();
-        assertThat(statusFuture.result().getState()).isEqualTo(OperationStatus.State.DOWNLOAD_COMPLETE);
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.DOWNLOAD_COMPLETE);
         verify(statusUpdater, times(4)).accept(any(OperationStatus.class));
     }
 
@@ -329,7 +329,7 @@ class LiveMigrationFileDownloaderTest
         awaitForFuture(statusFuture);
 
         assertThat(statusFuture.isComplete()).isTrue();
-        assertThat(statusFuture.result().getState()).isEqualTo(OperationStatus.State.DOWNLOAD_COMPLETE);
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.DOWNLOAD_COMPLETE);
         verify(statusUpdater, times(4)).accept(any(OperationStatus.class));
     }
 
@@ -362,7 +362,7 @@ class LiveMigrationFileDownloaderTest
         awaitForFuture(statusFuture);
 
         assertThat(statusFuture.isComplete()).isTrue();
-        assertThat(statusFuture.result().getState()).isEqualTo(OperationStatus.State.FAILED);
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.FAILED);
     }
 
 
@@ -407,7 +407,7 @@ class LiveMigrationFileDownloaderTest
         awaitForFuture(statusFuture);
 
         assertThat(statusFuture.isComplete()).isTrue();
-        assertThat(statusFuture.result().getState()).isEqualTo(OperationStatus.State.FAILED);
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.FAILED);
         verify(downloaderSpy, times(1)).updateFileTimestampAsync(any(), anyLong());
     }
 
@@ -440,7 +440,7 @@ class LiveMigrationFileDownloaderTest
         awaitForFuture(statusFuture);
 
         assertThat(statusFuture.isComplete()).isTrue();
-        assertThat(statusFuture.result().getState()).isEqualTo(OperationStatus.State.FAILED);
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.FAILED);
         verify(statusUpdater, times(2)).accept(any(OperationStatus.class));
     }
 
@@ -478,7 +478,7 @@ class LiveMigrationFileDownloaderTest
         awaitForFuture(statusFuture);
 
         assertThat(statusFuture.isComplete()).isTrue();
-        assertThat(statusFuture.result().getState()).isEqualTo(OperationStatus.State.FAILED);
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.FAILED);
         verify(statusUpdater, times(4)).accept(any(OperationStatus.class));
     }
 
@@ -516,7 +516,7 @@ class LiveMigrationFileDownloaderTest
         awaitForFuture(statusFuture);
 
         assertThat(statusFuture.isComplete()).isTrue();
-        assertThat(statusFuture.result().getState()).isEqualTo(OperationStatus.State.FAILED);
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.FAILED);
         verify(statusUpdater, times(4)).accept(any(OperationStatus.class));
     }
 
@@ -572,10 +572,10 @@ class LiveMigrationFileDownloaderTest
 
         // Ensure that the current state of operation is not in final state
         assertThat(operationStatusFuture.isComplete()).isFalse();
-        assertThat(downloaderSpy.operationStatus.getState()).isNotEqualTo(OperationStatus.State.SUCCESS)
-                                                            .isNotEqualTo(OperationStatus.State.FAILED)
-                                                            .isNotEqualTo(OperationStatus.State.CANCELLED)
-                                                            .isNotEqualTo(OperationStatus.State.CANCELLED);
+        assertThat(downloaderSpy.operationStatus.state()).isNotEqualTo(OperationStatus.State.SUCCESS)
+                                                         .isNotEqualTo(OperationStatus.State.FAILED)
+                                                         .isNotEqualTo(OperationStatus.State.CANCELLED)
+                                                         .isNotEqualTo(OperationStatus.State.CANCELLED);
 
         awaitForFuture(operationStatusFuture, 100);
 
@@ -584,19 +584,19 @@ class LiveMigrationFileDownloaderTest
 
         // Since two downloads are in progress, future should not be completed
         assertThat(operationStatusFuture.isComplete()).isFalse();
-        assertThat(downloaderSpy.operationStatus.getState()).isEqualTo(OperationStatus.State.CANCELLED);
+        assertThat(downloaderSpy.operationStatus.state()).isEqualTo(OperationStatus.State.CANCELLED);
 
         // Now resolve downloadPromise to ensure that operation state remains in CANCELLED state
         t1DownloadPromise.complete();
         awaitForFuture(operationStatusFuture, 100);
         assertThat(operationStatusFuture.isComplete()).isFalse();
-        assertThat(downloaderSpy.operationStatus.getState()).isEqualTo(OperationStatus.State.CANCELLED);
+        assertThat(downloaderSpy.operationStatus.state()).isEqualTo(OperationStatus.State.CANCELLED);
 
         t2DownloadPromise.tryFail(new IOException("Failed to download file"));
         awaitForFuture(operationStatusFuture, 100);
 
         assertThat(operationStatusFuture.isComplete()).isTrue();
-        assertThat(downloaderSpy.operationStatus.getState()).isEqualTo(OperationStatus.State.CANCELLED);
+        assertThat(downloaderSpy.operationStatus.state()).isEqualTo(OperationStatus.State.CANCELLED);
     }
 
     @Test
@@ -766,6 +766,8 @@ class LiveMigrationFileDownloaderTest
         Injector injector = getInjector();
         LiveMigrationFileDownloader downloaderSpy =
         getDownloaderSpy(injector, dummyRequest100pThreshold, 1, mock(Consumer.class), storageDir, dataDirs);
+        downloaderSpy.updateState(operationStatus -> operationStatus.toCleaningState(100, 10)
+                                                                    .toPreparingState().toDownloadingState(100, 10));
 
         String fileExists = LIVE_MIGRATION_FILES_ROUTE + "/data/0/dummy.txt";
         String fileDoesNotExist = LIVE_MIGRATION_FILES_ROUTE + "/data/0/does-not-exist.txt";
@@ -796,6 +798,8 @@ class LiveMigrationFileDownloaderTest
         Injector injector = getInjector();
         LiveMigrationFileDownloader downloaderSpy =
         getDownloaderSpy(injector, dummyRequest100pThreshold, 1, mock(Consumer.class), storageDir, dataDirs);
+        downloaderSpy.updateState(operationStatus -> operationStatus.toCleaningState(100, 10)
+                                                                    .toPreparingState().toDownloadingState(100, 10));
 
         String fileExists = LIVE_MIGRATION_FILES_ROUTE + "/data/0/dummy.txt";
         InstanceFileInfo fileInfos = getInstanceFileInfo(new String[]{ fileExists }, 0).get(0);
@@ -820,6 +824,8 @@ class LiveMigrationFileDownloaderTest
         Injector injector = getInjector();
         LiveMigrationFileDownloader downloaderSpy =
         getDownloaderSpy(injector, dummyRequest100pThreshold, 1, mock(Consumer.class), storageDir, dataDirs);
+        downloaderSpy.updateState(operationStatus -> operationStatus.toCleaningState(100, 10)
+                                                                    .toPreparingState().toDownloadingState(100, 10));
 
         String fileExists = LIVE_MIGRATION_FILES_ROUTE + "/data/0/dummy.txt";
         String fileDoesNotExist = LIVE_MIGRATION_FILES_ROUTE + "/data/0/file-does-not-exist.txt";
@@ -843,6 +849,8 @@ class LiveMigrationFileDownloaderTest
         Injector injector = getInjector();
         LiveMigrationFileDownloader downloaderSpy =
         getDownloaderSpy(injector, dummyRequest100pThreshold, 1, mock(Consumer.class), storageDir, dataDirs);
+        downloaderSpy.updateState(operationStatus -> operationStatus.toCleaningState(100, 10)
+                                                                    .toPreparingState().toDownloadingState(100, 10));
 
         String file = LIVE_MIGRATION_FILES_ROUTE + "/data/0/dummy.txt";
         InstanceFileInfo fileInfos = getInstanceFileInfo(new String[]{ file }, 0).get(0);
@@ -934,6 +942,8 @@ class LiveMigrationFileDownloaderTest
         List<String> dataDirs = getDataDirList(storageDir);
         Injector injector = getInjector();
         LiveMigrationFileDownloader downloader = getDownloader(injector, dummyRequest100pThreshold, 0, mock(Consumer.class), storageDir, dataDirs);
+        downloader.updateState(operationStatus -> operationStatus.toCleaningState(100, 10)
+                                                                 .toPreparingState().toDownloadingState(100, 10));
 
         String directoryUrl = LIVE_MIGRATION_FILES_ROUTE + "/data/0/ks1/table1";
         InstanceFileInfo directoryInfo = new InstanceFileInfo(directoryUrl, -1, FileType.DIRECTORY, System.currentTimeMillis());
@@ -945,7 +955,7 @@ class LiveMigrationFileDownloaderTest
         Path path = localPath(directoryUrl, downloader.instanceMetadata);
         assertThat(Files.exists(path)).isTrue();
         assertThat(Files.isDirectory(path)).isTrue();
-        assertThat(downloader.operationStatus.filesDownloaded().get()).isEqualTo(1);
+        assertThat(downloader.operationStatus.filesDownloaded()).isEqualTo(1);
     }
 
     @Test
@@ -955,6 +965,8 @@ class LiveMigrationFileDownloaderTest
         List<String> dataDirs = getDataDirList(storageDir);
         Injector injector = getInjector();
         LiveMigrationFileDownloader downloader = getDownloader(injector, dummyRequest100pThreshold, 0, mock(Consumer.class), storageDir, dataDirs);
+        downloader.updateState(operationStatus -> operationStatus.toCleaningState(100, 10)
+                                                                 .toPreparingState().toDownloadingState(100, 10));
 
         // Try to create directory with invalid characters (this should fail on most filesystems)
         String invalidDirectoryUrl = LIVE_MIGRATION_FILES_ROUTE + "/data/0/\0invalid";
@@ -964,7 +976,7 @@ class LiveMigrationFileDownloaderTest
         awaitForFuture(result);
 
         assertThat(result.failed()).isTrue();
-        assertThat(downloader.operationStatus.downloadFailures().get()).isEqualTo(1);
+        assertThat(downloader.operationStatus.downloadFailures()).isEqualTo(1);
     }
 
     @Test
@@ -1011,7 +1023,10 @@ class LiveMigrationFileDownloaderTest
         String storageDir = tempDir.resolve("testCreateEmptyFileNullParent").toAbsolutePath().toString();
         List<String> dataDirs = getDataDirList(storageDir);
         Injector injector = getInjector();
-        LiveMigrationFileDownloader downloader = spy(getDownloader(injector, dummyRequest100pThreshold, 0, mock(Consumer.class), storageDir, dataDirs));
+        LiveMigrationFileDownloader downloader =
+        spy(getDownloader(injector, dummyRequest100pThreshold, 0, mock(Consumer.class), storageDir, dataDirs));
+        downloader.updateState(operationStatus -> operationStatus.toCleaningState(100, 10)
+                                                                 .toPreparingState().toDownloadingState(100, 10));
 
         // Create file info with root path (no parent)
         String rootFileUrl = LIVE_MIGRATION_FILES_ROUTE + "/data/0/some_file.txt";
@@ -1029,8 +1044,8 @@ class LiveMigrationFileDownloaderTest
         assertThat(result.succeeded()).isFalse();
         assertThat(result.failed()).isTrue();
         assertThat(result.cause()).isNotNull();
-        assertThat(downloader.operationStatus.downloadFailures().get()).isEqualTo(1);
-        assertThat(downloader.operationStatus.filesDownloaded().get()).isEqualTo(0);
+        assertThat(downloader.operationStatus.downloadFailures()).isEqualTo(1);
+        assertThat(downloader.operationStatus.filesDownloaded()).isEqualTo(0);
     }
 
     @Test
@@ -1262,11 +1277,11 @@ class LiveMigrationFileDownloaderTest
                                           .iteration(currentIteration)
                                           .statusUpdater(mockStatusUpdater)
                                           .instanceMetadata(InstanceMetadataImpl.builder()
-                                                                               .dataDirs(dataDirs)
-                                                                               .storageDir(storageDir)
-                                                                               .metricRegistry(new MetricRegistry())
-                                                                               .id(1)
-                                                                               .build())
+                                                                                .dataDirs(dataDirs)
+                                                                                .storageDir(storageDir)
+                                                                                .metricRegistry(new MetricRegistry())
+                                                                                .id(1)
+                                                                                .build())
                                           .liveMigrationConfiguration(liveMigrationConfig)
                                           .source(SOURCE)
                                           .port(PORT)
@@ -1289,14 +1304,14 @@ class LiveMigrationFileDownloaderTest
         return spy(getDownloader(injector, request, currentIteration, mockStatusUpdater, storageDir, dataDirs));
     }
 
-    List<InstanceFileInfo> getInstanceFileInfo(final String[] fileUrls, final int size, final long lastModifiedTime)
+    List<InstanceFileInfo> getInstanceFileInfo(String[] fileUrls, int size, long lastModifiedTime)
     {
         return Arrays.stream(fileUrls)
                      .map(fileUrl -> new InstanceFileInfo(fileUrl, size, FileType.FILE, lastModifiedTime))
                      .collect(Collectors.toList());
     }
 
-    List<InstanceFileInfo> getInstanceFileInfo(final String[] fileUrls, final int size)
+    List<InstanceFileInfo> getInstanceFileInfo(String[] fileUrls, int size)
     {
         return getInstanceFileInfo(fileUrls, size, System.currentTimeMillis());
     }

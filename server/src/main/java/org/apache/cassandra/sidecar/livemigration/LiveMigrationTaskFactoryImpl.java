@@ -56,10 +56,10 @@ public class LiveMigrationTaskFactoryImpl implements LiveMigrationTaskFactory
      * {@inheritDoc}
      */
     @Override
-    public LiveMigrationTask create(final LiveMigrationDataCopyRequest request,
-                                    final String source,
-                                    final int port,
-                                    final InstanceMetadata instanceMetadata)
+    public LiveMigrationTask create(LiveMigrationDataCopyRequest request,
+                                    String source,
+                                    int port,
+                                    InstanceMetadata instanceMetadata)
     {
         return new LiveMigrationTaskImpl(vertx, executorPools, sidecarClientProvider, liveMigrationConfiguration,
                                          request, source, port, instanceMetadata);

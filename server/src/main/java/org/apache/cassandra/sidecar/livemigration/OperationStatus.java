@@ -63,7 +63,7 @@ import org.jetbrains.annotations.NotNull;
  * State transitions are managed through factory methods that return new instances.
  * Progress tracking is handled via atomic fields that can be safely updated from multiple threads.
  */
-public class OperationStatus
+class OperationStatus
 {
     // State of the operation
     private final State state;
@@ -108,7 +108,7 @@ public class OperationStatus
         this.bytesDownloaded = bytesDownloaded;
     }
 
-    public static OperationStatus getStartingState()
+    static OperationStatus startingState()
     {
         return new OperationStatus(State.STARTING,
                                    -1,
@@ -128,17 +128,16 @@ public class OperationStatus
      * @return new OperationStatus instance in CLEANING state
      * @throws IllegalStateTransitionException if current state cannot transition to CLEANING
      */
-    @VisibleForTesting
-    public OperationStatus getCleaningState(long totalSize, int totalFiles)
+    OperationStatus toCleaningState(long totalSize, int totalFiles)
     {
         return new OperationStatus(this.state.toCleaning(),
                                    totalSize,
                                    totalFiles,
                                    this.bytesToDownload,
                                    this.filesToDownload,
-                                   this.filesDownloaded,
-                                   this.downloadFailures,
-                                   this.bytesDownloaded);
+                                   new AtomicInteger(this.filesDownloaded.get()),
+                                   new AtomicInteger(this.downloadFailures.get()),
+                                   new AtomicLong(this.bytesDownloaded.get()));
     }
 
     /**
@@ -147,17 +146,16 @@ public class OperationStatus
      * @return new OperationStatus instance in PREPARING state
      * @throws IllegalStateTransitionException if current state cannot transition to PREPARING
      */
-    @VisibleForTesting
-    public OperationStatus getPreparingState()
+    OperationStatus toPreparingState()
     {
         return new OperationStatus(this.state.toPreparing(),
                                    this.totalSize,
                                    this.totalFiles,
                                    this.bytesToDownload,
                                    this.filesToDownload,
-                                   this.filesDownloaded,
-                                   this.downloadFailures,
-                                   this.bytesDownloaded);
+                                   new AtomicInteger(this.filesDownloaded.get()),
+                                   new AtomicInteger(this.downloadFailures.get()),
+                                   new AtomicLong(this.bytesDownloaded.get()));
     }
 
     /**
@@ -169,7 +167,7 @@ public class OperationStatus
      * @return new OperationStatus instance in DOWNLOADING state
      * @throws IllegalStateTransitionException if current state cannot transition to DOWNLOADING
      */
-    OperationStatus getDownloadingState(final long bytesToDownload, final int filesToDownload)
+    OperationStatus toDownloadingState(long bytesToDownload, int filesToDownload)
     {
         return new OperationStatus(this.state.toDownloading(),
                                    this.totalSize,
@@ -187,16 +185,16 @@ public class OperationStatus
      * @return new OperationStatus instance in DOWNLOAD_COMPLETE state
      * @throws IllegalStateTransitionException if current state cannot transition to DOWNLOAD_COMPLETE
      */
-    OperationStatus getDownloadCompleteState()
+    OperationStatus toDownloadCompleteState()
     {
         return new OperationStatus(this.state.toDownloadComplete(),
                                    this.totalSize,
                                    this.totalFiles,
                                    this.bytesToDownload,
                                    this.filesToDownload,
-                                   this.filesDownloaded,
-                                   this.downloadFailures,
-                                   this.bytesDownloaded);
+                                   new AtomicInteger(this.filesDownloaded.get()),
+                                   new AtomicInteger(this.downloadFailures.get()),
+                                   new AtomicLong(this.bytesDownloaded.get()));
     }
 
     /**
@@ -206,16 +204,16 @@ public class OperationStatus
      * @throws IllegalStateTransitionException if current state cannot transition to SUCCESS
      */
     @VisibleForTesting
-    public OperationStatus getSuccessState()
+    OperationStatus toSuccessState()
     {
         return new OperationStatus(this.state.toSuccess(),
                                    this.totalSize,
                                    this.totalFiles,
                                    this.bytesToDownload,
                                    this.filesToDownload,
-                                   this.filesDownloaded,
-                                   this.downloadFailures,
-                                   this.bytesDownloaded);
+                                   new AtomicInteger(this.filesDownloaded.get()),
+                                   new AtomicInteger(this.downloadFailures.get()),
+                                   new AtomicLong(this.bytesDownloaded.get()));
     }
 
     /**
@@ -231,9 +229,9 @@ public class OperationStatus
                                    this.totalFiles,
                                    this.bytesToDownload,
                                    this.filesToDownload,
-                                   this.filesDownloaded,
-                                   this.downloadFailures,
-                                   this.bytesDownloaded);
+                                   new AtomicInteger(this.filesDownloaded.get()),
+                                   new AtomicInteger(this.downloadFailures.get()),
+                                   new AtomicLong(this.bytesDownloaded.get()));
     }
 
     /**
@@ -241,39 +239,34 @@ public class OperationStatus
      *
      * @return Returns same state if completed, otherwise returns cancelled state.
      */
-    public OperationStatus cancel()
+    OperationStatus cancel()
     {
         return new OperationStatus(this.state.toCancelled(),
                                    this.totalSize,
                                    this.totalFiles,
                                    this.bytesToDownload,
                                    this.filesToDownload,
-                                   this.filesDownloaded,
-                                   this.downloadFailures,
-                                   this.bytesDownloaded);
+                                   new AtomicInteger(this.filesDownloaded.get()),
+                                   new AtomicInteger(this.downloadFailures.get()),
+                                   new AtomicLong(this.bytesDownloaded.get()));
     }
 
-    public State getState()
+    State state()
     {
         return state;
     }
 
-    public State state()
-    {
-        return state;
-    }
-
-    public long totalSize()
+    long totalSize()
     {
         return totalSize;
     }
 
-    public long bytesToDownload()
+    long bytesToDownload()
     {
         return bytesToDownload;
     }
 
-    public int filesToDownload()
+    int filesToDownload()
     {
         return filesToDownload;
     }
@@ -284,9 +277,26 @@ public class OperationStatus
      *
      * @return atomic counter for files downloaded
      */
-    public AtomicInteger filesDownloaded()
+    int filesDownloaded()
     {
-        return filesDownloaded;
+        return filesDownloaded.get();
+    }
+
+    /**
+     * Atomically increments the files downloaded counter using {@code incrementAndGet()}.
+     * This operation is thread-safe and returns the current instance for method chaining.
+     *
+     * @return this OperationStatus instance for method chaining
+     * @throws IllegalStateException if the operation has already completed
+     */
+    OperationStatus incrementFilesDownloaded()
+    {
+        if (cannotDownloadFiles())
+        {
+            throw new IllegalStateException("Cannot increment files downloaded when operation is in state " + state);
+        }
+        filesDownloaded.incrementAndGet();
+        return this;
     }
 
     /**
@@ -295,12 +305,30 @@ public class OperationStatus
      *
      * @return atomic counter for bytes downloaded
      */
-    public AtomicLong bytesDownloaded()
+    long bytesDownloaded()
     {
-        return bytesDownloaded;
+        return bytesDownloaded.get();
     }
 
-    public int totalFiles()
+    /**
+     * Atomically adds the specified size to bytes downloaded counter using {@code addAndGet()}.
+     * This operation is thread-safe and returns the current instance for method chaining.
+     *
+     * @param size the number of bytes to add to the counter
+     * @return this OperationStatus instance for method chaining
+     * @throws IllegalStateException if the operation has already completed
+     */
+    OperationStatus addBytesDownloaded(long size)
+    {
+        if (cannotDownloadFiles())
+        {
+            throw new IllegalStateException("Cannot increment bytes downloaded when operation is in state " + state);
+        }
+        bytesDownloaded.addAndGet(size);
+        return this;
+    }
+
+    int totalFiles()
     {
         return totalFiles;
     }
@@ -311,9 +339,54 @@ public class OperationStatus
      *
      * @return atomic counter for download failures
      */
-    public AtomicInteger downloadFailures()
+    int downloadFailures()
     {
-        return downloadFailures;
+        return downloadFailures.get();
+    }
+
+    /**
+     * Atomically increments the download failures counter using {@code incrementAndGet()}.
+     * This operation is thread-safe and returns the current instance for method chaining.
+     *
+     * @return this OperationStatus instance for method chaining
+     * @throws IllegalStateException if the operation has already completed
+     */
+    OperationStatus incrementDownloadFailures()
+    {
+        if (cannotDownloadFiles())
+        {
+            throw new IllegalStateException("Cannot increment download failures when operation is in state " + state);
+        }
+        downloadFailures.incrementAndGet();
+        return this;
+    }
+
+    /**
+     * Determines if the operation is in a state where files cannot be downloaded.
+     * This method checks the current state to see if download-related operations
+     * (like incrementing counters) should be prohibited.
+     *
+     * @return {@code true} if download operations are prohibited (STARTING, CLEANING, PREPARING, SUCCESS,
+     * DOWNLOAD_COMPLETE, FAILED states);
+     * {@code false} if download operations are allowed (DOWNLOADING, CANCELLED states)
+     */
+    private boolean cannotDownloadFiles()
+    {
+        switch (this.state)
+        {
+            case DOWNLOADING:
+            case CANCELLED: // Transition to CANCELLED happens early, so allow download counters to be incremented
+                return false;
+
+            case STARTING:
+            case CLEANING:
+            case PREPARING:
+            case SUCCESS:
+            case DOWNLOAD_COMPLETE:
+            case FAILED:
+            default:
+                return true;
+        }
     }
 
     @Override
@@ -381,37 +454,44 @@ public class OperationStatus
             throw new IllegalStateTransitionException(this, toState);
         }
 
-        private State toCancelled()
+        @VisibleForTesting
+        State toCancelled()
         {
             return this.transitionToState(CANCELLED);
         }
 
-        private State toFailed()
+        @VisibleForTesting
+        State toFailed()
         {
             return this.transitionToState(FAILED);
         }
 
-        private State toSuccess()
+        @VisibleForTesting
+        State toSuccess()
         {
             return this.transitionToState(SUCCESS);
         }
 
-        private State toDownloadComplete()
+        @VisibleForTesting
+        State toDownloadComplete()
         {
             return this.transitionToState(DOWNLOAD_COMPLETE);
         }
 
-        private State toDownloading()
+        @VisibleForTesting
+        State toDownloading()
         {
             return this.transitionToState(DOWNLOADING);
         }
 
-        private State toPreparing()
+        @VisibleForTesting
+        State toPreparing()
         {
             return this.transitionToState(PREPARING);
         }
 
-        private State toCleaning()
+        @VisibleForTesting
+        State toCleaning()
         {
             return this.transitionToState(CLEANING);
         }

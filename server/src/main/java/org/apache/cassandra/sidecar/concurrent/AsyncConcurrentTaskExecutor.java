@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.concurrent;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
@@ -105,7 +104,7 @@ public class AsyncConcurrentTaskExecutor<T>
             throw (new IllegalArgumentException("maxConcurrency must be > 0"));
         }
 
-        this.tasks = Collections.unmodifiableList(tasks);
+        this.tasks = List.copyOf(tasks);
         this.maxConcurrency = maxConcurrency;
         this.vertx = vertx;
         taskPromises = tasks.stream()

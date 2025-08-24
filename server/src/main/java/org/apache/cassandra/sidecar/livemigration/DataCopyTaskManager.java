@@ -82,8 +82,8 @@ public class DataCopyTaskManager
      * @throws LiveMigrationDataCopyInProgressException if another task is already running
      * @throws LiveMigrationInvalidRequestException     if request validation fails
      */
-    public Future<LiveMigrationTask> createTask(@NotNull final LiveMigrationDataCopyRequest request,
-                                                @NotNull final String currentHost)
+    public Future<LiveMigrationTask> createTask(@NotNull LiveMigrationDataCopyRequest request,
+                                                @NotNull String currentHost)
     throws LiveMigrationDataCopyInProgressException, LiveMigrationInvalidRequestException
     {
         int maxPossibleConcurrency = Objects.requireNonNull(sidecarConfiguration.liveMigrationConfiguration())
@@ -166,7 +166,7 @@ public class DataCopyTaskManager
      * @param currentHost the host where sidecar is running
      * @return list containing at most one task (empty if no active task)
      */
-    public List<LiveMigrationTask> getAllTasks(@NotNull final String currentHost)
+    public List<LiveMigrationTask> getAllTasks(@NotNull String currentHost)
     {
         InstanceMetadata localInstance = instancesMetadata.instanceFromHost(currentHost);
         if (currentTasks.isEmpty() || !currentTasks.containsKey(localInstance.id()))
@@ -184,8 +184,8 @@ public class DataCopyTaskManager
      * @return the LiveMigrationTask matching the given taskId
      * @throws LiveMigrationTaskNotFoundException if no task found with the given ID
      */
-    public LiveMigrationTask getTask(@NotNull final String taskId,
-                                     @NotNull final String currentHost) throws LiveMigrationTaskNotFoundException
+    public LiveMigrationTask getTask(@NotNull String taskId,
+                                     @NotNull String currentHost) throws LiveMigrationTaskNotFoundException
     {
         return getLiveMigrationTask(taskId, currentHost);
     }
@@ -198,8 +198,8 @@ public class DataCopyTaskManager
      * @return the cancelled LiveMigrationTask
      * @throws LiveMigrationTaskNotFoundException if no task found with the given ID
      */
-    public LiveMigrationTask cancelTask(@NotNull final String taskId,
-                                        @NotNull final String currentHost) throws LiveMigrationTaskNotFoundException
+    public LiveMigrationTask cancelTask(@NotNull String taskId,
+                                        @NotNull String currentHost) throws LiveMigrationTaskNotFoundException
     {
         LiveMigrationTask taskInProgress = getLiveMigrationTask(taskId, currentHost);
 

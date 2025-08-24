@@ -25,6 +25,7 @@ import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.Path;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
 import org.apache.cassandra.sidecar.handlers.FileStreamHandler;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationApiEnableDisableHandler;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationCancelDataCopyTaskHandler;
@@ -66,7 +67,7 @@ public class LiveMigrationModule extends AbstractModule
     @Operation(summary = "Create data copy task",
                description = "Creates a new data copy task for live migration")
     @APIResponse(description = "Data copy task created successfully",
-                 responseCode = "200",
+                 responseCode = "202",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "403",
@@ -92,7 +93,7 @@ public class LiveMigrationModule extends AbstractModule
     @APIResponse(description = "Data copy task cancelled successfully",
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+                 schema = @Schema(implementation = LiveMigrationTaskResponse.class)))
     @APIResponse(responseCode = "403",
                  description = "Live migration not enabled or node not configured as destination",
                  content = @Content(mediaType = "application/json",
@@ -119,7 +120,7 @@ public class LiveMigrationModule extends AbstractModule
     @APIResponse(description = "Data copy task retrieved successfully",
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+                 schema = @Schema(implementation = LiveMigrationTaskResponse.class)))
     @APIResponse(responseCode = "403",
                  description = "Live migration not enabled or node not configured as destination",
                  content = @Content(mediaType = "application/json",

@@ -128,7 +128,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
     void handleRetry(Future<OperationStatus> future, int iteration, int maxAttempts, Promise<OperationStatus> operationStatusPromise)
     {
         future.onComplete(ar -> {
-            if (ar.succeeded() && ar.result().getState() == OperationStatus.State.SUCCESS)
+            if (ar.succeeded() && ar.result().state() == OperationStatus.State.SUCCESS)
             {
                 operationStatusPromise.complete(ar.result());
             }
@@ -197,8 +197,8 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
                                                     operationStatus.totalFiles(),
                                                     operationStatus.bytesToDownload(),
                                                     operationStatus.filesToDownload(),
-                                                    operationStatus.filesDownloaded().get(),
-                                                    operationStatus.downloadFailures().get(),
-                                                    operationStatus.bytesDownloaded().get());
+                                                    operationStatus.filesDownloaded(),
+                                                    operationStatus.downloadFailures(),
+                                                    operationStatus.bytesDownloaded());
     }
 }

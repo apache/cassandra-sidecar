@@ -134,24 +134,23 @@ class LiveMigrationTaskImplTest
         LiveMigrationTaskImpl task = createTask();
 
         // Create actual OperationStatus objects using state transitions
-        OperationStatus status1 = OperationStatus.getStartingState()
-                                                 .getCleaningState(1000L, 10)
-                                                 .getPreparingState()
-                                                 .getDownloadingState(500L, 5);
+        OperationStatus status1 = OperationStatus.startingState()
+                                                 .toCleaningState(1000L, 10)
+                                                 .toPreparingState()
+                                                 .toDownloadingState(500L, 5)
+                                                 // Simulate progress updates
+                                                 .incrementFilesDownloaded()
+                                                 .incrementDownloadFailures()
+                                                 .incrementDownloadFailures()
+                                                 .addBytesDownloaded(300L);
 
-        // Simulate progress updates
-        status1.filesDownloaded().set(3);
-        status1.downloadFailures().set(2);
-        status1.bytesDownloaded().set(300L);
-
-        OperationStatus status2 = OperationStatus.getStartingState()
-                                                 .getCleaningState(2000L, 20)
-                                                 .getPreparingState()
-                                                 .getSuccessState();
-
-        // Simulate completion
-        status2.filesDownloaded().set(20);
-        status2.bytesDownloaded().set(2000L);
+        OperationStatus status2 = OperationStatus.startingState()
+                                                 .toCleaningState(2000L, 20)
+                                                 .toPreparingState()
+                                                 .toDownloadingState(1000L, 10)
+                                                 .incrementFilesDownloaded()
+                                                 .addBytesDownloaded(1000L)
+                                                 .toDownloadCompleteState();
 
         task.statusUpdater(0).accept(status1);
         task.statusUpdater(1).accept(status2);
@@ -173,20 +172,20 @@ class LiveMigrationTaskImplTest
         assertThat(responseStatus1.totalFiles()).isEqualTo(10);
         assertThat(responseStatus1.bytesToDownload()).isEqualTo(500L);
         assertThat(responseStatus1.filesToDownload()).isEqualTo(5);
-        assertThat(responseStatus1.filesDownloaded()).isEqualTo(3);
+        assertThat(responseStatus1.filesDownloaded()).isEqualTo(1);
         assertThat(responseStatus1.downloadFailures()).isEqualTo(2);
         assertThat(responseStatus1.bytesDownloaded()).isEqualTo(300L);
 
         LiveMigrationTaskResponse.Status responseStatus2 = statusList.get(1);
         assertThat(responseStatus2.iteration()).isEqualTo(1);
-        assertThat(responseStatus2.state()).isEqualTo("SUCCESS");
+        assertThat(responseStatus2.state()).isEqualTo("DOWNLOAD_COMPLETE");
         assertThat(responseStatus2.totalSize()).isEqualTo(2000L);
         assertThat(responseStatus2.totalFiles()).isEqualTo(20);
-        assertThat(responseStatus2.bytesToDownload()).isEqualTo(-1L); // SUCCESS state doesn't set this
-        assertThat(responseStatus2.filesToDownload()).isEqualTo(-1); // SUCCESS state doesn't set this
-        assertThat(responseStatus2.filesDownloaded()).isEqualTo(20);
+        assertThat(responseStatus2.bytesToDownload()).isEqualTo(1000L); // SUCCESS state doesn't set this
+        assertThat(responseStatus2.filesToDownload()).isEqualTo(10); // SUCCESS state doesn't set this
+        assertThat(responseStatus2.filesDownloaded()).isEqualTo(1);
         assertThat(responseStatus2.downloadFailures()).isEqualTo(0);
-        assertThat(responseStatus2.bytesDownloaded()).isEqualTo(2000L);
+        assertThat(responseStatus2.bytesDownloaded()).isEqualTo(1000L);
     }
 
     @Test
@@ -220,20 +219,20 @@ class LiveMigrationTaskImplTest
         LiveMigrationTaskImpl task = createTask();
 
         // Test with different state combinations
-        OperationStatus failedStatus = OperationStatus.getStartingState()
-                                                      .getCleaningState(500L, 5)
-                                                      .getPreparingState()
-                                                      .getDownloadingState(200L, 2)
+        OperationStatus failedStatus = OperationStatus.startingState()
+                                                      .toCleaningState(500L, 5)
+                                                      .toPreparingState()
+                                                      .toDownloadingState(200L, 2)
                                                       .tryFailureState();
 
-        OperationStatus cancelledStatus = OperationStatus.getStartingState()
+        OperationStatus cancelledStatus = OperationStatus.startingState()
                                                          .cancel();
 
-        OperationStatus downloadCompleteStatus = OperationStatus.getStartingState()
-                                                                .getCleaningState(1500L, 15)
-                                                                .getPreparingState()
-                                                                .getDownloadingState(750L, 8)
-                                                                .getDownloadCompleteState();
+        OperationStatus downloadCompleteStatus = OperationStatus.startingState()
+                                                                .toCleaningState(1500L, 15)
+                                                                .toPreparingState()
+                                                                .toDownloadingState(750L, 8)
+                                                                .toDownloadCompleteState();
 
         task.statusUpdater(0).accept(failedStatus);
         task.statusUpdater(1).accept(cancelledStatus);
@@ -254,10 +253,10 @@ class LiveMigrationTaskImplTest
         LiveMigrationTaskImpl task = createTask();
 
         // Test with different state combinations
-        OperationStatus downloadingState = OperationStatus.getStartingState()
-                                                          .getCleaningState(500L, 5)
-                                                          .getPreparingState()
-                                                          .getDownloadingState(200L, 2);
+        OperationStatus downloadingState = OperationStatus.startingState()
+                                                          .toCleaningState(500L, 5)
+                                                          .toPreparingState()
+                                                          .toDownloadingState(200L, 2);
 
 
         task.statusUpdater(0).accept(downloadingState);
@@ -268,22 +267,23 @@ class LiveMigrationTaskImplTest
         assertThat(statusList.get(0).state()).isEqualTo("DOWNLOADING");
         assertThat(statusList.get(0).bytesToDownload()).isEqualTo(downloadingState.bytesToDownload());
         assertThat(statusList.get(0).filesToDownload()).isEqualTo(downloadingState.filesToDownload());
-        assertThat(statusList.get(0).filesDownloaded()).isEqualTo(downloadingState.filesDownloaded().get());
-        assertThat(statusList.get(0).bytesDownloaded()).isEqualTo(downloadingState.bytesDownloaded().get());
-        assertThat(statusList.get(0).downloadFailures()).isEqualTo(downloadingState.downloadFailures().get());
+        assertThat(statusList.get(0).filesDownloaded()).isEqualTo(downloadingState.filesDownloaded());
+        assertThat(statusList.get(0).bytesDownloaded()).isEqualTo(downloadingState.bytesDownloaded());
+        assertThat(statusList.get(0).downloadFailures()).isEqualTo(downloadingState.downloadFailures());
 
 
         // some files downloaded and some failed
-        downloadingState.bytesDownloaded().addAndGet(100);
-        downloadingState.filesDownloaded().addAndGet(2);
-        downloadingState.downloadFailures().addAndGet(1);
+        downloadingState.addBytesDownloaded(100);
+        downloadingState.incrementFilesDownloaded();
+        downloadingState.incrementFilesDownloaded();
+        downloadingState.incrementDownloadFailures();
 
         statusList = task.getResponse().status();
 
         assertThat(statusList.get(0).bytesToDownload()).isEqualTo(downloadingState.bytesToDownload());
         assertThat(statusList.get(0).filesToDownload()).isEqualTo(downloadingState.filesToDownload());
-        assertThat(statusList.get(0).filesDownloaded()).isEqualTo(downloadingState.filesDownloaded().get());
-        assertThat(statusList.get(0).bytesDownloaded()).isEqualTo(downloadingState.bytesDownloaded().get());
-        assertThat(statusList.get(0).downloadFailures()).isEqualTo(downloadingState.downloadFailures().get());
+        assertThat(statusList.get(0).filesDownloaded()).isEqualTo(downloadingState.filesDownloaded());
+        assertThat(statusList.get(0).bytesDownloaded()).isEqualTo(downloadingState.bytesDownloaded());
+        assertThat(statusList.get(0).downloadFailures()).isEqualTo(downloadingState.downloadFailures());
     }
 }

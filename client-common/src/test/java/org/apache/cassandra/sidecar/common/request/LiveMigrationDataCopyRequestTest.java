@@ -31,9 +31,9 @@ class LiveMigrationDataCopyRequestTest
         LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(5, 0.95, 10);
 
         assertThat(request.id)
-            .isNotNull()
-            .isNotEmpty()
-            .matches("[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"); // UUID pattern
+        .isNotNull()
+        .isNotEmpty()
+        .matches("[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"); // UUID pattern
         assertThat(request.maxIterations).isEqualTo(5);
         assertThat(request.successThreshold).isEqualTo(0.95);
         assertThat(request.maxConcurrency).isEqualTo(10);
@@ -51,64 +51,64 @@ class LiveMigrationDataCopyRequestTest
     void testConstructorWithNullIdThrowsException()
     {
         assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(null, 5, 0.95, 10))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("id cannot be null or empty.");
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("id cannot be null or empty.");
     }
 
     @Test
     void testConstructorWithEmptyIdThrowsException()
     {
         assertThatThrownBy(() -> new LiveMigrationDataCopyRequest("", 5, 0.95, 10))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("id cannot be null or empty.");
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("id cannot be null or empty.");
     }
 
     @Test
     void testConstructorWithInvalidMaxIterationsThrowsException()
     {
         assertThatThrownBy(() -> new LiveMigrationDataCopyRequest("test-id", 0, 0.95, 10))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Invalid maxIterations 0. It cannot be less than or equal to zero.");
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Invalid maxIterations 0. It cannot be less than or equal to zero.");
     }
 
     @Test
     void testConstructorWithNegativeMaxIterationsThrowsException()
     {
         assertThatThrownBy(() -> new LiveMigrationDataCopyRequest("test-id", -5, 0.95, 10))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Invalid maxIterations -5. It cannot be less than or equal to zero.");
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Invalid maxIterations -5. It cannot be less than or equal to zero.");
     }
 
     @Test
     void testConstructorWithInvalidSuccessThresholdBelowZeroThrowsException()
     {
         assertThatThrownBy(() -> new LiveMigrationDataCopyRequest("test-id", 5, -0.1, 10))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Invalid successThreshold -0.1. It cannot be less than zero or greater than one.");
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Invalid successThreshold -0.1. It cannot be less than zero or greater than one.");
     }
 
     @Test
     void testConstructorWithInvalidSuccessThresholdAboveOneThrowsException()
     {
         assertThatThrownBy(() -> new LiveMigrationDataCopyRequest("test-id", 5, 1.5, 10))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Invalid successThreshold 1.5. It cannot be less than zero or greater than one.");
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Invalid successThreshold 1.5. It cannot be less than zero or greater than one.");
     }
 
     @Test
     void testConstructorWithInvalidMaxConcurrencyThrowsException()
     {
         assertThatThrownBy(() -> new LiveMigrationDataCopyRequest("test-id", 5, 0.95, 0))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Invalid maxConcurrency 0. It cannot be less than or equal to zero.");
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Invalid maxConcurrency 0. It cannot be less than or equal to zero.");
     }
 
     @Test
     void testConstructorWithNegativeMaxConcurrencyThrowsException()
     {
         assertThatThrownBy(() -> new LiveMigrationDataCopyRequest("test-id", 5, 0.95, -3))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Invalid maxConcurrency -3. It cannot be less than or equal to zero.");
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Invalid maxConcurrency -3. It cannot be less than or equal to zero.");
     }
 
     @Test

@@ -94,7 +94,7 @@ class LiveMigrationFileDownloader
         this.port = builder.port;
         this.executorPools = builder.executorPools;
 
-        this.operationStatus = OperationStatus.getStartingState();
+        this.operationStatus = OperationStatus.startingState();
         this.logPrefix = String.format("liveMigrationRequest=%s iteration=%s ", request.id, iteration);
     }
 
@@ -131,13 +131,13 @@ class LiveMigrationFileDownloader
 
     private Future<InstanceFilesListResponse> cleanupUnnecessaryFiles(InstanceFilesListResponse response)
     {
-        updateState(status -> status.getCleaningState(response.getTotalSize(), response.getFiles().size()));
+        updateState(status -> status.toCleaningState(response.getTotalSize(), response.getFiles().size()));
         return executorPools.internal().executeBlocking(() -> this.deleteUnnecessaryFilesAndDirectories(response));
     }
 
     private Future<List<InstanceFileInfo>> prepareDownloadList(InstanceFilesListResponse response)
     {
-        updateState(OperationStatus::getPreparingState);
+        updateState(OperationStatus::toPreparingState);
         return this.shortlistDownloadFiles(response, request.successThreshold);
     }
 
@@ -145,7 +145,7 @@ class LiveMigrationFileDownloader
     {
         if (instanceFiles.isEmpty())
         {
-            updateState(OperationStatus::getSuccessState);
+            updateState(OperationStatus::toSuccessState);
             return Future.succeededFuture(operationStatus);
         }
 
@@ -165,7 +165,7 @@ class LiveMigrationFileDownloader
         LOGGER.info("{} Downloading {} files from {}:{}", logPrefix, instanceFiles.size(), source, port);
         LOGGER.info("{} download size: {}", logPrefix, downloadSize);
 
-        updateState(status -> status.getDownloadingState(downloadSize, instanceFiles.size()));
+        updateState(status -> status.toDownloadingState(downloadSize, instanceFiles.size()));
         return sortBySizeAndDownload(instanceFiles);
     }
 
@@ -426,7 +426,7 @@ class LiveMigrationFileDownloader
                      .compose(ar -> {
                                   if (ar.succeeded())
                                   {
-                                      return Future.succeededFuture(this.updateState(OperationStatus::getDownloadCompleteState));
+                                      return Future.succeededFuture(this.updateState(OperationStatus::toDownloadCompleteState));
                                   }
                                   LOGGER.warn("{} Failed to download few files. Updating state to {}", logPrefix, State.FAILED);
                                   return Future.succeededFuture(this.updateState(OperationStatus::tryFailureState));
@@ -442,10 +442,10 @@ class LiveMigrationFileDownloader
     {
         return localPathAsync(file.fileUrl, instanceMetadata)
                .compose(path -> vertx.fileSystem().mkdirs(path.toString()))
-               .onSuccess(v -> operationStatus.filesDownloaded().incrementAndGet())
+               .onSuccess(v -> operationStatus.incrementFilesDownloaded())
                .onFailure(e -> {
                    LOGGER.error("{} Could not create directory for url={} ", logPrefix, file.fileUrl, e);
-                   operationStatus.downloadFailures().incrementAndGet();
+                   operationStatus.incrementDownloadFailures();
                });
     }
 
@@ -464,9 +464,9 @@ class LiveMigrationFileDownloader
                .onSuccess(path -> vertx.fileSystem().mkdirs(path.getParent().toAbsolutePath().toString()))
                .compose(path -> vertx.fileSystem().createFile(path.toString()).compose(v -> Future.succeededFuture(path)))
                .compose(path -> updateFileTimestampAsync(path, file.lastModifiedTime))
-               .onSuccess(v -> operationStatus.filesDownloaded().incrementAndGet())
+               .onSuccess(v -> operationStatus.incrementFilesDownloaded())
                .onFailure(e -> {
-                   operationStatus.downloadFailures().incrementAndGet();
+                   operationStatus.incrementDownloadFailures();
                    LOGGER.error("{} Could not create empty file for url={}", logPrefix, file.fileUrl, e);
                });
     }
@@ -493,11 +493,11 @@ class LiveMigrationFileDownloader
                .compose(path -> Future.fromCompletionStage(sidecarClient.liveMigrationStreamFileAsync(instance, file.fileUrl, path.toString()))
                                       .compose(success -> updateFileTimestampAsync(path, file.lastModifiedTime)))
                .onSuccess(v -> {
-                   operationStatus.filesDownloaded().getAndIncrement();
-                   operationStatus.bytesDownloaded().getAndAccumulate(file.size, Long::sum);
+                   operationStatus.incrementFilesDownloaded();
+                   operationStatus.addBytesDownloaded(file.size);
                })
                .onFailure(cause -> {
-                   operationStatus.downloadFailures().getAndIncrement();
+                   operationStatus.incrementDownloadFailures();
                    LOGGER.warn("{} Download failed with an exception: ", logPrefix, cause);
                });
     }

@@ -145,27 +145,27 @@ class LiveMigrationFileStreamHandlerTest
     }
 
     @Test
-    public void testRouteSucceeds(final VertxTestContext context) throws IOException
+    public void testRouteSucceeds(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        final String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
+        String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
         shouldSucceed(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP);
     }
 
     @Test
-    public void testRouteUnConfiguredDirFile(final VertxTestContext context)
+    public void testRouteUnConfiguredDirFile(VertxTestContext context)
     {
         // CDC dir not configured while constructing dummy InstanceMetadata in getInstanceMetadata()
         // Yet requesting a dummy file to see if the endpoint returns proper error
 
-        final String testRoute = LIVE_MIGRATION_CDC_RAW_DIR_PATH + "/0/Commitlog-7-1.db";
+        String testRoute = LIVE_MIGRATION_CDC_RAW_DIR_PATH + "/0/Commitlog-7-1.db";
         shouldThrowError(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
     }
 
     @Test
-    public void testRouteDoubleDotAtTheEndAfterDirIndex(final VertxTestContext context) throws IOException
+    public void testRouteDoubleDotAtTheEndAfterDirIndex(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
@@ -175,7 +175,7 @@ class LiveMigrationFileStreamHandlerTest
     }
 
     @Test
-    public void testRouteDoubleDotAtTheEnd(final VertxTestContext context) throws IOException
+    public void testRouteDoubleDotAtTheEnd(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
@@ -185,7 +185,7 @@ class LiveMigrationFileStreamHandlerTest
     }
 
     @Test
-    public void testRouteDoubleDotAfterDirIndex(final VertxTestContext context) throws IOException
+    public void testRouteDoubleDotAfterDirIndex(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
@@ -195,7 +195,7 @@ class LiveMigrationFileStreamHandlerTest
     }
 
     @Test
-    public void testRequestUsingEncodedDots(final VertxTestContext context) throws IOException
+    public void testRequestUsingEncodedDots(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
@@ -207,7 +207,7 @@ class LiveMigrationFileStreamHandlerTest
 
 
     @Test
-    public void testRequestInvalidPathUsingEncodedDots(final VertxTestContext context) throws IOException
+    public void testRequestInvalidPathUsingEncodedDots(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
@@ -219,7 +219,7 @@ class LiveMigrationFileStreamHandlerTest
 
 
     @Test
-    public void testRequestDirectory(final VertxTestContext context) throws IOException
+    public void testRequestDirectory(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
@@ -230,7 +230,7 @@ class LiveMigrationFileStreamHandlerTest
     }
 
     @Test
-    public void testRouteDirtyRouteThatDoesNotMatchPath(final VertxTestContext context) throws IOException
+    public void testRouteDirtyRouteThatDoesNotMatchPath(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
@@ -240,7 +240,7 @@ class LiveMigrationFileStreamHandlerTest
     }
 
     @Test
-    public void testRouteWithoutDirIndex(final VertxTestContext context) throws IOException
+    public void testRouteWithoutDirIndex(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
@@ -251,7 +251,7 @@ class LiveMigrationFileStreamHandlerTest
     }
 
     @Test
-    public void testRouteHavingNegativeDirIndex(final VertxTestContext context) throws IOException
+    public void testRouteHavingNegativeDirIndex(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
@@ -262,7 +262,7 @@ class LiveMigrationFileStreamHandlerTest
     }
 
     @Test
-    public void testRouteHavingDirIndexThatDoesNotExist(final VertxTestContext context) throws IOException
+    public void testRouteHavingDirIndexThatDoesNotExist(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
@@ -273,46 +273,46 @@ class LiveMigrationFileStreamHandlerTest
     }
 
     @Test
-    public void testRouteFailsForDestinationInstance(final VertxTestContext context) throws IOException
+    public void testRouteFailsForDestinationInstance(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        final String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
+        String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
         shouldThrowError(context, testRoute, FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, THIRD_INSTANCE_IP, 404);
     }
 
     @Test
-    public void testRouteFailsForNonLiveMigratingInstance(final VertxTestContext context) throws IOException
+    public void testRouteFailsForNonLiveMigratingInstance(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, secondInstanceDataDirs.get(0) + filePath);
 
-        final String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
+        String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
         // In this test second instance is neither source nor destination
         shouldThrowError(context, testRoute, "127.0.0.4", "127.0.0.5", SECOND_INSTANCE_IP, 404);
     }
 
 
     @Test
-    public void testRouteFailsExcludedDataDirFile(final VertxTestContext context) throws IOException
+    public void testRouteFailsExcludedDataDirFile(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/test.txt";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        final String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
+        String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
         mockFileExclusion(Collections.singleton("glob:${DATA_FILE_DIR}" + filePath));
 
         shouldThrowError(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
     }
 
     @Test
-    public void testRouteFailsExcludedFileSecondDataDirWildcardExclusion(final VertxTestContext context) throws IOException
+    public void testRouteFailsExcludedFileSecondDataDirWildcardExclusion(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/test.txt";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(1) + filePath);
 
-        final String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/1" + filePath;
+        String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/1" + filePath;
         mockFileExclusion(Collections.singleton("glob:${DATA_FILE_DIR_1}/ks/**"));
 
         shouldThrowError(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
@@ -320,24 +320,24 @@ class LiveMigrationFileStreamHandlerTest
 
 
     @Test
-    public void testRouteFailsWhenParentDirExcluded(final VertxTestContext context) throws IOException
+    public void testRouteFailsWhenParentDirExcluded(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/test.txt";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        final String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
+        String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
         mockDirExclusion(Collections.singleton("glob:${DATA_FILE_DIR}/ks"));
 
         shouldThrowError(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
     }
 
     @Test
-    public void testRouteSucceedsWhenOtherDirExcluded(final VertxTestContext context) throws IOException
+    public void testRouteSucceedsWhenOtherDirExcluded(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/test.txt";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        final String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
+        String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
         mockDirExclusion(Collections.singleton("glob:${DATA_FILE_DIR}/ks2"));
 
         shouldSucceed(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP);
@@ -345,15 +345,15 @@ class LiveMigrationFileStreamHandlerTest
 
 
     @SuppressWarnings("SameParameterValue")
-    void shouldSucceed(final VertxTestContext context,
-                       final String testRoute,
-                       final String source,
-                       final String destination,
+    void shouldSucceed(VertxTestContext context,
+                       String testRoute,
+                       String source,
+                       String destination,
                        String requestHost)
     {
         mockLiveMigrationMap(source, destination);
 
-        final WebClient client = WebClient.create(vertx);
+        WebClient client = WebClient.create(vertx);
         client.get(server.actualPort(), requestHost, testRoute)
               .as(BodyCodec.buffer())
               .send(context.succeeding(resp -> context.verify(() -> {
@@ -364,17 +364,17 @@ class LiveMigrationFileStreamHandlerTest
               })));
     }
 
-    void shouldThrowError(final VertxTestContext context,
-                          final String testRoute,
-                          final String source,
-                          final String destination,
+    void shouldThrowError(VertxTestContext context,
+                          String testRoute,
+                          String source,
+                          String destination,
                           String requestHost,
-                          final int expectedStatusCode)
+                          int expectedStatusCode)
     {
         mockLiveMigrationMap(source, destination);
 
-        final WebClient client = WebClient.create(vertx);
-        final String url = String.format("http://%s:%d%s", requestHost, server.actualPort(), testRoute);
+        WebClient client = WebClient.create(vertx);
+        String url = String.format("http://%s:%d%s", requestHost, server.actualPort(), testRoute);
         client.getAbs(url)
               .as(BodyCodec.buffer())
               .send(context.succeeding(resp -> context.verify(() -> {
@@ -384,7 +384,7 @@ class LiveMigrationFileStreamHandlerTest
               })));
     }
 
-    void mockLiveMigrationMap(final String source, final String destination)
+    void mockLiveMigrationMap(String source, String destination)
     {
         LiveMigrationConfiguration liveMigrationConfig = injector.getInstance(SidecarConfiguration.class)
                                                                  .liveMigrationConfiguration();

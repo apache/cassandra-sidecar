@@ -177,7 +177,8 @@ class LiveMigrationDataCopyTaskHandlerTest
                   assertThat(taskStatus.getString("taskId")).isNotNull();
                   assertThat(taskStatus.getString("status")).isNotNull();
               }))
-              .onComplete(result -> context.completeNow());
+              .onFailure(context::failNow)
+              .onSuccess(result -> context.completeNow());
     }
 
     @Test
@@ -213,7 +214,7 @@ class LiveMigrationDataCopyTaskHandlerTest
                   assertThat(task.getString("message")).isNotNull();
               }))
               .onFailure(context::failNow) // The call should not result a failure
-              .onComplete(result -> context.completeNow());
+              .onSuccess(result -> context.completeNow());
     }
 
     @Test
@@ -260,7 +261,8 @@ class LiveMigrationDataCopyTaskHandlerTest
                   JsonObject newTask = newTaskResult.body();
                   assertThat(newTask).isNotNull();
               }))
-              .onComplete(result -> context.completeNow());
+              .onFailure(context::failNow)
+              .onSuccess(result -> context.completeNow());
     }
 
     @Test
@@ -321,7 +323,8 @@ class LiveMigrationDataCopyTaskHandlerTest
                   assertThat(response).isNotNull();
                   assertThat(response.getString("message")).isNotNull();
               }))
-              .onComplete(result -> context.completeNow());
+              .onFailure(context::failNow)
+              .onSuccess(result -> context.completeNow());
     }
 
     @Test
@@ -392,7 +395,8 @@ class LiveMigrationDataCopyTaskHandlerTest
                   assertThat(cancelledTask.getJsonArray("status").getJsonObject(0).getString("state"))
                   .isEqualTo("SUCCESS");
               }))
-              .onComplete(result -> context.completeNow());
+              .onFailure(context::failNow)
+              .onSuccess(result -> context.completeNow());
     }
 
     @Test
@@ -437,7 +441,8 @@ class LiveMigrationDataCopyTaskHandlerTest
                   assertThat(cancelledTask.getJsonArray("status").getJsonObject(0).getString("state"))
                   .isEqualTo("CANCELLED");
               }))
-              .onComplete(result -> context.completeNow());
+              .onFailure(context::failNow)
+              .onSuccess(result -> context.completeNow());
     }
 
     @SuppressWarnings("SameParameterValue")
