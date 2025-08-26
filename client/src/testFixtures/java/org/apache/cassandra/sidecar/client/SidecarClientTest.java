@@ -1619,7 +1619,7 @@ abstract class SidecarClientTest
                                                  "\"abortedCompactions\":0," +
                                                  "\"reducedCompactions\":0," +
                                                  "\"sstablesDroppedFromCompaction\":5," +
-                                                 "\"completedCompactionsRate\":{\"meanRate\":\"1.23/hour\",\"fifteenMinuteRate\":\"0.45/minute\"}," +
+                                                 "\"completedCompactionsRate\":{\"meanRate\":1.23,\"fifteenMinuteRate\":0.45}," +
                                                  "\"activeCompactions\":[]," +
                                                  "\"activeCompactionsCount\":0," +
                                                  "\"activeCompactionsRemainingTime\":0}";
@@ -1644,8 +1644,8 @@ abstract class SidecarClientTest
             assertThat(result.activeCompactionsCount()).isEqualTo(0);
             assertThat(result.activeCompactionsRemainingTime()).isEqualTo(0);
             assertThat(result.completedCompactionsRate()).isNotNull();
-            assertThat(result.completedCompactionsRate().meanRate()).isEqualTo("1.23/hour");
-            assertThat(result.completedCompactionsRate().fifteenMinuteRate()).isEqualTo("0.45/minute");
+            assertThat(result.completedCompactionsRate().meanRate()).isEqualTo(1.23);
+            assertThat(result.completedCompactionsRate().fifteenMinuteRate()).isEqualTo(0.45);
             validateResponseServed(server, ApiEndpointsV1.COMPACTION_STATS_ROUTE, req -> {});
         }
     }
