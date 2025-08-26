@@ -66,6 +66,7 @@ import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
+import org.apache.cassandra.sidecar.common.response.LifecycleInfoResponse;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
@@ -862,6 +863,45 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                             .build());
     }
 
+    /**
+     * Sends a request to start or stop a provided Cassandra instance.
+     * <p>
+     * This operation asynchronously triggers a start or stop task of the Cassandra instance via Sidecar's LifecycleProvider.
+     * The request body must contain a JSON payload with a "state" field, which can be either "start" or "stop".
+     * On success of intended state submission, the server responds with HTTP 202 Accepted
+     * </p>
+     *
+     * @param instance the instance where the request will be executed
+     * @param state the desired node command state: {@link NodeCommandRequestPayload.State#START} or {@link NodeCommandRequestPayload.State#STOP}
+     * @return a CompletableFuture representing the completion of the operation
+     */
+
+     public CompletableFuture<LifecycleInfoResponse> nodeUpdateLifecycle(SidecarInstance instance, NodeCommandRequestPayload.State state)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .nodeLifecycleUpdateRequest(state)
+                                            .build());
+    }
+
+    /**
+     * Sends a request to retrieve the current lifecycle information of the provided Cassandra instance.
+     * <p>
+     * This operation retrieves the current lifecycle state of the Cassandra instance via Sidecar's LifecycleProvider.
+     * On success, the server responds with HTTP 200 OK and a payload containing the node's actual lifecycle state, desired state,
+     * status of the last lifecycle operation, and a message providing additional context about the last lifecycle operation.
+     * </p>
+     *
+     * @param instance the instance where the request will be executed
+     * @return a CompletableFuture representing the completion of the operation
+     */
+    public CompletableFuture<LifecycleInfoResponse> nodeLifecycleInfo(SidecarInstance instance)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .nodeLifecycleInfoRequest()
+                                            .build());
+    }
 
     /**
      * Returns a copy of the request builder with the default parameters configured for the client.

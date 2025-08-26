@@ -167,6 +167,9 @@ public final class ApiEndpointsV1
     // when a user visits /openapi
     public static final String OPENAPI_HTML_ROUTE = "/openapi/*";
 
+    // Lifecycle APIs
+    public static final String LIFECYCLE_ROUTE = API_V1 + CASSANDRA + "/lifecycle";
+
     private ApiEndpointsV1()
     {
         throw new IllegalStateException(getClass() + " is a constants container and shall not be instantiated");

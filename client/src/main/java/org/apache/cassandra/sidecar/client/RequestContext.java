@@ -39,6 +39,8 @@ import org.apache.cassandra.sidecar.common.request.GossipHealthRequest;
 import org.apache.cassandra.sidecar.common.request.GossipInfoRequest;
 import org.apache.cassandra.sidecar.common.request.GossipUpdateRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
+import org.apache.cassandra.sidecar.common.request.LifecycleInfoRequest;
+import org.apache.cassandra.sidecar.common.request.LifecycleUpdateRequest;
 import org.apache.cassandra.sidecar.common.request.ListOperationalJobsRequest;
 import org.apache.cassandra.sidecar.common.request.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.request.NativeUpdateRequest;
@@ -89,6 +91,7 @@ public class RequestContext
     protected static final NodeDecommissionRequest NODE_DECOMMISSION_REQUEST = new NodeDecommissionRequest();
 
     protected static final StreamStatsRequest STREAM_STATS_REQUEST = new StreamStatsRequest();
+    protected static final LifecycleInfoRequest LIFECYCLE_INFO_REQUEST = new LifecycleInfoRequest();
     protected static final RetryPolicy DEFAULT_NO_RETRY_POLICY = new NoRetryPolicy();
     protected static final RetryPolicy DEFAULT_EXPONENTIAL_BACKOFF_RETRY_POLICY =
     new ExponentialBackoffRetryPolicy(10, 500L, 60_000L);
@@ -612,6 +615,29 @@ public class RequestContext
         public Builder streamsStatsRequest()
         {
             return request(STREAM_STATS_REQUEST);
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link LifecycleUpdateRequest} for the
+         * given {@link NodeCommandRequestPayload.State state}, and returns a reference to this Builder enabling method chaining.
+         *
+         * @param state the intended state for a Cassandra node
+         * @return a reference to this Builder
+         */
+        public Builder nodeLifecycleUpdateRequest(@NotNull NodeCommandRequestPayload.State state)
+        {
+            return request(new LifecycleUpdateRequest(state));
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link LifecycleInfoRequest} and returns a reference to this Builder
+         * enabling method chaining.
+         *
+         * @return a reference to this Builder
+         */
+        public Builder nodeLifecycleInfoRequest()
+        {
+            return request(LIFECYCLE_INFO_REQUEST);
         }
 
         /**

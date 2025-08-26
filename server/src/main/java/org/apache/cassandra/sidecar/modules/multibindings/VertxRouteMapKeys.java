@@ -183,6 +183,16 @@ public interface VertxRouteMapKeys
         HttpMethod HTTP_METHOD = HttpMethod.GET;
         String ROUTE_URI = ApiEndpointsV1.KEYSPACE_SCHEMA_ROUTE;
     }
+    interface LifecycleInfoRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.LIFECYCLE_ROUTE;
+    }
+    interface LifecycleUpdateRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PUT;
+        String ROUTE_URI = ApiEndpointsV1.LIFECYCLE_ROUTE;
+    }
     interface ListCassandraOperationalJobRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.GET;

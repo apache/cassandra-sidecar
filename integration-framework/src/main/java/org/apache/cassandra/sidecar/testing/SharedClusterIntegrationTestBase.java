@@ -25,12 +25,16 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -56,7 +60,10 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.api.ConsistencyLevel;
@@ -91,6 +98,8 @@ import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
+import org.apache.cassandra.sidecar.lifecycle.InJvmDTestLifecycleProvider;
+import org.apache.cassandra.sidecar.lifecycle.LifecycleProvider;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
@@ -396,6 +405,32 @@ public abstract class SharedClusterIntegrationTestBase
         .isTrue();
     }
 
+    protected void waitForNodeToBeUp(String hostname, long timeout, TimeUnit timeUnit) throws TimeoutException
+    {
+        long startTime = System.nanoTime();
+        while (!serverWrapper.upNodes.contains(hostname))
+        {
+            if (System.nanoTime() - startTime > timeUnit.toNanos(timeout))
+            {
+                throw new TimeoutException("Instance " + hostname + " did not come up after " + timeout + ' ' + timeUnit);
+            }
+            Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    protected void waitForNodeToBeDown(String hostname, long timeout, TimeUnit timeUnit) throws TimeoutException
+    {
+        long startTime = System.nanoTime();
+        while (serverWrapper.upNodes.contains(hostname))
+        {
+            if (System.nanoTime() - startTime > timeUnit.toNanos(timeout))
+            {
+                throw new TimeoutException("Instance " + hostname + " did not come down after " + timeout + ' ' + timeUnit);
+            }
+            Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+        }
+    }
+
     /**
      * Stops the Sidecar service
      *
@@ -546,8 +581,10 @@ public abstract class SharedClusterIntegrationTestBase
     {
         public final Injector injector;
         public final Server server;
+        private final InstancesMetadata instancesMetadata;
         public volatile int serverPort;
         private final CountDownLatch sidecarSchemaReadyLatch = new CountDownLatch(1);
+        private final Set<String> upNodes = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
         public ServerWrapper(Injector sidecarServerInjector, Server server)
         {
@@ -555,10 +592,33 @@ public abstract class SharedClusterIntegrationTestBase
             this.server = server;
             // Server must have started to retrieve the port
             this.serverPort = server.actualPort();
+            this.instancesMetadata = injector.getInstance(InstancesMetadata.class);
 
             Vertx vertx = sidecarServerInjector.getInstance(Vertx.class);
             vertx.eventBus().localConsumer(SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED.address(),
                                            msg -> sidecarSchemaReadyLatch.countDown());
+            vertx.eventBus().localConsumer(SidecarServerEvents.ON_CASSANDRA_CQL_READY.address(),
+                                           cqlUpHandler());
+            vertx.eventBus().localConsumer(SidecarServerEvents.ON_CASSANDRA_CQL_DISCONNECTED.address(),
+                                           cqlDownHandler());
+        }
+
+        public Handler<Message<JsonObject>> cqlUpHandler()
+        {
+            return message -> {
+                Integer instanceId = message.body().getInteger("cassandraInstanceId");
+                String hostname = instancesMetadata.instanceFromId(instanceId).host();
+                upNodes.add(hostname);
+            };
+        }
+
+        public Handler<Message<JsonObject>> cqlDownHandler()
+        {
+            return message -> {
+                Integer instanceId = message.body().getInteger("cassandraInstanceId");
+                String hostname = instancesMetadata.instanceFromId(instanceId).host();
+                upNodes.remove(hostname);
+            };
         }
     }
 
@@ -643,6 +703,13 @@ public abstract class SharedClusterIntegrationTestBase
         public ClusterLease clusterLease()
         {
             return new ClusterLease(ClusterLease.Ownership.CLAIMED);
+        }
+
+        @Provides
+        @Singleton
+        public LifecycleProvider lifecycleProvider()
+        {
+            return new InJvmDTestLifecycleProvider(instances);
         }
 
         private List<InetSocketAddress> buildContactPoints()

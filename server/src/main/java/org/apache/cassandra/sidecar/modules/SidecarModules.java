@@ -61,7 +61,8 @@ public class SidecarModules
                        new UtilitiesModule(),
                        new MultiBindingTypeResolverModule(),
                        new LiveMigrationModule(),
-                       new OpenApiModule());
+                       new OpenApiModule(),
+                       new LifecycleModule());
     }
 
     /**
