@@ -25,8 +25,8 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
  */
 public class CompletedCompactionsRateData
 {
-    private final String meanRate;
-    private final String fifteenMinuteRate;
+    private final double meanRate;
+    private final double fifteenMinuteRate;
 
     private CompletedCompactionsRateData(Builder builder)
     {
@@ -34,12 +34,12 @@ public class CompletedCompactionsRateData
         this.fifteenMinuteRate = builder.fifteenMinuteRate;
     }
 
-    public String meanRate()
+    public double meanRate()
     {
         return meanRate;
     }
 
-    public String fifteenMinuteRate()
+    public double fifteenMinuteRate()
     {
         return fifteenMinuteRate;
     }
@@ -54,8 +54,8 @@ public class CompletedCompactionsRateData
      */
     public static final class Builder implements DataObjectBuilder<Builder, CompletedCompactionsRateData>
     {
-        private String meanRate;
-        private String fifteenMinuteRate;
+        private double meanRate;
+        private double fifteenMinuteRate;
 
         private Builder()
         {
@@ -73,7 +73,7 @@ public class CompletedCompactionsRateData
          * @param meanRate the {@code meanRate} to set
          * @return a reference to this Builder
          */
-        public Builder meanRate(String meanRate)
+        public Builder meanRate(double meanRate)
         {
             return update(b -> b.meanRate = meanRate);
         }
@@ -84,7 +84,7 @@ public class CompletedCompactionsRateData
          * @param fifteenMinuteRate the {@code fifteenMinuteRate} to set
          * @return a reference to this Builder
          */
-        public Builder fifteenMinuteRate(String fifteenMinuteRate)
+        public Builder fifteenMinuteRate(double fifteenMinuteRate)
         {
             return update(b -> b.fifteenMinuteRate = fifteenMinuteRate);
         }

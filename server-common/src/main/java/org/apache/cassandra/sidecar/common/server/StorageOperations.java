@@ -149,4 +149,21 @@ public interface StorageOperations
      * Triggers start gossip of the Cassandra node
      */
     void startGossiping();
+
+    /**
+     * Returns the number of concurrent compactors configured for the node
+     *
+     * @return number of concurrent compactors
+     */
+    int getConcurrentCompactors();
+
+    /**
+     * Returns the current compaction throughput in bytes per second.
+     * This method provides the throughput measurement in bytes per second, which is useful
+     * for calculating estimated completion times and remaining work for active compactions.
+     * Spelling of throughput is internationally wrong to match the method name in Cassandra StorageServiceMBean.
+     *
+     * @return the current compaction throughput in bytes per second, or 0 if throughput cannot be determined
+     */
+    long getCompactionThroughputBytesPerSec();
 }

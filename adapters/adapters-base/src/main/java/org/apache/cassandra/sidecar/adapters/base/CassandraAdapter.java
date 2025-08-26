@@ -29,6 +29,7 @@ import com.datastax.driver.core.Statement;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
+import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
@@ -152,6 +153,16 @@ public class CassandraAdapter implements ICassandraAdapter
     public TableOperations tableOperations()
     {
         return new CassandraTableOperations(jmxClient);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NotNull
+    public CompactionManagerOperations compactionManagerOperations()
+    {
+        return new CassandraCompactionManagerOperations(jmxClient);
     }
 
     /**

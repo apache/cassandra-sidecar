@@ -49,7 +49,7 @@ public final class CompactionStatsConverter
     {
         if (data == null)
         {
-            return null;
+            throw new IllegalStateException("No compaction stats data available");
         }
 
         CompactionStatsResponse.CompletedCompactionsRate responseRate = null;

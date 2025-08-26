@@ -24,6 +24,7 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.response.data.ActiveCompactionEntry;
 
@@ -68,8 +69,8 @@ public class CompactionStatsResponse
         public static final String MEAN_RATE = "meanRate";
         public static final String FIFTEEN_MINUTE_RATE = "fifteenMinuteRate";
 
-        private final String meanRate;
-        private final String fifteenMinuteRate;
+        private final double meanRate;
+        private final double fifteenMinuteRate;
 
         private CompletedCompactionsRate(Builder builder)
         {
@@ -78,21 +79,21 @@ public class CompactionStatsResponse
         }
 
         @JsonCreator
-        public CompletedCompactionsRate(@JsonProperty(MEAN_RATE) final String meanRate,
-                                        @JsonProperty(FIFTEEN_MINUTE_RATE) final String fifteenMinuteRate)
+        public CompletedCompactionsRate(@JsonProperty(MEAN_RATE) final double meanRate,
+                                        @JsonProperty(FIFTEEN_MINUTE_RATE) final double fifteenMinuteRate)
         {
             this.meanRate = meanRate;
             this.fifteenMinuteRate = fifteenMinuteRate;
         }
 
         @JsonProperty(MEAN_RATE)
-        public String meanRate()
+        public double meanRate()
         {
             return meanRate;
         }
 
         @JsonProperty(FIFTEEN_MINUTE_RATE)
-        public String fifteenMinuteRate()
+        public double fifteenMinuteRate()
         {
             return fifteenMinuteRate;
         }
@@ -107,8 +108,8 @@ public class CompactionStatsResponse
          */
         public static final class Builder implements DataObjectBuilder<Builder, CompletedCompactionsRate>
         {
-            private String meanRate;
-            private String fifteenMinuteRate;
+            private double meanRate;
+            private double fifteenMinuteRate;
 
             private Builder()
             {
@@ -126,7 +127,7 @@ public class CompactionStatsResponse
              * @param meanRate the {@code meanRate} to set
              * @return a reference to this Builder
              */
-            public Builder meanRate(String meanRate)
+            public Builder meanRate(double meanRate)
             {
                 return update(b -> b.meanRate = meanRate);
             }
@@ -137,7 +138,7 @@ public class CompactionStatsResponse
              * @param fifteenMinuteRate the {@code fifteenMinuteRate} to set
              * @return a reference to this Builder
              */
-            public Builder fifteenMinuteRate(String fifteenMinuteRate)
+            public Builder fifteenMinuteRate(double fifteenMinuteRate)
             {
                 return update(b -> b.fifteenMinuteRate = fifteenMinuteRate);
             }

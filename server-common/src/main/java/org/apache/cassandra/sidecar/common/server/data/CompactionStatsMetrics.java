@@ -16,9 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.adapters.base;
-
-import static org.apache.cassandra.sidecar.adapters.base.CassandraMetricsOperations.MetricType;
+package org.apache.cassandra.sidecar.common.server.data;
 
 /**
  * Represents the metrics related to compaction stats that are supported by the Sidecar
@@ -33,7 +31,7 @@ public enum CompactionStatsMetrics
     PENDING_TASKS_BY_TABLE_NAME("PendingTasksByTableName", MetricType.GAUGE);
 
     private final String metricName;
-    final MetricType type;
+    public final MetricType type;
 
     CompactionStatsMetrics(String metricName, MetricType type)
     {
@@ -41,7 +39,7 @@ public enum CompactionStatsMetrics
         this.type = type;
     }
 
-    String metricName()
+    public String metricName()
     {
         return metricName;
     }

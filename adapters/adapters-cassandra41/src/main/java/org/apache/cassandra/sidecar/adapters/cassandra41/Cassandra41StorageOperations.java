@@ -23,11 +23,14 @@ import java.util.Map;
 import org.apache.cassandra.sidecar.adapters.base.CassandraStorageOperations;
 import org.apache.cassandra.sidecar.adapters.base.RingProvider;
 import org.apache.cassandra.sidecar.adapters.base.TokenRangeReplicaProvider;
+import org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
 
 /**
  * An implementation of the {@link StorageOperations} that interfaces with Cassandra 4.1 and later
@@ -67,5 +70,15 @@ public class Cassandra41StorageOperations extends CassandraStorageOperations
                              @Nullable Map<String, String> options)
     {
         super.takeSnapshotInternal(tag, keyspace, table, options);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public long getCompactionThroughputBytesPerSec()
+    {
+        return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                .getCompactionThroughtputBytesPerSec();
     }
 }

@@ -294,4 +294,24 @@ public class CassandraStorageOperations implements StorageOperations
         jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
                  .startGossiping();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getConcurrentCompactors()
+    {
+        return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                        .getConcurrentCompactors();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public long getCompactionThroughputBytesPerSec()
+    {
+        LOGGER.warn("getCompactionThroughputBytesPerSec is not supported in Cassandra 4.0");
+        return 0;
+    }
 }

@@ -112,4 +112,10 @@ public interface ICassandraAdapter
      * @throws CassandraUnavailableException when Cassandra is not available
      */
     @NotNull TableOperations tableOperations();
+
+    /**
+     * @return the {@link CompactionManagerOperations} implementation for the Cassandra cluster
+     * @throws CassandraUnavailableException when Cassandra is not available
+     */
+    @NotNull CompactionManagerOperations compactionManagerOperations() throws CassandraUnavailableException;
 }
