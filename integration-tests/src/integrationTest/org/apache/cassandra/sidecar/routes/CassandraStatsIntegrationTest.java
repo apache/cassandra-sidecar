@@ -35,8 +35,8 @@ import io.vertx.ext.web.client.HttpResponse;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
-import org.apache.cassandra.sidecar.common.response.data.ActiveCompactionEntry;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
+import org.apache.cassandra.sidecar.common.response.data.CompactionInfo;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
@@ -475,7 +475,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
         for (int i = 0; i < stats.activeCompactions().size(); i++)
         {
-            ActiveCompactionEntry compaction = stats.activeCompactions().get(i);
+            CompactionInfo compaction = stats.activeCompactions().get(i);
             logger.info("Validating active compaction {}: {}", i + 1, compaction.id());
 
             // Required fields validation
@@ -485,17 +485,14 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
             assertThat(compaction.keyspace())
                     .as("Active compaction keyspace should not be null")
-                    .isNotNull()
                     .isNotBlank();
 
             assertThat(compaction.table())
                     .as("Active compaction table should not be null")
-                    .isNotNull()
                     .isNotBlank();
 
             assertThat(compaction.taskType())
                     .as("Active compaction task type should not be null")
-                    .isNotNull()
                     .isNotBlank();
 
             // Byte counters validation
@@ -533,7 +530,6 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
                 {
                     assertThat(ssTable)
                             .as("SSTable name should not be null or blank")
-                            .isNotNull()
                             .isNotBlank();
                 }
             }

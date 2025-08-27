@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
-import org.apache.cassandra.sidecar.common.response.data.ActiveCompactionEntry;
+import org.apache.cassandra.sidecar.common.response.data.CompactionInfo;
 import org.apache.cassandra.sidecar.common.server.data.ActiveCompactionEntryData;
 import org.apache.cassandra.sidecar.common.server.data.CompactionStatsData;
 
@@ -61,7 +61,7 @@ public final class CompactionStatsConverter
                 .build();
         }
 
-        List<ActiveCompactionEntry> responseActiveCompactions = null;
+        List<CompactionInfo> responseActiveCompactions = null;
         if (data.activeCompactions() != null)
         {
             responseActiveCompactions = data.activeCompactions().stream()
@@ -91,14 +91,14 @@ public final class CompactionStatsConverter
      * @param data the data object to convert
      * @return the API response object
      */
-    private static ActiveCompactionEntry toActiveCompactionEntry(ActiveCompactionEntryData data)
+    private static CompactionInfo toActiveCompactionEntry(ActiveCompactionEntryData data)
     {
         if (data == null)
         {
             return null;
         }
 
-        return ActiveCompactionEntry.builder()
+        return CompactionInfo.builder()
             .id(data.id())
             .keyspace(data.keyspace())
             .table(data.table())
@@ -106,7 +106,7 @@ public final class CompactionStatsConverter
             .completedBytes(data.completedBytes())
             .totalBytes(data.totalBytes())
             .percentCompleted(data.percentCompleted())
-            .ssTables(data.ssTables())
+            .sstables(data.ssTables())
             .targetDirectory(data.targetDirectory())
             .build();
     }

@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
-import org.apache.cassandra.sidecar.common.response.data.ActiveCompactionEntry;
+import org.apache.cassandra.sidecar.common.response.data.CompactionInfo;
 
 /**
  * Response class for the CompactionStats API
@@ -56,7 +56,7 @@ public class CompactionStatsResponse
     private final long reducedCompactions;
     private final long sstablesDroppedFromCompaction;
     private final CompletedCompactionsRate completedCompactionsRate;
-    private final List<ActiveCompactionEntry> activeCompactions;
+    private final List<CompactionInfo> activeCompactions;
     private final long activeCompactionsCount;
     private final long activeCompactionsRemainingTime;
 
@@ -198,7 +198,7 @@ public class CompactionStatsResponse
                                    @JsonProperty(REDUCED_COMPACTIONS) long reducedCompactions,
                                    @JsonProperty(SSTABLES_DROPPED_FROM_COMPACTION) long sstablesDroppedFromCompaction,
                                    @JsonProperty(COMPLETED_COMPACTIONS_RATE) CompletedCompactionsRate completedCompactionsRate,
-                                   @JsonProperty(ACTIVE_COMPACTIONS) List<ActiveCompactionEntry> activeCompactions,
+                                   @JsonProperty(ACTIVE_COMPACTIONS) List<CompactionInfo> activeCompactions,
                                    @JsonProperty(ACTIVE_COMPACTIONS_COUNT) long activeCompactionsCount,
                                    @JsonProperty(ACTIVE_COMPACTIONS_REMAINING_TIME) long activeCompactionsRemainingTime)
     {
@@ -272,7 +272,7 @@ public class CompactionStatsResponse
 
 
     @JsonProperty(ACTIVE_COMPACTIONS)
-    public List<ActiveCompactionEntry> activeCompactions()
+    public List<CompactionInfo> activeCompactions()
     {
         return activeCompactions;
     }
@@ -308,7 +308,7 @@ public class CompactionStatsResponse
         private long reducedCompactions;
         private long sstablesDroppedFromCompaction;
         private CompletedCompactionsRate completedCompactionsRate;
-        private List<ActiveCompactionEntry> activeCompactions;
+        private List<CompactionInfo> activeCompactions;
         private long activeCompactionsCount;
         private long activeCompactionsRemainingTime;
 
@@ -427,7 +427,7 @@ public class CompactionStatsResponse
          * @param activeCompactions the {@code activeCompactions} to set
          * @return a reference to this Builder
          */
-        public Builder activeCompactions(List<ActiveCompactionEntry> activeCompactions)
+        public Builder activeCompactions(List<CompactionInfo> activeCompactions)
         {
             return update(b -> b.activeCompactions = activeCompactions);
         }
