@@ -67,19 +67,19 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMe
 class LiveMigrationFileDownloader
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationFileDownloader.class);
-    final Vertx vertx;
-    final LiveMigrationDataCopyRequest request;
-    final int iteration;
-    final Consumer<OperationStatus> statusUpdater;
-    final InstanceMetadata instanceMetadata;
-    final LiveMigrationConfiguration liveMigrationConfiguration;
-    final SidecarClient sidecarClient;
-    final String source;
-    final int port;
-    final String logPrefix;
-    final ExecutorPools executorPools;
-    OperationStatus operationStatus;
-    AsyncConcurrentTaskExecutor<Void> concurrentTaskExecutor;
+    private final Vertx vertx;
+    private final LiveMigrationDataCopyRequest request;
+    private final int iteration;
+    private final Consumer<OperationStatus> statusUpdater;
+    private final InstanceMetadata instanceMetadata;
+    private final LiveMigrationConfiguration liveMigrationConfiguration;
+    private final SidecarClient sidecarClient;
+    private final String source;
+    private final int port;
+    private final String logPrefix;
+    private final ExecutorPools executorPools;
+    private OperationStatus operationStatus;
+    private AsyncConcurrentTaskExecutor<Void> concurrentTaskExecutor;
 
     protected LiveMigrationFileDownloader(Builder builder)
     {
@@ -162,8 +162,8 @@ class LiveMigrationFileDownloader
     private Future<OperationStatus> performDownload(List<InstanceFileInfo> instanceFiles)
     {
         long downloadSize = calculateDownloadSize(instanceFiles);
-        LOGGER.info("{} Downloading {} files from {}:{}", logPrefix, instanceFiles.size(), source, port);
-        LOGGER.info("{} download size: {}", logPrefix, downloadSize);
+        LOGGER.info("{} Downloading {} files from {}:{}, download size: {}",
+                    logPrefix, instanceFiles.size(), source, port, downloadSize);
 
         updateState(status -> status.toDownloadingState(downloadSize, instanceFiles.size()));
         return sortBySizeAndDownload(instanceFiles);
@@ -335,8 +335,8 @@ class LiveMigrationFileDownloader
             }
         }
 
-        LOGGER.info("{} Deleted {} unwanted files from local.", logPrefix, filesDeleted.get());
-        LOGGER.info("{} Deleted {} unwanted directories from local.", logPrefix, directoriesDeleted.get());
+        LOGGER.info("{} Deleted {} unwanted files and {} unwanted directories from local.",
+                    logPrefix, filesDeleted.get(), directoriesDeleted.get());
     }
 
     /**
@@ -372,41 +372,44 @@ class LiveMigrationFileDownloader
 
         // Calculate percentage of data required to download
         double toDownloadPercentage = ((totalSize - downloadSize) * 1.0) / totalSize;
-        LOGGER.info("{} Remaining size to download={} bytes", logPrefix, downloadSize);
-        LOGGER.info("{} Download percentage={}, success threshold={}", logPrefix, toDownloadPercentage, successThreshold);
+        LOGGER.info("{} Remaining size to download={} bytes, download percentage={}, success threshold={}",
+                    logPrefix, downloadSize, toDownloadPercentage, successThreshold);
 
         if (toDownloadPercentage <= successThreshold)
         {
             return Future.succeededFuture(filesToDownload);
         }
 
-        LOGGER.info("{} Download size met the successThreshold({}).{}",
-                    logPrefix,
-                    successThreshold,
-                    " Skipping download of " + filesToDownload.size() + " files of size " + downloadSize);
+        LOGGER.info("{} Download size met the successThreshold({}). Skipping download {} files of size {}",
+                    logPrefix, successThreshold, filesToDownload.size(), downloadSize);
         return Future.succeededFuture(Collections.emptyList());
     }
 
+    /**
+     * Sorting by size in descending order so that large files will be downloaded first.
+     * Larger files less likely to change compared to small files.
+     *
+     * @param instanceFileInfoList list of {@link InstanceFileInfo}
+     * @return future of {@link  OperationStatus}
+     */
     @VisibleForTesting
     Future<OperationStatus> sortBySizeAndDownload(List<InstanceFileInfo> instanceFileInfoList)
     {
         List<Future<Void>> futureList = new ArrayList<>(instanceFileInfoList.size());
 
-        // Sorting by size in descending order so that large files will be downloaded first. This will implicitly put
-        // directories at the end (because size is explicitly set to -1 for directories).
+        //This will implicitly put directories at the end (because size is explicitly set to -1 for directories).
         instanceFileInfoList.sort(Collections.reverseOrder(Comparator.comparingLong(instanceFileInfo -> instanceFileInfo.size)));
 
         List<Callable<Future<Void>>> downloadTasks = new ArrayList<>();
         SidecarInstanceImpl instance = new SidecarInstanceImpl(source, port);
 
-
         for (InstanceFileInfo file : instanceFileInfoList)
         {
-            if (file.fileType.equals(FileType.DIRECTORY))
+            if (file.fileType == FileType.DIRECTORY)
             {
                 futureList.add(createDirectory(file));
             }
-            else if (file.fileType.equals(FileType.FILE) && file.size == 0)
+            else if (file.fileType == FileType.FILE && file.size == 0)
             {
                 futureList.add(createEmptyFile(file));
             }
@@ -423,16 +426,10 @@ class LiveMigrationFileDownloader
         futureList.addAll(taskFutures);
 
         return Future.join(futureList)
-                     .compose(ar -> {
-                                  if (ar.succeeded())
-                                  {
-                                      return Future.succeededFuture(this.updateState(OperationStatus::toDownloadCompleteState));
-                                  }
-                                  LOGGER.warn("{} Failed to download few files. Updating state to {}", logPrefix, State.FAILED);
-                                  return Future.succeededFuture(this.updateState(OperationStatus::tryFailureState));
-                              },
-                              ar -> {
-                                  LOGGER.error("{} Failed to download files", logPrefix, ar);
+                     .compose(res -> res.succeeded() ? Future.succeededFuture() : Future.failedFuture(res.cause()))
+                     .compose(ar -> Future.succeededFuture(this.updateState(OperationStatus::toDownloadCompleteState)),
+                              cause -> {
+                                  LOGGER.error("{} Failed to download files.  Updating state to {}", logPrefix, State.FAILED, cause);
                                   return Future.succeededFuture(this.updateState(OperationStatus::tryFailureState));
                               });
     }
@@ -460,10 +457,16 @@ class LiveMigrationFileDownloader
     Future<Void> createEmptyFile(InstanceFileInfo file)
     {
         return localPathAsync(file.fileUrl, instanceMetadata)
-               .expecting(path -> path.getParent() != null)
-               .onSuccess(path -> vertx.fileSystem().mkdirs(path.getParent().toAbsolutePath().toString()))
-               .compose(path -> vertx.fileSystem().createFile(path.toString()).compose(v -> Future.succeededFuture(path)))
-               .compose(path -> updateFileTimestampAsync(path, file.lastModifiedTime))
+               .compose(path -> {
+                   if (path.getParent() == null)
+                   {
+                       return Future.failedFuture("Parent directory for path " + path + " is null." +
+                                                  " Cannot create empty file.");
+                   }
+                   return vertx.fileSystem().mkdirs(path.getParent().toAbsolutePath().toString())
+                               .compose(v -> vertx.fileSystem().createFile(path.toString()))
+                               .compose(v -> updateFileTimestampAsync(path, file.lastModifiedTime));
+               })
                .onSuccess(v -> operationStatus.incrementFilesDownloaded())
                .onFailure(e -> {
                    operationStatus.incrementDownloadFailures();
@@ -508,6 +511,18 @@ class LiveMigrationFileDownloader
                                 @NotNull InstanceMetadata metadata)
     {
         return Future.future(promise -> promise.complete(localPath(fileUrl, metadata)));
+    }
+
+    @VisibleForTesting
+    InstanceMetadata instanceMetadata()
+    {
+        return instanceMetadata;
+    }
+
+    @VisibleForTesting
+    OperationStatus operationStatus()
+    {
+        return operationStatus;
     }
 
     /**

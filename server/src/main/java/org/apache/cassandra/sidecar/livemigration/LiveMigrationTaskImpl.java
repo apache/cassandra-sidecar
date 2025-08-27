@@ -108,8 +108,13 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
         handleRetry(startInternal(iteration), iteration, request.maxIterations, promise);
     }
 
-    public Future<OperationStatus> startInternal(int iteration)
+    Future<OperationStatus> startInternal(int iteration)
     {
+        if (cancelled)
+        {
+            return Future.failedFuture("Data copy task got cancelled.");
+        }
+
         downloader = LiveMigrationFileDownloader.builder()
                                                 .vertx(vertx)
                                                 .sidecarClient(sidecarClientProvider.get())
@@ -177,7 +182,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
         return new LiveMigrationTaskResponse(request, getStatusResponse(), source, port);
     }
 
-    public Consumer<OperationStatus> statusUpdater(int iteration)
+    Consumer<OperationStatus> statusUpdater(int iteration)
     {
         return (operationStatus) -> statusMap.put(iteration, operationStatus);
     }
