@@ -75,13 +75,25 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
             return;
         }
 
-        ValidationUtils.validateKeyspaceExists(context, metadataFetcher, executorPools, host, input.keyspace())
+        ValidationUtils.validateKeyspaceExists(metadataFetcher, executorPools, host, input.keyspace())
         .onComplete(ar -> {
-            // If validation failed, the context has already been failed by the utility method
-            if (ar.failed() || context.failed())
+            if (ar.failed())
             {
+                // Handle failure
+                if (ar.cause().getMessage().contains("not found"))
+                {
+                    context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, ar.cause().getMessage()));
+                }
+                else
+                {
+                    context.fail(ar.cause());
+                }
                 return;
             }
+            
+            // Store metadata in context
+            KeyspaceMetadata keyspaceMetadata = ar.result();
+            RoutingContextUtils.put(context, RoutingContextUtils.SC_KEYSPACE_METADATA, keyspaceMetadata);
 
             String table = input.tableName();
             if (table == null)
@@ -92,7 +104,6 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
 
             try
             {
-                KeyspaceMetadata keyspaceMetadata = RoutingContextUtils.get(context, RoutingContextUtils.SC_KEYSPACE_METADATA);
                 TableMetadata tableMetadata = keyspaceMetadata.getTable(table);
                 if (tableMetadata == null)
                 {

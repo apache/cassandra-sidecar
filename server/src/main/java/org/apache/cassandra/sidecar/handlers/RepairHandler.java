@@ -135,7 +135,6 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
             return;
         }
 
-        // Get the result, waiting for the specified wait time for result
         job.asyncResult(executorPools.service(), config.operationalJobExecutionMaxWaitTime())
            .onComplete(v -> OperationalJobUtils.sendStatusBasedResponse(context, job));
     }

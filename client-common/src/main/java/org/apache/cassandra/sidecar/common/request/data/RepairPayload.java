@@ -18,9 +18,7 @@
 
 package org.apache.cassandra.sidecar.common.request.data;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -29,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -148,35 +147,32 @@ public class RepairPayload
      */
     public enum RepairType
     {
-        FULL("full"),
-        INCREMENTAL("incremental");
-
-        private final String value;
-
-        RepairType(String value)
-        {
-            this.value = value;
-        }
+        FULL,
+        INCREMENTAL;
 
         @JsonValue
         public String getValue()
         {
-            return value;
+            return name().toLowerCase();
         }
 
         @JsonCreator
-        public static RepairType fromValue(String text)
+        public static RepairType fromValue(@NotNull String text)
         {
-            String normalized = Optional.ofNullable(text)
-                                        .map(String::trim)
-                                        .filter(s -> !s.isEmpty())
-                                        .map(String::toLowerCase)
-                                        .orElse(null);
+            String trimmed = text.trim();
+            try
+            {
+                if (trimmed.isEmpty())
+                {
+                    throw new IllegalArgumentException("Unexpected value: " + text);
+                }
 
-            return Arrays.stream(RepairType.values())
-                         .filter(type -> type.getValue().equals(normalized))
-                         .findFirst()
-                         .orElseThrow(() -> new IllegalArgumentException("Unexpected value: " + text));
+                return valueOf(trimmed.toUpperCase());
+            }
+            catch (IllegalArgumentException e)
+            {
+                throw new IllegalArgumentException("Unexpected value: " + text);
+            }
         }
     }
 

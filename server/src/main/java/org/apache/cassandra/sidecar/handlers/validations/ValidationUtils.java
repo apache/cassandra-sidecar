@@ -19,14 +19,9 @@
 package org.apache.cassandra.sidecar.handlers.validations;
 
 import com.datastax.driver.core.KeyspaceMetadata;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
-import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-
-import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
  * Utility class for validation handlers that check the existence of Cassandra schema elements.
@@ -59,17 +54,16 @@ public class ValidationUtils
     }
 
     /**
-     * Validates that a keyspace exists and stores its metadata in the routing context.
+     * Validates that a keyspace exists.
      *
-     * @param context         the routing context
      * @param metadataFetcher the metadata fetcher
      * @param executorPools   the executor pools
      * @param host            the host to validate against
      * @param keyspace        the keyspace name to validate
-     * @return a Future that completes when validation is done
+     * @return a Future that completes with the KeyspaceMetadata if the keyspace exists,
+     *         or fails with an error if the keyspace doesn't exist or an error occurs
      */
-    public static Future<KeyspaceMetadata> validateKeyspaceExists(RoutingContext context,
-                                                                 InstanceMetadataFetcher metadataFetcher,
+    public static Future<KeyspaceMetadata> validateKeyspaceExists(InstanceMetadataFetcher metadataFetcher,
                                                                  ExecutorPools executorPools,
                                                                  String host,
                                                                  String keyspace)
@@ -78,18 +72,12 @@ public class ValidationUtils
                .compose(keyspaceMetadata -> {
                    if (keyspaceMetadata == null)
                    {
-                       context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND,
-                                                     "Keyspace " + keyspace + " was not found"));
                        return Future.failedFuture("Keyspace " + keyspace + " was not found");
                    }
                    else
                    {
-                       RoutingContextUtils.put(context, RoutingContextUtils.SC_KEYSPACE_METADATA, keyspaceMetadata);
                        return Future.succeededFuture(keyspaceMetadata);
                    }
-               }, throwable -> {
-                   context.fail(throwable);
-                   return Future.failedFuture(throwable);
                });
     }
 }

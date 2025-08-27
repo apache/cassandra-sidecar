@@ -26,12 +26,12 @@ import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfigur
 public interface RepairJobsConfiguration
 {
     /**
-     * @return the max runtime (in milliseconds) of a repair job tracked by the Sidecar
+     * @return the max retry attempts for the repair job status to be valid
      */
-    MillisecondBoundConfiguration maxRepairJobRuntime();
+    int validRepairStatusAttempts();
 
     /**
-     * @return the polling interval (in milliseconds) that checks for the completion of the repair job
+     * @return the polling interval (in milliseconds) that checks for the status of the repair job
      */
     MillisecondBoundConfiguration repairPollInterval();
 }

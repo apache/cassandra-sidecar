@@ -57,8 +57,8 @@ import org.mockito.ArgumentCaptor;
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.CREATED;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
-import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -243,6 +243,7 @@ public class RepairHandlerTest
     @Test
     void testRepairHandlerLongRunning(VertxTestContext context)
     {
+        // Simulate repair invocation taking 6s
         doAnswer(AdditionalAnswers.answersWithDelay(6000, invocation -> null))
         .when(mockStorageOperations).repair(anyString(), any());
 
@@ -252,6 +253,8 @@ public class RepairHandlerTest
                                              .tables(List.of("test_table"))
                                              .build();
 
+        // Since it was the OperationalJobExecutionTimeout that triggered the response, the job is still
+        // in CREATED state, as we returned before polling for the job status.
         client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
               .putHeader("Content-Type", "application/json")
               .sendJson(payload, context.succeeding(response -> {
@@ -260,7 +263,7 @@ public class RepairHandlerTest
 
                   OperationalJobResponse repairResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(repairResponse).isNotNull();
-                  assertThat(repairResponse.status()).isEqualTo(RUNNING);
+                  assertThat(repairResponse.status()).isEqualTo(CREATED);
                   context.completeNow();
               }));
     }

@@ -104,7 +104,7 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
         OperationalJobResponse response = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", testRoute)
                                                                      .as(BodyCodec.json(OperationalJobResponse.class))
                                                                      .sendJson(JsonObject.mapFrom(payload))
-                                                                     .expecting(HttpResponseExpectation.SC_OK))
+                                                                     .expecting(HttpResponseExpectation.SC_ACCEPTED))
                                           .body();
 
         Uninterruptibles.sleepUninterruptibly(5, TimeUnit.SECONDS);

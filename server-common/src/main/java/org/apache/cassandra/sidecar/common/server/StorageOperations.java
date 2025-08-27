@@ -138,7 +138,7 @@ public interface StorageOperations
     /**
      * Triggers a repair operation for the given keyspace and options
      *
-     * @param keyspace keyspace for the repair ioeration
+     * @param keyspace keyspace for the repair operation
      * @param options  repair options
      * @return an integer value representing the status of the repair operation
      * which can be used as a reference to check for the status of the repair session via  {@link #getParentRepairStatus(int)}.

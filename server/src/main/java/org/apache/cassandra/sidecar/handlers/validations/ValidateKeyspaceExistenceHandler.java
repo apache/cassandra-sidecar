@@ -28,6 +28,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
+import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
@@ -70,13 +71,27 @@ public class ValidateKeyspaceExistenceHandler extends AbstractHandler<Name>
             return;
         }
 
-        ValidationUtils.validateKeyspaceExists(context, metadataFetcher, executorPools, host, keyspace.name())
+        ValidationUtils.validateKeyspaceExists(metadataFetcher, executorPools, host, keyspace.name())
         .onComplete(ar -> {
-            if (ar.succeeded() && !context.failed())
+            if (ar.succeeded())
             {
+                // Store metadata in context
+                KeyspaceMetadata metadata = ar.result();
+                RoutingContextUtils.put(context, RoutingContextUtils.SC_KEYSPACE_METADATA, metadata);
                 context.next();
             }
-            // Context has already been failed by the utility method when validation fails
+            else
+            {
+                // Handle failure
+                if (ar.cause().getMessage().contains("not found"))
+                {
+                    context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, ar.cause().getMessage()));
+                }
+                else
+                {
+                    context.fail(ar.cause());
+                }
+            }
         });
     }
 }

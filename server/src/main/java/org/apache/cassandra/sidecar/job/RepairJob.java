@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.adapters.base.RepairOptions;
+import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
@@ -39,6 +41,15 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * Implementation of {@link OperationalJob} to perform repair operation.
+ * <p>
+ * Cassandra repair operations are asynchronous and can run for extended periods. When a repair is
+ * detected to be IN_PROGRESS, this job sets its status to RUNNING and completes its promise.
+ * <p>
+ * The job's status can be checked at any time using the {@link #status()} method, which directly
+ * queries the current repair status from Cassandra, regardless of whether the promise has been completed.
+ * <p>
+ * This design ensures timely responses to clients while allowing accurate status reporting for
+ * long-running repair operations.
  */
 public class RepairJob extends OperationalJob
 {
@@ -50,6 +61,8 @@ public class RepairJob extends OperationalJob
     private final RepairJobsConfiguration config;
     private final TaskExecutorPool internalPool;
     protected StorageOperations storageOperations;
+    private OperationalJobStatus currentStatus;
+    private int commandId = -1; // Store the command ID for status checks
 
     /**
      * Enum representing the status of a parent repair session
@@ -79,6 +92,7 @@ public class RepairJob extends OperationalJob
         this.config = config;
         this.storageOperations = storageOps;
         this.repairParams = repairParams;
+        this.currentStatus = OperationalJobStatus.CREATED;
     }
 
     /**
@@ -98,61 +112,201 @@ public class RepairJob extends OperationalJob
     @Override
     protected Future<Void> executeInternal()
     {
-        Map<String, String> options = generateRepairOptions(repairParams.requestPayload());
-        String keyspace = repairParams.keyspace().name();
-
-        LOGGER.info("Executing repair operation for keyspace {} jobId={} maxRuntime={}",
-                    keyspace, this.jobId(), config.maxRepairJobRuntime());
-
-        int cmd = storageOperations.repair(keyspace, options);
-        if (cmd <= 0)
+        final Promise<Void> repairJobPromise = Promise.promise();
+        try
         {
-            // When there are no relevant token ranges for the keyspace or RF is 1, the repair is inapplicable
-            LOGGER.info("Repair is not applicable for the provided options and keyspace '{}' jobId '{}'", keyspace, this.jobId());
-            return Future.succeededFuture();
-        }
-        final Promise<Void> repairPromise = Promise.promise();
-        final Promise<Boolean> maxWaitTimePromise = Promise.promise();
-        final long timerId = internalPool.setTimer(config.maxRepairJobRuntime().toMillis(),
-                                             d -> maxWaitTimePromise.tryComplete(true));
+            Map<String, String> options = generateRepairOptions(repairParams.requestPayload());
+            String keyspace = repairParams.keyspace().name();
 
-        queryForCompletedRepair(repairPromise, cmd);
-        final boolean repairCompleted = repairPromise.future().isComplete();
-        
-        final Long periodicId;
-        if (!repairCompleted)
-        {
-            periodicId = internalPool.setPeriodic(config.repairPollInterval().toMillis(),
-                                                id -> queryForCompletedRepair(repairPromise, cmd));
-            LOGGER.debug("Setting up periodic polling for repair job {}", this.jobId());
-        }
-        else
-        {
-            periodicId = null;
-            LOGGER.info("Repair job {} completed from eager status check", this.jobId());
-        }
+            LOGGER.info("Executing repair operation for keyspace {} jobId={}",
+                        keyspace, this.jobId());
 
-        repairPromise.future().onComplete(ar -> {
-            internalPool.cancelTimer(timerId);
-            if (periodicId != null)
+            try
             {
-                internalPool.cancelTimer(periodicId);
+                commandId = storageOperations.repair(keyspace, options);
             }
-            maxWaitTimePromise.tryComplete(false);
-        });
+            catch (Exception e)
+            {
+                LOGGER.error("Failed to initiate repair for keyspace {} jobId={}", keyspace, this.jobId(), e);
+                currentStatus = OperationalJobStatus.FAILED;
+                return Future.failedFuture(e);
+            }
 
-        return Future.any(maxWaitTimePromise.future(), repairPromise.future())
-                     .compose(f -> {
-                         boolean isTimeout = maxWaitTimePromise.future().result();
-                         if (isTimeout)
-                         {
-                             LOGGER.error("Timer ran out before the repair job completed. Repair took too long");
-                             return Future.failedFuture("Repair job taking too long");
-                         }
-                         return repairPromise.future();
-                     });
+            if (commandId <= 0)
+            {
+                // When there are no relevant token ranges for the keyspace or RF is 1, the repair is inapplicable
+                LOGGER.info("Repair is not applicable for the provided options and keyspace '{}' jobId '{}'", keyspace, this.jobId());
+                currentStatus = OperationalJobStatus.SUCCEEDED;
+                return Future.succeededFuture();
+            }
+
+            int maxAttempts = config.validRepairStatusAttempts();
+            final AtomicInteger attemptCounter = new AtomicInteger(0);
+
+            // Periodic timer that checks for a valid repair status for a specified no. attempts to make a best-effort attempt
+            // to validate that the repair has been kicked-off before returning.
+            internalPool.setPeriodic(0, config.repairPollInterval().toIntMillis(), id -> {
+                try
+                {
+                    int currentAttempt = attemptCounter.incrementAndGet();
+                    if (currentAttempt > maxAttempts)
+                    {
+                        internalPool.cancelTimer(id);
+                        String msg = String.format("Failed to obtain repair status after %d attempts.", maxAttempts);
+                        LOGGER.warn(msg);
+                        // Set status to RUNNING and complete the promise to ensure the job is properly handled
+                        currentStatus = OperationalJobStatus.RUNNING;
+                        repairJobPromise.tryComplete();
+                        return;
+                    }
+
+                    // Check the repair status
+                    List<String> status;
+                    try
+                    {
+                        status = storageOperations.getParentRepairStatus(commandId);
+                    }
+                    catch (Exception e)
+                    {
+                        LOGGER.warn("Failed to get repair status for cmd: {} (attempt {}/{})",
+                                    commandId, currentAttempt, maxAttempts, e);
+                        // Continue polling on exception
+                        return;
+                    }
+
+                    String queriedString = "queried for parent session status and";
+
+                    // If status is empty, continue polling
+                    if (status == null || status.isEmpty())
+                    {
+                        LOGGER.debug("{} found empty status for cmd: {} - repair may be initializing (attempt {}/{})",
+                                     queriedString, commandId, currentAttempt, maxAttempts);
+                        return;
+                    }
+
+                    internalPool.cancelTimer(id);
+                    updateRepairJobStatus(repairJobPromise, status, queriedString);
+                }
+                catch (Exception e)
+                {
+                    LOGGER.error("Unexpected error in repair status check", e);
+                    internalPool.cancelTimer(id);
+                    currentStatus = OperationalJobStatus.FAILED;
+                    repairJobPromise.tryFail(e);
+                }
+            });
+
+            return repairJobPromise.future();
+        }
+        catch (Exception e)
+        {
+            // Catch any exceptions in the overall method
+            LOGGER.error("Failed to execute repair job", e);
+            currentStatus = OperationalJobStatus.FAILED;
+            return Future.failedFuture(e);
+        }
     }
 
+
+    @Override
+    public OperationalJobStatus status()
+    {
+        // If we have a valid command ID, check the actual repair status
+        if (commandId > 0)
+        {
+            List<String> status = storageOperations.getParentRepairStatus(commandId);
+            if (status != null && !status.isEmpty())
+            {
+                try
+                {
+                    ParentRepairStatus parentRepairStatus = ParentRepairStatus.valueOf(status.get(0));
+                    switch (parentRepairStatus)
+                    {
+                        case COMPLETED:
+                            currentStatus = OperationalJobStatus.SUCCEEDED;
+                            break;
+                        case FAILED:
+                            currentStatus = OperationalJobStatus.FAILED;
+                            break;
+                        case IN_PROGRESS:
+                            currentStatus = OperationalJobStatus.RUNNING;
+                            break;
+                        default:
+                            LOGGER.warn("Encountered unexpected repair status: {}", parentRepairStatus);
+                            // Don't update currentStatus here, fall back to parent implementation
+                    }
+                }
+                catch (IllegalArgumentException e)
+                {
+                    LOGGER.warn("Invalid parent repair status: {}", status.get(0), e);
+                    // Don't update currentStatus here, fall back to parent implementation
+                }
+            }
+        }
+        
+        // If we have a current status, return it
+        if (currentStatus != null)
+        {
+            return currentStatus;
+        }
+        
+        // Otherwise, fall back to the parent implementation
+        return super.status();
+    }
+
+    /**
+     * Updates the repair job status based on the parent repair status from Cassandra.
+     * <p>
+     * When the parent repair status is IN_PROGRESS, this method sets the currentStatus
+     * to RUNNING and completes the promise
+     * <p>
+     * This approach ensures that resources are properly managed while still providing
+     * accurate status reporting through the {@link #status()} method.
+     *
+     * @param repairJobPromise the promise to complete
+     * @param status the parent repair status from Cassandra
+     * @param queriedString logging context string
+     */
+    private void updateRepairJobStatus(Promise<Void> repairJobPromise, List<String> status, String queriedString)
+    {
+        ParentRepairStatus parentRepairStatus = ParentRepairStatus.valueOf(status.get(0));
+        List<String> messages = status.subList(1, status.size());
+
+        switch (parentRepairStatus)
+        {
+            case COMPLETED:
+                LOGGER.info("{} discovered repair {}. Messages: {}",
+                            queriedString, parentRepairStatus.name().toLowerCase(),
+                            String.join("\n", messages));
+                currentStatus = OperationalJobStatus.SUCCEEDED;
+                repairJobPromise.tryComplete();
+                break;
+            case FAILED:
+                LOGGER.info("{} discovered repair {}",
+                            queriedString, parentRepairStatus.name().toLowerCase());
+                currentStatus = OperationalJobStatus.FAILED;
+                String reason = !messages.isEmpty() ? messages.get(0) :
+                                "Repair failed with no error message";
+                repairJobPromise.tryFail(new IOException(reason));
+                LOGGER.info("Repair {} Messages: {}",
+                            parentRepairStatus.name().toLowerCase(),
+                            String.join("\n", messages));
+                break;
+            case IN_PROGRESS:
+                LOGGER.info("Repair in progress. Messages: {}",
+                            String.join("\n", messages));
+                currentStatus = OperationalJobStatus.RUNNING;
+                repairJobPromise.tryComplete();
+                break;
+            default:
+                String message = String.format("Encountered unexpected repair status: %s Messages: %s",
+                                               parentRepairStatus, String.join("\n", messages));
+                LOGGER.error(message);
+                currentStatus = OperationalJobStatus.FAILED;
+                repairJobPromise.tryFail(message);
+                break;
+        }
+    }
 
     /**
      * {@inheritDoc}
@@ -228,58 +382,47 @@ public class RepairJob extends OperationalJob
         return options;
     }
 
-    private int missingJobStatusAttempt = 0;
-    private static final int MAX_MISSING_JOB_RETRIES = 5;
-    
-    private synchronized void queryForCompletedRepair(Promise<Void> promise, int cmd)
+    private void queryForCompletedRepair(Promise<Void> promise, int cmd)
     {
-        LOGGER.info("Polling repair operation for jobId={} status={}", this.jobId(), promise.future().isComplete());
+        LOGGER.info("Polling parent repair status for jobId={} status={}", this.jobId(), promise.future().isComplete());
         List<String> status = storageOperations.getParentRepairStatus(cmd);
         String queriedString = "queried for parent session status and";
         
         if (status == null || status.isEmpty())
         {
-            missingJobStatusAttempt++;
-            if (missingJobStatusAttempt >= MAX_MISSING_JOB_RETRIES)
-            {
-                // If we've seen too many consecutive empty statuses, assume the job doesn't exist
-                LOGGER.error("{} couldn't find repair status for cmd: {} after {} consecutive attempts",
-                             queriedString, cmd, MAX_MISSING_JOB_RETRIES);
-                promise.tryFail("Couldn't find repair status for cmd: " + cmd +
-                                " after " + MAX_MISSING_JOB_RETRIES + " consecutive attempts");
-                return;
-            }
-            
-            // Status can be empty if repair has not yet started - treat as "in progress" rather than failure
-            LOGGER.info("{} found empty status for cmd: {} - repair may be initializing (attempt {})",
-                        queriedString, cmd, missingJobStatusAttempt);
+            LOGGER.error("{} couldn't find repair status for cmd: {}", queriedString, cmd);
         }
         else
         {
-            missingJobStatusAttempt = 0;
-            ParentRepairStatus parentRepairStatus = ParentRepairStatus.valueOf(status.get(0));
-            List<String> messages = status.subList(1, status.size());
-            switch (parentRepairStatus)
-            {
-                case COMPLETED:
-                case FAILED:
-                    LOGGER.info("{} discovered repair {}", queriedString, parentRepairStatus.name().toLowerCase());
-                    if (parentRepairStatus == ParentRepairStatus.FAILED && !messages.isEmpty())
-                    {
-                        promise.tryFail(new IOException(messages.get(0)));
-                    }
-                    LOGGER.info("Repair {} Messages: {}", parentRepairStatus.name().toLowerCase(), String.join("\n", messages));
-                    promise.tryComplete();
-                    break;
-                case IN_PROGRESS:
-                    LOGGER.info("Repair in progress. Messages:{}", String.join("\n", messages));
-                    break;
-                default:
-                    String message = String.format("Encountered unexpected repair status: %s Messages: %s", parentRepairStatus, String.join("\n", messages));
-                    LOGGER.error(message);
-                    promise.tryFail(message);
-                    break;
-            }
+            resolveParentRepairStatus(promise, status, queriedString);
+        }
+    }
+
+    private void resolveParentRepairStatus(Promise<Void> promise, List<String> status, String queriedString)
+    {
+        ParentRepairStatus parentRepairStatus = ParentRepairStatus.valueOf(status.get(0));
+        List<String> messages = status.subList(1, status.size());
+        switch (parentRepairStatus)
+        {
+            case COMPLETED:
+            case FAILED:
+                LOGGER.info("{} discovered repair {}", queriedString, parentRepairStatus.name().toLowerCase());
+                if (parentRepairStatus == ParentRepairStatus.FAILED && !messages.isEmpty())
+                {
+                    promise.tryFail(new IOException(messages.get(0)));
+                }
+                LOGGER.info("Repair {} Messages: {}", parentRepairStatus.name().toLowerCase(), String.join("\n", messages));
+                promise.tryComplete();
+                break;
+            case IN_PROGRESS:
+                LOGGER.info("Repair in progress. Messages:{}", String.join("\n", messages));
+                promise.tryComplete();
+                break;
+            default:
+                String message = String.format("Encountered unexpected repair status: %s Messages: %s", parentRepairStatus, String.join("\n", messages));
+                LOGGER.error(message);
+                promise.tryFail(message);
+                break;
         }
     }
 }

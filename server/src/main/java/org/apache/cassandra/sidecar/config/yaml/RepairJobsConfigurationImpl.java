@@ -31,48 +31,50 @@ import org.apache.cassandra.sidecar.config.RepairJobsConfiguration;
 public class RepairJobsConfigurationImpl implements RepairJobsConfiguration
 {
     // 1 day in milliseconds
-    public static final long DEFAULT_MAX_REPAIR_RUNTIME_MILLIS = 24 * 60 * 60 * 1000L;
-    public static final long DEFAULT_REPAIR_POLLING_INTERVAL_MILLIS = 2_000L;
+    public static final int DEFAULT_VALID_REPAIR_STATUS_ATTEMPTS = 5;
+    public static final long DEFAULT_REPAIR_STATUS_POLLING_INTERVAL_MILLIS = 2_000L;
 
-    @JsonProperty(value = "max_repair_runtime", defaultValue = DEFAULT_MAX_REPAIR_RUNTIME_MILLIS + "")
-    protected final long maxRepairRuntimeMillis;
+    @JsonProperty(value = "repair_status_attempts", defaultValue = DEFAULT_VALID_REPAIR_STATUS_ATTEMPTS + "")
+    protected final int validRepairStatusAttempts;
 
-    @JsonProperty(value = "repair_polling_interval", defaultValue = DEFAULT_REPAIR_POLLING_INTERVAL_MILLIS + "")
-    protected final long repairPollIntervalMillis;
+    @JsonProperty(value = "repair_status_polling_interval", defaultValue = DEFAULT_REPAIR_STATUS_POLLING_INTERVAL_MILLIS + "")
+    protected final long repairStatusPollIntervalMillis;
 
     /**
      * Default constructor that sets default values
      */
     public RepairJobsConfigurationImpl()
     {
-        this(DEFAULT_MAX_REPAIR_RUNTIME_MILLIS, DEFAULT_REPAIR_POLLING_INTERVAL_MILLIS);
+        this(DEFAULT_VALID_REPAIR_STATUS_ATTEMPTS, DEFAULT_REPAIR_STATUS_POLLING_INTERVAL_MILLIS);
     }
 
     /**
      * Constructor with parameters for JSON deserialization
      *
-     * @param maxRepairRuntimeMillis the maximum runtime for repair jobs in milliseconds
-     * @param repairPollIntervalMillis the polling interval for repair jobs in milliseconds
+     * @param validRepairStatusAttempts the max retry attempts for the repair job status to be valid
+     * @param repairStatusPollIntervalMillis the polling interval for repair job status in milliseconds
      */
     @JsonCreator
     public RepairJobsConfigurationImpl(
-        @JsonProperty(value = "max_repair_runtime", defaultValue = DEFAULT_MAX_REPAIR_RUNTIME_MILLIS + "") long maxRepairRuntimeMillis,
-        @JsonProperty(value = "repair_polling_interval", defaultValue = DEFAULT_REPAIR_POLLING_INTERVAL_MILLIS + "") long repairPollIntervalMillis)
+        @JsonProperty(value = "repair_status_attempts", defaultValue = DEFAULT_VALID_REPAIR_STATUS_ATTEMPTS + "")
+        int validRepairStatusAttempts,
+        @JsonProperty(value = "repair_status_polling_interval", defaultValue = DEFAULT_REPAIR_STATUS_POLLING_INTERVAL_MILLIS + "")
+        long repairStatusPollIntervalMillis)
     {
-        this.maxRepairRuntimeMillis = maxRepairRuntimeMillis;
-        this.repairPollIntervalMillis = repairPollIntervalMillis;
+        this.validRepairStatusAttempts = validRepairStatusAttempts;
+        this.repairStatusPollIntervalMillis = repairStatusPollIntervalMillis;
     }
 
     @Override
-    public MillisecondBoundConfiguration maxRepairJobRuntime()
+    public int validRepairStatusAttempts()
     {
-        return new MillisecondBoundConfiguration(maxRepairRuntimeMillis, TimeUnit.MILLISECONDS);
+        return validRepairStatusAttempts;
     }
 
     @Override
     public MillisecondBoundConfiguration repairPollInterval()
     {
-        return new MillisecondBoundConfiguration(repairPollIntervalMillis, TimeUnit.MILLISECONDS);
+        return new MillisecondBoundConfiguration(repairStatusPollIntervalMillis, TimeUnit.MILLISECONDS);
     }
 
     
