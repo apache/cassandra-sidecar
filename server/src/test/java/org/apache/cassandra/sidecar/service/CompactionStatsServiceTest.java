@@ -90,19 +90,19 @@ class CompactionStatsServiceTest
 
         CompactionStatsData response = compactionStatsService.compactionStats();
 
-        assertThat(response.concurrentCompactors()).isEqualTo(4L);
-        assertThat(response.pendingTasks()).hasSize(1);
-        assertThat(response.totalPendingTasks()).isEqualTo(2L);
-        assertThat(response.completedCompactions()).isEqualTo(100L);
-        assertThat(response.dataCompacted()).isEqualTo(2048000L);
-        assertThat(response.abortedCompactions()).isEqualTo(5L);
-        assertThat(response.reducedCompactions()).isEqualTo(1L);
-        assertThat(response.sstablesDroppedFromCompaction()).isEqualTo(0L);
-        assertThat(response.completedCompactionsRate().meanRate()).isEqualTo(1800.00);
-        assertThat(response.completedCompactionsRate().fifteenMinuteRate()).isEqualTo(6.00);
-        assertThat(response.activeCompactions()).hasSize(1);
-        assertThat(response.activeCompactionsCount()).isEqualTo(1L);
-        assertThat(response.activeCompactionsRemainingTime()).isEqualTo(6L);
+        assertThat(response.concurrentCompactors).isEqualTo(4L);
+        assertThat(response.pendingTasks).hasSize(1);
+        assertThat(response.totalPendingTasks).isEqualTo(2L);
+        assertThat(response.completedCompactions).isEqualTo(100L);
+        assertThat(response.dataCompacted).isEqualTo(2048000L);
+        assertThat(response.abortedCompactions).isEqualTo(5L);
+        assertThat(response.reducedCompactions).isEqualTo(1L);
+        assertThat(response.sstablesDroppedFromCompaction).isEqualTo(0L);
+        assertThat(response.completedCompactionsRate.meanRate).isEqualTo(1800.00);
+        assertThat(response.completedCompactionsRate.fifteenMinuteRate).isEqualTo(6.00);
+        assertThat(response.activeCompactions).hasSize(1);
+        assertThat(response.activeCompactionsCount).isEqualTo(1L);
+        assertThat(response.activeCompactionsRemainingTime).isEqualTo(6L);
     }
 
     @Test
@@ -127,12 +127,12 @@ class CompactionStatsServiceTest
 
         CompactionStatsData response = compactionStatsService.compactionStats();
 
-        assertThat(response.concurrentCompactors()).isEqualTo(4L);
-        assertThat(response.pendingTasks()).isEmpty();
-        assertThat(response.totalPendingTasks()).isEqualTo(0L);
-        assertThat(response.activeCompactions()).isEmpty();
-        assertThat(response.activeCompactionsCount()).isEqualTo(0L);
-        assertThat(response.activeCompactionsRemainingTime()).isEqualTo(0L);
+        assertThat(response.concurrentCompactors).isEqualTo(4L);
+        assertThat(response.pendingTasks).isEmpty();
+        assertThat(response.totalPendingTasks).isEqualTo(0L);
+        assertThat(response.activeCompactions).isEmpty();
+        assertThat(response.activeCompactionsCount).isEqualTo(0L);
+        assertThat(response.activeCompactionsRemainingTime).isEqualTo(0L);
     }
 
     @Test
@@ -174,9 +174,9 @@ class CompactionStatsServiceTest
 
         CompactionStatsData response = compactionStatsService.compactionStats();
 
-        assertThat(response.activeCompactions()).hasSize(1);
-        ActiveCompactionEntryData compaction = response.activeCompactions().get(0);
-        assertThat(compaction.ssTables()).isEmpty();
+        assertThat(response.activeCompactions).hasSize(1);
+        ActiveCompactionEntryData compaction = response.activeCompactions.get(0);
+        assertThat(compaction.sstables).isEmpty();
     }
 
     @Test
@@ -206,7 +206,7 @@ class CompactionStatsServiceTest
 
         CompactionStatsData response = compactionStatsService.compactionStats();
 
-        assertThat(response.activeCompactionsRemainingTime()).isEqualTo(0L);
+        assertThat(response.activeCompactionsRemainingTime).isEqualTo(0L);
     }
 
     @Test

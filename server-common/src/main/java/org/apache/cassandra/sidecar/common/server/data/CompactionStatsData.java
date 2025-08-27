@@ -28,18 +28,18 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
  */
 public class CompactionStatsData
 {
-    private final long concurrentCompactors;
-    private final Map<String, Map<String, Integer>> pendingTasks;
-    private final long totalPendingTasks;
-    private final long completedCompactions;
-    private final long dataCompacted;
-    private final long abortedCompactions;
-    private final long reducedCompactions;
-    private final long sstablesDroppedFromCompaction;
-    private final CompletedCompactionsRateData completedCompactionsRate;
-    private final List<ActiveCompactionEntryData> activeCompactions;
-    private final long activeCompactionsCount;
-    private final long activeCompactionsRemainingTime;
+    public final long concurrentCompactors;
+    public final Map<String, Map<String, Integer>> pendingTasks;
+    public final long totalPendingTasks;
+    public final long completedCompactions;
+    public final long dataCompacted;
+    public final long abortedCompactions;
+    public final long reducedCompactions;
+    public final long sstablesDroppedFromCompaction;
+    public final CompletedCompactionsRateData completedCompactionsRate;
+    public final List<ActiveCompactionEntryData> activeCompactions;
+    public final long activeCompactionsCount;
+    public final long activeCompactionsRemainingTime;
 
     private CompactionStatsData(Builder builder)
     {
@@ -57,65 +57,6 @@ public class CompactionStatsData
         this.activeCompactionsRemainingTime = builder.activeCompactionsRemainingTime;
     }
 
-    public long concurrentCompactors()
-    {
-        return concurrentCompactors;
-    }
-
-    public Map<String, Map<String, Integer>> pendingTasks()
-    {
-        return pendingTasks;
-    }
-
-    public long totalPendingTasks()
-    {
-        return totalPendingTasks;
-    }
-
-    public long completedCompactions()
-    {
-        return completedCompactions;
-    }
-
-    public long dataCompacted()
-    {
-        return dataCompacted;
-    }
-
-    public long abortedCompactions()
-    {
-        return abortedCompactions;
-    }
-
-    public long reducedCompactions()
-    {
-        return reducedCompactions;
-    }
-
-    public long sstablesDroppedFromCompaction()
-    {
-        return sstablesDroppedFromCompaction;
-    }
-
-    public CompletedCompactionsRateData completedCompactionsRate()
-    {
-        return completedCompactionsRate;
-    }
-
-    public List<ActiveCompactionEntryData> activeCompactions()
-    {
-        return activeCompactions;
-    }
-
-    public long activeCompactionsCount()
-    {
-        return activeCompactionsCount;
-    }
-
-    public long activeCompactionsRemainingTime()
-    {
-        return activeCompactionsRemainingTime;
-    }
 
     public static Builder builder()
     {

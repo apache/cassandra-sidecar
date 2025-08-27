@@ -103,8 +103,8 @@ class CassandraMetricsOperationsTest
 
         CompletedCompactionsRateData result = metricsOperations.getCompletedCompactionsRate();
 
-        assertThat(result.meanRate()).isEqualTo(0.5);
-        assertThat(result.fifteenMinuteRate()).isEqualTo(0.1);
+        assertThat(result.meanRate).isEqualTo(0.5);
+        assertThat(result.fifteenMinuteRate).isEqualTo(0.1);
     }
 
     @Test

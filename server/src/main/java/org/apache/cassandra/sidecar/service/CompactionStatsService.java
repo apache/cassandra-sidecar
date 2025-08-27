@@ -182,7 +182,7 @@ public class CompactionStatsService
                 .completedBytes(completedBytes)
                 .totalBytes(totalBytes)
                 .percentCompleted(percentCompleted)
-                .ssTables(ssTables)
+                .sstables(ssTables)
                 .targetDirectory(targetDirectory)
                 .build();
         }).collect(Collectors.toList());
@@ -197,8 +197,8 @@ public class CompactionStatsService
 
         // Calculate total remaining bytes across all active compactions
         long totalRemainingBytes = activeCompactions.stream()
-                .filter(compaction -> compaction.totalBytes() >= 0 && compaction.completedBytes() >= 0)
-                .mapToLong(compaction -> Math.max(0, compaction.totalBytes() - compaction.completedBytes()))
+                .filter(compaction -> compaction.totalBytes >= 0 && compaction.completedBytes >= 0)
+                .mapToLong(compaction -> Math.max(0, compaction.totalBytes - compaction.completedBytes))
                 .sum();
 
         long throughputBytesPerSec = storageOperations.getCompactionThroughputBytesPerSec();

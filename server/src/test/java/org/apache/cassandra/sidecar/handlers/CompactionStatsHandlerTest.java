@@ -86,7 +86,7 @@ public class CompactionStatsHandlerTest
         .completedBytes(1024000L)
         .totalBytes(2048000L)
         .percentCompleted(50.0)
-        .ssTables(List.of("sstable1.db", "sstable2.db"))
+        .sstables(List.of("sstable1.db", "sstable2.db"))
         .targetDirectory("/var/lib/cassandra/data")
         .build();
     

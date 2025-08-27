@@ -27,15 +27,15 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
  */
 public class ActiveCompactionEntryData
 {
-    private final String id;
-    private final String keyspace;
-    private final String table;
-    private final String taskType;
-    private final long completedBytes;
-    private final long totalBytes;
-    private final double percentCompleted;
-    private final List<String> ssTables;
-    private final String targetDirectory;
+    public final String id;
+    public final String keyspace;
+    public final String table;
+    public final String taskType;
+    public final long completedBytes;
+    public final long totalBytes;
+    public final double percentCompleted;
+    public final List<String> sstables;
+    public final String targetDirectory;
 
     private ActiveCompactionEntryData(Builder builder)
     {
@@ -46,54 +46,10 @@ public class ActiveCompactionEntryData
         this.completedBytes = builder.completedBytes;
         this.totalBytes = builder.totalBytes;
         this.percentCompleted = builder.percentCompleted;
-        this.ssTables = builder.ssTables;
+        this.sstables = builder.sstables;
         this.targetDirectory = builder.targetDirectory;
     }
 
-    public String id()
-    {
-        return id;
-    }
-
-    public String keyspace()
-    {
-        return keyspace;
-    }
-
-    public String table()
-    {
-        return table;
-    }
-
-    public String taskType()
-    {
-        return taskType;
-    }
-
-    public long completedBytes()
-    {
-        return completedBytes;
-    }
-
-    public long totalBytes()
-    {
-        return totalBytes;
-    }
-
-    public double percentCompleted()
-    {
-        return percentCompleted;
-    }
-
-    public List<String> ssTables()
-    {
-        return ssTables;
-    }
-
-    public String targetDirectory()
-    {
-        return targetDirectory;
-    }
 
     public static Builder builder()
     {
@@ -112,7 +68,7 @@ public class ActiveCompactionEntryData
         private long completedBytes;
         private long totalBytes;
         private double percentCompleted;
-        private List<String> ssTables;
+        private List<String> sstables;
         private String targetDirectory;
 
         private Builder()
@@ -203,14 +159,14 @@ public class ActiveCompactionEntryData
         }
 
         /**
-         * Sets the {@code ssTables} and returns a reference to this Builder enabling method chaining.
+         * Sets the {@code sstables} and returns a reference to this Builder enabling method chaining.
          *
-         * @param ssTables the {@code ssTables} to set
+         * @param sstables the {@code sstables} to set
          * @return a reference to this Builder
          */
-        public Builder ssTables(List<String> ssTables)
+        public Builder sstables(List<String> sstables)
         {
-            return update(b -> b.ssTables = ssTables);
+            return update(b -> b.sstables = sstables);
         }
 
         /**

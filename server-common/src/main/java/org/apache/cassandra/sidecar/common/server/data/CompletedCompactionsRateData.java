@@ -25,8 +25,8 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
  */
 public class CompletedCompactionsRateData
 {
-    private final double meanRate;
-    private final double fifteenMinuteRate;
+    public final double meanRate;
+    public final double fifteenMinuteRate;
 
     private CompletedCompactionsRateData(Builder builder)
     {
@@ -34,15 +34,6 @@ public class CompletedCompactionsRateData
         this.fifteenMinuteRate = builder.fifteenMinuteRate;
     }
 
-    public double meanRate()
-    {
-        return meanRate;
-    }
-
-    public double fifteenMinuteRate()
-    {
-        return fifteenMinuteRate;
-    }
 
     public static Builder builder()
     {
