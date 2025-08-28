@@ -24,10 +24,15 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
+import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test for {@link JwtAuthenticationHandlerFactory}
@@ -54,5 +59,25 @@ class JWTAuthenticationHandlerFactoryTest
         assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, Map.of("site", "www.apache.org")))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Missing client_id JWT parameter");
+    }
+
+    @Test
+    void testValidatePrerequisitesWithSchemaDisabled()
+    {
+        PeriodicTaskExecutor mockTaskExecutor = mock(PeriodicTaskExecutor.class);
+        JwtAuthenticationHandlerFactory factory = new JwtAuthenticationHandlerFactory(mockRoleProcessor, mockTaskExecutor);
+        
+        SidecarConfiguration mockSidecarConfig = mock(SidecarConfiguration.class);
+        ServiceConfiguration mockServiceConfig = mock(ServiceConfiguration.class);
+        SchemaKeyspaceConfiguration mockSchemaConfig = mock(SchemaKeyspaceConfiguration.class);
+        
+        when(mockSidecarConfig.serviceConfiguration()).thenReturn(mockServiceConfig);
+        when(mockServiceConfig.schemaKeyspaceConfiguration()).thenReturn(mockSchemaConfig);
+        when(mockSchemaConfig.isEnabled()).thenReturn(false);
+        
+        // Should throw exception when schema is disabled
+        assertThatThrownBy(() -> factory.validatePrerequisites(mockSidecarConfig))
+        .isInstanceOf(ConfigurationException.class)
+        .hasMessage("JwtAuthenticationHandlerFactory requires Sidecar schema to be enabled for role processing");
     }
 }

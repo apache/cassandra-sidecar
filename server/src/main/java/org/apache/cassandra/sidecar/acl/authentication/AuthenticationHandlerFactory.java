@@ -23,6 +23,7 @@ import java.util.Map;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerInternal;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 
 /**
@@ -45,4 +46,16 @@ public interface AuthenticationHandlerFactory
     AuthenticationHandlerInternal create(Vertx vertx,
                                          AccessControlConfiguration accessControlConfiguration,
                                          Map<String, String> parameters) throws ConfigurationException;
+    
+    /**
+     * Validates that this authentication handler factory can be used with the given configuration.
+     * This gives the implementation flexibility to establish pre-requisites in order to properly function
+     * correctly.
+     *
+     * @param sidecarConfiguration the sidecar configuration to validate against
+     * @throws ConfigurationException if the authentication handler factory cannot be used with the given configuration
+     */
+    default void validatePrerequisites(SidecarConfiguration sidecarConfiguration) throws ConfigurationException
+    {
+    }
 }

@@ -119,6 +119,18 @@ public abstract class AuthCache<K, V>
         return Collections.unmodifiableMap(cache.asMap());
     }
 
+    /**
+     * Invalidate a key.
+     * @param k key to invalidate
+     */
+    public void invalidate(K k)
+    {
+        if (cache != null)
+        {
+            cache.invalidate(k);
+        }
+    }
+
     private LoadingCache<K, V> initCache()
     {
         return Caffeine.newBuilder()

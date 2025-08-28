@@ -25,6 +25,7 @@ import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerInternal;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 
@@ -64,5 +65,17 @@ public class JwtAuthenticationHandlerFactory implements AuthenticationHandlerFac
     protected JwtParameters parameterParser(Map<String, String> parameters)
     {
         return new JwtParameterExtractor(parameters);
+    }
+    
+    @Override
+    public void validatePrerequisites(SidecarConfiguration sidecarConfiguration) throws ConfigurationException
+    {
+        boolean isSidecarSchemaEnabled = sidecarConfiguration.serviceConfiguration()
+                                                             .schemaKeyspaceConfiguration()
+                                                             .isEnabled();
+        if (!isSidecarSchemaEnabled)
+        {
+            throw new ConfigurationException("JwtAuthenticationHandlerFactory requires Sidecar schema to be enabled for role processing");
+        }
     }
 }
