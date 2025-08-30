@@ -37,7 +37,7 @@ This document provides a comprehensive guide to running tests for the Apache Cas
 ### Required Software
 
 1. **Java 11 or higher** (OpenJDK or Oracle)
-2. **Docker** for running integration tests
+2. **Docker** for running integration tests that leverage the S3MockContainer to test the S3 client. Unless your test requires the S3 Mock Container, please create a unit or integration test. 
 3. **Git** for cloning repositories
 
 ### Build Prerequisites
