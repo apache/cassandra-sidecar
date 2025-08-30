@@ -172,7 +172,7 @@ Integration tests support several environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `INTEGRATION_MAX_HEAP_SIZE` | `3000M` | Maximum heap size for integration tests |
+| `INTEGRATION_MAX_HEAP_SIZE` | `3000M` | Maximum heap size for integration tests, per parallel fork |
 | `INTEGRATION_MAX_PARALLEL_FORKS` | `4` | Number of parallel test forks |
 | `INTEGRATION_MTLS_ENABLED` | `true` | Enable mTLS for integration tests |
 
