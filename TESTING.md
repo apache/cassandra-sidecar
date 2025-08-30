@@ -135,7 +135,11 @@ Cassandra instances. They are divided into two categories:
 
 ### Container Tests
 
-Container-based tests run in Docker environments for additional isolation.
+Container-based tests run in Docker environments for additional isolation. For example,
+tests for the Restore from S3 feature leverage the testcontainer-based S3 service
+(`com.adobe.testing.s3mock.testcontainers.S3MockContainer`). Only tests that require
+testcontainer-like functionality should live under `src/containerTest/`; otherwise,
+a unit or in JVM dtest integration test should suffice.
 
 **Location**: `src/containerTest/` in relevant modules
 
@@ -170,11 +174,11 @@ Test fixtures provide shared test utilities and data across modules.
 
 Integration tests support several environment variables:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `INTEGRATION_MAX_HEAP_SIZE` | `3000M` | Maximum heap size for integration tests, per parallel fork |
-| `INTEGRATION_MAX_PARALLEL_FORKS` | `4` | Number of parallel test forks |
-| `INTEGRATION_MTLS_ENABLED` | `true` | Enable mTLS for integration tests |
+| Variable                         | Default | Description                                                |
+|----------------------------------|---------|------------------------------------------------------------|
+| `INTEGRATION_MAX_HEAP_SIZE`      | `3000M` | Maximum heap size for integration tests, per parallel fork |
+| `INTEGRATION_MAX_PARALLEL_FORKS` | `4`     | Number of parallel test forks                              |
+| `INTEGRATION_MTLS_ENABLED`       | `true`  | Enable mTLS for integration tests                          |
 
 Example:
 ```bash
