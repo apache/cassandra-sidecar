@@ -166,4 +166,12 @@ public interface StorageOperations
      * @return the current compaction throughput in bytes per second, or 0 if throughput cannot be determined
      */
     long getCompactionThroughputBytesPerSec();
+
+    /**
+     * Returns the current compaction throughput in megabytes per second.
+     * This method provides the throughput measurement in megabytes per second from Cassandra's StorageServiceMBean.
+     *
+     * @return the current compaction throughput in megabytes per second, or 0 if throughput cannot be determined
+     */
+    long getCompactionThroughputMbPerSec();
 }

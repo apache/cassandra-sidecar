@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.server.data;
+package org.apache.cassandra.sidecar.adapters.base.data;
+
+import org.apache.cassandra.sidecar.common.server.data.MetricType;
 
 /**
  * Represents the metrics related to compaction stats that are supported by the Sidecar

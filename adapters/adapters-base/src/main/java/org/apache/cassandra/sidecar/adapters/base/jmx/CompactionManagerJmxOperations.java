@@ -30,6 +30,7 @@ public interface CompactionManagerJmxOperations
 
     /**
      * Returns active compactions as a list of compaction info maps
+     *
      * @return list of compaction info maps
      */
     List<Map<String, String>> getCompactions();

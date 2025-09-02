@@ -51,19 +51,26 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
+import org.apache.cassandra.sidecar.common.server.CompactionStatsOperations;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.ActiveCompactionEntryData;
 import org.apache.cassandra.sidecar.common.server.data.CompactionStatsData;
-import org.apache.cassandra.sidecar.common.server.data.CompactionStatsMetrics;
 import org.apache.cassandra.sidecar.common.server.data.CompletedCompactionsRateData;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static org.apache.cassandra.sidecar.adapters.base.data.CompactionStatsMetrics.BYTES_COMPACTED;
+import static org.apache.cassandra.sidecar.adapters.base.data.CompactionStatsMetrics.COMPACTIONS_ABORTED;
+import static org.apache.cassandra.sidecar.adapters.base.data.CompactionStatsMetrics.COMPACTIONS_REDUCED;
+import static org.apache.cassandra.sidecar.adapters.base.data.CompactionStatsMetrics.PENDING_TASKS_BY_TABLE_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.data.CompactionStatsMetrics.SSTABLES_DROPPED_FROM_COMPACTION;
+import static org.apache.cassandra.sidecar.adapters.base.data.CompactionStatsMetrics.TOTAL_COMPACTIONS_COMPLETED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 
 /**
  * Tests for the {@link CompactionStatsHandler} class
@@ -77,19 +84,19 @@ public class CompactionStatsHandlerTest
     private static final double EXPECTED_MEAN_RATE = 1800.00;
     private static final double EXPECTED_FIFTEEN_MINUTE_RATE = 6.00;
     private static final long EXPECTED_REMAINING_TIME = 61;
-    
+
     private static final ActiveCompactionEntryData EXPECTED_ACTIVE_COMPACTION = ActiveCompactionEntryData.builder()
-        .id("comp-1")
-        .keyspace("test_keyspace")
-        .table("test_table")
-        .taskType("COMPACTION")
-        .completedBytes(1024000L)
-        .totalBytes(2048000L)
-        .percentCompleted(50.0)
-        .sstables(List.of("sstable1.db", "sstable2.db"))
-        .targetDirectory("/var/lib/cassandra/data")
-        .build();
-    
+                                                                                                         .id("comp-1")
+                                                                                                         .keyspace("test_keyspace")
+                                                                                                         .table("test_table")
+                                                                                                         .taskType("COMPACTION")
+                                                                                                         .completedBytes(1024000L)
+                                                                                                         .totalBytes(2048000L)
+                                                                                                         .percentCompleted(50.0)
+                                                                                                         .sstables(List.of("sstable1.db", "sstable2.db"))
+                                                                                                         .targetDirectory("/var/lib/cassandra/data")
+                                                                                                         .build();
+
     static final Logger LOGGER = LoggerFactory.getLogger(CompactionStatsHandlerTest.class);
     Vertx vertx;
     Server server;
@@ -152,26 +159,26 @@ public class CompactionStatsHandlerTest
         @Singleton
         public InstancesMetadata instanceConfig()
         {
-            CompletedCompactionsRateData rate = 
-                CompletedCompactionsRateData.builder()
-                    .meanRate(EXPECTED_MEAN_RATE)
-                    .fifteenMinuteRate(EXPECTED_FIFTEEN_MINUTE_RATE)
-                    .build();
+            CompletedCompactionsRateData rate =
+            CompletedCompactionsRateData.builder()
+                                        .meanRate(EXPECTED_MEAN_RATE)
+                                        .fifteenMinuteRate(EXPECTED_FIFTEEN_MINUTE_RATE)
+                                        .build();
 
             CompactionStatsData mockResponse = CompactionStatsData.builder()
-                .concurrentCompactors(EXPECTED_CONCURRENT_COMPACTORS)
-                .pendingTasks(Collections.emptyMap())
-                .totalPendingTasks(0)
-                .completedCompactions(EXPECTED_COMPLETED_COMPACTIONS)
-                .dataCompacted(EXPECTED_DATA_COMPACTED)
-                .abortedCompactions(0)
-                .reducedCompactions(0)
-                .sstablesDroppedFromCompaction(0)
-                .completedCompactionsRate(rate)
-                .activeCompactions(List.of(EXPECTED_ACTIVE_COMPACTION))
-                .activeCompactionsCount(1)
-                .activeCompactionsRemainingTime(EXPECTED_REMAINING_TIME)
-                .build();
+                                                                  .concurrentCompactors(EXPECTED_CONCURRENT_COMPACTORS)
+                                                                  .pendingTasks(Collections.emptyMap())
+                                                                  .totalPendingTasks(0)
+                                                                  .completedCompactions(EXPECTED_COMPLETED_COMPACTIONS)
+                                                                  .dataCompacted(EXPECTED_DATA_COMPACTED)
+                                                                  .abortedCompactions(0)
+                                                                  .reducedCompactions(0)
+                                                                  .sstablesDroppedFromCompaction(0)
+                                                                  .completedCompactionsRate(rate)
+                                                                  .activeCompactions(List.of(EXPECTED_ACTIVE_COMPACTION))
+                                                                  .activeCompactionsCount(1)
+                                                                  .activeCompactionsRemainingTime(EXPECTED_REMAINING_TIME)
+                                                                  .build();
 
             final int instanceId = 100;
             final String host = "127.0.0.1";
@@ -182,46 +189,51 @@ public class CompactionStatsHandlerTest
             when(instanceMetadata.stagingDir()).thenReturn("");
 
             CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
-            
+
             // Mock StorageOperations
             StorageOperations mockStorageOperations = mock(StorageOperations.class);
             when(mockStorageOperations.getConcurrentCompactors()).thenReturn(EXPECTED_CONCURRENT_COMPACTORS);
             when(mockStorageOperations.getCompactionThroughputBytesPerSec()).thenReturn(16777L); // 1024000 bytes / 62 seconds
-            
+
             // Mock MetricsOperations
             MetricsOperations mockMetricsOperations = mock(MetricsOperations.class);
-            when(mockMetricsOperations.getCompactionMetric(CompactionStatsMetrics.PENDING_TASKS_BY_TABLE_NAME))
-                .thenReturn(Collections.emptyMap());
-            when(mockMetricsOperations.getCompactionMetric(CompactionStatsMetrics.TOTAL_COMPACTIONS_COMPLETED))
-                .thenReturn(EXPECTED_COMPLETED_COMPACTIONS);
-            when(mockMetricsOperations.getCompactionMetric(CompactionStatsMetrics.BYTES_COMPACTED))
-                .thenReturn(EXPECTED_DATA_COMPACTED);
-            when(mockMetricsOperations.getCompactionMetric(CompactionStatsMetrics.COMPACTIONS_ABORTED))
-                .thenReturn(0L);
-            when(mockMetricsOperations.getCompactionMetric(CompactionStatsMetrics.COMPACTIONS_REDUCED))
-                .thenReturn(0L);
-            when(mockMetricsOperations.getCompactionMetric(CompactionStatsMetrics.SSTABLES_DROPPED_FROM_COMPACTION))
-                .thenReturn(0L);
+            when(mockMetricsOperations.getCompactionMetric(PENDING_TASKS_BY_TABLE_NAME.metricName(), PENDING_TASKS_BY_TABLE_NAME.type))
+            .thenReturn(Collections.emptyMap());
+            when(mockMetricsOperations.getCompactionMetric(TOTAL_COMPACTIONS_COMPLETED.metricName(), TOTAL_COMPACTIONS_COMPLETED.type))
+            .thenReturn(EXPECTED_COMPLETED_COMPACTIONS);
+            when(mockMetricsOperations.getCompactionMetric(BYTES_COMPACTED.metricName(), BYTES_COMPACTED.type))
+            .thenReturn(EXPECTED_DATA_COMPACTED);
+            when(mockMetricsOperations.getCompactionMetric(COMPACTIONS_ABORTED.metricName(), COMPACTIONS_ABORTED.type))
+            .thenReturn(0L);
+            when(mockMetricsOperations.getCompactionMetric(COMPACTIONS_REDUCED.metricName(), COMPACTIONS_REDUCED.type))
+            .thenReturn(0L);
+            when(mockMetricsOperations.getCompactionMetric(SSTABLES_DROPPED_FROM_COMPACTION.metricName(), SSTABLES_DROPPED_FROM_COMPACTION.type))
+            .thenReturn(0L);
             when(mockMetricsOperations.getCompletedCompactionsRate()).thenReturn(rate);
-            
+
             // Mock CompactionManagerOperations
             CompactionManagerOperations mockCompactionManagerOperations = mock(CompactionManagerOperations.class);
             when(mockCompactionManagerOperations.getCompactions()).thenReturn(List.of(
-                java.util.Map.of(
-                    "compactionId", "comp-1",
-                    "keyspace", "test_keyspace", 
-                    "columnfamily", "test_table",
-                    "taskType", "COMPACTION",
-                    "completed", "1024000",
-                    "total", "2048000",
-                    "sstables", "sstable1.db,sstable2.db",
-                    "targetDirectory", "/var/lib/cassandra/data"
-                )
+            java.util.Map.of(
+            "compactionId", "comp-1",
+            "keyspace", "test_keyspace",
+            "columnfamily", "test_table",
+            "taskType", "COMPACTION",
+            "completed", "1024000",
+            "total", "2048000",
+            "sstables", "sstable1.db,sstable2.db",
+            "targetDirectory", "/var/lib/cassandra/data"
+            )
             ));
-            
+
+            // Mock CompactionStatsOperations
+            CompactionStatsOperations mockCompactionStatsOperations = mock(CompactionStatsOperations.class);
+            when(mockCompactionStatsOperations.compactionStats()).thenReturn(mockResponse);
+
             when(delegate.storageOperations()).thenReturn(mockStorageOperations);
             when(delegate.metricsOperations()).thenReturn(mockMetricsOperations);
             when(delegate.compactionManagerOperations()).thenReturn(mockCompactionManagerOperations);
+            when(delegate.compactionStatsOperations()).thenReturn(mockCompactionStatsOperations);
             when(instanceMetadata.delegate()).thenReturn(delegate);
 
             InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);

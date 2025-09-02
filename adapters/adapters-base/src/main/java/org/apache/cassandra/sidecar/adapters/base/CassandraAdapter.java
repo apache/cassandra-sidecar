@@ -30,6 +30,7 @@ import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
 import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
+import org.apache.cassandra.sidecar.common.server.CompactionStatsOperations;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
@@ -163,6 +164,16 @@ public class CassandraAdapter implements ICassandraAdapter
     public CompactionManagerOperations compactionManagerOperations()
     {
         return new CassandraCompactionManagerOperations(jmxClient);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NotNull
+    public CompactionStatsOperations compactionStatsOperations()
+    {
+        return new CassandraCompactionStatsOperations(storageOperations(), metricsOperations(), compactionManagerOperations());
     }
 
     /**

@@ -79,6 +79,6 @@ public class Cassandra41StorageOperations extends CassandraStorageOperations
     public long getCompactionThroughputBytesPerSec()
     {
         return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
-                .getCompactionThroughtputBytesPerSec();
+                        .getCompactionThroughtputBytesPerSec();
     }
 }

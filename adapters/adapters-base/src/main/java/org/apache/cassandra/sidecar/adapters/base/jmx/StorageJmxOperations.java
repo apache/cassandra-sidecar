@@ -150,24 +150,27 @@ public interface StorageJmxOperations
 
     /**
      * Force cleanup the data of the tables in the keyspace. All partitions that out of the range are removed
-     * @param jobs job concurrency
+     *
+     * @param jobs         job concurrency
      * @param keyspaceName keyspace of the table to clean
-     * @param tables tables to clean
+     * @param tables       tables to clean
      * @return status code. 0: success; 1: aborted; 2: unable to cancel
-     * @throws IOException i/o exception during cleanup
-     * @throws ExecutionException it does not really throw but declared in MBean
+     * @throws IOException          i/o exception during cleanup
+     * @throws ExecutionException   it does not really throw but declared in MBean
      * @throws InterruptedException it does not really throw but declared in MBean
      */
     int forceKeyspaceCleanup(int jobs, String keyspaceName, String... tables) throws IOException, ExecutionException, InterruptedException;
 
     /**
      * Triggers the node decommission operation
+     *
      * @param force force decommission, bypassing RF checks, when this flag is set
      */
     void decommission(boolean force) throws IllegalStateException, IllegalArgumentException, UnsupportedOperationException;
 
     /**
      * Fetch the operation-mode of the node
+     *
      * @return string representation of the operation-mode
      */
     String getOperationMode();
@@ -201,6 +204,7 @@ public interface StorageJmxOperations
 
     /**
      * Returns the number of concurrent compactors configured for the node
+     *
      * @return number of concurrent compactors
      */
     int getConcurrentCompactors();
@@ -210,8 +214,18 @@ public interface StorageJmxOperations
      * This method provides the throughput measurement in bytes per second, which is useful
      * for calculating estimated completion times and remaining work for active compactions.
      * Spelling of throughput is internationally wrong to match the method name in Cassandra StorageServiceMBean.
-     * 
+     *
      * @return the current compaction throughput in bytes per second, or 0 if throughput cannot be determined
      */
     long getCompactionThroughtputBytesPerSec();
+
+    /**
+     * Returns the current compaction throughput in megabytes per second.
+     * This method provides the throughput measurement in megabytes per second from Cassandra's StorageServiceMBean.
+     * Note: The method name uses "Mb" to match Cassandra's StorageServiceMBean method naming convention,
+     * but the actual unit returned is megabytes (MB) per second.
+     *
+     * @return the current compaction throughput in megabytes per second, or 0 if throughput cannot be determined
+     */
+    long getCompactionThroughputMbPerSec();
 }

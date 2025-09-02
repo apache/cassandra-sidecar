@@ -56,33 +56,33 @@ public final class CompactionStatsConverter
         if (data.completedCompactionsRate != null)
         {
             responseRate = CompactionStatsResponse.CompletedCompactionsRate.builder()
-                .meanRate(data.completedCompactionsRate.meanRate)
-                .fifteenMinuteRate(data.completedCompactionsRate.fifteenMinuteRate)
-                .build();
+                                                                           .meanRate(data.completedCompactionsRate.meanRate)
+                                                                           .fifteenMinuteRate(data.completedCompactionsRate.fifteenMinuteRate)
+                                                                           .build();
         }
 
         List<CompactionInfo> responseActiveCompactions = null;
         if (data.activeCompactions != null)
         {
             responseActiveCompactions = data.activeCompactions.stream()
-                .map(CompactionStatsConverter::toActiveCompactionEntry)
-                .collect(Collectors.toList());
+                                                              .map(CompactionStatsConverter::toActiveCompactionEntry)
+                                                              .collect(Collectors.toList());
         }
 
         return CompactionStatsResponse.builder()
-            .concurrentCompactors(data.concurrentCompactors)
-            .pendingTasks(data.pendingTasks)
-            .totalPendingTasks(data.totalPendingTasks)
-            .completedCompactions(data.completedCompactions)
-            .dataCompacted(data.dataCompacted)
-            .abortedCompactions(data.abortedCompactions)
-            .reducedCompactions(data.reducedCompactions)
-            .sstablesDroppedFromCompaction(data.sstablesDroppedFromCompaction)
-            .completedCompactionsRate(responseRate)
-            .activeCompactions(responseActiveCompactions)
-            .activeCompactionsCount(data.activeCompactionsCount)
-            .activeCompactionsRemainingTime(data.activeCompactionsRemainingTime)
-            .build();
+                                      .concurrentCompactors(data.concurrentCompactors)
+                                      .pendingTasks(data.pendingTasks)
+                                      .totalPendingTasks(data.totalPendingTasks)
+                                      .completedCompactions(data.completedCompactions)
+                                      .dataCompacted(data.dataCompacted)
+                                      .abortedCompactions(data.abortedCompactions)
+                                      .reducedCompactions(data.reducedCompactions)
+                                      .sstablesDroppedFromCompaction(data.sstablesDroppedFromCompaction)
+                                      .completedCompactionsRate(responseRate)
+                                      .activeCompactions(responseActiveCompactions)
+                                      .activeCompactionsCount(data.activeCompactionsCount)
+                                      .activeCompactionsRemainingTime(data.activeCompactionsRemainingTime)
+                                      .build();
     }
 
     /**
@@ -99,16 +99,15 @@ public final class CompactionStatsConverter
         }
 
         return CompactionInfo.builder()
-            .id(data.id)
-            .keyspace(data.keyspace)
-            .table(data.table)
-            .taskType(data.taskType)
-            .completedBytes(data.completedBytes)
-            .totalBytes(data.totalBytes)
-            .percentCompleted(data.percentCompleted)
-            .sstables(data.sstables)
-            .targetDirectory(data.targetDirectory)
-            .build();
+                             .id(data.id)
+                             .keyspace(data.keyspace)
+                             .table(data.table)
+                             .taskType(data.taskType)
+                             .completedBytes(data.completedBytes)
+                             .totalBytes(data.totalBytes)
+                             .percentCompleted(data.percentCompleted)
+                             .sstables(data.sstables)
+                             .targetDirectory(data.targetDirectory)
+                             .build();
     }
-
 }

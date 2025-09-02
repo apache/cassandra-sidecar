@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.common.server.utils;
+package org.apache.cassandra.sidecar.adapters.base.utils;
 
 /**
  * Utility class for data type conversions.
@@ -105,5 +105,18 @@ public class DataTypeUtils
         {
             throw new NumberFormatException("Failed to parse long value '" + value + "' for " + contextDescription + ": " + ex.getMessage());
         }
+    }
+
+    /**
+     * Converts megabytes to bytes.
+     * This utility method performs the standard conversion from megabytes to bytes
+     * using the binary conversion factor (1 MB = 1024 * 1024 bytes).
+     *
+     * @param megabytes the value in megabytes to convert
+     * @return the equivalent value in bytes
+     */
+    public static long megabytesToBytes(long megabytes)
+    {
+        return megabytes * 1024 * 1024;
     }
 }

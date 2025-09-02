@@ -27,9 +27,9 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.common.server.CompactionStatsOperations;
 import org.apache.cassandra.sidecar.common.server.utils.CompactionStatsConverter;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.service.CompactionStatsService;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
@@ -66,14 +66,10 @@ public class CompactionStatsHandler extends AbstractHandler<Void> implements Acc
                                SocketAddress remoteAddress,
                                Void request)
     {
-        CompactionStatsService compactionStatsService = new CompactionStatsService(
-            metadataFetcher.delegate(host).storageOperations(),
-            metadataFetcher.delegate(host).metricsOperations(),
-            metadataFetcher.delegate(host).compactionManagerOperations()
-        );
-        
+        CompactionStatsOperations compactionStatsOperations = metadataFetcher.delegate(host).compactionStatsOperations();
+
         executorPools.service()
-                     .executeBlocking(() -> CompactionStatsConverter.toResponse(compactionStatsService.compactionStats()))
+                     .executeBlocking(() -> CompactionStatsConverter.toResponse(compactionStatsOperations.compactionStats()))
                      .onSuccess(context::json)
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }

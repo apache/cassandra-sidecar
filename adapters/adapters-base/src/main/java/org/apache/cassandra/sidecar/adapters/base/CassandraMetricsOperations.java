@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.adapters.base.jmx.CounterMetricsJmxOperation
 import org.apache.cassandra.sidecar.adapters.base.jmx.GaugeMetricsJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.MeterMetricsJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.StreamManagerJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.utils.DataTypeUtils;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
@@ -47,11 +48,9 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
-import org.apache.cassandra.sidecar.common.server.data.CompactionStatsMetrics;
 import org.apache.cassandra.sidecar.common.server.data.CompletedCompactionsRateData;
 import org.apache.cassandra.sidecar.common.server.data.MetricType;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
-import org.apache.cassandra.sidecar.common.server.utils.DataTypeUtils;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.jetbrains.annotations.NotNull;
 
@@ -68,26 +67,6 @@ public class CassandraMetricsOperations implements MetricsOperations
 
     private static final String METRICS_OBJ_TYPE_KEYSPACE_TABLE_FORMAT = "org.apache.cassandra.metrics:type=Table,keyspace=%s,scope=%s,name=%s";
     private static final String METRICS_OBJ_TYPE_COMPACTION = "org.apache.cassandra.metrics:type=Compaction,name=%s";
-
-    // Constants for compaction info map keys
-    // Unique identifier for the compaction session
-    public static final String ID = "id";
-    // Keyspace name being compacted
-    public static final String KEYSPACE = "keyspace";
-    // Column family (table) name being compacted
-    public static final String COLUMNFAMILY = "columnfamily";
-    // Number of bytes already processed in the compaction
-    public static final String COMPLETED = "completed";
-    // Total number of bytes to be processed in the compaction
-    public static final String TOTAL = "total";
-    // Type of compaction task (e.g., COMPACTION, VALIDATION, etc.)
-    public static final String TASK_TYPE = "taskType";
-    // Unique compaction identifier
-    public static final String COMPACTION_ID = "compactionId";
-    // Comma-separated list of SSTable names involved in the compaction
-    public static final String SSTABLES = "sstables";
-    // Directory where compaction output will be written
-    public static final String TARGET_DIRECTORY = "targetDirectory";
 
     /**
      * Creates a new instance with the provided {@link CQLSessionProvider}
@@ -145,7 +124,7 @@ public class CassandraMetricsOperations implements MetricsOperations
 
     private Object queryMetric(String metricObjectType, MetricType type)
     {
-        switch(type)
+        switch (type)
         {
             case GAUGE:
                 return jmxClient.proxy(GaugeMetricsJmxOperations.class, metricObjectType).getValue();
@@ -220,7 +199,6 @@ public class CassandraMetricsOperations implements MetricsOperations
                      totalBytesToReceive, totalBytesReceived, totalBytesToSend, totalBytesSent);
         return new StreamsProgressStats(totalFilesToReceive, totalFilesReceived, totalBytesToReceive, totalBytesReceived,
                                         totalFilesToSend, totalFilesSent, totalBytesToSend, totalBytesSent);
-
     }
 
     private ConnectedClientStatsResponse connectedClientSummary()
@@ -259,10 +237,10 @@ public class CassandraMetricsOperations implements MetricsOperations
      * {@inheritDoc}
      */
     @Override
-    public Object getCompactionMetric(CompactionStatsMetrics metric)
+    public Object getCompactionMetric(String metricName, MetricType metricType)
     {
-        String metricObjectType = String.format(METRICS_OBJ_TYPE_COMPACTION, metric.metricName());
-        return queryMetric(metricObjectType, metric.type);
+        String metricObjectType = String.format(METRICS_OBJ_TYPE_COMPACTION, metricName);
+        return queryMetric(metricObjectType, metricType);
     }
 
     /**
@@ -276,8 +254,8 @@ public class CassandraMetricsOperations implements MetricsOperations
         MeterMetricsJmxOperations metricsProxy = jmxClient.proxy(MeterMetricsJmxOperations.class, metricObjectType);
 
         return CompletedCompactionsRateData.builder()
-            .meanRate(metricsProxy.getMeanRate())
-            .fifteenMinuteRate(metricsProxy.getFifteenMinuteRate())
-            .build();
+                                           .meanRate(metricsProxy.getMeanRate())
+                                           .fifteenMinuteRate(metricsProxy.getFifteenMinuteRate())
+                                           .build();
     }
 }

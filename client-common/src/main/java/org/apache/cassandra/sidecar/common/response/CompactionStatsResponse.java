@@ -175,18 +175,18 @@ public class CompactionStatsResponse
     /**
      * Constructs a new {@link CompactionStatsResponse}.
      *
-     * @param concurrentCompactors              number of concurrent compactors
-     * @param pendingTasks                      pending compaction tasks by keyspace and table
-     * @param totalPendingTasks                 total number of pending tasks
-     * @param completedCompactions              total compactions completed
-     * @param dataCompacted                     total data compacted in bytes
-     * @param abortedCompactions                total compactions aborted
-     * @param reducedCompactions                total compactions reduced
-     * @param sstablesDroppedFromCompaction     total SSTables dropped from compaction
-     * @param completedCompactionsRate          completed compactions rate statistics
-     * @param activeCompactions                 list of active compactions
-     * @param activeCompactionsCount            number of active compactions
-     * @param activeCompactionsRemainingTime    estimated remaining time for active compactions in seconds
+     * @param concurrentCompactors           number of concurrent compactors
+     * @param pendingTasks                   pending compaction tasks by keyspace and table
+     * @param totalPendingTasks              total number of pending tasks
+     * @param completedCompactions           total compactions completed
+     * @param dataCompacted                  total data compacted in bytes
+     * @param abortedCompactions             total compactions aborted
+     * @param reducedCompactions             total compactions reduced
+     * @param sstablesDroppedFromCompaction  total SSTables dropped from compaction
+     * @param completedCompactionsRate       completed compactions rate statistics
+     * @param activeCompactions              list of active compactions
+     * @param activeCompactionsCount         number of active compactions
+     * @param activeCompactionsRemainingTime estimated remaining time for active compactions in seconds
      */
     @JsonCreator
     public CompactionStatsResponse(@JsonProperty(CONCURRENT_COMPACTORS) long concurrentCompactors,

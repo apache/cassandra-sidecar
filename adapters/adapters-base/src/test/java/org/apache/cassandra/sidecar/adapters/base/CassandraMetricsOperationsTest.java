@@ -26,10 +26,11 @@ import org.apache.cassandra.sidecar.adapters.base.jmx.GaugeMetricsJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.MeterMetricsJmxOperations;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
-import org.apache.cassandra.sidecar.common.server.data.CompactionStatsMetrics;
 import org.apache.cassandra.sidecar.common.server.data.CompletedCompactionsRateData;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 
+import static org.apache.cassandra.sidecar.adapters.base.data.CompactionStatsMetrics.PENDING_TASKS_BY_TABLE_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.data.CompactionStatsMetrics.TOTAL_COMPACTIONS_COMPLETED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -65,10 +66,12 @@ class CassandraMetricsOperationsTest
         when(mockJmxClient.proxy(eq(CounterMetricsJmxOperations.class), anyString())).thenReturn(mockCounterMetrics);
         when(mockCounterMetrics.getCount()).thenReturn(100L);
 
-        Object result = metricsOperations.getCompactionMetric(CompactionStatsMetrics.TOTAL_COMPACTIONS_COMPLETED);
+        Object result = metricsOperations.getCompactionMetric(
+        TOTAL_COMPACTIONS_COMPLETED.metricName(), TOTAL_COMPACTIONS_COMPLETED.type);
 
         assertThat(result).isEqualTo(100L);
     }
+
     @Test
     void testGetCompactionMetricHappyPathGauge()
     {
@@ -76,7 +79,8 @@ class CassandraMetricsOperationsTest
         when(mockJmxClient.proxy(eq(GaugeMetricsJmxOperations.class), anyString())).thenReturn(mockGaugeMetrics);
         when(mockGaugeMetrics.getValue()).thenReturn(100L);
 
-        Object result = metricsOperations.getCompactionMetric(CompactionStatsMetrics.PENDING_TASKS_BY_TABLE_NAME);
+        Object result = metricsOperations.getCompactionMetric(
+        PENDING_TASKS_BY_TABLE_NAME.metricName(), PENDING_TASKS_BY_TABLE_NAME.type);
 
         assertThat(result).isEqualTo(100L);
     }
@@ -86,11 +90,12 @@ class CassandraMetricsOperationsTest
     {
         // Test getCompactionMetric method with JMX exception
         when(mockJmxClient.proxy(eq(CounterMetricsJmxOperations.class), anyString()))
-                .thenThrow(new RuntimeException("JMX connection failed"));
+        .thenThrow(new RuntimeException("JMX connection failed"));
 
-        assertThatThrownBy(() -> metricsOperations.getCompactionMetric(CompactionStatsMetrics.TOTAL_COMPACTIONS_COMPLETED))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessage("JMX connection failed");
+        assertThatThrownBy(() -> metricsOperations.getCompactionMetric(
+        TOTAL_COMPACTIONS_COMPLETED.metricName(), TOTAL_COMPACTIONS_COMPLETED.type))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessage("JMX connection failed");
     }
 
     @Test
@@ -112,10 +117,10 @@ class CassandraMetricsOperationsTest
     {
         // Test getCompletedCompactionsRate method with JMX exception
         when(mockJmxClient.proxy(eq(MeterMetricsJmxOperations.class), anyString()))
-            .thenThrow(new RuntimeException("JMX connection failed"));
+        .thenThrow(new RuntimeException("JMX connection failed"));
 
         assertThatThrownBy(() -> metricsOperations.getCompletedCompactionsRate())
-            .isInstanceOf(RuntimeException.class)
-            .hasMessage("JMX connection failed");
+        .isInstanceOf(RuntimeException.class)
+        .hasMessage("JMX connection failed");
     }
 }

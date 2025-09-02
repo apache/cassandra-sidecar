@@ -83,7 +83,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
         for (QualifiedName tableName : COMPACTION_TEST_TABLES)
         {
             createTestTable(tableName,
-                    "CREATE TABLE %s ( \n" +
+                            "CREATE TABLE %s ( \n" +
                             "  id int PRIMARY KEY, \n" +
                             "  data text \n" +
                             ");");
@@ -200,7 +200,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
                                          tableName.keyspace(), tableName.table());
         HttpResponse<Buffer> resp;
         resp = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", testRoute)
-                                 .send());
+                                          .send());
         assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
     }
 
@@ -209,7 +209,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
         String testRoute = "/api/v1/cassandra/keyspaces/" + tableName.keyspace() + "/tables/" + tableName.table() + "/stats";
         HttpResponse<Buffer> resp;
         resp = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", testRoute)
-                                 .send());
+                                          .send());
         assertTableStatsResponse(tableName, resp);
     }
 
@@ -316,9 +316,9 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
             try
             {
                 response = getBlocking(
-                        trustedClient().get(serverWrapper.serverPort, "localhost", COMPACTION_STATS_ROUTE)
-                                .send()
-                                .expecting(HttpResponseExpectation.SC_OK));
+                trustedClient().get(serverWrapper.serverPort, "localhost", COMPACTION_STATS_ROUTE)
+                               .send()
+                               .expecting(HttpResponseExpectation.SC_OK));
 
                 stats = response.bodyAsJson(CompactionStatsResponse.class);
                 foundActiveCompactions = !stats.activeCompactions().isEmpty();
@@ -326,7 +326,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
                 if (foundActiveCompactions)
                 {
                     logger.info("SUCCESS: Found {} active compactions on attempt {}",
-                            stats.activeCompactionsCount(), attempt + 1);
+                                stats.activeCompactionsCount(), attempt + 1);
                     break;
                 }
                 else
@@ -369,7 +369,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
             for (int i = batch * 1000; i < (batch + 1) * 1000; i++)
             {
                 String statement = String.format("INSERT INTO %s (id, data) VALUES (%d, '%s');",
-                        tableName, i, "data" + i);
+                                                 tableName, i, "data" + i);
                 cluster.schemaChangeIgnoringStoppedInstances(statement);
             }
             cluster.stream().forEach(instance -> instance.flush(TEST_KEYSPACE));
@@ -379,16 +379,16 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     private void triggerCompactionForTable(QualifiedName tableName)
     {
         cluster.stream().forEach(instance ->
-        {
-            try
-            {
-                instance.nodetool("compact", tableName.keyspace(), tableName.table());
-            }
-            catch (Exception e)
-            {
-                logger.warn("Failed to trigger compaction for {}: {}", tableName, e.getMessage());
-            }
-        });
+                                 {
+                                     try
+                                     {
+                                         instance.nodetool("compact", tableName.keyspace(), tableName.table());
+                                     }
+                                     catch (Exception e)
+                                     {
+                                         logger.warn("Failed to trigger compaction for {}: {}", tableName, e.getMessage());
+                                     }
+                                 });
     }
 
     private void validateCompactionStatsResponse(CompactionStatsResponse stats)
@@ -418,13 +418,13 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
         // Validate mean rate format is X.XX/hour
         assertThat(stats.completedCompactionsRate().meanRate())
-                .as("Mean rate should not be null")
-                .isNotNull();
+        .as("Mean rate should not be null")
+        .isNotNull();
 
         // Validate fifteen minute rate format is X.XX/minute
         assertThat(stats.completedCompactionsRate().fifteenMinuteRate())
-                .as("Fifteen minute rate should not be null")
-                .isNotNull();
+        .as("Fifteen minute rate should not be null")
+        .isNotNull();
 
         // Active compactions validation
         assertThat(stats.activeCompactions()).isNotNull();
@@ -444,26 +444,26 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
         }
 
         logger.info("Compaction stats validation successful. Active: {}, Completed: {}, Pending: {}",
-                stats.activeCompactionsCount(), stats.completedCompactions(), stats.totalPendingTasks());
+                    stats.activeCompactionsCount(), stats.completedCompactions(), stats.totalPendingTasks());
     }
 
     private void validatePendingTasks(CompactionStatsResponse stats)
     {
         stats.pendingTasks().forEach((keyspace, tableMap) -> {
             assertThat(keyspace)
-                    .as("Pending task keyspace should not be blank")
-                    .isNotBlank();
+            .as("Pending task keyspace should not be blank")
+            .isNotBlank();
             assertThat(tableMap)
-                    .as("Pending task table map should not be null")
-                    .isNotNull();
+            .as("Pending task table map should not be null")
+            .isNotNull();
 
             tableMap.forEach((table, count) -> {
                 assertThat(table)
-                        .as("Pending task table name should not be blank")
-                        .isNotBlank();
+                .as("Pending task table name should not be blank")
+                .isNotBlank();
                 assertThat(count)
-                        .as("Pending task count should be non-negative")
-                        .isGreaterThanOrEqualTo(0);
+                .as("Pending task count should be non-negative")
+                .isGreaterThanOrEqualTo(0);
             });
         });
         logger.info("Validated {} pending task keyspaces", stats.pendingTasks().size());
@@ -480,80 +480,80 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
             // Required fields validation
             assertThat(compaction.id())
-                    .as("Active compaction ID should not be null")
-                    .isNotNull();
+            .as("Active compaction ID should not be null")
+            .isNotNull();
 
             assertThat(compaction.keyspace())
-                    .as("Active compaction keyspace should not be null")
-                    .isNotBlank();
+            .as("Active compaction keyspace should not be null")
+            .isNotBlank();
 
             assertThat(compaction.table())
-                    .as("Active compaction table should not be null")
-                    .isNotBlank();
+            .as("Active compaction table should not be null")
+            .isNotBlank();
 
             assertThat(compaction.taskType())
-                    .as("Active compaction task type should not be null")
-                    .isNotBlank();
+            .as("Active compaction task type should not be null")
+            .isNotBlank();
 
             // Byte counters validation
             assertThat(compaction.completedBytes())
-                    .as("Completed bytes should be non-negative")
-                    .isGreaterThanOrEqualTo(0);
+            .as("Completed bytes should be non-negative")
+            .isGreaterThanOrEqualTo(0);
 
             assertThat(compaction.totalBytes())
-                    .as("Total bytes should be greater than 0")
-                    .isGreaterThan(0);
+            .as("Total bytes should be greater than 0")
+            .isGreaterThan(0);
 
             assertThat(compaction.completedBytes())
-                    .as("Completed bytes should not exceed total bytes")
-                    .isLessThanOrEqualTo(compaction.totalBytes());
+            .as("Completed bytes should not exceed total bytes")
+            .isLessThanOrEqualTo(compaction.totalBytes());
 
             // Percentage validation
             assertThat(compaction.percentCompleted())
-                    .as("Percent completed should be between 0 and 100")
-                    .isBetween(0.0, 100.0);
+            .as("Percent completed should be between 0 and 100")
+            .isBetween(0.0, 100.0);
 
             // Validate percentage consistency with bytes
             double expectedPercentage = (double) compaction.completedBytes() / compaction.totalBytes() * 100;
             assertThat(compaction.percentCompleted())
-                    .as("Percent completed should be consistent with completed/total bytes ratio")
-                    .isCloseTo(expectedPercentage, org.assertj.core.data.Percentage.withPercentage(1.0));
+            .as("Percent completed should be consistent with completed/total bytes ratio")
+            .isCloseTo(expectedPercentage, org.assertj.core.data.Percentage.withPercentage(1.0));
 
             // SSTables validation
             assertThat(compaction.ssTables())
-                    .as("SSTables list should not be null")
-                    .isNotNull();
+            .as("SSTables list should not be null")
+            .isNotNull();
 
             if (!compaction.ssTables().isEmpty())
             {
                 for (String ssTable : compaction.ssTables())
                 {
                     assertThat(ssTable)
-                            .as("SSTable name should not be null or blank")
-                            .isNotBlank();
+                    .as("SSTable name should not be null or blank")
+                    .isNotBlank();
                 }
             }
 
             // Keyspace should match our test keyspace
             assertThat(compaction.keyspace())
-                    .as("Compaction should be on our test keyspace")
-                    .isEqualTo(TEST_KEYSPACE);
+            .as("Compaction should be on our test keyspace")
+            .isEqualTo(TEST_KEYSPACE);
 
             // Table should be one of our test tables
             boolean isTestTable = COMPACTION_TEST_TABLES.stream()
-                    .anyMatch(table -> table.table().equals(compaction.table()));
+                                                        .anyMatch(table -> table.table().equals(compaction.table()));
             assertThat(isTestTable)
-                    .as("Compaction should be on one of our test tables: " + compaction.table())
-                    .isTrue();
+            .as("Compaction should be on one of our test tables: " + compaction.table())
+            .isTrue();
 
             logger.info("Active compaction {} validation successful: {}% complete, {} bytes",
-                    compaction.id(), compaction.percentCompleted(), compaction.completedBytes());
+                        compaction.id(), compaction.percentCompleted(), compaction.completedBytes());
         }
 
         // Validate remaining time value when active compactions exist
         long remainingTime = stats.activeCompactionsRemainingTime();
         assertThat(remainingTime)
-                .as("Remaining time should be >= -1 (where -1 indicates unavailable)")
-                .isGreaterThanOrEqualTo(-1L);
+        .as("Remaining time should be >= -1 (where -1 indicates unavailable)")
+        .isGreaterThanOrEqualTo(-1L);
     }
 }

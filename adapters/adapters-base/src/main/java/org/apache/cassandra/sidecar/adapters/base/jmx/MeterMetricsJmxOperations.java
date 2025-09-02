@@ -24,21 +24,16 @@ package org.apache.cassandra.sidecar.adapters.base.jmx;
  */
 public interface MeterMetricsJmxOperations
 {
-    
-    /**
-     * Returns the total number of events that have occurred.
-     * @return the total count of events
-     */
-    long getCount();
-
     /**
      * Returns the mean rate of events per second over the entire lifetime of the meter.
+     *
      * @return the mean rate in events per second
      */
     double getMeanRate();
 
     /**
      * Returns the fifteen-minute exponentially-weighted moving average rate.
+     *
      * @return the fifteen-minute rate in events per second
      */
     double getFifteenMinuteRate();

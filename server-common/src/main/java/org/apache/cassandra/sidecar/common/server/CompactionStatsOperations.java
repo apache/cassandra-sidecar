@@ -16,17 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.adapters.base.jmx;
+package org.apache.cassandra.sidecar.common.server;
+
+import org.apache.cassandra.sidecar.common.server.data.CompactionStatsData;
 
 /**
- * JMX operations for Gauge metrics
+ * Operations for fetching compaction statistics from Cassandra
  */
-public interface GaugeMetricsJmxOperations
+public interface CompactionStatsOperations
 {
     /**
-     * Retrieves the value of the metric of type {@link com.codahale.metrics.Gauge}
+     * Retrieves compaction statistics data
      *
-     * @return the value of the Gauge metric
+     * @return compaction statistics data
      */
-    Object getValue();
+    CompactionStatsData compactionStats();
 }
