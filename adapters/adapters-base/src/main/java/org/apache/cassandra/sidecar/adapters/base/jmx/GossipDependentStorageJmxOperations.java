@@ -215,7 +215,7 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
     }
 
     @Override
-    public long getCompactionThroughputMbPerSec()
+    public int getCompactionThroughputMbPerSec()
     {
         return delegate.getCompactionThroughputMbPerSec();
     }

@@ -309,18 +309,18 @@ public class CassandraStorageOperations implements StorageOperations
     /**
      * {@inheritDoc}
      */
-    public long getCompactionThroughputMbPerSec()
+    @Override
+    public long getCompactionThroughputBytesPerSec()
     {
-        return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
-                        .getCompactionThroughputMbPerSec();
+        return DataTypeUtils.megabytesToBytes(getCompactionThroughputMbPerSec());
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public long getCompactionThroughputBytesPerSec()
+    public int getCompactionThroughputMbPerSec()
     {
-        return DataTypeUtils.megabytesToBytes(getCompactionThroughputMbPerSec());
+        return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                        .getCompactionThroughputMbPerSec();
     }
 }

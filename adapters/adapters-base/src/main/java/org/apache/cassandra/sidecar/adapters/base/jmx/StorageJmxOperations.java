@@ -227,5 +227,5 @@ public interface StorageJmxOperations
      *
      * @return the current compaction throughput in megabytes per second, or 0 if throughput cannot be determined
      */
-    long getCompactionThroughputMbPerSec();
+    int getCompactionThroughputMbPerSec();
 }
