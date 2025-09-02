@@ -1,6 +1,7 @@
 0.3.0
 -----
-* Sidecar endpoint for vending statistics related to compaction (CASSSIDECAR-329)
+ * Sidecar endpoint for vending statistics related to compaction (CASSSIDECAR-329)
+ * Update logging dependencies (CASSSIDECAR-337)
 
 0.2.0
 -----
