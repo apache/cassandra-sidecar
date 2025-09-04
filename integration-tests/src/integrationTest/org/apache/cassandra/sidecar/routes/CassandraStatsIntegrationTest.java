@@ -357,7 +357,6 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
             }
         }
         assertThat(stats).isNotNull();
-        System.out.println(stats);
         logger.info("Response:{}", stats);
         validateCompactionStatsResponse(stats);
     }
