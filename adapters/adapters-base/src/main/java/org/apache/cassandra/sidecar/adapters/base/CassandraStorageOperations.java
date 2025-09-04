@@ -312,7 +312,7 @@ public class CassandraStorageOperations implements StorageOperations
     @Override
     public long getCompactionThroughputBytesPerSec()
     {
-        return DataTypeUtils.megabytesToBytes(getCompactionThroughputMbPerSec());
+        return DataTypeUtils.mebibytesToBytes(getCompactionThroughputMbPerSec());
     }
 
     /**

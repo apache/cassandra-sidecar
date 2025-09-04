@@ -123,7 +123,7 @@ public class DataTypeUtilsTest
         }
     }
 
-    static Stream<Arguments> megabytesToBytesTestCases()
+    static Stream<Arguments> mebibytesToBytesTestCases()
     {
         return Stream.of(
         // Test converting 0 megabytes
@@ -138,10 +138,10 @@ public class DataTypeUtilsTest
     }
 
     @ParameterizedTest
-    @MethodSource("megabytesToBytesTestCases")
-    void testMegabytesToBytes(String testCase, long megabytes, long expectedBytes)
+    @MethodSource("mebibytesToBytesTestCases")
+    void testMebibytesToBytes(String testCase, long megabytes, long expectedBytes)
     {
-        long result = DataTypeUtils.megabytesToBytes(megabytes);
+        long result = DataTypeUtils.mebibytesToBytes(megabytes);
         assertEquals(expectedBytes, result);
     }
 }

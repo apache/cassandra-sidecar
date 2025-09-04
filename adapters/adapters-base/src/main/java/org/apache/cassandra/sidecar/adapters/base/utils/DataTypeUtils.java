@@ -115,8 +115,8 @@ public class DataTypeUtils
      * @param megabytes the value in megabytes to convert
      * @return the equivalent value in bytes
      */
-    public static long megabytesToBytes(long megabytes)
+    public static long mebibytesToBytes(long megabytes)
     {
-        return megabytes * 1024 * 1024;
+        return megabytes << 20;
     }
 }
