@@ -357,6 +357,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
             }
         }
         assertThat(stats).isNotNull();
+        System.out.println(stats);
         logger.info("Response:{}", stats);
         validateCompactionStatsResponse(stats);
     }
@@ -395,7 +396,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     {
         assertThat(stats).isNotNull();
 
-        // Basic counters validation
+        // Basic counters validation - all should be non-negative
         assertThat(stats.concurrentCompactors()).isGreaterThanOrEqualTo(0);
         assertThat(stats.totalPendingTasks()).isGreaterThanOrEqualTo(0);
         assertThat(stats.completedCompactions()).isGreaterThanOrEqualTo(0);
@@ -404,34 +405,34 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
         assertThat(stats.reducedCompactions()).isGreaterThanOrEqualTo(0);
         assertThat(stats.sstablesDroppedFromCompaction()).isGreaterThanOrEqualTo(0);
 
-        // Pending tasks validation
+        // Pending tasks validation - should not be null
         assertThat(stats.pendingTasks()).isNotNull();
 
-        // Validate each pending task entry if there are any
+        // Validate pending task entries structure and values
         if (!stats.pendingTasks().isEmpty())
         {
             validatePendingTasks(stats);
         }
 
-        // Completion rates validation
+        // Completion rates validation - should not be null
         assertThat(stats.completedCompactionsRate()).isNotNull();
 
-        // Validate mean rate format is X.XX/hour
+        // Validate mean rate is not null
         assertThat(stats.completedCompactionsRate().meanRate())
         .as("Mean rate should not be null")
         .isNotNull();
 
-        // Validate fifteen minute rate format is X.XX/minute
+        // Validate fifteen minute rate is not null
         assertThat(stats.completedCompactionsRate().fifteenMinuteRate())
         .as("Fifteen minute rate should not be null")
         .isNotNull();
 
-        // Active compactions validation
+        // Active compactions validation - list should not be null, count should match size
         assertThat(stats.activeCompactions()).isNotNull();
         assertThat(stats.activeCompactionsCount()).isEqualTo(stats.activeCompactions().size());
         assertThat(stats.activeCompactionsRemainingTime()).isGreaterThanOrEqualTo(0L);
 
-        // Detailed active compaction validation when compactions are found
+        // Validate active compaction details when compactions are present
         if (!stats.activeCompactions().isEmpty())
         {
             validateActiveCompactions(stats);
@@ -449,6 +450,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
     private void validatePendingTasks(CompactionStatsResponse stats)
     {
+        // Validate each keyspace and its associated table map structure
         stats.pendingTasks().forEach((keyspace, tableMap) -> {
             assertThat(keyspace)
             .as("Pending task keyspace should not be blank")
@@ -457,6 +459,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
             .as("Pending task table map should not be null")
             .isNotNull();
 
+            // Validate each table name and its pending task count
             tableMap.forEach((table, count) -> {
                 assertThat(table)
                 .as("Pending task table name should not be blank")
@@ -473,12 +476,13 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     {
         logger.info("Validating {} active compaction entries", stats.activeCompactionsCount());
 
+        // Validate each active compaction entry
         for (int i = 0; i < stats.activeCompactions().size(); i++)
         {
             CompactionInfo compaction = stats.activeCompactions().get(i);
             logger.info("Validating active compaction {}: {}", i + 1, compaction.id());
 
-            // Required fields validation
+            // Validate required fields are not null or blank
             assertThat(compaction.id())
             .as("Active compaction ID should not be null")
             .isNotNull();
@@ -495,7 +499,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
             .as("Active compaction task type should not be null")
             .isNotBlank();
 
-            // Byte counters validation
+            // Validate byte counters are within expected ranges
             assertThat(compaction.completedBytes())
             .as("Completed bytes should be non-negative")
             .isGreaterThanOrEqualTo(0);
@@ -508,22 +512,23 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
             .as("Completed bytes should not exceed total bytes")
             .isLessThanOrEqualTo(compaction.totalBytes());
 
-            // Percentage validation
+            // Validate percentage completion is within valid range
             assertThat(compaction.percentCompleted())
             .as("Percent completed should be between 0 and 100")
             .isBetween(0.0, 100.0);
 
-            // Validate percentage consistency with bytes
+            // Ensure percentage matches the completed/total bytes ratio
             double expectedPercentage = (double) compaction.completedBytes() / compaction.totalBytes() * 100;
             assertThat(compaction.percentCompleted())
             .as("Percent completed should be consistent with completed/total bytes ratio")
             .isCloseTo(expectedPercentage, org.assertj.core.data.Percentage.withPercentage(1.0));
 
-            // SSTables validation
+            // Validate SSTables list structure and content
             assertThat(compaction.ssTables())
             .as("SSTables list should not be null")
             .isNotNull();
 
+            // Validate individual SSTable names if any exist
             if (!compaction.ssTables().isEmpty())
             {
                 for (String ssTable : compaction.ssTables())
@@ -534,12 +539,12 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
                 }
             }
 
-            // Keyspace should match our test keyspace
+            // Ensure compaction is operating on our test keyspace
             assertThat(compaction.keyspace())
             .as("Compaction should be on our test keyspace")
             .isEqualTo(TEST_KEYSPACE);
 
-            // Table should be one of our test tables
+            // Ensure compaction is operating on one of our test tables
             boolean isTestTable = COMPACTION_TEST_TABLES.stream()
                                                         .anyMatch(table -> table.table().equals(compaction.table()));
             assertThat(isTestTable)
@@ -550,7 +555,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
                         compaction.id(), compaction.percentCompleted(), compaction.completedBytes());
         }
 
-        // Validate remaining time value when active compactions exist
+        // Validate remaining time estimate is valid (-1 means unavailable)
         long remainingTime = stats.activeCompactionsRemainingTime();
         assertThat(remainingTime)
         .as("Remaining time should be >= -1 (where -1 indicates unavailable)")

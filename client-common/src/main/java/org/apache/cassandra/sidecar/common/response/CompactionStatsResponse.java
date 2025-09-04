@@ -24,7 +24,6 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.response.data.CompactionInfo;
 
@@ -96,6 +95,15 @@ public class CompactionStatsResponse
         public double fifteenMinuteRate()
         {
             return fifteenMinuteRate;
+        }
+
+        @Override
+        public String toString()
+        {
+            return String.format("CompletedCompactionsRate{" +
+                                 "meanRate=%.2f, " +
+                                 "fifteenMinuteRate=%.2f}",
+                                 meanRate, fifteenMinuteRate);
         }
 
         public static Builder builder()
@@ -287,6 +295,27 @@ public class CompactionStatsResponse
     public long activeCompactionsRemainingTime()
     {
         return activeCompactionsRemainingTime;
+    }
+
+    @Override
+    public String toString()
+    {
+        return String.format("CompactionStatsResponse{" +
+                             "concurrentCompactors=%d, " +
+                             "pendingTasks=%s, " +
+                             "totalPendingTasks=%d, " +
+                             "completedCompactions=%d, " +
+                             "dataCompacted=%d, " +
+                             "abortedCompactions=%d, " +
+                             "reducedCompactions=%d, " +
+                             "sstablesDroppedFromCompaction=%d, " +
+                             "completedCompactionsRate=%s, " +
+                             "activeCompactions=%s, " +
+                             "activeCompactionsCount=%d, " +
+                             "activeCompactionsRemainingTime=%d}",
+                             concurrentCompactors, pendingTasks, totalPendingTasks, completedCompactions,
+                             dataCompacted, abortedCompactions, reducedCompactions, sstablesDroppedFromCompaction,
+                             completedCompactionsRate, activeCompactions, activeCompactionsCount, activeCompactionsRemainingTime);
     }
 
     public static Builder builder()

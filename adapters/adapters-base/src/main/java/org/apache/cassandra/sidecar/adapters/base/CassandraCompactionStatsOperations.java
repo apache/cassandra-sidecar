@@ -98,11 +98,11 @@ public class CassandraCompactionStatsOperations implements CompactionStatsOperat
                                              .sum();
 
         // Get compaction metrics from JMX counters and meters
-        long completedCompactionsCount = getCompactionMetricLong(TOTAL_COMPACTIONS_COMPLETED);
-        long dataCompactedBytes = getCompactionMetricLong(BYTES_COMPACTED);
-        long abortedCompactionsCount = getCompactionMetricLong(COMPACTIONS_ABORTED);
-        long reducedCompactionsCount = getCompactionMetricLong(COMPACTIONS_REDUCED);
-        long sstablesDroppedFromCompactionCount = getCompactionMetricLong(SSTABLES_DROPPED_FROM_COMPACTION);
+        long completedCompactionsCount = getCompactionMetric(TOTAL_COMPACTIONS_COMPLETED);
+        long dataCompactedBytes = getCompactionMetric(BYTES_COMPACTED);
+        long abortedCompactionsCount = getCompactionMetric(COMPACTIONS_ABORTED);
+        long reducedCompactionsCount = getCompactionMetric(COMPACTIONS_REDUCED);
+        long sstablesDroppedFromCompactionCount = getCompactionMetric(SSTABLES_DROPPED_FROM_COMPACTION);
 
         // Get completed compactions rate with proper time conversions
         CompletedCompactionsRateData completedCompactionsRate = metricsOperations.getCompletedCompactionsRate();
@@ -130,7 +130,7 @@ public class CassandraCompactionStatsOperations implements CompactionStatsOperat
                                   .build();
     }
 
-    private long getCompactionMetricLong(CompactionStatsMetrics metric)
+    private long getCompactionMetric(CompactionStatsMetrics metric)
     {
         return DataTypeUtils.getValueAsLong(metricsOperations.getCompactionMetric(metric.metricName(), metric.type));
     }

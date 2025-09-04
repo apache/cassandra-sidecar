@@ -153,6 +153,22 @@ public class CompactionInfo
         return targetDirectory;
     }
 
+    @Override
+    public String toString()
+    {
+        return String.format("CompactionInfo{" +
+                           "id='%s', " +
+                           "keyspace='%s', " +
+                           "table='%s', " +
+                           "taskType='%s', " +
+                           "completedBytes=%d, " +
+                           "totalBytes=%d, " +
+                           "percentCompleted=%.2f, " +
+                           "sstables=%s, " +
+                           "targetDirectory='%s'}",
+                           id, keyspace, table, taskType, completedBytes, totalBytes, percentCompleted, sstables, targetDirectory);
+    }
+
     public static Builder builder()
     {
         return new Builder();
