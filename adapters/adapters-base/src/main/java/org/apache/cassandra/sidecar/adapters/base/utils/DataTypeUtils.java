@@ -108,15 +108,15 @@ public class DataTypeUtils
     }
 
     /**
-     * Converts megabytes to bytes.
-     * This utility method performs the standard conversion from megabytes to bytes
+     * Converts mebibytes to bytes.
+     * This utility method performs the standard conversion from mebibytes to bytes
      * using the binary conversion factor (1 MB = 1024 * 1024 bytes).
      *
-     * @param megabytes the value in megabytes to convert
+     * @param mebibytes the value in mebibytes to convert
      * @return the equivalent value in bytes
      */
-    public static long mebibytesToBytes(long megabytes)
+    public static long mebibytesToBytes(long mebibytes)
     {
-        return megabytes << 20;
+        return mebibytes << 20;
     }
 }
