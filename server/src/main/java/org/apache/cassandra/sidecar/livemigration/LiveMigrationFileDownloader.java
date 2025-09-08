@@ -51,9 +51,11 @@ import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo.FileType;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.MigrationState;
 import org.apache.cassandra.sidecar.concurrent.AsyncConcurrentTaskExecutor;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
 import org.apache.cassandra.sidecar.livemigration.OperationStatus.State;
 import org.jetbrains.annotations.NotNull;
 
@@ -111,12 +113,39 @@ class LiveMigrationFileDownloader
      */
     public Future<OperationStatus> downloadFiles()
     {
-        return fetchSourceFileList()
+        return checkLiveMigrationStatusOfSource()
+               .compose(v -> fetchSourceFileList())
                .compose(this::cleanupUnnecessaryFiles)
                .compose(this::prepareDownloadList)
                .compose(this::executeDownloadIfNeeded)
                .onSuccess(result -> LOGGER.info("{} Operation completed with status: {}", logPrefix, result))
                .otherwise(this::handleDownloadFailure);
+    }
+
+
+    /**
+     * Checks whether the live migration status at the source is NOT_COMPLETED or COMPLETED.
+     * This check helps a corner where destination is not aware that live migration was
+     * already completed and trying to download the files again.
+     *
+     * @return a {@link Future} which succeeds when live migration at source is not marked
+     * as completed, a failed Future otherwise.
+     */
+    private Future<Void> checkLiveMigrationStatusOfSource()
+    {
+        return Future.fromCompletionStage(
+                     sidecarClient.liveMigrationStatus(new SidecarInstanceImpl(source, port)))
+                     .compose(sourceLiveMigrationStatus -> {
+                         if (sourceLiveMigrationStatus.state() == MigrationState.NOT_COMPLETED)
+                         {
+                             return Future.succeededFuture();
+                         }
+                         else
+                         {
+                             return Future.failedFuture(
+                             new LiveMigrationInvalidRequestException("Live migration has completed at source."));
+                         }
+                     });
     }
 
     private Future<InstanceFilesListResponse> fetchSourceFileList()

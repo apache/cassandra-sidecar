@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
+import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
@@ -51,6 +52,7 @@ import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 import org.apache.cassandra.sidecar.handlers.AccessProtected;
 import org.apache.cassandra.sidecar.handlers.FileStreamHandler;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil;
+import org.apache.cassandra.sidecar.livemigration.LiveMigrationStatusTracker;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
@@ -74,15 +76,18 @@ public class LiveMigrationFileStreamHandler extends AbstractHandler<Void> implem
     private final Map<Integer, List<PathMatcher>> fileExclusionsByInstanceId = new ConcurrentHashMap<>();
     private final Map<Integer, List<PathMatcher>> dirExclusionsByInstanceId = new ConcurrentHashMap<>();
     private final LiveMigrationConfiguration liveMigrationConfiguration;
+    private final LiveMigrationStatusTracker statusTracker;
 
     @Inject
     public LiveMigrationFileStreamHandler(InstanceMetadataFetcher metadataFetcher,
                                           ExecutorPools executorPools,
                                           CassandraInputValidator validator,
-                                          SidecarConfiguration sidecarConfiguration)
+                                          SidecarConfiguration sidecarConfiguration,
+                                          LiveMigrationStatusTracker statusTracker)
     {
         super(metadataFetcher, executorPools, validator);
         this.liveMigrationConfiguration = sidecarConfiguration.liveMigrationConfiguration();
+        this.statusTracker = statusTracker;
     }
 
     @Override
@@ -130,6 +135,25 @@ public class LiveMigrationFileStreamHandler extends AbstractHandler<Void> implem
         }
 
         InstanceMetadata instanceMeta = metadataFetcher.instance(host);
+        try
+        {
+            if (statusTracker.hasMigrationCompleted(instanceMeta))
+            {
+                LOGGER.warn("Attempted download file using url {} after completing Live Migration for host {}.",
+                            reqPath, host);
+
+                // Cannot throw 404 here as the client can assume that the file no-longer exists and ignore it.
+                rc.response().setStatusCode(HttpResponseStatus.BAD_REQUEST.code()).end();
+                return;
+            }
+        }
+        catch (IOException e)
+        {
+            LOGGER.error("Failed to check if migration is completed for host {}", host, e);
+            rc.response().setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code()).end();
+            return;
+        }
+
         String normalizedPath = rc.normalizedPath();
         String localFile;
 

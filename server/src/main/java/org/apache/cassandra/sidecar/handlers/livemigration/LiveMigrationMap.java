@@ -23,6 +23,7 @@ import java.util.Objects;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationMapException;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -36,10 +37,11 @@ public interface LiveMigrationMap
      * @param instanceMeta Cassandra instance metadata
      * @return true if given instance is configured as source for live migration.
      */
-    default boolean isSource(@NotNull InstanceMetadata instanceMeta)
+    default boolean isSource(@NotNull InstanceMetadata instanceMeta) throws LiveMigrationMapException
+
     {
         Map<String, String> map = getMigrationMap();
-        return map != null && map.containsKey(String.valueOf(instanceMeta.host()));
+        return map.containsKey(String.valueOf(instanceMeta.host()));
     }
 
     /**
@@ -48,10 +50,10 @@ public interface LiveMigrationMap
      * @param instanceMeta Cassandra instance metadata
      * @return true if given instance is configured as destination for live migration.
      */
-    default boolean isDestination(@NotNull InstanceMetadata instanceMeta)
+    default boolean isDestination(@NotNull InstanceMetadata instanceMeta) throws LiveMigrationMapException
     {
         Map<String, String> map = getMigrationMap();
-        return map != null && map.containsValue(String.valueOf(instanceMeta.host()));
+        return map.containsValue(String.valueOf(instanceMeta.host()));
     }
 
     /**
@@ -60,17 +62,19 @@ public interface LiveMigrationMap
      * @param instanceMeta Cassandra instance metadata
      * @return true if given instance is either source or destination
      */
-    default boolean isAny(@NotNull InstanceMetadata instanceMeta)
+    default boolean isAny(@NotNull InstanceMetadata instanceMeta) throws LiveMigrationMapException
     {
         return isSource(instanceMeta) || isDestination(instanceMeta);
     }
 
     /**
-     * Returns map of source and destination
+     * Returns map of source and destination. Returns empty map if live migration is not configured.
      *
-     * @return map of source and destination
+     * @return map of source and destination, never null
+     * @throws LiveMigrationMapException if unable to fetch the migration configuration
      */
-    Map<String, String> getMigrationMap();
+    @NotNull
+    Map<String, String> getMigrationMap()  throws LiveMigrationMapException;
 
 
     /**
@@ -84,14 +88,10 @@ public interface LiveMigrationMap
      * @throws LiveMigrationInvalidRequestException if live migration is not configured (migration map is null)
      *                                              or if no source host is found for the given destination host
      */
-    default String getSource(String destination)
+    default String getSource(String destination) throws LiveMigrationMapException
     {
         Objects.requireNonNull(destination);
         Map<String, String> migrationMap = getMigrationMap();
-        if (null == migrationMap)
-        {
-            throw new LiveMigrationInvalidRequestException("Live migration not configured.");
-        }
 
         for (Map.Entry<String, String> entry : migrationMap.entrySet())
         {

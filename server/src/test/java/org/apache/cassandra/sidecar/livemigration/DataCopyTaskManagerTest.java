@@ -109,6 +109,27 @@ public class DataCopyTaskManagerTest
     }
 
     @Test
+    public void testCreateTaskWhenLiveMigrationStatusMarkedAsCompleted() throws Exception
+    {
+        // This test tries to create a data copy task when Live Migration is already marked as
+        // completed using Live Migration status endpoint.
+        Injector injector = getInjector();
+        DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest("task1", 1, 1.0, 2);
+
+        LiveMigrationStatusTracker tracker = injector.getInstance(LiveMigrationStatusTracker.class);
+        when(tracker.hasMigrationCompleted(any(InstanceMetadata.class)))
+        .thenReturn(true);
+
+        Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
+        awaitForFuture(future);
+
+        assertThat(future.succeeded()).isFalse();
+        assertThat(future.cause()).isNotNull()
+                                  .isInstanceOf(LiveMigrationInvalidRequestException.class);
+    }
+
+    @Test
     public void testCreateTaskWithMaxConcurrencyExceeded() throws InterruptedException
     {
         Injector injector = getInjector();
@@ -373,8 +394,10 @@ public class DataCopyTaskManagerTest
         SidecarConfiguration sidecarConfiguration = injector.getInstance(SidecarConfiguration.class);
         LiveMigrationMap liveMigrationMap = injector.getInstance(LiveMigrationMap.class);
         LiveMigrationTaskFactory liveMigrationTaskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
+        LiveMigrationStatusTracker statusTracker = injector.getInstance(LiveMigrationStatusTracker.class);
 
-        return new DataCopyTaskManager(vertx, instancesMetadata, sidecarConfiguration, liveMigrationMap, liveMigrationTaskFactory);
+        return new DataCopyTaskManager(vertx, instancesMetadata, sidecarConfiguration, liveMigrationMap,
+                                       liveMigrationTaskFactory, statusTracker);
     }
 
     private LiveMigrationTask getInProgressTask(@NotNull String taskId)
@@ -416,6 +439,7 @@ public class DataCopyTaskManagerTest
             bind(SidecarConfiguration.class).toInstance(mockSidecarConfiguration);
             bind(LiveMigrationMap.class).toInstance(mockLiveMigrationmap);
             bind(InstancesMetadata.class).toInstance(mockInstancesMetadata);
+            bind(LiveMigrationStatusTracker.class).toInstance(mock(LiveMigrationStatusTracker.class));
 
             // Configure SidecarConfiguration mocks
             when(mockSidecarConfiguration.serviceConfiguration()).thenReturn(mockServiceConfiguration);

@@ -65,4 +65,20 @@ public class LiveMigrationExceptions
             super(message);
         }
     }
+
+    /**
+     * Exception thrown when operations related to retrieving or processing the live migration map fail.
+     * <p>
+     * This exception is typically thrown when:
+     * - Unable to retrieve the migration map
+     * - Cache loading operations fail
+     * - Timeout occurs while waiting for the mapping data
+     */
+    public static class LiveMigrationMapException extends Exception
+    {
+        public LiveMigrationMapException(String message, Throwable cause)
+        {
+            super(message, cause);
+        }
+    }
 }

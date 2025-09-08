@@ -18,12 +18,16 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationMapException;
 
 import static org.apache.cassandra.sidecar.handlers.AbstractHandler.extractHostAddressWithoutPort;
 
@@ -34,6 +38,8 @@ import static org.apache.cassandra.sidecar.handlers.AbstractHandler.extractHostA
  */
 public class LiveMigrationApiEnableDisableHandler
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationApiEnableDisableHandler.class);
+
     final LiveMigrationMap liveMigrationMap;
     final InstancesMetadata instancesMetadata;
 
@@ -53,13 +59,21 @@ public class LiveMigrationApiEnableDisableHandler
     public void isSource(RoutingContext rc)
     {
         InstanceMetadata instanceMeta = getLocalInstanceMeta(rc);
-        if (liveMigrationMap.isSource(instanceMeta))
+        try
         {
-            rc.next();
+            if (liveMigrationMap.isSource(instanceMeta))
+            {
+                rc.next();
+            }
+            else
+            {
+                rc.fail(HttpResponseStatus.NOT_FOUND.code());
+            }
         }
-        else
+        catch (LiveMigrationMapException e)
         {
-            rc.fail(HttpResponseStatus.NOT_FOUND.code());
+            LOGGER.error("Failed to check if instance {} is a source in live migration map", instanceMeta.host(), e);
+            rc.fail(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
         }
     }
 
@@ -71,13 +85,22 @@ public class LiveMigrationApiEnableDisableHandler
     public void isDestination(RoutingContext rc)
     {
         InstanceMetadata instanceMeta = getLocalInstanceMeta(rc);
-        if (liveMigrationMap.isDestination(instanceMeta))
+        try
         {
-            rc.next();
+            if (liveMigrationMap.isDestination(instanceMeta))
+            {
+                rc.next();
+            }
+            else
+            {
+                rc.fail(HttpResponseStatus.NOT_FOUND.code());
+            }
         }
-        else
+        catch (LiveMigrationMapException e)
         {
-            rc.fail(HttpResponseStatus.NOT_FOUND.code());
+            LOGGER.error("Failed to check if instance {} is a destination in live migration map",
+                         instanceMeta.host(), e);
+            rc.fail(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
         }
     }
 
@@ -89,13 +112,45 @@ public class LiveMigrationApiEnableDisableHandler
     public void isSourceOrDestination(RoutingContext rc)
     {
         InstanceMetadata instanceMeta = getLocalInstanceMeta(rc);
-        if (liveMigrationMap.isAny(instanceMeta))
+        try
         {
-            rc.next();
+            if (liveMigrationMap.isAny(instanceMeta))
+            {
+                rc.next();
+            }
+            else
+            {
+                rc.fail(HttpResponseStatus.NOT_FOUND.code());
+            }
         }
-        else
+        catch (LiveMigrationMapException e)
         {
-            rc.fail(HttpResponseStatus.NOT_FOUND.code());
+            LOGGER.error("Failed to check if instance {} is source or destination in live migration map",
+                         instanceMeta.host(), e);
+            rc.fail(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
+        }
+    }
+
+    public void neitherSourceNorDestination(RoutingContext rc)
+    {
+        InstanceMetadata instanceMeta = getLocalInstanceMeta(rc);
+        try
+        {
+            if (!liveMigrationMap.isAny(instanceMeta))
+            {
+                rc.next();
+            }
+            else
+            {
+                // If the current instance is either source or destination
+                rc.fail(HttpResponseStatus.FORBIDDEN.code());
+            }
+        }
+        catch (LiveMigrationMapException e)
+        {
+            LOGGER.error("Failed to check if instance {} is source or destination in live migration map",
+                         instanceMeta.host(), e);
+            rc.fail(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
         }
     }
 

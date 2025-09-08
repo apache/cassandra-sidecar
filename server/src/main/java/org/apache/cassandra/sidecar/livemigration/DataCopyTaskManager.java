@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.livemigration;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -37,6 +38,7 @@ import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationDataCopyInProgressException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationMapException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationTaskNotFoundException;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationMap;
 import org.jetbrains.annotations.NotNull;
@@ -57,19 +59,22 @@ public class DataCopyTaskManager
     private final SidecarConfiguration sidecarConfiguration;
     private final LiveMigrationMap liveMigrationMap;
     private final LiveMigrationTaskFactory liveMigrationTaskFactory;
+    private final LiveMigrationStatusTracker statusTracker;
 
     @Inject
     public DataCopyTaskManager(Vertx vertx,
                                InstancesMetadata instancesMetadata,
                                SidecarConfiguration sidecarConfiguration,
                                LiveMigrationMap liveMigrationMap,
-                               LiveMigrationTaskFactory liveMigrationTaskFactory)
+                               LiveMigrationTaskFactory liveMigrationTaskFactory,
+                               LiveMigrationStatusTracker liveMigrationStatusTracker)
     {
         this.vertx = vertx;
         this.instancesMetadata = instancesMetadata;
         this.sidecarConfiguration = sidecarConfiguration;
         this.liveMigrationMap = liveMigrationMap;
         this.liveMigrationTaskFactory = liveMigrationTaskFactory;
+        this.statusTracker = liveMigrationStatusTracker;
     }
 
     /**
@@ -96,9 +101,33 @@ public class DataCopyTaskManager
 
         InstanceMetadata localInstanceMetadata = instancesMetadata.instanceFromHost(currentHost);
 
-        return vertx.executeBlocking(() -> liveMigrationMap.getSource(currentHost))
+        return vertx.executeBlocking(() -> hasMigrationCompleted(localInstanceMetadata))
+                    .compose(v -> getSource(currentHost))
                     .compose(source -> validateDataDirs(source, localInstanceMetadata))
                     .compose(source -> createDataCopyTask(request, source, localInstanceMetadata));
+    }
+
+    private boolean hasMigrationCompleted(InstanceMetadata localInstanceMetadata) throws IOException
+    {
+        if (statusTracker.hasMigrationCompleted(localInstanceMetadata))
+        {
+            LOGGER.error("Attempted to create Live Migration data copy task for instance {} " +
+                         "for which migration already completed.", localInstanceMetadata.id());
+            throw new LiveMigrationInvalidRequestException("Live Migration already completed.");
+        }
+        return true;
+    }
+
+    private Future<String> getSource(@NotNull String currentHost)
+    {
+        try
+        {
+            return Future.succeededFuture(liveMigrationMap.getSource(currentHost));
+        }
+        catch (LiveMigrationMapException e)
+        {
+            return Future.failedFuture(e);
+        }
     }
 
     Future<String> validateDataDirs(String source, InstanceMetadata localInstanceMetadata)

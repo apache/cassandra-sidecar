@@ -54,6 +54,7 @@ public class LiveMigrationMapSidecarConfigImpl implements LiveMigrationMap
     }
 
     @Override
+    @NotNull
     public Map<String, String> getMigrationMap()
     {
         return liveMigrationConfiguration.migrationMap();
