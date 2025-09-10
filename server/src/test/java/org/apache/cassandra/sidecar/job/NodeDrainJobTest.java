@@ -48,7 +48,7 @@ class NodeDrainJobTest
     private static final String OPERATION_MODE_NORMAL = "NORMAL";
     private static final String OPERATION_MODE_UNKNOWN = "UNKNOWN";
     private static final String JOB_NAME_DRAIN = "drain";
-    
+
     private StorageOperations mockStorageOperations;
     private NodeDrainJob nodeDrainJob;
     private UUID jobId;
@@ -72,7 +72,7 @@ class NodeDrainJobTest
     void testIsRunningOnCassandra_WhenDraining()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_DRAINING);
-        
+
         assertThat(nodeDrainJob.isRunningOnCassandra()).isTrue();
     }
 
@@ -80,7 +80,7 @@ class NodeDrainJobTest
     void testIsRunningOnCassandra_WhenDrained()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_DRAINED);
-        
+
         assertThat(nodeDrainJob.isRunningOnCassandra()).isFalse();
     }
 
@@ -88,7 +88,7 @@ class NodeDrainJobTest
     void testIsRunningOnCassandra_WhenNormal()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
-        
+
         assertThat(nodeDrainJob.isRunningOnCassandra()).isFalse();
     }
 
@@ -96,7 +96,7 @@ class NodeDrainJobTest
     void testIsRunningOnCassandra_WhenUnknownState()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_UNKNOWN);
-        
+
         assertThat(nodeDrainJob.isRunningOnCassandra()).isFalse();
     }
 
@@ -104,7 +104,7 @@ class NodeDrainJobTest
     void testIsRunningOnCassandra_WhenNull()
     {
         when(mockStorageOperations.operationMode()).thenReturn(null);
-        
+
         assertThat(nodeDrainJob.isRunningOnCassandra()).isFalse();
     }
 
@@ -112,7 +112,7 @@ class NodeDrainJobTest
     void testStatus_WhenDraining()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_DRAINING);
-        
+
         assertThat(nodeDrainJob.status()).isEqualTo(OperationalJobStatus.RUNNING);
     }
 
@@ -120,7 +120,7 @@ class NodeDrainJobTest
     void testStatus_WhenDrained()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_DRAINED);
-        
+
         assertThat(nodeDrainJob.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
     }
 
@@ -128,7 +128,7 @@ class NodeDrainJobTest
     void testStatus_WhenNormal()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
-        
+
         assertThat(nodeDrainJob.status()).isEqualTo(OperationalJobStatus.CREATED);
     }
 
@@ -136,7 +136,7 @@ class NodeDrainJobTest
     void testStatus_WhenUnknownState()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_UNKNOWN);
-        
+
         assertThat(nodeDrainJob.status()).isEqualTo(OperationalJobStatus.CREATED);
     }
 
@@ -144,7 +144,7 @@ class NodeDrainJobTest
     void testStatus_WhenNull()
     {
         when(mockStorageOperations.operationMode()).thenReturn(null);
-        
+
         assertThat(nodeDrainJob.status()).isEqualTo(OperationalJobStatus.CREATED);
     }
 
@@ -152,9 +152,9 @@ class NodeDrainJobTest
     void testExecuteInternal_WhenNotRunning() throws IOException, ExecutionException, InterruptedException
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
-        
+
         nodeDrainJob.executeInternal();
-        
+
         verify(mockStorageOperations).drain();
     }
 
@@ -162,9 +162,9 @@ class NodeDrainJobTest
     void testExecuteInternal_WhenAlreadyDraining() throws IOException, ExecutionException, InterruptedException
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_DRAINING);
-        
+
         nodeDrainJob.executeInternal();
-        
+
         verify(mockStorageOperations, never()).drain();
     }
 
@@ -174,11 +174,11 @@ class NodeDrainJobTest
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         IOException ioException = new IOException("Drain failed due to IO error");
         doThrow(ioException).when(mockStorageOperations).drain();
-        
+
         assertThatThrownBy(() -> nodeDrainJob.executeInternal())
-            .isInstanceOf(OperationalJobException.class)
-            .hasCause(ioException);
-        
+        .isInstanceOf(OperationalJobException.class)
+        .hasCause(ioException);
+
         verify(mockStorageOperations).drain();
     }
 
@@ -188,11 +188,11 @@ class NodeDrainJobTest
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         ExecutionException executionException = new ExecutionException("Drain failed during execution", new RuntimeException());
         doThrow(executionException).when(mockStorageOperations).drain();
-        
+
         assertThatThrownBy(() -> nodeDrainJob.executeInternal())
-            .isInstanceOf(OperationalJobException.class)
-            .hasCause(executionException);
-        
+        .isInstanceOf(OperationalJobException.class)
+        .hasCause(executionException);
+
         verify(mockStorageOperations).drain();
     }
 
@@ -202,11 +202,11 @@ class NodeDrainJobTest
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         InterruptedException interruptedException = new InterruptedException("Drain was interrupted");
         doThrow(interruptedException).when(mockStorageOperations).drain();
-        
+
         assertThatThrownBy(() -> nodeDrainJob.executeInternal())
-            .isInstanceOf(OperationalJobException.class)
-            .hasCause(interruptedException);
-        
+        .isInstanceOf(OperationalJobException.class)
+        .hasCause(interruptedException);
+
         verify(mockStorageOperations).drain();
     }
 
@@ -214,42 +214,42 @@ class NodeDrainJobTest
     void testNodeDrainStateEnum_FromOperationMode()
     {
         assertThat(NodeDrainJob.NodeDrainStateEnum.fromOperationMode(OPERATION_MODE_DRAINING))
-            .isEqualTo(NodeDrainJob.NodeDrainStateEnum.DRAINING);
-        
+        .isEqualTo(NodeDrainJob.NodeDrainStateEnum.DRAINING);
+
         assertThat(NodeDrainJob.NodeDrainStateEnum.fromOperationMode(OPERATION_MODE_DRAINED))
-            .isEqualTo(NodeDrainJob.NodeDrainStateEnum.DRAINED);
-        
+        .isEqualTo(NodeDrainJob.NodeDrainStateEnum.DRAINED);
+
         assertThat(NodeDrainJob.NodeDrainStateEnum.fromOperationMode(OPERATION_MODE_NORMAL))
-            .isNull();
-        
+        .isNull();
+
         assertThat(NodeDrainJob.NodeDrainStateEnum.fromOperationMode(OPERATION_MODE_UNKNOWN))
-            .isNull();
-        
+        .isNull();
+
         assertThat(NodeDrainJob.NodeDrainStateEnum.fromOperationMode(null))
-            .isNull();
-        
+        .isNull();
+
         assertThat(NodeDrainJob.NodeDrainStateEnum.fromOperationMode(""))
-            .isNull();
+        .isNull();
     }
 
     @Test
     void testNodeDrainStateEnum_JobStatusMapping()
     {
         assertThat(NodeDrainJob.NodeDrainStateEnum.DRAINING.jobStatus)
-            .isEqualTo(OperationalJobStatus.RUNNING);
-        
+        .isEqualTo(OperationalJobStatus.RUNNING);
+
         assertThat(NodeDrainJob.NodeDrainStateEnum.DRAINED.jobStatus)
-            .isEqualTo(OperationalJobStatus.SUCCEEDED);
+        .isEqualTo(OperationalJobStatus.SUCCEEDED);
     }
 
     @Test
     void testNodeDrainStateEnum_Values()
     {
         NodeDrainJob.NodeDrainStateEnum[] expectedValues = {
-            NodeDrainJob.NodeDrainStateEnum.DRAINING,
-            NodeDrainJob.NodeDrainStateEnum.DRAINED
+        NodeDrainJob.NodeDrainStateEnum.DRAINING,
+        NodeDrainJob.NodeDrainStateEnum.DRAINED
         };
-        
+
         assertThat(NodeDrainJob.NodeDrainStateEnum.values()).containsExactly(expectedValues);
     }
 
@@ -257,12 +257,12 @@ class NodeDrainJobTest
     void testNodeDrainStateEnum_ValueOf()
     {
         assertThat(NodeDrainJob.NodeDrainStateEnum.valueOf(OPERATION_MODE_DRAINING))
-            .isEqualTo(NodeDrainJob.NodeDrainStateEnum.DRAINING);
-        
+        .isEqualTo(NodeDrainJob.NodeDrainStateEnum.DRAINING);
+
         assertThat(NodeDrainJob.NodeDrainStateEnum.valueOf(OPERATION_MODE_DRAINED))
-            .isEqualTo(NodeDrainJob.NodeDrainStateEnum.DRAINED);
-        
+        .isEqualTo(NodeDrainJob.NodeDrainStateEnum.DRAINED);
+
         assertThatThrownBy(() -> NodeDrainJob.NodeDrainStateEnum.valueOf(OPERATION_MODE_NORMAL))
-            .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -327,11 +327,11 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
 
     /**
      * Handles the submission and execution of an operational job.
-     * 
+     *
      * @param jobManager the manager responsible for submitting and tracking operational jobs
-     * @param config the service configuration containing execution parameters
-     * @param context the routing context for the HTTP request/response
-     * @param job the operational job to be executed
+     * @param config     the service configuration containing execution parameters
+     * @param context    the routing context for the HTTP request/response
+     * @param job        the operational job to be executed
      */
     protected void handleOperationalJob(OperationalJobManager jobManager, ServiceConfiguration config, RoutingContext context, OperationalJob job)
     {
