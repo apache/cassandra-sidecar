@@ -140,6 +140,7 @@ public final class ApiEndpointsV1
     public static final String LIST_OPERATIONAL_JOBS_ROUTE = API_V1 + CASSANDRA + OPERATIONAL_JOBS;
     public static final String OPERATIONAL_JOB_ROUTE = API_V1 + CASSANDRA + PER_OPERATIONAL_JOB;
     public static final String NODE_DECOMMISSION_ROUTE = API_V1 + CASSANDRA + "/operations/decommission";
+    public static final String NODE_DRAIN_ROUTE = API_V1 + CASSANDRA + "/operations/drain";
     public static final String STREAM_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/streams";
     public static final String TABLE_STATS_ROUTE = API_V1 + CASSANDRA + PER_KEYSPACE + PER_TABLE + "/stats";
 

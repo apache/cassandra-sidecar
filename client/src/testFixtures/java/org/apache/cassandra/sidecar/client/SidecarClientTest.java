@@ -1391,6 +1391,25 @@ abstract class SidecarClientTest
     }
 
     @Test
+    public void testNodeDrain() throws Exception
+    {
+        UUID jobId = UUID.randomUUID();
+        String nodeDrainString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"SUCCEEDED\",\"instance\":\"127.0.0.1\"}";
+
+        MockResponse response = new MockResponse()
+                                .setResponseCode(OK.code())
+                                .setHeader("content-type", "application/json")
+                                .setBody(nodeDrainString);
+        enqueue(response);
+
+        SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(servers.get(0));
+        OperationalJobResponse result = client.nodeDrain(sidecarInstance).get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
+        validateResponseServed(ApiEndpointsV1.NODE_DRAIN_ROUTE);
+    }
+
+    @Test
     void testFailsWithOneAttemptPerServer()
     {
         for (MockWebServer server : servers)
