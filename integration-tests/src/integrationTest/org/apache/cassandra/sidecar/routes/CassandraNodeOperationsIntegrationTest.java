@@ -38,6 +38,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
+    public static final String CASSANDRA_VERSION_4_0 = "4.0";
+
     @Override
     protected void initializeSchemaForTest()
     {
@@ -90,5 +92,29 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
         JsonObject streamStats = streamStatsResponse.bodyAsJsonObject();
         assertThat(streamStats).isNotNull();
         assertThat(streamStats.getString("operationMode")).isEqualTo("DRAINED");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void tearDown() throws Exception
+    {
+        try
+        {
+            super.tearDown();
+        }
+        catch (IllegalStateException ex)
+        {
+            logger.error("Exception in tear down", ex);
+            // When cluster.close() is called after drain For Cassandra 4.0
+            // it throws IllegalStateException "HintsService has already been shut down".
+            if (!CASSANDRA_VERSION_4_0.equals(this.testVersion.version()))
+            {
+                throw ex;
+            }
+            logger.warn("Suppressing {} for Cassandra version {}",
+                        ex.getClass().getCanonicalName(), CASSANDRA_VERSION_4_0);
+        }
     }
 }
