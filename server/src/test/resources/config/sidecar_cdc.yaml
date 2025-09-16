@@ -60,6 +60,7 @@ sidecar:
     segment_hardlink_cache_expiry: 1m # 1 minute
     enabled: true
     config_refresh_time: 10s
+    table_schema_refresh_time: 60s
   jmx:
     max_retries: 1
     retry_delay: 1234ms

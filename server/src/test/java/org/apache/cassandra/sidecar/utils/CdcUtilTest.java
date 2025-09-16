@@ -18,7 +18,11 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
+
+import org.apache.cassandra.spark.utils.TableIdentifier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -80,5 +84,59 @@ public class CdcUtilTest
         assertEquals("CommitLog-12345.log", CdcUtil.idxToLogFileName("CommitLog-12345_cdc.idx"));
         assertEquals("CommitLog-2-1240512736956320000.log", CdcUtil.idxToLogFileName("CommitLog-2-1240512736956320000_cdc.idx"));
         assertEquals("CommitLog-2-1340512736956320000.log", CdcUtil.idxToLogFileName("CommitLog-2-1340512736956320000_cdc.idx"));
+    }
+
+    @Test
+    public void testExtractCdcTables()
+    {
+        // Test with single CDC-enabled table
+        String singleTableSchema = "CREATE TABLE test_ks.cdc_table (id uuid PRIMARY KEY, data text) WITH cdc = true;";
+        Map<TableIdentifier, String> result = CdcUtil.extractCdcTables(singleTableSchema);
+        assertEquals(1, result.size());
+        assertTrue(result.containsKey(TableIdentifier.of("test_ks", "cdc_table")));
+
+        // Test with multiple CDC-enabled tables
+        String multipleTablesSchema = 
+            "CREATE TABLE ks1.table1 (id uuid PRIMARY KEY, data text) WITH cdc = true;" +
+            "CREATE TABLE ks2.table2 (id uuid PRIMARY KEY, value int) WITH cdc = true;" +
+            "CREATE TABLE ks3.table3 (id uuid PRIMARY KEY, info text) WITH cdc = false;";
+        result = CdcUtil.extractCdcTables(multipleTablesSchema);
+        assertEquals(2, result.size());
+        assertTrue(result.containsKey(TableIdentifier.of("ks1", "table1")));
+        assertTrue(result.containsKey(TableIdentifier.of("ks2", "table2")));
+        assertFalse(result.containsKey(TableIdentifier.of("ks3", "table3")));
+
+        // Test with quoted keyspace and table names
+        String quotedNamesSchema = 
+            "CREATE TABLE \"my_keyspace\".\"my_table\" (id uuid PRIMARY KEY, data text) WITH cdc = true;";
+        result = CdcUtil.extractCdcTables(quotedNamesSchema);
+        assertEquals(1, result.size());
+        assertTrue(result.containsKey(TableIdentifier.of("my_keyspace", "my_table")));
+
+        // Test with no CDC-enabled tables
+        String noCdcSchema = 
+            "CREATE TABLE test_ks.regular_table (id uuid PRIMARY KEY, data text);" +
+            "CREATE TABLE test_ks.another_table (id uuid PRIMARY KEY, value int) WITH cdc = false;";
+        result = CdcUtil.extractCdcTables(noCdcSchema);
+        assertTrue(result.isEmpty());
+
+        // Test with complex schema including clustering and additional options
+        String complexSchema = 
+            "CREATE TABLE events.user_activity (" +
+            "user_id uuid, " +
+            "timestamp timestamp, " +
+            "activity text, " +
+            "PRIMARY KEY (user_id, timestamp)" +
+            ") WITH CLUSTERING ORDER BY (timestamp DESC) " +
+            "AND bloom_filter_fp_chance = 0.01 " +
+            "AND cdc = true " +
+            "AND comment = 'User activity tracking';";
+        result = CdcUtil.extractCdcTables(complexSchema);
+        assertEquals(1, result.size());
+        assertTrue(result.containsKey(TableIdentifier.of("events", "user_activity")));
+
+        // Test with empty schema
+        result = CdcUtil.extractCdcTables("");
+        assertTrue(result.isEmpty());
     }
 }

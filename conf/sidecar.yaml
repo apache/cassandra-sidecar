@@ -107,6 +107,7 @@ sidecar:
       maximum_size: 10000
   cdc:
     segment_hardlink_cache_expiry: 5m # 5 minutes
+    table_schema_refresh_time: 60s    # Interval time between table schema refresh for CDC
   worker_pools:
     service:
       name: "sidecar-worker-pool"

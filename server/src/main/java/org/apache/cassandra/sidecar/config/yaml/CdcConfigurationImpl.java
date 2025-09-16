@@ -35,10 +35,13 @@ public class CdcConfigurationImpl implements CdcConfiguration
     private static final Logger LOGGER = LoggerFactory.getLogger(CdcConfigurationImpl.class);
     public static final String IS_ENABLED_PROPERTY = "enabled";
     public static final String CONFIGURATION_REFRESH_TIME_PROPERTY = "config_refresh_time";
+    public static final String TABLE_SCHEMA_REFRESH_TIME_PROPERTY = "table_schema_refresh_time";
     public static final String SEGMENT_HARD_LINK_CACHE_EXPIRY_PROPERTY = "segment_hardlink_cache_expiry";
     public static final boolean DEFAULT_IS_ENABLED = false;
     public static final MillisecondBoundConfiguration DEFAULT_CDC_CONFIG_REFRESH_TIME =
             MillisecondBoundConfiguration.parse("30s");
+    public static final SecondBoundConfiguration DEFAULT_TABLE_SCHEMA_REFRESH_TIME =
+            SecondBoundConfiguration.parse("60s");
     public static final SecondBoundConfiguration DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY =
             SecondBoundConfiguration.parse("5m");
     public static final String CDC_RAW_CLEANER_FREQUENCY_PROPERTY = "cdc_raw_cleaner_frequency";
@@ -67,6 +70,8 @@ public class CdcConfigurationImpl implements CdcConfiguration
     private final boolean isEnabled;
     @JsonProperty(value = CONFIGURATION_REFRESH_TIME_PROPERTY)
     private final MillisecondBoundConfiguration cdcConfigRefreshTime;
+    @JsonProperty(value = TABLE_SCHEMA_REFRESH_TIME_PROPERTY)
+    private final SecondBoundConfiguration tableSchemaRefreshTime;
     @JsonProperty(value = SEGMENT_HARD_LINK_CACHE_EXPIRY_PROPERTY)
     private SecondBoundConfiguration segmentHardLinkCacheExpiry;
     @JsonProperty(value = CDC_RAW_CLEANER_FREQUENCY_PROPERTY)
@@ -88,6 +93,7 @@ public class CdcConfigurationImpl implements CdcConfiguration
     {
         this.segmentHardLinkCacheExpiry = DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY;
         this.cdcConfigRefreshTime = DEFAULT_CDC_CONFIG_REFRESH_TIME;
+        this.tableSchemaRefreshTime = DEFAULT_TABLE_SCHEMA_REFRESH_TIME;
         this.isEnabled = DEFAULT_IS_ENABLED;
         this.cdcRawCleanerFrequency = DEFAULT_CDC_RAW_CLEANER_FREQUENCY;
         this.enableCdcRawCleaner = DEFAULT_ENABLE_CDC_RAW_CLEANER_PROPERTY;
@@ -107,6 +113,7 @@ public class CdcConfigurationImpl implements CdcConfiguration
         cdcConfigRefreshTime,
         segmentHardLinkCacheExpiry,
         DEFAULT_CDC_RAW_CLEANER_FREQUENCY,
+        DEFAULT_TABLE_SCHEMA_REFRESH_TIME,
         DEFAULT_ENABLE_CDC_RAW_CLEANER_PROPERTY,
         DEFAULT_FALLBACK_CDC_RAW_MAX_DIRECTORY_SIZE_BYTES,
         DEFAULT_CDC_RAW_MAX_DIRECTORY_MAX_PERCENT,
@@ -118,6 +125,7 @@ public class CdcConfigurationImpl implements CdcConfiguration
 
     public CdcConfigurationImpl(boolean isEnabled,
                                 MillisecondBoundConfiguration cdcConfigRefreshTime,
+                                SecondBoundConfiguration tableSchemaRefreshTime,
                                 SecondBoundConfiguration segmentHardLinkCacheExpiry,
                                 SecondBoundConfiguration cdcRawCleanerFrequency,
                                 boolean enableCdcRawCleaner,
@@ -129,6 +137,7 @@ public class CdcConfigurationImpl implements CdcConfiguration
     {
         this.isEnabled = isEnabled;
         this.cdcConfigRefreshTime = cdcConfigRefreshTime;
+        this.tableSchemaRefreshTime = tableSchemaRefreshTime;
         this.segmentHardLinkCacheExpiry = segmentHardLinkCacheExpiry;
         this.cdcRawCleanerFrequency = cdcRawCleanerFrequency;
         this.enableCdcRawCleaner = enableCdcRawCleaner;
@@ -151,6 +160,13 @@ public class CdcConfigurationImpl implements CdcConfiguration
     public MillisecondBoundConfiguration cdcConfigRefreshTime()
     {
         return cdcConfigRefreshTime;
+    }
+
+    @Override
+    @JsonProperty(value = TABLE_SCHEMA_REFRESH_TIME_PROPERTY)
+    public SecondBoundConfiguration tableSchemaRefreshTime()
+    {
+        return tableSchemaRefreshTime;
     }
 
     @Override

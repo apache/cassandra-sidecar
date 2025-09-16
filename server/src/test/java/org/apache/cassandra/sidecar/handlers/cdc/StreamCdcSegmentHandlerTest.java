@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.handlers.cdc;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -43,6 +42,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cdc.CdcLogCache;
+import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
@@ -59,15 +59,19 @@ class StreamCdcSegmentHandlerTest
     static final Logger LOGGER = LoggerFactory.getLogger(StreamCdcSegmentHandlerTest.class);
     private Vertx vertx;
     private Server server;
+    private CdcLogCache cdcLogCache;
+    private InstancesMetadata instancesMetadata;
 
     @BeforeEach
-    void setUp() throws InterruptedException, IOException
+    void setUp() throws InterruptedException
     {
         Module testOverride = new TestModule();
         Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                         .with(testOverride));
         server = injector.getInstance(Server.class);
         vertx = injector.getInstance(Vertx.class);
+        cdcLogCache = injector.getInstance(CdcLogCache.class);
+        instancesMetadata = injector.getInstance(InstancesMetadata.class);
 
         VertxTestContext context = new VertxTestContext();
         server.start()
@@ -120,11 +124,11 @@ class StreamCdcSegmentHandlerTest
                       latch.countDown();
                       if (latch.getCount() == 0)
                       {
+                          spinAssertCdcRawTempEmpty();
                           context.completeNow();
                       }
                   }));
         }
-        spinAssertCdcRawTempEmpty();
     }
 
     @Test // The server internal should re-create hardlinks for each request in this scenario.
@@ -259,6 +263,9 @@ class StreamCdcSegmentHandlerTest
 
     private void spinAssertCdcRawTempEmpty()
     {
+        // Force cache cleanup to remove hardlinked files
+        cdcLogCache.cleanupLinkedFilesOnStartup(instancesMetadata);
+
         File cdcTempDir = new File(CDC_RAW_TEMP_DIR);
         assertThat(cdcTempDir.exists()).isTrue();
         int attempts = 10;

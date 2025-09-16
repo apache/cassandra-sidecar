@@ -41,6 +41,11 @@ public interface CdcConfiguration
      */
     MillisecondBoundConfiguration cdcConfigRefreshTime();
 
+    /**
+     * @return how frequently CDC schemas are to be refreshed
+     */
+    SecondBoundConfiguration tableSchemaRefreshTime();
+
     /* CdcRawDirectorySpaceCleaner Configuration */
 
     /**

@@ -26,7 +26,11 @@ import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
+import org.apache.cassandra.bridge.CassandraBridgeFactory;
+import org.apache.cassandra.sidecar.cdc.CdcConfig;
+import org.apache.cassandra.sidecar.cdc.CdcConfigImpl;
 import org.apache.cassandra.sidecar.cdc.CdcLogCache;
+import org.apache.cassandra.sidecar.cdc.SidecarCdcStats;
 import org.apache.cassandra.sidecar.client.SidecarInstancesProvider;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
@@ -41,6 +45,10 @@ import org.apache.cassandra.sidecar.coordination.SidecarHttpHealthProvider;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitorTask;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthProvider;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerProvider;
+import org.apache.cassandra.sidecar.db.CdcConfigAccessor;
+import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.KafkaConfigAccessor;
+import org.apache.cassandra.sidecar.db.TokenSplitConfigAccessor;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemViewsSchema;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
@@ -55,9 +63,13 @@ import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
 import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
+import org.apache.cassandra.sidecar.tasks.CassandraClusterSchemaMonitor;
 import org.apache.cassandra.sidecar.tasks.CdcRawDirectorySpaceCleaner;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
+import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
+import org.apache.cassandra.sidecar.utils.TokenSplitUtil;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
@@ -83,6 +95,42 @@ public class CdcModule extends AbstractModule
     PeriodicTask cdcRawDirectorySpaceCleanercPeriodicTask(CdcRawDirectorySpaceCleaner cleanerTask)
     {
         return cleanerTask;
+    }
+
+    @ProvidesIntoMap
+    @KeyClassMapKey(PeriodicTaskMapKeys.CassandraClusterSchemaTaskKey.class)
+    PeriodicTask cassandraClusterSchemaMonitor(InstanceMetadataFetcher instanceMetadataFetcher,
+                                               CdcDatabaseAccessor databaseAccessor,
+                                               SidecarConfiguration configuration,
+                                               CassandraBridgeFactory cassandraBridgeFactory)
+    {
+        return new CassandraClusterSchemaMonitor(instanceMetadataFetcher, databaseAccessor, configuration, cassandraBridgeFactory);
+    }
+
+    @Provides
+    @Singleton
+    CdcConfig cdcConfig(SidecarConfiguration sidecarConfiguration,
+                        CdcConfigAccessor cdcConfigAccessor,
+                        KafkaConfigAccessor kafkaConfigAccessor,
+                        PeriodicTaskExecutor periodicTaskExecutor)
+    {
+        return new CdcConfigImpl(sidecarConfiguration, cdcConfigAccessor, kafkaConfigAccessor, periodicTaskExecutor);
+    }
+
+    @Provides
+    @Singleton
+    CassandraBridgeFactory cassandraBridgeFactory()
+    {
+        return new CassandraBridgeFactory();
+    }
+
+    @Provides
+    @Singleton
+    TokenSplitUtil tokenSplitUtilProvider(TokenSplitConfigAccessor tokenSplitConfigAccessor,
+                                          CdcConfig cdcConfig,
+                                          InstanceMetadataFetcher fetcher)
+    {
+        return new TokenSplitUtil(tokenSplitConfigAccessor, cdcConfig, fetcher);
     }
 
     @ProvidesIntoMap
@@ -211,5 +259,14 @@ public class CdcModule extends AbstractModule
     public SidecarInstancesProvider sidecarInstancesProvider(InstancesMetadata instancesMetadata, ServiceConfiguration serviceConfiguration)
     {
         return new DynamicSidecarInstancesProvider(instancesMetadata, serviceConfiguration);
+    }
+
+    @Provides
+    @Singleton
+    public SidecarCdcStats sidecarCdcStats()
+    {
+        return new SidecarCdcStats()
+        {
+        };
     }
 }

@@ -143,6 +143,10 @@ dependencies {
     implementation("org.eclipse.microprofile.openapi:microprofile-openapi-api:${project.microprofileOpenApiVersion}")
     implementation("jakarta.ws.rs:jakarta.ws.rs-api:${project.jakartaWsRsVersion}")
 
+    implementation(group: "org.apache.cassandra", name: "cassandra-analytics-common", version: "${[project.analyticsVersion]}")
+    implementation(group: "org.apache.cassandra", name: "cassandra-analytics-cdc_spark3_2.12", version: "${[project.analyticsVersion]}")
+    implementation "com.esotericsoftware:kryo-shaded:${kryoVersion}"
+
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
     testImplementation "org.assertj:assertj-core:3.24.2"
