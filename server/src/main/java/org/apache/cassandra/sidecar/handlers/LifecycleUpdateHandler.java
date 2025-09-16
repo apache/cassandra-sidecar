@@ -93,8 +93,8 @@ public class LifecycleUpdateHandler extends NodeCommandHandler implements Access
                                                    .end(Json.encode(info));
                                             break;
                                         default:
-                                            logger.warn("{} request failed with unexpected result. request={}, remoteAddress={}, instance={}",
-                                                        this.getClass().getSimpleName(), request, remoteAddress, host);
+                                            logger.warn("{} request failed with unexpected result. request={}, remoteAddress={}, instance={}, lifecycleStatus={}",
+                                                        this.getClass().getSimpleName(), request, remoteAddress, host, info.status());
                                             context.response().putHeader("Content-Type", "application/json")
                                                    .setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
                                                    .end(Json.encode(info));

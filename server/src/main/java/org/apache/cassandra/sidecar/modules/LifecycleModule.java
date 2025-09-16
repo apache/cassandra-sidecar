@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.modules;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 
 import com.google.inject.AbstractModule;
@@ -72,13 +72,8 @@ public class LifecycleModule extends AbstractModule
 
         if (providerClass.className().equalsIgnoreCase(ProcessLifecycleProvider.class.getName()))
         {
-            Map<String, String> params = new HashMap<>();
             Map<String, String> namedParams = providerClass.namedParameters();
-            if (namedParams != null)
-            {
-                params.putAll(namedParams);
-            }
-            return new ProcessLifecycleProvider(params);
+            return new ProcessLifecycleProvider(namedParams != null ? namedParams : Collections.emptyMap());
         }
 
         throw new ConfigurationException("Unrecognized authorization provider " + providerClass.className() + " set");
@@ -88,16 +83,19 @@ public class LifecycleModule extends AbstractModule
     {
         return new LifecycleProvider()
         {
+            @Override
             public void start(InstanceMetadata instance)
             {
                 throw new UnsupportedOperationException("Lifecycle management is disabled. Cannot start instance " + instance.host());
             }
 
+            @Override
             public void stop(InstanceMetadata instance)
             {
                 throw new UnsupportedOperationException("Lifecycle management is disabled. Cannot stop instance " + instance.host());
             }
 
+            @Override
             public boolean isRunning(InstanceMetadata instance)
             {
                 throw new UnsupportedOperationException("Lifecycle management is disabled. Cannot check if instance " + instance.host() + " is running");

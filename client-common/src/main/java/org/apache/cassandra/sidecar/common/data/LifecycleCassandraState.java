@@ -26,10 +26,19 @@ import static org.apache.cassandra.sidecar.common.request.data.NodeCommandReques
  */
 public enum LifecycleCassandraState
 {
+    /**
+     * The state when a desired lifecycle state has not been submitted yet
+     */
     UNKNOWN,
 
+    /**
+     * The state when a Cassandra process is running
+     */
     RUNNING,
 
+    /**
+     * The state when a Cassandra process is not running
+     */
     STOPPED;
 
     public boolean isRunning()

@@ -24,12 +24,24 @@ package org.apache.cassandra.sidecar.common.data;
  */
 public enum LifecycleStatus
 {
+    /**
+     * The status when a desired lifecycle state has not been submitted yet
+     */
     UNDEFINED,
 
+    /**
+     * The status when the current lifecycle state of an instance matches the desired lifecycle state
+     */
     CONVERGED,
 
+    /**
+     * The status when the current lifecycle state of an instance does not match the desired lifecycle state
+     */
     DIVERGED,
 
+    /**
+     * The status when an instance is starting or stopping to match the desired lifecycle state
+     */
     CONVERGING;
 
     public boolean isCompleted()

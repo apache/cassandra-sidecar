@@ -25,10 +25,26 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
  */
 public interface LifecycleProvider
 {
+    /**
+     * Start a Cassandra process
+     *
+     *  @param instance Cassandra instance metadata
+     */
     void start(InstanceMetadata instance);
 
+    /**
+     * Stop a Cassandra process
+     *
+     * @param instance Cassandra instance metadata
+     */
     void stop(InstanceMetadata instance);
 
+    /**
+     * Check whether a Cassandra process is running or not
+     *
+     * @param instance Cassandra instance metadata
+     * @return true if the Cassandra process is running
+     */
     boolean isRunning(InstanceMetadata instance);
 
 }

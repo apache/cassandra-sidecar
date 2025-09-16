@@ -57,7 +57,7 @@ public class LifecycleConfigurationImpl implements LifecycleConfiguration
     }
 
     @JsonProperty(value = "enabled")
-    public Boolean enabled()
+    public boolean enabled()
     {
         return enabled;
     }
