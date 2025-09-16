@@ -27,7 +27,7 @@ public interface LifecycleConfiguration
     /**
      * @return {@code true} if lifecycle management is enabled, {@code false} otherwise
      */
-    Boolean enabled();
+    boolean enabled();
 
     /**
      * @return configuration needed for setting up lifecycle in Sidecar

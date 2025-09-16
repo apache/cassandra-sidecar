@@ -103,6 +103,7 @@ public class LifecycleUpdateHandler extends NodeCommandHandler implements Access
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 
+    @Override
     protected void processFailure(Throwable cause, RoutingContext context, String host, SocketAddress remoteAddress, NodeCommandRequestPayload request)
     {
         if (cause instanceof LifecycleTaskConflictException)

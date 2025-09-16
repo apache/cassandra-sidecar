@@ -93,19 +93,25 @@ public class LifecycleInfoResponse
         return lastUpdate;
     }
 
+    @Override
     public boolean equals(Object o)
     {
         if (this == o) return true;
         if (!(o instanceof LifecycleInfoResponse)) return false;
         LifecycleInfoResponse that = (LifecycleInfoResponse) o;
-        return currentState == that.currentState && desiredState == that.desiredState && status == that.status && Objects.equals(lastUpdate, that.lastUpdate);
+        return currentState == that.currentState
+               && desiredState == that.desiredState
+               && status == that.status
+               && Objects.equals(lastUpdate, that.lastUpdate);
     }
 
+    @Override
     public int hashCode()
     {
         return Objects.hash(currentState, desiredState, status, lastUpdate);
     }
 
+    @Override
     public String toString()
     {
         return "LifecycleInfoResponse{" +

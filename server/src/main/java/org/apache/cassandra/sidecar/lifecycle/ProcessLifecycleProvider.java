@@ -34,17 +34,20 @@ public class ProcessLifecycleProvider implements LifecycleProvider
         // Params unused for now
     }
 
+    @Override
     public void start(InstanceMetadata instance)
     {
         throw new UnsupportedOperationException("Not implemented yet");
     }
 
+    @Override
     public void stop(InstanceMetadata instance)
     {
         throw new UnsupportedOperationException("Not implemented yet");
 
     }
 
+    @Override
     public boolean isRunning(InstanceMetadata instance)
     {
         throw new UnsupportedOperationException("Not implemented yet");

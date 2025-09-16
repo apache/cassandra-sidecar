@@ -24,7 +24,7 @@ import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 
 /**
- * Manages the lifecycle of JVM Dtest Casasndra instances.
+ * Manages the lifecycle of JVM Dtest Cassandra instances.
  * This should used for integration tests where Cassandra instances are started and stopped
  */
 public class InJvmDTestLifecycleProvider implements LifecycleProvider
@@ -36,11 +36,13 @@ public class InJvmDTestLifecycleProvider implements LifecycleProvider
         this.instances = instances;
     }
 
+    @Override
     public void start(InstanceMetadata instanceMetadata)
     {
         getInstance(instanceMetadata).startup();
     }
 
+    @Override
     public void stop(InstanceMetadata instanceMetadata)
     {
         try
@@ -54,6 +56,7 @@ public class InJvmDTestLifecycleProvider implements LifecycleProvider
         }
     }
 
+    @Override
     public boolean isRunning(InstanceMetadata host)
     {
         return !getInstance(host).isShutdown();
