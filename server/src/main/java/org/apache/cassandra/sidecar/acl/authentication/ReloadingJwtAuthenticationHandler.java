@@ -97,7 +97,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     @Override
     public void authenticate(RoutingContext context, Handler<AsyncResult<User>> handler)
     {
-        AuthenticationHandlerInternal oAuth2AuthHandler = delegateHandler.get();
+        AuthenticationHandlerInternal authHandler = delegateHandler.get();
         if (oAuth2AuthHandler == null)
         {
             handler.handle(Future.failedFuture(wrapHttpException(SERVICE_UNAVAILABLE,
