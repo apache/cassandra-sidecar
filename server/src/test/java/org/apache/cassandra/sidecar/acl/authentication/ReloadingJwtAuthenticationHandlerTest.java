@@ -132,7 +132,7 @@ class ReloadingJwtAuthenticationHandlerTest
             ReloadingJwtAuthenticationHandler handler = getReloadingJwtAuthenticationHandler(vertx, parameterExtractor, mockRoleProcessor);
 
             // Wait a bit for the handler to be set
-            Thread.sleep(1000);
+            loopAssert(1, () -> assertNotNull(handler.delegateHandler.get()));
 
             // Test authentication with valid token - create proper mocks
             RoutingContext mockCtx = mock(RoutingContext.class);
