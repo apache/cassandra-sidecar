@@ -23,8 +23,10 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
+import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -35,6 +37,7 @@ import static org.mockito.Mockito.when;
 public class InJvmLifecycleProviderIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
     static final InstanceMetadata LOCALHOST_METADATA = mock(InstanceMetadata.class);
+    private static final String JVM_LIFECYCLE_TEST_MIN_VERSION = "4.1";
 
     @BeforeAll
     static void beforeAll()
@@ -51,6 +54,11 @@ public class InJvmLifecycleProviderIntegrationTest extends SharedClusterSidecarI
     @Test
     void testInJvmLifecycleProviderStartAndStopAndRecoveryAfterCrash() throws Exception
     {
+        // JVM Distributed Test framework contains a bug with restarting nodes in version 4.0 (CASSANDRA-19729)
+        assumeThat(SimpleCassandraVersion.create(testVersion.version()))
+        .withFailMessage("JVM Distributed Test framework contains a bug with restarting nodes in version 4.0 (CASSANDRA-19729)")
+        .isGreaterThanOrEqualTo(SimpleCassandraVersion.create(JVM_LIFECYCLE_TEST_MIN_VERSION));
+
         // Simulate node crashing by directly calling the lifecycle provider's stop method
         Runnable cassandraCrasher = () -> {
             LifecycleProvider lifecycleProvider = serverWrapper.injector.getInstance(LifecycleProvider.class);
