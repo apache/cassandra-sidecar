@@ -121,13 +121,14 @@ class ReloadingJwtAuthenticationHandlerTest
                 request.response()
                        .putHeader("Content-Type", "text/plain")
                        .end(publicKeyPem);
-            }).listen(8080, result -> serverLatch.countDown());
+            }).listen(0, result -> serverLatch.countDown());
 
             serverLatch.await(5, TimeUnit.SECONDS);
 
             // Configure for stateless authentication
+            String site = String.format("http://localhost:%d/jwks", mockServer.actualPort());
             JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("enabled", "true",
-                                                                                        "site", "http://localhost:8080/jwks",
+                                                                                        "site", site,
                                                                                         "jwt_auth_type", JwtParameters.AuthType.STATELESS.toString().toLowerCase()));
             JwtRoleProcessor mockRoleProcessor = mock(JwtRoleProcessor.class);
             when(mockRoleProcessor.processRoles(any())).thenReturn(List.of("test_role"));
