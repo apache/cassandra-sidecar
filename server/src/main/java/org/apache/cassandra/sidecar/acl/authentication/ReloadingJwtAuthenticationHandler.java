@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.acl.authentication;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +67,8 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReloadingJwtAuthenticationHandler.class);
 
-    private final AtomicReference<AuthenticationHandlerInternal> delegateHandler = new AtomicReference<>();
+    @VisibleForTesting
+    final AtomicReference<AuthenticationHandlerInternal> delegateHandler = new AtomicReference<>();
     private final Vertx vertx;
     private final JwtParameters jwtParameters;
     private final JwtRoleProcessor roleProcessor;
@@ -98,14 +100,14 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     public void authenticate(RoutingContext context, Handler<AsyncResult<User>> handler)
     {
         AuthenticationHandlerInternal authHandler = delegateHandler.get();
-        if (oAuth2AuthHandler == null)
+        if (authHandler == null)
         {
             handler.handle(Future.failedFuture(wrapHttpException(SERVICE_UNAVAILABLE,
                                                                  "JWT authentication handler unavailable")));
             return;
         }
 
-        oAuth2AuthHandler.authenticate(context, authN -> {
+        authHandler.authenticate(context, authN -> {
             if (authN.failed())
             {
                 handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, authN.cause())));
