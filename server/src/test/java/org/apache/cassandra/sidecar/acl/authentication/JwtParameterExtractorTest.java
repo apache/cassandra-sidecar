@@ -132,4 +132,26 @@ class JwtParameterExtractorTest
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Invalid JWT authentication type: bear. Supported types are: [");
     }
+
+    @Test
+    void testJwtAuthTypeWhenStatelessAndSetsKeystoreMustSetPassword()
+    {
+        assertThatThrownBy(() -> new JwtParameterExtractor(Map.of("enabled", "true",
+                "site", "www.apache.org",
+                "jwt_auth_type", JwtParameters.AuthType.STATELESS.toString().toLowerCase(),
+                "keystore_path", "/path/to/keystore")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Missing keystore_password JWT parameter");
+    }
+
+    @Test
+    void testJwtAuthTypeWhenStatelessAndSetsTruststoreMustSetPassword()
+    {
+        assertThatThrownBy(() -> new JwtParameterExtractor(Map.of("enabled", "true",
+                "site", "www.apache.org",
+                "jwt_auth_type", JwtParameters.AuthType.STATELESS.toString().toLowerCase(),
+                "truststore_path", "/path/to/keystore")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Missing truststore_password JWT parameter");
+    }
 }

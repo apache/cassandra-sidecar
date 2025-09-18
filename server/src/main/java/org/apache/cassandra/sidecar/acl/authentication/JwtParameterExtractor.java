@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -50,12 +51,17 @@ public class JwtParameterExtractor implements JwtParameters
     private static final String SCOPES_SUPPORTED_PARAM_KEY = "scopes_supported";
     private static final String CONFIG_DISCOVER_INTERVAL_PARAM_KEY = "config_discover_interval";
     private static final SecondBoundConfiguration DEFAULT_CONFIG_DISCOVER_INTERVAL
-    = SecondBoundConfiguration.parse("1h");
+            = SecondBoundConfiguration.parse("1h");
     private static final String JWT_AUTH_TYPE_PARAM_KEY = "jwt_auth_type";
     private static final String DEFAULT_JWT_AUTH_TYPE = "oauth";
+    private static final String KEYSTORE_PATH_KEY = "keystore_path";
+    private static final String KEYSTORE_PASSWORD_KEY = "keystore_password";
+    private static final String TRUSTSTORE_PATH_KEY = "truststore_path";
+    private static final String TRUSTSTORE_PASSWORD_KEY = "truststore_password";
+    private static final String PEM_PROVIDER_JWT_KEY = "pem_provider_jwt";
     private static final Set<String> SUPPORTED_JWT_AUTH_TYPES = Arrays.stream(JwtParameters.AuthType.values())
-                                                                       .map(authType -> authType.name().toLowerCase())
-                                                                       .collect(Collectors.toSet());
+                                                                      .map(authType -> authType.name().toLowerCase())
+                                                                      .collect(Collectors.toSet());
 
     private final boolean enabled;
     private final String site;
@@ -63,6 +69,11 @@ public class JwtParameterExtractor implements JwtParameters
     private final SecondBoundConfiguration configDiscoverInterval;
     private final List<String> scopes;
     private final AuthType jwtAuthType;
+    private String keystorePath;
+    private String keystorePassword;
+    private String truststorePath;
+    private String truststorePassword;
+    private String pemProviderJwt;
 
     public JwtParameterExtractor(Map<String, String> parameters)
     {
@@ -72,9 +83,14 @@ public class JwtParameterExtractor implements JwtParameters
         this.clientId = parameters.get(CLIENT_ID_PARAM_KEY);
         this.scopes = buildScopes(parameters);
         this.configDiscoverInterval = parameters.containsKey(CONFIG_DISCOVER_INTERVAL_PARAM_KEY)
-                                      ? SecondBoundConfiguration.parse(parameters.get(CONFIG_DISCOVER_INTERVAL_PARAM_KEY))
-                                      : DEFAULT_CONFIG_DISCOVER_INTERVAL;
+                                              ? SecondBoundConfiguration.parse(parameters.get(CONFIG_DISCOVER_INTERVAL_PARAM_KEY))
+                                              : DEFAULT_CONFIG_DISCOVER_INTERVAL;
         this.jwtAuthType = JwtParameters.AuthType.valueOf(parameters.getOrDefault(JWT_AUTH_TYPE_PARAM_KEY, DEFAULT_JWT_AUTH_TYPE).toUpperCase());
+        this.keystorePath = parameters.getOrDefault(KEYSTORE_PATH_KEY, null);
+        this.keystorePassword = parameters.getOrDefault(KEYSTORE_PASSWORD_KEY, null);
+        this.truststorePath = parameters.getOrDefault(TRUSTSTORE_PATH_KEY, null);
+        this.truststorePassword = parameters.getOrDefault(TRUSTSTORE_PASSWORD_KEY, null);
+        this.pemProviderJwt = parameters.getOrDefault(PEM_PROVIDER_JWT_KEY, null);
     }
 
     @Override
@@ -113,6 +129,36 @@ public class JwtParameterExtractor implements JwtParameters
         return jwtAuthType;
     }
 
+    @Override
+    public Optional<String> keystorePath()
+    {
+        return Optional.ofNullable(keystorePath);
+    }
+
+    @Override
+    public Optional<String> keystorePassword()
+    {
+        return Optional.ofNullable(keystorePassword);
+    }
+
+    @Override
+    public Optional<String> truststorePath()
+    {
+        return Optional.ofNullable(truststorePath);
+    }
+
+    @Override
+    public Optional<String> truststorePassword()
+    {
+        return Optional.ofNullable(truststorePassword);
+    }
+
+    @Override
+    public Optional<String> pemProviderJwt()
+    {
+        return Optional.ofNullable(pemProviderJwt);
+    }
+
     private void validate(Map<String, String> parameters)
     {
         if (parameters == null)
@@ -123,12 +169,24 @@ public class JwtParameterExtractor implements JwtParameters
         if (!SUPPORTED_JWT_AUTH_TYPES.contains(configuredJwtAuthType))
         {
             throw new IllegalArgumentException("Invalid JWT authentication type: " + configuredJwtAuthType +
-                                               ". Supported types are: " + SUPPORTED_JWT_AUTH_TYPES);
+                                                       ". Supported types are: " + SUPPORTED_JWT_AUTH_TYPES);
         }
         validateParameterPresence(parameters, SITE_PARAM_KEY);
         if (AuthType.valueOf(configuredJwtAuthType.toUpperCase()) == AuthType.OAUTH)
         {
             validateParameterPresence(parameters, CLIENT_ID_PARAM_KEY);
+        }
+        if (AuthType.valueOf(configuredJwtAuthType.toUpperCase()) == AuthType.STATELESS)
+        {
+            if (parameters.containsKey(KEYSTORE_PATH_KEY))
+            {
+                validateParameterPresence(parameters, KEYSTORE_PASSWORD_KEY);
+            }
+
+            if (parameters.containsKey(TRUSTSTORE_PATH_KEY))
+            {
+                validateParameterPresence(parameters, TRUSTSTORE_PASSWORD_KEY);
+            }
         }
     }
 
@@ -162,8 +220,8 @@ public class JwtParameterExtractor implements JwtParameters
         if (isNotEmpty(parameters.get(SCOPES_SUPPORTED_PARAM_KEY)))
         {
             String delimiter = isNotEmpty(parameters.get(SCOPE_SEPARATOR_PARAM_KEY))
-                               ? parameters.get(SCOPE_SEPARATOR_PARAM_KEY)
-                               : DEFAULT_SCOPE_SEPARATOR;
+                                       ? parameters.get(SCOPE_SEPARATOR_PARAM_KEY)
+                                       : DEFAULT_SCOPE_SEPARATOR;
             scopes.addAll(Arrays.asList(parameters.get(SCOPES_SUPPORTED_PARAM_KEY).split(delimiter)));
         }
         return scopes;

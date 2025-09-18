@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.modules;
 
 import java.util.List;
 
-import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +51,7 @@ import org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
-import org.apache.cassandra.sidecar.metrics.server.ServerMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;

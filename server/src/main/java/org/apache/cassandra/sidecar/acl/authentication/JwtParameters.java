@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.acl.authentication;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
@@ -57,6 +58,32 @@ public interface JwtParameters
      * @return The configured method of JWT authentication to use. Defaults to oauth if not supplied.
      */
     AuthType jwtAuthType();
+
+    /**
+     * @return Optional path to a keystore to provide mutual TLS to PEM public key provider service
+     */
+    Optional<String> keystorePath();
+
+    /**
+     * @return Optional password for the provided keystore
+     */
+    Optional<String> keystorePassword();
+
+    /**
+     * @return Optional path to a truststore to validate SSL certs from PEM public key provider service
+     */
+    Optional<String> truststorePath();
+
+    /**
+     * @return Optional password for the provided truststore
+     */
+    Optional<String> truststorePassword();
+
+    /**
+     * @return Optional JWT to authenticate to PEM public key provider service
+     */
+    Optional<String> pemProviderJwt();
+
 
     /**
      * Supported types of JWT authentication. Today Oauth and Stateless JWT token authentication methods are supported.

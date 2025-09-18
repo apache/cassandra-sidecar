@@ -30,7 +30,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.JksOptions;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authentication.AuthenticationProvider;
@@ -39,6 +41,7 @@ import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.auth.oauth2.OAuth2Options;
 import io.vertx.ext.auth.oauth2.providers.OpenIDConnectAuth;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerImpl;
@@ -50,6 +53,7 @@ import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration
 import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.jetbrains.annotations.NotNull;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
 import static io.netty.handler.codec.http.HttpResponseStatus.UNAUTHORIZED;
@@ -88,7 +92,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         this.metrics = metrics;
         if (jwtParameters.jwtAuthType().equals(JwtParameters.AuthType.STATELESS))
         {
-            periodicTaskExecutor.schedule(new PeriodicStatelessJwtRefreshTask());
+            periodicTaskExecutor.schedule(buildPeriodicStatelessJwtRefreshTask(vertx, jwtParameters));
         }
         else if (jwtParameters.jwtAuthType().equals(JwtParameters.AuthType.OAUTH))
         {
@@ -98,6 +102,37 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         {
             throw new IllegalStateException("Unsupported JWT Auth Type: " + jwtParameters.jwtAuthType());
         }
+    }
+
+    private @NotNull PeriodicStatelessJwtRefreshTask buildPeriodicStatelessJwtRefreshTask(Vertx vertx, JwtParameters jwtParameters)
+    {
+        WebClientOptions options = new WebClientOptions()
+                .setSsl(jwtParameters.site().startsWith("https"));
+
+        if (jwtParameters.keystorePath().isPresent())
+        {
+            if (jwtParameters.keystorePassword().isEmpty())
+            {
+                throw new IllegalArgumentException("JWT keystore password required when setting JWT keystore path.");
+            }
+            options.setKeyStoreOptions(new JksOptions()
+                    .setPath(jwtParameters.keystorePath().get())
+                    .setPassword(jwtParameters.keystorePassword().get())
+            );
+        }
+        if (jwtParameters.truststorePath().isPresent())
+        {
+            if (jwtParameters.truststorePassword().isEmpty())
+            {
+                throw new IllegalArgumentException("JWT truststore password required when setting JWT truststore path.");
+            }
+            options.setTrustStoreOptions(new JksOptions()
+                    .setPath(jwtParameters.truststorePath().get())
+                    .setPassword(jwtParameters.truststorePassword().get())
+            );
+        }
+        WebClient webClient = WebClient.create(vertx, options);
+        return new PeriodicStatelessJwtRefreshTask(webClient);
     }
 
     @Override
@@ -239,6 +274,13 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     private class PeriodicStatelessJwtRefreshTask implements PeriodicTask
     {
         private final String taskName = String.format("PeriodicStatelessJwtRefreshTask_%s", jwtParameters.site());
+        private final WebClient webClient;
+
+        private PeriodicStatelessJwtRefreshTask(WebClient webClient)
+        {
+            this.webClient = webClient;
+        }
+
         @Override
         public DurationSpec delay()
         {
@@ -255,7 +297,6 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         @Override
         public void execute(Promise<Void> promise)
         {
-            WebClient webClient = WebClient.create(vertx, new WebClientOptions().setSsl(true));
             if (!jwtParameters.enabled())
             {
                 delegateHandler.set(null);
@@ -263,8 +304,14 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
                 return;
             }
             String jwtPemUri = jwtParameters.site();
-            webClient.getAbs(jwtPemUri).send()
-                     .onSuccess(ar -> {
+            HttpRequest<Buffer> request = webClient.getAbs(jwtPemUri);
+            if (jwtParameters.pemProviderJwt().isPresent())
+            {
+                request.bearerTokenAuthentication(jwtParameters.pemProviderJwt().get());
+            }
+
+            request.send()
+                    .onSuccess(ar -> {
                         String pem = ar.bodyAsString();
                         JWTAuthOptions jwtAuthOptions = new JWTAuthOptions()
                                                         .addPubSecKey(new PubSecKeyOptions()
