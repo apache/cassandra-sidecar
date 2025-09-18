@@ -47,6 +47,7 @@ import io.vertx.ext.web.handler.impl.JWTAuthHandlerImpl;
 import io.vertx.ext.web.handler.impl.OAuth2AuthHandlerImpl;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 
@@ -72,16 +73,19 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
     private final Vertx vertx;
     private final JwtParameters jwtParameters;
     private final JwtRoleProcessor roleProcessor;
+    private final AuthMetrics metrics;
 
     public ReloadingJwtAuthenticationHandler(Vertx vertx,
                                              JwtParameters jwtParameters,
                                              JwtRoleProcessor roleProcessor,
-                                             PeriodicTaskExecutor periodicTaskExecutor)
+                                             PeriodicTaskExecutor periodicTaskExecutor,
+                                             AuthMetrics metrics)
     {
         super(NoOpAuthenticationProvider.INSTANCE);
         this.vertx = vertx;
         this.jwtParameters = jwtParameters;
         this.roleProcessor = roleProcessor;
+        this.metrics = metrics;
         if (jwtParameters.jwtAuthType().equals(JwtParameters.AuthType.STATELESS))
         {
             periodicTaskExecutor.schedule(new PeriodicStatelessJwtRefreshTask());
@@ -272,6 +276,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
                         promise.complete();
                     }).onFailure(cause -> {
                         LOGGER.error("Error encountered when refreshing stateless JWT PEM material.", cause);
+                        metrics.jwtPemRefreshFailures.metric.inc();
                         promise.fail(cause);
                     });
         }

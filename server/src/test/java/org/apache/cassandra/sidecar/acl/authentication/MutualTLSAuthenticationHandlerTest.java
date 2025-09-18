@@ -38,6 +38,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.MetricRegistry;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
@@ -77,6 +78,7 @@ import org.apache.cassandra.sidecar.config.yaml.ParameterizedClassConfigurationI
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
+import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
@@ -241,7 +243,9 @@ class MutualTLSAuthenticationHandlerTest
         ChainAuthHandlerImpl chainAuthHandlerSucceeds = (ChainAuthHandlerImpl) ChainAuthHandler.any();
         MutualTlsAuthenticationHandlerFactory mTLSAuthFactory = injector.getInstance(MutualTlsAuthenticationHandlerFactory.class);
         SidecarConfiguration config = injector.getInstance(SidecarConfiguration.class);
-        chainAuthHandlerSucceeds.add(mTLSAuthFactory.create(vertx, config.accessControlConfiguration(), params));
+        MetricRegistry metricRegistry = new MetricRegistry();
+        AuthMetrics authMetrics = new AuthMetrics(metricRegistry);
+        chainAuthHandlerSucceeds.add(mTLSAuthFactory.create(vertx, config.accessControlConfiguration(), params, authMetrics));
         chainAuthHandlerSucceeds.add(new TestAuthHandler(new NoOpAuthentication(), true));
 
         RoutingContext mockContext = mock(RoutingContext.class);
@@ -251,7 +255,7 @@ class MutualTLSAuthenticationHandlerTest
         when(mockContext.request()).thenReturn(mockServerRequest);
 
         ChainAuthHandlerImpl chainAuthHandlerFails = (ChainAuthHandlerImpl) ChainAuthHandler.any();
-        chainAuthHandlerFails.add(mTLSAuthFactory.create(vertx, config.accessControlConfiguration(), params));
+        chainAuthHandlerFails.add(mTLSAuthFactory.create(vertx, config.accessControlConfiguration(), params, authMetrics));
         chainAuthHandlerFails.add(new TestAuthHandler(new NoOpAuthentication(), false));
 
         CountDownLatch waitForResponse = new CountDownLatch(2);

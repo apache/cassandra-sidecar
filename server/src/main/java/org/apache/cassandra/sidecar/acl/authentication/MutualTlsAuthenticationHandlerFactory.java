@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 
 /**
  * {@link AuthenticationHandlerFactory} implementation for {@link MutualTlsAuthenticationHandler}
@@ -56,7 +57,8 @@ public class MutualTlsAuthenticationHandlerFactory implements AuthenticationHand
     @Override
     public AuthenticationHandlerInternal create(Vertx vertx,
                                                 AccessControlConfiguration accessControlConfiguration,
-                                                Map<String, String> parameters) throws ConfigurationException
+                                                Map<String, String> parameters,
+                                                AuthMetrics metrics) throws ConfigurationException
     {
         validate(parameters);
         try

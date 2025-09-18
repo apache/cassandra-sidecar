@@ -26,6 +26,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.codahale.metrics.MetricRegistry;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
@@ -37,6 +38,7 @@ import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory.CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY;
@@ -110,7 +112,9 @@ class MutualTlsAuthenticationHandlerFactoryTest
         when(mockSidecarConfig.accessControlConfiguration()).thenReturn(mockAccessControlConfig);
         SystemAuthDatabaseAccessor mockAccessor = mock(SystemAuthDatabaseAccessor.class);
         MutualTlsAuthenticationHandlerFactory factory = factory(mockSidecarConfig, mockAccessor);
-        assertThatThrownBy(() -> factory.create(vertx, mockAccessControlConfig, parameters))
+        MetricRegistry metricRegistry = new MetricRegistry();
+        AuthMetrics authMetrics = new AuthMetrics(metricRegistry);
+        assertThatThrownBy(() -> factory.create(vertx, mockAccessControlConfig, parameters, authMetrics))
         .isInstanceOf(ConfigurationException.class)
         .hasMessage(expectedErrMsg);
     }

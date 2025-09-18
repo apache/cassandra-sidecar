@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.codahale.metrics.MetricRegistry;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
@@ -45,6 +46,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
+import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.jetbrains.annotations.NotNull;
 
@@ -71,8 +73,10 @@ class ReloadingJwtAuthenticationHandlerTest
         when(mockRoleProcessor.processRoles(any())).thenReturn(List.of("test_role"));
         PeriodicTaskExecutor mockTaskExecutor = mock(PeriodicTaskExecutor.class);
         doNothing().when(mockTaskExecutor).schedule(any());
+        MetricRegistry metricRegistry = new MetricRegistry();
+        AuthMetrics authMetrics = new AuthMetrics(metricRegistry);
         ReloadingJwtAuthenticationHandler reloadingJwtAuthenticationHandler
-        = new ReloadingJwtAuthenticationHandler(mockVertx, parameterExtractor, mockRoleProcessor, mockTaskExecutor);
+        = new ReloadingJwtAuthenticationHandler(mockVertx, parameterExtractor, mockRoleProcessor, mockTaskExecutor, authMetrics);
         RoutingContext mockCtx = mock(RoutingContext.class);
         reloadingJwtAuthenticationHandler.authenticate(mockCtx, result -> {
             assertThat(result.failed()).isTrue();
@@ -89,8 +93,10 @@ class ReloadingJwtAuthenticationHandlerTest
                                                                                     "client_id", "id"));
         JwtRoleProcessor mockRoleProcessor = mock(JwtRoleProcessor.class);
         PeriodicTaskExecutor mockTaskExecutor = mock(PeriodicTaskExecutor.class);
+        MetricRegistry metricRegistry = new MetricRegistry();
+        AuthMetrics authMetrics = new AuthMetrics(metricRegistry);
         ReloadingJwtAuthenticationHandler reloadingJwtAuthenticationHandler
-        = new ReloadingJwtAuthenticationHandler(mockVertx, parameterExtractor, mockRoleProcessor, mockTaskExecutor);
+        = new ReloadingJwtAuthenticationHandler(mockVertx, parameterExtractor, mockRoleProcessor, mockTaskExecutor, authMetrics);
         RoutingContext mockCtx = mock(RoutingContext.class);
         reloadingJwtAuthenticationHandler.authenticate(mockCtx, result -> {
             assertThat(result.failed()).isTrue();
@@ -177,12 +183,14 @@ class ReloadingJwtAuthenticationHandlerTest
         ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         ClusterLease clusterLease = new ClusterLease();
         PeriodicTaskExecutor executor = new PeriodicTaskExecutor(executorPools, clusterLease);
-        ReloadingJwtAuthenticationHandler handler = new ReloadingJwtAuthenticationHandler(vertx,
-                                                                                          parameterExtractor,
-                                                                                          mockRoleProcessor,
-                                                                                          executor
+        MetricRegistry metricRegistry = new MetricRegistry();
+        AuthMetrics authMetrics = new AuthMetrics(metricRegistry);
+        return new ReloadingJwtAuthenticationHandler(vertx,
+                                                     parameterExtractor,
+                                                     mockRoleProcessor,
+                                                     executor,
+                                                     authMetrics
         );
-        return handler;
     }
 
     private String createTestJwtToken(PrivateKey privateKey)

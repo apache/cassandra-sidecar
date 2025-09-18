@@ -43,15 +43,15 @@ class JWTAuthenticationHandlerFactoryTest
     {
         PeriodicTaskExecutor mockTaskExecutor = mock(PeriodicTaskExecutor.class);
         JwtAuthenticationHandlerFactory factory = new JwtAuthenticationHandlerFactory(mockRoleProcessor, mockTaskExecutor);
-        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, null))
+        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, null, null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("JWT parameters can not be null");
 
-        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, Map.of()))
+        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, Map.of(), null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Missing site JWT parameter");
 
-        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, Map.of("site", "www.apache.org")))
+        assertThatThrownBy(() -> factory.create(mockVertx, mockConfig, Map.of("site", "www.apache.org"), null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Missing client_id JWT parameter");
     }
