@@ -273,6 +273,7 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
                         JWTAuth auth = JWTAuth.create(vertx, jwtAuthOptions);
                         AuthenticationHandlerInternal jwtAuthHandlerDelegate = new JWTAuthHandlerImpl(auth, null);
                         delegateHandler.set(jwtAuthHandlerDelegate);
+                        metrics.jwtPemRefreshSuccesses.metric.inc();
                         promise.complete();
                     }).onFailure(cause -> {
                         LOGGER.error("Error encountered when refreshing stateless JWT PEM material.", cause);

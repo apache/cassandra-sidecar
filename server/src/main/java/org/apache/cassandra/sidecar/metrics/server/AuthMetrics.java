@@ -31,11 +31,18 @@ public class AuthMetrics
 {
     private static final String DOMAIN = SERVER_PREFIX + ".Auth";
     public final NamedMetric<Counter> jwtPemRefreshFailures;
+    public final NamedMetric<Counter> jwtPemRefreshSuccesses;
+
     public AuthMetrics(MetricRegistry metricRegistry)
     {
         jwtPemRefreshFailures = NamedMetric.builder(name -> metricRegistry.counter(name))
                                         .withDomain(DOMAIN)
                                         .withName("JwtPemRefreshFailures")
                                         .build();
+
+        jwtPemRefreshSuccesses = NamedMetric.builder(name -> metricRegistry.counter(name))
+                                         .withDomain(DOMAIN)
+                                         .withName("JwtPemRefreshSuccesses")
+                                         .build();
     }
 }
