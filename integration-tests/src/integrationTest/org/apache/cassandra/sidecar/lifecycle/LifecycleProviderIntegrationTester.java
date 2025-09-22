@@ -42,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class LifecycleProviderIntegrationTester
 {
-    protected final Logger logger = LoggerFactory.getLogger(SharedClusterIntegrationTestBase.class);
+    protected final Logger logger = LoggerFactory.getLogger(LifecycleProviderIntegrationTester.class);
 
     static final int TIMEOUT_SECONDS = 120;
 
@@ -162,7 +162,7 @@ public class LifecycleProviderIntegrationTester
     {
         return getBlocking(client
                            .put(sidecarPort, sidecarHost, "/api/v1/cassandra/lifecycle")
-                           .sendBuffer(Buffer.buffer("{\"state\":\"" + desiredState + "\"}")));
+                           .sendBuffer(JsonObject.of("state", desiredState).toBuffer()));
     }
 
     public void waitForCqlStatus(String expectedStatus, int timeoutSeconds) throws TimeoutException

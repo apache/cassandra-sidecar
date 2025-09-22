@@ -25,7 +25,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 
 /**
  * Manages the lifecycle of JVM Dtest Cassandra instances.
- * This should used for integration tests where Cassandra instances are started and stopped
+ * This should be used for integration tests where Cassandra instances are started and stopped
  */
 public class InJvmDTestLifecycleProvider implements LifecycleProvider
 {

@@ -106,18 +106,17 @@ class LifecycleManagerTest
         // Wait for the task to complete
         startLatch.countDown();
         when(mockLifecycleProvider.isRunning(TEST_HOST_META)).thenReturn(true);
-        Thread.sleep(200);
-
+        
         // Check status was updated
-        actualResponse = lifecycleManager.getLifecycleInfo(TEST_HOST);
-        expectedResponse = new LifecycleInfoResponse(LifecycleCassandraState.RUNNING, LifecycleCassandraState.RUNNING,
+        LifecycleInfoResponse actualResponseAfterStart = lifecycleManager.getLifecycleInfo(TEST_HOST);
+        LifecycleInfoResponse expectedResponseAfterStart = new LifecycleInfoResponse(LifecycleCassandraState.RUNNING, LifecycleCassandraState.RUNNING,
                                                      LifecycleStatus.CONVERGED,
                                                      "Instance has started");
-        assertThat(actualResponse).isEqualTo(expectedResponse);
+        loopAssert(1, 10, () -> assertThat(actualResponseAfterStart).isEqualTo(expectedResponseAfterStart));
 
         // Attempt to start the instance again, should be no-op since instance is already running
         actualResponse = lifecycleManager.updateDesiredState(TEST_HOST, LifecycleCassandraState.RUNNING);
-        assertThat(actualResponse).isEqualTo(expectedResponse);
+        assertThat(actualResponse).isEqualTo(expectedResponseAfterStart);
     }
 
     @Test
