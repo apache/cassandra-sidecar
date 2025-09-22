@@ -19,6 +19,7 @@
 
 package org.apache.cassandra.sidecar.client;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -42,6 +43,7 @@ import org.apache.cassandra.sidecar.common.request.AllServicesConfigRequest;
 import org.apache.cassandra.sidecar.common.request.CreateRestoreJobRequest;
 import org.apache.cassandra.sidecar.common.request.CreateRestoreJobSliceRequest;
 import org.apache.cassandra.sidecar.common.request.DeleteServiceConfigRequest;
+import org.apache.cassandra.sidecar.common.request.GenerateRoleRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.ListCdcSegmentsRequest;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationListInstanceFilesRequest;
@@ -57,12 +59,14 @@ import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.Digest;
+import org.apache.cassandra.sidecar.common.request.data.GenerateRoleRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.RestoreJobProgressRequestParams;
 import org.apache.cassandra.sidecar.common.request.data.UpdateCdcServiceConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
+import org.apache.cassandra.sidecar.common.response.GenerateRoleResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
@@ -938,6 +942,12 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                                             .request(new StreamFileRequest(reqPath, targetFilePath))
                                                             .retryPolicy(new LiveMigrationDownloadRetryPolicy(defaultRetryPolicy, targetFilePath))
                                                             .build());
+    }
+
+    public CompletableFuture<GenerateRoleResponse> generateRole(SidecarInstance instance, GenerateRoleRequestPayload payload)
+    {
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .request(new GenerateRoleRequest(payload)).build());
     }
 
     /**

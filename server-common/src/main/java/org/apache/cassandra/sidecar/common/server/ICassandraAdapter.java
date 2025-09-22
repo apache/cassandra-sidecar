@@ -102,6 +102,12 @@ public interface ICassandraAdapter
     @NotNull MetricsOperations metricsOperations() throws CassandraUnavailableException;
 
     /**
+     * @return the {@link RolesOperations} implementation of the Cassandra cluster
+     * @throws CassandraUnavailableException when Cassandra is not available
+     */
+    @NotNull RolesOperations rolesOperations() throws CassandraUnavailableException;
+
+    /**
      * @return the {@link ClusterMembershipOperations} implementation for handling cluster membership operations
      * @throws CassandraUnavailableException when Cassandra is not available
      */

@@ -27,6 +27,7 @@ import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSche
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
+import org.apache.cassandra.sidecar.common.response.GenerateRoleResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
@@ -52,6 +53,7 @@ import org.apache.cassandra.sidecar.handlers.StreamStatsHandler;
 import org.apache.cassandra.sidecar.handlers.TableStatsHandler;
 import org.apache.cassandra.sidecar.handlers.TokenRangeReplicaMapHandler;
 import org.apache.cassandra.sidecar.handlers.cassandra.NodeSettingsHandler;
+import org.apache.cassandra.sidecar.handlers.role.RoleGenerationHandler;
 import org.apache.cassandra.sidecar.handlers.validations.ValidateTableExistenceHandler;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
@@ -378,5 +380,21 @@ public class CassandraOperationsModule extends AbstractModule
                       .setBodyHandler(true)
                       .handler(nodeNativeHandler)
                       .build();
+    }
+
+    @PUT
+    @Path(ApiEndpointsV1.GENERATE_ROLE)
+    @Operation(summary = "Update service configuration",
+               description = "Generates a role with optionally generated password")
+    @APIResponse(description = "Role has been generated successfully",
+                 responseCode = "200",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = GenerateRoleResponse.class)))
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.GenerateRoleKey.class)
+    VertxRoute createGeneratedRoleRoute(RouteBuilder.Factory factory,
+                                        RoleGenerationHandler roleGenerationHandler)
+    {
+        return factory.builderForRoute().setBodyHandler(true).handler(roleGenerationHandler).build();
     }
 }
