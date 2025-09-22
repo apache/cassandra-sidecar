@@ -109,26 +109,26 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         WebClientOptions options = new WebClientOptions()
                 .setSsl(jwtParameters.site().startsWith("https"));
 
-        if (jwtParameters.keystorePath().isPresent())
+        if (jwtParameters.keystorePath() != null)
         {
             if (jwtParameters.keystorePassword().isEmpty())
             {
                 throw new IllegalArgumentException("JWT keystore password required when setting JWT keystore path.");
             }
             options.setKeyStoreOptions(new JksOptions()
-                    .setPath(jwtParameters.keystorePath().get())
-                    .setPassword(jwtParameters.keystorePassword().get())
+                    .setPath(jwtParameters.keystorePath())
+                    .setPassword(jwtParameters.keystorePassword())
             );
         }
-        if (jwtParameters.truststorePath().isPresent())
+        if (jwtParameters.truststorePath() != null)
         {
             if (jwtParameters.truststorePassword().isEmpty())
             {
                 throw new IllegalArgumentException("JWT truststore password required when setting JWT truststore path.");
             }
             options.setTrustStoreOptions(new JksOptions()
-                    .setPath(jwtParameters.truststorePath().get())
-                    .setPassword(jwtParameters.truststorePassword().get())
+                    .setPath(jwtParameters.truststorePath())
+                    .setPassword(jwtParameters.truststorePassword())
             );
         }
         WebClient webClient = WebClient.create(vertx, options);
@@ -305,9 +305,9 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
             }
             String jwtPemUri = jwtParameters.site();
             HttpRequest<Buffer> request = webClient.getAbs(jwtPemUri);
-            if (jwtParameters.pemProviderJwt().isPresent())
+            if (jwtParameters.pemProviderJwt() != null)
             {
-                request.bearerTokenAuthentication(jwtParameters.pemProviderJwt().get());
+                request.bearerTokenAuthentication(jwtParameters.pemProviderJwt());
             }
 
             request.send()

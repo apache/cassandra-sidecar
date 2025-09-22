@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -130,33 +129,33 @@ public class JwtParameterExtractor implements JwtParameters
     }
 
     @Override
-    public Optional<String> keystorePath()
+    public String keystorePath()
     {
-        return Optional.ofNullable(keystorePath);
+        return keystorePath;
     }
 
     @Override
-    public Optional<String> keystorePassword()
+    public String keystorePassword()
     {
-        return Optional.ofNullable(keystorePassword);
+        return keystorePassword;
     }
 
     @Override
-    public Optional<String> truststorePath()
+    public String truststorePath()
     {
-        return Optional.ofNullable(truststorePath);
+        return truststorePath;
     }
 
     @Override
-    public Optional<String> truststorePassword()
+    public String truststorePassword()
     {
-        return Optional.ofNullable(truststorePassword);
+        return truststorePassword;
     }
 
     @Override
-    public Optional<String> pemProviderJwt()
+    public String pemProviderJwt()
     {
-        return Optional.ofNullable(pemProviderJwt);
+        return pemProviderJwt;
     }
 
     private void validate(Map<String, String> parameters)

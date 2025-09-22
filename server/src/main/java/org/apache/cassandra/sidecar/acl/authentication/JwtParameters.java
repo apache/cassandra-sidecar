@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.acl.authentication;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
@@ -62,27 +61,27 @@ public interface JwtParameters
     /**
      * @return Optional path to a keystore to provide mutual TLS to PEM public key provider service
      */
-    Optional<String> keystorePath();
+    String keystorePath();
 
     /**
      * @return Optional password for the provided keystore
      */
-    Optional<String> keystorePassword();
+    String keystorePassword();
 
     /**
      * @return Optional path to a truststore to validate SSL certs from PEM public key provider service
      */
-    Optional<String> truststorePath();
+    String truststorePath();
 
     /**
      * @return Optional password for the provided truststore
      */
-    Optional<String> truststorePassword();
+    String truststorePassword();
 
     /**
      * @return Optional JWT to authenticate to PEM public key provider service
      */
-    Optional<String> pemProviderJwt();
+    String pemProviderJwt();
 
 
     /**
