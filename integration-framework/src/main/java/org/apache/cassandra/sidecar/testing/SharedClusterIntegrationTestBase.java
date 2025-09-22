@@ -438,6 +438,10 @@ public abstract class SharedClusterIntegrationTestBase
      */
     protected void stopSidecar() throws InterruptedException
     {
+        if (serverWrapper == null)
+        {
+            return;
+        }
         closeServer(serverWrapper.server);
     }
 

@@ -51,14 +51,18 @@ public class InJvmLifecycleProviderIntegrationTest extends SharedClusterSidecarI
         return super.testClusterConfiguration().startCluster(false);
     }
 
-    @Test
-    void testInJvmLifecycleProviderStartAndStopAndRecoveryAfterCrash() throws Exception
+    @Override
+    protected void beforeClusterProvisioning()
     {
         // JVM Distributed Test framework contains a bug with restarting nodes in version 4.0 (CASSANDRA-19729)
         assumeThat(SimpleCassandraVersion.create(testVersion.version()))
         .withFailMessage("JVM Distributed Test framework contains a bug with restarting nodes in version 4.0 (CASSANDRA-19729)")
         .isGreaterThanOrEqualTo(SimpleCassandraVersion.create(JVM_LIFECYCLE_TEST_MIN_VERSION));
+    }
 
+    @Test
+    void testInJvmLifecycleProviderStartAndStopAndRecoveryAfterCrash() throws Exception
+    {
         // Simulate node crashing by directly calling the lifecycle provider's stop method
         Runnable cassandraCrasher = () -> {
             LifecycleProvider lifecycleProvider = serverWrapper.injector.getInstance(LifecycleProvider.class);
