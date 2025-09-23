@@ -171,6 +171,10 @@ public class FilteringMetricRegistry extends MetricRegistry
                 existingAllMetrics.putAll(excludedMetrics);
                 allMetrics = existingAllMetrics = Map.copyOf(existingAllMetrics);
             }
+            else
+            {
+                existingAllMetrics = allMetrics;
+            }
         }
         return existingAllMetrics;
     }
