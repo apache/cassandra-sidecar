@@ -45,6 +45,9 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarPermissionsDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
@@ -57,9 +60,14 @@ import static org.mockito.Mockito.when;
  */
 class RoleAuthorizationsCacheTest
 {
+    private static final MetricRegistryFactory FACTORY
+    = new MetricRegistryFactory(RoleAuthorizationsCacheTest.class.getName(),
+                                Collections.emptyList(),
+                                Collections.emptyList());
     Vertx vertx;
     SidecarSchema mockSidecarSchema;
     ExecutorPools executorPools;
+    SidecarMetrics sidecarMetrics;
 
     @BeforeEach
     void setup()
@@ -68,12 +76,14 @@ class RoleAuthorizationsCacheTest
         mockSidecarSchema = mock(SidecarSchema.class);
         when(mockSidecarSchema.isInitialized()).thenReturn(true);
         executorPools = createdSharedTestPool(vertx);
+        sidecarMetrics = new SidecarMetricsImpl(FACTORY, null);
     }
 
     @AfterEach
     void cleanup()
     {
         TestResourceReaper.create().with(vertx).with(executorPools).close();
+        FACTORY.getOrCreate().removeMatching((name, metric) -> true);
     }
 
     @Test
@@ -93,9 +103,11 @@ class RoleAuthorizationsCacheTest
                                                                     mockConfig,
                                                                     mockSidecarSchema,
                                                                     mockDbAccessor,
-                                                                    mockSidecarPermissionsAccessor);
+                                                                    mockSidecarPermissionsAccessor,
+                                                                    sidecarMetrics);
         assertThat(cache.getAll().size()).isZero();
         assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(2);
+        assertThat(sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot().hitCount()).isZero();
         assertThat(cache.getAll().size()).isOne();
 
         sidecarAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(BasicPermissions.STREAM_SNAPSHOT.toAuthorization())));
@@ -106,7 +118,11 @@ class RoleAuthorizationsCacheTest
 
         // New entries fetched during refreshes
         assertThat(cache.getAuthorizations("test_role2").size()).isOne();
+        assertThat(sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot().hitCount()).isZero();
         assertThat(cache.getAll().size()).isOne();
+        assertThat(cache.getAuthorizations("test_role2").size()).isOne();
+        assertThat(sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot().hitCount()).isOne();
+
     }
 
     @Test
@@ -126,7 +142,8 @@ class RoleAuthorizationsCacheTest
                                                                     mockConfig,
                                                                     mockSidecarSchema,
                                                                     mockDbAccessor,
-                                                                    mockSidecarPermissionsAccessor);
+                                                                    mockSidecarPermissionsAccessor,
+                                                                    sidecarMetrics);
         assertThat(cache.getAll().size()).isZero();
 
         cache.warmUp(5);
@@ -151,7 +168,8 @@ class RoleAuthorizationsCacheTest
                                                                     mockConfig,
                                                                     mockSidecarSchema,
                                                                     mockDbAccessor,
-                                                                    mockSidecarPermissionsAccessor);
+                                                                    mockSidecarPermissionsAccessor,
+                                                                    sidecarMetrics);
         assertThat(cache.getAll().size()).isZero();
 
         // warming cache
@@ -184,7 +202,8 @@ class RoleAuthorizationsCacheTest
                                                                     mockConfig,
                                                                     mockSidecarSchema,
                                                                     mockDbAccessor,
-                                                                    mockSidecarPermissionsAccessor);
+                                                                    mockSidecarPermissionsAccessor,
+                                                                    sidecarMetrics);
         assertThat(cache.getAuthorizations("test_role1").size()).isOne();
         assertThat(cache.getAuthorizations("test_role2").size()).isOne();
     }
@@ -201,7 +220,8 @@ class RoleAuthorizationsCacheTest
                                                                     mockConfig,
                                                                     mockSidecarSchema,
                                                                     mockDbAccessor,
-                                                                    mockSidecarPermissionsAccessor);
+                                                                    mockSidecarPermissionsAccessor,
+                                                                    sidecarMetrics);
         assertThat(cache.getAll().size()).isZero();
 
         // warming cache
@@ -233,7 +253,8 @@ class RoleAuthorizationsCacheTest
                                                                     mockConfig,
                                                                     mockSidecarSchema,
                                                                     mockDbAccessor,
-                                                                    mockSidecarPermissionsAccessor);
+                                                                    mockSidecarPermissionsAccessor,
+                                                                    sidecarMetrics);
         assertThat(cache.getAll().size()).isZero();
 
         // force warmup of cache

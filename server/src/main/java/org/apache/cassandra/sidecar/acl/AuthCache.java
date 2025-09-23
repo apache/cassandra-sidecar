@@ -34,6 +34,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
+import org.apache.cassandra.sidecar.metrics.CacheStatsCounter;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
@@ -51,6 +52,7 @@ public abstract class AuthCache<K, V>
     private final Function<K, V> loadFunction;
     private final Supplier<Map<K, V>> bulkLoadFunction;
     private final CacheConfiguration config;
+    private final CacheStatsCounter cacheMetrics;
     private final TaskExecutorPool internalPool;
     // cache is null when AuthCache is disabled
     private volatile LoadingCache<K, V> cache;
@@ -61,7 +63,8 @@ public abstract class AuthCache<K, V>
                         ExecutorPools executorPools,
                         Function<K, V> loadFunction,
                         Supplier<Map<K, V>> bulkLoadFunction,
-                        CacheConfiguration cacheConfiguration)
+                        CacheConfiguration cacheConfiguration,
+                        CacheStatsCounter cacheMetrics)
     {
         this.name = name;
         this.vertx = vertx;
@@ -69,6 +72,7 @@ public abstract class AuthCache<K, V>
         this.loadFunction = loadFunction;
         this.bulkLoadFunction = bulkLoadFunction;
         this.config = cacheConfiguration;
+        this.cacheMetrics = cacheMetrics;
 
         if (this.config.enabled())
         {
@@ -119,13 +123,25 @@ public abstract class AuthCache<K, V>
         return Collections.unmodifiableMap(cache.asMap());
     }
 
+    /**
+     * Invalidate a key.
+     * @param k key to invalidate
+     */
+    public void invalidate(K k)
+    {
+        if (cache != null)
+        {
+            cache.invalidate(k);
+        }
+    }
+
     private LoadingCache<K, V> initCache()
     {
         return Caffeine.newBuilder()
-                       // setting refreshAfterWrite and expireAfterWrite to same value makes sure no stale
-                       // data is fetched after expire time
-                       .refreshAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
-                       .expireAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
+                       // The cache keeps the entry until it's last access has expired. This avoids repeated calls to
+                       // db for the same key during high volume requests.
+                       .expireAfterAccess(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
+                       .recordStats(() -> cacheMetrics)
                        .maximumSize(config.maximumSize())
                        .build(loadFunction::apply);
     }
