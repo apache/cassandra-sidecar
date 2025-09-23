@@ -21,7 +21,13 @@ package org.apache.cassandra.sidecar.metrics;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.AfterEach;
@@ -30,6 +36,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.codahale.metrics.DefaultSettableGauge;
+import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.NoopMetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
@@ -242,5 +249,107 @@ class FilteringMetricRegistryTest
                   waitUntilCheck.flag();
                   context.completeNow();
               });
+    }
+
+    @Test
+    void testGetMetricsWithConcurrentRegistration() throws InterruptedException
+    {
+        FilteringMetricRegistry registry = new FilteringMetricRegistry(s -> s.endsWith("odd"));
+
+        // Let's get some concurrent updates to the registry
+        int nThreads = 100;
+        ExecutorService pool = Executors.newFixedThreadPool(nThreads);
+        CountDownLatch latch = new CountDownLatch(nThreads);
+        for (int i = 0; i < nThreads; i++)
+        {
+            int finalI = i;
+            pool.submit(() -> {
+                try
+                {
+                    // Invoke register roughly at the same time
+                    latch.countDown();
+                    latch.await();
+
+                    registry.register("testMetricThroughputMeter_" + finalI + "_" + ((finalI % 2 == 0) ? "even" : "odd"), new ThroughputMeter());
+                    assertThat(registry.getMetrics()).isNotEmpty();
+                }
+                catch (InterruptedException e)
+                {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+
+        pool.shutdown();
+        assertThat(pool.awaitTermination(1, TimeUnit.MINUTES)).isTrue();
+
+        // Let's make sure that all metrics are returned
+        Map<String, Metric> allMetrics = registry.getMetrics();
+        assertThat(allMetrics).hasSize(nThreads);
+        assertThat(registry.getIncludedMetrics()).as("Our filter filters out half of the metrics, so we expect this value to be half")
+                                                 .hasSize(nThreads / 2);
+
+        // Validate that all metric names are in the set of all metric names
+        Set<String> allMetricNames = allMetrics.keySet();
+        for (int i = 0; i < nThreads; i++)
+        {
+            String expectedMetricName = "testMetricThroughputMeter_" + i + "_" + ((i % 2 == 0) ? "even" : "odd");
+            assertThat(allMetricNames).as("Expected metric %s", expectedMetricName).contains(expectedMetricName);
+        }
+    }
+
+    @Test
+    void testGetMetricsWithConcurrentRegistrationAndRemoval() throws InterruptedException
+    {
+        FilteringMetricRegistry registry = new FilteringMetricRegistry(s -> {
+            int lastIndexOfUnderscore = s.lastIndexOf("_") + 1;
+            int i = Integer.parseInt(s.substring(lastIndexOfUnderscore));
+            return i % 4 != 0;
+        });
+
+        int nThreads = 100;
+
+        // First populate the registry
+        for (int i = 0; i < nThreads; i++)
+        {
+            String registryName = "testMetricThroughputMeter_" + i;
+            registry.register(registryName, new ThroughputMeter());
+            assertThat(registry.getMetrics()).hasSize(i + 1);
+        }
+
+        // Let's get some concurrent removals to the registry
+        ExecutorService pool = Executors.newFixedThreadPool(nThreads);
+        CountDownLatch latch = new CountDownLatch(nThreads);
+        for (int i = 0; i < nThreads; i++)
+        {
+            int finalI = i;
+            pool.submit(() -> {
+                try
+                {
+                    String registryName = "testMetricThroughputMeter_" + finalI;
+                    boolean removeFromRegistry = finalI % 2 == 0;
+                    // Invoke register roughly at the same time
+                    latch.countDown();
+                    latch.await();
+
+                    if (removeFromRegistry)
+                    {
+                        registry.remove(registryName);
+                    }
+                }
+                catch (InterruptedException e)
+                {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+
+        pool.shutdown();
+        assertThat(pool.awaitTermination(1, TimeUnit.MINUTES)).isTrue();
+
+        // Let's make sure that all metrics are returned
+        Map<String, Metric> allMetrics = registry.getMetrics();
+        assertThat(allMetrics).as("About half the metrics are removed").hasSize(nThreads / 2);
+        assertThat(registry.getIncludedMetrics()).hasSize(nThreads / 2);
     }
 }

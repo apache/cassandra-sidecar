@@ -299,17 +299,19 @@ public class PeriodicTaskExecutor implements Closeable
     {
         private final String identifier;
         private final PeriodicTask task;
+        private final int hashCode;
 
         PeriodicTaskKey(PeriodicTask task)
         {
             this.identifier = task.identifier();
             this.task = task;
+            this.hashCode = identifier.hashCode();
         }
 
         @Override
         public int hashCode()
         {
-            return identifier.hashCode();
+            return hashCode;
         }
 
         @Override

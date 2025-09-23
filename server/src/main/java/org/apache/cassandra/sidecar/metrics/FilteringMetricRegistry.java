@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,6 +40,7 @@ public class FilteringMetricRegistry extends MetricRegistry
     private static final NoopMetricRegistry NO_OP_METRIC_REGISTRY = new NoopMetricRegistry(); // supplies no-op metrics
     private final Predicate<String> isAllowed;
     private final Map<String, Metric> excludedMetrics = new ConcurrentHashMap<>();
+    private volatile Map<String, Metric> allMetrics;
 
     public FilteringMetricRegistry(Predicate<String> isAllowedPredicate)
     {
@@ -156,10 +156,23 @@ public class FilteringMetricRegistry extends MetricRegistry
     @Override
     public Map<String, Metric> getMetrics()
     {
-        Map<String, Metric> allMetrics = new HashMap<>();
-        allMetrics.putAll(super.getMetrics());
-        allMetrics.putAll(excludedMetrics);
-        return Collections.unmodifiableMap(allMetrics);
+        Map<String, Metric> existingAllMetrics = allMetrics;
+        if (existingAllMetrics != null)
+        {
+            return existingAllMetrics;
+        }
+
+        synchronized (this)
+        {
+            if (allMetrics == null)
+            {
+                existingAllMetrics = new HashMap<>();
+                existingAllMetrics.putAll(super.getMetrics());
+                existingAllMetrics.putAll(excludedMetrics);
+                allMetrics = existingAllMetrics = Map.copyOf(existingAllMetrics);
+            }
+        }
+        return existingAllMetrics;
     }
 
     /**
@@ -175,14 +188,59 @@ public class FilteringMetricRegistry extends MetricRegistry
      * Metric specific retrieve methods such as {@code counter(name)} retrieve a noop instance if metric is filtered.
      * Prefer calling those over register method, register method returns an unregistered metric if the metric is
      * filtered. In some cases Noop metric instance has a performance advantage.
+     *
+     * @param name   the name of the metric
+     * @param metric the metric
+     * @param <T>    the type of the metric
+     * @return {@code metric}
+     * @throws IllegalArgumentException if the name is already registered or metric variable is null
      */
+    @Override
     public <T extends Metric> T register(String name, T metric) throws IllegalArgumentException
+    {
+        T registeredMetric = registerInternal(name, metric);
+
+        // allMetrics needs to be recomputed every time a metric is registered
+        synchronized (this)
+        {
+            allMetrics = null;
+        }
+
+        return registeredMetric;
+    }
+
+    /**
+     * Removes the metric with the given name from the set of excluded metrics, and if the metric
+     * does not exists it removes it from the underlying metrics.
+     *
+     * @param name the name of the metric
+     * @return whether or not the metric was removed
+     */
+    @Override
+    public boolean remove(String name)
+    {
+        boolean removeResult = true;
+        Metric removedMetric = excludedMetrics.remove(name);
+        if (removedMetric == null)
+        {
+            removeResult = super.remove(name);
+        }
+
+        // force allMetrics to be recomputed every time a metric is removed
+        synchronized (this)
+        {
+            allMetrics = null;
+        }
+
+        return removeResult;
+    }
+
+    private <T extends Metric> T registerInternal(String name, T metric)
     {
         if (metric == null)
         {
             throw new IllegalArgumentException("Metric can not be null");
         }
-
         // The metric is registered by calling the register() directly
         // We need to test whether it is allowed first
         if (isAllowed.test(name))
