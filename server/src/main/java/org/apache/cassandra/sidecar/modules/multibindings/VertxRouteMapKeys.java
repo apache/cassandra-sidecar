@@ -243,6 +243,11 @@ public interface VertxRouteMapKeys
         HttpMethod HTTP_METHOD = HttpMethod.GET;
         String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE;
     }
+    interface GenerateRoleKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PUT;
+        String ROUTE_URI = ApiEndpointsV1.GENERATE_ROLE;
+    }
     interface SSTableCleanupRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.DELETE;

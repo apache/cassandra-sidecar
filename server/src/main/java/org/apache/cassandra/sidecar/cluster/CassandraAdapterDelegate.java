@@ -53,6 +53,7 @@ import org.apache.cassandra.sidecar.common.server.CompactionStatsOperations;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.MetricsOperations;
+import org.apache.cassandra.sidecar.common.server.RolesOperations;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
@@ -413,6 +414,13 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     public MetricsOperations metricsOperations() throws CassandraUnavailableException
     {
         return fromAdapter(ICassandraAdapter::metricsOperations);
+    }
+
+    @Override
+    @NotNull
+    public RolesOperations rolesOperations() throws CassandraUnavailableException
+    {
+        return fromAdapter(ICassandraAdapter::rolesOperations);
     }
 
     @Override

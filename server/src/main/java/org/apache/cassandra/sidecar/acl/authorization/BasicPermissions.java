@@ -84,4 +84,7 @@ public class BasicPermissions
     // Live Migration permissions
     public static final Permission LIST_FILES = new DomainAwarePermission("LIVE_MIGRATION:LIST_FILES", CLUSTER_SCOPE);
     public static final Permission STREAM_FILES = new DomainAwarePermission("LIVE_MIGRATION:STREAM", CLUSTER_SCOPE);
+
+    // Role management
+    public static final Permission ROLE_CREATION = new DomainAwarePermission("ROLE:CREATE", CLUSTER_SCOPE);
 }
