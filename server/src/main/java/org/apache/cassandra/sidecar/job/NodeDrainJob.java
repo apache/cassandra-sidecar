@@ -67,6 +67,8 @@ public class NodeDrainJob extends OperationalJob
             }
             catch (IllegalArgumentException | NullPointerException e)
             {
+                LOGGER.error("No matching NodeDrainStateEnum found for Cassandra node status={}. Error={}",
+                             operationMode, e);
                 return null;
             }
         }
@@ -86,7 +88,7 @@ public class NodeDrainJob extends OperationalJob
     {
         String operationMode = storageOperations.operationMode();
         NodeDrainStateEnum nodeDrainStateEnum = NodeDrainStateEnum.fromOperationMode(operationMode);
-        return nodeDrainStateEnum != null && nodeDrainStateEnum.jobStatus == OperationalJobStatus.RUNNING;
+        return nodeDrainStateEnum == NodeDrainStateEnum.DRAINING;
     }
 
     /**

@@ -161,8 +161,12 @@ public class CassandraOperationsModule extends AbstractModule
     @Path(ApiEndpointsV1.NODE_DRAIN_ROUTE)
     @Operation(summary = "Drain node",
                description = "Drains the Cassandra node by flushing memtables and stopping writes")
-    @APIResponse(description = "Node drain operation initiated successfully",
+    @APIResponse(description = "Node drain operation completed successfully",
                  responseCode = "200",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = OperationalJobResponse.class)))
+    @APIResponse(description = "Node drain operation initiated successfully",
+                 responseCode = "202",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(implementation = OperationalJobResponse.class)))
     @ProvidesIntoMap

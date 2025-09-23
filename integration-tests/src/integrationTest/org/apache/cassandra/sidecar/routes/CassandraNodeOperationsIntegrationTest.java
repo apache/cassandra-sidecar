@@ -31,6 +31,7 @@ import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestB
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -72,26 +73,18 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
         OperationalJobStatus.SUCCEEDED.name()
         );
 
-        // Wait 30 seconds for drain operation to complete
-        try
-        {
-            Thread.sleep(30000);
-        }
-        catch (InterruptedException e)
-        {
-            throw new RuntimeException(e);
-        }
+        loopAssert(30, 500, () -> {
+            // Verify node status is DRAINED by checking the operationMode via stream stats endpoint
+            HttpResponse<Buffer> streamStatsResponse = getBlocking(
+            trustedClient().get(serverWrapper.serverPort, "localhost", ApiEndpointsV1.STREAM_STATS_ROUTE)
+                           .send());
 
-        // Verify node status is DRAINED by checking the operationMode via stream stats endpoint
-        HttpResponse<Buffer> streamStatsResponse = getBlocking(
-        trustedClient().get(serverWrapper.serverPort, "localhost", ApiEndpointsV1.STREAM_STATS_ROUTE)
-                       .send());
+            assertThat(streamStatsResponse.statusCode()).isEqualTo(OK.code());
 
-        assertThat(streamStatsResponse.statusCode()).isEqualTo(OK.code());
-
-        JsonObject streamStats = streamStatsResponse.bodyAsJsonObject();
-        assertThat(streamStats).isNotNull();
-        assertThat(streamStats.getString("operationMode")).isEqualTo("DRAINED");
+            JsonObject streamStats = streamStatsResponse.bodyAsJsonObject();
+            assertThat(streamStats).isNotNull();
+            assertThat(streamStats.getString("operationMode")).isEqualTo("DRAINED");
+        });
     }
 
     /**
