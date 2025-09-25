@@ -85,12 +85,14 @@ public class AuthModule extends AbstractModule
     RouteBuilder.Factory accessProtectedRouteBuilderFactory(SidecarConfiguration sidecarConfiguration,
                                                             AuthorizationProvider authorizationProvider,
                                                             AdminIdentityResolver adminIdentityResolver,
-                                                            AuthorizationParameterValidateHandler authorizationParameterValidateHandler)
+                                                            AuthorizationParameterValidateHandler authorizationParameterValidateHandler,
+                                                            SidecarMetrics metrics)
     {
         return new RouteBuilder.Factory(sidecarConfiguration.accessControlConfiguration(),
                                         authorizationProvider,
                                         adminIdentityResolver,
-                                        authorizationParameterValidateHandler);
+                                        authorizationParameterValidateHandler,
+                                        metrics);
     }
 
     @Provides

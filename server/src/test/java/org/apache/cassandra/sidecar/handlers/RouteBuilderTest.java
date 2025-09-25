@@ -34,6 +34,9 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.RouteBuilder.Factory;
 import org.apache.cassandra.sidecar.routes.SettableVertxRoute;
@@ -49,6 +52,9 @@ import static org.mockito.Mockito.when;
  */
 class RouteBuilderTest
 {
+    MetricRegistryFactory mockRegistryFactory = mock(MetricRegistryFactory.class);
+    SidecarMetrics metrics = new SidecarMetricsImpl(mockRegistryFactory, null);
+
     @Test
     void testRequiredParameters()
     {
@@ -57,7 +63,7 @@ class RouteBuilderTest
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
         AuthorizationParameterValidateHandler mockHandler = mock(AuthorizationParameterValidateHandler.class);
 
-        Factory factory = new Factory(mockConfig, mockAuthorizationProvider, mockAdminIdentityResolver, mockHandler);
+        Factory factory = new Factory(mockConfig, mockAuthorizationProvider, mockAdminIdentityResolver, mockHandler, metrics);
         RouteBuilder routeBuilder = factory.builderForRoute();
         Router mockRouter = mock(Router.class);
         SettableVertxRoute route = routeBuilder.build();
@@ -112,7 +118,7 @@ class RouteBuilderTest
         AuthorizationProvider mockAuthorizationProvider = mock(AuthorizationProvider.class);
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
         AuthorizationParameterValidateHandler mockHandler = mock(AuthorizationParameterValidateHandler.class);
-        Factory factory = new Factory(mockConfig, mockAuthorizationProvider, mockAdminIdentityResolver, mockHandler);
+        Factory factory = new Factory(mockConfig, mockAuthorizationProvider, mockAdminIdentityResolver, mockHandler, metrics);
         RouteBuilder routeBuilder = routeBuilderFunction.apply(factory);
         SettableVertxRoute route = routeBuilder.handler(handler).build();
         test.accept(route);

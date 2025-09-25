@@ -40,10 +40,11 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
     private static final ParameterizedClassConfiguration DEFAULT_AUTHORIZER_CONFIGURATION
     = new ParameterizedClassConfigurationImpl(AllowAllAuthorizationProvider.class.getName(), Collections.emptyMap());
     private static final Set<String> DEFAULT_ADMIN_IDENTITIES = Collections.emptySet();
-    private static final CacheConfiguration DEFAULT_PERMISSION_CACHE_CONFIGURATION = CacheConfigurationImpl.builder()
-                                                                                                           .expireAfterAccess(MillisecondBoundConfiguration.parse("2h"))
-                                                                                                           .maximumSize(1_000)
-                                                                                                           .build();
+    private static final CacheConfiguration DEFAULT_PERMISSION_CACHE_CONFIGURATION
+    = CacheConfigurationImpl.builder()
+                            .expireAfterAccess(MillisecondBoundConfiguration.parse("2h"))
+                            .maximumSize(1_000)
+                            .build();
 
     @JsonProperty(value = "enabled")
     protected final boolean enabled;

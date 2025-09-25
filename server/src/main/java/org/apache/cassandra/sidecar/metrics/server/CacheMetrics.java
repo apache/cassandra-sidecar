@@ -32,6 +32,7 @@ public class CacheMetrics
     public final CacheStatsCounter identityToRoleCacheMetrics;
     public final CacheStatsCounter superUserCacheMetrics;
     public final CacheStatsCounter rolePermissionsCacheMetrics;
+    public final CacheStatsCounter authorizationCacheMetrics;
 
     public CacheMetrics(MetricRegistry globalMetricRegistry)
     {
@@ -39,5 +40,6 @@ public class CacheMetrics
         identityToRoleCacheMetrics = new CacheStatsCounter(globalMetricRegistry, "identity_to_role_cache");
         superUserCacheMetrics = new CacheStatsCounter(globalMetricRegistry, "super_user_cache");
         rolePermissionsCacheMetrics = new CacheStatsCounter(globalMetricRegistry, "role_permissions_cache");
+        authorizationCacheMetrics = new CacheStatsCounter(globalMetricRegistry, "authorization_cache");
     }
 }

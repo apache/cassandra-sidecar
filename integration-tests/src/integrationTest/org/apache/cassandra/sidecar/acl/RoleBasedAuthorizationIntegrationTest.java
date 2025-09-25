@@ -364,6 +364,12 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         // SNAPSHOT:CREATE permission granted for data/grant_table_test_keyspace/test_table
         verifyAccess(HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
 
+        // SNAPSHOT:CREATE permission granted for data/grant_table_test_keyspace/test_table
+        verifyAccess(HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+
+        // SNAPSHOT:DELETE permission not granted for data/grant_table_test_keyspace/test_table
+        verifyAccess(HttpMethod.DELETE, createSnapshotRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
+
         // SNAPSHOT:DELETE permission not granted for data/grant_table_test_keyspace/test_table
         verifyAccess(HttpMethod.DELETE, createSnapshotRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
     }
