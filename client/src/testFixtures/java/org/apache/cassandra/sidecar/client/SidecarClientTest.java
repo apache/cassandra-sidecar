@@ -63,8 +63,8 @@ import org.apache.cassandra.sidecar.client.request.RequestExecutorTest;
 import org.apache.cassandra.sidecar.client.retry.RetryAction;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
-import org.apache.cassandra.sidecar.common.data.LifecycleCassandraState;
-import org.apache.cassandra.sidecar.common.data.LifecycleStatus;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.CassandraState;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.OperationStatus;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
@@ -1979,9 +1979,9 @@ abstract class SidecarClientTest
         SidecarInstanceImpl sidecarInstance = instances.get(0);
         LifecycleInfoResponse result = client.nodeLifecycleInfo(sidecarInstance).get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
-        assertThat(result.currentState()).isEqualTo(LifecycleCassandraState.RUNNING);
-        assertThat(result.desiredState()).isEqualTo(LifecycleCassandraState.RUNNING);
-        assertThat(result.status()).isEqualTo(LifecycleStatus.CONVERGED);
+        assertThat(result.currentState()).isEqualTo(CassandraState.RUNNING);
+        assertThat(result.desiredState()).isEqualTo(CassandraState.RUNNING);
+        assertThat(result.status()).isEqualTo(OperationStatus.CONVERGED);
         assertThat(result.lastUpdate()).isEqualTo("Instance has started");
 
         validateResponseServed(ApiEndpointsV1.LIFECYCLE_ROUTE);
@@ -2000,9 +2000,9 @@ abstract class SidecarClientTest
                 .get(30, TimeUnit.SECONDS);
 
         assertThat(result).isNotNull();
-        assertThat(result.currentState()).isEqualTo(LifecycleCassandraState.RUNNING);
-        assertThat(result.desiredState()).isEqualTo(LifecycleCassandraState.STOPPED);
-        assertThat(result.status()).isEqualTo(LifecycleStatus.CONVERGING);
+        assertThat(result.currentState()).isEqualTo(CassandraState.RUNNING);
+        assertThat(result.desiredState()).isEqualTo(CassandraState.STOPPED);
+        assertThat(result.status()).isEqualTo(OperationStatus.CONVERGING);
         assertThat(result.lastUpdate()).isEqualTo("Submitting stop task for instance");
 
         validateResponseServed(ApiEndpointsV1.LIFECYCLE_ROUTE, request -> {

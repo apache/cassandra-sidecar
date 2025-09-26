@@ -40,8 +40,8 @@ import io.vertx.junit5.VertxTestContext;
 
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.TestResourceReaper;
-import org.apache.cassandra.sidecar.common.data.LifecycleCassandraState;
-import org.apache.cassandra.sidecar.common.data.LifecycleStatus;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.CassandraState;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.OperationStatus;
 import org.apache.cassandra.sidecar.common.response.LifecycleInfoResponse;
 import org.apache.cassandra.sidecar.lifecycle.LifecycleManager;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
@@ -88,8 +88,8 @@ public class LifecycleInfoHandlerTest
     void testGetLifecycleInfoNoTask(VertxTestContext context)
     {
         // Mock response for initial state with no task submitted
-        LifecycleInfoResponse expectedResponse = new LifecycleInfoResponse(LifecycleCassandraState.RUNNING, LifecycleCassandraState.RUNNING, LifecycleStatus.CONVERGED,
-                                                                           "All good");
+        LifecycleInfoResponse expectedResponse = new LifecycleInfoResponse(CassandraState.RUNNING, CassandraState.RUNNING,
+                OperationStatus.CONVERGED, "All good");
         when(mockLifecycleManager.getLifecycleInfo(anyString())).thenReturn(expectedResponse);
 
         WebClient client = WebClient.create(vertx);
@@ -109,7 +109,7 @@ public class LifecycleInfoHandlerTest
     {
         // Mock response for a task in progress
         LifecycleInfoResponse mockResponse = new LifecycleInfoResponse(
-        LifecycleCassandraState.STOPPED, LifecycleCassandraState.RUNNING, LifecycleStatus.CONVERGING, null);
+        CassandraState.STOPPED, CassandraState.RUNNING, OperationStatus.CONVERGING, null);
         when(mockLifecycleManager.getLifecycleInfo("127.0.0.1")).thenReturn(mockResponse);
 
         WebClient client = WebClient.create(vertx);
@@ -120,9 +120,9 @@ public class LifecycleInfoHandlerTest
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   LifecycleInfoResponse lifecycleResponse = response.bodyAsJson(LifecycleInfoResponse.class);
                   assertThat(lifecycleResponse).isNotNull();
-                  assertThat(lifecycleResponse.currentState()).isEqualTo(LifecycleCassandraState.STOPPED);
-                  assertThat(lifecycleResponse.desiredState()).isEqualTo(LifecycleCassandraState.RUNNING);
-                  assertThat(lifecycleResponse.status()).isEqualTo(LifecycleStatus.CONVERGING);
+                  assertThat(lifecycleResponse.currentState()).isEqualTo(CassandraState.STOPPED);
+                  assertThat(lifecycleResponse.desiredState()).isEqualTo(CassandraState.RUNNING);
+                  assertThat(lifecycleResponse.status()).isEqualTo(OperationStatus.CONVERGING);
                   assertThat(lifecycleResponse.lastUpdate()).isNull();
                   context.completeNow();
               }));
@@ -133,7 +133,7 @@ public class LifecycleInfoHandlerTest
     {
         // Mock response for a finished task
         LifecycleInfoResponse mockResponse = new LifecycleInfoResponse(
-        LifecycleCassandraState.RUNNING, LifecycleCassandraState.RUNNING, LifecycleStatus.CONVERGED, "Host has started");
+        CassandraState.RUNNING, CassandraState.RUNNING, OperationStatus.CONVERGED, "Host has started");
         when(mockLifecycleManager.getLifecycleInfo("127.0.0.1")).thenReturn(mockResponse);
 
         WebClient client = WebClient.create(vertx);
@@ -144,9 +144,9 @@ public class LifecycleInfoHandlerTest
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   LifecycleInfoResponse lifecycleResponse = response.bodyAsJson(LifecycleInfoResponse.class);
                   assertThat(lifecycleResponse).isNotNull();
-                  assertThat(lifecycleResponse.currentState()).isEqualTo(LifecycleCassandraState.RUNNING);
-                  assertThat(lifecycleResponse.desiredState()).isEqualTo(LifecycleCassandraState.RUNNING);
-                  assertThat(lifecycleResponse.status()).isEqualTo(LifecycleStatus.CONVERGED);
+                  assertThat(lifecycleResponse.currentState()).isEqualTo(CassandraState.RUNNING);
+                  assertThat(lifecycleResponse.desiredState()).isEqualTo(CassandraState.RUNNING);
+                  assertThat(lifecycleResponse.status()).isEqualTo(OperationStatus.CONVERGED);
                   assertThat(lifecycleResponse.lastUpdate()).isEqualTo("Host has started");
                   context.completeNow();
               }));

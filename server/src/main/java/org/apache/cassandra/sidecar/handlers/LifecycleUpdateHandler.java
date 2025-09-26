@@ -25,13 +25,14 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.common.data.LifecycleCassandraState;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.CassandraState;
 import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.exceptions.LifecycleTaskConflictException;
@@ -40,8 +41,6 @@ import org.apache.cassandra.sidecar.utils.HttpExceptions;
 
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-
-import static org.apache.cassandra.sidecar.common.data.LifecycleCassandraState.fromNodeCommandState;
 
 /**
  * Handles {@code PUT /api/v1/cassandra/lifecycle} requests to start or stop a Cassandra node.
@@ -75,7 +74,7 @@ public class LifecycleUpdateHandler extends NodeCommandHandler implements Access
                                   SocketAddress remoteAddress,
                                   NodeCommandRequestPayload request)
     {
-        LifecycleCassandraState desiredState = fromNodeCommandState(request.state());
+        CassandraState desiredState = CassandraState.fromNodeCommandState(request.state());
         executorPools.service()
                      .executeBlocking(() -> lifecycleManager.updateDesiredState(host, desiredState))
                      .onSuccess(info ->
@@ -90,7 +89,7 @@ public class LifecycleUpdateHandler extends NodeCommandHandler implements Access
                                             response.setStatusCode(HttpResponseStatus.ACCEPTED.code());
                                             break;
                                         default:
-                                            logger.warn("{} request failed with unexpected result. request={}, remoteAddress={}, instance={}, lifecycleStatus={}",
+                                            logger.warn("{} request failed with unexpected result. request={}, remoteAddress={}, instance={}, operationStatus={}",
                                                         this.getClass().getSimpleName(), request, remoteAddress, host, info.status());
                                             response.setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
                                     }

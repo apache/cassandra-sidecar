@@ -22,8 +22,8 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import org.apache.cassandra.sidecar.common.data.LifecycleCassandraState;
-import org.apache.cassandra.sidecar.common.data.LifecycleStatus;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.CassandraState;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.OperationStatus;
 
 /**
  * A class representing a response for the {@code LifecycleInfoRequest}.
@@ -31,9 +31,9 @@ import org.apache.cassandra.sidecar.common.data.LifecycleStatus;
 public class LifecycleInfoResponse
 {
 
-    private final LifecycleCassandraState currentState;
-    private final LifecycleCassandraState desiredState;
-    private final LifecycleStatus status;
+    private final CassandraState currentState;
+    private final CassandraState desiredState;
+    private final OperationStatus status;
     private final String lastUpdate;
 
     /**
@@ -46,9 +46,9 @@ public class LifecycleInfoResponse
      * @param lastUpdate a message providing additional context about the last lifecycle operation
      */
     @JsonCreator
-    public LifecycleInfoResponse(@JsonProperty("current_state") LifecycleCassandraState currentState,
-                                 @JsonProperty("desired_state") LifecycleCassandraState desiredState,
-                                 @JsonProperty("status") LifecycleStatus status,
+    public LifecycleInfoResponse(@JsonProperty("current_state") CassandraState currentState,
+                                 @JsonProperty("desired_state") CassandraState desiredState,
+                                 @JsonProperty("status") OperationStatus status,
                                  @JsonProperty("last_update") String lastUpdate)
     {
         this.currentState = Objects.requireNonNull(currentState, "State must be non-null");
@@ -61,7 +61,7 @@ public class LifecycleInfoResponse
      * @return the current state of the Cassandra node
      */
     @JsonProperty("current_state")
-    public LifecycleCassandraState currentState()
+    public CassandraState currentState()
     {
         return currentState;
     }
@@ -70,16 +70,16 @@ public class LifecycleInfoResponse
      * @return the intended state of the Cassandra node
      */
     @JsonProperty("desired_state")
-    public LifecycleCassandraState desiredState()
+    public CassandraState desiredState()
     {
         return desiredState;
     }
 
     /**
-     * @return the status of the last lifecycle state
+     * @return the status of the last lifecycle operation
      */
     @JsonProperty("status")
-    public LifecycleStatus status()
+    public OperationStatus status()
     {
         return status;
     }

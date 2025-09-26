@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Test;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.data.LifecycleCassandraState;
-import org.apache.cassandra.sidecar.common.data.LifecycleStatus;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.CassandraState;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.OperationStatus;
 import org.apache.cassandra.sidecar.common.response.LifecycleInfoResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
@@ -84,9 +84,9 @@ class LifecycleManagerTest
         when(mockLifecycleProvider.isRunning(TEST_HOST_META)).thenReturn(false);
 
         LifecycleInfoResponse response = lifecycleManager.getLifecycleInfo(TEST_HOST);
-        assertThat(response.currentState()).isEqualTo(LifecycleCassandraState.STOPPED);
-        assertThat(response.desiredState()).isEqualTo(LifecycleCassandraState.UNKNOWN);
-        assertThat(response.status()).isEqualTo(LifecycleStatus.UNDEFINED);
+        assertThat(response.currentState()).isEqualTo(CassandraState.STOPPED);
+        assertThat(response.desiredState()).isEqualTo(CassandraState.UNKNOWN);
+        assertThat(response.status()).isEqualTo(OperationStatus.UNDEFINED);
         assertThat(response.lastUpdate()).isEqualTo("No lifecycle task submitted for this instance yet.");
     }
 
@@ -98,9 +98,9 @@ class LifecycleManagerTest
         CountDownLatch startLatch = slowCassandraStart();
         LifecycleManager lifecycleManager = new LifecycleManager(metadataFetcher, mockLifecycleProvider, executorPools);
 
-        LifecycleInfoResponse actualResponse = lifecycleManager.updateDesiredState(TEST_HOST, LifecycleCassandraState.RUNNING);
-        LifecycleInfoResponse expectedResponse = new LifecycleInfoResponse(LifecycleCassandraState.STOPPED, LifecycleCassandraState.RUNNING,
-                                                                           LifecycleStatus.CONVERGING,
+        LifecycleInfoResponse actualResponse = lifecycleManager.updateDesiredState(TEST_HOST, CassandraState.RUNNING);
+        LifecycleInfoResponse expectedResponse = new LifecycleInfoResponse(CassandraState.STOPPED, CassandraState.RUNNING,
+                                                                           OperationStatus.CONVERGING,
                                                                            "Submitting start task for instance");
         assertThat(actualResponse).isEqualTo(expectedResponse);
 
@@ -109,8 +109,8 @@ class LifecycleManagerTest
         when(mockLifecycleProvider.isRunning(TEST_HOST_META)).thenReturn(true);
         
         // Check status was updated
-        LifecycleInfoResponse expectedResponseAfterStart = new LifecycleInfoResponse(LifecycleCassandraState.RUNNING, LifecycleCassandraState.RUNNING,
-                                                     LifecycleStatus.CONVERGED,
+        LifecycleInfoResponse expectedResponseAfterStart = new LifecycleInfoResponse(CassandraState.RUNNING, CassandraState.RUNNING,
+                                                     OperationStatus.CONVERGED,
                                                      "Instance has started");
         loopAssert(1, 200, () -> {
             LifecycleInfoResponse actualResponseAfterStart = lifecycleManager.getLifecycleInfo(TEST_HOST);
@@ -118,7 +118,7 @@ class LifecycleManagerTest
         });
 
         // Attempt to start the instance again, should be no-op since instance is already running
-        LifecycleInfoResponse responseAfterStartAgain = lifecycleManager.updateDesiredState(TEST_HOST, LifecycleCassandraState.RUNNING);
+        LifecycleInfoResponse responseAfterStartAgain = lifecycleManager.updateDesiredState(TEST_HOST, CassandraState.RUNNING);
         assertThat(responseAfterStartAgain).isEqualTo(expectedResponseAfterStart);
     }
 
@@ -131,26 +131,26 @@ class LifecycleManagerTest
         String errorMessage = "Cannot find Cassandra executable to start instance.";
         doThrow(new RuntimeException(errorMessage)).when(mockLifecycleProvider).start(TEST_HOST_META);
 
-        lifecycleManager.updateDesiredState(TEST_HOST, LifecycleCassandraState.RUNNING);
+        lifecycleManager.updateDesiredState(TEST_HOST, CassandraState.RUNNING);
 
         loopAssert(1, 200, () -> {
             LifecycleInfoResponse response = lifecycleManager.getLifecycleInfo(TEST_HOST);
-            assertThat(response.currentState()).isEqualTo(LifecycleCassandraState.STOPPED);
-            assertThat(response.desiredState()).isEqualTo(LifecycleCassandraState.RUNNING);
-            assertThat(response.status()).isEqualTo(LifecycleStatus.DIVERGED);
+            assertThat(response.currentState()).isEqualTo(CassandraState.STOPPED);
+            assertThat(response.desiredState()).isEqualTo(CassandraState.RUNNING);
+            assertThat(response.status()).isEqualTo(OperationStatus.DIVERGED);
             assertThat(response.lastUpdate()).isEqualTo(String.format("Failed to start instance 127.0.0.1: %s", errorMessage));
         });
 
-        lifecycleManager.updateDesiredState(TEST_HOST, LifecycleCassandraState.RUNNING);
+        lifecycleManager.updateDesiredState(TEST_HOST, CassandraState.RUNNING);
         reset(mockLifecycleProvider);
 
         when(mockLifecycleProvider.isRunning(TEST_HOST_META)).thenReturn(true);
 
         loopAssert(1, 200, () -> {
             LifecycleInfoResponse newResponse = lifecycleManager.getLifecycleInfo(TEST_HOST);
-            assertThat(newResponse.currentState()).isEqualTo(LifecycleCassandraState.RUNNING);
-            assertThat(newResponse.desiredState()).isEqualTo(LifecycleCassandraState.RUNNING);
-            assertThat(newResponse.status()).isEqualTo(LifecycleStatus.CONVERGED);
+            assertThat(newResponse.currentState()).isEqualTo(CassandraState.RUNNING);
+            assertThat(newResponse.desiredState()).isEqualTo(CassandraState.RUNNING);
+            assertThat(newResponse.status()).isEqualTo(OperationStatus.CONVERGED);
             assertThat(newResponse.lastUpdate()).isEqualTo("Instance has started");
         });
     }
@@ -162,9 +162,9 @@ class LifecycleManagerTest
         // Mock a slow start operation
         slowCassandraStart();
 
-        lifecycleManager.updateDesiredState(TEST_HOST, LifecycleCassandraState.RUNNING);
+        lifecycleManager.updateDesiredState(TEST_HOST, CassandraState.RUNNING);
 
-        assertThatThrownBy(() -> lifecycleManager.updateDesiredState(TEST_HOST, LifecycleCassandraState.RUNNING))
+        assertThatThrownBy(() -> lifecycleManager.updateDesiredState(TEST_HOST, CassandraState.RUNNING))
         .isExactlyInstanceOf(LifecycleTaskConflictException.class)
         .hasMessage("Cannot update lifecycle state of instance " + TEST_HOST + " to RUNNING. Task already in progress for this host.");
     }
@@ -175,13 +175,13 @@ class LifecycleManagerTest
         LifecycleManager lifecycleManager = new LifecycleManager(metadataFetcher, mockLifecycleProvider, executorPools);
         when(mockLifecycleProvider.isRunning(TEST_HOST_META)).thenReturn(true);
 
-        lifecycleManager.updateDesiredState(TEST_HOST, LifecycleCassandraState.RUNNING);
+        lifecycleManager.updateDesiredState(TEST_HOST, CassandraState.RUNNING);
 
         loopAssert(1, 200, () -> {
             LifecycleInfoResponse firstResponse = lifecycleManager.getLifecycleInfo(TEST_HOST);
-            assertThat(firstResponse.currentState()).isEqualTo(LifecycleCassandraState.RUNNING);
-            assertThat(firstResponse.desiredState()).isEqualTo(LifecycleCassandraState.RUNNING);
-            assertThat(firstResponse.status()).isEqualTo(LifecycleStatus.CONVERGED);
+            assertThat(firstResponse.currentState()).isEqualTo(CassandraState.RUNNING);
+            assertThat(firstResponse.desiredState()).isEqualTo(CassandraState.RUNNING);
+            assertThat(firstResponse.status()).isEqualTo(OperationStatus.CONVERGED);
             assertThat(firstResponse.lastUpdate()).isEqualTo("Instance has started");
         });
         when(mockLifecycleProvider.isRunning(TEST_HOST_META)).thenReturn(false);
@@ -189,16 +189,16 @@ class LifecycleManagerTest
         loopAssert(1, 200, () -> {
             try
             {
-                lifecycleManager.updateDesiredState(TEST_HOST, LifecycleCassandraState.STOPPED);
+                lifecycleManager.updateDesiredState(TEST_HOST, CassandraState.STOPPED);
             }
             catch (LifecycleTaskConflictException e)
             {
                 // Ignore and retry in case the previous task is still in progress
             }
             LifecycleInfoResponse finalResponse = lifecycleManager.getLifecycleInfo(TEST_HOST);
-            assertThat(finalResponse.currentState()).isEqualTo(LifecycleCassandraState.STOPPED);
-            assertThat(finalResponse.desiredState()).isEqualTo(LifecycleCassandraState.STOPPED);
-            assertThat(finalResponse.status()).isEqualTo(LifecycleStatus.CONVERGED);
+            assertThat(finalResponse.currentState()).isEqualTo(CassandraState.STOPPED);
+            assertThat(finalResponse.desiredState()).isEqualTo(CassandraState.STOPPED);
+            assertThat(finalResponse.status()).isEqualTo(OperationStatus.CONVERGED);
             assertThat(finalResponse.lastUpdate()).isEqualTo("Instance has stopped");
         });
     }
@@ -209,13 +209,13 @@ class LifecycleManagerTest
         // Update state to RUNNING
         LifecycleManager lifecycleManager = new LifecycleManager(metadataFetcher, mockLifecycleProvider, executorPools);
         when(mockLifecycleProvider.isRunning(TEST_HOST_META)).thenReturn(true);
-        lifecycleManager.updateDesiredState(TEST_HOST, LifecycleCassandraState.RUNNING);
+        lifecycleManager.updateDesiredState(TEST_HOST, CassandraState.RUNNING);
 
         loopAssert(1, 200, () -> {
             LifecycleInfoResponse response = lifecycleManager.getLifecycleInfo(TEST_HOST);
-            assertThat(response.currentState()).isEqualTo(LifecycleCassandraState.RUNNING);
-            assertThat(response.desiredState()).isEqualTo(LifecycleCassandraState.RUNNING);
-            assertThat(response.status()).isEqualTo(LifecycleStatus.CONVERGED);
+            assertThat(response.currentState()).isEqualTo(CassandraState.RUNNING);
+            assertThat(response.desiredState()).isEqualTo(CassandraState.RUNNING);
+            assertThat(response.status()).isEqualTo(OperationStatus.CONVERGED);
             assertThat(response.lastUpdate()).isEqualTo("Instance has started");
         });
 
@@ -224,18 +224,18 @@ class LifecycleManagerTest
 
         loopAssert(1, 200, () -> {
             LifecycleInfoResponse divergedResponse = lifecycleManager.getLifecycleInfo(TEST_HOST);
-            assertThat(divergedResponse.currentState()).isEqualTo(LifecycleCassandraState.STOPPED);
-            assertThat(divergedResponse.desiredState()).isEqualTo(LifecycleCassandraState.RUNNING);
-            assertThat(divergedResponse.status()).isEqualTo(LifecycleStatus.DIVERGED);
+            assertThat(divergedResponse.currentState()).isEqualTo(CassandraState.STOPPED);
+            assertThat(divergedResponse.desiredState()).isEqualTo(CassandraState.RUNNING);
+            assertThat(divergedResponse.status()).isEqualTo(OperationStatus.DIVERGED);
             assertThat(divergedResponse.lastUpdate()).isEqualTo("Instance 127.0.0.1 has unexpectedly diverged from the desired state RUNNING to STOPPED.");
         });
 
         // Now simulate instance getting running without a START lifecycle task being submitted
         when(mockLifecycleProvider.isRunning(TEST_HOST_META)).thenReturn(true);
         LifecycleInfoResponse convergedResponse = lifecycleManager.getLifecycleInfo(TEST_HOST);
-        assertThat(convergedResponse.currentState()).isEqualTo(LifecycleCassandraState.RUNNING);
-        assertThat(convergedResponse.desiredState()).isEqualTo(LifecycleCassandraState.RUNNING);
-        assertThat(convergedResponse.status()).isEqualTo(LifecycleStatus.CONVERGED);
+        assertThat(convergedResponse.currentState()).isEqualTo(CassandraState.RUNNING);
+        assertThat(convergedResponse.desiredState()).isEqualTo(CassandraState.RUNNING);
+        assertThat(convergedResponse.status()).isEqualTo(OperationStatus.CONVERGED);
         assertThat(convergedResponse.lastUpdate()).isEqualTo("Instance 127.0.0.1 has converged back to the desired state RUNNING.");
     }
 
@@ -251,22 +251,22 @@ class LifecycleManagerTest
         CountDownLatch stopLatch = slowCassandraStop();
 
         LifecycleManager lifecycleManager = new LifecycleManager(metadataFetcher, mockLifecycleProvider, executorPools);
-        lifecycleManager.updateDesiredState(TEST_HOST, LifecycleCassandraState.RUNNING);
-        lifecycleManager.updateDesiredState(TEST_HOST_2, LifecycleCassandraState.STOPPED);
+        lifecycleManager.updateDesiredState(TEST_HOST, CassandraState.RUNNING);
+        lifecycleManager.updateDesiredState(TEST_HOST_2, CassandraState.STOPPED);
 
 
         loopAssert(1, 200, () -> {
             LifecycleInfoResponse response1 = lifecycleManager.getLifecycleInfo(TEST_HOST);
             LifecycleInfoResponse response2 = lifecycleManager.getLifecycleInfo(TEST_HOST_2);
 
-            assertThat(response1.currentState()).isEqualTo(LifecycleCassandraState.STOPPED);
-            assertThat(response1.desiredState()).isEqualTo(LifecycleCassandraState.RUNNING);
-            assertThat(response1.status()).isEqualTo(LifecycleStatus.CONVERGING);
+            assertThat(response1.currentState()).isEqualTo(CassandraState.STOPPED);
+            assertThat(response1.desiredState()).isEqualTo(CassandraState.RUNNING);
+            assertThat(response1.status()).isEqualTo(OperationStatus.CONVERGING);
             assertThat(response1.lastUpdate()).isEqualTo("Starting instance");
 
-            assertThat(response2.currentState()).isEqualTo(LifecycleCassandraState.RUNNING);
-            assertThat(response2.desiredState()).isEqualTo(LifecycleCassandraState.STOPPED);
-            assertThat(response2.status()).isEqualTo(LifecycleStatus.CONVERGING);
+            assertThat(response2.currentState()).isEqualTo(CassandraState.RUNNING);
+            assertThat(response2.desiredState()).isEqualTo(CassandraState.STOPPED);
+            assertThat(response2.status()).isEqualTo(OperationStatus.CONVERGING);
             assertThat(response2.lastUpdate()).isEqualTo("Stopping instance");
         });
 

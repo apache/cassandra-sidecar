@@ -56,7 +56,7 @@ public class InJvmLifecycleProviderIntegrationTest extends SharedClusterSidecarI
     {
         // JVM Distributed Test framework contains a bug with restarting nodes in version 4.0 (CASSANDRA-19729)
         assumeThat(SimpleCassandraVersion.create(testVersion.version()))
-        .withFailMessage("JVM Distributed Test framework contains a bug with restarting nodes in version 4.0 (CASSANDRA-19729)")
+        .as("JVM Distributed Test framework contains a bug with restarting nodes in version 4.0 (CASSANDRA-19729)")
         .isGreaterThanOrEqualTo(SimpleCassandraVersion.create(JVM_LIFECYCLE_TEST_MIN_VERSION));
     }
 

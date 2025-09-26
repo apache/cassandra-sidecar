@@ -40,8 +40,8 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.TestResourceReaper;
-import org.apache.cassandra.sidecar.common.data.LifecycleCassandraState;
-import org.apache.cassandra.sidecar.common.data.LifecycleStatus;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.CassandraState;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.OperationStatus;
 import org.apache.cassandra.sidecar.common.response.LifecycleInfoResponse;
 import org.apache.cassandra.sidecar.exceptions.LifecycleTaskConflictException;
 import org.apache.cassandra.sidecar.lifecycle.LifecycleManager;
@@ -95,16 +95,16 @@ public class LifecycleUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         JsonObject payload = JsonObject.of("state", "start");
-        LifecycleInfoResponse expectedResponse = new LifecycleInfoResponse(LifecycleCassandraState.STOPPED,
-                                                                           LifecycleCassandraState.RUNNING,
-                                                                           LifecycleStatus.CONVERGING,
+        LifecycleInfoResponse expectedResponse = new LifecycleInfoResponse(CassandraState.STOPPED,
+                                                                           CassandraState.RUNNING,
+                                                                           OperationStatus.CONVERGING,
                                                                            "Submitted task to start instance");
-        when(mockLifecycleManager.updateDesiredState("127.0.0.1", LifecycleCassandraState.RUNNING))
+        when(mockLifecycleManager.updateDesiredState("127.0.0.1", CassandraState.RUNNING))
                                                                                 .thenReturn(expectedResponse);
         client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/lifecycle")
               .sendBuffer(payload.toBuffer(), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
-                      verify(mockLifecycleManager, times(1)).updateDesiredState("127.0.0.1", LifecycleCassandraState.RUNNING);
+                      verify(mockLifecycleManager, times(1)).updateDesiredState("127.0.0.1", CassandraState.RUNNING);
                       assertThat(resp.bodyAsJson(LifecycleInfoResponse.class)).isEqualTo(expectedResponse);
                       assertThat(resp.statusCode()).isEqualTo(ACCEPTED.code());
                   });
@@ -117,15 +117,15 @@ public class LifecycleUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         JsonObject payload = JsonObject.of("state", "stop");
-        LifecycleInfoResponse expectedResponse = new LifecycleInfoResponse(LifecycleCassandraState.STOPPED,
-                                                                           LifecycleCassandraState.STOPPED,
-                                                                           LifecycleStatus.CONVERGED,
+        LifecycleInfoResponse expectedResponse = new LifecycleInfoResponse(CassandraState.STOPPED,
+                                                                           CassandraState.STOPPED,
+                                                                           OperationStatus.CONVERGED,
                                                                            "Submitted task to stop instance");
-        when(mockLifecycleManager.updateDesiredState("127.0.0.1", LifecycleCassandraState.STOPPED)).thenReturn(expectedResponse);
+        when(mockLifecycleManager.updateDesiredState("127.0.0.1", CassandraState.STOPPED)).thenReturn(expectedResponse);
         client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/lifecycle")
               .sendBuffer(payload.toBuffer(), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
-                      verify(mockLifecycleManager, times(1)).updateDesiredState("127.0.0.1", LifecycleCassandraState.STOPPED);
+                      verify(mockLifecycleManager, times(1)).updateDesiredState("127.0.0.1", CassandraState.STOPPED);
                       assertThat(resp.bodyAsJson(LifecycleInfoResponse.class)).isEqualTo(expectedResponse);
                       assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                   });
@@ -138,15 +138,15 @@ public class LifecycleUpdateHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         JsonObject payload = JsonObject.of("state", "stop");
-        LifecycleInfoResponse expectedResponse = new LifecycleInfoResponse(LifecycleCassandraState.RUNNING,
-                                                                           LifecycleCassandraState.STOPPED,
-                                                                           LifecycleStatus.DIVERGED,
+        LifecycleInfoResponse expectedResponse = new LifecycleInfoResponse(CassandraState.RUNNING,
+                                                                           CassandraState.STOPPED,
+                                                                           OperationStatus.DIVERGED,
                                                                            "Error while stopping instance");
-        when(mockLifecycleManager.updateDesiredState("127.0.0.1", LifecycleCassandraState.STOPPED)).thenReturn(expectedResponse);
+        when(mockLifecycleManager.updateDesiredState("127.0.0.1", CassandraState.STOPPED)).thenReturn(expectedResponse);
         client.put(server.actualPort(), "127.0.0.1", "/api/v1/cassandra/lifecycle")
               .sendBuffer(payload.toBuffer(), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
-                      verify(mockLifecycleManager, times(1)).updateDesiredState("127.0.0.1", LifecycleCassandraState.STOPPED);
+                      verify(mockLifecycleManager, times(1)).updateDesiredState("127.0.0.1", CassandraState.STOPPED);
                       assertThat(resp.bodyAsJson(LifecycleInfoResponse.class)).isEqualTo(expectedResponse);
                       assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
                   });
@@ -163,8 +163,8 @@ public class LifecycleUpdateHandlerTest
               .sendBuffer(payload.toBuffer(), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
-                      verify(mockLifecycleManager, times(0)).updateDesiredState("127.0.0.1", LifecycleCassandraState.RUNNING);
-                      verify(mockLifecycleManager, times(0)).updateDesiredState("127.0.0.1", LifecycleCassandraState.STOPPED);
+                      verify(mockLifecycleManager, times(0)).updateDesiredState("127.0.0.1", CassandraState.RUNNING);
+                      verify(mockLifecycleManager, times(0)).updateDesiredState("127.0.0.1", CassandraState.STOPPED);
                   });
                   ctx.completeNow();
               }));
@@ -175,7 +175,7 @@ public class LifecycleUpdateHandlerTest
     {
         // Setup mock to throw conflict exception
         doThrow(new LifecycleTaskConflictException("Cannot start host 127.0.0.1. Task already in progress for this host."))
-        .when(mockLifecycleManager).updateDesiredState("127.0.0.1", LifecycleCassandraState.RUNNING);
+        .when(mockLifecycleManager).updateDesiredState("127.0.0.1", CassandraState.RUNNING);
 
         WebClient client = WebClient.create(vertx);
         JsonObject payload = JsonObject.of("state", "start");
@@ -183,7 +183,7 @@ public class LifecycleUpdateHandlerTest
               .sendBuffer(payload.toBuffer(), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(CONFLICT.code());
-                      verify(mockLifecycleManager, times(1)).updateDesiredState("127.0.0.1", LifecycleCassandraState.RUNNING);
+                      verify(mockLifecycleManager, times(1)).updateDesiredState("127.0.0.1", CassandraState.RUNNING);
                   });
                   ctx.completeNow();
               }));
@@ -197,7 +197,7 @@ public class LifecycleUpdateHandlerTest
 
         @Provides
         @Singleton
-        public LifecycleManager intentManager()
+        public LifecycleManager lifecycleManager()
         {
             return mockLifecycleManager;
         }

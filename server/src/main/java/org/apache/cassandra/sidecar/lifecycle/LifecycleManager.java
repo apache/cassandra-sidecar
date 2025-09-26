@@ -30,8 +30,8 @@ import com.google.inject.Singleton;
 
 import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.data.LifecycleCassandraState;
-import org.apache.cassandra.sidecar.common.data.LifecycleStatus;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.CassandraState;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.OperationStatus;
 import org.apache.cassandra.sidecar.common.response.LifecycleInfoResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.exceptions.LifecycleTaskConflictException;
@@ -51,8 +51,8 @@ public class LifecycleManager
     private final ExecutorPools executorPools;
 
     private final Set<String> convergingInstances = ConcurrentHashMap.newKeySet();
-    private final Map<String, LifecycleStatus> lastCompletedStatus = new ConcurrentHashMap<>();
-    private final Map<String, LifecycleCassandraState> desiredStateByInstance = new ConcurrentHashMap<>();
+    private final Map<String, OperationStatus> lastCompletedStatus = new ConcurrentHashMap<>();
+    private final Map<String, CassandraState> desiredStateByInstance = new ConcurrentHashMap<>();
     private final Map<String, String> lastUpdateMsgByInstance = new ConcurrentHashMap<>();
 
     @Inject
@@ -65,12 +65,12 @@ public class LifecycleManager
         this.executorPools = executorPools;
     }
 
-    public synchronized LifecycleInfoResponse updateDesiredState(String instanceId, LifecycleCassandraState desiredState)
+    public synchronized LifecycleInfoResponse updateDesiredState(String instanceId, CassandraState desiredState)
                                                         throws LifecycleTaskConflictException
     {
         // Nothing to do: already in successful desired state
         LifecycleInfoResponse current = getLifecycleInfo(instanceId);
-        if  (current.desiredState() == desiredState && current.status() == LifecycleStatus.CONVERGED)
+        if  (current.desiredState() == desiredState && current.status() == OperationStatus.CONVERGED)
         {
             return current;
         }
@@ -106,26 +106,26 @@ public class LifecycleManager
 
     public synchronized LifecycleInfoResponse getLifecycleInfo(String instanceId)
     {
-        LifecycleCassandraState currentState = lifecycleProvider
-            .isRunning(metadata(instanceId)) ? LifecycleCassandraState.RUNNING : LifecycleCassandraState.STOPPED;
-        LifecycleCassandraState desiredState = this.desiredStateByInstance.getOrDefault(instanceId, LifecycleCassandraState.UNKNOWN);
-        LifecycleStatus currentStatus = getStatus(instanceId, currentState, desiredState);
+        CassandraState currentState = lifecycleProvider
+            .isRunning(metadata(instanceId)) ? CassandraState.RUNNING : CassandraState.STOPPED;
+        CassandraState desiredState = this.desiredStateByInstance.getOrDefault(instanceId, CassandraState.UNKNOWN);
+        OperationStatus currentStatus = getStatus(instanceId, currentState, desiredState);
         maybeRefreshLastCompletedStatus(instanceId, currentStatus, currentState, desiredState);
         String lastUpdate = this.lastUpdateMsgByInstance.getOrDefault(instanceId, "No lifecycle task submitted for this instance yet.");
         return new LifecycleInfoResponse(currentState, desiredState, currentStatus, lastUpdate);
     }
 
     /**
-     * This method keeps track of the last completed status of an instance and logs a warning if the status has changed unexpectedly.
+     * This method keeps track of the last completed status of an instance and logs a warning if the operation status has changed unexpectedly.
      * This is useful for detecting unexpected state changes that may indicate issues with the lifecycle management.
      * See @{link LifecycleManagerTest#testStateChangesUnexpectedlyFlapping} for an example test case.
      */
-    private void maybeRefreshLastCompletedStatus(String instanceId, LifecycleStatus currentStatus, LifecycleCassandraState currentState,
-                                                 LifecycleCassandraState desiredState)
+    private void maybeRefreshLastCompletedStatus(String instanceId, OperationStatus currentStatus, CassandraState currentState,
+                                                 CassandraState desiredState)
     {
         if (!currentStatus.isCompleted()) // this logic is only valid after a lifecycle task has completed
             return;
-        LifecycleStatus lastStatus = lastCompletedStatus.put(instanceId, currentStatus);
+        OperationStatus lastStatus = lastCompletedStatus.put(instanceId, currentStatus);
         if (lastStatus != null && lastStatus != currentStatus)
         {
             String msg = currentStatus.isConverged() ?
@@ -172,21 +172,21 @@ public class LifecycleManager
         });
     }
 
-    private LifecycleStatus getStatus(String instanceId, LifecycleCassandraState currentState, LifecycleCassandraState desiredState)
+    private OperationStatus getStatus(String instanceId, CassandraState currentState, CassandraState desiredState)
     {
         if (convergingInstances.contains(instanceId) && desiredState != currentState)
         {
-            return LifecycleStatus.CONVERGING;
+            return OperationStatus.CONVERGING;
         }
-        if (desiredState == LifecycleCassandraState.UNKNOWN)
+        if (desiredState == CassandraState.UNKNOWN)
         {
-            return LifecycleStatus.UNDEFINED;
+            return OperationStatus.UNDEFINED;
         }
         if (desiredState != currentState)
         {
-            return LifecycleStatus.DIVERGED;
+            return OperationStatus.DIVERGED;
         }
-        return LifecycleStatus.CONVERGED;
+        return OperationStatus.CONVERGED;
     }
 
     private InstanceMetadata metadata(String host)
