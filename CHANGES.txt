@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Add lifecycle APIs for starting and stopping Cassandra (CASSSIDECAR-266)
  * Implementation of CassandraClusterSchemaMonitor (CASSSIDECAR-245)
  * Sidecar endpoint for vending statistics related to compaction (CASSSIDECAR-329)
  * Update logging dependencies (CASSSIDECAR-337)
