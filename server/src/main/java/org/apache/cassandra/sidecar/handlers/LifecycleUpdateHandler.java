@@ -80,25 +80,21 @@ public class LifecycleUpdateHandler extends NodeCommandHandler implements Access
                      .executeBlocking(() -> lifecycleManager.updateDesiredState(host, desiredState))
                      .onSuccess(info ->
                                 {
+                                    HttpServerResponse response = context.response().putHeader("Content-Type", "application/json");
                                     switch (info.status())
                                     {
                                         case CONVERGED:
-                                            context.response().putHeader("Content-Type", "application/json")
-                                                   .setStatusCode(HttpResponseStatus.OK.code())
-                                                   .end(Json.encode(info));
+                                            response.setStatusCode(HttpResponseStatus.OK.code());
                                             break;
                                         case CONVERGING:
-                                            context.response().putHeader("Content-Type", "application/json")
-                                                   .setStatusCode(HttpResponseStatus.ACCEPTED.code())
-                                                   .end(Json.encode(info));
+                                            response.setStatusCode(HttpResponseStatus.ACCEPTED.code());
                                             break;
                                         default:
                                             logger.warn("{} request failed with unexpected result. request={}, remoteAddress={}, instance={}, lifecycleStatus={}",
                                                         this.getClass().getSimpleName(), request, remoteAddress, host, info.status());
-                                            context.response().putHeader("Content-Type", "application/json")
-                                                   .setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
-                                                   .end(Json.encode(info));
+                                            response.setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
                                     }
+                                    response.end(Json.encode(info));
                                 })
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
