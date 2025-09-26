@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.metrics;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -175,7 +176,7 @@ public class FilteringMetricRegistry extends MetricRegistry
                 existingAllMetrics = new HashMap<>();
                 existingAllMetrics.putAll(super.getMetrics());
                 existingAllMetrics.putAll(excludedMetrics);
-                allMetrics = existingAllMetrics = Map.copyOf(existingAllMetrics);
+                allMetrics = existingAllMetrics = Collections.unmodifiableMap(existingAllMetrics);
             }
             else
             {
