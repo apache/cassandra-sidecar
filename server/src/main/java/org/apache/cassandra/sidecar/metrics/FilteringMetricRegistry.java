@@ -151,9 +151,9 @@ public class FilteringMetricRegistry extends MetricRegistry
     }
 
     /**
-     * The performance characteristic of this implementation depends on the frequency of changes to the
-     * metrics being registered. If modifications to the registry are infrequent, this implementation will
-     * perform best with low garbage being created. If modifications to the registry are frequent, more garbage
+     * The performance characteristics of this method depend on the frequency of changes to the
+     * metrics. If modifications to the registry are infrequent, this implementation will perform
+     * best with low garbage being created. If modifications to the registry are frequent, more garbage
      * will be created.
      *
      * @return all the metrics including the allowed and disallowed metrics. This is to prevent re-registering of
