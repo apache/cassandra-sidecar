@@ -271,6 +271,16 @@ public class FilteringMetricRegistry extends MetricRegistry
         throw new IllegalArgumentException("Metric already present with type " + metric.getClass());
     }
 
+    /**
+     * Adds excluded metric if it does not exist in the excluded list yet. This method ensures
+     * that when adding a metric to the list of excluded metrics, a recomputation is forced
+     * for the metrics returned by the {@link #getMetrics()} method.
+     *
+     * @param name            the name of the metric
+     * @param mappingFunction the mapping function to compute the value of the metric
+     * @return the current value of the excluded metric if it exists, or the new computed
+     * value if it doesn't
+     */
     private Metric addExcludedMetricIfNotExists(String name, Function<String, ? extends Metric> mappingFunction)
     {
         return excludedMetrics.computeIfAbsent(name, k -> {
