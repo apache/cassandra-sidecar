@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.metrics;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.codahale.metrics.Counter;
@@ -54,7 +55,7 @@ public class FilteringMetricRegistry extends MetricRegistry
         {
             return super.counter(name);
         }
-        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::counter), Counter.class);
+        return typeChecked(addExcludedMetricIfNotExists(name, NO_OP_METRIC_REGISTRY::counter), Counter.class);
     }
 
     @Override
@@ -64,7 +65,7 @@ public class FilteringMetricRegistry extends MetricRegistry
         {
             return super.counter(name, supplier);
         }
-        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::counter), Counter.class);
+        return typeChecked(addExcludedMetricIfNotExists(name, NO_OP_METRIC_REGISTRY::counter), Counter.class);
     }
 
     @Override
@@ -74,7 +75,7 @@ public class FilteringMetricRegistry extends MetricRegistry
         {
             return super.histogram(name);
         }
-        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::histogram), Histogram.class);
+        return typeChecked(addExcludedMetricIfNotExists(name, NO_OP_METRIC_REGISTRY::histogram), Histogram.class);
     }
 
     @Override
@@ -84,7 +85,7 @@ public class FilteringMetricRegistry extends MetricRegistry
         {
             return super.histogram(name, supplier);
         }
-        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::histogram), Histogram.class);
+        return typeChecked(addExcludedMetricIfNotExists(name, NO_OP_METRIC_REGISTRY::histogram), Histogram.class);
     }
 
     @Override
@@ -94,7 +95,7 @@ public class FilteringMetricRegistry extends MetricRegistry
         {
             return super.meter(name);
         }
-        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::meter), Meter.class);
+        return typeChecked(addExcludedMetricIfNotExists(name, NO_OP_METRIC_REGISTRY::meter), Meter.class);
     }
 
     @Override
@@ -104,7 +105,7 @@ public class FilteringMetricRegistry extends MetricRegistry
         {
             return super.meter(name, supplier);
         }
-        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::meter), Meter.class);
+        return typeChecked(addExcludedMetricIfNotExists(name, NO_OP_METRIC_REGISTRY::meter), Meter.class);
     }
 
     @Override
@@ -114,7 +115,7 @@ public class FilteringMetricRegistry extends MetricRegistry
         {
             return super.timer(name);
         }
-        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::timer), Timer.class);
+        return typeChecked(addExcludedMetricIfNotExists(name, NO_OP_METRIC_REGISTRY::timer), Timer.class);
     }
 
     @Override
@@ -124,7 +125,7 @@ public class FilteringMetricRegistry extends MetricRegistry
         {
             return super.timer(name, supplier);
         }
-        return typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::timer), Timer.class);
+        return typeChecked(addExcludedMetricIfNotExists(name, NO_OP_METRIC_REGISTRY::timer), Timer.class);
     }
 
     @Override
@@ -135,7 +136,7 @@ public class FilteringMetricRegistry extends MetricRegistry
         {
             return super.gauge(name);
         }
-        return (T) typeChecked(excludedMetrics.computeIfAbsent(name, NO_OP_METRIC_REGISTRY::gauge), Gauge.class);
+        return (T) typeChecked(addExcludedMetricIfNotExists(name, NO_OP_METRIC_REGISTRY::gauge), Gauge.class);
     }
 
     @Override
@@ -146,10 +147,15 @@ public class FilteringMetricRegistry extends MetricRegistry
         {
             return super.gauge(name, supplier);
         }
-        return (T) typeChecked(excludedMetrics.computeIfAbsent(name, k -> supplier.newMetric() /* unregistered metric */), Gauge.class);
+        return (T) typeChecked(addExcludedMetricIfNotExists(name, k -> supplier.newMetric() /* unregistered metric */), Gauge.class);
     }
 
     /**
+     * The performance characteristic of this implementation depends on the frequency of changes to the
+     * metrics being registered. If modifications to the registry are infrequent, this implementation will
+     * perform best with low garbage being created. If modifications to the registry are frequent, more garbage
+     * will be created.
+     *
      * @return all the metrics including the allowed and disallowed metrics. This is to prevent re-registering of
      * excluded metrics
      */
@@ -252,7 +258,7 @@ public class FilteringMetricRegistry extends MetricRegistry
             return super.register(name, metric);
         }
 
-        return (T) typeChecked(excludedMetrics.computeIfAbsent(name, key -> metric), metric.getClass());
+        return (T) typeChecked(addExcludedMetricIfNotExists(name, key -> metric), metric.getClass());
     }
 
     private <T extends Metric> T typeChecked(Metric metric, Class<T> type)
@@ -262,6 +268,19 @@ public class FilteringMetricRegistry extends MetricRegistry
             return (T) metric;
         }
         throw new IllegalArgumentException("Metric already present with type " + metric.getClass());
+    }
+
+    private Metric addExcludedMetricIfNotExists(String name, Function<String, ? extends Metric> mappingFunction)
+    {
+        return excludedMetrics.computeIfAbsent(name, k -> {
+            // allMetrics needs to be recomputed when an excluded metric is registered
+            synchronized (this)
+            {
+                allMetrics = null;
+            }
+
+            return mappingFunction.apply(k);
+        });
     }
 
     /**

@@ -252,6 +252,78 @@ class FilteringMetricRegistryTest
     }
 
     @Test
+    void testGetMetrics()
+    {
+        FilteringMetricRegistry registry = new FilteringMetricRegistry(s -> s.endsWith("Include"));
+
+        registry.gauge("gaugeInclude", () -> new DefaultSettableGauge<>(0L));
+        assertThat(registry.getMetrics()).hasSize(1)
+                                         .containsKey("gaugeInclude");
+        assertThat(registry.getIncludedMetrics()).hasSize(1)
+                                                 .containsKey("gaugeInclude");
+        registry.gauge("gaugeIgnore", () -> new DefaultSettableGauge<>(1L));
+        assertThat(registry.getMetrics()).hasSize(2)
+                                         .containsKey("gaugeIgnore");
+        assertThat(registry.getIncludedMetrics()).hasSize(1)
+                                                 .containsKey("gaugeInclude");
+
+        registry.counter("counterInclude");
+        assertThat(registry.getMetrics()).hasSize(3)
+                                         .containsKey("counterInclude");
+        assertThat(registry.getIncludedMetrics()).hasSize(2)
+                                                 .containsKey("counterInclude");
+        registry.counter("counterIgnore");
+        assertThat(registry.getMetrics()).hasSize(4)
+                                         .containsKey("counterIgnore");
+        assertThat(registry.getIncludedMetrics()).hasSize(2)
+                                                 .containsKey("counterInclude");
+
+        registry.histogram("histogramInclude");
+        assertThat(registry.getMetrics()).hasSize(5)
+                                         .containsKey("histogramInclude");
+        assertThat(registry.getIncludedMetrics()).hasSize(3)
+                                                 .containsKey("histogramInclude");
+        registry.histogram("histogramIgnore");
+        assertThat(registry.getMetrics()).hasSize(6)
+                                         .containsKey("histogramIgnore");
+        assertThat(registry.getIncludedMetrics()).hasSize(3)
+                                                 .containsKey("histogramInclude");
+
+        registry.meter("meterInclude");
+        assertThat(registry.getMetrics()).hasSize(7)
+                                         .containsKey("meterInclude");
+        assertThat(registry.getIncludedMetrics()).hasSize(4)
+                                                 .containsKey("meterInclude");
+        registry.meter("meterIgnore");
+        assertThat(registry.getMetrics()).hasSize(8)
+                                         .containsKey("meterIgnore");
+        assertThat(registry.getIncludedMetrics()).hasSize(4)
+                                                 .containsKey("meterInclude");
+
+        registry.timer("timerInclude");
+        assertThat(registry.getMetrics()).hasSize(9)
+                                         .containsKey("timerInclude");
+        assertThat(registry.getIncludedMetrics()).hasSize(5)
+                                                 .containsKey("timerInclude");
+        registry.timer("timerIgnore");
+        assertThat(registry.getMetrics()).hasSize(10)
+                                         .containsKey("timerIgnore");
+        assertThat(registry.getIncludedMetrics()).hasSize(5)
+                                                 .containsKey("timerInclude");
+
+        registry.register("throughputInclude", new ThroughputMeter());
+        assertThat(registry.getMetrics()).hasSize(11)
+                                         .containsKey("throughputInclude");
+        assertThat(registry.getIncludedMetrics()).hasSize(6)
+                                                 .containsKey("throughputInclude");
+        registry.register("throughputIgnore", new ThroughputMeter());
+        assertThat(registry.getMetrics()).hasSize(12)
+                                         .containsKey("throughputIgnore");
+        assertThat(registry.getIncludedMetrics()).hasSize(6)
+                                                 .containsKey("throughputInclude");
+    }
+
+    @Test
     void testGetMetricsWithConcurrentRegistration() throws InterruptedException
     {
         FilteringMetricRegistry registry = new FilteringMetricRegistry(s -> s.endsWith("odd"));
