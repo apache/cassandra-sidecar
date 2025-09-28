@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Thread race issue when adding excluded metric in FilteringMetricRegistry (CASSSIDECAR-349)
  * Add support for stateless JWT authentication using public keys (CASSSIDECAR-334)
  * Improve FilteringMetricRegistry implementation (CASSSIDECAR-347)
  * Add lifecycle APIs for starting and stopping Cassandra (CASSSIDECAR-266)
