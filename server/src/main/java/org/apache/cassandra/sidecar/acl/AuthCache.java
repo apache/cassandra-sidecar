@@ -140,8 +140,10 @@ public abstract class AuthCache<K, V>
     private LoadingCache<K, V> initCache()
     {
         return Caffeine.newBuilder()
-                       // The cache lazily refreshed entries based on cache read.
+                       // setting refreshAfterWrite and expireAfterWrite to same value makes sure no stale
+                       // data is fetched after expire time
                        .refreshAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
+                       .expireAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
                        .recordStats(() -> cacheMetrics)
                        .maximumSize(config.maximumSize())
                        .build(loadFunction::apply);
