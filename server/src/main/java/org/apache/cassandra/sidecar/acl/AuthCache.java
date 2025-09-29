@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.acl;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -72,7 +73,7 @@ public abstract class AuthCache<K, V>
         this.loadFunction = loadFunction;
         this.bulkLoadFunction = bulkLoadFunction;
         this.config = cacheConfiguration;
-        this.cacheMetrics = cacheMetrics;
+        this.cacheMetrics = Objects.requireNonNull(cacheMetrics, "cacheMetrics is required");
 
         if (this.config.enabled())
         {
@@ -132,15 +133,15 @@ public abstract class AuthCache<K, V>
         if (cache != null)
         {
             cache.invalidate(k);
+            logger.info("Cache entry with key={} has been invalidated", k);
         }
     }
 
     private LoadingCache<K, V> initCache()
     {
         return Caffeine.newBuilder()
-                       // The cache keeps the entry until it's last access has expired. This avoids repeated calls to
-                       // db for the same key during high volume requests.
-                       .expireAfterAccess(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
+                       // The cache lazily refreshed entries based on cache read.
+                       .refreshAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
                        .recordStats(() -> cacheMetrics)
                        .maximumSize(config.maximumSize())
                        .build(loadFunction::apply);
