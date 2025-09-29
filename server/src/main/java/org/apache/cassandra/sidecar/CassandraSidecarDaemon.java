@@ -60,7 +60,7 @@ public class CassandraSidecarDaemon
     }
 
     /**
-     * Closes the server, waits up to 1 minute for the server to shut down.
+     * Closes the server, waits up to 2 minute for the server to shut down.
      *
      * @param app the server
      * @return {@code true} if the server shutdown successfully, {@code false} otherwise
@@ -73,7 +73,7 @@ public class CassandraSidecarDaemon
             app.close()
                .toCompletionStage()
                .toCompletableFuture()
-               .get(1, TimeUnit.MINUTES);
+               .get(2, TimeUnit.MINUTES);
             return true;
         }
         catch (Exception ex)
