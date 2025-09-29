@@ -49,6 +49,7 @@ import org.jetbrains.annotations.NotNull;
 import org.mockito.Mockito;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.when;
 
 /**
@@ -105,20 +106,26 @@ public class CassandraAdapterDelegateTest
         PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
         when(preparedStatement.bind()).thenReturn(Mockito.mock(BoundStatement.class));
         when(session.prepare(any(String.class))).thenReturn(preparedStatement);
+
         Row row = Mockito.mock(Row.class);
         when(row.getString("name")).thenReturn("concurrent_reads");
         when(row.getString("value")).thenReturn("16");
         ResultSet resultSet = Mockito.mock(ResultSet.class);
         when(resultSet.all()).thenReturn(List.of(row));
         when(resultSet.one()).thenReturn(row);
-        SimpleStatement mockHealthCheckStatement = new SimpleStatement("SELECT release_version FROM system.local");
+        when(session.execute(any(BoundStatement.class))).thenReturn(resultSet);
+
         Row healthCheckResponse = Mockito.mock(Row.class);
         ResultSet healthCheckResultSet = Mockito.mock(ResultSet.class);
         when(healthCheckResultSet.one()).thenReturn(healthCheckResponse);
-        when(session.execute(mockHealthCheckStatement))
+        when(session.execute(argThat((Statement s) ->
+                (s instanceof SimpleStatement) && "SELECT release_version FROM system.local".equals(
+                        ((SimpleStatement) s).getQueryString()
+                )
+        )))
         .thenReturn(healthCheckResultSet)
         .thenThrow(NoHostAvailableException.class);
-        when(session.execute(any(Statement.class))).thenReturn(resultSet);
+
         CQLSessionProvider cqlSessionProvider = Mockito.mock(CQLSessionProvider.class);
         when(cqlSessionProvider.get()).thenReturn(session);
         when(cqlSessionProvider.getIfConnected()).thenReturn(session);
@@ -155,6 +162,7 @@ public class CassandraAdapterDelegateTest
         Map<String, String> actual = cassandraAdapterDelegate.cqlNodeSettings();
         Map<String, String> expected = Map.of("concurrent_reads", "16");
         Assertions.assertEquals(expected, actual);
+        cassandraAdapterDelegate.cqlNodeSettings();
         cassandraAdapterDelegate.nativeProtocolHealthCheck();
         Assertions.assertThrows(CassandraUnavailableException.class, () -> cassandraAdapterDelegate.cqlNodeSettings());
     }

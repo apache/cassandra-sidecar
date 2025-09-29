@@ -78,7 +78,7 @@ public class CassandraSidecarDaemon
         }
         catch (Exception ex)
         {
-            LOGGER.warn("Failed to stop Sidecar in 1 minute", ex);
+            LOGGER.warn("Failed to stop Sidecar in 2 minutes", ex);
         }
         return false;
     }
