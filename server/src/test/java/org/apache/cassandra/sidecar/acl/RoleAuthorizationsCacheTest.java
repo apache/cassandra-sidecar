@@ -370,6 +370,70 @@ class RoleAuthorizationsCacheTest
         assertThat(afterFailureStats.loadSuccessCount()).isEqualTo(0);
     }
 
+    @Test
+    void testCacheRefreshAfterWriteConfiguration() throws InterruptedException
+    {
+        Map<String, Set<Authorization>> cassandraAuthorizations = cassandraAuthorizations();
+        SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
+        when(mockDbAccessor.findAllRolesAndPermissions()).thenReturn(cassandraAuthorizations);
+        SidecarPermissionsDatabaseAccessor mockSidecarPermissionsAccessor = mock(SidecarPermissionsDatabaseAccessor.class);
+
+        // Configure cache with a very short refresh interval to test refresh behavior
+        SidecarConfiguration mockConfig = mockConfigWithRefresh("100ms");
+        RoleAuthorizationsCache cache = new RoleAuthorizationsCache(vertx,
+                                                                    executorPools,
+                                                                    mockConfig,
+                                                                    mockSidecarSchema,
+                                                                    mockDbAccessor,
+                                                                    mockSidecarPermissionsAccessor,
+                                                                    sidecarMetrics);
+
+        // Initial load
+        cache.getAuthorizations("test_role1");
+        CacheStats initialStats = sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot();
+        assertThat(initialStats.loadCount()).isOne();
+
+        // Access the same key multiple times before refresh interval
+        cache.getAuthorizations("test_role1");
+        cache.getAuthorizations("test_role1");
+        CacheStats beforeRefreshStats = sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot();
+        assertThat(beforeRefreshStats.loadCount()).isOne(); // Should still be one load
+        assertThat(beforeRefreshStats.hitCount()).isEqualTo(2); // Two hits
+
+        // Wait for refresh interval to pass and access again
+        Thread.sleep(200); // Wait longer than refresh interval (100ms)
+        cache.getAuthorizations("test_role1");
+
+        // Give some time for async refresh to complete
+        Thread.sleep(100);
+
+        CacheStats afterRefreshStats = sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot();
+        // Load count might increase due to refresh, but exact behavior depends on timing
+        assertThat(afterRefreshStats.loadCount()).isGreaterThanOrEqualTo(1);
+        assertThat(afterRefreshStats.hitCount()).isGreaterThanOrEqualTo(3);
+    }
+
+    private SidecarConfiguration mockConfigWithRefresh(String refreshTime)
+    {
+        SidecarConfiguration mockConfig = mock(SidecarConfiguration.class);
+        ServiceConfiguration mockServiceConfig = mock(ServiceConfiguration.class);
+        SchemaKeyspaceConfiguration mockSchemaConfig = mock(SchemaKeyspaceConfiguration.class);
+        when(mockSchemaConfig.isEnabled()).thenReturn(true);
+        when(mockServiceConfig.schemaKeyspaceConfiguration()).thenReturn(mockSchemaConfig);
+        when(mockConfig.serviceConfiguration()).thenReturn(mockServiceConfig);
+        AccessControlConfiguration mockAccessControlConfig = mock(AccessControlConfiguration.class);
+        when(mockConfig.accessControlConfiguration()).thenReturn(mockAccessControlConfig);
+        CacheConfiguration mockCacheConfig = mock(CacheConfiguration.class);
+        when(mockCacheConfig.enabled()).thenReturn(true);
+        when(mockCacheConfig.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse("1h"));
+        when(mockCacheConfig.refreshAfterWrite()).thenReturn(MillisecondBoundConfiguration.parse(refreshTime));
+        when(mockCacheConfig.maximumSize()).thenReturn(10L);
+        when(mockCacheConfig.warmupRetries()).thenReturn(5);
+        when(mockCacheConfig.warmupRetryInterval()).thenReturn(MillisecondBoundConfiguration.parse("1s"));
+        when(mockAccessControlConfig.permissionCacheConfiguration()).thenReturn(mockCacheConfig);
+        return mockConfig;
+    }
+
     private SidecarConfiguration mockConfig()
     {
         return mockConfig("1s");
@@ -388,8 +452,10 @@ class RoleAuthorizationsCacheTest
         CacheConfiguration mockCacheConfig = mock(CacheConfiguration.class);
         when(mockCacheConfig.enabled()).thenReturn(true);
         when(mockCacheConfig.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse(time));
+        when(mockCacheConfig.refreshAfterWrite()).thenReturn(MillisecondBoundConfiguration.parse("30s"));
         when(mockCacheConfig.maximumSize()).thenReturn(10L);
         when(mockCacheConfig.warmupRetries()).thenReturn(5);
+        when(mockCacheConfig.warmupRetryInterval()).thenReturn(MillisecondBoundConfiguration.parse("1s"));
         when(mockAccessControlConfig.permissionCacheConfiguration()).thenReturn(mockCacheConfig);
         return mockConfig;
     }

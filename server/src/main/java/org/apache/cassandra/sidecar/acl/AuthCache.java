@@ -139,14 +139,26 @@ public abstract class AuthCache<K, V>
 
     private LoadingCache<K, V> initCache()
     {
-        return Caffeine.newBuilder()
-                       // setting refreshAfterWrite and expireAfterWrite to same value makes sure no stale
-                       // data is fetched after expire time
-                       .refreshAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
-                       .expireAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
-                       .recordStats(() -> cacheMetrics)
-                       .maximumSize(config.maximumSize())
-                       .build(loadFunction::apply);
+        if (config.refreshAfterWrite() == null && config.expireAfterAccess() == null)
+        {
+            throw new IllegalArgumentException(name +
+                                               "must be configured with either refreshAfterWrite or expireAfterAccess");
+        }
+
+        Caffeine<Object, Object> cacheBuilder
+        = Caffeine.newBuilder()
+                  .refreshAfterWrite(config.refreshAfterWrite().quantity(), config.refreshAfterWrite().unit())
+                  .recordStats(() -> cacheMetrics)
+                  .maximumSize(config.maximumSize());
+        if (config.refreshAfterWrite() != null)
+        {
+            cacheBuilder.expireAfterAccess(config.refreshAfterWrite().quantity(), config.refreshAfterWrite().unit());
+        }
+        if (config.expireAfterAccess() != null)
+        {
+            cacheBuilder.expireAfterAccess(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit());
+        }
+        return cacheBuilder.build(loadFunction::apply);
     }
 
     private void configureSidecarServerEventListener()

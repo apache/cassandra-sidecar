@@ -37,6 +37,8 @@ public class CacheConfigurationImpl implements CacheConfiguration
 
     protected MillisecondBoundConfiguration expireAfterAccess;
 
+    protected MillisecondBoundConfiguration refreshAfterWrite;
+
     @JsonProperty("maximum_size")
     protected final long maximumSize;
 
@@ -50,22 +52,24 @@ public class CacheConfigurationImpl implements CacheConfiguration
 
     public CacheConfigurationImpl()
     {
-        this(MillisecondBoundConfiguration.parse("1h"), 100, true, 5, MillisecondBoundConfiguration.parse("1s"));
+        this(null, null, 100, true, 5, MillisecondBoundConfiguration.parse("1s"));
     }
 
     @VisibleForTesting
     public CacheConfigurationImpl(MillisecondBoundConfiguration expireAfterAccess, long maximumSize)
     {
-        this(expireAfterAccess, maximumSize, true, 5, MillisecondBoundConfiguration.parse("1s"));
+        this(expireAfterAccess, MillisecondBoundConfiguration.parse("1h"), maximumSize, true, 5, MillisecondBoundConfiguration.parse("1s"));
     }
 
     public CacheConfigurationImpl(MillisecondBoundConfiguration expireAfterAccess,
+                                  MillisecondBoundConfiguration refreshAfterWrite,
                                   long maximumSize,
                                   boolean enabled,
                                   int warmupRetries,
                                   MillisecondBoundConfiguration warmupRetryInterval)
     {
         this.expireAfterAccess = expireAfterAccess;
+        this.refreshAfterWrite = refreshAfterWrite;
         this.maximumSize = maximumSize;
         this.enabled = enabled;
         this.warmupRetries = warmupRetries;
@@ -83,6 +87,19 @@ public class CacheConfigurationImpl implements CacheConfiguration
     public void setExpireAfterAccess(MillisecondBoundConfiguration expireAfterAccess)
     {
         this.expireAfterAccess = expireAfterAccess;
+    }
+
+    @Override
+    @JsonProperty("refresh_after_write")
+    public MillisecondBoundConfiguration refreshAfterWrite()
+    {
+        return refreshAfterWrite;
+    }
+
+    @JsonProperty("refresh_after_write")
+    public void setRefreshAfterWrite(MillisecondBoundConfiguration refreshAfterWrite)
+    {
+        this.refreshAfterWrite = refreshAfterWrite;
     }
 
     /**

@@ -263,6 +263,7 @@ public class IntegrationTestModule extends AbstractModule
                                                   rbacConfig,
                                                   Collections.singleton(ADMIN_IDENTITY),
                                                   new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("1s"),
+                                                                             MillisecondBoundConfiguration.parse("1s"),
                                                                              100,
                                                                              true,
                                                                              5,

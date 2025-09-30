@@ -418,6 +418,7 @@ class SidecarConfigurationTest
         assertThat(permissionCacheConfiguration.enabled()).isTrue();
         assertThat(permissionCacheConfiguration.expireAfterAccess().quantity()).isEqualTo(5);
         assertThat(permissionCacheConfiguration.expireAfterAccess().unit()).isEqualTo(TimeUnit.MINUTES);
+        assertThat(permissionCacheConfiguration.refreshAfterWrite()).isNull();
         assertThat(permissionCacheConfiguration.maximumSize()).isEqualTo(1000);
         assertThat(permissionCacheConfiguration.warmupRetries()).isEqualTo(5);
         assertThat(permissionCacheConfiguration.warmupRetryInterval().quantity()).isEqualTo(2);
