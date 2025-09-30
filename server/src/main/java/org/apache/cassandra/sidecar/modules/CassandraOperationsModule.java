@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.handlers.KeyspaceSchemaHandler;
 import org.apache.cassandra.sidecar.handlers.ListOperationalJobsHandler;
 import org.apache.cassandra.sidecar.handlers.NativeUpdateHandler;
 import org.apache.cassandra.sidecar.handlers.NodeDecommissionHandler;
+import org.apache.cassandra.sidecar.handlers.NodeMoveHandler;
 import org.apache.cassandra.sidecar.handlers.OperationalJobHandler;
 import org.apache.cassandra.sidecar.handlers.RingHandler;
 import org.apache.cassandra.sidecar.handlers.SchemaHandler;
@@ -154,6 +155,26 @@ public class CassandraOperationsModule extends AbstractModule
                                               NodeDecommissionHandler nodeDecommissionHandler)
     {
         return factory.buildRouteWithHandler(nodeDecommissionHandler);
+    }
+
+    @PUT
+    @Path(ApiEndpointsV1.NODE_MOVE_ROUTE)
+    @Operation(summary = "Move node to new token",
+               description = "Moves the Cassandra node to a new token in the ring")
+    @APIResponse(description = "Node move operation completed successfully",
+                 responseCode = "200",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = OperationalJobResponse.class)))
+    @APIResponse(description = "Node move operation initiated successfully",
+                 responseCode = "202",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = OperationalJobResponse.class)))
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.CassandraNodeMoveRouteKey.class)
+    VertxRoute cassandraNodeMoveRoute(RouteBuilder.Factory factory,
+                                      NodeMoveHandler nodeMoveHandler)
+    {
+        return factory.buildRouteWithHandler(nodeMoveHandler);
     }
 
     @GET

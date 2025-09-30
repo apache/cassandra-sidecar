@@ -323,4 +323,14 @@ public class CassandraStorageOperations implements StorageOperations
         return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
                         .getCompactionThroughputMbPerSec();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void move(String newToken)
+    {
+        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                 .move(newToken);
+    }
 }

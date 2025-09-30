@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Sidecar endpoint for moving a node to a new token (CASSSIDECAR-344)
  * Improve FilteringMetricRegistry implementation (CASSSIDECAR-347)
  * Add lifecycle APIs for starting and stopping Cassandra (CASSSIDECAR-266)
  * Implementation of CassandraClusterSchemaMonitor (CASSSIDECAR-245)

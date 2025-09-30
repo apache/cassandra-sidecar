@@ -228,4 +228,11 @@ public interface StorageJmxOperations
      * @return the current compaction throughput in megabytes per second, or 0 if throughput cannot be determined
      */
     int getCompactionThroughputMbPerSec();
+
+    /**
+     * Triggers the node move operation to move this node to a new token
+     *
+     * @param newToken the new token for the node to move to
+     */
+    void move(String newToken);
 }
