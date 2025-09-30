@@ -68,4 +68,9 @@ public interface ServerMetrics
      * @return metrics tracked by server for cdc functionality.
      */
     CdcMetrics cdc();
+
+    /**
+     * @return metrics tracked by the server for the authentication / authorization subsystem.
+     */
+    AuthMetrics auth();
 }

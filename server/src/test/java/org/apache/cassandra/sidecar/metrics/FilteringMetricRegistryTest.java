@@ -21,13 +21,16 @@ package org.apache.cassandra.sidecar.metrics;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.AfterEach;
@@ -62,6 +65,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class FilteringMetricRegistryTest
 {
     private static final MetricRegistry NO_OP_METRIC_REGISTRY = new NoopMetricRegistry();
+    private static final List<BiConsumer<FilteringMetricRegistry, String>> METRIC_REGISTRY_STRING_BI_CONSUMER = List.of(
+    (r, metricName) -> r.register(metricName, new ThroughputMeter()),
+    FilteringMetricRegistry::meter,
+    FilteringMetricRegistry::gauge,
+    FilteringMetricRegistry::counter,
+    FilteringMetricRegistry::histogram,
+    FilteringMetricRegistry::timer
+    );
     @TempDir
     private Path confPath;
 
@@ -338,11 +349,13 @@ class FilteringMetricRegistryTest
             pool.submit(() -> {
                 try
                 {
+                    String metricName = "metric_" + finalI + "_" + ((finalI % 2 == 0) ? "even" : "odd");
+                    BiConsumer<FilteringMetricRegistry, String> biConsumer = registerRandomMetric();
                     // Invoke register roughly at the same time
                     latch.countDown();
                     latch.await();
 
-                    registry.register("testMetricThroughputMeter_" + finalI + "_" + ((finalI % 2 == 0) ? "even" : "odd"), new ThroughputMeter());
+                    biConsumer.accept(registry, metricName);
                     assertThat(registry.getMetrics()).isNotEmpty();
                 }
                 catch (InterruptedException e)
@@ -365,7 +378,7 @@ class FilteringMetricRegistryTest
         Set<String> allMetricNames = allMetrics.keySet();
         for (int i = 0; i < nThreads; i++)
         {
-            String expectedMetricName = "testMetricThroughputMeter_" + i + "_" + ((i % 2 == 0) ? "even" : "odd");
+            String expectedMetricName = "metric_" + i + "_" + ((i % 2 == 0) ? "even" : "odd");
             assertThat(allMetricNames).as("Expected metric %s", expectedMetricName).contains(expectedMetricName);
         }
     }
@@ -423,5 +436,10 @@ class FilteringMetricRegistryTest
         Map<String, Metric> allMetrics = registry.getMetrics();
         assertThat(allMetrics).as("About half the metrics are removed").hasSize(nThreads / 2);
         assertThat(registry.getIncludedMetrics()).hasSize(nThreads / 2);
+    }
+
+    BiConsumer<FilteringMetricRegistry, String> registerRandomMetric()
+    {
+        return METRIC_REGISTRY_STRING_BI_CONSUMER.get(ThreadLocalRandom.current().nextInt(METRIC_REGISTRY_STRING_BI_CONSUMER.size()));
     }
 }

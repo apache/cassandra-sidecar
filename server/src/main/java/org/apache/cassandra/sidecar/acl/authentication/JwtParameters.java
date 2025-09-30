@@ -52,4 +52,44 @@ public interface JwtParameters
      * dynamically retrieve configuration information of an OpenID provider.
      */
     SecondBoundConfiguration configDiscoverInterval();
+
+    /**
+     * @return The configured method of JWT authentication to use. Defaults to oauth if not supplied.
+     */
+    AuthType jwtAuthType();
+
+    /**
+     * @return Optional path to a keystore to provide mutual TLS to PEM public key provider service
+     */
+    String keystorePath();
+
+    /**
+     * @return Optional password for the provided keystore
+     */
+    String keystorePassword();
+
+    /**
+     * @return Optional path to a truststore to validate SSL certs from PEM public key provider service
+     */
+    String truststorePath();
+
+    /**
+     * @return Optional password for the provided truststore
+     */
+    String truststorePassword();
+
+    /**
+     * @return Optional JWT to authenticate to PEM public key provider service
+     */
+    String pemProviderJwt();
+
+
+    /**
+     * Supported types of JWT authentication. Today Oauth and Stateless JWT token authentication methods are supported.
+     */
+    enum AuthType
+    {
+        OAUTH,
+        STATELESS
+    }
 }

@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -283,15 +284,22 @@ public class FilteringMetricRegistry extends MetricRegistry
      */
     private Metric addExcludedMetricIfNotExists(String name, Function<String, ? extends Metric> mappingFunction)
     {
-        return excludedMetrics.computeIfAbsent(name, k -> {
+        AtomicBoolean registeredExcludedMetric = new AtomicBoolean(false);
+        Metric excludedMetric = excludedMetrics.computeIfAbsent(name, k -> {
+            registeredExcludedMetric.set(true);
+            return mappingFunction.apply(k);
+        });
+
+        if (registeredExcludedMetric.get())
+        {
             // allMetrics needs to be recomputed when an excluded metric is registered
             synchronized (this)
             {
                 allMetrics = null;
             }
+        }
 
-            return mappingFunction.apply(k);
-        });
+        return excludedMetric;
     }
 
     /**

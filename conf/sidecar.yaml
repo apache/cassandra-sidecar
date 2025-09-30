@@ -258,6 +258,25 @@ access_control:
         # trying to connect.
         client_id: recognized_client_id
         config_discover_interval: 1h
+        #
+        # Authentication type dictates whether to use the Oauth flow or a stateless JWT authenticator
+        # If not provided, default is oauth. Valid values are oauth or stateless
+        # jwt_auth_type: oauth
+        #
+        # Optional configurations for connecting to JWT PEM provider
+        #
+        # keystore_path defines the path to a keystore which can be used to provide SSL certificates to
+        # a JWT pem provider. If specified, a password must be provided.
+        # keystore_path: /path/to/keystore
+        # keystore_password: changeme
+        #
+        # truststore_path defines the path to a truststore that contains the CA used to validate SSL certs used
+        # by downstream PEM provider services. If specified, a password must be provided.
+        # truststore_path: /path/to/truststore
+        # truststore_password: changeme
+        #
+        # Optional JWT which can be used to authenticate to a downstream PEM provider if required.
+        # pem_provider_jwt: changeme
   authorizer:
     # Authorization backend, implementing io.vertx.ext.auth.authorization.AuthorizationProvider; used to
     # provide permissions a user holds.
