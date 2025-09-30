@@ -34,6 +34,7 @@ import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.metrics.CacheStatsCounter;
 import org.jetbrains.annotations.VisibleForTesting;
@@ -141,8 +142,8 @@ public abstract class AuthCache<K, V>
     {
         if (config.refreshAfterWrite() == null && config.expireAfterAccess() == null)
         {
-            throw new IllegalArgumentException(name +
-                                               " must be configured with either refreshAfterWrite or expireAfterAccess");
+            throw new ConfigurationException(name +
+                                             " must be configured with either refreshAfterWrite or expireAfterAccess");
         }
 
         Caffeine<Object, Object> cacheBuilder

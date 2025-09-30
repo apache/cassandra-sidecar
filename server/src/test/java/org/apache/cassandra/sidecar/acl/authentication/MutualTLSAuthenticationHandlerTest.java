@@ -66,6 +66,7 @@ import io.vertx.ext.web.handler.impl.ChainAuthHandlerImpl;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
@@ -386,7 +387,7 @@ class MutualTLSAuthenticationHandlerTest
                                                  authenticatorsConfiguration(),
                                                  new ParameterizedClassConfigurationImpl(className, Collections.emptyMap()),
                                                  Collections.singleton(ADMIN_IDENTITY),
-                                                 new CacheConfigurationImpl());
+                                                 new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("30s"), 100));
 
             return super.abstractConfig(sslConfiguration, builder -> builder.accessControlConfiguration(accessControlConfiguration));
         }

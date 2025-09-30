@@ -46,6 +46,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarPermissionsDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
@@ -390,7 +391,7 @@ class RoleAuthorizationsCacheTest
                                           mockDbAccessor,
                                           mockSidecarPermissionsAccessor,
                                           sidecarMetrics))
-        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOf(ConfigurationException.class)
         .hasMessageContaining("role_permissions_cache must be configured with either refreshAfterWrite or expireAfterAccess");
     }
 
