@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
-import java.io.IOException;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -43,9 +42,22 @@ import org.jetbrains.annotations.NotNull;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * Handler to clear the completed live migration status for an instance.
- * Allows the instance to be migrated again in the future by removing the completion status.
- * Should only be called after the instance entry is removed from the Live Migration map.
+ * Handler to clear the live migration status for an instance.
+ * <p>
+ * This endpoint removes the migration completion status, allowing the instance to be
+ * migrated again in the future. Clearing the status is necessary to prevent blocking
+ * future migrations of the same destination instance.
+ *
+ * <h3>Usage Safety:</h3>
+ * IMPORTANT: This endpoint should ONLY be called after completing the live migration
+ * process and the instance entry has been removed from the Live Migration map
+ * Calling this endpoint prematurely may lead to inconsistent migration state.
+ *
+ * <h3>Use Cases:</h3>
+ * <ul>
+ *   <li>After successful completion of a live migration to allow future migrations</li>
+ *   <li>To recover from erroneous COMPLETED status markings</li>
+ * </ul>
  */
 public class LiveMigrationStatusClearHandler extends AbstractHandler<Void> implements AccessProtected
 {
@@ -73,23 +85,22 @@ public class LiveMigrationStatusClearHandler extends AbstractHandler<Void> imple
     protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, @NotNull String host, SocketAddress remoteAddress, Void request)
     {
         InstanceMetadata instanceMetadata = metadataFetcher.instance(host);
-        executorPools.service().runBlocking(() -> {
-            try
-            {
-                statusTracker.unsetMigrationCompleted(instanceMetadata);
-                context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
-            }
-            catch (IllegalArgumentException iae)
-            {
-                LOGGER.error("Error while clearing live migration status for instance {}", host, iae);
-                context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, iae.getMessage(), iae));
-            }
-            catch (IOException e)
-            {
-                LOGGER.error("Error while clearing live migration status for instance {}", host, e);
-                context.fail(wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE, e.getMessage(), e));
-            }
-        });
+        statusTracker.clearMigrationStatus(instanceMetadata)
+                     .onSuccess(v -> {
+                         LOGGER.info("Successfully cleared live migration status for instance {}", host);
+                         context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
+                     })
+                     .onFailure(e -> {
+                         LOGGER.error("Error while clearing live migration status for instance {}", host, e);
+                         if (e instanceof IllegalArgumentException)
+                         {
+                             context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, e.getMessage(), e));
+                         }
+                         else
+                         {
+                             context.fail(wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE, e.getMessage(), e));
+                         }
+                     });
     }
 
     @Override

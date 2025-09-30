@@ -44,7 +44,6 @@ import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
-import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationMapException;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.jetbrains.annotations.NotNull;
@@ -95,31 +94,18 @@ class LiveMigrationStatusHandlersTest
     @Test
     void testUpdateStatusAndGetStatusSucceedsAtSource(VertxTestContext context)
     {
-        mockLiveMigrationMap(injector, Map.of("localhost", "localhost3"));
-        WebClient client = WebClient.create(vertx);
-        client.post(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
-              .as(BodyCodec.buffer())
-              .send()
-              .compose(response -> {
-                  assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                  assertThat(response.bodyAsJsonObject().getString("state")).isEqualTo("COMPLETED");
-                  return Future.succeededFuture();
-              })
-              .compose(v -> client.get(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
-                                  .send()
-                                  .compose(response -> {
-                                      assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                                      assertThat(response.bodyAsJsonObject().getString("state")).isEqualTo("COMPLETED");
-                                      return Future.succeededFuture();
-                                  }))
-              .onSuccess(r -> context.completeNow())
-              .onFailure(context::failNow);
+        updateStatusAndGetStatusSucceedsAtDestination(context, Map.of("localhost", "localhost3"));
     }
 
     @Test
     void testUpdateStatusAndGetStatusSucceedsAtDestination(VertxTestContext context)
     {
-        mockLiveMigrationMap(injector, Map.of("localhost3", "localhost"));
+        updateStatusAndGetStatusSucceedsAtDestination(context, Map.of("localhost3", "localhost"));
+    }
+
+    void updateStatusAndGetStatusSucceedsAtDestination(VertxTestContext context, Map<String, String> liveMigrationMap)
+    {
+        mockLiveMigrationMap(injector, liveMigrationMap);
         WebClient client = WebClient.create(vertx);
         client.post(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
               .as(BodyCodec.buffer())
@@ -239,6 +225,8 @@ class LiveMigrationStatusHandlersTest
                   assertThat(response.bodyAsJsonObject().getString("state")).isEqualTo("COMPLETED");
                   return Future.succeededFuture();
               })
+              // Migration map is not cleared before sending delete status request,
+              // so delete status request should fail.
               .compose(v -> client.delete(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
                                   .as(BodyCodec.buffer())
                                   .send())
@@ -251,12 +239,11 @@ class LiveMigrationStatusHandlersTest
     }
 
     @Test
-    void testCompleteStatusShouldNotSucceedWhenFetchingMigrationMapFails(VertxTestContext context) throws LiveMigrationMapException
+    void testCompleteStatusShouldNotSucceedWhenFetchingMigrationMapFails(VertxTestContext context)
     {
         LiveMigrationMap migrationMap = injector.getInstance(LiveMigrationMap.class);
         when(migrationMap.getMigrationMap())
-        .thenThrow(new LiveMigrationMapException("Could not fetch migration map",
-                                                 new IOException("Failed to fetch config")));
+        .thenReturn(Future.failedFuture(new IOException("Failed to fetch config")));
 
         WebClient client = WebClient.create(vertx);
         client.post(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
@@ -285,16 +272,8 @@ class LiveMigrationStatusHandlersTest
               })
               .compose(v -> {
                   LiveMigrationMap migrationMap = injector.getInstance(LiveMigrationMap.class);
-                  try
-                  {
-                      when(migrationMap.getMigrationMap())
-                      .thenThrow(new LiveMigrationMapException("Could not fetch migration map",
-                                                               new IOException("Failed to fetch config")));
-                  }
-                  catch (LiveMigrationMapException e)
-                  {
-                      return Future.failedFuture(e);
-                  }
+                  when(migrationMap.getMigrationMap())
+                  .thenReturn(Future.failedFuture(new IOException("Failed to fetch config")));
                   return Future.succeededFuture();
               })
               .compose(v -> client.delete(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
@@ -331,14 +310,7 @@ class LiveMigrationStatusHandlersTest
     void mockLiveMigrationMap(Injector injector, Map<String, String> migrationMap)
     {
         LiveMigrationMap map = injector.getInstance(LiveMigrationMap.class);
-        try
-        {
-            when(map.getMigrationMap()).thenReturn(migrationMap);
-        }
-        catch (LiveMigrationMapException e)
-        {
-            throw new RuntimeException(e);
-        }
+        when(map.getMigrationMap()).thenReturn(Future.succeededFuture(migrationMap));
     }
 
     private static class LiveMigrationStatusTestModule extends AbstractModule
@@ -347,13 +319,13 @@ class LiveMigrationStatusHandlersTest
         @Override
         protected void configure()
         {
-            //noinspection Convert2Lambda,Anonymous2MethodRef
+            // noinspection Convert2Lambda
             LiveMigrationMap liveMigrationMap = spy(new LiveMigrationMap()
             {
                 @Override
-                public @NotNull Map<String, String> getMigrationMap()
+                public @NotNull Future<Map<String, String>> getMigrationMap()
                 {
-                    return Map.of();
+                    return Future.succeededFuture(Map.of());
                 }
             });
             bind(LiveMigrationMap.class).toInstance(liveMigrationMap);

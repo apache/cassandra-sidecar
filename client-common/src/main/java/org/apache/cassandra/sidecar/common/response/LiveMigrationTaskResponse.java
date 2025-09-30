@@ -32,23 +32,45 @@ import org.jetbrains.annotations.NotNull;
 public class LiveMigrationTaskResponse
 {
 
-    private final LiveMigrationDataCopyRequest request;
+    private final String taskId;
+    private final int maxIterations;
+    private final double successThreshold;
+    private final int maxConcurrency;
     private final List<Status> statusList;
     private final String source;
     private final int port;
 
-    public LiveMigrationTaskResponse(LiveMigrationDataCopyRequest request, List<Status> statusList, String source, int port)
+    public LiveMigrationTaskResponse(String taskId,
+                                     String source,
+                                     int port,
+                                     LiveMigrationDataCopyRequest request,
+                                     List<Status> statusList)
     {
-        this.request = request;
-        this.statusList = statusList;
+        this(taskId, source, port, request.maxIterations, request.successThreshold, request.maxConcurrency, statusList);
+    }
+
+    @JsonCreator
+    public LiveMigrationTaskResponse(@JsonProperty("taskId") String taskId,
+                                     @JsonProperty("source") String source,
+                                     @JsonProperty("port") int port,
+                                     @JsonProperty("maxIterations") int maxIterations,
+                                     @JsonProperty("successThreshold") double successThreshold,
+                                     @JsonProperty("maxConcurrency") int maxConcurrency,
+                                     @JsonProperty("status") List<Status> statusList)
+    {
+        this.taskId = taskId;
         this.source = source;
         this.port = port;
+        this.maxIterations = maxIterations;
+        this.successThreshold = successThreshold;
+        this.maxConcurrency = maxConcurrency;
+        this.statusList = statusList;
     }
 
     @JsonProperty("taskId")
     public String taskId()
     {
-        return request.id;
+        return taskId;
     }
 
     @JsonProperty("source")
@@ -66,13 +88,19 @@ public class LiveMigrationTaskResponse
     @JsonProperty("maxIterations")
     public int maxIterations()
     {
-        return request.maxIterations;
+        return maxIterations;
+    }
+
+    @JsonProperty("maxConcurrency")
+    public int maxConcurrency()
+    {
+        return maxConcurrency;
     }
 
     @JsonProperty("successThreshold")
     public double successThreshold()
     {
-        return request.successThreshold;
+        return successThreshold;
     }
 
     @JsonProperty("status")

@@ -30,6 +30,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public class LiveMigrationStatus
 {
+    public static final LiveMigrationStatus NOT_COMPLETED_STATUS = new LiveMigrationStatus(MigrationState.NOT_COMPLETED, null);
+
     private final MigrationState state;
     private final Long endTime;
 

@@ -101,7 +101,7 @@ class LiveMigrationFileDownloaderTest
     private static final int FILE_DOWNLOAD_MAX_CONCURRENCY = 10;
     private static final int PORT = 9043;
     private static final LiveMigrationDataCopyRequest dummyRequest100pThreshold =
-    new LiveMigrationDataCopyRequest(UUID.randomUUID().toString(), MAX_ITERATIONS, 1.0, FILE_DOWNLOAD_MAX_CONCURRENCY);
+    new LiveMigrationDataCopyRequest(MAX_ITERATIONS, 1.0, FILE_DOWNLOAD_MAX_CONCURRENCY);
     final Vertx vertx = Vertx.vertx();
 
     private final List<String> dataDirsOne = Collections.singletonList("/tmp/data0");
@@ -293,6 +293,52 @@ class LiveMigrationFileDownloaderTest
 
         assertThat(statusFuture.isComplete()).isTrue();
         assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.DOWNLOAD_COMPLETE);
+        verify(statusUpdater, times(4)).accept(any(OperationStatus.class));
+    }
+
+    @Test
+    void testDownloadSuccessfullyDownloadedFilesSourceHasMoreDataDirs(@TempDir Path tmpDir) throws InterruptedException, IOException
+    {
+        // In this case source has more data dirs than destination.
+        // Download should fail as the destination does not have sufficient data directories.
+        String storageDir = tmpDir.resolve("testDownloadSuccessfullyDownloadedFiles")
+                                  .toAbsolutePath().toString();
+        List<String> dataDirs = getDataDirList(storageDir);
+        final Consumer<OperationStatus> statusUpdater = mock(Consumer.class);
+        int fileSize = 64;
+        long lastModifiedTime = System.currentTimeMillis();
+        List<TestFile> filesToDownload = List.of(
+        new TestFile(DATA_FILE_DIR, 0, "ks1/t1/data.db", fileSize, lastModifiedTime),
+        new TestFile(DATA_FILE_DIR, 0, "ks1/t2/data.db", fileSize, lastModifiedTime),
+        // Second data directory file specified with dirIndex as 1
+        new TestFile(DATA_FILE_DIR, 1, "ks1/t2/data2.db", fileSize, lastModifiedTime)
+        );
+
+        Injector injector = getInjector();
+        SidecarClient sidecarClient = injector.getInstance(SidecarClient.class);
+        when(sidecarClient.liveMigrationListInstanceFilesAsync(eq(new SidecarInstanceImpl(SOURCE, PORT))))
+        .thenReturn(CompletableFuture.completedFuture(getInstanceFilesListResponse(filesToDownload)));
+
+        LiveMigrationFileDownloader downloaderSpy =
+        getDownloaderSpy(injector, dummyRequest100pThreshold, 0, statusUpdater, storageDir, dataDirs);
+
+        doAnswer(invocation -> invocation.getArguments()[0])
+        .when(downloaderSpy).deleteUnnecessaryFilesAndDirectories(any(InstanceFilesListResponse.class));
+
+        doReturn(Future.succeededFuture(getInstanceFileInfo(filesToDownload)))
+        .when(downloaderSpy).shortlistDownloadFiles(any(InstanceFilesListResponse.class), anyDouble());
+
+        doReturn(Future.succeededFuture())
+        .when(downloaderSpy).updateFileTimestampAsync(any(Path.class), anyLong());
+
+        when(sidecarClient.liveMigrationStreamFileAsync(any(SidecarInstance.class), anyString(), anyString()))
+        .thenReturn(CompletableFuture.completedFuture(null));
+
+        Future<OperationStatus> statusFuture = downloaderSpy.downloadFiles();
+        awaitForFuture(statusFuture);
+
+        assertThat(statusFuture.isComplete()).isTrue();
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.FAILED);
         verify(statusUpdater, times(4)).accept(any(OperationStatus.class));
     }
 
@@ -578,7 +624,7 @@ class LiveMigrationFileDownloaderTest
         final Consumer<OperationStatus> statusUpdater = mock(Consumer.class);
         Injector injector = getInjector();
         LiveMigrationDataCopyRequest maxConcurrency1Request =
-        new LiveMigrationDataCopyRequest("data-copy-request", 1, 1.0, 2);
+        new LiveMigrationDataCopyRequest(1, 1.0, 2);
         LiveMigrationFileDownloader downloaderSpy =
         spy(getDownloader(injector, maxConcurrency1Request, 0, statusUpdater, storageDir, dataDirs));
 
@@ -1309,6 +1355,7 @@ class LiveMigrationFileDownloaderTest
         LiveMigrationConfiguration liveMigrationConfig = injector.getInstance(SidecarConfiguration.class)
                                                                  .liveMigrationConfiguration();
         return LiveMigrationFileDownloader.builder()
+                                          .id(UUID.randomUUID().toString())
                                           .vertx(vertx)
                                           .sidecarClient(sidecarClientProvider.get())
                                           .request(request)

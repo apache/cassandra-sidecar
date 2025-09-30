@@ -18,11 +18,11 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
-import java.util.Objects;
 import java.util.Set;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
@@ -30,8 +30,6 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus;
-import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.MigrationState;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 import org.apache.cassandra.sidecar.handlers.AccessProtected;
@@ -42,7 +40,10 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * Handler to retrieve the current live migration status for an instance.
- * Returns COMPLETED if the migration has finished, or NOT_COMPLETED if it's still in progress or not started.
+ * <p>
+ * This endpoint allows clients to query the migration state of a specific instance,
+ * returning a {@link org.apache.cassandra.sidecar.common.response.LiveMigrationStatus}
+ * object containing the state (COMPLETED or NOT_COMPLETED) and timestamp.
  */
 @Singleton
 public class LiveMigrationStatusGetHandler extends AbstractHandler<Void> implements AccessProtected
@@ -70,14 +71,12 @@ public class LiveMigrationStatusGetHandler extends AbstractHandler<Void> impleme
     protected void handleInternal(RoutingContext routingContext, HttpServerRequest httpServerRequest,
                                   @NotNull String host, SocketAddress socketAddress, Void unused)
     {
-        executorPools.service().runBlocking(() -> {
-            InstanceMetadata instance = metadataFetcher.instance(host);
-            LiveMigrationStatus status =
-            Objects.requireNonNullElseGet(statusTracker.getMigrationStatus(instance),
-                                          () -> new LiveMigrationStatus(MigrationState.NOT_COMPLETED, null));
-            routingContext.response()
-                          .send(Json.encode(status));
-        });
+        InstanceMetadata instance = metadataFetcher.instance(host);
+        statusTracker.getMigrationStatus(instance)
+                     .compose(status -> routingContext.response().send(Json.encode(status)))
+                     .onFailure(e -> routingContext.response()
+                                                   .setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code())
+                                                   .end(e.getMessage()));
     }
 
     @Override

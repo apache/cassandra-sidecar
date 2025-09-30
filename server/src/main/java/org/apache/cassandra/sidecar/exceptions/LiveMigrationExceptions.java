@@ -40,7 +40,7 @@ public class LiveMigrationExceptions
 
     /**
      * Exception thrown when a Live Migration request contains invalid parameters or violates
-     *  constraints such as:
+     * constraints such as:
      * <ul>
      * <li>Requested max concurrency exceeds system limits</li>
      * <li>Source instance has more data directories than destination</li>
@@ -63,22 +63,6 @@ public class LiveMigrationExceptions
         public LiveMigrationTaskNotFoundException(String message)
         {
             super(message);
-        }
-    }
-
-    /**
-     * Exception thrown when operations related to retrieving or processing the live migration map fail.
-     * <p>
-     * This exception is typically thrown when:
-     * - Unable to retrieve the migration map
-     * - Cache loading operations fail
-     * - Timeout occurs while waiting for the mapping data
-     */
-    public static class LiveMigrationMapException extends Exception
-    {
-        public LiveMigrationMapException(String message, Throwable cause)
-        {
-            super(message, cause);
         }
     }
 }

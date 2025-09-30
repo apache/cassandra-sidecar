@@ -24,13 +24,13 @@ import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_STATUS_ROUTE;
 
 /**
- * Request object for retrieving the status of a Live Migration operation.
- * This request is used to query the current state of an ongoing Live Migration process.
+ * Request object for retrieving the status of a live migration operation.
+ * This request is used to query the current state of an ongoing live migration process.
  */
 public class LiveMigrationStatusRequest extends JsonRequest<LiveMigrationStatus>
 {
     /**
-     * Constructs a LiveMigrationStatusRequest using the Live Migration status route.
+     * Constructs a LiveMigrationStatusRequest using the live migration status route.
      */
     public LiveMigrationStatusRequest()
     {

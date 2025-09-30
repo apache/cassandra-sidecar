@@ -92,6 +92,7 @@ public class LiveMigrationModule extends AbstractModule
         return factory.builderForRoute()
                       .setBodyHandler(true)
                       .handler(liveMigrationApiEnableDisableHandler::isDestination)
+                      .handler(liveMigrationApiEnableDisableHandler::allowIfMigrationNotComplete)
                       .handler(liveMigrationCreateDataCopyTaskHandler)
                       .build();
     }
@@ -194,6 +195,7 @@ public class LiveMigrationModule extends AbstractModule
     {
         return factory.builderForRoute()
                       .handler(liveMigrationApiEnableDisableHandler::isSource)
+                      .handler(liveMigrationApiEnableDisableHandler::allowIfMigrationNotComplete)
                       .handler(liveMigrationFileStreamHandler)
                       .handler(fileStreamHandler)
                       .build();

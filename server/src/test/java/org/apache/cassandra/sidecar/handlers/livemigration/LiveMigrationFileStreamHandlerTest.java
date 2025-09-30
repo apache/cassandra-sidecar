@@ -43,6 +43,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
@@ -163,7 +164,8 @@ class LiveMigrationFileStreamHandlerTest
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
         LiveMigrationStatusTracker statusTracker = injector.getInstance(LiveMigrationStatusTracker.class);
-        when(statusTracker.hasMigrationCompleted(any(InstanceMetadata.class))).thenReturn(true);
+        when(statusTracker.hasMigrationCompleted(any(InstanceMetadata.class)))
+        .thenReturn(Future.succeededFuture(true));
 
 
         String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
@@ -451,16 +453,10 @@ class LiveMigrationFileStreamHandlerTest
             bind(SidecarConfiguration.class).toInstance(sidecarConfiguration);
             install(new HelperTestModules.InstanceMetadataTestModule(instanceMetaList));
 
-            try
-            {
-                LiveMigrationStatusTracker statusTracker = mock(LiveMigrationStatusTracker.class);
-                when(statusTracker.hasMigrationCompleted(any(InstanceMetadata.class))).thenReturn(false);
-                bind(LiveMigrationStatusTracker.class).toInstance(statusTracker);
-            }
-            catch (IOException e)
-            {
-                throw new RuntimeException(e);
-            }
+            LiveMigrationStatusTracker statusTracker = mock(LiveMigrationStatusTracker.class);
+            when(statusTracker.hasMigrationCompleted(any(InstanceMetadata.class)))
+            .thenReturn(Future.succeededFuture(false));
+            bind(LiveMigrationStatusTracker.class).toInstance(statusTracker);
         }
     }
 }

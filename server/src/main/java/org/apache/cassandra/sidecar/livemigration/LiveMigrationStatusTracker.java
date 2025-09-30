@@ -18,8 +18,7 @@
 
 package org.apache.cassandra.sidecar.livemigration;
 
-import java.io.IOException;
-
+import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus;
 
@@ -30,37 +29,34 @@ public interface LiveMigrationStatusTracker
 {
 
     /**
-     * Sets the live migration status as completed for the given instance.
+     * Sets the live migration status for the given instance.
      *
-     * @param instanceMetadata Metadata of instance for which migration completion status needs to be recorded
-     * @param endTime          timestamp when the migration was completed
-     * @return the LiveMigrationStatus object that was created and stored
-     * @throws IOException              when cannot record migration completion
-     * @throws IllegalArgumentException when staging directory is not configured
+     * @param instanceMetadata Metadata of instance for which migration status needs to be recorded
+     * @param status           LiveMigrationStatus object containing the status and timestamp of completion
+     * @return a Future that completes when the status has been successfully written
      */
-    LiveMigrationStatus setMigrationCompleted(InstanceMetadata instanceMetadata, long endTime) throws IOException;
+    Future<Void> setMigrationStatus(InstanceMetadata instanceMetadata, LiveMigrationStatus status);
 
     /**
      * Retrieves the live migration status for the given instance.
      *
      * @param instanceMetadata metadata of the instance for which status is requested
-     * @return LiveMigrationStatus object containing the current status, or null if no status is set
-     * @throws IOException if unable to read the migration status
+     * @return a Future containing the LiveMigrationStatus object with the current status,
+     * or NOT_COMPLETED_STATUS if no status is set
      */
-    LiveMigrationStatus getMigrationStatus(InstanceMetadata instanceMetadata) throws IOException;
+    Future<LiveMigrationStatus> getMigrationStatus(InstanceMetadata instanceMetadata);
 
     /**
      * Checks whether the migration has been completed for the given instance by reading and
      * validating the stored migration status.
      *
      * @param instanceMetadata metadata object of instance for which migration status needs to be checked
-     * @return true if migration has completed, otherwise false.
-     * @throws IOException if unable to read or parse the migration status
+     * @return a Future containing true if migration has completed, otherwise false
      */
-    boolean hasMigrationCompleted(InstanceMetadata instanceMetadata) throws IOException;
+    Future<Boolean> hasMigrationCompleted(InstanceMetadata instanceMetadata);
 
     /**
-     * Unsets the migration completion status for a specific instance.
+     * Clears the migration status for a specific instance.
      * <p>
      * IMPORTANT: The caller must ensure that this method is called ONLY AFTER
      * the instance entry is removed from the live migration map (i.e., after
@@ -72,7 +68,7 @@ public interface LiveMigrationStatusTracker
      * 2. Removing the migration status allows the instance to be migrated again in the future.
      *
      * @param instanceMetadata metadata of the instance for which the migration status needs to be cleared
-     * @throws IOException if clearing the migration status fails
+     * @return a Future that completes when the migration status has been successfully cleared
      */
-    void unsetMigrationCompleted(InstanceMetadata instanceMetadata) throws IOException;
+    Future<Void> clearMigrationStatus(InstanceMetadata instanceMetadata);
 }

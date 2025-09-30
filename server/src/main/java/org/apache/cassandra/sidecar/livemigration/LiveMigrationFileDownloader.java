@@ -76,6 +76,7 @@ class LiveMigrationFileDownloader
     private final InstanceMetadata instanceMetadata;
     private final LiveMigrationConfiguration liveMigrationConfiguration;
     private final SidecarClient sidecarClient;
+    private final String id;
     private final String source;
     private final int port;
     private final String logPrefix;
@@ -92,12 +93,13 @@ class LiveMigrationFileDownloader
         this.statusUpdater = builder.statusUpdater;
         this.instanceMetadata = builder.instanceMetadata;
         this.liveMigrationConfiguration = builder.liveMigrationConfiguration;
+        this.id = builder.id;
         this.source = builder.source;
         this.port = builder.port;
         this.executorPools = builder.executorPools;
 
         this.operationStatus = OperationStatus.startingState();
-        this.logPrefix = String.format("liveMigrationRequest=%s iteration=%s ", request.id, iteration);
+        this.logPrefix = String.format("liveMigrationRequest=%s iteration=%s ", id, iteration);
     }
 
     public static Builder builder()
@@ -567,6 +569,7 @@ class LiveMigrationFileDownloader
         private Consumer<OperationStatus> statusUpdater;
         private InstanceMetadata instanceMetadata;
         private LiveMigrationConfiguration liveMigrationConfiguration;
+        private String id;
         private String source;
         private int port;
 
@@ -658,6 +661,17 @@ class LiveMigrationFileDownloader
         }
 
         /**
+         * Sets the {@code id} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param id the {@code id} to set
+         * @return a reference to this Builder
+         */
+        public Builder id(String id)
+        {
+            return update(b -> b.id = id);
+        }
+
+        /**
          * Sets the {@code source} and returns a reference to this Builder enabling method chaining.
          *
          * @param source the {@code source} to set
@@ -703,6 +717,7 @@ class LiveMigrationFileDownloader
             Objects.requireNonNull(sidecarClient);
             Objects.requireNonNull(statusUpdater);
             Objects.requireNonNull(liveMigrationConfiguration);
+            Objects.requireNonNull(id);
             Objects.requireNonNull(request);
             Objects.requireNonNull(source);
             Objects.requireNonNull(executorPools);

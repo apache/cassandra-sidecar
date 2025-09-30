@@ -1972,7 +1972,6 @@ abstract class SidecarClientTest
     }
 
     @Test
-<<<<<<< HEAD
     void testNodeLifecycleInfo() throws Exception
     {
         String lifecycleInfoResponse = "{\"current_state\":\"RUNNING\",\"desired_state\":\"RUNNING\",\"status\":\"CONVERGED\"," +
@@ -1995,13 +1994,13 @@ abstract class SidecarClientTest
     void testNodeUpdateLifecycle() throws Exception
     {
         String lifecycleUpdateResponse = "{\"current_state\":\"RUNNING\",\"desired_state\":\"STOPPED\",\"status\":\"CONVERGING\"," +
-                                         "\"last_update\":\"Submitting stop task for instance\"}";
+                "\"last_update\":\"Submitting stop task for instance\"}";
         MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(lifecycleUpdateResponse);
         enqueue(response);
 
         SidecarInstanceImpl sidecarInstance = instances.get(0);
         LifecycleInfoResponse result = client.nodeUpdateLifecycle(sidecarInstance, NodeCommandRequestPayload.State.STOP)
-                                             .get(30, TimeUnit.SECONDS);
+                .get(30, TimeUnit.SECONDS);
 
         assertThat(result).isNotNull();
         assertThat(result.currentState()).isEqualTo(CassandraState.RUNNING);

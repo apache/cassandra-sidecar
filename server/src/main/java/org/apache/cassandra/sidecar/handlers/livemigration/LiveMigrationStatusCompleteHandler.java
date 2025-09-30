@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
-import java.io.IOException;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -27,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
@@ -55,7 +55,6 @@ import org.jetbrains.annotations.NotNull;
  * all data transfer and validation steps. Premature completion can lead to data inconsistency
  * or loss during cluster operations.
  *
- * @see LiveMigrationStatusTracker#setMigrationCompleted(InstanceMetadata, long)
  * @see LiveMigrationStatusTracker#hasMigrationCompleted(InstanceMetadata)
  */
 @Singleton
@@ -88,30 +87,43 @@ public class LiveMigrationStatusCompleteHandler extends AbstractHandler<Void> im
     {
         InstanceMetadata instanceMetadata = metadataFetcher.instance(host);
 
-        executorPools.service().runBlocking(() -> {
-            if (statusTracker.hasMigrationCompleted(instanceMetadata))
-            {
-                LOGGER.error("Attempted to update Live Migration status as COMPLETED for instance {} that was " +
-                             " marked as COMPLETED already.", instanceMetadata.host());
-                routingContext.response()
-                              .setStatusCode(HttpResponseStatus.BAD_REQUEST.code())
-                              .end("Live Migration marked as COMPLETED earlier.");
-                return;
-            }
-
-            try
-            {
-                LiveMigrationStatus status = statusTracker.setMigrationCompleted(instanceMetadata, System.currentTimeMillis());
-                routingContext.response().end(Json.encode(status));
-            }
-            catch (IOException | IllegalArgumentException e)
-            {
-                LOGGER.error("Could not update Live Migration status as COMPLETED for instance {}", instanceMetadata.host(), e);
-                routingContext.response()
-                              .setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code())
-                              .end("Could not update Live Migration as complete.");
-            }
-        });
+        statusTracker.hasMigrationCompleted(instanceMetadata)
+                     .compose(completed -> {
+                         if (completed)
+                         {
+                             LOGGER.error("Attempted to update live migration status as COMPLETED for instance {} that was " +
+                                          "marked as COMPLETED already.", instanceMetadata.host());
+                             return Future.failedFuture(new IllegalStateException("Live migration marked as COMPLETED earlier."));
+                         }
+                         return Future.succeededFuture();
+                     })
+                     .compose(v -> {
+                         LiveMigrationStatus status = new LiveMigrationStatus(LiveMigrationStatus.MigrationState.COMPLETED,
+                                                                              System.currentTimeMillis());
+                         return statusTracker.setMigrationStatus(instanceMetadata, status)
+                                             .compose(setStatus -> Future.succeededFuture(status));
+                     })
+                     .onSuccess(status -> {
+                         LOGGER.info("Successfully updated Live Migration status as COMPLETED for instance: {}",
+                                     instanceMetadata.host());
+                         routingContext.response().end(Json.encode(status));
+                     })
+                     .onFailure(e -> {
+                         LOGGER.error("Could not update Live Migration status as COMPLETED for instance {}",
+                                      instanceMetadata.host(), e);
+                         if (e instanceof IllegalStateException)
+                         {
+                             routingContext.response()
+                                           .setStatusCode(HttpResponseStatus.BAD_REQUEST.code())
+                                           .end("Live migration marked as COMPLETED earlier.");
+                         }
+                         else
+                         {
+                             routingContext.response()
+                                           .setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code())
+                                           .end("Could not update Live Migration as complete.");
+                         }
+                     });
     }
 
     @Override
