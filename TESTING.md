@@ -139,7 +139,7 @@ Container-based tests run in Docker environments for additional isolation. For e
 tests for the Restore from S3 feature leverage the testcontainer-based S3 service
 (`com.adobe.testing.s3mock.testcontainers.S3MockContainer`). Only tests that require
 testcontainer-like functionality should live under `src/containerTest/`; otherwise,
-a unit or in JVM dtest integration test should suffice.
+a unit or in JVM dtest integration test is preferred.
 
 **Location**: `src/containerTest/` in relevant modules
 
@@ -228,7 +228,7 @@ Tests running on Java 11+ automatically receive optimized JVM arguments defined 
 For faster development cycles:
 
 ```bash
-# Run with code checks disabled
+# Run the Sidecar server with code checks disabled. This is useful for local manual testing of endpoints.
 ./gradlew run
 
 # Run specific test class
@@ -318,10 +318,12 @@ INTEGRATION_MAX_PARALLEL_FORKS=1 ./gradlew integrationTest
 Integration tests use `forkEvery = 1` to ensure test isolation. If you encounter test pollution:
 
 1. Verify each test properly cleans up resources
-2. Check for static state leakage
-3. Review test execution order
+2. Check for static state leakage within the failing test class.
+3. Review test execution order.
 
-### Debugging Integration Tests
+If the test state pollution is unavoidable within the test class, it is reasonable to split the tests into multiple, independent test classes.
+
+### Enabling debug logging for Integration Tests
 
 Enable debug logging by modifying `server/src/test/resources/logback-in-jvm-dtest.xml`:
 
