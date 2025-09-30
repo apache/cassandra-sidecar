@@ -292,9 +292,8 @@ access_control:
 #    - spiffe://authorized/admin/identities
   permission_cache:
     enabled: true
-    # refresh_after_write lazily refreshes cache entry, also it does async cache refreshes. expire_after_access removes
-    # the cache entry on expiry, triggering db calls for retrieval. Prefer setting refresh_after_write over
-    # expire_after_access for AuthCaches
+    # refresh_after_write does async cache refreshes. expire_after_access removes the cache entry on expiry. Prefer
+    # setting refresh_after_write over expire_after_access for AuthCaches
     # expire_after_access: 5m
     refresh_after_write: 5m
     maximum_size: 1000

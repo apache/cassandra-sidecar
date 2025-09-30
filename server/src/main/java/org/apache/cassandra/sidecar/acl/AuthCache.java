@@ -142,17 +142,16 @@ public abstract class AuthCache<K, V>
         if (config.refreshAfterWrite() == null && config.expireAfterAccess() == null)
         {
             throw new IllegalArgumentException(name +
-                                               "must be configured with either refreshAfterWrite or expireAfterAccess");
+                                               " must be configured with either refreshAfterWrite or expireAfterAccess");
         }
 
         Caffeine<Object, Object> cacheBuilder
         = Caffeine.newBuilder()
-                  .refreshAfterWrite(config.refreshAfterWrite().quantity(), config.refreshAfterWrite().unit())
                   .recordStats(() -> cacheMetrics)
                   .maximumSize(config.maximumSize());
         if (config.refreshAfterWrite() != null)
         {
-            cacheBuilder.expireAfterAccess(config.refreshAfterWrite().quantity(), config.refreshAfterWrite().unit());
+            cacheBuilder.refreshAfterWrite(config.refreshAfterWrite().quantity(), config.refreshAfterWrite().unit());
         }
         if (config.expireAfterAccess() != null)
         {
