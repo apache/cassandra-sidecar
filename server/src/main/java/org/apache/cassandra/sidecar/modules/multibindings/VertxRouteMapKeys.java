@@ -83,6 +83,11 @@ public interface VertxRouteMapKeys
         HttpMethod HTTP_METHOD = HttpMethod.PUT;
         String ROUTE_URI = ApiEndpointsV1.NODE_DECOMMISSION_ROUTE;
     }
+    interface CassandraNodeFlushRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.POST;
+        String ROUTE_URI = ApiEndpointsV1.NODE_FLUSH_ROUTE;
+    }
     interface CassandraNodeSettingsRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.GET;

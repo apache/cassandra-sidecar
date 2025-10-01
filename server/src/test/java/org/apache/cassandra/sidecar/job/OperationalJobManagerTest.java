@@ -77,7 +77,7 @@ class OperationalJobManagerTest
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
 
         OperationalJob testJob = OperationalJobTest.createOperationalJob(SUCCEEDED);
-        manager.trySubmitJob(testJob);
+        manager.trySubmitJob(testJob, true);
         testJob.execute(Promise.promise());
         assertThat(testJob.asyncResult().isComplete()).isTrue();
         assertThat(testJob.status()).isEqualTo(SUCCEEDED);
@@ -94,7 +94,7 @@ class OperationalJobManagerTest
         when(mockPools.internal()).thenReturn(mockExecPool);
         when(mockExecPool.runBlocking(any())).thenReturn(null);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
-        assertThatThrownBy(() -> manager.trySubmitJob(runningJob))
+        assertThatThrownBy(() -> manager.trySubmitJob(runningJob, true))
         .isExactlyInstanceOf(OperationalJobConflictException.class)
         .hasMessage("The same operational job is already running on Cassandra. operationName='Operation X'");
     }
@@ -109,7 +109,7 @@ class OperationalJobManagerTest
 
         OperationalJob testJob = OperationalJobTest.createOperationalJob(jobId, SecondBoundConfiguration.parse("10s"));
 
-        manager.trySubmitJob(testJob);
+        manager.trySubmitJob(testJob, true);
         // execute the job async.
         vertx.executeBlocking(testJob::execute);
         // by the time of checking, the job should still be running. It runs for 10 seconds.
@@ -141,7 +141,7 @@ class OperationalJobManagerTest
             }
         };
 
-        manager.trySubmitJob(failingJob);
+        manager.trySubmitJob(failingJob, true);
         failingJob.execute(Promise.promise());
         assertThat(failingJob.asyncResult().isComplete()).isTrue();
         assertThat(failingJob.asyncResult().failed()).isTrue();

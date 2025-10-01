@@ -219,4 +219,10 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
     {
         return delegate.getCompactionThroughputMbPerSec();
     }
+
+    @Override
+    public void forceKeyspaceFlush(String keyspaceName, String... tableNames) throws IOException
+    {
+        delegate.forceKeyspaceFlush(keyspaceName, tableNames);
+    }
 }

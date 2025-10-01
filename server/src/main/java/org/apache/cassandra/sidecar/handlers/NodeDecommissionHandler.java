@@ -91,7 +91,7 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
         NodeDecommissionJob job = new NodeDecommissionJob(UUIDs.timeBased(), operations, isForce);
         try
         {
-            jobManager.trySubmitJob(job);
+            jobManager.trySubmitJob(job, true);
         }
         catch (OperationalJobConflictException oje)
         {

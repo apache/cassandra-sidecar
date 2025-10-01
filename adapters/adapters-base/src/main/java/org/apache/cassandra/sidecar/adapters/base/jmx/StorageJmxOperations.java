@@ -228,4 +228,13 @@ public interface StorageJmxOperations
      * @return the current compaction throughput in megabytes per second, or 0 if throughput cannot be determined
      */
     int getCompactionThroughputMbPerSec();
+
+    /**
+     * Triggers the node flush operation to flush memtables for the specified keyspace and tables.
+     *
+     * @param keyspaceName the keyspace name
+     * @param tableNames   the array of table names to flush; if empty, all tables in the keyspace will be flushed
+     * @throws IOException if an I/O error occurs during the flush operation
+     */
+    void forceKeyspaceFlush(String keyspaceName, String... tableNames) throws IOException;
 }

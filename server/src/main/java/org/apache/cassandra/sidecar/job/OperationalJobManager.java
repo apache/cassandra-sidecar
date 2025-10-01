@@ -79,12 +79,16 @@ public class OperationalJobManager
      * tracked and not running. The job is triggered on a separate internal thread-pool.
      * The job execution failure behavior is tracked within the {@link OperationalJob}.
      *
-     * @param job OperationalJob instance to submit
+     * @param job           OperationalJob instance to submit
+     * @param checkConflict whether to check for job conflicts before submission
      * @throws OperationalJobConflictException when the same operational job is already running on Cassandra
      */
-    public void trySubmitJob(OperationalJob job) throws OperationalJobConflictException
+    public void trySubmitJob(OperationalJob job, boolean checkConflict) throws OperationalJobConflictException
     {
-        checkConflict(job);
+        if (checkConflict)
+        {
+            checkConflict(job);
+        }
 
         // New job is submitted for all cases when we do not have a corresponding downstream job
         jobTracker.computeIfAbsent(job.jobId(), jobId -> {

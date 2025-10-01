@@ -19,6 +19,7 @@
 
 package org.apache.cassandra.sidecar.client;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,6 +46,7 @@ import org.apache.cassandra.sidecar.common.request.DeleteServiceConfigRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.ListCdcSegmentsRequest;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationListInstanceFilesRequest;
+import org.apache.cassandra.sidecar.common.request.NodeFlushRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobProgressRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobSummaryRequest;
 import org.apache.cassandra.sidecar.common.request.Service;
@@ -821,6 +823,36 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                             .singleInstanceSelectionPolicy(instance)
                                             .nodeDecommissionRequest()
                                             .build());
+    }
+
+    /**
+     * Executes the node flush request using the default retry policy and provided {@code instance}.
+     * Flushes memtables for the specified keyspace and optionally for specific tables.
+     *
+     * @param instance   the instance where the request will be executed
+     * @param keyspace   the keyspace name to flush
+     * @param tableNames the list of table names to flush (can be empty to flush all tables)
+     * @return a completable future of the operational job response
+     */
+    public CompletableFuture<OperationalJobResponse> nodeFlush(SidecarInstance instance, String keyspace, List<String> tableNames)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .request(new NodeFlushRequest(keyspace, tableNames))
+                                            .build());
+    }
+
+    /**
+     * Executes the node flush request using the default retry policy and provided {@code instance}.
+     * Flushes all memtables for the specified keyspace.
+     *
+     * @param instance the instance where the request will be executed
+     * @param keyspace the keyspace name to flush
+     * @return a completable future of the operational job response
+     */
+    public CompletableFuture<OperationalJobResponse> nodeFlush(SidecarInstance instance, String keyspace)
+    {
+        return nodeFlush(instance, keyspace, Collections.emptyList());
     }
 
     /**
