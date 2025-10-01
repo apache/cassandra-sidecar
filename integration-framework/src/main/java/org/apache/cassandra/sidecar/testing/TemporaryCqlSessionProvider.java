@@ -29,6 +29,8 @@ import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.NettyOptions;
+import com.datastax.driver.core.PlainTextAuthProvider;
+import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.DriverInternalError;
@@ -50,14 +52,21 @@ public class TemporaryCqlSessionProvider implements CQLSessionProvider
     private static final Logger logger = LoggerFactory.getLogger(TemporaryCqlSessionProvider.class);
     private final List<InetSocketAddress> contactPoints;
     private Session localSession;
+    private final SSLOptions sslOptions;
     private final NettyOptions nettyOptions;
     private final ReconnectionPolicy reconnectionPolicy;
 
     public TemporaryCqlSessionProvider(List<InetSocketAddress> contactPoints, NettyOptions options)
     {
+        this(contactPoints, options, null);
+    }
+
+    public TemporaryCqlSessionProvider(List<InetSocketAddress> contactPoints, NettyOptions options, SSLOptions sslOptions)
+    {
         nettyOptions = options;
         reconnectionPolicy = new ExponentialReconnectionPolicy(100, 1000);
         this.contactPoints = contactPoints;
+        this.sslOptions = sslOptions;
     }
 
     @NotNull
@@ -77,6 +86,8 @@ public class TemporaryCqlSessionProvider implements CQLSessionProvider
                              .addContactPointsWithPorts(contactPoints)
                              .withReconnectionPolicy(reconnectionPolicy)
                              .withoutMetrics()
+                             .withSSL(sslOptions)
+                             .withAuthProvider(new PlainTextAuthProvider("cassandra", "cassandra"))
                              // tests can create a lot of these Cluster objects, to avoid creating HWTs and
                              // event thread pools for each we have the override
                              .withNettyOptions(nettyOptions)

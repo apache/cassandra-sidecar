@@ -149,5 +149,7 @@ public final class TestUtils
         System.setProperty("cassandra.allow_alter_rf_during_range_movement", "true");
 
         System.setProperty("cassandra.minimum_replication_factor", "1");
+        // Uncomment the line below to debug SSL Handshake issues during tests
+        //System.setProperty("javax.net.debug", "ssl:handshake");
     }
 }

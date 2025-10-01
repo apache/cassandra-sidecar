@@ -64,7 +64,7 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 
 import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS;
-import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.EMPTY_PASSWORD_STRING;
+import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.PASSWORD_STRING;
 import static org.apache.cassandra.sidecar.testing.SharedClusterIntegrationTestBase.IntegrationTestModule.cassandraInstanceHostname;
 import static org.apache.cassandra.sidecar.testing.SharedClusterIntegrationTestBase.IntegrationTestModule.defaultConfigurationBuilder;
 import static org.apache.cassandra.testing.TestUtils.DC1_RF3;
@@ -123,7 +123,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
         sidecarServerMap.values().forEach(serverWrapper -> {
             try
             {
-                closeServer(serverWrapper.server);
+                closeServer(serverWrapper);
             }
             catch (Exception e)
             {
@@ -245,7 +245,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
 
                     KeyStoreConfiguration keyStoreConfiguration =
                     new KeyStoreConfigurationImpl(mtlsTestHelper.clientKeyStorePath(),
-                                                  EMPTY_PASSWORD_STRING,
+                                                  PASSWORD_STRING,
                                                   mtlsTestHelper.serverKeyStoreType(), // server and client keystore types are the same
                                                   SecondBoundConfiguration.parse("60s"));
 
