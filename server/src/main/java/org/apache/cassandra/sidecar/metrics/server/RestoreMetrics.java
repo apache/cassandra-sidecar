@@ -46,6 +46,7 @@ public class RestoreMetrics
     public final NamedMetric<DeltaGauge> tokenRefreshed;
     public final NamedMetric<DeltaGauge> tokenUnauthorized;
     public final NamedMetric<DeltaGauge> tokenExpired;
+    public final NamedMetric<DefaultSettableGauge<Integer>> activeTasks;
 
     public RestoreMetrics(MetricRegistry metricRegistry)
     {
@@ -60,6 +61,7 @@ public class RestoreMetrics
         tokenRefreshed = createMetric("TokenRefreshed", name -> metricRegistry.gauge(name, DeltaGauge::new));
         tokenUnauthorized = createMetric("TokenUnauthorized", name -> metricRegistry.gauge(name, DeltaGauge::new));
         tokenExpired = createMetric("TokenExpired",  name -> metricRegistry.gauge(name, DeltaGauge::new));
+        activeTasks = createMetric("ActiveTasks", name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)));
     }
 
     private <T extends Metric> NamedMetric<T> createMetric(String simpleName, Function<String, T> metricCreator)

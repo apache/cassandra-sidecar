@@ -114,12 +114,12 @@ public class RestoreRange
     private final InstanceMetadata owner;
     private final RestoreJobProgressTracker tracker;
 
-    // mutable states
-    private Long sliceObjectLength; // content length value from the HeadObjectResponse; it should be the same with the slice#compressedSize
-    private boolean existsOnS3 = false;
-    private boolean hasStaged = false;
-    private boolean hasImported = false;
-    private int downloadAttempt = 0;
+    // mutable states; all are accessed from multiple threads
+    private volatile Long sliceObjectLength; // content length value from the HeadObjectResponse; it should be the same with the slice#compressedSize
+    private volatile int downloadAttempt = 0;
+    private volatile boolean existsOnS3 = false;
+    private volatile boolean hasStaged = false;
+    private volatile boolean hasImported = false;
     private volatile boolean isCancelled = false;
     private volatile boolean discarded = false;
 
@@ -380,6 +380,11 @@ public class RestoreRange
     {
         return Objects.requireNonNull(source, "Source slice does not exist")
                       .creationTimeNanos();
+    }
+
+    public long sliceElapsedTimeNanos()
+    {
+        return System.nanoTime() - sliceCreationTimeNanos();
     }
 
     public long sliceCompressedSize()

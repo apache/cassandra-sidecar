@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Fix restore job metrics and log adjustments (CASSSIDECAR-350)
  * Add observability around authN and authZ caches in Sidecar (CASSSIDECAR-348)
  * Thread race issue when adding excluded metric in FilteringMetricRegistry (CASSSIDECAR-349)
  * Add support for stateless JWT authentication using public keys (CASSSIDECAR-334)

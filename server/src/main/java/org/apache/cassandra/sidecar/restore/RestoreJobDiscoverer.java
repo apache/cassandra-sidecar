@@ -219,10 +219,9 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
     {
         Preconditions.checkState(periodicTaskExecutor != null, "Loop executor is not registered");
 
-        // Log one message every few minutes should be acceptable
-        LOGGER.info("Discovering restore jobs. " +
-                    "inflightJobsCount={} delayMs={} jobDiscoveryRecencyDays={}",
-                    inflightJobsCount, delay(), jobDiscoveryRecencyDays);
+        LOGGER.debug("Discovering restore jobs. " +
+                     "inflightJobsCount={} jobDiscoveryRecencyDays={}",
+                     inflightJobsCount, delay(), jobDiscoveryRecencyDays);
 
         // reset in-flight jobs
         inflightJobsCount = 0;
@@ -245,10 +244,11 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         jobDiscoveryRecencyDays = Math.max(context.earliestInDays, restoreJobConfig.jobDiscoveryMinimumRecencyDays());
         LOGGER.info("Exit job discovery. " +
                     "inflightJobsCount={} " +
+                    "delay={} " +
                     "jobDiscoveryRecencyDays={} " +
                     "expiredJobs={} " +
                     "abortedJobs={}",
-                    inflightJobsCount, jobDiscoveryRecencyDays, context.expiredJobs, context.abortedJobs);
+                    inflightJobsCount, delay(), jobDiscoveryRecencyDays, context.expiredJobs, context.abortedJobs);
         metrics.activeJobs.metric.setValue(inflightJobsCount);
     }
 
