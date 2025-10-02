@@ -52,9 +52,14 @@ class CacheConfigurationImplTest
         MillisecondBoundConfiguration refreshAfterWrite = MillisecondBoundConfiguration.parse("5m");
         MillisecondBoundConfiguration warmupRetryInterval = MillisecondBoundConfiguration.parse("2s");
 
-        CacheConfigurationImpl config
-        = new CacheConfigurationImpl(expireAfterAccess, refreshAfterWrite, 1000, false,
-                                     10, warmupRetryInterval);
+        CacheConfigurationImpl config = CacheConfigurationImpl.builder()
+                                                              .expireAfterAccess(expireAfterAccess)
+                                                              .refreshAfterWrite(refreshAfterWrite)
+                                                              .maximumSize(1000)
+                                                              .enabled(false)
+                                                              .warmupRetries(10)
+                                                              .warmupRetryInterval(warmupRetryInterval)
+                                                              .build();
 
         assertThat(config.expireAfterAccess()).isEqualTo(expireAfterAccess);
         assertThat(config.refreshAfterWrite()).isEqualTo(refreshAfterWrite);
@@ -67,7 +72,10 @@ class CacheConfigurationImplTest
     @Test
     void testBuilderWithDefaults()
     {
-        CacheConfigurationImpl config = new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("30m"), 100);
+        CacheConfigurationImpl config = CacheConfigurationImpl.builder()
+                                                              .expireAfterAccess(MillisecondBoundConfiguration.parse("30m"))
+                                                              .maximumSize(100)
+                                                              .build();
 
         assertThat(config.expireAfterAccess()).isEqualTo(MillisecondBoundConfiguration.parse("30m"));
         assertThat(config.refreshAfterWrite()).isEqualTo(MillisecondBoundConfiguration.parse("1h"));

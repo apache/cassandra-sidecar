@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -382,12 +383,17 @@ class MutualTLSAuthenticationHandlerTest
 
 
             String className = "org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider";
-            AccessControlConfiguration accessControlConfiguration
-            = new AccessControlConfigurationImpl(true,
-                                                 authenticatorsConfiguration(),
-                                                 new ParameterizedClassConfigurationImpl(className, Collections.emptyMap()),
-                                                 Collections.singleton(ADMIN_IDENTITY),
-                                                 new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("30s"), 100));
+            CacheConfigurationImpl permissionCacheConfiguration = CacheConfigurationImpl.builder()
+                                                                                        .expireAfterAccess(MillisecondBoundConfiguration.parse("30s"))
+                                                                                        .maximumSize(100)
+                                                                                        .build();
+            AccessControlConfiguration accessControlConfiguration = AccessControlConfigurationImpl.builder()
+                                                                                                  .enabled(true)
+                                                                                                  .authenticatorsConfiguration(authenticatorsConfiguration())
+                                                                                                  .authorizerConfiguration(new ParameterizedClassConfigurationImpl(className, Collections.emptyMap()))
+                                                                                                  .adminIdentities(Set.of(ADMIN_IDENTITY))
+                                                                                                  .permissionCacheConfiguration(permissionCacheConfiguration)
+                                                                                                  .build();
 
             return super.abstractConfig(sslConfiguration, builder -> builder.accessControlConfiguration(accessControlConfiguration));
         }
