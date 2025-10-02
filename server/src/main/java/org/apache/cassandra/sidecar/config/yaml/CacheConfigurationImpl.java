@@ -41,6 +41,7 @@ public class CacheConfigurationImpl implements CacheConfiguration
 
     protected MillisecondBoundConfiguration expireAfterAccess;
 
+    @JsonProperty("refresh_after_write")
     protected final MillisecondBoundConfiguration refreshAfterWrite;
 
     @JsonProperty("maximum_size")
