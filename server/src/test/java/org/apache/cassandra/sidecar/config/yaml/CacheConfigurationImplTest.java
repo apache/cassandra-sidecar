@@ -78,7 +78,7 @@ class CacheConfigurationImplTest
                                                               .build();
 
         assertThat(config.expireAfterAccess()).isEqualTo(MillisecondBoundConfiguration.parse("30m"));
-        assertThat(config.refreshAfterWrite()).isEqualTo(MillisecondBoundConfiguration.parse("1h"));
+        assertThat(config.refreshAfterWrite()).isNull();
         assertThat(config.maximumSize()).isEqualTo(100);
         assertThat(config.enabled()).isTrue();
         assertThat(config.warmupRetries()).isEqualTo(5);
