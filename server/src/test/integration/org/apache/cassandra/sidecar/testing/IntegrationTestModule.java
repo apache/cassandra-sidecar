@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.datastax.driver.core.Session;
 import com.google.inject.AbstractModule;
@@ -140,7 +141,9 @@ public class IntegrationTestModule extends AbstractModule
                                        .build();
     }
 
+    // @formatter:off
     static class TestClusterLeaseClaimTaskKey implements ClassKey {}
+    // @formatter:on
     @ProvidesIntoMap
     @KeyClassMapKey(TestClusterLeaseClaimTaskKey.class)
     public PeriodicTask clusterLeaseClaimTask(ServiceConfiguration serviceConfiguration,
@@ -258,16 +261,21 @@ public class IntegrationTestModule extends AbstractModule
         ParameterizedClassConfiguration rbacConfig
         = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider",
                                                   Collections.emptyMap());
-        return new AccessControlConfigurationImpl(true,
-                                                  Collections.singletonList(mTLSConfig),
-                                                  rbacConfig,
-                                                  Collections.singleton(ADMIN_IDENTITY),
-                                                  new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("1s"),
-                                                                             MillisecondBoundConfiguration.parse("1s"),
-                                                                             100,
-                                                                             true,
-                                                                             5,
-                                                                             MillisecondBoundConfiguration.parse("1s")));
+        CacheConfigurationImpl cacheConfiguration = CacheConfigurationImpl.builder()
+                                                                          .expireAfterAccess(MillisecondBoundConfiguration.parse("1s"))
+                                                                          .refreshAfterWrite(MillisecondBoundConfiguration.parse("1s"))
+                                                                          .maximumSize(100)
+                                                                          .enabled(true)
+                                                                          .warmupRetries(5)
+                                                                          .warmupRetryInterval(MillisecondBoundConfiguration.parse("1s"))
+                                                                          .build();
+        return AccessControlConfigurationImpl.builder()
+                                             .enabled(true)
+                                             .authenticatorsConfiguration(List.of(mTLSConfig))
+                                             .authorizerConfiguration(rbacConfig)
+                                             .adminIdentities(Set.of(ADMIN_IDENTITY))
+                                             .permissionCacheConfiguration(cacheConfiguration)
+                                             .build();
     }
 
     class WrapperInstancesMetadata implements InstancesMetadata
