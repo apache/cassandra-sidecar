@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import com.datastax.driver.core.Row;
@@ -113,10 +114,10 @@ public class RestoreRange
     private final String uploadId;
     private final InstanceMetadata owner;
     private final RestoreJobProgressTracker tracker;
+    private final AtomicInteger downloadAttempts = new AtomicInteger(0);
 
     // mutable states; all are accessed from multiple threads
     private volatile Long sliceObjectLength; // content length value from the HeadObjectResponse; it should be the same with the slice#compressedSize
-    private volatile int downloadAttempt = 0;
     private volatile boolean existsOnS3 = false;
     private volatile boolean hasStaged = false;
     private volatile boolean hasImported = false;
@@ -260,7 +261,7 @@ public class RestoreRange
 
     public void incrementDownloadAttempt()
     {
-        this.downloadAttempt++;
+        this.downloadAttempts.incrementAndGet();
     }
 
     /**
@@ -490,7 +491,7 @@ public class RestoreRange
 
     public int downloadAttempt()
     {
-        return downloadAttempt;
+        return downloadAttempts.get();
     }
 
     public boolean isCancelled()
