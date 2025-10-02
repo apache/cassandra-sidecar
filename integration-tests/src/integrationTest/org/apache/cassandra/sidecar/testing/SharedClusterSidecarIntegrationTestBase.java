@@ -40,6 +40,11 @@ public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClus
     private WebClient trustedClient;
     private WebClient noAuthClient;
 
+    /**
+     * A utility functional interface to perform verifications for a test
+     *
+     * @param <T> the type accepted by the verifier
+     */
     @FunctionalInterface
     public interface Verifier<T>
     {

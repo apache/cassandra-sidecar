@@ -116,7 +116,8 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     new RoleWithIdentityTestScenario("test_keyspace", "super_user_test_role", "spiffe://cassandra/sidecar/super_user_test_user")
     .superuser();
     public static final RoleWithIdentityTestScenario NON_SUPERUSER_ROLE_WITH_TRANSITIVE_SUPERUSER_ROLE =
-    new RoleWithIdentityTestScenario("test_keyspace", "non_super_user_with_transitive_super_user_role", "spiffe://cassandra/sidecar/non_super_user_with_transitive_super_user");
+    new RoleWithIdentityTestScenario("test_keyspace", "non_super_user_with_transitive_super_user_role",
+                                     "spiffe://cassandra/sidecar/non_super_user_with_transitive_super_user");
     public static final RoleWithIdentityTestScenario NON_ADMIN_READ_TEST_KEYSPACE_ROLE =
     new RoleWithIdentityTestScenario("non_admin_test_keyspace", "non_admin_test_role", "spiffe://cassandra/sidecar/non_admin_test_user")
     .addPermission("data/non_admin_test_keyspace", "SCHEMA:READ");
@@ -140,10 +141,12 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     .addPermission("data/grant_bulk_read_across_tables_test_keyspace", "ANALYTICS:READ_DIRECT")
     .addPermission("data/grant_bulk_read_test_keyspace/test_table", "ANALYTICS:READ_DIRECT");
     public static final RoleWithIdentityTestScenario BULK_READ_PERMISSIONS_TEST_TABLE_ROLE =
-    new RoleWithIdentityTestScenario("grant_bulk_read_across_tables_test_keyspace", "bulk_read_across_data_test_role", "spiffe://cassandra/sidecar/bulk_read_across_data_test_user")
+    new RoleWithIdentityTestScenario("grant_bulk_read_across_tables_test_keyspace", "bulk_read_across_data_test_role",
+                                     "spiffe://cassandra/sidecar/bulk_read_across_data_test_user")
     .addPermission("data", "ANALYTICS:READ_DIRECT");
     public static final RoleWithIdentityTestScenario BULK_READ_PERMISSIONS_TEST_TABLE_2_ROLE =
-    new RoleWithIdentityTestScenario("grant_bulk_read_across_tables_test_keyspace", "bulk_read_across_data_test_role", "spiffe://cassandra/sidecar/bulk_read_across_data_test_user")
+    new RoleWithIdentityTestScenario("grant_bulk_read_across_tables_test_keyspace", "bulk_read_across_data_test_role",
+                                     "spiffe://cassandra/sidecar/bulk_read_across_data_test_user")
     .table("test_table2");
     public static final RoleWithIdentityTestScenario BULK_WRITE_PERMISSION_ROLE =
     new RoleWithIdentityTestScenario("grant_bulk_write_test_keyspace", "bulk_write_test_role", "spiffe://cassandra/sidecar/bulk_write_test_user")
@@ -152,7 +155,8 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     new RoleWithIdentityTestScenario(null, "cdc_test_role", "spiffe://cassandra/sidecar/cdc_test_user")
     .addPermission("cluster", "CDC");
     public static final RoleWithIdentityTestScenario ALL_ANALYTICS_PERMISSION_ROLE =
-    new RoleWithIdentityTestScenario("all_analytics_permission_test_keyspace", "all_analytics_permission_test_role", "spiffe://cassandra/sidecar/all_analytics_permission_test_user")
+    new RoleWithIdentityTestScenario("all_analytics_permission_test_keyspace", "all_analytics_permission_test_role",
+                                     "spiffe://cassandra/sidecar/all_analytics_permission_test_user")
     .addPermission("data/all_analytics_permission_test_keyspace/test_table", "ANALYTICS:*");
     public static final RoleWithIdentityTestScenario BULK_READ_WRITE_PERMISSION_ROLE =
     new RoleWithIdentityTestScenario("grant_bulk_read_write_test_keyspace", "bulk_read_write_test_role", "spiffe://cassandra/sidecar/bulk_read_write_test_user")
@@ -336,8 +340,9 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     {
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "test_keyspace");
         // uses client keystore with superuser identity
-        Path clientKeystorePath = mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
-                                                                     certificateBuilder.addSanUriName("spiffe://cassandra/sidecar/non_super_user_with_transitive_super_user"));
+        Path clientKeystorePath =
+        mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
+                                           certificateBuilder.addSanUriName("spiffe://cassandra/sidecar/non_super_user_with_transitive_super_user"));
 
         verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, assertStatus(HttpResponseStatus.OK));
     }
@@ -418,8 +423,9 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         String schemaRoute = "/api/v1/cassandra/schema";
         String gossipRoute = "/api/v1/cassandra/gossip";
         String ringRoute = "/api/v1/cassandra/ring";
-        Path clientKeystorePath = mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
-                                                                     certificateBuilder.addSanUriName("spiffe://cassandra/sidecar/wildcard_with_subparts_test_user"));
+        Path clientKeystorePath =
+        mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
+                                           certificateBuilder.addSanUriName("spiffe://cassandra/sidecar/wildcard_with_subparts_test_user"));
 
         // SCHEMA:READ permission granted for cluster with GOSSIP,SCHEMA:READ
         verifyAccess(HttpMethod.GET, schemaRoute, clientKeystorePath, assertStatus(HttpResponseStatus.OK));
@@ -446,7 +452,10 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
         String[] componentDownloadUrl = new String[1];
         Path clientKeystorePath = cassandraIdentityClientKeyStore();
-        SSLOptions sslOptions = getSSLOptions(clientKeystorePath.toString(), mtlsTestHelper.clientKeyStorePassword(), mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
+        SSLOptions sslOptions = getSSLOptions(clientKeystorePath.toString(),
+                                              mtlsTestHelper.clientKeyStorePassword(),
+                                              mtlsTestHelper.trustStorePath(),
+                                              mtlsTestHelper.trustStorePassword());
         withAuthenticatedSession(cluster.get(1), "cassandra", "cassandra", session -> {
             // grant sidecar permission for streaming
             updateSidecarPermission(session,
@@ -558,8 +567,9 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     @Test
     void testGrantingBulkReadFeaturePermissionAcrossData() throws Exception
     {
-        Path clientKeystorePath = mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
-                                                                     certificateBuilder.addSanUriName("spiffe://cassandra/sidecar/bulk_read_across_data_test_user"));
+        Path clientKeystorePath =
+        mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
+                                           certificateBuilder.addSanUriName("spiffe://cassandra/sidecar/bulk_read_across_data_test_user"));
 
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot-2",
                                                    "test_keyspace", "test_table");
@@ -615,8 +625,9 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     @Test
     void testGrantingAllAnalyticsRelatedPermissions() throws Exception
     {
-        Path clientKeystorePath = mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
-                                                                     certificateBuilder.addSanUriName("spiffe://cassandra/sidecar/all_analytics_permission_test_user"));
+        Path clientKeystorePath =
+        mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
+                                           certificateBuilder.addSanUriName("spiffe://cassandra/sidecar/all_analytics_permission_test_user"));
 
         String topologyRoute = String.format("/api/v1/keyspaces/%s/token-range-replicas", "all_analytics_permission_test_keyspace");
         // TOPOLOGY:READ permission under ANALYTICS:WRITE_DIRECT granted with ANALYTICS:*
@@ -651,7 +662,10 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         Path clientKeystorePath = cassandraIdentityClientKeyStore();
 
         createRequiredKeystores();
-        SSLOptions sslOptions = getSSLOptions(clientKeystorePath.toString(), mtlsTestHelper.clientKeyStorePassword(), mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
+        SSLOptions sslOptions = getSSLOptions(clientKeystorePath.toString(),
+                                              mtlsTestHelper.clientKeyStorePassword(),
+                                              mtlsTestHelper.trustStorePath(),
+                                              mtlsTestHelper.trustStorePassword());
         withAuthenticatedSession(cluster.get(1), "cassandra", "cassandra", session -> {
             // Required for authentication of sidecar requests to Cassandra. Only superusers can grant permissions
             createTestKeyspace(session, "sidecar_internal", DC1_RF1);
@@ -887,7 +901,9 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
             }
 
             SSLOptions sslOptions = getSSLOptions(clientKeystoreForSidecarToCassandraConnections.toString(),
-                                                  mtlsTestHelper.clientKeyStorePassword(), mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
+                                                  mtlsTestHelper.clientKeyStorePassword(),
+                                                  mtlsTestHelper.trustStorePath(),
+                                                  mtlsTestHelper.trustStorePassword());
             return new TemporaryCqlSessionProvider(contactPoints,
                                                    SharedExecutorNettyOptions.INSTANCE,
                                                    sslOptions);
