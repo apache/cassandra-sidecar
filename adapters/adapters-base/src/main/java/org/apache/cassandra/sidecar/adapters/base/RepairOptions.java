@@ -52,7 +52,7 @@ public enum RepairOptions
      */
     HOSTS("hosts"),
     /**
-     * force the repair operation
+     * Force the repair operation
      */
     FORCE_REPAIR("forceRepair"),
     /**
@@ -70,9 +70,9 @@ public enum RepairOptions
     }
 
     /**
-     * @return Value corresponding to the repair option
+     * @return Name corresponding to the repair option
      */
-    public String getValue()
+    public String optionName()
     {
         return value;
     }

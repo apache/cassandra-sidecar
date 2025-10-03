@@ -61,8 +61,8 @@ public class RepairJob extends OperationalJob
     private final RepairJobsConfiguration config;
     private final TaskExecutorPool internalPool;
     protected StorageOperations storageOperations;
-    private OperationalJobStatus currentStatus;
-    private int commandId = -1; // Store the command ID for status checks
+    private volatile OperationalJobStatus currentStatus;
+    private volatile int commandId = -1; // Store the command ID for status checks
 
     /**
      * Enum representing the status of a parent repair session
@@ -223,14 +223,11 @@ public class RepairJob extends OperationalJob
                     switch (parentRepairStatus)
                     {
                         case COMPLETED:
-                            currentStatus = OperationalJobStatus.SUCCEEDED;
-                            break;
+                            return OperationalJobStatus.SUCCEEDED;
                         case FAILED:
-                            currentStatus = OperationalJobStatus.FAILED;
-                            break;
+                            return OperationalJobStatus.FAILED;
                         case IN_PROGRESS:
-                            currentStatus = OperationalJobStatus.RUNNING;
-                            break;
+                            return OperationalJobStatus.RUNNING;
                         default:
                             LOGGER.warn("Encountered unexpected repair status: {}", parentRepairStatus);
                             // Don't update currentStatus here, fall back to parent implementation
@@ -324,26 +321,26 @@ public class RepairJob extends OperationalJob
         List<String> tables = repairPayload.tables();
         if (tables != null && !tables.isEmpty())
         {
-            options.put(RepairOptions.COLUMNFAMILIES.getValue(), String.join(",", tables));
+            options.put(RepairOptions.COLUMNFAMILIES.optionName(), String.join(",", tables));
         }
 
         Boolean isPrimaryRange = repairPayload.isPrimaryRange();
         if (isPrimaryRange != null)
         {
-            options.put(RepairOptions.PRIMARY_RANGE.getValue(), String.valueOf(isPrimaryRange));
+            options.put(RepairOptions.PRIMARY_RANGE.optionName(), String.valueOf(isPrimaryRange));
         }
         // TODO: Verify use-cases involving multiple DCs
 
         String dc = repairPayload.datacenter();
         if (dc != null)
         {
-            options.put(RepairOptions.DATACENTERS.getValue(), dc);
+            options.put(RepairOptions.DATACENTERS.optionName(), dc);
         }
 
         List<String> hosts = repairPayload.hosts();
         if (hosts != null && !hosts.isEmpty())
         {
-            options.put(RepairOptions.HOSTS.getValue(), String.join(",", hosts));
+            options.put(RepairOptions.HOSTS.optionName(), String.join(",", hosts));
         }
 
         if (repairPayload.startToken() != null && repairPayload.endToken() != null)
@@ -357,7 +354,7 @@ public class RepairJob extends OperationalJob
                     throw new IllegalArgumentException("Start token must be less than end token. " +
                                                       "Got start: " + startToken + ", end: " + endToken);
                 }
-                options.put(RepairOptions.RANGES.getValue(), repairPayload.startToken() + ":" + repairPayload.endToken());
+                options.put(RepairOptions.RANGES.optionName(), repairPayload.startToken() + ":" + repairPayload.endToken());
             }
             catch (NumberFormatException e)
             {
@@ -367,62 +364,18 @@ public class RepairJob extends OperationalJob
 
         if (repairPayload.repairType() == RepairPayload.RepairType.INCREMENTAL)
         {
-            options.put(RepairOptions.INCREMENTAL.getValue(), Boolean.TRUE.toString());
+            options.put(RepairOptions.INCREMENTAL.optionName(), Boolean.TRUE.toString());
         }
 
         if (repairPayload.force() != null)
         {
-            options.put(RepairOptions.FORCE_REPAIR.getValue(), String.valueOf(repairPayload.force()));
+            options.put(RepairOptions.FORCE_REPAIR.optionName(), String.valueOf(repairPayload.force()));
         }
 
         if (repairPayload.shouldValidate() != null)
         {
-            options.put(RepairOptions.PREVIEW.getValue(), PREVIEW_KIND_REPAIRED);
+            options.put(RepairOptions.PREVIEW.optionName(), PREVIEW_KIND_REPAIRED);
         }
         return options;
-    }
-
-    private void queryForCompletedRepair(Promise<Void> promise, int cmd)
-    {
-        LOGGER.info("Polling parent repair status for jobId={} status={}", this.jobId(), promise.future().isComplete());
-        List<String> status = storageOperations.getParentRepairStatus(cmd);
-        String queriedString = "queried for parent session status and";
-        
-        if (status == null || status.isEmpty())
-        {
-            LOGGER.error("{} couldn't find repair status for cmd: {}", queriedString, cmd);
-        }
-        else
-        {
-            resolveParentRepairStatus(promise, status, queriedString);
-        }
-    }
-
-    private void resolveParentRepairStatus(Promise<Void> promise, List<String> status, String queriedString)
-    {
-        ParentRepairStatus parentRepairStatus = ParentRepairStatus.valueOf(status.get(0));
-        List<String> messages = status.subList(1, status.size());
-        switch (parentRepairStatus)
-        {
-            case COMPLETED:
-            case FAILED:
-                LOGGER.info("{} discovered repair {}", queriedString, parentRepairStatus.name().toLowerCase());
-                if (parentRepairStatus == ParentRepairStatus.FAILED && !messages.isEmpty())
-                {
-                    promise.tryFail(new IOException(messages.get(0)));
-                }
-                LOGGER.info("Repair {} Messages: {}", parentRepairStatus.name().toLowerCase(), String.join("\n", messages));
-                promise.tryComplete();
-                break;
-            case IN_PROGRESS:
-                LOGGER.info("Repair in progress. Messages:{}", String.join("\n", messages));
-                promise.tryComplete();
-                break;
-            default:
-                String message = String.format("Encountered unexpected repair status: %s Messages: %s", parentRepairStatus, String.join("\n", messages));
-                LOGGER.error(message);
-                promise.tryFail(message);
-                break;
-        }
     }
 }
