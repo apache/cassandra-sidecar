@@ -482,6 +482,35 @@ class SidecarConfigurationTest
     }
 
     @Test
+    void testLifecycle() throws Exception
+    {
+        String yaml = "lifecycle:\n" +
+                      "  enabled: true\n" +
+                      "  provider:\n" +
+                      "    class_name: org.apache.cassandra.sidecar.lifecycle.ProcessLifecycleProvider\n" +
+                      "    parameters:\n" +
+                      "      state_dir: /var/lib/cassandra-sidecar/lifecycle\n" +
+                      "      cassandra_home: /opt/cassandra\n" +
+                      "      sys.cassandra.ring_delay_ms: 30000\n" +
+                      "      sys.com.sun.management.jmxremote.authenticate: true\n" +
+                      "      env.MAX_HEAP_SIZE: 7G\n" +
+                      "      env.HEAP_NEWSIZE: 1G";
+        SidecarConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml);
+        LifecycleConfiguration lifecycleConfiguration = config.lifecycleConfiguration();
+        assertThat(lifecycleConfiguration).isNotNull();
+
+        assertThat(lifecycleConfiguration.enabled()).isTrue();
+        ParameterizedClassConfiguration provider = lifecycleConfiguration.lifecycleProvider();
+        assertThat(provider.className()).isEqualTo("org.apache.cassandra.sidecar.lifecycle.ProcessLifecycleProvider");
+        assertThat(provider.namedParameters()).containsEntry("state_dir", "/var/lib/cassandra-sidecar/lifecycle")
+                                              .containsEntry("cassandra_home", "/opt/cassandra")
+                                              .containsEntry("sys.cassandra.ring_delay_ms", "30000")
+                                              .containsEntry("sys.com.sun.management.jmxremote.authenticate", "true")
+                                              .containsEntry("env.MAX_HEAP_SIZE", "7G")
+                                              .containsEntry("env.HEAP_NEWSIZE", "1G");
+    }
+
+    @Test
     void testDnsResolverDefault() throws Exception
     {
         Path yamlPath = yaml("config/sidecar_single_instance.yaml");

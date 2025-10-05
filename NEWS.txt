@@ -1,6 +1,11 @@
 0.3
 ===
 
+New features
+------------
+    - ProcessLifecycleProvider for managing Cassandra process lifecycle (start/stop) via sidecar APIs with configurable
+      startup and shutdown commands, state tracking, and support for custom environment configurations.
+
 0.2
 ===
 

@@ -79,7 +79,7 @@ We can now start our Sidecar instance. A single Sidecar instance will manage all
 in our CCM cluster.
 
 ```shell
-./gradlew run -Dsidecar.config=file:///$PWD/examples/conf/sidecar-ccm.yaml
+./gradlew run -Dsidecar.config=file:///$PWD/examples/sidecar-ccm/conf/sidecar-ccm.yaml
 ```
 
 We should see our Sidecar logs showing a successful connection to the all Cassandra instances

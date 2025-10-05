@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.cluster.instance;
 
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
@@ -75,6 +76,11 @@ public interface InstanceMetadata
     String stagingDir();
 
     /**
+     * @return the storage directory of the cassandra instance
+     */
+    String storageDir();
+
+    /**
      * @return a {@link CassandraAdapterDelegate} specific for the instance, or throws when the delegate is unavailable
      * @throws CassandraUnavailableException when the Cassandra service is unavailable
      */
@@ -118,4 +124,13 @@ public interface InstanceMetadata
      */
     @NotNull
     InstanceMetrics metrics();
+
+    /**
+     * @return The lifecycle options specific to this instance
+     * For example, Cassandra configuration directory or logging directory,
+     * since this is different between different Cassandra instances
+     * residing in the same host
+     */
+    @NotNull
+    Map<String, String> lifecycleOptions();
 }

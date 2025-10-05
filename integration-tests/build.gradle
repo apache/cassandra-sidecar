@@ -72,6 +72,7 @@ dependencies {
     integrationTestImplementation(group: 'net.java.dev.jna', name: 'jna', version: '5.9.0')
     integrationTestImplementation(project(path: ":integration-framework"))
     integrationTestImplementation("com.google.inject:guice:${guiceVersion}")
+    integrationTestImplementation 'org.apache.commons:commons-compress:1.27.1'
     testRuntimeOnly 'com.fasterxml.jackson.core:jackson-annotations:2.14.2'
 
     integrationTestCompileOnly(group: 'com.intellij', name: 'annotations', version: '12.0')

@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.config.yaml;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -48,6 +49,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
     protected final boolean jmxSslEnabled;
     protected final String jmxRole;
     protected final String jmxRolePassword;
+    protected final Map<String, String> lifecycleOptions;
 
     @JsonCreator
     public InstanceConfigurationImpl(@JsonProperty("id") int id,
@@ -65,7 +67,8 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
                                      @JsonProperty("jmx_port") int jmxPort,
                                      @JsonProperty("jmx_ssl_enabled") boolean jmxSslEnabled,
                                      @Nullable @JsonProperty("jmx_role") String jmxRole,
-                                     @Nullable @JsonProperty("jmx_role_password") String jmxRolePassword)
+                                     @Nullable @JsonProperty("jmx_role_password") String jmxRolePassword,
+                                     @Nullable @JsonProperty("lifecycle_options") Map<String, String> lifecycleOptions)
     {
         this.id = id;
         this.host = host;
@@ -83,6 +86,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
         this.jmxSslEnabled = jmxSslEnabled;
         this.jmxRole = jmxRole;
         this.jmxRolePassword = jmxRolePassword;
+        this.lifecycleOptions = lifecycleOptions != null ? Collections.unmodifiableMap(lifecycleOptions) : Collections.emptyMap();
     }
 
     /**
@@ -240,5 +244,15 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
     public String jmxRolePassword()
     {
         return jmxRolePassword;
+    }
+
+    /**
+     * @return The lifecycle options for this Cassandra instance
+     */
+    @Override
+    @JsonProperty("lifecycle_options")
+    public Map<String, String> lifecycleOptions()
+    {
+        return lifecycleOptions;
     }
 }

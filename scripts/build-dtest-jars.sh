@@ -30,11 +30,14 @@ REPO=${REPO:-"https://github.com/apache/cassandra.git"}
 SCRIPT_DIR=$( dirname -- "$( readlink -f -- "$0"; )"; )
 DTEST_JAR_DIR="$(dirname "${SCRIPT_DIR}/")/dtest-jars"
 DTEST_JAR_DIR=${CASSANDRA_DEP_DIR:-$DTEST_JAR_DIR}
+TARBALL_DIR="$(dirname "${SCRIPT_DIR}/")/cassandra-tarballs"
 BUILD_DIR="${DTEST_JAR_DIR}/build"
 
 if [[ "x$CLEAN" != "x" ]]; then
   echo "Clean up $DTEST_JAR_DIR"
   rm -rf $DTEST_JAR_DIR
+  echo "Cleanup $TARBALL_DIR"
+  rm -rf $TARBALL_DIR
 fi
 
 source "$SCRIPT_DIR/functions.sh"
@@ -83,16 +86,27 @@ for index in "${!CANDIDATE_BRANCHES[@]}"; do
   CASSANDRA_VERSION=$(cat build.xml | grep 'property name="base.version"' | awk -F "\"" '{print $4}')
   # Loop to prevent failure due to maven-ant-tasks not downloading a jar.
   for x in $(seq 1 3); do
-      if [ -f "${DTEST_JAR_DIR}/dtest-${CASSANDRA_VERSION}.jar" ]; then
-          RETURN="0"
+        RETURN="0"
+        DTEST_JAR_FILE="${DTEST_JAR_DIR}/dtest-${CASSANDRA_VERSION}.jar"
+        TARBALL_GLOB_FILE="${TARBALL_DIR}/apache-cassandra-${CASSANDRA_VERSION}*-bin.tar.gz"
+
+        if [ -f "${DTEST_JAR_DIR}/dtest-${CASSANDRA_VERSION}.jar" ] && (ls ${TARBALL_GLOB_FILE} >/dev/null 2>&1); then
+          echo "Found existing dtest jar ${DTEST_JAR_FILE} and tarball `ls ${TARBALL_GLOB_FILE}` for version ${CASSANDRA_VERSION}, skipping build."
           break
-        else
+        fi
+
+        if ! [ -f "${DTEST_JAR_FILE}" ]; then
+          echo "Building dtest jar ${DTEST_JAR_FILE} for version ${CASSANDRA_VERSION}"
           "${SCRIPT_DIR}/build-shaded-dtest-jar-local.sh"
           RETURN="$?"
-          if [ "${RETURN}" -eq "0" ]; then
-              break
-          fi
-      fi
+        fi
+
+        if [ "${RETURN}" -eq "0" ] && ! (ls ${TARBALL_GLOB_FILE} >/dev/null 2>&1); then
+          echo "Building tarball for version ${CASSANDRA_VERSION}"
+          "${SCRIPT_DIR}/build-cassandra-tarball.sh"
+          RETURN="$?"
+          break
+        fi
   done
   # Exit, if we didn't build successfully
   if [ "${RETURN}" -ne "0" ]; then

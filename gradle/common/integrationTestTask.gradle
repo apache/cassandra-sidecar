@@ -29,6 +29,22 @@ println("Using mTLS for tests? ${integrationEnableMtls}")
 
 apply from: "${project.rootDir}/gradle/common/java11Options.gradle"
 
+def getCassandraTarballLocation() {
+    def tarballsDirFile = file(tarballsDir)
+    if (tarballsDirFile.exists() && tarballsDirFile.isDirectory()) {
+        def matchingFiles = fileTree(tarballsDirFile).files.findAll {it.name ==~ /^apache-cassandra-${tarballVersion}\.?\d*(-SNAPSHOT){0,1}-bin\.tar.gz$/ }
+        if (matchingFiles.size() > 0) {
+            def tarballToTest = matchingFiles.first()
+            println("Testing with tarball ${tarballToTest}")
+            return tarballToTest
+        } else {
+            logger.warn("WARN: No tarballs matching version ${tarballVersion} found in the directory: ${tarballsDir}. Use script build-dtest-jars.sh to build it.")
+        }
+    } else {
+        logger.warn("WARN: Tarballs directory does not exist or is not a directory: ${tarballsDir}. Use script build-dtest-jars.sh to build it.")
+    }
+}
+
 ['integrationTestLightWeight', 'integrationTestHeavyWeight'].each { name ->
     tasks.register(name, Test) {
         if (JavaVersion.current().isJava11Compatible()) {
@@ -37,6 +53,7 @@ apply from: "${project.rootDir}/gradle/common/java11Options.gradle"
         }
         systemProperty "cassandra.integration.sidecar.test.enable_mtls", integrationEnableMtls
         systemProperty "cassandra.test.dtest_jar_path", dependencyLocation
+        systemProperty "cassandra.test.tarball_path", getCassandraTarballLocation()
         // Disable direct memory allocator as it doesn't release properly
         systemProperty "cassandra.netty_use_heap_allocator", "true"
         systemProperty "vertxweb.environment", "dev"

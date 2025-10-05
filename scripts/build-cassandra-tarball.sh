@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -16,35 +17,14 @@
 # limitations under the License.
 #
 
-version=0.3.0
-junitVersion=5.9.2
-vertxVersion=4.5.23
-nettyVersion=4.1.118.Final
-guavaVersion=27.0.1-jre
-guiceVersion=7.0.0
-slf4jVersion=2.0.17
-logbackVersion=1.5.15
-jacksonVersion=2.14.3
-caffeineVersion=3.2.2
-dtestApiVersion=0.0.17
-assertjCoreVersion=3.24.2
-# trunk is currently 5.1 - update when trunk moves
-dtestVersion=5.1
-tarballVersion=5.1
-dtestDependencyName=cassandra-dtest-local-all
-awsSdkVersion=2.26.12
-# The dep is to introduce xxhash impl
-commonsCodecVersion=1.16.1
-# openSSL
-boringSslVersion=2.0.61.Final
-# OpenAPI dependencies
-smallryeOpenApiVersion=4.1.1
-microprofileOpenApiVersion=3.1.1
-jakartaWsRsVersion=3.1.0
-swaggerVersion=2.2.21
-# Cdc dependencies
-kryoVersion=4.0.2
-# OSHI dependencies
-oshiVersion=6.9.0
-analyticsVersion=0.2.0
-kafkaClientVersion=3.7.0
+set -xe
+
+export CASSANDRA_USE_JDK11=true
+SCRIPT_DIR=$( dirname -- "$( readlink -f -- "$0"; )"; )
+TARBALL_DIR="$(dirname "${SCRIPT_DIR}/")/cassandra-tarballs"
+
+ant artifacts -Dant.gen-doc.skip=true -Dno-checkstyle=true
+mkdir -p ${TARBALL_DIR}
+cp ./build/apache-cassandra-*-bin.tar.gz ${TARBALL_DIR}
+
+set +xe

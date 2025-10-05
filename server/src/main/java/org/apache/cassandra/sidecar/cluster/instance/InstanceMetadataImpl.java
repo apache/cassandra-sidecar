@@ -23,6 +23,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -64,10 +65,13 @@ public class InstanceMetadataImpl implements InstanceMetadata
     private final String savedCachesDir;
     private final String localSystemDataFileDir;
     @Nullable
+    private final String storageDir;
+    @Nullable
     private final CassandraAdapterDelegate delegate;
     private final InstanceMetrics metrics;
     private final DnsResolver dnsResolver;
     private volatile String ipAddress;
+    private final Map<String, String> lifecycleOptions;
 
     protected InstanceMetadataImpl(Builder builder)
     {
@@ -89,6 +93,10 @@ public class InstanceMetadataImpl implements InstanceMetadata
         hintsDir = builder.resolveHintsDir();
         savedCachesDir = builder.resolveSavedCachesDir();
         localSystemDataFileDir = FileUtils.maybeResolveHomeDirectory(builder.localSystemDataFileDir);
+        lifecycleOptions = builder.lifecycleOptions != null
+                           ? Collections.unmodifiableMap(builder.lifecycleOptions)
+                           : Collections.emptyMap();
+        storageDir = builder.storageDir;
     }
 
     @Override
@@ -134,6 +142,12 @@ public class InstanceMetadataImpl implements InstanceMetadata
     public String stagingDir()
     {
         return stagingDir;
+    }
+
+    @Override
+    public String storageDir()
+    {
+        return storageDir;
     }
 
     @Override
@@ -188,6 +202,16 @@ public class InstanceMetadataImpl implements InstanceMetadata
         return metrics;
     }
 
+    /**
+     * @return The lifecycle options for this Cassandra instance
+     */
+    @Override
+    @NotNull
+    public Map<String, String> lifecycleOptions()
+    {
+        return lifecycleOptions;
+    }
+
     public static Builder builder()
     {
         return new Builder();
@@ -224,6 +248,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         protected CassandraAdapterDelegate delegate;
         protected MetricRegistry metricRegistry;
         protected InstanceMetrics metrics;
+        protected Map<String, String> lifecycleOptions;
 
         protected Builder()
         {
@@ -244,6 +269,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
             localSystemDataFileDir = instanceMetadata.localSystemDataFileDir;
             delegate = instanceMetadata.delegate;
             metrics = instanceMetadata.metrics;
+            lifecycleOptions = instanceMetadata.lifecycleOptions;
         }
 
         @Override
@@ -376,6 +402,17 @@ public class InstanceMetadataImpl implements InstanceMetadata
         public Builder savedCachesDir(String savedCachesDir)
         {
             return update(b -> b.savedCachesDir = savedCachesDir);
+        }
+
+        /**
+         * Sets the {@code lifecycleOptions} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param lifecycleOptions the {@code lifecycleOptions} to set
+         * @return a reference to this Builder
+         */
+        public Builder lifecycleOptions(Map<String, String> lifecycleOptions)
+        {
+            return update(b -> b.lifecycleOptions = lifecycleOptions);
         }
 
         /**

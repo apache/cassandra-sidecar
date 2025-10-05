@@ -90,6 +90,7 @@ ext {
     }
 
     dependencyLocation = propertyWithDefault("CASSANDRA_DEP_DIR", "${rootDir}/dtest-jars") + "/"
+    tarballsDir = propertyWithDefault("CASSANDRA_TARBALL_DIR", "${rootDir}/cassandra-tarballs") + "/"
 
     // This allows simplified builds and local maven installs.
     forceSigning = propertyExists("forceSigning")
@@ -229,6 +230,7 @@ distributions {
             exclude '**.idea/**'
             exclude 'bin/**'
             exclude 'dtest-jars/**'
+            exclude 'cassandra-tarballs/**'
             exclude '**lib/**'
             exclude '**logs/**'
             exclude '**/build/**'

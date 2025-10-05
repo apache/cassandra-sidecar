@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Add default process-based lifecycle provider (CASSSIDECAR-340)
  * Sidecar API Endpoint for Nodetool Compaction Stop (CASSSIDECAR-360)
  * Implementation of CDCPublisher (CASSSIDECAR-243)
  * Sidecar endpoint for moving a node to a new token (CASSSIDECAR-344)

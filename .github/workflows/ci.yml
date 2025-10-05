@@ -66,7 +66,9 @@ jobs:
         id: cache-dtest-jars
         uses: actions/cache@v4
         with:
-          path: dtest-jars/
+          path: |
+            dtest-jars/
+            cassandra-tarballs/
           key: dtest-jars-${{ hashFiles('scripts/build-dtest-jars.sh', 'gradle/wrapper/gradle-wrapper.properties') }}
 
       - name: Dtest jars cache status
@@ -88,6 +90,13 @@ jobs:
           name: dtest-jars
           path: dtest-jars/
           retention-days: 90
+
+      - name: Upload cassandra tarballs artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: cassandra-tarballs
+          path: cassandra-tarballs/
+          retention-days: 30
 
   # Run unit tests with static analysis on all Java versions
   unit-tests:
@@ -304,6 +313,12 @@ jobs:
           name: dtest-jars
           path: dtest-jars/
 
+      - name: Download cassandra tarballs
+        uses: actions/download-artifact@v5
+        with:
+          name: cassandra-tarballs
+          path: cassandra-tarballs/
+
       - name: Install dtest jars to local Maven
         run: |
           ./scripts/install-shaded-dtest-jar-local.sh
@@ -314,8 +329,9 @@ jobs:
         run: |
           ./gradlew --no-daemon \
             -PdtestVersion=${{ matrix.dtestVersion }} \
+            -PtarballVersion=${{ matrix.cassandra }} \
             -Dcassandra.sidecar.versions_to_test="${{ matrix.cassandra }}" \
-            integrationTestHeavyWeight \
+            jar integrationTestHeavyWeight \
             --stacktrace
         env:
           CASSANDRA_DEP_DIR: ${{ github.workspace }}/dtest-jars

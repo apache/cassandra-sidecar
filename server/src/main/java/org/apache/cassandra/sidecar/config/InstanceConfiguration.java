@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.config;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Encapsulates the basic configuration needed to connect to a single Cassandra instance
@@ -104,4 +105,9 @@ public interface InstanceConfiguration
      * @return the password for the JMX role for the JMX service for the Cassandra instance
      */
     String jmxRolePassword();
+
+    /**
+     * @return The lifecycle options for this Cassandra instance
+     */
+    Map<String, String> lifecycleOptions();
 }

@@ -97,6 +97,10 @@ lib
 .gradle
 
 dtest-jars
+cassandra-tarballs
 scripts/dependency-reduced-pom.xml
 
 default-stylesheet.xsl
+
+# Examples
+examples/lifecycle/nodes/

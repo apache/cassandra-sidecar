@@ -21,7 +21,7 @@
 #
 cassandra_instances:
   - id: 1
-    host: localhost1
+    host: localhost
     port: 9042
 
     # The instance's storage directory as defined per the cassandra.storagedir property
@@ -30,7 +30,7 @@ cassandra_instances:
     # commitlog dir, cdc dir, hints dir and saved caches dir. If data_dirs, commitlog_dir,
     # cdc_dir, hints_dir and saved_caches_dir are configured explicitly, then they will be used.
     # Otherwise, default paths based on storage directory will be used.
-    storage_dir: /var/lib/cassandra
+    storage_dir: ${cassandraStorageDir}
 
     # List of directories where Cassandra stores data on disk. If not set, the default directory
     # is <storage_dir>/data
@@ -67,12 +67,8 @@ cassandra_instances:
 #    jmx_role:
 #    jmx_role_password:
     lifecycle_options:
-      cassandra_conf_dir: /etc/cassandra
-      #cassandra_log_dir: /var/log/cassandra
-      # Optional configuration for the cassandra YAML configuration file location.
-      # When not specified the configuration file will resolve to
-      # <lifecycle_options.cassandra_conf_dir>/cassandra.yaml
-      #cassandra_yaml_path: /etc/cassandra/cassandra.yaml
+      cassandra_conf_dir: ${cassandraConfDir}
+      cassandra_log_dir: ${cassandraLogDir}
 
 sidecar:
   host: 0.0.0.0
@@ -114,7 +110,6 @@ sidecar:
       maximum_size: 10000
   cdc:
     segment_hardlink_cache_expiry: 5m # 5 minutes
-    table_schema_refresh_time: 60s    # Interval time between table schema refresh for CDC
   worker_pools:
     service:
       name: "sidecar-worker-pool"
@@ -170,26 +165,10 @@ sidecar:
       # The minimum value allowed for the cluster lease claim process task implementation is 30 seconds
       execute_interval: 100s
 
-# Exposes vertx configurations
 vertx:
-  # Configuration options for the vertx filesystem
-  # These options will affect the behavior when serving static resources from the
-  # classpath. For example, setting classpath_resolving_enabled to false will cause
-  # the static file resolution to only look for files in the filesystem and avoid
-  # resolving resources from the classpath.
   filesystem_options:
-    # When vert.x cannot find the file on the filesystem it tries to resolve the
-    # file from the classpath when this is set to true. Otherwise, vert.x
-    # will not attempt to resolve the file on the classpath
-    classpath_resolving_enabled: true
-    # Set to true to enable caching files on the real file system
-    # when the filesystem performs class path resolving. Set to false to
-    # disable caching.
-    file_caching_enabled: true
-    # When vert.x reads a file that is packaged with the application it gets
-    # extracted to this directory first and subsequent reads will use the extracted
-    # file to get better IO performance.
-    #file_cache_dir: /tmp
+    classpath_resolving_enabled: false
+    file_caching_enabled: false
 
 schema_reporting:                            # Schema Reporting configuration
   enabled:          false                    # Disabled by default
@@ -265,25 +244,6 @@ access_control:
         # trying to connect.
         client_id: recognized_client_id
         config_discover_interval: 1h
-        #
-        # Authentication type dictates whether to use the Oauth flow or a stateless JWT authenticator
-        # If not provided, default is oauth. Valid values are oauth or stateless
-        # jwt_auth_type: oauth
-        #
-        # Optional configurations for connecting to JWT PEM provider
-        #
-        # keystore_path defines the path to a keystore which can be used to provide SSL certificates to
-        # a JWT pem provider. If specified, a password must be provided.
-        # keystore_path: /path/to/keystore
-        # keystore_password: changeme
-        #
-        # truststore_path defines the path to a truststore that contains the CA used to validate SSL certs used
-        # by downstream PEM provider services. If specified, a password must be provided.
-        # truststore_path: /path/to/truststore
-        # truststore_password: changeme
-        #
-        # Optional JWT which can be used to authenticate to a downstream PEM provider if required.
-        # pem_provider_jwt: changeme
   authorizer:
     # Authorization backend, implementing io.vertx.ext.auth.authorization.AuthorizationProvider; used to
     # provide permissions a user holds.
@@ -299,10 +259,7 @@ access_control:
 #    - spiffe://authorized/admin/identities
   permission_cache:
     enabled: true
-    # refresh_after_write does async cache refreshes. expire_after_access removes the cache entry on expiry. Prefer
-    # setting refresh_after_write over expire_after_access for AuthCaches
-    # expire_after_access: 5m
-    refresh_after_write: 5m
+    expire_after_access: 5m
     maximum_size: 1000
     warmup_retries: 5
     warmup_retry_interval: 2s
@@ -382,23 +339,6 @@ metrics:
 #      value: "vertx.eventbus.*"              # exclude all metrics starts with vertx.eventbus
 
 cassandra_input_validation:
-  validator:
-    # Implementation to use for the validation of Casandra inputs. Out of the box, Cassandra Sidecar provides
-    # org.apache.cassandra.sidecar.utils.{RegexBasedCassandraInputValidator, FastCassandraInputValidator}.
-    #
-    # - RegexBasedCassandraInputValidator default implementation the uses regular expressions to perform validations
-    # - FastCassandraInputValidator optimized implementation that does not use regular expressions. This implementation
-    #                               ignores the regular expressions configured in the cassandra_input_validation
-    #                               configuration.
-  - class_name: org.apache.cassandra.sidecar.utils.RegexBasedCassandraInputValidator
-    # Configuration parameters that are only applicable to the FastCassandraInputValidator implementation
-    #parameters:
-    #  # Comma-separated list of terminations allowed for the component name. By default, allowed component
-    #  # names can only end in .db, .cql, .json, .crc32, or TOC.txt
-    #  valid_terminations: ".db,.cql,.json,.crc32,TOC.txt"
-    #  # Comma-separated list of terminations allowed for the restricted component name. By default, allowed
-    #  # restricted component names con only end in .db or TOC.txt
-    #  valid_restricted_terminations: ".db,TOC.txt"
   forbidden_keyspaces:
     - system_schema
     - system_traces
@@ -465,13 +405,12 @@ live_migration:
 
 # Configuration to allow sidecar start and stop Cassandra instances via the lifecycle API (disabled by default)
 lifecycle:
-  enabled: false
-  provider:
-    class_name: org.apache.cassandra.sidecar.lifecycle.ProcessLifecycleProvider
-    parameters:
-      state_dir: /var/lib/cassandra-sidecar/lifecycle # The directory where the process state is stored
-      cassandra_home: /opt/cassandra # The default Cassandra installation directory
-#     process_timeout_seconds: 120 # Timeout in seconds for Cassandra process start/stop operations (default: 120)
-#     sys.cassandra.ring_delay_ms: 30000   # It is possible to set JVM properties via the "sys." prefix
-#     env.MAX_HEAP_SIZE: 8G # It is possible to set environment variables used to start Cassandra via the "env" prefix
-#     env.HEAP_NEWSIZE: 8G
+    enabled: true
+    provider:
+        class_name: org.apache.cassandra.sidecar.lifecycle.ProcessLifecycleProvider
+        parameters:
+          state_dir: ${lifecycleDir}
+          cassandra_home: ${cassandraHome} # The default Cassandra installation directory
+          sys.cassandra.ring_delay_ms: 5000   # down from 30s default
+          env.MAX_HEAP_SIZE: 4G # this should be enough, since we only start and stop cassandra
+          env.HEAP_NEWSIZE: 1G # this should be enough, since we only start and stop cassandra

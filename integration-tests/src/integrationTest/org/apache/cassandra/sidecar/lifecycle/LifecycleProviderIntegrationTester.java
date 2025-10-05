@@ -203,7 +203,7 @@ public class LifecycleProviderIntegrationTester
                 throw new TimeoutException("Expected lifecycle update not reached after " + timeoutSeconds + " seconds. " +
                                            ", last_update: " + lastUpdate);
             }
-            Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
+            Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
             lastUpdate = getLifecycle().bodyAsJsonObject().getString("last_update");
         }
     }
