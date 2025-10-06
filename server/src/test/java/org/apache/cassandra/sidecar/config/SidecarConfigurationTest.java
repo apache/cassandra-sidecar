@@ -34,7 +34,9 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.assertj.core.api.Condition;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
@@ -827,6 +829,19 @@ class SidecarConfigurationTest
         assertThat(config.vertxConfiguration()).isNotNull();
         assertThat(config.includeConfigurations()).isNotNull();
         assertThat(config.excludeConfigurations()).isNotNull();
+    }
+
+    @Test
+    void testInvalidOperationalJobExecutionMaxWaitTime()
+    {
+        String yaml = "sidecar:\\n" +
+                      "  service:\\n" +
+                      "    " + ServiceConfigurationImpl.OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY + ": 2m";
+        assertThatExceptionOfType(JsonMappingException.class)
+        .isThrownBy(() -> SidecarConfigurationImpl.fromYamlString(yaml))
+        .withRootCauseInstanceOf(ConfigurationException.class)
+        .withMessageContaining("Invalid " + ServiceConfigurationImpl.OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY +
+                               " value (2m). The maximum allowed value is 1m.");
     }
 
     private Path yaml(String resourceName)

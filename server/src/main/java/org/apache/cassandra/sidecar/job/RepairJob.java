@@ -118,8 +118,7 @@ public class RepairJob extends OperationalJob
             Map<String, String> options = generateRepairOptions(repairParams.requestPayload());
             String keyspace = repairParams.keyspace().name();
 
-            LOGGER.info("Executing repair operation for keyspace {} jobId={}",
-                        keyspace, this.jobId());
+            LOGGER.info("Executing repair operation for keyspace {} jobId={}", keyspace, this.jobId());
 
             try
             {
@@ -140,7 +139,7 @@ public class RepairJob extends OperationalJob
                 return Future.succeededFuture();
             }
 
-            int maxAttempts = config.validRepairStatusAttempts();
+            int maxAttempts = config.repairStatusMaxAttempts();
             final AtomicInteger attemptCounter = new AtomicInteger(0);
 
             // Periodic timer that checks for a valid repair status for a specified no. attempts to make a best-effort attempt
@@ -174,18 +173,16 @@ public class RepairJob extends OperationalJob
                         return;
                     }
 
-                    String queriedString = "queried for parent session status and";
-
                     // If status is empty, continue polling
                     if (status == null || status.isEmpty())
                     {
-                        LOGGER.debug("{} found empty status for cmd: {} - repair may be initializing (attempt {}/{})",
-                                     queriedString, commandId, currentAttempt, maxAttempts);
+                        LOGGER.debug("No parent repair session status found for cmd: {} - repair may be initializing (attempt {}/{})",
+                                     commandId, currentAttempt, maxAttempts);
                         return;
                     }
 
                     internalPool.cancelTimer(id);
-                    updateRepairJobStatus(repairJobPromise, status, queriedString);
+                    updateRepairJobStatus(repairJobPromise, status);
                 }
                 catch (Exception e)
                 {
@@ -262,36 +259,29 @@ public class RepairJob extends OperationalJob
      *
      * @param repairJobPromise the promise to complete
      * @param status the parent repair status from Cassandra
-     * @param queriedString logging context string
      */
-    private void updateRepairJobStatus(Promise<Void> repairJobPromise, List<String> status, String queriedString)
+    private void updateRepairJobStatus(Promise<Void> repairJobPromise, List<String> status)
     {
         ParentRepairStatus parentRepairStatus = ParentRepairStatus.valueOf(status.get(0));
         List<String> messages = status.subList(1, status.size());
 
+        LOGGER.info("Parent repair session {} has {} status. Messages: {}",
+                    parentRepairStatus.name().toLowerCase(),
+                    parentRepairStatus,
+                    String.join("\n", messages));
         switch (parentRepairStatus)
         {
             case COMPLETED:
-                LOGGER.info("{} discovered repair {}. Messages: {}",
-                            queriedString, parentRepairStatus.name().toLowerCase(),
-                            String.join("\n", messages));
                 currentStatus = OperationalJobStatus.SUCCEEDED;
                 repairJobPromise.tryComplete();
                 break;
             case FAILED:
-                LOGGER.info("{} discovered repair {}",
-                            queriedString, parentRepairStatus.name().toLowerCase());
                 currentStatus = OperationalJobStatus.FAILED;
                 String reason = !messages.isEmpty() ? messages.get(0) :
                                 "Repair failed with no error message";
                 repairJobPromise.tryFail(new IOException(reason));
-                LOGGER.info("Repair {} Messages: {}",
-                            parentRepairStatus.name().toLowerCase(),
-                            String.join("\n", messages));
                 break;
             case IN_PROGRESS:
-                LOGGER.info("Repair in progress. Messages: {}",
-                            String.join("\n", messages));
                 currentStatus = OperationalJobStatus.RUNNING;
                 repairJobPromise.tryComplete();
                 break;

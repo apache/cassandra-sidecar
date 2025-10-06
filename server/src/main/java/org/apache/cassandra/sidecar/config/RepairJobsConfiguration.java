@@ -28,7 +28,7 @@ public interface RepairJobsConfiguration
     /**
      * @return the max retry attempts for the repair job status to be valid
      */
-    int validRepairStatusAttempts();
+    int repairStatusMaxAttempts();
 
     /**
      * @return the polling interval (in milliseconds) that checks for the status of the repair job

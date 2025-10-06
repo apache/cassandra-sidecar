@@ -129,7 +129,10 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
         catch (OperationalJobConflictException oje)
         {
             String reason = oje.getMessage();
-            logger.warn("Conflicting job encountered for keyspace {}. reason={}", repairRequestParam.keyspace(), reason);
+            logger.warn("Conflicting repair job encountered for keyspace {}, tables {}, reason={}",
+                        repairRequestParam.keyspace(),
+                        repairRequestParam.requestPayload().tables(),
+                        reason);
             context.response().setStatusCode(HttpResponseStatus.CONFLICT.code());
             context.json(new OperationalJobResponse(job.jobId(), OperationalJobStatus.FAILED, job.name(), reason));
             return;

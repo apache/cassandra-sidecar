@@ -69,11 +69,13 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public static final MinuteBoundConfiguration DEFAULT_ALLOWABLE_TIME_SKEW = MinuteBoundConfiguration.parse("1h");
     private static final String SERVER_VERTICLE_INSTANCES_PROPERTY = "server_verticle_instances";
     private static final String OPERATIONAL_JOB_TRACKER_SIZE_PROPERTY = "operations_job_tracker_size";
-    private static final String OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY = "operations_job_sync_response_timeout";
+    public static final String OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY = "operations_job_execution_max_wait_time";
     private static final int DEFAULT_SERVER_VERTICLE_INSTANCES = 1;
     private static final int DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE = 64;
     private static final MillisecondBoundConfiguration DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME =
     MillisecondBoundConfiguration.parse("5s");
+    private static final MillisecondBoundConfiguration MAX_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME =
+    MillisecondBoundConfiguration.parse("1m");
     public static final String THROTTLE_PROPERTY = "throttle";
     public static final String SSTABLE_UPLOAD_PROPERTY = "sstable_upload";
     public static final String SSTABLE_IMPORT_PROPERTY = "sstable_import";
@@ -184,6 +186,13 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         allowableTimeSkew = builder.allowableTimeSkew;
         serverVerticleInstances = builder.serverVerticleInstances;
         operationalJobTrackerSize = builder.operationalJobTrackerSize;
+        if (builder.operationalJobExecutionMaxWaitTime.compareTo(MAX_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME) > 0)
+        {
+            throw new ConfigurationException(String.format("Invalid %s value (%s). The maximum allowed value is %s.",
+                                                           OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY,
+                                                           builder.operationalJobExecutionMaxWaitTime,
+                                                           MAX_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME));
+        }
         operationalJobExecutionMaxWaitTime = builder.operationalJobExecutionMaxWaitTime;
         repairJobsConfiguration = builder.repairJobsConfiguration;
         throttleConfiguration = builder.throttleConfiguration;

@@ -30,7 +30,6 @@ import org.apache.cassandra.sidecar.config.RepairJobsConfiguration;
  */
 public class RepairJobsConfigurationImpl implements RepairJobsConfiguration
 {
-    // 1 day in milliseconds
     public static final int DEFAULT_VALID_REPAIR_STATUS_ATTEMPTS = 5;
     public static final long DEFAULT_REPAIR_STATUS_POLLING_INTERVAL_MILLIS = 2_000L;
 
@@ -66,7 +65,7 @@ public class RepairJobsConfigurationImpl implements RepairJobsConfiguration
     }
 
     @Override
-    public int validRepairStatusAttempts()
+    public int repairStatusMaxAttempts()
     {
         return validRepairStatusAttempts;
     }

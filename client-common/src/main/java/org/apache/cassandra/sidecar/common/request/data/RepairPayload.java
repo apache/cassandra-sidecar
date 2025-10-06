@@ -53,18 +53,10 @@ public class RepairPayload
     private final List<String> hosts;
     private final String startToken;
     private final String endToken;
-    private RepairType repairType;
+    private final RepairType repairType;
     private final Boolean force;
     private final Boolean validate;
-
-    /**
-     * Constructs a new {@link RepairPayload}.
-     */
-    public RepairPayload()
-    {
-        this(builder());
-    }
-
+    
     public static RepairPayload.Builder builder()
     {
         return new RepairPayload.Builder();

@@ -1517,8 +1517,7 @@ abstract class SidecarClientTest
         OperationalJobResponse result = client.repair(sidecarInstance, "testkeyspace", payload).get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
-        validateResponseServed(ApiEndpointsV1.REPAIR_ROUTE.replaceAll(KEYSPACE_PATH_PARAM,
-                                                                      "testkeyspace"));
+        validateResponseServed(ApiEndpointsV1.REPAIR_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "testkeyspace"));
     }
 
     @Test
