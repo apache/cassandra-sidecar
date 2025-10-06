@@ -123,8 +123,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = OPERATIONAL_JOB_TRACKER_SIZE_PROPERTY, defaultValue = DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE + "")
     protected final int operationalJobTrackerSize;
 
-    @JsonProperty(value = OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY)
-    protected final MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime;
+    protected MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime;
 
     @JsonProperty(value = THROTTLE_PROPERTY)
     protected final ThrottleConfiguration throttleConfiguration;
@@ -186,13 +185,6 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         allowableTimeSkew = builder.allowableTimeSkew;
         serverVerticleInstances = builder.serverVerticleInstances;
         operationalJobTrackerSize = builder.operationalJobTrackerSize;
-        if (builder.operationalJobExecutionMaxWaitTime.compareTo(MAX_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME) > 0)
-        {
-            throw new ConfigurationException(String.format("Invalid %s value (%s). The maximum allowed value is %s.",
-                                                           OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY,
-                                                           builder.operationalJobExecutionMaxWaitTime,
-                                                           MAX_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME));
-        }
         operationalJobExecutionMaxWaitTime = builder.operationalJobExecutionMaxWaitTime;
         repairJobsConfiguration = builder.repairJobsConfiguration;
         throttleConfiguration = builder.throttleConfiguration;
@@ -367,10 +359,22 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY)
     public MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime()
     {
         return operationalJobExecutionMaxWaitTime;
+    }
+
+    @JsonProperty(value = OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY)
+    public void setOperationalJobExecutionMaxWaitTime(MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime)
+    {
+        if (operationalJobExecutionMaxWaitTime.compareTo(MAX_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME) > 0)
+        {
+            throw new ConfigurationException(String.format("Invalid %s value (%s). The maximum allowed value is %s.",
+                                                           OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY,
+                                                           operationalJobExecutionMaxWaitTime,
+                                                           MAX_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME));
+        }
+        this.operationalJobExecutionMaxWaitTime = operationalJobExecutionMaxWaitTime;
     }
 
     /**
