@@ -54,8 +54,13 @@ public class CassandraAdapter implements ICassandraAdapter
     protected final CQLSessionProvider cqlSessionProvider;
     protected final InetSocketAddress localNativeTransportAddress;
     protected final DriverUtils driverUtils;
-    private final TableSchemaFetcher tableSchemaFetcher;
     private volatile Host host;
+    private final StorageOperations storageOperations;
+    private final ClusterMembershipOperations clusterMembershipOperations;
+    private final TableOperations tableOperations;
+    private final CompactionManagerOperations compactionManagerOperations;
+    private final MetricsOperations metricsOperations;
+    private final CompactionStatsOperations compactionStatsOperations;
 
     public CassandraAdapter(DnsResolver dnsResolver,
                             JmxClient jmxClient,
@@ -69,7 +74,14 @@ public class CassandraAdapter implements ICassandraAdapter
         this.cqlSessionProvider = cqlSessionProvider;
         this.localNativeTransportAddress = localNativeTransportAddress;
         this.driverUtils = driverUtils;
-        this.tableSchemaFetcher = tableSchemaFetcher;
+        this.storageOperations = initializeStorageOperations(dnsResolver, jmxClient, cqlSessionProvider);
+        this.clusterMembershipOperations = initializeClusterMembershipOperations(dnsResolver, jmxClient, cqlSessionProvider);
+        this.tableOperations = initializeTableOperations(dnsResolver, jmxClient, cqlSessionProvider);
+        this.compactionManagerOperations = initializeCompactionManagerOperations(dnsResolver, jmxClient, cqlSessionProvider);
+        this.metricsOperations = initializeMetricsOperations(dnsResolver, jmxClient, cqlSessionProvider, tableSchemaFetcher);
+        this.compactionStatsOperations = initializeCompactionStatsOperations(dnsResolver, jmxClient, cqlSessionProvider,
+                                                                             storageOperations, metricsOperations,
+                                                                             compactionManagerOperations);
     }
 
     /**
@@ -126,14 +138,14 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public StorageOperations storageOperations()
     {
-        return new CassandraStorageOperations(jmxClient, dnsResolver);
+        return storageOperations;
     }
 
     @Override
     @NotNull
     public MetricsOperations metricsOperations()
     {
-        return new CassandraMetricsOperations(jmxClient, tableSchemaFetcher, this);
+        return metricsOperations;
     }
 
     /**
@@ -143,7 +155,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public ClusterMembershipOperations clusterMembershipOperations()
     {
-        return new CassandraClusterMembershipOperations(jmxClient);
+        return clusterMembershipOperations;
     }
 
     /**
@@ -153,7 +165,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public TableOperations tableOperations()
     {
-        return new CassandraTableOperations(jmxClient);
+        return tableOperations;
     }
 
     /**
@@ -163,7 +175,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public CompactionManagerOperations compactionManagerOperations()
     {
-        return new CassandraCompactionManagerOperations(jmxClient);
+        return compactionManagerOperations;
     }
 
     /**
@@ -173,7 +185,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public CompactionStatsOperations compactionStatsOperations()
     {
-        return new CassandraCompactionStatsOperations(storageOperations(), metricsOperations(), compactionManagerOperations());
+        return compactionStatsOperations;
     }
 
     /**
@@ -183,6 +195,52 @@ public class CassandraAdapter implements ICassandraAdapter
     public String toString()
     {
         return "CassandraAdapter" + "@" + Integer.toHexString(hashCode());
+    }
+
+    protected StorageOperations initializeStorageOperations(DnsResolver dnsResolver,
+                                                            JmxClient jmxClient,
+                                                            CQLSessionProvider cqlSessionProvider)
+    {
+        return new CassandraStorageOperations(jmxClient, dnsResolver);
+    }
+
+    protected ClusterMembershipOperations initializeClusterMembershipOperations(DnsResolver dnsResolver,
+                                                                                JmxClient jmxClient,
+                                                                                CQLSessionProvider cqlSessionProvider)
+    {
+        return new CassandraClusterMembershipOperations(jmxClient);
+    }
+
+    protected TableOperations initializeTableOperations(DnsResolver dnsResolver,
+                                                        JmxClient jmxClient,
+                                                        CQLSessionProvider cqlSessionProvider)
+    {
+        return new CassandraTableOperations(jmxClient);
+    }
+
+    protected CompactionManagerOperations initializeCompactionManagerOperations(DnsResolver dnsResolver,
+                                                                                JmxClient jmxClient,
+                                                                                CQLSessionProvider cqlSessionProvider)
+    {
+        return new CassandraCompactionManagerOperations(jmxClient);
+    }
+
+    protected MetricsOperations initializeMetricsOperations(DnsResolver dnsResolver,
+                                                            JmxClient jmxClient,
+                                                            CQLSessionProvider cqlSessionProvider,
+                                                            TableSchemaFetcher tableSchemaFetcher)
+    {
+        return new CassandraMetricsOperations(jmxClient, tableSchemaFetcher, this);
+    }
+
+    protected CompactionStatsOperations initializeCompactionStatsOperations(DnsResolver dnsResolver,
+                                                                            JmxClient jmxClient,
+                                                                            CQLSessionProvider cqlSessionProvider,
+                                                                            StorageOperations storageOperations,
+                                                                            MetricsOperations metricsOperations,
+                                                                            CompactionManagerOperations compactionManagerOperations)
+    {
+        return new CassandraCompactionStatsOperations(storageOperations, metricsOperations, compactionManagerOperations);
     }
 
     @NotNull

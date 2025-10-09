@@ -28,7 +28,6 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * A {@link ICassandraAdapter} implementation for Cassandra 4.1 and later
@@ -49,8 +48,9 @@ public class Cassandra41Adapter extends CassandraAdapter
      * {@inheritDoc}
      */
     @Override
-    @NotNull
-    public StorageOperations storageOperations()
+    protected StorageOperations initializeStorageOperations(DnsResolver dnsResolver,
+                                                            JmxClient jmxClient,
+                                                            CQLSessionProvider cqlSessionProvider)
     {
         return new Cassandra41StorageOperations(jmxClient, dnsResolver);
     }
