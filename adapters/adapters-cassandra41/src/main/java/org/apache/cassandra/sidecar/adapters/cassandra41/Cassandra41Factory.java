@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.adapters.cassandra41;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
@@ -41,9 +42,9 @@ public class Cassandra41Factory implements ICassandraFactory
 
     public Cassandra41Factory(DnsResolver dnsResolver, DriverUtils driverUtils, TableSchemaFetcher tableSchemaFetcher)
     {
-        this.dnsResolver = dnsResolver;
-        this.driverUtils = driverUtils;
-        this.tableSchemaFetcher = tableSchemaFetcher;
+        this.dnsResolver = Objects.requireNonNull(dnsResolver, "dnsResolver is required");
+        this.driverUtils = Objects.requireNonNull(driverUtils, "driverUtils is required");
+        this.tableSchemaFetcher = Objects.requireNonNull(tableSchemaFetcher, "tableSchemaFetcher is required");
     }
 
     /**

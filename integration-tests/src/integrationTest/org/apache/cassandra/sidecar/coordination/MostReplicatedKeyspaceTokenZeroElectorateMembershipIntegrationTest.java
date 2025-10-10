@@ -51,6 +51,9 @@ import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.db.schema.SidecarInternalKeyspace;
+import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
@@ -77,7 +80,8 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
     private static final SidecarConfigurationImpl CONFIG = new SidecarConfigurationImpl();
     Vertx vertx = Vertx.vertx();
     DriverUtils driverUtils = new DriverUtils();
-    CassandraVersionProvider cassandraVersionProvider = TestUtils.cassandraVersionProvider(DnsResolvers.DEFAULT, null);
+    TableSchemaFetcher tableSchemaFetcher = new SidecarSchema(vertx, CONFIG, new SidecarInternalKeyspace(CONFIG));
+    CassandraVersionProvider cassandraVersionProvider = TestUtils.cassandraVersionProvider(DnsResolvers.DEFAULT, tableSchemaFetcher);
     MetricRegistryFactory metricRegistryProvider = new MetricRegistryFactory("cassandra_sidecar", List.of(), List.of());
 
     @ParameterizedTest(name = "{index} => version {0}")
