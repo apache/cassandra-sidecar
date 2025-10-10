@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.adapters.base;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Host;
@@ -74,14 +75,13 @@ public class CassandraAdapter implements ICassandraAdapter
         this.cqlSessionProvider = cqlSessionProvider;
         this.localNativeTransportAddress = localNativeTransportAddress;
         this.driverUtils = driverUtils;
-        this.storageOperations = initializeStorageOperations(dnsResolver, jmxClient, cqlSessionProvider);
-        this.clusterMembershipOperations = initializeClusterMembershipOperations(jmxClient);
-        this.tableOperations = initializeTableOperations(jmxClient);
-        this.compactionManagerOperations = initializeCompactionManagerOperations(jmxClient);
-        this.metricsOperations = initializeMetricsOperations(jmxClient, tableSchemaFetcher);
-        this.compactionStatsOperations = initializeCompactionStatsOperations(
-        storageOperations, metricsOperations,
-        compactionManagerOperations);
+        this.storageOperations = Objects.requireNonNull(createStorageOperations(dnsResolver, jmxClient), "storageOperations is required");
+        this.clusterMembershipOperations = Objects.requireNonNull(createClusterMembershipOperations(jmxClient), "clusterMembershipOperations is required");
+        this.tableOperations = Objects.requireNonNull(createTableOperations(jmxClient), "tableOperations is required");
+        this.compactionManagerOperations = Objects.requireNonNull(createCompactionManagerOperations(jmxClient), "compactionManagerOperations is required");
+        this.metricsOperations = Objects.requireNonNull(createMetricsOperations(jmxClient, tableSchemaFetcher), "metricsOperations is required");
+        this.compactionStatsOperations = Objects.requireNonNull(createCompactionStatsOperations(storageOperations, metricsOperations,
+                                                                                                compactionManagerOperations), "compactionStatsOperations is required");
     }
 
     /**
@@ -198,40 +198,40 @@ public class CassandraAdapter implements ICassandraAdapter
     }
 
     @NotNull
-    protected StorageOperations initializeStorageOperations(DnsResolver dnsResolver, JmxClient jmxClient)
+    protected StorageOperations createStorageOperations(DnsResolver dnsResolver, JmxClient jmxClient)
     {
         return new CassandraStorageOperations(jmxClient, dnsResolver);
     }
 
     @NotNull
-    protected ClusterMembershipOperations initializeClusterMembershipOperations(JmxClient jmxClient)
+    protected ClusterMembershipOperations createClusterMembershipOperations(JmxClient jmxClient)
     {
         return new CassandraClusterMembershipOperations(jmxClient);
     }
 
     @NotNull
-    protected TableOperations initializeTableOperations(JmxClient jmxClient)
+    protected TableOperations createTableOperations(JmxClient jmxClient)
     {
         return new CassandraTableOperations(jmxClient);
     }
 
     @NotNull
-    protected CompactionManagerOperations initializeCompactionManagerOperations(JmxClient jmxClient)
+    protected CompactionManagerOperations createCompactionManagerOperations(JmxClient jmxClient)
     {
         return new CassandraCompactionManagerOperations(jmxClient);
     }
 
     @NotNull
-    protected MetricsOperations initializeMetricsOperations(JmxClient jmxClient,
-                                                            TableSchemaFetcher tableSchemaFetcher)
+    protected MetricsOperations createMetricsOperations(JmxClient jmxClient,
+                                                        TableSchemaFetcher tableSchemaFetcher)
     {
         return new CassandraMetricsOperations(jmxClient, tableSchemaFetcher, this);
     }
 
     @NotNull
-    protected CompactionStatsOperations initializeCompactionStatsOperations(StorageOperations storageOperations,
-                                                                            MetricsOperations metricsOperations,
-                                                                            CompactionManagerOperations compactionManagerOperations)
+    protected CompactionStatsOperations createCompactionStatsOperations(StorageOperations storageOperations,
+                                                                        MetricsOperations metricsOperations,
+                                                                        CompactionManagerOperations compactionManagerOperations)
     {
         return new CassandraCompactionStatsOperations(storageOperations, metricsOperations, compactionManagerOperations);
     }

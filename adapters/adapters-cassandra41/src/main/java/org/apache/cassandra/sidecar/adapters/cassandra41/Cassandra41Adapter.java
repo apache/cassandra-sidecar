@@ -50,7 +50,7 @@ public class Cassandra41Adapter extends CassandraAdapter
      */
     @Override
     @NotNull
-    protected StorageOperations initializeStorageOperations(DnsResolver dnsResolver, JmxClient jmxClient)
+    protected StorageOperations createStorageOperations(DnsResolver dnsResolver, JmxClient jmxClient)
     {
         return new Cassandra41StorageOperations(jmxClient, dnsResolver);
     }
