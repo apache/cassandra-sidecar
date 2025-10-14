@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.livemigration;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse;
 
 
 /**
@@ -41,9 +42,9 @@ public interface LiveMigrationTaskFactory
      * @param instanceMetadata Instance metadata for which data copy should be initiated.
      * @return Live migration task
      */
-    LiveMigrationTask create(String id,
-                             LiveMigrationDataCopyRequest request,
-                             String source,
-                             int port,
-                             InstanceMetadata instanceMetadata);
+    LiveMigrationTask<LiveMigrationDataCopyResponse> create(String id,
+                                                            LiveMigrationDataCopyRequest request,
+                                                            String source,
+                                                            int port,
+                                                            InstanceMetadata instanceMetadata);
 }

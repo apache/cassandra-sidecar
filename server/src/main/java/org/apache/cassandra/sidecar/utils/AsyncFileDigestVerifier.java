@@ -18,16 +18,12 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.io.IOException;
 import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.AsyncFile;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.file.OpenOptions;
@@ -43,7 +39,6 @@ import static org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus
  */
 public abstract class AsyncFileDigestVerifier<D extends Digest> implements DigestVerifier
 {
-    public static final int DEFAULT_READ_BUFFER_SIZE = 512 * 1024; // 512KiB
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
     protected final FileSystem fs;
     protected final D digest;
@@ -91,42 +86,6 @@ public abstract class AsyncFileDigestVerifier<D extends Digest> implements Diges
      */
     protected Future<String> calculateDigest(AsyncFile asyncFile)
     {
-        Promise<String> result = Promise.promise();
-
-        readFile(asyncFile, result,
-                 buf -> {
-                     byte[] bytes = buf.getBytes();
-                     digestAlgorithm.update(bytes, 0, bytes.length);
-                 },
-                 onReadComplete -> {
-                     result.complete(digestAlgorithm.digest());
-                     try
-                     {
-                         digestAlgorithm.close();
-                     }
-                     catch (IOException e)
-                     {
-                         logger.warn("Potential memory leak due to failed to close hasher {}",
-                                     digestAlgorithm.getClass().getSimpleName());
-                     }
-                 });
-
-        return result.future();
-    }
-
-    protected void readFile(AsyncFile file, Promise<String> result, Handler<Buffer> onBufferAvailable,
-                            Handler<Void> onReadComplete)
-    {
-        // Make sure to close the file when complete
-        result.future().onComplete(ignored -> file.end());
-        file.pause()
-            .setReadBufferSize(DEFAULT_READ_BUFFER_SIZE)
-            .handler(onBufferAvailable)
-            .endHandler(onReadComplete)
-            .exceptionHandler(cause -> {
-                logger.error("Error while calculating the {} digest", digest.algorithm(), cause);
-                result.fail(cause);
-            })
-            .resume();
+        return AsyncFileDigestCalculator.calculateDigest(asyncFile, digestAlgorithm);
     }
 }

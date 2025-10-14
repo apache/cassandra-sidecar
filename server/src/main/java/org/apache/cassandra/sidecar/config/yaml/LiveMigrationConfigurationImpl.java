@@ -32,34 +32,34 @@ import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 public class LiveMigrationConfigurationImpl implements LiveMigrationConfiguration
 {
 
-    public static final int DEFAULT_MAX_CONCURRENT_DOWNLOADS = 20;
+    public static final int DEFAULT_MAX_CONCURRENT_FILE_REQUESTS = 20;
 
     private final Set<String> filesToExclude;
     private final Set<String> directoriesToExclude;
     private final Map<String, String> migrationMap;
-    private final int maxConcurrentDownloads;
+    private final int maxConcurrentFileRequests;
 
     public LiveMigrationConfigurationImpl()
     {
-        this(Collections.emptySet(), Collections.emptySet(), Collections.emptyMap(), DEFAULT_MAX_CONCURRENT_DOWNLOADS);
+        this(Collections.emptySet(), Collections.emptySet(), Collections.emptyMap(), DEFAULT_MAX_CONCURRENT_FILE_REQUESTS);
     }
 
     @JsonCreator
     public LiveMigrationConfigurationImpl(@JsonProperty("files_to_exclude") Set<String> filesToExclude,
                                           @JsonProperty("dirs_to_exclude") Set<String> directoriesToExclude,
                                           @JsonProperty("migration_map") Map<String, String> migrationMap,
-                                          @JsonProperty("max_concurrent_downloads") int maxConcurrentDownloads)
+                                          @JsonProperty("max_concurrent_file_requests") int maxConcurrentFileRequests)
     {
         this.filesToExclude = filesToExclude;
         this.directoriesToExclude = directoriesToExclude;
         this.migrationMap = migrationMap == null ? Collections.emptyMap() : Collections.unmodifiableMap(migrationMap);
 
-        if (maxConcurrentDownloads < 1)
+        if (maxConcurrentFileRequests < 1)
         {
-            throw new IllegalArgumentException("Invalid max_concurrent_downloads " + maxConcurrentDownloads +
+            throw new IllegalArgumentException("Invalid max_concurrent_file_requests " + maxConcurrentFileRequests +
                                                ". It must be >= 1");
         }
-        this.maxConcurrentDownloads = maxConcurrentDownloads;
+        this.maxConcurrentFileRequests = maxConcurrentFileRequests;
     }
 
     @Override
@@ -84,9 +84,9 @@ public class LiveMigrationConfigurationImpl implements LiveMigrationConfiguratio
     }
 
     @Override
-    @JsonProperty("max_concurrent_downloads")
-    public int maxConcurrentDownloads()
+    @JsonProperty("max_concurrent_file_requests")
+    public int maxConcurrentFileRequests()
     {
-        return maxConcurrentDownloads;
+        return maxConcurrentFileRequests;
     }
 }

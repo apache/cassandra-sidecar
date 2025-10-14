@@ -33,12 +33,12 @@ import org.junit.jupiter.api.io.TempDir;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.mockito.Mockito;
 
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_COMMITLOG_DIR_PATH;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_HINTS_DIR_PATH;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_SAVED_CACHES_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_COMMITLOG_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_HINTS_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_SAVED_CACHES_DIR_PATH;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.localPath;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.CDC_RAW_DIR_PLACEHOLDER;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.COMMITLOG_DIR_PLACEHOLDER;

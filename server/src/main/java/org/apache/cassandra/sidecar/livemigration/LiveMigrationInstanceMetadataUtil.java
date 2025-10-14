@@ -23,6 +23,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -33,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.CDC_RAW_DIR;
@@ -52,71 +54,178 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholde
  * Utility class for having all {@link InstanceMetadata} related helper functions related to
  * Live Migration in one place.
  */
-@SuppressWarnings("ConstantValue")
 public class LiveMigrationInstanceMetadataUtil
 {
-
-    public static final String LIVE_MIGRATION_CDC_RAW_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE + "/" + CDC_RAW_DIR.dirType;
-    public static final String LIVE_MIGRATION_COMMITLOG_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE + "/" + COMMIT_LOG_DIR.dirType;
-    public static final String LIVE_MIGRATION_DATA_FILE_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE + "/" + DATA_FILE_DIR.dirType;
-    public static final String LIVE_MIGRATION_HINTS_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE + "/" + HINTS_DIR.dirType;
-    public static final String LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE
-                                                                                + "/" + LOCAL_SYSTEM_DATA_FILE_DIR.dirType;
-    public static final String LIVE_MIGRATION_SAVED_CACHES_DIR_PATH = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE + "/" + SAVED_CACHES_DIR.dirType;
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationInstanceMetadataUtil.class);
+
+    /**
+     * Encapsulates all metadata for a specific directory instance in live migration.
+     * Each descriptor represents one physical directory with its associated index, URL route, and placeholder.
+     *
+     * <p>Example mapping for a data directory at index 0:
+     * <ul>
+     *   <li>dirType: DATA_FILE_DIR</li>
+     *   <li>placeholder: "DATA_FILE_DIR"</li>
+     *   <li>localDir: "/var/lib/cassandra/data"</li>
+     *   <li>index: 0</li>
+     *   <li>fileTransferUrl: "/api/v1/live-migration/data/0"</li>
+     * </ul>
+     *
+     * <p>The descriptor is used to map between:
+     * <ul>
+     *   <li>URL paths (e.g., /api/v1/live-migration/data/0/keyspace/table/file.db)</li>
+     *   <li>Local file paths (e.g., /var/lib/cassandra/data/keyspace/table/file.db)</li>
+     *   <li>Configuration placeholders (e.g., ${DATA_FILE_DIR}/keyspace/table/file.db)</li>
+     * </ul>
+     */
+    private static class DirectoryDescriptor
+    {
+        /** The type of directory (e.g., DATA_FILE_DIR, HINTS_DIR, COMMIT_LOG_DIR) */
+        final LiveMigrationDirType dirType;
+
+        /** The placeholder name used in configuration patterns (e.g., "DATA_FILE_DIR") */
+        final String placeholder;
+
+        /** The absolute path to the local directory on the file system */
+        final String localDir;
+
+        /** The index of this directory within directories of the same type (0-based) */
+        final int index;
+
+        /** The URL prefix for file transfer operations (e.g., "/api/v1/live-migration/data/0") */
+        final String fileTransferUrl;
+
+        /**
+         * Creates a directory descriptor with the specified metadata.
+         *
+         * @param dirType the type of directory
+         * @param placeholder the placeholder name for configuration patterns
+         * @param localDir the absolute path to the local directory
+         * @param index the index of this directory (0 for single directories, 0-N for data directories)
+         */
+        DirectoryDescriptor(LiveMigrationDirType dirType,
+                            String placeholder,
+                            String localDir,
+                            int index)
+        {
+            this.dirType = dirType;
+            this.placeholder = placeholder;
+            this.localDir = localDir;
+            this.index = index;
+
+            String urlBase = ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE + "/" + dirType.dirType;
+            this.fileTransferUrl = urlBase + "/" + index;
+        }
+
+        /**
+         * Returns the set of placeholders that can be used to reference this directory.
+         *
+         * <p>Most directory types return a single placeholder (e.g., "HINTS_DIR").
+         * DATA_FILE_DIR returns both a generic placeholder and an indexed one to support
+         * multiple data directories:
+         * <ul>
+         *   <li>Generic: "DATA_FILE_DIR" - resolves to all data directories</li>
+         *   <li>Indexed: "DATA_FILE_DIR_0", "DATA_FILE_DIR_1", etc. - resolves to specific data directory</li>
+         * </ul>
+         *
+         * @return immutable set of placeholder strings for this directory
+         */
+        Set<String> getPlaceholders()
+        {
+            if (dirType == DATA_FILE_DIR)
+            {
+                return Set.of(placeholder, placeholder + "_" + index);
+            }
+            return Set.of(placeholder);
+        }
+    }
+
+    /**
+     * Builds all directory descriptors for the given instance metadata.
+     * Each descriptor represents one specific directory with its index.
+     * This is the single source of truth for all directory-to-URL mappings.
+     *
+     * @param instanceMetadata the Cassandra instance metadata
+     * @return list of directory descriptors for all directories in the instance
+     */
+    @SuppressWarnings("ConstantValue")
+    private static List<DirectoryDescriptor> buildDescriptors(InstanceMetadata instanceMetadata)
+    {
+        List<DirectoryDescriptor> descriptors = new ArrayList<>();
+
+        // Hints directory - always has index 0
+        descriptors.add(new DirectoryDescriptor(
+            HINTS_DIR, HINTS_DIR_PLACEHOLDER, instanceMetadata.hintsDir(), 0));
+
+        // Commit log directory - always has index 0
+        descriptors.add(new DirectoryDescriptor(
+            COMMIT_LOG_DIR, COMMITLOG_DIR_PLACEHOLDER, instanceMetadata.commitlogDir(), 0));
+
+        // Saved caches directory - always has index 0
+        if (instanceMetadata.savedCachesDir() != null)
+        {
+            descriptors.add(new DirectoryDescriptor(
+                SAVED_CACHES_DIR, SAVED_CACHES_DIR_PLACEHOLDER, instanceMetadata.savedCachesDir(), 0));
+        }
+
+        // CDC directory - always has index 0
+        if (instanceMetadata.cdcDir() != null)
+        {
+            descriptors.add(new DirectoryDescriptor(
+                CDC_RAW_DIR, CDC_RAW_DIR_PLACEHOLDER, instanceMetadata.cdcDir(), 0));
+        }
+
+        // Local system data directory - always has index 0
+        if (instanceMetadata.localSystemDataFileDir() != null)
+        {
+            descriptors.add(new DirectoryDescriptor(
+                LOCAL_SYSTEM_DATA_FILE_DIR, LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER,
+                instanceMetadata.localSystemDataFileDir(), 0));
+        }
+
+        // Data directories - each gets its own index
+        List<String> dataDirs = instanceMetadata.dataDirs();
+        for (int i = 0; i < dataDirs.size(); i++)
+        {
+            descriptors.add(new DirectoryDescriptor(
+                DATA_FILE_DIR, DATA_FILE_DIR_PLACEHOLDER, dataDirs.get(i), i));
+        }
+
+        return descriptors;
+    }
 
     /**
      * Returns all directories that need to be copied during live migration.
      * Includes hints, commit log, saved caches, CDC, local system data, and data directories.
-     * 
+     *
      * @param instanceMetadata the Cassandra instance metadata containing directory paths
      * @return an unmodifiable list of directory paths to be copied during live migration
      */
     public static List<String> dirsToCopy(InstanceMetadata instanceMetadata)
     {
         List<String> dirsToCopy = new ArrayList<>();
-        dirsToCopy.add(instanceMetadata.hintsDir());
-        dirsToCopy.add(instanceMetadata.commitlogDir());
-        if (instanceMetadata.savedCachesDir() != null)
+        for (DirectoryDescriptor desc : buildDescriptors(instanceMetadata))
         {
-            dirsToCopy.add(instanceMetadata.savedCachesDir());
+            dirsToCopy.add(desc.localDir);
         }
-        if (instanceMetadata.cdcDir() != null)
-        {
-            dirsToCopy.add(instanceMetadata.cdcDir());
-        }
-        if (instanceMetadata.localSystemDataFileDir() != null)
-        {
-            dirsToCopy.add(instanceMetadata.localSystemDataFileDir());
-        }
-        dirsToCopy.addAll(instanceMetadata.dataDirs());
         return Collections.unmodifiableList(dirsToCopy);
     }
 
     /**
-     * Returns map of directory that can be copied and the index to use while constructing
-     * url for file transfer.
+     * Returns a map of local directory paths to their corresponding file transfer URL prefixes.
+     * <p>
+     * Example: For a data directory "/var/lib/cassandra/data", the map contains:
+     * "/var/lib/cassandra/data" -&gt; "/api/v1/live-migration/data/0"
+     *
+     * @param instanceMetadata the Cassandra instance metadata containing directory paths
+     * @return unmodifiable map from local directory path to URL prefix
      */
     public static Map<String, String> dirPathPrefixMap(InstanceMetadata instanceMetadata)
     {
         Map<String, String> dirIndexMap = new HashMap<>();
-        dirIndexMap.put(instanceMetadata.hintsDir(), LIVE_MIGRATION_HINTS_DIR_PATH + "/0");
-        dirIndexMap.put(instanceMetadata.commitlogDir(), LIVE_MIGRATION_COMMITLOG_DIR_PATH + "/0");
-        if (instanceMetadata.savedCachesDir() != null)
+        for (DirectoryDescriptor desc : buildDescriptors(instanceMetadata))
         {
-            dirIndexMap.put(instanceMetadata.savedCachesDir(), LIVE_MIGRATION_SAVED_CACHES_DIR_PATH + "/0");
-        }
-        if (instanceMetadata.cdcDir() != null)
-        {
-            dirIndexMap.put(instanceMetadata.cdcDir(), LIVE_MIGRATION_CDC_RAW_DIR_PATH + "/0");
-        }
-        if (instanceMetadata.localSystemDataFileDir() != null)
-        {
-            dirIndexMap.put(instanceMetadata.localSystemDataFileDir(), LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH + "/0");
-        }
-        for (int i = 0; i < instanceMetadata.dataDirs().size(); i++)
-        {
-            dirIndexMap.put(instanceMetadata.dataDirs().get(i), LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/" + i);
+            dirIndexMap.put(desc.localDir, desc.fileTransferUrl);
         }
         return Collections.unmodifiableMap(dirIndexMap);
     }
@@ -127,33 +236,10 @@ public class LiveMigrationInstanceMetadataUtil
     public static Map<String, Set<String>> dirPlaceHoldersMap(InstanceMetadata instanceMetadata)
     {
         Map<String, Set<String>> placeholderMap = new HashMap<>();
-
-        placeholderMap.put(instanceMetadata.hintsDir(), Collections.singleton(HINTS_DIR_PLACEHOLDER));
-        placeholderMap.put(instanceMetadata.commitlogDir(), Collections.singleton(COMMITLOG_DIR_PLACEHOLDER));
-        if (instanceMetadata.savedCachesDir() != null)
+        for (DirectoryDescriptor desc : buildDescriptors(instanceMetadata))
         {
-            placeholderMap.put(instanceMetadata.savedCachesDir(), Collections.singleton(SAVED_CACHES_DIR_PLACEHOLDER));
+            placeholderMap.put(desc.localDir, desc.getPlaceholders());
         }
-
-        if (instanceMetadata.cdcDir() != null)
-        {
-            placeholderMap.put(instanceMetadata.cdcDir(), Collections.singleton(CDC_RAW_DIR_PLACEHOLDER));
-        }
-
-        if (instanceMetadata.localSystemDataFileDir() != null)
-        {
-            placeholderMap.put(instanceMetadata.localSystemDataFileDir(),
-                               Collections.singleton(LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER));
-        }
-
-        List<String> dataDirs = instanceMetadata.dataDirs();
-        for (int i = 0; i < dataDirs.size(); i++)
-        {
-            String dir = dataDirs.get(i);
-            Set<String> placeholders = Set.of(DATA_FILE_DIR_PLACEHOLDER, DATA_FILE_DIR_PLACEHOLDER + "_" + i);
-            placeholderMap.put(dir, placeholders);
-        }
-
         return Collections.unmodifiableMap(placeholderMap);
     }
 
@@ -164,36 +250,17 @@ public class LiveMigrationInstanceMetadataUtil
     {
         Map<String, Set<String>> placeholderDirsMap = new HashMap<>();
 
-        placeholderDirsMap.put(HINTS_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.hintsDir()));
-        placeholderDirsMap.put(COMMITLOG_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.commitlogDir()));
-
-        if (instanceMetadata.savedCachesDir() != null)
+        for (DirectoryDescriptor desc : buildDescriptors(instanceMetadata))
         {
-            placeholderDirsMap.put(SAVED_CACHES_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.savedCachesDir()));
+            for (String placeholder : desc.getPlaceholders())
+            {
+                placeholderDirsMap.computeIfAbsent(placeholder, k -> new HashSet<>())
+                                  .add(desc.localDir);
+            }
         }
 
-        if (instanceMetadata.cdcDir() != null)
-        {
-            placeholderDirsMap.put(CDC_RAW_DIR_PLACEHOLDER, Collections.singleton(instanceMetadata.cdcDir()));
-        }
-
-        if (instanceMetadata.localSystemDataFileDir() != null)
-        {
-            placeholderDirsMap.put(LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER,
-                                  Collections.singleton(instanceMetadata.localSystemDataFileDir()));
-        }
-
-        placeholderDirsMap.put(DATA_FILE_DIR_PLACEHOLDER, Set.copyOf(instanceMetadata.dataDirs()));
-
-        List<String> dataDirs = instanceMetadata.dataDirs();
-        for (int i = 0; i < dataDirs.size(); i++)
-        {
-            placeholderDirsMap.put(DATA_FILE_DIR_PLACEHOLDER + "_" + i, Collections.singleton(dataDirs.get(i)));
-        }
-
-        return placeholderDirsMap;
+        return Collections.unmodifiableMap(placeholderDirsMap);
     }
-
 
     /**
      * Converts given live migration file download URL to local path.
@@ -205,6 +272,8 @@ public class LiveMigrationInstanceMetadataUtil
     public static Path localPath(@NotNull String fileUrl,
                                  @NotNull InstanceMetadata metadata)
     {
+        Objects.requireNonNull(fileUrl, "fileUrl cannot be null");
+        Objects.requireNonNull(metadata, "metadata cannot be null");
 
         if (fileUrl.contains("/../") || fileUrl.endsWith("/.."))
         {
@@ -220,33 +289,33 @@ public class LiveMigrationInstanceMetadataUtil
             {
                 Objects.requireNonNull(entry.getValue(), () -> "No local path found for url " + fileUrl);
                 String relativePath = fileUrl.substring(entry.getKey().length());
-                return Paths.get(entry.getValue(), relativePath).toAbsolutePath();
+                Path baseDir = Paths.get(entry.getValue()).toAbsolutePath().normalize();
+                Path resolvedPath = Paths.get(entry.getValue(), relativePath).toAbsolutePath().normalize();
+
+                if (!resolvedPath.startsWith(baseDir))
+                {
+                    String errorMessage = "Resolved path escapes base directory for url " + fileUrl;
+                    LOGGER.error(errorMessage);
+                    throw new IllegalArgumentException(errorMessage);
+                }
+
+                return resolvedPath;
             }
         }
 
         throw new IllegalArgumentException("File url " + fileUrl + " is unknown.");
     }
+
     private static Map<String, String> migrationUrlLocalDirMap(InstanceMetadata instanceMetadata)
     {
         Map<String, String> urlToLocalDirMap = new HashMap<>();
-        urlToLocalDirMap.put(LIVE_MIGRATION_COMMITLOG_DIR_PATH + "/0/", instanceMetadata.commitlogDir());
-        urlToLocalDirMap.put(LIVE_MIGRATION_HINTS_DIR_PATH + "/0/", instanceMetadata.hintsDir());
-        urlToLocalDirMap.put(LIVE_MIGRATION_SAVED_CACHES_DIR_PATH + "/0/", instanceMetadata.savedCachesDir());
 
-        if (instanceMetadata.cdcDir() != null)
+        for (DirectoryDescriptor desc : buildDescriptors(instanceMetadata))
         {
-            urlToLocalDirMap.put(LIVE_MIGRATION_CDC_RAW_DIR_PATH + "/0/", instanceMetadata.cdcDir());
-        }
-        if (instanceMetadata.localSystemDataFileDir() != null)
-        {
-            urlToLocalDirMap.put(LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH + "/0/", instanceMetadata.localSystemDataFileDir());
+            // Add file transfer URL mapping
+            urlToLocalDirMap.put(desc.fileTransferUrl + "/", desc.localDir);
         }
 
-        for (int i = 0; i < instanceMetadata.dataDirs().size(); i++)
-        {
-            urlToLocalDirMap.put(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/" + i + "/", instanceMetadata.dataDirs().get(i));
-        }
-
-        return urlToLocalDirMap;
+        return Collections.unmodifiableMap(urlToLocalDirMap);
     }
 }

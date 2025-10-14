@@ -21,9 +21,7 @@ package org.apache.cassandra.sidecar.livemigration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,13 +33,16 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
-import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationDataCopyInProgressException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationTaskInProgressException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationTaskNotFoundException;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationMap;
 import org.jetbrains.annotations.NotNull;
+
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationDataCopyTask.DATA_COPY_TASK_TYPE;
 
 /**
  * Manages live migration data copy tasks. Handles task creation, tracking, and cancellation.
@@ -52,19 +53,20 @@ public class DataCopyTaskManager
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(DataCopyTaskManager.class);
 
-    @VisibleForTesting
-    final ConcurrentHashMap<Integer, LiveMigrationTask> currentTasks = new ConcurrentHashMap<>();
+    private final LiveMigrationTaskManager taskManager;
     private final InstancesMetadata instancesMetadata;
     private final SidecarConfiguration sidecarConfiguration;
     private final LiveMigrationMap liveMigrationMap;
     private final LiveMigrationTaskFactory liveMigrationTaskFactory;
 
     @Inject
-    public DataCopyTaskManager(InstancesMetadata instancesMetadata,
+    public DataCopyTaskManager(LiveMigrationTaskManager taskManager,
+                               InstancesMetadata instancesMetadata,
                                SidecarConfiguration sidecarConfiguration,
                                LiveMigrationMap liveMigrationMap,
                                LiveMigrationTaskFactory liveMigrationTaskFactory)
     {
+        this.taskManager = taskManager;
         this.instancesMetadata = instancesMetadata;
         this.sidecarConfiguration = sidecarConfiguration;
         this.liveMigrationMap = liveMigrationMap;
@@ -77,16 +79,17 @@ public class DataCopyTaskManager
      *
      * @param request     live migration request containing task parameters
      * @param currentHost the destination host where sidecar is running
-     * @return Future containing the created LiveMigrationTask
-     * @throws LiveMigrationDataCopyInProgressException if another task is already running
-     * @throws LiveMigrationInvalidRequestException     if request validation fails
+     * @return Future containing the created LiveMigrationTask, or a failed Future with:
+     * <ul>
+     * <li>{@link LiveMigrationInvalidRequestException} if max concurrency exceeds the configured limit</li>
+     * <li>{@link LiveMigrationTaskInProgressException} if another task is already running for this instance</li>
+     * </ul>
      */
-    public Future<LiveMigrationTask> createTask(@NotNull LiveMigrationDataCopyRequest request,
-                                                @NotNull String currentHost)
-    throws LiveMigrationDataCopyInProgressException, LiveMigrationInvalidRequestException
+    public Future<LiveMigrationTask<LiveMigrationDataCopyResponse>> createTask(@NotNull LiveMigrationDataCopyRequest request,
+                                                                               @NotNull String currentHost)
     {
         int maxPossibleConcurrency = Objects.requireNonNull(sidecarConfiguration.liveMigrationConfiguration())
-                                            .maxConcurrentDownloads();
+                                            .maxConcurrentFileRequests();
         if (request.maxConcurrency > maxPossibleConcurrency)
         {
             return Future.failedFuture(
@@ -99,34 +102,26 @@ public class DataCopyTaskManager
                                .compose(source -> createDataCopyTask(request, source, localInstanceMetadata));
     }
 
-    Future<LiveMigrationTask> createDataCopyTask(LiveMigrationDataCopyRequest request,
-                                                 String source,
-                                                 InstanceMetadata localInstanceMetadata)
+    private Future<LiveMigrationTask<LiveMigrationDataCopyResponse>> createDataCopyTask(LiveMigrationDataCopyRequest request,
+                                                                                        String source,
+                                                                                        InstanceMetadata localInstanceMetadata)
     {
         // Fast local JMX check before creating task - prevents task creation if Cassandra is running
         return verifyCassandraNotRunning(localInstanceMetadata)
                .compose(v -> {
-                   LiveMigrationTask newTask = createTask(request,
-                                                          source,
-                                                          sidecarConfiguration.serviceConfiguration().port(),
-                                                          localInstanceMetadata);
+                   LiveMigrationTask<LiveMigrationDataCopyResponse> newTask = createTask(request,
+                                                                                         source,
+                                                                                         sidecarConfiguration.serviceConfiguration().port(),
+                                                                                         localInstanceMetadata);
 
                    // It is possible to serve only one live migration data copy request per instance at a time.
                    // Checking if there is another migration is in progress before accepting new one.
-                   boolean accepted = newTask == currentTasks.compute(localInstanceMetadata.id(), (integer, taskInMap) -> {
-                       if (taskInMap == null)
-                       {
-                           return newTask;
-                       }
-
-                       // Accept new task if and only if the existing task has completed.
-                       return taskInMap.isCompleted() ? newTask : taskInMap;
-                   });
+                   boolean accepted = taskManager.submitTask(localInstanceMetadata.id(), newTask);
 
                    if (!accepted)
                    {
                        return Future.failedFuture(
-                       new LiveMigrationDataCopyInProgressException("Another task is already under progress. Cannot accept new task."));
+                       new LiveMigrationTaskInProgressException("Another task is already under progress. Cannot accept new task."));
                    }
                    LOGGER.info("Starting data copy task with id={}, source={}, destination={}",
                                newTask.id(), source, localInstanceMetadata.host());
@@ -175,72 +170,87 @@ public class DataCopyTaskManager
         }
     }
 
-    LiveMigrationTask createTask(LiveMigrationDataCopyRequest request,
-                                 String source,
-                                 int port,
-                                 InstanceMetadata localInstanceMetadata)
+    LiveMigrationTask<LiveMigrationDataCopyResponse> createTask(LiveMigrationDataCopyRequest request,
+                                                                String source,
+                                                                int port,
+                                                                InstanceMetadata localInstanceMetadata)
     {
-
         return liveMigrationTaskFactory.create(UUIDs.timeBased().toString(), request, source, port, localInstanceMetadata);
     }
 
     /**
-     * Returns all live migration tasks for the current host.
+     * Returns all live migration data copy tasks for the current host.
      *
      * @param currentHost the host where sidecar is running
-     * @return list containing at most one task (empty if no active task)
+     * @return list containing at most one task (empty if no active task or if task is not a data copy task)
      */
-    public List<LiveMigrationTask> getAllTasks(@NotNull String currentHost)
+    public List<LiveMigrationTask<LiveMigrationDataCopyResponse>> getAllTasks(@NotNull String currentHost)
     {
-        InstanceMetadata localInstance = instancesMetadata.instanceFromHost(currentHost);
-        if (currentTasks.isEmpty() || !currentTasks.containsKey(localInstance.id()))
+        List<LiveMigrationTask<?>> tasks = taskManager.getAllTasks(currentHost);
+        if (tasks.isEmpty())
         {
             return Collections.emptyList();
         }
-        return Collections.singletonList(currentTasks.get(localInstance.id()));
+
+        LiveMigrationTask<?> task = tasks.get(0);
+        if (isDataCopyTask(task))
+        {
+            return List.of(castToDataCopyTask(task));
+        }
+
+        return Collections.emptyList();
     }
 
     /**
-     * Returns the live migration task with the specified task ID.
+     * Returns the live migration data copy task with the specified task ID.
      *
      * @param taskId      ID of the task to retrieve
      * @param currentHost the host where sidecar is running
      * @return the LiveMigrationTask matching the given taskId
-     * @throws LiveMigrationTaskNotFoundException if no task found with the given ID
+     * @throws LiveMigrationTaskNotFoundException if no task found with the given ID or if task is not a data copy task
      */
-    public LiveMigrationTask getTask(@NotNull String taskId,
-                                     @NotNull String currentHost) throws LiveMigrationTaskNotFoundException
+    public LiveMigrationTask<LiveMigrationDataCopyResponse> getTask(@NotNull String taskId,
+                                                                    @NotNull String currentHost) throws LiveMigrationTaskNotFoundException
     {
-        return getLiveMigrationTask(taskId, currentHost);
+        LiveMigrationTask<?> task = taskManager.getTask(taskId, currentHost);
+
+        if (isDataCopyTask(task))
+        {
+            return castToDataCopyTask(task);
+        }
+
+        throw new LiveMigrationTaskNotFoundException("Task " + taskId + " is not a data copy task");
     }
 
     /**
-     * Cancels the live migration task with the specified task ID.
+     * Cancels the live migration data copy task with the specified task ID.
      *
      * @param taskId      ID of the task to cancel
      * @param currentHost the host where sidecar is running
      * @return the cancelled LiveMigrationTask
-     * @throws LiveMigrationTaskNotFoundException if no task found with the given ID
+     * @throws LiveMigrationTaskNotFoundException if no task found with the given ID or if task is not a data copy task
      */
-    public LiveMigrationTask cancelTask(@NotNull String taskId,
-                                        @NotNull String currentHost) throws LiveMigrationTaskNotFoundException
+    public LiveMigrationTask<LiveMigrationDataCopyResponse> cancelTask(@NotNull String taskId,
+                                                                       @NotNull String currentHost) throws LiveMigrationTaskNotFoundException
     {
-        LiveMigrationTask taskInProgress = getLiveMigrationTask(taskId, currentHost);
+        LiveMigrationTask<?> task = taskManager.getTask(taskId, currentHost);
 
-        // Cancelling the task
-        taskInProgress.cancel();
+        if (isDataCopyTask(task))
+        {
+            return castToDataCopyTask(taskManager.cancelTask(taskId, currentHost));
+        }
 
-        return taskInProgress;
+        throw new LiveMigrationTaskNotFoundException("Task " + taskId + " is not a data copy task");
     }
 
-    private LiveMigrationTask getLiveMigrationTask(@NotNull String taskId, @NotNull String currentHost)
+    private boolean isDataCopyTask(LiveMigrationTask<?> task)
     {
-        InstanceMetadata localInstance = instancesMetadata.instanceFromHost(currentHost);
-        LiveMigrationTask taskInProgress = currentTasks.get(localInstance.id());
-        if (null == taskInProgress || !taskId.equals(taskInProgress.id()))
-        {
-            throw new LiveMigrationTaskNotFoundException("No data copy task found with given id " + taskId);
-        }
-        return taskInProgress;
+        return DATA_COPY_TASK_TYPE.equals(task.type());
+    }
+
+    @SuppressWarnings("unchecked")
+    private LiveMigrationTask<LiveMigrationDataCopyResponse> castToDataCopyTask(LiveMigrationTask<?> task)
+    {
+        return (LiveMigrationTask<LiveMigrationDataCopyResponse>) task;
     }
 }

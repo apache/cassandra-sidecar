@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -37,7 +36,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.codahale.metrics.MetricRegistry;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -52,27 +50,28 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.HelperTestModules;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.LiveMigrationConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationStatusTracker;
-import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.getInstanceMetadata;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.createFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(VertxExtension.class)
-class LiveMigrationFileStreamHandlerTest
+class LiveMigrationFileStreamTest
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationFileStreamHandlerTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationFileStreamTest.class);
 
     private static final int FIRST_ID = 1000110;
     private static final String FIRST_INSTANCE_IP = "127.0.0.1";
@@ -82,8 +81,6 @@ class LiveMigrationFileStreamHandlerTest
     private static final String THIRD_INSTANCE_IP = "127.0.0.3";
     private static final String DUMMY_CONTENT = "data";
 
-    private static final MetricRegistryFactory REGISTRY_FACTORY =
-    new MetricRegistryFactory("cassandra_sidecar_" + UUID.randomUUID(), Collections.emptyList(), Collections.emptyList());
     private final Vertx vertx = Vertx.vertx();
     @TempDir
     Path tempDir;
@@ -96,11 +93,11 @@ class LiveMigrationFileStreamHandlerTest
     @BeforeEach
     public void setup() throws InterruptedException
     {
-        InstanceMetadata firstInstanceMeta = getInstanceMetadata(FIRST_INSTANCE_IP, FIRST_ID);
+        InstanceMetadata firstInstanceMeta = getInstanceMetadata(FIRST_INSTANCE_IP, FIRST_ID, tempDir);
         firstInstanceDataDirs = firstInstanceMeta.dataDirs();
-        InstanceMetadata secondInstanceMeta = getInstanceMetadata(SECOND_INSTANCE_IP, SECOND_ID);
+        InstanceMetadata secondInstanceMeta = getInstanceMetadata(SECOND_INSTANCE_IP, SECOND_ID, tempDir);
         secondInstanceDataDirs = secondInstanceMeta.dataDirs();
-        InstanceMetadata thirdInstanceMeta = getInstanceMetadata(THIRD_INSTANCE_IP, THIRD_ID);
+        InstanceMetadata thirdInstanceMeta = getInstanceMetadata(THIRD_INSTANCE_IP, THIRD_ID, tempDir);
         thirdInstanceDataDirs = thirdInstanceMeta.dataDirs();
         FileStreamHandlerTestModule handlerTestModule = new FileStreamHandlerTestModule(
         Arrays.asList(firstInstanceMeta, secondInstanceMeta, thirdInstanceMeta));
@@ -114,27 +111,6 @@ class LiveMigrationFileStreamHandlerTest
               .onSuccess(s -> context.completeNow())
               .onFailure(context::failNow);
         context.awaitCompletion(15, TimeUnit.SECONDS);
-    }
-
-    private InstanceMetadata getInstanceMetadata(String instanceIp,
-                                                 int instanceId)
-    {
-        String root = tempDir.resolve(String.valueOf(instanceId)).toString();
-        List<String> dataDirs = Arrays.asList(root + "/d1/data", root + "/d2/data");
-        MetricRegistry instanceSpecificRegistry = REGISTRY_FACTORY.getOrCreate(instanceId);
-
-        return InstanceMetadataImpl.builder()
-                                   .id(instanceId)
-                                   .host(instanceIp)
-                                   .port(9042)
-                                   .storagePort(7000)
-                                   .dataDirs(dataDirs)
-                                   .hintsDir(root + "/hints")
-                                   .commitlogDir(root + "/commitlog")
-                                   .savedCachesDir(root + "/saved_caches")
-                                   .stagingDir(root + "/staging")
-                                   .metricRegistry(instanceSpecificRegistry)
-                                   .build();
     }
 
     @AfterEach
@@ -159,7 +135,7 @@ class LiveMigrationFileStreamHandlerTest
     }
 
     @Test
-    public void testDownloadFailsWhenLiveMigrationCompletedAsCompleted(VertxTestContext context) throws IOException
+    public void testDownloadFailsWhenLiveMigrationMarkedAsCompleted(VertxTestContext context) throws IOException
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
@@ -189,8 +165,9 @@ class LiveMigrationFileStreamHandlerTest
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/data/0/..",
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
+        String url = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/..";
+        shouldThrowError(context, url, // This url itself will not be identified by Vertx, 404 is expected
+                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
     }
 
     @Test
@@ -231,7 +208,7 @@ class LiveMigrationFileStreamHandlerTest
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        // Vertx is stopping routes having three "%2E%2E" in the path and returning 404
+        // Vertx rejects 3+ consecutive %2E%2E (encoded ..) patterns
         shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/%2E%2E/%2E%2E/%2E%2E/secrets",
                          FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
     }
@@ -438,18 +415,13 @@ class LiveMigrationFileStreamHandlerTest
         @Override
         protected void configure()
         {
+            LiveMigrationConfiguration liveMigrationConfigurationSpy = spy(new LiveMigrationConfigurationImpl(
+            Set.of(), Set.of("glob:${DATA_FILE_DIR}/*/*/snapshots"), Map.of(), 10));
 
-            LiveMigrationConfiguration mockLiveMigrationConfiguration = mock(LiveMigrationConfiguration.class);
-            when(mockLiveMigrationConfiguration.filesToExclude())
-            .thenReturn(Collections.emptySet());
-            when(mockLiveMigrationConfiguration.directoriesToExclude())
-            .thenReturn(Collections.singleton("glob:${DATA_FILE_DIR}/*/*/snapshots"));
-            when(mockLiveMigrationConfiguration.migrationMap())
-            .thenReturn(Collections.emptyMap());
-
-            SidecarConfiguration sidecarConfiguration = SidecarConfigurationImpl.builder()
-                                                                                .liveMigrationConfiguration(mockLiveMigrationConfiguration)
-                                                                                .build();
+            SidecarConfiguration sidecarConfiguration =
+            SidecarConfigurationImpl.builder()
+                                    .liveMigrationConfiguration(liveMigrationConfigurationSpy)
+                                    .build();
 
             bind(SidecarConfiguration.class).toInstance(sidecarConfiguration);
             install(new HelperTestModules.InstanceMetadataTestModule(instanceMetaList));

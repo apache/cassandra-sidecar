@@ -76,4 +76,15 @@ public class InstanceFileInfo
     {
         return Objects.hash(fileUrl, size, fileType, lastModifiedTime);
     }
+
+    @Override
+    public String toString()
+    {
+        return "InstanceFileInfo{" +
+               "fileUrl='" + fileUrl + '\'' +
+               ", size=" + size +
+               ", fileType=" + fileType +
+               ", lastModifiedTime=" + lastModifiedTime +
+               '}';
+    }
 }

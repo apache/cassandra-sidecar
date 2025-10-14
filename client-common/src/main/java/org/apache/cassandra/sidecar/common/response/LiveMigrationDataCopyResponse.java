@@ -29,7 +29,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Represents response of Live Migration task.
  */
-public class LiveMigrationTaskResponse
+public class LiveMigrationDataCopyResponse
 {
 
     private final String taskId;
@@ -40,23 +40,23 @@ public class LiveMigrationTaskResponse
     private final String source;
     private final int port;
 
-    public LiveMigrationTaskResponse(String taskId,
-                                     String source,
-                                     int port,
-                                     LiveMigrationDataCopyRequest request,
-                                     List<Status> statusList)
+    public LiveMigrationDataCopyResponse(String taskId,
+                                         String source,
+                                         int port,
+                                         LiveMigrationDataCopyRequest request,
+                                         List<Status> statusList)
     {
         this(taskId, source, port, request.maxIterations, request.successThreshold, request.maxConcurrency, statusList);
     }
 
     @JsonCreator
-    public LiveMigrationTaskResponse(@JsonProperty("taskId") String taskId,
-                                     @JsonProperty("source") String source,
-                                     @JsonProperty("port") int port,
-                                     @JsonProperty("maxIterations") int maxIterations,
-                                     @JsonProperty("successThreshold") double successThreshold,
-                                     @JsonProperty("maxConcurrency") int maxConcurrency,
-                                     @JsonProperty("status") List<Status> statusList)
+    public LiveMigrationDataCopyResponse(@JsonProperty("taskId") String taskId,
+                                         @JsonProperty("source") String source,
+                                         @JsonProperty("port") int port,
+                                         @JsonProperty("maxIterations") int maxIterations,
+                                         @JsonProperty("successThreshold") double successThreshold,
+                                         @JsonProperty("maxConcurrency") int maxConcurrency,
+                                         @JsonProperty("status") List<Status> statusList)
     {
         this.taskId = taskId;
         this.source = source;

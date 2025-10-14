@@ -23,6 +23,7 @@ import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -32,7 +33,7 @@ import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
  * Factory implementation which produces {@link LiveMigrationTask} instances.
  */
 @Singleton
-public class LiveMigrationTaskFactoryImpl implements LiveMigrationTaskFactory
+public class LiveMigrationDataCopyTaskFactoryImpl implements LiveMigrationTaskFactory
 {
 
     private final Vertx vertx;
@@ -42,11 +43,11 @@ public class LiveMigrationTaskFactoryImpl implements LiveMigrationTaskFactory
     private final LiveMigrationFileDownloadPreCheck preCheck;
 
     @Inject
-    public LiveMigrationTaskFactoryImpl(Vertx vertx,
-                                        ExecutorPools executorPools,
-                                        SidecarClientProvider sidecarClientProvider,
-                                        SidecarConfiguration sidecarConfiguration,
-                                        LiveMigrationFileDownloadPreCheck preCheck)
+    public LiveMigrationDataCopyTaskFactoryImpl(Vertx vertx,
+                                                ExecutorPools executorPools,
+                                                SidecarClientProvider sidecarClientProvider,
+                                                SidecarConfiguration sidecarConfiguration,
+                                                LiveMigrationFileDownloadPreCheck preCheck)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
@@ -59,13 +60,13 @@ public class LiveMigrationTaskFactoryImpl implements LiveMigrationTaskFactory
      * {@inheritDoc}
      */
     @Override
-    public LiveMigrationTask create(String id,
-                                    LiveMigrationDataCopyRequest request,
-                                    String source,
-                                    int port,
-                                    InstanceMetadata instanceMetadata)
+    public LiveMigrationTask<LiveMigrationDataCopyResponse> create(String id,
+                                                                   LiveMigrationDataCopyRequest request,
+                                                                   String source,
+                                                                   int port,
+                                                                   InstanceMetadata instanceMetadata)
     {
-        return new LiveMigrationTaskImpl(vertx, executorPools, sidecarClientProvider, liveMigrationConfiguration,
-                                         id, request, source, port, instanceMetadata, preCheck);
+        return new LiveMigrationDataCopyTask(vertx, executorPools, sidecarClientProvider, liveMigrationConfiguration,
+                                             id, request, source, port, instanceMetadata, preCheck);
     }
 }

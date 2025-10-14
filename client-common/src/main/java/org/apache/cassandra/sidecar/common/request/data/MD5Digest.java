@@ -30,6 +30,8 @@ import org.jetbrains.annotations.NotNull;
  */
 public class MD5Digest implements Digest
 {
+    public static final String MD5_ALGORITHM = "MD5";
+
     private final @NotNull String value;
 
     /**
@@ -54,7 +56,7 @@ public class MD5Digest implements Digest
     @Override
     public String algorithm()
     {
-        return "MD5";
+        return MD5_ALGORITHM;
     }
 
     /**

@@ -51,7 +51,8 @@ class InstanceFetcherTestModule extends AbstractModule
         List.of(
         getMockInstance(1, "localhost"),
         getMockInstance(2, "localhost2"),
-        getMockInstance(3, "localhost3")),
+        getMockInstance(3, "localhost3"),
+        getMockInstance(4, "localhost4")),
         new DnsResolver()
         {
             @Override

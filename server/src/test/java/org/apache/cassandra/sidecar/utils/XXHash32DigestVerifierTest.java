@@ -138,7 +138,7 @@ class XXHash32DigestVerifierTest
 
         public ExposeAsyncFileXXHash32DigestVerifier(FileSystem fs, XXHash32Digest digest)
         {
-            super(fs, digest, new XXHash32Provider.Lz4XXHash32(maybeGetSeedOrDefault(digest)));
+            super(fs, digest, new XXHash32Provider.Lz4XXHash32DigestAlgorithm(maybeGetSeedOrDefault(digest)));
         }
 
         @Override

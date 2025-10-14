@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Objects;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.net.SocketAddress;
@@ -29,10 +32,14 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
+import org.apache.cassandra.sidecar.utils.DigestAlgorithmProvider;
+import org.apache.cassandra.sidecar.utils.JdkMd5DigestProvider;
+import org.apache.cassandra.sidecar.utils.XXHash32Provider;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 /**
@@ -99,6 +106,28 @@ public class HelperTestModules
                                                                   "No Cassandra instance exists with given ID")));
 
             bind(InstancesMetadata.class).toInstance(mockInstancesMetadata);
+        }
+    }
+
+    /**
+     * Test module that provides {@link DigestAlgorithmProvider}
+     */
+    public static class DigestAlgorithmProviderTestModule extends AbstractModule
+    {
+        @Provides
+        @Singleton
+        @Named("xxhash32")
+        DigestAlgorithmProvider xxHash32Provider()
+        {
+            return spy(new XXHash32Provider());
+        }
+
+        @Provides
+        @Singleton
+        @Named("md5")
+        DigestAlgorithmProvider md5Provider()
+        {
+            return spy(new JdkMd5DigestProvider());
         }
     }
 }

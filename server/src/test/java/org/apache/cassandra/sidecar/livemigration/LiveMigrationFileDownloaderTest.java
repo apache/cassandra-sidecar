@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.livemigration;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -66,7 +65,6 @@ import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
 import org.jetbrains.annotations.NotNull;
 
@@ -76,6 +74,7 @@ import static org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.M
 import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.DATA_FILE_DIR;
 import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType.HINTS_DIR;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.localPath;
+import static org.apache.cassandra.sidecar.utils.TestFileUtils.createFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -1274,6 +1273,82 @@ class LiveMigrationFileDownloaderTest
         assertThat(downloaderSpy.canDelete(fileAttrsToCheck, Path.of(rightTimestampFileLocalPath), dataDirPath)).isFalse();
     }
 
+    @Test
+    void testExcludedFileNotDeletedWhenMissingFromRemote(@TempDir Path tempDir) throws IOException
+    {
+        String storageDir = tempDir.resolve("testExcludedFileNotDeletedWhenMissingFromRemote")
+                                   .toAbsolutePath().toString();
+        List<String> dataDirs = getDataDirList(storageDir);
+        int fileSize = 32;
+        long timestamp = System.currentTimeMillis();
+
+        // Create files that exist locally
+        TestFile excludedFile = new TestFile(DATA_FILE_DIR, 0, "ks1/t1/excluded.db", fileSize, timestamp);
+        TestFile normalFile = new TestFile(DATA_FILE_DIR, 0, "ks1/t1/normal.db", fileSize, timestamp);
+        prepareDataHomeDir(storageDir, List.of(excludedFile, normalFile));
+
+        // Create remote files list that doesn't include the excluded file or normal file
+        TestFile remoteFile = new TestFile(DATA_FILE_DIR, 0, "ks1/t2/remote.db", fileSize, timestamp);
+        TestFile remoteKeyspaceDir = new TestFile(DATA_FILE_DIR, 0, "ks1", -1, timestamp);
+        TestFile remoteTableDir = new TestFile(DATA_FILE_DIR, 0, "ks1/t1", -1, timestamp);
+        List<TestFile> remoteFiles = List.of(remoteFile, remoteKeyspaceDir, remoteTableDir);
+
+        Consumer<OperationStatus> mockStatusUpdater = mock(Consumer.class);
+
+        // Create injector with excluded files configuration
+        Injector injector = getInjectorWithExcludedFiles(Set.of("glob:${DATA_FILE_DIR}/**/excluded.db"), Set.of());
+
+        LiveMigrationFileDownloader downloaderSpy =
+        getDownloaderSpy(injector, dummyRequest100pThreshold, 1, mockStatusUpdater, storageDir, dataDirs);
+
+        InstanceFilesListResponse instanceFilesListResponse = getInstanceFilesListResponse(remoteFiles);
+
+        InstanceFilesListResponse responseFuture = downloaderSpy.deleteUnnecessaryFilesAndDirectories(instanceFilesListResponse);
+
+        assertThat(responseFuture).isEqualTo(instanceFilesListResponse);
+        // Verify the excluded file still exists even though it's not in the remote list
+        assertFileExists(excludedFile.getFilePath(storageDir), excludedFile.size);
+        // Verify the normal file was deleted as expected since it's not excluded and not in remote
+        assertFileDoesNotExists(normalFile.getFilePath(storageDir));
+    }
+
+    @Test
+    void testExcludedDirectoryNotDeletedWhenMissingFromRemote(@TempDir Path tempDir) throws IOException
+    {
+        String storageDir = tempDir.resolve("testExcludedDirectoryNotDeletedWhenMissingFromRemote")
+                                   .toAbsolutePath().toString();
+        List<String> dataDirs = getDataDirList(storageDir);
+        long timestamp = System.currentTimeMillis();
+
+        // Create directories that exist locally
+        TestFile excludedDir = new TestFile(DATA_FILE_DIR, 0, "ks1/excluded_table", -1, timestamp);
+        TestFile normalDir = new TestFile(DATA_FILE_DIR, 0, "ks1/normal_table", -1, timestamp);
+        prepareDataHomeDir(storageDir, List.of(excludedDir, normalDir));
+
+        // Create remote files list that doesn't include the excluded directory or normal directory
+        TestFile remoteKeyspaceDir = new TestFile(DATA_FILE_DIR, 0, "ks1", -1, timestamp);
+        TestFile remoteTableDir = new TestFile(DATA_FILE_DIR, 0, "ks1/t1", -1, timestamp);
+        List<TestFile> remoteFiles = List.of(remoteKeyspaceDir, remoteTableDir);
+
+        Consumer<OperationStatus> mockStatusUpdater = mock(Consumer.class);
+
+        // Create injector with excluded directories configuration
+        Injector injector = getInjectorWithExcludedFiles(Set.of(), Set.of("glob:${DATA_FILE_DIR}/**/excluded_table"));
+
+        LiveMigrationFileDownloader downloaderSpy =
+        getDownloaderSpy(injector, dummyRequest100pThreshold, 1, mockStatusUpdater, storageDir, dataDirs);
+
+        InstanceFilesListResponse instanceFilesListResponse = getInstanceFilesListResponse(remoteFiles);
+
+        InstanceFilesListResponse responseFuture = downloaderSpy.deleteUnnecessaryFilesAndDirectories(instanceFilesListResponse);
+
+        assertThat(responseFuture).isEqualTo(instanceFilesListResponse);
+        // Verify the excluded directory still exists even though it's not in the remote list
+        assertDirExists(excludedDir.getFilePath(storageDir));
+        // Verify the normal directory was deleted as expected since it's not excluded and not in remote
+        assertFileDoesNotExists(normalDir.getFilePath(storageDir));
+    }
+
     void assertFileExists(String dataDir, String relativeFilePath, int expectedFileSize)
     {
         File file = new File(dataDir + "/" + relativeFilePath);
@@ -1316,23 +1391,6 @@ class LiveMigrationFileDownloaderTest
             createFile(f, testFile.size, testFile.lastModifiedTime);
         }
     }
-
-    void createFile(String file, int size, long lastModifiedTime) throws IOException
-    {
-        createFile(new File(file), size, lastModifiedTime);
-    }
-
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    void createFile(File f, int size, long lastModifiedTime) throws IOException
-    {
-        f.getParentFile().mkdirs();
-        RandomAccessFile randomAccessFile = new RandomAccessFile(f, "rw");
-        randomAccessFile.seek(size - 1);
-        randomAccessFile.write(0);
-        randomAccessFile.close();
-        f.setLastModified(lastModifiedTime);
-    }
-
 
     @Test
     void testShortlistDownloadFiles(@TempDir Path tmpDir) throws IOException
@@ -1394,6 +1452,11 @@ class LiveMigrationFileDownloaderTest
     Injector getInjector()
     {
         return Guice.createInjector(new LiveMigrationFileDownloaderTestModule());
+    }
+
+    Injector getInjectorWithExcludedFiles(Set<String> filesToExclude, Set<String> directoriesToExclude)
+    {
+        return Guice.createInjector(new LiveMigrationFileDownloaderTestModule(filesToExclude, directoriesToExclude));
     }
 
     LiveMigrationFileDownloader getDownloader(Injector injector,
@@ -1502,51 +1565,25 @@ class LiveMigrationFileDownloaderTest
     {
         return testFiles.stream().map(TestFile::getInstanceFileInfo).collect(Collectors.toList());
     }
-
-    private static class TestFile
-    {
-        final LiveMigrationDirType dirType;
-        final int dirIndex;
-        final String relativePath;
-        final int size;
-        final long lastModifiedTime;
-
-        public TestFile(LiveMigrationDirType dirType, int dirIndex, String relativePath, int size, long lastModifiedTime)
-        {
-            this.dirType = dirType;
-            this.dirIndex = dirIndex;
-            this.relativePath = relativePath;
-            this.size = size;
-            this.lastModifiedTime = lastModifiedTime;
-        }
-
-        InstanceFileInfo getInstanceFileInfo()
-        {
-            return new InstanceFileInfo(getFileUrl(), size, getFileType(), lastModifiedTime);
-        }
-
-        String getFileUrl()
-        {
-            return LIVE_MIGRATION_FILES_ROUTE + "/" + dirType.dirType + "/" + dirIndex + "/" + relativePath;
-        }
-
-        FileType getFileType()
-        {
-            return -1 == size ? FileType.DIRECTORY : FileType.FILE;
-        }
-
-        String getFilePath(String storageDir)
-        {
-            return storageDir + "/" + dirType.dirType + "/" + relativePath;
-        }
-    }
-
     private static class LiveMigrationFileDownloaderTestModule extends AbstractModule
     {
         SidecarClient sidecarClient = mock(SidecarClient.class);
         SidecarClientProvider sidecarClientProvider = mock(SidecarClientProvider.class);
         SidecarConfiguration mockSidecarConfiguration = mock(SidecarConfiguration.class);
         LiveMigrationConfiguration mockLiveMigrationConfig = mock(LiveMigrationConfiguration.class);
+        private final Set<String> filesToExclude;
+        private final Set<String> directoriesToExclude;
+
+        LiveMigrationFileDownloaderTestModule()
+        {
+            this(Set.of(), Set.of());
+        }
+
+        LiveMigrationFileDownloaderTestModule(Set<String> filesToExclude, Set<String> directoriesToExclude)
+        {
+            this.filesToExclude = filesToExclude;
+            this.directoriesToExclude = directoriesToExclude;
+        }
 
         @Override
         protected void configure()
@@ -1559,8 +1596,8 @@ class LiveMigrationFileDownloaderTest
             .thenReturn(CompletableFuture.completedFuture(new LiveMigrationStatus(NOT_COMPLETED, 1L)));
             when(sidecarClientProvider.get()).thenReturn(sidecarClient);
             when(mockSidecarConfiguration.liveMigrationConfiguration()).thenReturn(mockLiveMigrationConfig);
-            when(mockLiveMigrationConfig.filesToExclude()).thenReturn(Set.of());
-            when(mockLiveMigrationConfig.directoriesToExclude()).thenReturn(Set.of());
+            when(mockLiveMigrationConfig.filesToExclude()).thenReturn(filesToExclude);
+            when(mockLiveMigrationConfig.directoriesToExclude()).thenReturn(directoriesToExclude);
         }
     }
 }

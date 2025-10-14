@@ -30,6 +30,7 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationTaskNotFoundException;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
@@ -75,7 +76,7 @@ public class LiveMigrationCancelDataCopyTaskHandler extends AbstractHandler<Stri
     {
         try
         {
-            LiveMigrationTask task = dataCopyTaskManager.cancelTask(taskId, host);
+            LiveMigrationTask<LiveMigrationDataCopyResponse> task = dataCopyTaskManager.cancelTask(taskId, host);
             LOGGER.info("Successfully cancelled the data copy task with TaskID={}", taskId);
             context.json(task.getResponse());
         }

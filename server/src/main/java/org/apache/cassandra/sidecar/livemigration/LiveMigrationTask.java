@@ -18,18 +18,13 @@
 
 package org.apache.cassandra.sidecar.livemigration;
 
-import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
-import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
-
 /**
- * Represents a live migration data copy task. During live migration, the source Cassandra instance
- * may continue running while the destination copies files, meaning new SSTables can be created and
- * existing ones may disappear due to compaction. To handle these changes, the task performs multiple
- * iterations to synchronize data until the success threshold criteria in
- * {@link LiveMigrationDataCopyRequest#successThreshold} is met, up to a maximum number of iterations
- * specified by {@link LiveMigrationDataCopyRequest#maxIterations}.
+ * Represents a live migration task. This interface provides lifecycle management
+ * for asynchronous live migration operations.
+ *
+ * @param <T> the type of response returned by this task
  */
-public interface LiveMigrationTask
+public interface LiveMigrationTask<T>
 {
     /**
      * ID of live migration task.
@@ -39,7 +34,12 @@ public interface LiveMigrationTask
     String id();
 
     /**
-     * Starts live migration.
+     * Type of task
+     */
+    String type();
+
+    /**
+     * Starts the live migration task.
      */
     void start();
 
@@ -49,15 +49,17 @@ public interface LiveMigrationTask
      *
      * @return current live migration task's response
      */
-    LiveMigrationTaskResponse getResponse();
+    T getResponse();
 
     /**
      * Cancels the current live migration task if not finished already.
+     *
+     * <p><b>Note:</b> Cancellation is best-effort; ongoing operations may not stop immediately.
      */
     void cancel();
 
     /**
-     * Tells whether current live migration has completed or not.
+     * Tells whether current live migration task has completed or not.
      *
      * @return true if completed otherwise false.
      */

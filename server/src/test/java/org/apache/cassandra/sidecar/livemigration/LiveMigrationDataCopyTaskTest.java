@@ -28,7 +28,7 @@ import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.client.SidecarClient;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
-import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
@@ -39,17 +39,17 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class LiveMigrationTaskImplTest
+class LiveMigrationDataCopyTaskTest
 {
     private static final String SOURCE = "127.0.0.1";
     private static final int PORT = 9043;
 
-    private LiveMigrationTaskImpl createTask()
+    private LiveMigrationDataCopyTask createTask()
     {
         return createTask("test-task-id", new LiveMigrationDataCopyRequest(5, 0.8, 10));
     }
 
-    private LiveMigrationTaskImpl createTask(String id, LiveMigrationDataCopyRequest request)
+    private LiveMigrationDataCopyTask createTask(String id, LiveMigrationDataCopyRequest request)
     {
         Vertx vertx = mock(Vertx.class);
         SidecarClientProvider sidecarClientProvider = mock(SidecarClientProvider.class);
@@ -61,14 +61,14 @@ class LiveMigrationTaskImplTest
 
         ExecutorPools executorPools = ExecutorPoolsHelper.createdSharedTestPool(vertx);
 
-        return new LiveMigrationTaskImpl(vertx, executorPools, sidecarClientProvider, liveMigrationConfiguration,
-                                         id, request, SOURCE, PORT, instanceMetadata, LiveMigrationFileDownloadPreCheck.DEFAULT);
+        return new LiveMigrationDataCopyTask(vertx, executorPools, sidecarClientProvider, liveMigrationConfiguration,
+                                             id, request, SOURCE, PORT, instanceMetadata, LiveMigrationFileDownloadPreCheck.DEFAULT);
     }
 
     @Test
     void testCancelWithoutPromiseOrDownloader()
     {
-        LiveMigrationTaskImpl task = createTask();
+        LiveMigrationDataCopyTask task = createTask();
 
         task.cancel();
 
@@ -78,7 +78,7 @@ class LiveMigrationTaskImplTest
     @Test
     void testCancelWithPromise()
     {
-        LiveMigrationTaskImpl task = createTask();
+        LiveMigrationDataCopyTask task = createTask();
         task.promise = Promise.promise();
 
         task.cancel();
@@ -91,7 +91,7 @@ class LiveMigrationTaskImplTest
     @Test
     void testCancelWithDownloader()
     {
-        LiveMigrationTaskImpl task = createTask();
+        LiveMigrationDataCopyTask task = createTask();
         LiveMigrationFileDownloader mockDownloader = mock(LiveMigrationFileDownloader.class);
         task.downloader = mockDownloader;
 
@@ -104,7 +104,7 @@ class LiveMigrationTaskImplTest
     @Test
     void testCancelAlreadyCancelled()
     {
-        LiveMigrationTaskImpl task = createTask();
+        LiveMigrationDataCopyTask task = createTask();
         LiveMigrationFileDownloader mockDownloader = mock(LiveMigrationFileDownloader.class);
         task.downloader = mockDownloader;
 
@@ -117,9 +117,9 @@ class LiveMigrationTaskImplTest
     @Test
     void testGetResponseEmptyStatusMap()
     {
-        LiveMigrationTaskImpl task = createTask();
+        LiveMigrationDataCopyTask task = createTask();
 
-        LiveMigrationTaskResponse response = task.getResponse();
+        LiveMigrationDataCopyResponse response = task.getResponse();
 
         assertThat(response).isNotNull();
         assertThat(response.taskId()).isEqualTo("test-task-id");
@@ -131,7 +131,7 @@ class LiveMigrationTaskImplTest
     @Test
     void testGetResponseWithOperationStatusUpdates()
     {
-        LiveMigrationTaskImpl task = createTask();
+        LiveMigrationDataCopyTask task = createTask();
 
         // Create actual OperationStatus objects using state transitions
         OperationStatus status1 = OperationStatus.startingState()
@@ -155,17 +155,17 @@ class LiveMigrationTaskImplTest
         task.statusUpdater(0).accept(status1);
         task.statusUpdater(1).accept(status2);
 
-        LiveMigrationTaskResponse response = task.getResponse();
+        LiveMigrationDataCopyResponse response = task.getResponse();
 
         assertThat(response).isNotNull();
         assertThat(response.taskId()).isEqualTo("test-task-id");
         assertThat(response.source()).isEqualTo(SOURCE);
         assertThat(response.port()).isEqualTo(PORT);
 
-        List<LiveMigrationTaskResponse.Status> statusList = response.status();
+        List<LiveMigrationDataCopyResponse.Status> statusList = response.status();
         assertThat(statusList).hasSize(2);
 
-        LiveMigrationTaskResponse.Status responseStatus1 = statusList.get(0);
+        LiveMigrationDataCopyResponse.Status responseStatus1 = statusList.get(0);
         assertThat(responseStatus1.iteration()).isEqualTo(0);
         assertThat(responseStatus1.state()).isEqualTo("DOWNLOADING");
         assertThat(responseStatus1.totalSize()).isEqualTo(1000L);
@@ -176,7 +176,7 @@ class LiveMigrationTaskImplTest
         assertThat(responseStatus1.downloadFailures()).isEqualTo(2);
         assertThat(responseStatus1.bytesDownloaded()).isEqualTo(300L);
 
-        LiveMigrationTaskResponse.Status responseStatus2 = statusList.get(1);
+        LiveMigrationDataCopyResponse.Status responseStatus2 = statusList.get(1);
         assertThat(responseStatus2.iteration()).isEqualTo(1);
         assertThat(responseStatus2.state()).isEqualTo("DOWNLOAD_COMPLETE");
         assertThat(responseStatus2.totalSize()).isEqualTo(2000L);
@@ -191,7 +191,7 @@ class LiveMigrationTaskImplTest
     @Test
     void testId()
     {
-        LiveMigrationTaskImpl task = createTask();
+        LiveMigrationDataCopyTask task = createTask();
 
         assertThat(task.id()).isEqualTo("test-task-id");
     }
@@ -199,7 +199,7 @@ class LiveMigrationTaskImplTest
     @Test
     void testIsCompletedNotStarted()
     {
-        LiveMigrationTaskImpl task = createTask();
+        LiveMigrationDataCopyTask task = createTask();
 
         assertThat(task.isCompleted()).isFalse();
     }
@@ -207,7 +207,7 @@ class LiveMigrationTaskImplTest
     @Test
     void testIsCompletedCancelled()
     {
-        LiveMigrationTaskImpl task = createTask();
+        LiveMigrationDataCopyTask task = createTask();
         task.cancel();
 
         assertThat(task.isCompleted()).isTrue();
@@ -216,7 +216,7 @@ class LiveMigrationTaskImplTest
     @Test
     void testGetResponseWithMultipleStateTransitions()
     {
-        LiveMigrationTaskImpl task = createTask();
+        LiveMigrationDataCopyTask task = createTask();
 
         // Test with different state combinations
         OperationStatus failedStatus = OperationStatus.startingState()
@@ -238,8 +238,8 @@ class LiveMigrationTaskImplTest
         task.statusUpdater(1).accept(cancelledStatus);
         task.statusUpdater(2).accept(downloadCompleteStatus);
 
-        LiveMigrationTaskResponse response = task.getResponse();
-        List<LiveMigrationTaskResponse.Status> statusList = response.status();
+        LiveMigrationDataCopyResponse response = task.getResponse();
+        List<LiveMigrationDataCopyResponse.Status> statusList = response.status();
 
         assertThat(statusList).hasSize(3);
         assertThat(statusList.get(0).state()).isEqualTo("FAILED");
@@ -250,7 +250,7 @@ class LiveMigrationTaskImplTest
     @Test
     void testGetResponseDownloadsInProgress()
     {
-        LiveMigrationTaskImpl task = createTask();
+        LiveMigrationDataCopyTask task = createTask();
 
         // Test with different state combinations
         OperationStatus downloadingState = OperationStatus.startingState()
@@ -261,7 +261,7 @@ class LiveMigrationTaskImplTest
 
         task.statusUpdater(0).accept(downloadingState);
 
-        List<LiveMigrationTaskResponse.Status> statusList = task.getResponse().status();
+        List<LiveMigrationDataCopyResponse.Status> statusList = task.getResponse().status();
 
         assertThat(statusList).hasSize(1);
         assertThat(statusList.get(0).state()).isEqualTo("DOWNLOADING");
