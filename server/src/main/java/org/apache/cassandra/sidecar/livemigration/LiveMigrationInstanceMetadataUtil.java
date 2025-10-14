@@ -244,7 +244,7 @@ public class LiveMigrationInstanceMetadataUtil
 
         for (int i = 0; i < instanceMetadata.dataDirs().size(); i++)
         {
-            urlToLocalDirMap.put(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/" + i + "/", instanceMetadata.dataDirs().get(0));
+            urlToLocalDirMap.put(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/" + i + "/", instanceMetadata.dataDirs().get(i));
         }
 
         return urlToLocalDirMap;
