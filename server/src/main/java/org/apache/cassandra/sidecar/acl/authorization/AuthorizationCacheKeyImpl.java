@@ -27,7 +27,8 @@ import io.vertx.ext.auth.User;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractCassandraRoles;
 
 /**
- *
+ * Implementation of {@link AuthorizationCacheKey}, uniquely represents an authorization request with user and resource
+ * context.
  */
 public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
 {
@@ -37,8 +38,8 @@ public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
     public AuthorizationCacheKeyImpl(User user, MultiMap variables)
     {
         this.roles = extractCassandraRoles(user);
-        // Store a copy, otherwise Cache is not able to identity 2 keys with same values in MultiMap as same. If
-        // MultiMap is modifiable the equality behaviour changes.
+        // Store a copy, otherwise Cache is not able to identity 2 keys with same values in MultiMap as same.
+        // If MultiMap is modifiable the equality behaviour changes.
         this.variables = MultiMap.caseInsensitiveMultiMap();
         if (variables != null)
         {
@@ -49,12 +50,17 @@ public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
     @Override
     public boolean equals(Object o)
     {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
         AuthorizationCacheKeyImpl that = (AuthorizationCacheKeyImpl) o;
         return roles.equals(that.roles) && variablesEqual(variables, that.variables);
     }
-
 
     private boolean variablesEqual(MultiMap map1, MultiMap map2)
     {
@@ -89,8 +95,10 @@ public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
 
     private int variablesHashCode(MultiMap variables)
     {
-        if (variables == null) return 0;
-
+        if (variables == null)
+        {
+            return 0;
+        }
         int hash = 0;
         for (String name : variables.names())
         {
