@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -44,7 +43,7 @@ import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 
 /**
- * Verifies user has required authorizations. Allows admin identities to bypass authorization checks.
+ * {@link CachedAuthorizationHandler} caches all authorization requests using {@link AuthorizationCacheKey}.
  */
 public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
 {
@@ -57,7 +56,6 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
     private final Cache<AuthorizationCacheKey, Boolean> authorizationCache;
     // This is overridden since Vert.x does not expose this
     private BiConsumer<RoutingContext, AuthorizationContext> variableHandler;
-    private final List<AuthorizationCacheKey> keys = new ArrayList<>();
 
     public CachedAuthorizationHandler(AccessControlConfiguration accessControlConfiguration,
                                       AuthorizationParameterValidateHandler authZParameterValidateHandler,
@@ -94,7 +92,6 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         AtomicBoolean ctxNextCalled = new AtomicBoolean(false);
 
         AuthorizationCacheKey key = AuthorizationCacheKey.create(authorizationContext);
-        keys.add(key);
         Boolean authorized = authorizationCache.get(key, k -> {
             List<String> identities = extractIdentities(user);
 

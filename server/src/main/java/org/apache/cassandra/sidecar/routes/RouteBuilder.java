@@ -26,6 +26,8 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.auth.authorization.AndAuthorization;
@@ -178,7 +180,8 @@ public class RouteBuilder
         return andAuthorization;
     }
 
-    private BiConsumer<RoutingContext, AuthorizationContext> routeGenericVariableConsumer()
+    @VisibleForTesting
+    public BiConsumer<RoutingContext, AuthorizationContext> routeGenericVariableConsumer()
     {
         return (routingCtx, authZContext) -> {
             Optional<QualifiedTableName> optional = RoutingContextUtils.getAsOptional(routingCtx, SC_QUALIFIED_TABLE_NAME);
