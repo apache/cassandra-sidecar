@@ -76,10 +76,14 @@ public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
         {
             return false;
         }
+        if (!map1.names().equals(map2.names()))
+        {
+            return false;
+        }
 
         for (String name : map1.names())
         {
-            if (!map2.contains(name) || !map1.getAll(name).equals(map2.getAll(name)))
+            if (!map1.getAll(name).equals(map2.getAll(name)))
             {
                 return false;
             }

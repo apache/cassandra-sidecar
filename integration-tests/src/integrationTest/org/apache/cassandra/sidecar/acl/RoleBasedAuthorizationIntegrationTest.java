@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.AuthenticationException;
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -50,6 +51,7 @@ import org.apache.cassandra.distributed.api.ICluster;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.shared.Uninterruptibles;
+import org.apache.cassandra.sidecar.acl.authorization.RoleAuthorizationsCache;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -71,7 +73,9 @@ import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.modules.multibindings.ClassKey;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.MultiBindingTypeResolver;
@@ -98,7 +102,6 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 /**
  * Test for role based access control in Sidecar
  * Note:
- * - Do not add new test cases in this class. Add them into test method, example refer to testForAdmin.
  * - Create a new keyspace or test role for each test method as required to prevent permissions overlapping
  */
 class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrationTestBase
@@ -121,6 +124,12 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     public static final RoleWithIdentityTestScenario NON_ADMIN_READ_TEST_KEYSPACE_ROLE =
     new RoleWithIdentityTestScenario("non_admin_test_keyspace", "non_admin_test_role", "spiffe://cassandra/sidecar/non_admin_test_user")
     .addPermission("data/non_admin_test_keyspace", "SCHEMA:READ");
+    public static final RoleWithIdentityTestScenario NON_ADMIN_CACHE_REVOCATION_TEST_KEYSPACE_ROLE =
+    new RoleWithIdentityTestScenario("non_admin_cache_revocation_test_keyspace", "non_admin_test_role", "spiffe://cassandra/sidecar/non_admin_test_user")
+    .addPermission("data/non_admin_cache_revocation_test_keyspace", "SCHEMA:READ");
+    public static final RoleWithIdentityTestScenario NON_ADMIN_CACHE_FORBIDDEN_TEST_KEYSPACE_ROLE =
+    new RoleWithIdentityTestScenario("non_admin_cache_forbidden_test_keyspace", "non_admin_test_role", "spiffe://cassandra/sidecar/non_admin_test_user")
+    .addPermission("data/non_admin_cache_forbidden_test_keyspace", "GOSSIP:READ");
     public static final RoleWithIdentityTestScenario NON_ADMIN_CREATE_SNAPSHOT_TEST_KEYSPACE_ROLE =
     new RoleWithIdentityTestScenario("grant_table_test_keyspace", "non_admin_test_role", "spiffe://cassandra/sidecar/non_admin_test_user")
     .addPermission("data/grant_table_test_keyspace/test_table", "SNAPSHOT:CREATE");
@@ -171,6 +180,8 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     static final List<RoleWithIdentityTestScenario> ROLE_WITH_IDENTITY_TEST_SCENARIOS = List.of(SUPERUSER,
                                                                                                 NON_SUPERUSER_ROLE_WITH_TRANSITIVE_SUPERUSER_ROLE,
                                                                                                 NON_ADMIN_READ_TEST_KEYSPACE_ROLE,
+                                                                                                NON_ADMIN_CACHE_REVOCATION_TEST_KEYSPACE_ROLE,
+                                                                                                NON_ADMIN_CACHE_FORBIDDEN_TEST_KEYSPACE_ROLE,
                                                                                                 NON_ADMIN_CREATE_SNAPSHOT_TEST_KEYSPACE_ROLE,
                                                                                                 NON_ADMIN_CREATE_SNAPSHOT_KEYSPACE_LEVEL_ROLE,
                                                                                                 NON_ADMIN_CREATE_SNAPSHOT_ALL_TABLES_ROLE,
@@ -257,7 +268,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                                       Map.of());
 
             CacheConfiguration permissionCacheConfiguration = CacheConfigurationImpl.builder()
-                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("100ms"))
+                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("1m"))
                                                                                     .build();
 
             AccessControlConfiguration accessControlConfiguration = AccessControlConfigurationImpl.builder()
@@ -363,12 +374,6 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
         // SNAPSHOT:CREATE permission granted for data/grant_table_test_keyspace/test_table
         verifyAccess(HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
-
-        // SNAPSHOT:CREATE permission granted for data/grant_table_test_keyspace/test_table
-        verifyAccess(HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
-
-        // SNAPSHOT:DELETE permission not granted for data/grant_table_test_keyspace/test_table
-        verifyAccess(HttpMethod.DELETE, createSnapshotRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
 
         // SNAPSHOT:DELETE permission not granted for data/grant_table_test_keyspace/test_table
         verifyAccess(HttpMethod.DELETE, createSnapshotRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
@@ -662,6 +667,108 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                                HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
     }
 
+    @Test
+    void testAuthorizationCaching()
+    {
+        SidecarMetrics metrics = sidecarMetrics();
+
+        CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
+
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_test_keyspace");
+
+        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+
+        // Verify cache stats, 1 hit 1 miss
+        CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(callStats.missCount()).isEqualTo(1);
+        assertThat(callStats.hitCount()).isEqualTo(1);
+    }
+
+    @Test
+    void testAuthorizationCachingWithPermissionRevocation()
+    {
+        SidecarMetrics metrics = sidecarMetrics();
+
+        CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
+
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_cache_revocation_test_keyspace");
+
+        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+
+        CacheStats firstCallStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(firstCallStats.missCount()).isEqualTo(1);
+        assertThat(firstCallStats.hitCount()).isEqualTo(0);
+
+        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+
+        CacheStats secondCallStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(secondCallStats.missCount()).isEqualTo(0);
+        assertThat(secondCallStats.hitCount()).isEqualTo(1);
+
+        // Revoke permission
+        Path clientKeystorePath = cassandraIdentityClientKeyStore();
+        SSLOptions sslOptions = getSSLOptions(clientKeystorePath.toString(),
+                                              mtlsTestHelper.clientKeyStorePassword(),
+                                              mtlsTestHelper.trustStorePath(),
+                                              mtlsTestHelper.trustStorePassword());
+        withAuthenticatedSession(cluster.get(1), "cassandra", "cassandra", session -> {
+            session.execute(String.format("DELETE FROM sidecar_internal.role_permissions_v1 " +
+                                          "WHERE role = '%s' AND resource = 'data/%s'", "non_admin_test_role",
+                                          "non_admin_cache_revocation_test_keyspace"));
+        }, sslOptions);
+
+//        RoleAuthorizationsCache cache = serverWrapper.injector.getInstance(RoleAuthorizationsCache.class);
+//        cache.invalidate("non_admin_test_role");
+
+        loopAssert(80, 1000, () -> {
+            verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
+            CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+            assertThat(callStats.missCount()).isEqualTo(1);
+            assertThat(callStats.hitCount()).isEqualTo(0);
+        });
+    }
+
+    @Test
+    void testAuthorizationCachingForForbiddenRequests()
+    {
+        SidecarMetrics metrics = sidecarMetrics();
+
+        CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
+
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_cache_forbidden_test_keyspace");
+
+        // user has GOSSIP:READ permission but not SCHEMA:READ
+        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
+        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
+
+        // Verify cache stats, 1 hit 1 miss
+        CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(callStats.missCount()).isEqualTo(1);
+        assertThat(callStats.hitCount()).isEqualTo(1);
+    }
+
+    @Test
+    void testAdminBypassCaching() throws Exception
+    {
+        SidecarMetrics metrics = sidecarMetrics();
+
+        CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
+
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_test_keyspace");
+        // Uses client keystore with admin identity. Configured admin identities bypass authorization checks
+        Path clientKeystorePath = mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
+                                                                     certificateBuilder.addSanUriName(ADMIN_IDENTITY));
+
+        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, assertStatus(HttpResponseStatus.OK));
+        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, assertStatus(HttpResponseStatus.OK));
+
+        // Verify cache stats, 1 hit 1 miss
+        CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(callStats.missCount()).isEqualTo(1);
+        assertThat(callStats.hitCount()).isEqualTo(1);
+    }
+
     @Override
     protected void initializeSchemaForTest()
     {
@@ -824,6 +931,13 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
             throw new RuntimeException(e);
         }
         return clientKeystorePath;
+    }
+
+    private SidecarMetrics sidecarMetrics()
+    {
+        MetricRegistryFactory registryFactory
+        = new MetricRegistryFactory("cassandra_sidecar", List.of(), List.of());
+        return new SidecarMetricsImpl(registryFactory, null);
     }
 
     /**
