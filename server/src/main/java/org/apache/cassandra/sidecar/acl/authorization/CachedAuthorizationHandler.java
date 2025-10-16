@@ -19,6 +19,8 @@
 package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
@@ -47,6 +49,8 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
  */
 public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
 {
+    static final String POPULATE_AUTHORIZATION_CACHES_ENV_NAME = "populate_authorization_caches";
+    static final Set<Cache<AuthorizationCacheKey, Boolean>> AUTHORIZATION_CACHES = ConcurrentHashMap.newKeySet();
     private static final HttpException FORBIDDEN_EXCEPTION = new HttpException(403);
     private final AccessControlConfiguration accessControlConfiguration;
     private final AuthorizationParameterValidateHandler authZParameterValidateHandler;
@@ -70,6 +74,10 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         this.authMetrics = sidecarMetrics.server().auth();
         this.cacheMetrics = sidecarMetrics.server().cache().authorizationCacheMetrics;
         this.authorizationCache = initCache();
+        if (Boolean.parseBoolean(System.getenv(POPULATE_AUTHORIZATION_CACHES_ENV_NAME)))
+        {
+            AUTHORIZATION_CACHES.add(this.authorizationCache);
+        }
     }
 
     @Override

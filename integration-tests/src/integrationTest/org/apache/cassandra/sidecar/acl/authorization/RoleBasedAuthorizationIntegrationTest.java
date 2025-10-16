@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.acl;
+package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.AuthenticationException;
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -86,12 +87,15 @@ import org.apache.cassandra.sidecar.testing.TemporaryCqlSessionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 
+import static org.apache.cassandra.sidecar.acl.authorization.CachedAuthorizationHandler.AUTHORIZATION_CACHES;
+import static org.apache.cassandra.sidecar.acl.authorization.CachedAuthorizationHandler.POPULATE_AUTHORIZATION_CACHES_ENV_NAME;
 import static org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema.ROLE_PERMISSIONS_TABLE;
 import static org.apache.cassandra.testing.DriverTestUtils.buildContactPoints;
 import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
 import static org.apache.cassandra.testing.TlsTestUtils.getSSLOptions;
 import static org.apache.cassandra.testing.TlsTestUtils.withAuthenticatedSession;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -447,6 +451,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     @Test
     void testEndpointRequiringMultipleActions()
     {
+        System.setProperty(POPULATE_AUTHORIZATION_CACHES_ENV_NAME, "true");
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                                    "multiple_permissions_required_test_keyspace", "test_table");
 
@@ -470,23 +475,24 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                     "data/multiple_permissions_required_test_keyspace/test_table",
                                     "SNAPSHOT:READ");
 
-            // Wait for cache to expire without accessing it
-            Uninterruptibles.sleepUninterruptibly(4, TimeUnit.SECONDS);
+            invalidateAuthorizationHandlerCaches();
 
-            verifyAccess(HttpMethod.GET, listSnapshotRoute, nonAdminClientKeystorePath, response -> {
-                assertThat(response).isNotNull();
-                assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                ListSnapshotFilesResponse snapshotFiles = response.bodyAsJson(ListSnapshotFilesResponse.class);
-                List<ListSnapshotFilesResponse.FileInfo> filesToStream =
-                snapshotFiles.snapshotFilesInfo()
-                             .stream()
-                             .filter(info -> info.fileName.endsWith("-Data.db"))
-                             .sorted(Comparator.comparing(o -> o.fileName))
-                             .collect(Collectors.toList());
-                assertThat(filesToStream).isNotNull().isNotEmpty();
-                componentDownloadUrl[0] = filesToStream.get(0).componentDownloadUrl();
+            // wait for cache refresh
+            loopAssert(4, 100, () -> {
+                verifyAccess(HttpMethod.GET, listSnapshotRoute, nonAdminClientKeystorePath, response -> {
+                    assertThat(response).isNotNull();
+                    assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                    ListSnapshotFilesResponse snapshotFiles = response.bodyAsJson(ListSnapshotFilesResponse.class);
+                    List<ListSnapshotFilesResponse.FileInfo> filesToStream =
+                    snapshotFiles.snapshotFilesInfo()
+                                 .stream()
+                                 .filter(info -> info.fileName.endsWith("-Data.db"))
+                                 .sorted(Comparator.comparing(o -> o.fileName))
+                                 .collect(Collectors.toList());
+                    assertThat(filesToStream).isNotNull().isNotEmpty();
+                    componentDownloadUrl[0] = filesToStream.get(0).componentDownloadUrl();
+                });
             });
-
 
             // grant sidecar permission for streaming
             updateSidecarPermission(session,
@@ -494,24 +500,25 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                     "data/multiple_permissions_required_test_keyspace/test_table",
                                     "SNAPSHOT:STREAM");
 
+            invalidateAuthorizationHandlerCaches();
+
             // STREAM SSTable request requires both Sidecar SNAPSHOT:STREAM permission and Cassandra's SELECT
             // permission on a table it accesses data.
-
-            // Wait for cache to expire without accessing it
-            Uninterruptibles.sleepUninterruptibly(4, TimeUnit.SECONDS);
-
-            // request denied without SELECT permission
-            verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
+            loopAssert(4, 100, () -> {
+                // request denied without SELECT permission
+                verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
+            });
 
             // grant SELECT permission to non_admin_test_role
             grantTablePermission(session, "multiple_permissions_required_test_keyspace", "test_table", "non_admin_test_role");
         }, sslOptions);
 
-        // Wait for cache to expire without accessing it
-        Uninterruptibles.sleepUninterruptibly(4, TimeUnit.SECONDS);
+        invalidateAuthorizationHandlerCaches();
 
-        // request goes through with SELECT permission
-        verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+        loopAssert(4, 100, () -> {
+            // request denied without SELECT permission
+            verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+        });
     }
 
     @Test
@@ -718,8 +725,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                           "non_admin_cache_revocation_test_keyspace"));
         }, sslOptions);
 
-        // Wait for cache to expire without accessing it
-        Uninterruptibles.sleepUninterruptibly(4, TimeUnit.SECONDS);
+        invalidateAuthorizationHandlerCaches();
 
         // After cache expires, verify permission revocation takes effect
         verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
@@ -857,6 +863,14 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     {
         session.execute(String.format("UPDATE sidecar_internal.role_permissions_v1 SET permissions = permissions + {'%s'} " +
                                       "where role = '%s' and resource = '%s'", permission, role, resource));
+    }
+
+    private void invalidateAuthorizationHandlerCaches()
+    {
+        for (Cache<AuthorizationCacheKey, Boolean> authorizationCache : AUTHORIZATION_CACHES)
+        {
+            authorizationCache.invalidateAll();
+        }
     }
 
     private void verifyAccess(HttpMethod method, String testRoute, Path clientKeystorePath, Verifier<HttpResponse<Buffer>> assertions)
