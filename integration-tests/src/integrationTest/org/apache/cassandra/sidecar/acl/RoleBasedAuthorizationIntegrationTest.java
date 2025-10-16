@@ -51,7 +51,6 @@ import org.apache.cassandra.distributed.api.ICluster;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.shared.Uninterruptibles;
-import org.apache.cassandra.sidecar.acl.authorization.RoleAuthorizationsCache;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -73,9 +72,7 @@ import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchemaInitializer;
-import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
-import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.modules.multibindings.ClassKey;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.MultiBindingTypeResolver;
@@ -95,7 +92,6 @@ import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
 import static org.apache.cassandra.testing.TlsTestUtils.getSSLOptions;
 import static org.apache.cassandra.testing.TlsTestUtils.withAuthenticatedSession;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
-import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -268,7 +264,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                                       Map.of());
 
             CacheConfiguration permissionCacheConfiguration = CacheConfigurationImpl.builder()
-                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("1m"))
+                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("200ms"))
                                                                                     .build();
 
             AccessControlConfiguration accessControlConfiguration = AccessControlConfigurationImpl.builder()
@@ -474,22 +470,23 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                     "data/multiple_permissions_required_test_keyspace/test_table",
                                     "SNAPSHOT:READ");
 
-            // wait for cache refresh
-            loopAssert(2, 100, () -> {
-                verifyAccess(HttpMethod.GET, listSnapshotRoute, nonAdminClientKeystorePath, response -> {
-                    assertThat(response).isNotNull();
-                    assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                    ListSnapshotFilesResponse snapshotFiles = response.bodyAsJson(ListSnapshotFilesResponse.class);
-                    List<ListSnapshotFilesResponse.FileInfo> filesToStream =
-                    snapshotFiles.snapshotFilesInfo()
-                                 .stream()
-                                 .filter(info -> info.fileName.endsWith("-Data.db"))
-                                 .sorted(Comparator.comparing(o -> o.fileName))
-                                 .collect(Collectors.toList());
-                    assertThat(filesToStream).isNotNull().isNotEmpty();
-                    componentDownloadUrl[0] = filesToStream.get(0).componentDownloadUrl();
-                });
+            // Wait for cache to expire without accessing it
+            Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
+
+            verifyAccess(HttpMethod.GET, listSnapshotRoute, nonAdminClientKeystorePath, response -> {
+                assertThat(response).isNotNull();
+                assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                ListSnapshotFilesResponse snapshotFiles = response.bodyAsJson(ListSnapshotFilesResponse.class);
+                List<ListSnapshotFilesResponse.FileInfo> filesToStream =
+                snapshotFiles.snapshotFilesInfo()
+                             .stream()
+                             .filter(info -> info.fileName.endsWith("-Data.db"))
+                             .sorted(Comparator.comparing(o -> o.fileName))
+                             .collect(Collectors.toList());
+                assertThat(filesToStream).isNotNull().isNotEmpty();
+                componentDownloadUrl[0] = filesToStream.get(0).componentDownloadUrl();
             });
+
 
             // grant sidecar permission for streaming
             updateSidecarPermission(session,
@@ -499,19 +496,22 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
             // STREAM SSTable request requires both Sidecar SNAPSHOT:STREAM permission and Cassandra's SELECT
             // permission on a table it accesses data.
-            loopAssert(2, 100, () -> {
-                // request denied without SELECT permission
-                verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
-            });
+
+            // Wait for cache to expire without accessing it
+            Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
+
+            // request denied without SELECT permission
+            verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
 
             // grant SELECT permission to non_admin_test_role
             grantTablePermission(session, "multiple_permissions_required_test_keyspace", "test_table", "non_admin_test_role");
         }, sslOptions);
 
-        loopAssert(2, 100, () -> {
-            // request denied without SELECT permission
-            verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
-        });
+        // Wait for cache to expire without accessing it
+        Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
+
+        // request goes through with SELECT permission
+        verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
     }
 
     @Test
@@ -670,7 +670,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     @Test
     void testAuthorizationCaching()
     {
-        SidecarMetrics metrics = sidecarMetrics();
+        SidecarMetrics metrics = serverWrapper.injector.getInstance(SidecarMetrics.class);
 
         CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
 
@@ -688,7 +688,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     @Test
     void testAuthorizationCachingWithPermissionRevocation()
     {
-        SidecarMetrics metrics = sidecarMetrics();
+        SidecarMetrics metrics = serverWrapper.injector.getInstance(SidecarMetrics.class);
 
         CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
 
@@ -718,21 +718,23 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                           "non_admin_cache_revocation_test_keyspace"));
         }, sslOptions);
 
-//        RoleAuthorizationsCache cache = serverWrapper.injector.getInstance(RoleAuthorizationsCache.class);
-//        cache.invalidate("non_admin_test_role");
+        // Wait for cache to expire without accessing it
+        Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
 
-        loopAssert(80, 1000, () -> {
-            verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
-            CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
-            assertThat(callStats.missCount()).isEqualTo(1);
-            assertThat(callStats.hitCount()).isEqualTo(0);
-        });
+        // After cache expires, verify permission revocation takes effect
+        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
+        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
+
+        CacheStats finalCallStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        // After cache expires, we should see a new miss and a hit for subsequent call
+        assertThat(finalCallStats.missCount()).isEqualTo(1);
+        assertThat(finalCallStats.hitCount()).isEqualTo(1);
     }
 
     @Test
     void testAuthorizationCachingForForbiddenRequests()
     {
-        SidecarMetrics metrics = sidecarMetrics();
+        SidecarMetrics metrics = serverWrapper.injector.getInstance(SidecarMetrics.class);
 
         CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
 
@@ -751,7 +753,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     @Test
     void testAdminBypassCaching() throws Exception
     {
-        SidecarMetrics metrics = sidecarMetrics();
+        SidecarMetrics metrics = serverWrapper.injector.getInstance(SidecarMetrics.class);
 
         CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
 
@@ -931,13 +933,6 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
             throw new RuntimeException(e);
         }
         return clientKeystorePath;
-    }
-
-    private SidecarMetrics sidecarMetrics()
-    {
-        MetricRegistryFactory registryFactory
-        = new MetricRegistryFactory("cassandra_sidecar", List.of(), List.of());
-        return new SidecarMetricsImpl(registryFactory, null);
     }
 
     /**
