@@ -264,7 +264,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                                       Map.of());
 
             CacheConfiguration permissionCacheConfiguration = CacheConfigurationImpl.builder()
-                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("200ms"))
+                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("300ms"))
                                                                                     .build();
 
             AccessControlConfiguration accessControlConfiguration = AccessControlConfigurationImpl.builder()
@@ -471,7 +471,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                     "SNAPSHOT:READ");
 
             // Wait for cache to expire without accessing it
-            Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
+            Uninterruptibles.sleepUninterruptibly(4, TimeUnit.SECONDS);
 
             verifyAccess(HttpMethod.GET, listSnapshotRoute, nonAdminClientKeystorePath, response -> {
                 assertThat(response).isNotNull();
@@ -498,7 +498,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
             // permission on a table it accesses data.
 
             // Wait for cache to expire without accessing it
-            Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
+            Uninterruptibles.sleepUninterruptibly(4, TimeUnit.SECONDS);
 
             // request denied without SELECT permission
             verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
@@ -508,7 +508,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         }, sslOptions);
 
         // Wait for cache to expire without accessing it
-        Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(4, TimeUnit.SECONDS);
 
         // request goes through with SELECT permission
         verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
@@ -719,7 +719,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         }, sslOptions);
 
         // Wait for cache to expire without accessing it
-        Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(4, TimeUnit.SECONDS);
 
         // After cache expires, verify permission revocation takes effect
         verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));

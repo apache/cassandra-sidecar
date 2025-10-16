@@ -92,25 +92,7 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         AtomicBoolean ctxNextCalled = new AtomicBoolean(false);
 
         AuthorizationCacheKey key = AuthorizationCacheKey.create(authorizationContext);
-        Boolean authorized = authorizationCache.get(key, k -> {
-            List<String> identities = extractIdentities(user);
-
-            // Admin identities bypass route specific authorization checks
-            if (!identities.isEmpty() && identities.stream().anyMatch(adminIdentityResolver::isAdmin))
-            {
-                return true;
-            }
-
-            super.handle(ctx);
-            if (!ctx.failed())
-            {
-                ctxNextCalled.set(true);
-                long durationNanos = System.nanoTime() - startTimeNanos;
-                authMetrics.authorizationTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
-                return true;
-            }
-            return false;
-        });
+        Boolean authorized = authorizationCache.get(key, k -> isUserAuthorized(ctx, ctxNextCalled, startTimeNanos));
 
         // We avoid calling ctx.next() and ctx.fail() when it is already done during cache value computation
         if (Boolean.TRUE.equals(authorized))
@@ -129,6 +111,14 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         }
     }
 
+    @Override
+    public AuthorizationHandler variableConsumer(BiConsumer<RoutingContext, AuthorizationContext> handler)
+    {
+        this.variableHandler = handler;
+        super.variableConsumer(handler);
+        return this;
+    }
+
     private <K, V> Cache<K, V> initCache()
     {
         CacheConfiguration permissionCacheConfig = accessControlConfiguration.permissionCacheConfiguration();
@@ -136,22 +126,38 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         {
             throw new ConfigurationException("Authorization handler cache must be configured with expireAfterAccess");
         }
-        Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder()
-                                                        .maximumSize(permissionCacheConfig.maximumSize())
-                                                        .recordStats(() -> cacheMetrics);
-        if (permissionCacheConfig.expireAfterAccess() != null)
-        {
-            cacheBuilder.expireAfterAccess(permissionCacheConfig.expireAfterAccess().quantity(),
-                                           permissionCacheConfig.expireAfterAccess().unit());
-        }
-        return cacheBuilder.build();
+        return Caffeine.newBuilder()
+                       .expireAfterAccess(permissionCacheConfig.expireAfterAccess().quantity(),
+                                          permissionCacheConfig.expireAfterAccess().unit())
+                       .maximumSize(permissionCacheConfig.maximumSize())
+                       .recordStats(() -> cacheMetrics)
+                       .build();
     }
 
-    @Override
-    public AuthorizationHandler variableConsumer(BiConsumer<RoutingContext, AuthorizationContext> handler)
+    private boolean isUserAuthorized(RoutingContext ctx, AtomicBoolean ctxNextCalled, long startTimeNanos)
     {
-        this.variableHandler = handler;
-        super.variableConsumer(handler);
-        return this;
+        User user = ctx.user();
+        List<String> identities = extractIdentities(user);
+
+        // Admin identities bypass route specific authorization checks
+        if (isAdmin(identities))
+        {
+            return true;
+        }
+
+        super.handle(ctx);
+        if (!ctx.failed())
+        {
+            ctxNextCalled.set(true);
+            long durationNanos = System.nanoTime() - startTimeNanos;
+            authMetrics.authorizationTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isAdmin(List<String> identities)
+    {
+        return !identities.isEmpty() && identities.stream().anyMatch(adminIdentityResolver::isAdmin);
     }
 }
