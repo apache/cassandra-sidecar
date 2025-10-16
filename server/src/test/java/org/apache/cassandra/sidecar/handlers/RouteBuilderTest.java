@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -52,8 +53,8 @@ import static org.mockito.Mockito.when;
  */
 class RouteBuilderTest
 {
-    MetricRegistryFactory mockRegistryFactory = mock(MetricRegistryFactory.class);
-    SidecarMetrics metrics = new SidecarMetricsImpl(mockRegistryFactory, null);
+    MetricRegistryFactory metricRegistryFactory = new MetricRegistryFactory("cassandra_sidecar", List.of(), List.of());
+    SidecarMetrics metrics = new SidecarMetricsImpl(metricRegistryFactory, null);
 
     @Test
     void testRequiredParameters()
