@@ -38,7 +38,7 @@ public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
     public AuthorizationCacheKeyImpl(User user, MultiMap variables)
     {
         this.roles = extractCassandraRoles(user);
-        // Store a copy, otherwise Cache is not able to identity 2 keys with same values in MultiMap as same.
+        // Store a copy, otherwise Cache is not able to identify 2 keys with same values in MultiMap as same.
         // If MultiMap is modifiable the equality behaviour changes.
         this.variables = MultiMap.caseInsensitiveMultiMap();
         if (variables != null)
