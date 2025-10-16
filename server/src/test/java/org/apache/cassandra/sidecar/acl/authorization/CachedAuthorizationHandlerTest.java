@@ -200,7 +200,7 @@ class CachedAuthorizationHandlerTest
     void testCacheMissDifferentUsers()
     {
         CachedAuthorizationHandler handler
-        = new CachedAuthorizationHandler(mockAccessControlConfig,mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          testAuthorization, metrics);
 
         RoutingContext mockContext1 = createMockContext("user5", "identity5", "role5");
