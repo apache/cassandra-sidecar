@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -46,12 +47,15 @@ import com.google.inject.multibindings.ProvidesIntoMap;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.auth.authorization.Authorization;
+import io.vertx.ext.auth.authorization.AuthorizationProvider;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import org.apache.cassandra.distributed.api.ICluster;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.shared.Uninterruptibles;
+import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -78,6 +82,7 @@ import org.apache.cassandra.sidecar.modules.multibindings.ClassKey;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.MultiBindingTypeResolver;
 import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys;
+import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.testing.MtlsTestHelper;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
@@ -87,15 +92,12 @@ import org.apache.cassandra.sidecar.testing.TemporaryCqlSessionProvider;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 
-import static org.apache.cassandra.sidecar.acl.authorization.CachedAuthorizationHandler.AUTHORIZATION_CACHES;
-import static org.apache.cassandra.sidecar.acl.authorization.CachedAuthorizationHandler.POPULATE_AUTHORIZATION_CACHES_ENV_NAME;
 import static org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema.ROLE_PERMISSIONS_TABLE;
 import static org.apache.cassandra.testing.DriverTestUtils.buildContactPoints;
 import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
 import static org.apache.cassandra.testing.TlsTestUtils.getSSLOptions;
 import static org.apache.cassandra.testing.TlsTestUtils.withAuthenticatedSession;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
-import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -107,6 +109,8 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
     protected static final int MIN_VERSION_WITH_MTLS = 5;
+    static final Set<Cache<?, ?>> AUTHORIZATION_CACHES = ConcurrentHashMap.newKeySet();
+
     private static final String ADMIN_IDENTITY = "spiffe://cassandra/sidecar/admin";
     // CASSANDRA_IDENTITY is only used to configure schemas for test setup, do not use this identity for anything else
     private static final String CASSANDRA_IDENTITY = "spiffe://cassandra/sidecar/cassandra_role";
@@ -268,7 +272,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                                       Map.of());
 
             CacheConfiguration permissionCacheConfiguration = CacheConfigurationImpl.builder()
-                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("300ms"))
+                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("100ms"))
                                                                                     .build();
 
             AccessControlConfiguration accessControlConfiguration = AccessControlConfigurationImpl.builder()
@@ -451,7 +455,6 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     @Test
     void testEndpointRequiringMultipleActions()
     {
-        System.setProperty(POPULATE_AUTHORIZATION_CACHES_ENV_NAME, "true");
         String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot",
                                                    "multiple_permissions_required_test_keyspace", "test_table");
 
@@ -477,21 +480,18 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
             invalidateAuthorizationHandlerCaches();
 
-            // wait for cache refresh
-            loopAssert(4, 100, () -> {
-                verifyAccess(HttpMethod.GET, listSnapshotRoute, nonAdminClientKeystorePath, response -> {
-                    assertThat(response).isNotNull();
-                    assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                    ListSnapshotFilesResponse snapshotFiles = response.bodyAsJson(ListSnapshotFilesResponse.class);
-                    List<ListSnapshotFilesResponse.FileInfo> filesToStream =
-                    snapshotFiles.snapshotFilesInfo()
-                                 .stream()
-                                 .filter(info -> info.fileName.endsWith("-Data.db"))
-                                 .sorted(Comparator.comparing(o -> o.fileName))
-                                 .collect(Collectors.toList());
-                    assertThat(filesToStream).isNotNull().isNotEmpty();
-                    componentDownloadUrl[0] = filesToStream.get(0).componentDownloadUrl();
-                });
+            verifyAccess(HttpMethod.GET, listSnapshotRoute, nonAdminClientKeystorePath, response -> {
+                assertThat(response).isNotNull();
+                assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                ListSnapshotFilesResponse snapshotFiles = response.bodyAsJson(ListSnapshotFilesResponse.class);
+                List<ListSnapshotFilesResponse.FileInfo> filesToStream =
+                snapshotFiles.snapshotFilesInfo()
+                             .stream()
+                             .filter(info -> info.fileName.endsWith("-Data.db"))
+                             .sorted(Comparator.comparing(o -> o.fileName))
+                             .collect(Collectors.toList());
+                assertThat(filesToStream).isNotNull().isNotEmpty();
+                componentDownloadUrl[0] = filesToStream.get(0).componentDownloadUrl();
             });
 
             // grant sidecar permission for streaming
@@ -504,10 +504,9 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
             // STREAM SSTable request requires both Sidecar SNAPSHOT:STREAM permission and Cassandra's SELECT
             // permission on a table it accesses data.
-            loopAssert(4, 100, () -> {
-                // request denied without SELECT permission
-                verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
-            });
+
+            // request denied without SELECT permission
+            verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
 
             // grant SELECT permission to non_admin_test_role
             grantTablePermission(session, "multiple_permissions_required_test_keyspace", "test_table", "non_admin_test_role");
@@ -515,10 +514,8 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
         invalidateAuthorizationHandlerCaches();
 
-        loopAssert(4, 100, () -> {
-            // request denied without SELECT permission
-            verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
-        });
+        // request goes through with SELECT permission
+        verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
     }
 
     @Test
@@ -867,7 +864,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
     private void invalidateAuthorizationHandlerCaches()
     {
-        for (Cache<AuthorizationCacheKey, Boolean> authorizationCache : AUTHORIZATION_CACHES)
+        for (Cache<?, ?> authorizationCache : AUTHORIZATION_CACHES)
         {
             authorizationCache.invalidateAll();
         }
@@ -1000,6 +997,29 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         }
     }
 
+    /**
+     *
+     */
+    static class CollectingCachedAuthorizationHandler extends CachedAuthorizationHandler
+    {
+        public CollectingCachedAuthorizationHandler(AccessControlConfiguration accessControlConfiguration,
+                                                    AuthorizationParameterValidateHandler authZParameterValidateHandler,
+                                                    AdminIdentityResolver adminIdentityResolver,
+                                                    Authorization authorization,
+                                                    SidecarMetrics sidecarMetrics)
+        {
+            super(accessControlConfiguration, authZParameterValidateHandler, adminIdentityResolver, authorization, sidecarMetrics);
+        }
+
+        @Override
+        protected <K, V> Cache<K, V> initCache()
+        {
+            Cache<K, V> cache = super.initCache();
+            AUTHORIZATION_CACHES.add(cache);
+            return cache;
+        }
+    }
+
     static class TestModule extends AbstractModule
     {
         private final MtlsTestHelper mtlsTestHelper;
@@ -1009,6 +1029,23 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         {
             this.mtlsTestHelper = mtlsTestHelper;
             this.cluster = cluster;
+        }
+
+        @Provides
+        @Singleton
+        RouteBuilder.Factory accessProtectedRouteBuilderFactory(SidecarConfiguration sidecarConfiguration,
+                                                                AuthorizationProvider authorizationProvider,
+                                                                AdminIdentityResolver adminIdentityResolver,
+                                                                AuthorizationParameterValidateHandler authorizationParameterValidateHandler,
+                                                                SidecarMetrics metrics)
+        {
+            return new RouteBuilder.Factory(sidecarConfiguration.accessControlConfiguration(), authorizationProvider,
+                                            adminIdentityResolver, authorizationParameterValidateHandler, metrics,
+                                            builder -> new CollectingCachedAuthorizationHandler(builder.accessControlConfiguration,
+                                                                                                builder.authZParameterValidateHandler,
+                                                                                                builder.adminIdentityResolver,
+                                                                                                builder.requiredAuthorization(),
+                                                                                                builder.sidecarMetrics));
         }
 
         @Provides

@@ -40,6 +40,7 @@ import org.apache.cassandra.sidecar.metrics.CacheStatsCounter;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 
 /**
@@ -47,13 +48,19 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
  */
 public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
 {
+    private static final long DEFAULT_CACHE_MAX_SIZE = 100;
     private static final HttpException FORBIDDEN_EXCEPTION = new HttpException(403);
     private final AccessControlConfiguration accessControlConfiguration;
     private final AuthorizationParameterValidateHandler authZParameterValidateHandler;
     private final AdminIdentityResolver adminIdentityResolver;
     private final AuthMetrics authMetrics;
     private final CacheStatsCounter cacheMetrics;
+
+    // CachedAuthorizationHandler is instantiated per route, the authorization cache is created per route.
+    // A global authorization cache is intentionally avoided to prevent unnecessary permission matching overhead.
+    // As each route maintains its own cache, it's important to carefully manage the maximum cache size.
     private final Cache<AuthorizationCacheKey, Boolean> authorizationCache;
+
     // This is overridden since Vert.x does not expose this
     private BiConsumer<RoutingContext, AuthorizationContext> variableHandler;
 
@@ -106,7 +113,7 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         {
             if (!ctx.failed())
             {
-                ctx.fail(403, FORBIDDEN_EXCEPTION);
+                ctx.fail(FORBIDDEN.code(), FORBIDDEN_EXCEPTION);
             }
         }
     }
@@ -119,9 +126,10 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         return this;
     }
 
-    private <K, V> Cache<K, V> initCache()
+    protected <K, V> Cache<K, V> initCache()
     {
         CacheConfiguration permissionCacheConfig = accessControlConfiguration.permissionCacheConfiguration();
+        long cacheMaxSize = permissionCacheConfig.maximumSize() / 2;
         if (permissionCacheConfig.expireAfterAccess() == null)
         {
             throw new ConfigurationException("Authorization handler cache must be configured with expireAfterAccess");
@@ -129,7 +137,7 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         return Caffeine.newBuilder()
                        .expireAfterAccess(permissionCacheConfig.expireAfterAccess().quantity(),
                                           permissionCacheConfig.expireAfterAccess().unit())
-                       .maximumSize(permissionCacheConfig.maximumSize())
+                       .maximumSize(cacheMaxSize <= 0 ? DEFAULT_CACHE_MAX_SIZE : cacheMaxSize)
                        .recordStats(() -> cacheMetrics)
                        .build();
     }
@@ -150,6 +158,7 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         {
             ctxNextCalled.set(true);
             long durationNanos = System.nanoTime() - startTimeNanos;
+            // authorization time recorded here is only taking into account authorizations that are not cached
             authMetrics.authorizationTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
             return true;
         }
