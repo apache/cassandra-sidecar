@@ -44,9 +44,16 @@ public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
         // Vert.x HeadersMultimap and HeadersMultimap.MapEntry does not implement equals or hashCode,
         // hence we store variables in a List
         this.variables = new ArrayList<>();
+        if (variables == null || !variables.iterator().hasNext())
+        {
+            this.hashCode = Objects.hash(this.roles, this.variables);
+            return;
+        }
+
         for (Map.Entry<String, String> entry : variables)
         {
-            this.variables.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
+            // We convert to lower case, since Vert.x Multimap representation is case insensitive for variables stored
+            this.variables.add(new AbstractMap.SimpleEntry<>(entry.getKey().toLowerCase(), entry.getValue()));
         }
         this.hashCode = Objects.hash(this.roles, this.variables);
     }
