@@ -21,6 +21,9 @@ package org.apache.cassandra.sidecar.concurrent;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * A class that provides functionality for a concurrency limiter where implementing consumers can try to acquire a
  * permit before executing an operation, and later releasing the permit when the operation is completed. This
@@ -59,6 +62,7 @@ import java.util.function.IntSupplier;
  */
 public class ConcurrencyLimiter
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConcurrencyLimiter.class);
     private final AtomicInteger permits = new AtomicInteger(0);
     private final IntSupplier concurrencyLimitSupplier;
 
@@ -95,7 +99,14 @@ public class ConcurrencyLimiter
     {
         permits.updateAndGet(current -> {
             int next = current - 1;
-            return Math.max(next, 0);
+            if (next < 0)
+            {
+                // log a warning with stacktrace and reset the acquired permits to 0
+                LOGGER.warn("Over-release detected!", new IllegalStateException("ConcurrencyLimiter permits over-released"));
+                return 0;
+            }
+
+            return next;
         });
     }
 

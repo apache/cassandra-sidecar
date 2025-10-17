@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.adapters.base;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Host;
@@ -54,8 +55,13 @@ public class CassandraAdapter implements ICassandraAdapter
     protected final CQLSessionProvider cqlSessionProvider;
     protected final InetSocketAddress localNativeTransportAddress;
     protected final DriverUtils driverUtils;
-    private final TableSchemaFetcher tableSchemaFetcher;
     private volatile Host host;
+    private final StorageOperations storageOperations;
+    private final ClusterMembershipOperations clusterMembershipOperations;
+    private final TableOperations tableOperations;
+    private final CompactionManagerOperations compactionManagerOperations;
+    private final MetricsOperations metricsOperations;
+    private final CompactionStatsOperations compactionStatsOperations;
 
     public CassandraAdapter(DnsResolver dnsResolver,
                             JmxClient jmxClient,
@@ -69,7 +75,13 @@ public class CassandraAdapter implements ICassandraAdapter
         this.cqlSessionProvider = cqlSessionProvider;
         this.localNativeTransportAddress = localNativeTransportAddress;
         this.driverUtils = driverUtils;
-        this.tableSchemaFetcher = tableSchemaFetcher;
+        this.storageOperations = Objects.requireNonNull(createStorageOperations(dnsResolver, jmxClient), "storageOperations is required");
+        this.clusterMembershipOperations = Objects.requireNonNull(createClusterMembershipOperations(jmxClient), "clusterMembershipOperations is required");
+        this.tableOperations = Objects.requireNonNull(createTableOperations(jmxClient), "tableOperations is required");
+        this.compactionManagerOperations = Objects.requireNonNull(createCompactionManagerOperations(jmxClient), "compactionManagerOperations is required");
+        this.metricsOperations = Objects.requireNonNull(createMetricsOperations(jmxClient, tableSchemaFetcher), "metricsOperations is required");
+        this.compactionStatsOperations = Objects.requireNonNull(createCompactionStatsOperations(storageOperations, metricsOperations,
+                                                                                                compactionManagerOperations), "compactionStatsOperations is required");
     }
 
     /**
@@ -126,14 +138,14 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public StorageOperations storageOperations()
     {
-        return new CassandraStorageOperations(jmxClient, dnsResolver);
+        return storageOperations;
     }
 
     @Override
     @NotNull
     public MetricsOperations metricsOperations()
     {
-        return new CassandraMetricsOperations(jmxClient, tableSchemaFetcher, this);
+        return metricsOperations;
     }
 
     /**
@@ -143,7 +155,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public ClusterMembershipOperations clusterMembershipOperations()
     {
-        return new CassandraClusterMembershipOperations(jmxClient);
+        return clusterMembershipOperations;
     }
 
     /**
@@ -153,7 +165,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public TableOperations tableOperations()
     {
-        return new CassandraTableOperations(jmxClient);
+        return tableOperations;
     }
 
     /**
@@ -163,7 +175,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public CompactionManagerOperations compactionManagerOperations()
     {
-        return new CassandraCompactionManagerOperations(jmxClient);
+        return compactionManagerOperations;
     }
 
     /**
@@ -173,7 +185,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public CompactionStatsOperations compactionStatsOperations()
     {
-        return new CassandraCompactionStatsOperations(storageOperations(), metricsOperations(), compactionManagerOperations());
+        return compactionStatsOperations;
     }
 
     /**
@@ -183,6 +195,45 @@ public class CassandraAdapter implements ICassandraAdapter
     public String toString()
     {
         return "CassandraAdapter" + "@" + Integer.toHexString(hashCode());
+    }
+
+    @NotNull
+    protected StorageOperations createStorageOperations(DnsResolver dnsResolver, JmxClient jmxClient)
+    {
+        return new CassandraStorageOperations(jmxClient, dnsResolver);
+    }
+
+    @NotNull
+    protected ClusterMembershipOperations createClusterMembershipOperations(JmxClient jmxClient)
+    {
+        return new CassandraClusterMembershipOperations(jmxClient);
+    }
+
+    @NotNull
+    protected TableOperations createTableOperations(JmxClient jmxClient)
+    {
+        return new CassandraTableOperations(jmxClient);
+    }
+
+    @NotNull
+    protected CompactionManagerOperations createCompactionManagerOperations(JmxClient jmxClient)
+    {
+        return new CassandraCompactionManagerOperations(jmxClient);
+    }
+
+    @NotNull
+    protected MetricsOperations createMetricsOperations(JmxClient jmxClient,
+                                                        TableSchemaFetcher tableSchemaFetcher)
+    {
+        return new CassandraMetricsOperations(jmxClient, tableSchemaFetcher, this);
+    }
+
+    @NotNull
+    protected CompactionStatsOperations createCompactionStatsOperations(StorageOperations storageOperations,
+                                                                        MetricsOperations metricsOperations,
+                                                                        CompactionManagerOperations compactionManagerOperations)
+    {
+        return new CassandraCompactionStatsOperations(storageOperations, metricsOperations, compactionManagerOperations);
     }
 
     @NotNull

@@ -42,6 +42,7 @@ import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
+import org.apache.cassandra.sidecar.config.LifecycleConfiguration;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.MetricsConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
@@ -115,6 +116,9 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     @JsonProperty("live_migration")
     private LiveMigrationConfiguration liveMigrationConfiguration;
 
+    @JsonProperty("lifecycle")
+    private LifecycleConfiguration lifecycleConfiguration;
+
     public SidecarConfigurationImpl()
     {
         this(builder());
@@ -138,6 +142,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         vertxConfiguration = builder.vertxConfiguration;
         schemaReportingConfiguration = builder.schemaReportingConfiguration;
         liveMigrationConfiguration = builder.liveMigrationConfiguration;
+        lifecycleConfiguration = builder.lifecycleConfiguration;
     }
 
     /**
@@ -301,6 +306,13 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         return liveMigrationConfiguration;
     }
 
+    @Override
+    @JsonProperty("lifecycle")
+    public LifecycleConfiguration lifecycleConfiguration()
+    {
+        return lifecycleConfiguration;
+    }
+
 
     public static SidecarConfigurationImpl readYamlConfiguration(Path yamlConfigurationPath) throws IOException
     {
@@ -413,6 +425,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         private VertxConfiguration vertxConfiguration = new VertxConfigurationImpl();
         private SchemaReportingConfiguration schemaReportingConfiguration = new SchemaReportingConfigurationImpl();
         private LiveMigrationConfiguration liveMigrationConfiguration = new LiveMigrationConfigurationImpl();
+        private LifecycleConfiguration lifecycleConfiguration = new LifecycleConfigurationImpl();
 
         protected Builder()
         {
@@ -604,6 +617,17 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         public Builder liveMigrationConfiguration(LiveMigrationConfiguration liveMigrationConfiguration)
         {
             return update(b -> b.liveMigrationConfiguration = liveMigrationConfiguration);
+        }
+
+        /**
+         * Sets the {@code lifecycleConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param lifecycleConfiguration the {@code lifecycleConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder lifecycleConfiguration(LifecycleConfiguration lifecycleConfiguration)
+        {
+            return update(b -> b.lifecycleConfiguration = lifecycleConfiguration);
         }
 
         /**

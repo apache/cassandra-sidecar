@@ -51,17 +51,18 @@ public class SidecarModules
                        new CdcModule(),
                        new ConfigurationModule(confPath),
                        new CoordinationModule(),
-                       new SchemaReportingModule(),
                        new HealthCheckModule(),
+                       new LifecycleModule(),
+                       new LiveMigrationModule(),
+                       new MultiBindingTypeResolverModule(),
+                       new OpenApiModule(),
                        new RestoreJobModule(),
                        new SchedulingModule(),
+                       new SchemaReportingModule(),
                        new SidecarSchemaModule(),
                        new SSTablesAccessModule(),
                        new TelemetryModule(),
-                       new UtilitiesModule(),
-                       new MultiBindingTypeResolverModule(),
-                       new LiveMigrationModule(),
-                       new OpenApiModule());
+                       new UtilitiesModule());
     }
 
     /**

@@ -36,6 +36,7 @@ public class ServerMetricsImpl implements ServerMetrics
     protected final CacheMetrics cacheMetrics;
     protected final CoordinationMetrics coordinationMetrics;
     protected final CdcMetrics cdcMetrics;
+    protected final AuthMetrics authMetrics;
 
     public ServerMetricsImpl(MetricRegistry metricRegistry)
     {
@@ -49,6 +50,7 @@ public class ServerMetricsImpl implements ServerMetrics
         this.cacheMetrics = new CacheMetrics(metricRegistry);
         this.coordinationMetrics = new CoordinationMetrics(metricRegistry);
         this.cdcMetrics = new CdcMetrics(metricRegistry);
+        this.authMetrics = new AuthMetrics(metricRegistry);
     }
 
     @Override
@@ -97,5 +99,11 @@ public class ServerMetricsImpl implements ServerMetrics
     public CdcMetrics cdc()
     {
         return cdcMetrics;
+    }
+
+    @Override
+    public AuthMetrics auth()
+    {
+        return authMetrics;
     }
 }

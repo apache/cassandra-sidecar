@@ -25,6 +25,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 /**
  * Caches entries from system_auth.identity_to_role table. The table maps valid certificate identities to Cassandra
@@ -39,14 +40,16 @@ public class IdentityToRoleCache extends AuthCache<String, String>
     public IdentityToRoleCache(Vertx vertx,
                                ExecutorPools executorPools,
                                SidecarConfiguration sidecarConfiguration,
-                               SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
+                               SystemAuthDatabaseAccessor systemAuthDatabaseAccessor,
+                               SidecarMetrics sidecarMetrics)
     {
         super(NAME,
               vertx,
               executorPools,
               systemAuthDatabaseAccessor::findRoleFromIdentity,
               systemAuthDatabaseAccessor::findAllIdentityToRoles,
-              sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration());
+              sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
+              sidecarMetrics.server().cache().identityToRoleCacheMetrics);
     }
 
     public boolean containsKey(String identity)

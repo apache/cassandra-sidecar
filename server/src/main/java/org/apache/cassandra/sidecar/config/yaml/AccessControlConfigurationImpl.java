@@ -24,6 +24,7 @@ import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider;
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
@@ -39,8 +40,10 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
     private static final ParameterizedClassConfiguration DEFAULT_AUTHORIZER_CONFIGURATION
     = new ParameterizedClassConfigurationImpl(AllowAllAuthorizationProvider.class.getName(), Collections.emptyMap());
     private static final Set<String> DEFAULT_ADMIN_IDENTITIES = Collections.emptySet();
-    private static final CacheConfiguration DEFAULT_PERMISSION_CACHE_CONFIGURATION =
-    new CacheConfigurationImpl(MillisecondBoundConfiguration.parse("2h"), 1_000);
+    private static final CacheConfiguration DEFAULT_PERMISSION_CACHE_CONFIGURATION = CacheConfigurationImpl.builder()
+                                                                                                           .expireAfterAccess(MillisecondBoundConfiguration.parse("2h"))
+                                                                                                           .maximumSize(1_000)
+                                                                                                           .build();
 
     @JsonProperty(value = "enabled")
     protected final boolean enabled;
@@ -59,21 +62,16 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
 
     public AccessControlConfigurationImpl()
     {
-        this(DEFAULT_ENABLED, DEFAULT_AUTHENTICATORS_CONFIGURATION, DEFAULT_AUTHORIZER_CONFIGURATION,
-             DEFAULT_ADMIN_IDENTITIES, DEFAULT_PERMISSION_CACHE_CONFIGURATION);
+        this(builder());
     }
 
-    public AccessControlConfigurationImpl(boolean enabled,
-                                          List<ParameterizedClassConfiguration> authenticatorsConfiguration,
-                                          ParameterizedClassConfiguration authorizerConfiguration,
-                                          Set<String> adminIdentities,
-                                          CacheConfiguration permissionCacheConfiguration)
+    protected AccessControlConfigurationImpl(Builder builder)
     {
-        this.enabled = enabled;
-        this.authenticatorsConfiguration = authenticatorsConfiguration;
-        this.authorizerConfiguration = authorizerConfiguration;
-        this.adminIdentities = adminIdentities;
-        this.permissionCacheConfiguration = permissionCacheConfiguration;
+        enabled = builder.enabled;
+        authenticatorsConfiguration = builder.authenticatorsConfiguration;
+        authorizerConfiguration = builder.authorizerConfiguration;
+        adminIdentities = builder.adminIdentities;
+        permissionCacheConfiguration = builder.permissionCacheConfiguration;
     }
 
     /**
@@ -124,5 +122,98 @@ public class AccessControlConfigurationImpl implements AccessControlConfiguratio
     public CacheConfiguration permissionCacheConfiguration()
     {
         return permissionCacheConfiguration;
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    /**
+     * {@code AccessControlConfigurationImpl} builder static inner class.
+     */
+    public static class Builder implements DataObjectBuilder<Builder, AccessControlConfigurationImpl>
+    {
+        private boolean enabled = DEFAULT_ENABLED;
+        private List<ParameterizedClassConfiguration> authenticatorsConfiguration = DEFAULT_AUTHENTICATORS_CONFIGURATION;
+        private ParameterizedClassConfiguration authorizerConfiguration = DEFAULT_AUTHORIZER_CONFIGURATION;
+        private Set<String> adminIdentities = DEFAULT_ADMIN_IDENTITIES;
+        private CacheConfiguration permissionCacheConfiguration = DEFAULT_PERMISSION_CACHE_CONFIGURATION;
+
+        private Builder()
+        {
+        }
+
+        @Override
+        public Builder self()
+        {
+            return this;
+        }
+
+        /**
+         * Sets the {@code enabled} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param enabled the {@code enabled} to set
+         * @return a reference to this Builder
+         */
+        public Builder enabled(boolean enabled)
+        {
+            return update(b -> b.enabled = enabled);
+        }
+
+        /**
+         * Sets the {@code authenticatorsConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param authenticatorsConfiguration the {@code authenticatorsConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder authenticatorsConfiguration(List<ParameterizedClassConfiguration> authenticatorsConfiguration)
+        {
+            return update(b -> b.authenticatorsConfiguration = authenticatorsConfiguration);
+        }
+
+        /**
+         * Sets the {@code authorizerConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param authorizerConfiguration the {@code authorizerConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder authorizerConfiguration(ParameterizedClassConfiguration authorizerConfiguration)
+        {
+            return update(b -> b.authorizerConfiguration = authorizerConfiguration);
+        }
+
+        /**
+         * Sets the {@code adminIdentities} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param adminIdentities the {@code adminIdentities} to set
+         * @return a reference to this Builder
+         */
+        public Builder adminIdentities(Set<String> adminIdentities)
+        {
+            return update(b -> b.adminIdentities = adminIdentities);
+        }
+
+        /**
+         * Sets the {@code permissionCacheConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param permissionCacheConfiguration the {@code permissionCacheConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder permissionCacheConfiguration(CacheConfiguration permissionCacheConfiguration)
+        {
+            return update(b -> b.permissionCacheConfiguration = permissionCacheConfiguration);
+        }
+
+        /**
+         * Returns a {@code AccessControlConfigurationImpl} built from the parameters previously set.
+         *
+         * @return a {@code AccessControlConfigurationImpl} built with parameters of this {@code AccessControlConfigurationImpl.Builder}
+         */
+        @Override
+        public AccessControlConfigurationImpl build()
+        {
+            return new AccessControlConfigurationImpl(this);
+        }
     }
 }

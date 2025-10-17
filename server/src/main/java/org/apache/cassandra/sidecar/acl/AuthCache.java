@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.acl;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -33,7 +34,9 @@ import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
+import org.apache.cassandra.sidecar.metrics.CacheStatsCounter;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
@@ -51,6 +54,7 @@ public abstract class AuthCache<K, V>
     private final Function<K, V> loadFunction;
     private final Supplier<Map<K, V>> bulkLoadFunction;
     private final CacheConfiguration config;
+    private final CacheStatsCounter cacheMetrics;
     private final TaskExecutorPool internalPool;
     // cache is null when AuthCache is disabled
     private volatile LoadingCache<K, V> cache;
@@ -61,7 +65,8 @@ public abstract class AuthCache<K, V>
                         ExecutorPools executorPools,
                         Function<K, V> loadFunction,
                         Supplier<Map<K, V>> bulkLoadFunction,
-                        CacheConfiguration cacheConfiguration)
+                        CacheConfiguration cacheConfiguration,
+                        CacheStatsCounter cacheMetrics)
     {
         this.name = name;
         this.vertx = vertx;
@@ -69,6 +74,7 @@ public abstract class AuthCache<K, V>
         this.loadFunction = loadFunction;
         this.bulkLoadFunction = bulkLoadFunction;
         this.config = cacheConfiguration;
+        this.cacheMetrics = Objects.requireNonNull(cacheMetrics, "cacheMetrics is required");
 
         if (this.config.enabled())
         {
@@ -119,15 +125,40 @@ public abstract class AuthCache<K, V>
         return Collections.unmodifiableMap(cache.asMap());
     }
 
+    /**
+     * Invalidate a key.
+     * @param k key to invalidate
+     */
+    public void invalidate(K k)
+    {
+        if (cache != null)
+        {
+            cache.invalidate(k);
+            logger.info("Cache entry with key={} has been invalidated", k);
+        }
+    }
+
     private LoadingCache<K, V> initCache()
     {
-        return Caffeine.newBuilder()
-                       // setting refreshAfterWrite and expireAfterWrite to same value makes sure no stale
-                       // data is fetched after expire time
-                       .refreshAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
-                       .expireAfterWrite(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit())
-                       .maximumSize(config.maximumSize())
-                       .build(loadFunction::apply);
+        if (config.refreshAfterWrite() == null && config.expireAfterAccess() == null)
+        {
+            throw new ConfigurationException(name +
+                                             " must be configured with either refreshAfterWrite or expireAfterAccess");
+        }
+
+        Caffeine<Object, Object> cacheBuilder
+        = Caffeine.newBuilder()
+                  .recordStats(() -> cacheMetrics)
+                  .maximumSize(config.maximumSize());
+        if (config.refreshAfterWrite() != null)
+        {
+            cacheBuilder.refreshAfterWrite(config.refreshAfterWrite().quantity(), config.refreshAfterWrite().unit());
+        }
+        if (config.expireAfterAccess() != null)
+        {
+            cacheBuilder.expireAfterAccess(config.expireAfterAccess().quantity(), config.expireAfterAccess().unit());
+        }
+        return cacheBuilder.build(loadFunction::apply);
     }
 
     private void configureSidecarServerEventListener()

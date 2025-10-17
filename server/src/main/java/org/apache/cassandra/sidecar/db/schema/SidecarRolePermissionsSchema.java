@@ -30,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class SidecarRolePermissionsSchema extends TableSchema
 {
-    private static final String ROLE_PERMISSIONS_TABLE = "role_permissions_v1";
+    public static final String ROLE_PERMISSIONS_TABLE = "role_permissions_v1";
 
     private final SchemaKeyspaceConfiguration keyspaceConfig;
 

@@ -21,7 +21,16 @@ package org.apache.cassandra.sidecar.metrics;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.AfterEach;
@@ -30,6 +39,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.codahale.metrics.DefaultSettableGauge;
+import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.NoopMetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
@@ -55,6 +65,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class FilteringMetricRegistryTest
 {
     private static final MetricRegistry NO_OP_METRIC_REGISTRY = new NoopMetricRegistry();
+    private static final List<BiConsumer<FilteringMetricRegistry, String>> METRIC_REGISTRY_STRING_BI_CONSUMER = List.of(
+    (r, metricName) -> r.register(metricName, new ThroughputMeter()),
+    FilteringMetricRegistry::meter,
+    FilteringMetricRegistry::gauge,
+    FilteringMetricRegistry::counter,
+    FilteringMetricRegistry::histogram,
+    FilteringMetricRegistry::timer
+    );
     @TempDir
     private Path confPath;
 
@@ -242,5 +260,186 @@ class FilteringMetricRegistryTest
                   waitUntilCheck.flag();
                   context.completeNow();
               });
+    }
+
+    @Test
+    void testGetMetrics()
+    {
+        FilteringMetricRegistry registry = new FilteringMetricRegistry(s -> s.endsWith("Include"));
+
+        registry.gauge("gaugeInclude", () -> new DefaultSettableGauge<>(0L));
+        assertThat(registry.getMetrics()).hasSize(1)
+                                         .containsKey("gaugeInclude");
+        assertThat(registry.getIncludedMetrics()).hasSize(1)
+                                                 .containsKey("gaugeInclude");
+        registry.gauge("gaugeIgnore", () -> new DefaultSettableGauge<>(1L));
+        assertThat(registry.getMetrics()).hasSize(2)
+                                         .containsKey("gaugeIgnore");
+        assertThat(registry.getIncludedMetrics()).hasSize(1)
+                                                 .containsKey("gaugeInclude");
+
+        registry.counter("counterInclude");
+        assertThat(registry.getMetrics()).hasSize(3)
+                                         .containsKey("counterInclude");
+        assertThat(registry.getIncludedMetrics()).hasSize(2)
+                                                 .containsKey("counterInclude");
+        registry.counter("counterIgnore");
+        assertThat(registry.getMetrics()).hasSize(4)
+                                         .containsKey("counterIgnore");
+        assertThat(registry.getIncludedMetrics()).hasSize(2)
+                                                 .containsKey("counterInclude");
+
+        registry.histogram("histogramInclude");
+        assertThat(registry.getMetrics()).hasSize(5)
+                                         .containsKey("histogramInclude");
+        assertThat(registry.getIncludedMetrics()).hasSize(3)
+                                                 .containsKey("histogramInclude");
+        registry.histogram("histogramIgnore");
+        assertThat(registry.getMetrics()).hasSize(6)
+                                         .containsKey("histogramIgnore");
+        assertThat(registry.getIncludedMetrics()).hasSize(3)
+                                                 .containsKey("histogramInclude");
+
+        registry.meter("meterInclude");
+        assertThat(registry.getMetrics()).hasSize(7)
+                                         .containsKey("meterInclude");
+        assertThat(registry.getIncludedMetrics()).hasSize(4)
+                                                 .containsKey("meterInclude");
+        registry.meter("meterIgnore");
+        assertThat(registry.getMetrics()).hasSize(8)
+                                         .containsKey("meterIgnore");
+        assertThat(registry.getIncludedMetrics()).hasSize(4)
+                                                 .containsKey("meterInclude");
+
+        registry.timer("timerInclude");
+        assertThat(registry.getMetrics()).hasSize(9)
+                                         .containsKey("timerInclude");
+        assertThat(registry.getIncludedMetrics()).hasSize(5)
+                                                 .containsKey("timerInclude");
+        registry.timer("timerIgnore");
+        assertThat(registry.getMetrics()).hasSize(10)
+                                         .containsKey("timerIgnore");
+        assertThat(registry.getIncludedMetrics()).hasSize(5)
+                                                 .containsKey("timerInclude");
+
+        registry.register("throughputInclude", new ThroughputMeter());
+        assertThat(registry.getMetrics()).hasSize(11)
+                                         .containsKey("throughputInclude");
+        assertThat(registry.getIncludedMetrics()).hasSize(6)
+                                                 .containsKey("throughputInclude");
+        registry.register("throughputIgnore", new ThroughputMeter());
+        assertThat(registry.getMetrics()).hasSize(12)
+                                         .containsKey("throughputIgnore");
+        assertThat(registry.getIncludedMetrics()).hasSize(6)
+                                                 .containsKey("throughputInclude");
+    }
+
+    @Test
+    void testGetMetricsWithConcurrentRegistration() throws InterruptedException
+    {
+        FilteringMetricRegistry registry = new FilteringMetricRegistry(s -> s.endsWith("odd"));
+
+        // Let's get some concurrent updates to the registry
+        int nThreads = 100;
+        ExecutorService pool = Executors.newFixedThreadPool(nThreads);
+        CountDownLatch latch = new CountDownLatch(nThreads);
+        for (int i = 0; i < nThreads; i++)
+        {
+            int finalI = i;
+            pool.submit(() -> {
+                try
+                {
+                    String metricName = "metric_" + finalI + "_" + ((finalI % 2 == 0) ? "even" : "odd");
+                    BiConsumer<FilteringMetricRegistry, String> biConsumer = registerRandomMetric();
+                    // Invoke register roughly at the same time
+                    latch.countDown();
+                    latch.await();
+
+                    biConsumer.accept(registry, metricName);
+                    assertThat(registry.getMetrics()).isNotEmpty();
+                }
+                catch (InterruptedException e)
+                {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+
+        pool.shutdown();
+        assertThat(pool.awaitTermination(1, TimeUnit.MINUTES)).isTrue();
+
+        // Let's make sure that all metrics are returned
+        Map<String, Metric> allMetrics = registry.getMetrics();
+        assertThat(allMetrics).hasSize(nThreads);
+        assertThat(registry.getIncludedMetrics()).as("Our filter filters out half of the metrics, so we expect this value to be half")
+                                                 .hasSize(nThreads / 2);
+
+        // Validate that all metric names are in the set of all metric names
+        Set<String> allMetricNames = allMetrics.keySet();
+        for (int i = 0; i < nThreads; i++)
+        {
+            String expectedMetricName = "metric_" + i + "_" + ((i % 2 == 0) ? "even" : "odd");
+            assertThat(allMetricNames).as("Expected metric %s", expectedMetricName).contains(expectedMetricName);
+        }
+    }
+
+    @Test
+    void testGetMetricsWithConcurrentRegistrationAndRemoval() throws InterruptedException
+    {
+        FilteringMetricRegistry registry = new FilteringMetricRegistry(s -> {
+            int lastIndexOfUnderscore = s.lastIndexOf("_") + 1;
+            int i = Integer.parseInt(s.substring(lastIndexOfUnderscore));
+            return i % 4 != 0;
+        });
+
+        int nThreads = 100;
+
+        // First populate the registry
+        for (int i = 0; i < nThreads; i++)
+        {
+            String registryName = "testMetricThroughputMeter_" + i;
+            registry.register(registryName, new ThroughputMeter());
+            assertThat(registry.getMetrics()).hasSize(i + 1);
+        }
+
+        // Let's get some concurrent removals to the registry
+        ExecutorService pool = Executors.newFixedThreadPool(nThreads);
+        CountDownLatch latch = new CountDownLatch(nThreads);
+        for (int i = 0; i < nThreads; i++)
+        {
+            int finalI = i;
+            pool.submit(() -> {
+                try
+                {
+                    String registryName = "testMetricThroughputMeter_" + finalI;
+                    boolean removeFromRegistry = finalI % 2 == 0;
+                    // Invoke register roughly at the same time
+                    latch.countDown();
+                    latch.await();
+
+                    if (removeFromRegistry)
+                    {
+                        registry.remove(registryName);
+                    }
+                }
+                catch (InterruptedException e)
+                {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+
+        pool.shutdown();
+        assertThat(pool.awaitTermination(1, TimeUnit.MINUTES)).isTrue();
+
+        // Let's make sure that all metrics are returned
+        Map<String, Metric> allMetrics = registry.getMetrics();
+        assertThat(allMetrics).as("About half the metrics are removed").hasSize(nThreads / 2);
+        assertThat(registry.getIncludedMetrics()).hasSize(nThreads / 2);
+    }
+
+    BiConsumer<FilteringMetricRegistry, String> registerRandomMetric()
+    {
+        return METRIC_REGISTRY_STRING_BI_CONSUMER.get(ThreadLocalRandom.current().nextInt(METRIC_REGISTRY_STRING_BI_CONSUMER.size()));
     }
 }

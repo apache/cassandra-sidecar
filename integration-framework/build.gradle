@@ -42,7 +42,7 @@ dependencies {
     api('org.mockito:mockito-inline:4.10.0')
     api("org.assertj:assertj-core:${assertjCoreVersion}")
 
-    api('com.datastax.cassandra:cassandra-driver-core:3.11.3')
+    api('com.datastax.cassandra:cassandra-driver-core:3.11.5')
     implementation("com.google.inject:guice:${guiceVersion}")
 
     implementation("com.google.guava:guava:27.0.1-jre")

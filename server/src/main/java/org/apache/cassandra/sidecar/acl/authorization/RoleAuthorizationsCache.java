@@ -32,6 +32,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SidecarPermissionsDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 /**
  * Caches role and authorizations held by it. Entries from system_auth.role_permissions table in Cassandra and
@@ -51,7 +52,8 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
                                    SidecarConfiguration sidecarConfiguration,
                                    SidecarSchema sidecarSchema,
                                    SystemAuthDatabaseAccessor systemAuthDatabaseAccessor,
-                                   SidecarPermissionsDatabaseAccessor sidecarPermissionsDatabaseAccessor)
+                                   SidecarPermissionsDatabaseAccessor sidecarPermissionsDatabaseAccessor,
+                                   SidecarMetrics sidecarMetrics)
     {
         super(NAME,
               vertx,
@@ -63,7 +65,8 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
                                              loadAuthorizations(systemAuthDatabaseAccessor,
                                                                 sidecarSchema,
                                                                 sidecarPermissionsDatabaseAccessor)),
-              sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration());
+              sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
+              sidecarMetrics.server().cache().rolePermissionsCacheMetrics);
     }
 
     /**

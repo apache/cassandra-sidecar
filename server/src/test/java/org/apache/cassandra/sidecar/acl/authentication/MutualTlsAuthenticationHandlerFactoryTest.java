@@ -26,6 +26,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.codahale.metrics.MetricRegistry;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
@@ -37,6 +38,10 @@ import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
+import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.apache.cassandra.sidecar.acl.authentication.MutualTlsAuthenticationHandlerFactory.CERTIFICATE_IDENTITY_EXTRACTOR_PARAM_KEY;
@@ -50,14 +55,20 @@ import static org.mockito.Mockito.when;
  */
 class MutualTlsAuthenticationHandlerFactoryTest
 {
+    private static final MetricRegistryFactory FACTORY
+    = new MetricRegistryFactory(MutualTlsAuthenticationHandlerFactoryTest.class.getName(),
+                                Collections.emptyList(),
+                                Collections.emptyList());
     Vertx vertx;
     ExecutorPools executorPools;
+    SidecarMetrics sidecarMetrics;
 
     @BeforeEach
     void setup()
     {
         vertx = Vertx.vertx();
         executorPools = createdSharedTestPool(vertx);
+        sidecarMetrics = new SidecarMetricsImpl(FACTORY, null);
     }
 
     @AfterEach
@@ -110,7 +121,9 @@ class MutualTlsAuthenticationHandlerFactoryTest
         when(mockSidecarConfig.accessControlConfiguration()).thenReturn(mockAccessControlConfig);
         SystemAuthDatabaseAccessor mockAccessor = mock(SystemAuthDatabaseAccessor.class);
         MutualTlsAuthenticationHandlerFactory factory = factory(mockSidecarConfig, mockAccessor);
-        assertThatThrownBy(() -> factory.create(vertx, mockAccessControlConfig, parameters))
+        MetricRegistry metricRegistry = new MetricRegistry();
+        AuthMetrics authMetrics = new AuthMetrics(metricRegistry);
+        assertThatThrownBy(() -> factory.create(vertx, mockAccessControlConfig, parameters, authMetrics))
         .isInstanceOf(ConfigurationException.class)
         .hasMessage(expectedErrMsg);
     }
@@ -119,9 +132,9 @@ class MutualTlsAuthenticationHandlerFactoryTest
                                                           SystemAuthDatabaseAccessor mockAccessor)
     {
         IdentityToRoleCache identityToRoleCache
-        = new IdentityToRoleCache(vertx, executorPools, mockSidecarConfig, mockAccessor);
+        = new IdentityToRoleCache(vertx, executorPools, mockSidecarConfig, mockAccessor, sidecarMetrics);
         SuperUserCache superUserCache
-        = new SuperUserCache(vertx, executorPools, mockSidecarConfig, mockAccessor);
+        = new SuperUserCache(vertx, executorPools, mockSidecarConfig, mockAccessor, sidecarMetrics);
         AdminIdentityResolver adminIdentityResolver
         = new AdminIdentityResolver(identityToRoleCache, superUserCache, mockSidecarConfig);
         return new MutualTlsAuthenticationHandlerFactory(identityToRoleCache, adminIdentityResolver);

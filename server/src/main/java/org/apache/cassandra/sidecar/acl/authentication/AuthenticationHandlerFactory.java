@@ -24,6 +24,7 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.impl.AuthenticationHandlerInternal;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 
 /**
  * Factory class for creating {@link AuthenticationHandlerInternal} instances.
@@ -39,10 +40,13 @@ public interface AuthenticationHandlerFactory
      * @param vertx                         instance of Vertx
      * @param accessControlConfiguration    Configuration for creating authentication handler
      * @param parameters                    Parameters for creating {@link AuthenticationHandlerInternal} implementation
+     * @param metrics                       Reference to the AuthMetrics which provide observability into authn / authz
+     *                                      operations.
      * @return a newly created instance of {@link AuthenticationHandlerInternal}.
      * @throws ConfigurationException if handler cannot be created
      */
     AuthenticationHandlerInternal create(Vertx vertx,
                                          AccessControlConfiguration accessControlConfiguration,
-                                         Map<String, String> parameters) throws ConfigurationException;
+                                         Map<String, String> parameters,
+                                         AuthMetrics metrics) throws ConfigurationException;
 }

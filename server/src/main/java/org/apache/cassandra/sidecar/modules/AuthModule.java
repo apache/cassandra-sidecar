@@ -51,6 +51,7 @@ import org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
@@ -114,7 +115,8 @@ public class AuthModule extends AbstractModule
     @KeyClassMapKey(VertxRouteMapKeys.GlobalChainAuthHandlerKey.class)
     VertxRoute chainAuthHandler(Vertx vertx,
                                 SidecarConfiguration sidecarConfiguration,
-                                AuthenticationHandlerFactoryRegistry registry) throws ConfigurationException
+                                AuthenticationHandlerFactoryRegistry registry,
+                                SidecarMetrics sidecarMetrics) throws ConfigurationException
     {
         AccessControlConfiguration accessControlConfiguration = sidecarConfiguration.accessControlConfiguration();
         if (!accessControlConfiguration.enabled())
@@ -141,7 +143,7 @@ public class AuthModule extends AbstractModule
                 throw new RuntimeException(String.format("Implementation for class %s has not been registered",
                                                          config.className()));
             }
-            chainAuthHandler.add(factory.create(vertx, accessControlConfiguration, config.namedParameters()));
+            chainAuthHandler.add(factory.create(vertx, accessControlConfiguration, config.namedParameters(), sidecarMetrics.server().auth()));
         }
 
         return VertxRoute.create(router -> router.route()

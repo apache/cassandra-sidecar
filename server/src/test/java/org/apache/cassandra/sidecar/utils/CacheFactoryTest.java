@@ -56,8 +56,10 @@ class CacheFactoryTest
     {
         fakeTicker = new FakeTicker();
 
-        CacheConfiguration ssTableImportCacheConfiguration =
-        new CacheConfigurationImpl(SSTABLE_IMPORT_EXPIRE_AFTER_ACCESS, SSTABLE_IMPORT_CACHE_MAX_SIZE);
+        CacheConfiguration ssTableImportCacheConfiguration = CacheConfigurationImpl.builder()
+                                                                                   .expireAfterAccess(SSTABLE_IMPORT_EXPIRE_AFTER_ACCESS)
+                                                                                   .maximumSize(SSTABLE_IMPORT_CACHE_MAX_SIZE)
+                                                                                   .build();
 
         SSTableImportConfiguration ssTableImportConfiguration =
         new SSTableImportConfigurationImpl(ssTableImportCacheConfiguration);

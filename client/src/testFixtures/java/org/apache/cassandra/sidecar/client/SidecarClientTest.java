@@ -63,6 +63,8 @@ import org.apache.cassandra.sidecar.client.request.RequestExecutorTest;
 import org.apache.cassandra.sidecar.client.retry.RetryAction;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.CassandraState;
+import org.apache.cassandra.sidecar.common.data.Lifecycle.OperationStatus;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
@@ -81,6 +83,7 @@ import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
+import org.apache.cassandra.sidecar.common.response.LifecycleInfoResponse;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
@@ -1982,6 +1985,50 @@ abstract class SidecarClientTest
         assertThat(result.isCompletedExceptionally()).isTrue();
         assertThat(Files.exists(filePath)).isFalse();
         validateResponseServed(fileUrl);
+    }
+
+    @Test
+    void testNodeLifecycleInfo() throws Exception
+    {
+        String lifecycleInfoResponse = "{\"current_state\":\"RUNNING\",\"desired_state\":\"RUNNING\",\"status\":\"CONVERGED\"," +
+                                      "\"last_update\":\"Instance has started\"}";
+        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(lifecycleInfoResponse);
+        enqueue(response);
+
+        SidecarInstanceImpl sidecarInstance = instances.get(0);
+        LifecycleInfoResponse result = client.nodeLifecycleInfo(sidecarInstance).get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.currentState()).isEqualTo(CassandraState.RUNNING);
+        assertThat(result.desiredState()).isEqualTo(CassandraState.RUNNING);
+        assertThat(result.status()).isEqualTo(OperationStatus.CONVERGED);
+        assertThat(result.lastUpdate()).isEqualTo("Instance has started");
+
+        validateResponseServed(ApiEndpointsV1.LIFECYCLE_ROUTE);
+    }
+
+    @Test
+    void testNodeUpdateLifecycle() throws Exception
+    {
+        String lifecycleUpdateResponse = "{\"current_state\":\"RUNNING\",\"desired_state\":\"STOPPED\",\"status\":\"CONVERGING\"," +
+                "\"last_update\":\"Submitting stop task for instance\"}";
+        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(lifecycleUpdateResponse);
+        enqueue(response);
+
+        SidecarInstanceImpl sidecarInstance = instances.get(0);
+        LifecycleInfoResponse result = client.nodeUpdateLifecycle(sidecarInstance, NodeCommandRequestPayload.State.STOP)
+                .get(30, TimeUnit.SECONDS);
+
+        assertThat(result).isNotNull();
+        assertThat(result.currentState()).isEqualTo(CassandraState.RUNNING);
+        assertThat(result.desiredState()).isEqualTo(CassandraState.STOPPED);
+        assertThat(result.status()).isEqualTo(OperationStatus.CONVERGING);
+        assertThat(result.lastUpdate()).isEqualTo("Submitting stop task for instance");
+
+        validateResponseServed(ApiEndpointsV1.LIFECYCLE_ROUTE, request -> {
+            String requestBody = request.getBody().readUtf8();
+            assertThat(request.getMethod()).isEqualTo("PUT");
+            assertThat(requestBody).isEqualTo("{\"state\":\"stop\"}");
+        });
     }
 
     private void enqueue(MockResponse response)
