@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Add cache for Authorization layer (CASSSIDECAR-357)
  * Avoid creating objects in the CassandraAdapter implementation (CASSSIDECAR-355)
  * Code refactoring for some configuration classes and migrate RoleBasedAuthorizationIntegrationTest to integration-tests (CASSSIDECAR-351)
  * Fix restore job metrics and log adjustments (CASSSIDECAR-350)
