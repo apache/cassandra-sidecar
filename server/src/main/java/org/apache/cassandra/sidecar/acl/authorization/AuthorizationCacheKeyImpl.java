@@ -18,10 +18,11 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import io.vertx.core.MultiMap;
 import io.vertx.ext.auth.User;
@@ -35,15 +36,16 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.extractCassandraRoles
 public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
 {
     private final List<String> roles;
-    private final Map<String, String> variables;
+    private final List<Map.Entry<String, String>> variables;
+    private final int hashCode;
 
     public AuthorizationCacheKeyImpl(User user, MultiMap variables)
     {
         this.roles = extractCassandraRoles(user);
-        // store an immutable copy of variables in a Map
-        this.variables = variables.entries()
-                                  .stream()
-                                  .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+        // Vert.x HeadersMultimap does not implement equals or hashCode, hence we store variables in a List
+        this.variables = new ArrayList<>(variables.size());
+        variables.forEach((key, value) -> this.variables.add(new AbstractMap.SimpleEntry<>(key, value)));
+        this.hashCode = Objects.hash(this.roles, this.variables);
     }
 
     @Override
@@ -64,6 +66,6 @@ public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
     @Override
     public int hashCode()
     {
-        return Objects.hash(roles, variables);
+        return hashCode;
     }
 }
