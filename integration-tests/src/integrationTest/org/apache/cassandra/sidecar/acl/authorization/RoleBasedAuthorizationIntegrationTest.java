@@ -45,6 +45,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.auth.authorization.Authorization;
@@ -744,13 +745,50 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_cache_forbidden_test_keyspace");
 
         // user has GOSSIP:READ permission but not SCHEMA:READ
-        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
-        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
+        WebClient client = trustedClient(nonAdminClientKeystorePath.toString(), mtlsTestHelper.clientKeyStorePassword(),
+                                         mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
+        try
+        {
+            // Start both requests before blocking on either
+            Future<HttpResponse<Buffer>> future1 = client.request(HttpMethod.GET, serverWrapper.serverPort, "127.0.0.1", keyspaceSchemaRoute).send();
+            Future<HttpResponse<Buffer>> future2 = client.request(HttpMethod.GET, serverWrapper.serverPort, "127.0.0.1", keyspaceSchemaRoute).send();
+
+            // Now block on both
+            HttpResponse<Buffer> response1 = getBlocking(future1);
+            HttpResponse<Buffer> response2 = getBlocking(future2);
+
+            assertThat(response1.statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
+            assertThat(response2.statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
+        }
+        finally
+        {
+            client.close();
+        }
 
         // Verify cache stats, 1 hit 1 miss
         CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
         assertThat(callStats.missCount()).isEqualTo(1);
         assertThat(callStats.hitCount()).isEqualTo(1);
+    }
+
+    @Test
+    void testSameUserAccessingDifferentRoutes() throws Exception
+    {
+        SidecarMetrics metrics = serverWrapper.injector.getInstance(SidecarMetrics.class);
+
+        CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
+
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_test_keyspace");
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot-different-access",
+                                                   "grant_table_test_keyspace", "test_table");
+
+        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+        verifyAccess(HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+
+        // Verify cache stats, both miss
+        CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(callStats.missCount()).isEqualTo(2);
+        assertThat(callStats.hitCount()).isEqualTo(0);
     }
 
     @Test
@@ -765,8 +803,25 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         Path clientKeystorePath = mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
                                                                      certificateBuilder.addSanUriName(ADMIN_IDENTITY));
 
-        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, assertStatus(HttpResponseStatus.OK));
-        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, clientKeystorePath, assertStatus(HttpResponseStatus.OK));
+        WebClient client = trustedClient(clientKeystorePath.toString(), mtlsTestHelper.clientKeyStorePassword(),
+                                         mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
+        try
+        {
+            // Start both requests before blocking on either
+            Future<HttpResponse<Buffer>> future1 = client.request(HttpMethod.GET, serverWrapper.serverPort, "127.0.0.1", keyspaceSchemaRoute).send();
+            Future<HttpResponse<Buffer>> future2 = client.request(HttpMethod.GET, serverWrapper.serverPort, "127.0.0.1", keyspaceSchemaRoute).send();
+
+            // Now block on both
+            HttpResponse<Buffer> response1 = getBlocking(future1);
+            HttpResponse<Buffer> response2 = getBlocking(future2);
+
+            assertThat(response1.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+            assertThat(response2.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+        }
+        finally
+        {
+            client.close();
+        }
 
         // Verify cache stats, 1 hit 1 miss
         CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
