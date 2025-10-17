@@ -699,17 +699,14 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_cache_revocation_test_keyspace");
 
-        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+        WebClient client = trustedClient(nonAdminClientKeystorePath.toString(), mtlsTestHelper.clientKeyStorePassword(),
+                                         mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
 
-        CacheStats firstCallStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
-        assertThat(firstCallStats.missCount()).isEqualTo(1);
-        assertThat(firstCallStats.hitCount()).isEqualTo(0);
+        createMultipleRequests(client, HttpMethod.GET, keyspaceSchemaRoute, 2, HttpResponseStatus.OK.code());
 
-        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
-
-        CacheStats secondCallStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
-        assertThat(secondCallStats.missCount()).isEqualTo(0);
-        assertThat(secondCallStats.hitCount()).isEqualTo(1);
+        CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(callStats.missCount()).isEqualTo(1);
+        assertThat(callStats.hitCount()).isEqualTo(1);
 
         // Revoke permission
         Path clientKeystorePath = cassandraIdentityClientKeyStore();
@@ -725,9 +722,15 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
         invalidateAuthorizationHandlerCaches();
 
-        // After cache expires, verify permission revocation takes effect
-        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
-        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
+        try
+        {
+            // After cache expires, verify permission revocation takes effect
+            createMultipleRequests(client, HttpMethod.GET, keyspaceSchemaRoute, 2, HttpResponseStatus.FORBIDDEN.code());
+        }
+        finally
+        {
+            client.close();
+        }
 
         CacheStats finalCallStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
         // After cache expires, we should see a new miss and a hit for subsequent call
@@ -747,18 +750,10 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         // user has GOSSIP:READ permission but not SCHEMA:READ
         WebClient client = trustedClient(nonAdminClientKeystorePath.toString(), mtlsTestHelper.clientKeyStorePassword(),
                                          mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
+
         try
         {
-            // Start both requests before blocking on either
-            Future<HttpResponse<Buffer>> future1 = client.request(HttpMethod.GET, serverWrapper.serverPort, "127.0.0.1", keyspaceSchemaRoute).send();
-            Future<HttpResponse<Buffer>> future2 = client.request(HttpMethod.GET, serverWrapper.serverPort, "127.0.0.1", keyspaceSchemaRoute).send();
-
-            // Now block on both
-            HttpResponse<Buffer> response1 = getBlocking(future1);
-            HttpResponse<Buffer> response2 = getBlocking(future2);
-
-            assertThat(response1.statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
-            assertThat(response2.statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
+            createMultipleRequests(client, HttpMethod.GET, keyspaceSchemaRoute, 2, HttpResponseStatus.FORBIDDEN.code());
         }
         finally
         {
@@ -807,16 +802,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                          mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
         try
         {
-            // Start both requests before blocking on either
-            Future<HttpResponse<Buffer>> future1 = client.request(HttpMethod.GET, serverWrapper.serverPort, "127.0.0.1", keyspaceSchemaRoute).send();
-            Future<HttpResponse<Buffer>> future2 = client.request(HttpMethod.GET, serverWrapper.serverPort, "127.0.0.1", keyspaceSchemaRoute).send();
-
-            // Now block on both
-            HttpResponse<Buffer> response1 = getBlocking(future1);
-            HttpResponse<Buffer> response2 = getBlocking(future2);
-
-            assertThat(response1.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-            assertThat(response2.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+            createMultipleRequests(client, HttpMethod.GET, keyspaceSchemaRoute, 2, HttpResponseStatus.OK.code());
         }
         finally
         {
@@ -948,6 +934,28 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     private HttpResponse<Buffer> createRequest(WebClient client, HttpMethod method, String route)
     {
         return getBlocking(client.request(method, serverWrapper.serverPort, "127.0.0.1", route).send());
+    }
+
+    private void createMultipleRequests(WebClient client, HttpMethod method, String route, int times,
+                                        int expectedResponseCode)
+    {
+        List<Future<HttpResponse<Buffer>>> futures = new ArrayList<>();
+        for (int i = 0; i < times; i++)
+        {
+            futures.add(createUnblockingRequest(client, method, route));
+        }
+
+        // Now block for response
+        for (int i = 0; i < times; i++)
+        {
+            HttpResponse<Buffer> response = getBlocking(futures.get(i));
+            assertThat(response.statusCode()).isEqualTo(expectedResponseCode);
+        }
+    }
+
+    private Future<HttpResponse<Buffer>> createUnblockingRequest(WebClient client, HttpMethod method, String route)
+    {
+        return client.request(method, serverWrapper.serverPort, "127.0.0.1", route).send();
     }
 
     private void configureAdminAndSidecarIdentity(IInstance instance)

@@ -19,10 +19,12 @@
 package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 
 import io.vertx.ext.auth.User;
 
@@ -35,7 +37,8 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.extractCassandraRoles
 public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
 {
     private final List<String> roles;
-    private final List<Map.Entry<String, String>> variables;
+    // We use MultiSet instead of a List here, when entries are extracted from MultiMap, they need not be in order
+    private final Multiset<Map.Entry<String, String>> variables;
     private final int hashCode;
 
     public AuthorizationCacheKeyImpl(User user, Iterable<Map.Entry<String, String>> variables)
@@ -43,7 +46,7 @@ public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
         this.roles = extractCassandraRoles(user);
         // Vert.x HeadersMultimap and HeadersMultimap.MapEntry does not implement equals or hashCode,
         // hence we store variables in a List
-        this.variables = new ArrayList<>();
+        this.variables = HashMultiset.create();
         if (variables == null || !variables.iterator().hasNext())
         {
             this.hashCode = Objects.hash(this.roles, this.variables);
