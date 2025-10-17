@@ -19,11 +19,15 @@
 package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
-import com.github.benmanes.caffeine.cache.Cache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authorization.Authorization;
@@ -48,6 +52,7 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
  */
 public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CachedAuthorizationHandler.class);
     private static final long DEFAULT_CACHE_MAX_SIZE = 100;
     private static final HttpException FORBIDDEN_EXCEPTION = new HttpException(403);
     private final AccessControlConfiguration accessControlConfiguration;
@@ -59,7 +64,7 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
     // CachedAuthorizationHandler is instantiated per route, the authorization cache is created per route.
     // A global authorization cache is intentionally avoided to prevent unnecessary permission matching overhead.
     // As each route maintains its own cache, it's important to carefully manage the maximum cache size.
-    private final Cache<AuthorizationCacheKey, Boolean> authorizationCache;
+    private final AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache;
 
     // This is overridden since Vert.x does not expose this
     private BiConsumer<RoutingContext, AuthorizationContext> variableHandler;
@@ -99,23 +104,38 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         AtomicBoolean ctxNextCalled = new AtomicBoolean(false);
 
         AuthorizationCacheKey key = AuthorizationCacheKey.create(authorizationContext);
-        Boolean authorized = authorizationCache.get(key, k -> isUserAuthorized(ctx, ctxNextCalled, startTimeNanos));
 
-        // We avoid calling ctx.next() and ctx.fail() when it is already done during cache value computation
-        if (Boolean.TRUE.equals(authorized))
-        {
-            if (!ctxNextCalled.get())
+        CompletableFuture<Boolean> authorizationFuture = authorizationCache.get(key,
+            k -> isUserAuthorized(ctx, ctxNextCalled, startTimeNanos)
+        );
+
+        authorizationFuture.whenComplete((authorized, throwable) -> {
+            if (throwable != null)
             {
-                ctx.next();
+                LOGGER.error("Error encountered during authorization cache computation", throwable);
+                if (!ctx.failed())
+                {
+                    ctx.fail(FORBIDDEN.code(), FORBIDDEN_EXCEPTION);
+                }
+                return;
             }
-        }
-        else
-        {
-            if (!ctx.failed())
+
+            // We avoid calling ctx.next() and ctx.fail() when it is already done during cache value computation
+            if (Boolean.TRUE.equals(authorized))
             {
-                ctx.fail(FORBIDDEN.code(), FORBIDDEN_EXCEPTION);
+                if (!ctxNextCalled.get())
+                {
+                    ctx.next();
+                }
             }
-        }
+            else
+            {
+                if (!ctx.failed())
+                {
+                    ctx.fail(FORBIDDEN.code(), FORBIDDEN_EXCEPTION);
+                }
+            }
+        });
     }
 
     @Override
@@ -126,7 +146,7 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         return this;
     }
 
-    protected <K, V> Cache<K, V> initCache()
+    protected <K, V> AsyncCache<K, V> initCache()
     {
         CacheConfiguration permissionCacheConfig = accessControlConfiguration.permissionCacheConfiguration();
         long cacheMaxSize = permissionCacheConfig.maximumSize() / 2;
@@ -139,7 +159,7 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
                                           permissionCacheConfig.expireAfterAccess().unit())
                        .maximumSize(cacheMaxSize <= 0 ? DEFAULT_CACHE_MAX_SIZE : cacheMaxSize)
                        .recordStats(() -> cacheMetrics)
-                       .build();
+                       .buildAsync();
     }
 
     private boolean isUserAuthorized(RoutingContext ctx, AtomicBoolean ctxNextCalled, long startTimeNanos)
@@ -167,6 +187,17 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
 
     private boolean isAdmin(List<String> identities)
     {
-        return !identities.isEmpty() && identities.stream().anyMatch(adminIdentityResolver::isAdmin);
+        if (identities.isEmpty())
+        {
+            return false;
+        }
+        for (String identity : identities)
+        {
+            if (adminIdentityResolver.isAdmin(identity))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

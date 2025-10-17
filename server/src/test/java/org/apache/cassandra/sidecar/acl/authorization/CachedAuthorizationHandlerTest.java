@@ -47,6 +47,7 @@ import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 
 import static org.apache.cassandra.sidecar.utils.AuthUtils.CASSANDRA_ROLES_ATTRIBUTE_NAME;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -211,7 +212,7 @@ class CachedAuthorizationHandlerTest
 
         handler.handle(mockContext2);
 
-        verify(mockContext2).next();
+        loopAssert(2, 100, () -> verify(mockContext2).next());
 
         // Verify cache miss for different user
         CacheStats differentUserStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
@@ -384,11 +385,11 @@ class CachedAuthorizationHandlerTest
 
         if (success)
         {
-            verify(mockContext).next();
+            loopAssert(2, 100, () -> verify(mockContext).next());
         }
         else
         {
-            verify(mockContext, times(1)).fail(eq(statusCode), any(Throwable.class));
+            loopAssert(2, 100, () -> verify(mockContext, times(1)).fail(eq(statusCode), any(Throwable.class)));
         }
 
         // Verify cache miss on first admin request
@@ -407,11 +408,11 @@ class CachedAuthorizationHandlerTest
 
         if (success)
         {
-            verify(mockContext, times(6)).next();
+            loopAssert(2, 100, () -> verify(mockContext, times(6)).next());
         }
         else
         {
-            verify(mockContext, times(6)).fail(eq(statusCode), any(Throwable.class));
+            loopAssert(2, 100, () -> verify(mockContext, times(6)).fail(eq(statusCode), any(Throwable.class)));
         }
 
         // Verify cache hit on subsequent requests

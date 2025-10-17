@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.AuthenticationException;
-import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -110,7 +110,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
     protected static final int MIN_VERSION_WITH_MTLS = 5;
-    static final Set<Cache<?, ?>> AUTHORIZATION_CACHES = ConcurrentHashMap.newKeySet();
+    static final Set<AsyncCache<?, ?>> AUTHORIZATION_CACHES = ConcurrentHashMap.newKeySet();
 
     private static final String ADMIN_IDENTITY = "spiffe://cassandra/sidecar/admin";
     // CASSANDRA_IDENTITY is only used to configure schemas for test setup, do not use this identity for anything else
@@ -681,8 +681,16 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
         String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_test_keyspace");
 
-        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
-        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+        WebClient client = trustedClient(nonAdminClientKeystorePath.toString(), mtlsTestHelper.clientKeyStorePassword(),
+                                         mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
+        try
+        {
+            createMultipleRequests(client, HttpMethod.GET, keyspaceSchemaRoute, 2, HttpResponseStatus.OK.code());
+        }
+        finally
+        {
+            client.close();
+        }
 
         // Verify cache stats, 1 hit 1 miss
         CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
@@ -905,9 +913,9 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
     private void invalidateAuthorizationHandlerCaches()
     {
-        for (Cache<?, ?> authorizationCache : AUTHORIZATION_CACHES)
+        for (AsyncCache<?, ?> authorizationCache : AUTHORIZATION_CACHES)
         {
-            authorizationCache.invalidateAll();
+            authorizationCache.synchronous().invalidateAll();
         }
     }
 
@@ -1061,7 +1069,8 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     }
 
     /**
-     *
+     * {@link CollectingCachedAuthorizationHandler} collects authorization caches across routes for invalidating during
+     * tests
      */
     static class CollectingCachedAuthorizationHandler extends CachedAuthorizationHandler
     {
@@ -1075,9 +1084,9 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         }
 
         @Override
-        protected <K, V> Cache<K, V> initCache()
+        protected <K, V> AsyncCache<K, V> initCache()
         {
-            Cache<K, V> cache = super.initCache();
+            AsyncCache<K, V> cache = super.initCache();
             AUTHORIZATION_CACHES.add(cache);
             return cache;
         }
