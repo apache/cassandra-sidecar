@@ -18,13 +18,11 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
-import java.util.AbstractMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Multiset;
+import java.util.Set;
 
 import io.vertx.ext.auth.User;
 
@@ -37,16 +35,15 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.extractCassandraRoles
 public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
 {
     private final List<String> roles;
-    // We use MultiSet instead of a List here, when entries are extracted from MultiMap, they need not be in order
-    private final Multiset<Map.Entry<String, String>> variables;
+    private final Set<String> variables;
     private final int hashCode;
 
     public AuthorizationCacheKeyImpl(User user, Iterable<Map.Entry<String, String>> variables)
     {
         this.roles = extractCassandraRoles(user);
         // Vert.x HeadersMultimap and HeadersMultimap.MapEntry does not implement equals or hashCode,
-        // hence we store variables in a List
-        this.variables = HashMultiset.create();
+        // hence we store flattened variables in a Set
+        this.variables = new HashSet<>();
         if (variables == null || !variables.iterator().hasNext())
         {
             this.hashCode = Objects.hash(this.roles, this.variables);
@@ -56,7 +53,7 @@ public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
         for (Map.Entry<String, String> entry : variables)
         {
             // We convert to lower case, since Vert.x Multimap representation is case insensitive for variables stored
-            this.variables.add(new AbstractMap.SimpleEntry<>(entry.getKey().toLowerCase(), entry.getValue()));
+            this.variables.add(entry.getKey().toLowerCase() + ":" +entry.getValue());
         }
         this.hashCode = Objects.hash(this.roles, this.variables);
     }

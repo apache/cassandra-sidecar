@@ -193,10 +193,10 @@ class AuthorizationCacheKeyImplTest
 
         MultiMap variables1 = MultiMap.caseInsensitiveMultiMap()
                                       .add("keyspace", "ks1")
-                                      .add("keyspace", "ks2");
+                                      .add("keyspace", "ks1");
         MultiMap variables2 = MultiMap.caseInsensitiveMultiMap()
                                       .add("keyspace", "ks1")
-                                      .add("keyspace", "ks2");
+                                      .add("keyspace", "ks1");
 
         AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables1);
         AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, variables2);
