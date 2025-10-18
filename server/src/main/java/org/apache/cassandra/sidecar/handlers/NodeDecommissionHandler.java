@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.job.NodeDecommissionJob;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.OperationalJobUtils;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
@@ -84,7 +85,11 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
         NodeDecommissionJob job = new NodeDecommissionJob(UUIDs.timeBased(), operations, isForce);
-        handleOperationalJob(this.jobManager, this.config, context, job);
+        this.jobManager.trySubmitJob(job,
+                                     (completedJob, exception) ->
+                                     OperationalJobUtils.sendStatusBasedResponse(context, completedJob, exception),
+                                     executorPools.service(),
+                                     config.operationalJobExecutionMaxWaitTime());
     }
 
     /**

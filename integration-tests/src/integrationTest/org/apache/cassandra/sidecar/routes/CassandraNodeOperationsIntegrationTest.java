@@ -85,6 +85,56 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
             assertThat(streamStats).isNotNull();
             assertThat(streamStats.getString("operationMode")).isEqualTo("DRAINED");
         });
+
+        // Validate the operational job status using the OperationalJobHandler
+        String jobId = responseBody.getString("jobId");
+        validateOperationalJobStatus(jobId, "drain");
+    }
+
+    /**
+     * Validates the operational job status by querying the OperationalJobHandler endpoint
+     * and waiting for the job to reach a final state if necessary.
+     *
+     * @param jobId the ID of the operational job to validate
+     * @param expectedOperation the expected operation name (e.g., "move", "decommission", "drain")
+     */
+    private void validateOperationalJobStatus(String jobId, String expectedOperation)
+    {
+        String operationalJobRoute = ApiEndpointsV1.OPERATIONAL_JOB_ROUTE.replace(":operationId", jobId);
+
+        HttpResponse<Buffer> jobStatusResponse = getBlocking(
+        trustedClient().get(serverWrapper.serverPort, "localhost", operationalJobRoute)
+                       .send());
+
+        assertThat(jobStatusResponse.statusCode()).isEqualTo(OK.code());
+
+        JsonObject jobStatusBody = jobStatusResponse.bodyAsJsonObject();
+        assertThat(jobStatusBody).isNotNull();
+        assertThat(jobStatusBody.getString("jobId")).isEqualTo(jobId);
+        assertThat(jobStatusBody.getString("operation")).isEqualTo(expectedOperation);
+        assertThat(jobStatusBody.getString("jobStatus")).isIn(
+        OperationalJobStatus.RUNNING.name(),
+        OperationalJobStatus.SUCCEEDED.name()
+        );
+
+        // If the job is still running, wait for it to complete or reach a final state
+        if (OperationalJobStatus.RUNNING.name().equals(jobStatusBody.getString("jobStatus")))
+        {
+            loopAssert(30, 500, () -> {
+                HttpResponse<Buffer> finalJobStatusResponse = getBlocking(
+                trustedClient().get(serverWrapper.serverPort, "localhost", operationalJobRoute)
+                               .send());
+
+                assertThat(finalJobStatusResponse.statusCode()).isEqualTo(OK.code());
+
+                JsonObject finalJobStatusBody = finalJobStatusResponse.bodyAsJsonObject();
+                assertThat(finalJobStatusBody).isNotNull();
+                assertThat(finalJobStatusBody.getString("jobStatus")).isIn(
+                OperationalJobStatus.SUCCEEDED.name(),
+                OperationalJobStatus.FAILED.name()
+                );
+            });
+        }
     }
 
     /**

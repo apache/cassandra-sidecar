@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.job.NodeDrainJob;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.OperationalJobUtils;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -82,7 +83,11 @@ public class NodeDrainHandler extends AbstractHandler<Void> implements AccessPro
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
         NodeDrainJob job = new NodeDrainJob(UUIDs.timeBased(), operations);
-        handleOperationalJob(this.jobManager, this.config, context, job);
+        this.jobManager.trySubmitJob(job,
+                                     (completedJob, exception) ->
+                                     OperationalJobUtils.sendStatusBasedResponse(context, completedJob, exception),
+                                     executorPools.service(),
+                                     config.operationalJobExecutionMaxWaitTime());
     }
 
     /**

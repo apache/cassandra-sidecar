@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
+import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
 import org.apache.cassandra.sidecar.job.OperationalJob;
 
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
@@ -37,13 +38,26 @@ public class OperationalJobUtils
     private static final Logger LOGGER = LoggerFactory.getLogger(OperationalJobUtils.class);
 
     /**
-     * In the operational job context, sends a {@link OperationalJobResponse} based on the status of the job.
+     * Sends an HTTP response with appropriate status code and {@link OperationalJobResponse} payload
+     * based on the operational job status and any conflict exceptions.
+     * If an exception is provided, responds with HTTP 409 CONFLICT and FAILED status.
+     * Otherwise, responds with HTTP 200 OK for completed jobs or HTTP 202 ACCEPTED for ongoing jobs.
      *
-     * @param context the request context
-     * @param job     the operational job to reports status on
+     * @param context   the routing context for the HTTP request
+     * @param job       the operational job to report status on
+     * @param exception the conflict exception, if any (null if no conflict)
      */
-    public static void sendStatusBasedResponse(RoutingContext context, OperationalJob job)
+    public static void sendStatusBasedResponse(RoutingContext context, OperationalJob job, OperationalJobConflictException exception)
     {
+        if (exception != null)
+        {
+            String reason = exception.getMessage();
+            LOGGER.error("Conflicting job encountered. reason={}", reason);
+            context.response().setStatusCode(HttpResponseStatus.CONFLICT.code());
+            context.json(new OperationalJobResponse(job.jobId(), OperationalJobStatus.FAILED, job.name(), reason));
+            return;
+        }
+
         OperationalJobStatus status = job.status();
         LOGGER.info("Job completion status={} jobId={}", status, job.jobId());
         if (status.isCompleted())
