@@ -315,32 +315,30 @@ class CachedAuthorizationHandlerTest
     }
 
     @Test
-    void testEmptyIdentitiesWithPermission()
+    void testEmptyIdentities()
     {
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
-        CachedAuthorizationHandler handler
+        CachedAuthorizationHandler handlerWithModifyPermission
         = new CachedAuthorizationHandler(10, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
-        RoutingContext mockContext = createMockContext("user9", List.of(), List.of());
+        RoutingContext mockContext1 = createMockContext("user9", List.of(), List.of());
         when(mockAdminIdentityResolver.isAdmin(any())).thenReturn(false);
 
-        verifySuccess(handler, mockContext);
-    }
+        verifySuccess(handlerWithModifyPermission, mockContext1);
 
-    @Test
-    void testEmptyIdentitiesWithoutPermission()
-    {
         Authorization expected = PermissionBasedAuthorization.create("CREATE");
-        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
-        CachedAuthorizationHandler handler
+        CachedAuthorizationHandler handlerWithCreatePermission
         = new CachedAuthorizationHandler(11, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          expected, metrics, cacheFactory.endpointAuthorizationCache());
 
-        RoutingContext mockContext = createMockContext("user10", List.of(), List.of());
-        when(mockAdminIdentityResolver.isAdmin(any())).thenReturn(false);
-
-        verifyFailure(handler, mockContext);
+        RoutingContext mockContext2 = createMockContext("user10", List.of(), List.of());
+        handlerWithCreatePermission.handle(mockContext2);
+        CacheStats emptyIdentityWithoutPermissionCall = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(emptyIdentityWithoutPermissionCall.missCount()).isEqualTo(1);
+        assertThat(emptyIdentityWithoutPermissionCall.hitCount()).isEqualTo(0);
+        assertThat(emptyIdentityWithoutPermissionCall.loadSuccessCount()).isEqualTo(1);
+        assertThat(emptyIdentityWithoutPermissionCall.loadCount()).isEqualTo(1);
     }
 
     @Test

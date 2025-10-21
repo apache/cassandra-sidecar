@@ -189,10 +189,6 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
 
     private boolean isAdmin(List<String> identities)
     {
-        if (identities.isEmpty())
-        {
-            return false;
-        }
         for (String identity : identities)
         {
             if (adminIdentityResolver.isAdmin(identity))

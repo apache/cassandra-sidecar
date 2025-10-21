@@ -50,19 +50,22 @@ public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
     {
         this.handlerId = handlerId;
         this.roles = extractCassandraRoles(user);
-        // Vert.x HeadersMultimap and HeadersMultimap.MapEntry does not implement equals or hashCode,
-        // hence we store flattened variables in a Set
-        this.variables = new HashSet<>();
+
         if (variables == null || !variables.iterator().hasNext())
         {
-            this.hashCode = Objects.hash(this.handlerId, this.roles, this.variables);
-            return;
+            this.variables = Set.of();
         }
-
-        for (Map.Entry<String, String> entry : variables)
+        else
         {
-            // We convert to lower case, since Vert.x Multimap representation is case insensitive for variables stored
-            this.variables.add(entry.getKey().toLowerCase() + ":" + entry.getValue());
+            // Vert.x HeadersMultimap and HeadersMultimap.MapEntry does not implement equals or hashCode,
+            // hence we store flattened variables in a Set
+            Set<String> flattenedVariables = new HashSet<>();
+            for (Map.Entry<String, String> entry : variables)
+            {
+                // We convert to lower case, since Vert.x Multimap representation is case insensitive for variables stored
+                flattenedVariables.add(entry.getKey().toLowerCase() + ":" + entry.getValue());
+            }
+            this.variables = Set.copyOf(flattenedVariables);
         }
         this.hashCode = Objects.hash(this.handlerId, this.roles, this.variables);
     }
