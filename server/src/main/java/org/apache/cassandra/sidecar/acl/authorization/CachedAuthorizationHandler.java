@@ -54,7 +54,7 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
 
     // uniquely identities CachedAuthorizationHandler across different routes. Having same handlerId can lead
     // to permission bypass across routes.
-    private static final AtomicInteger cachedAuthHandlerIdGen = new AtomicInteger(0);
+    private static final AtomicInteger HANDLER_ID_GEN = new AtomicInteger(0);
     private static final HttpException FORBIDDEN_EXCEPTION = new HttpException(403);
     private final int handlerId;
     private final AccessControlConfiguration accessControlConfiguration;
@@ -73,7 +73,7 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
                                       SidecarMetrics sidecarMetrics,
                                       AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache)
     {
-        this(cachedAuthHandlerIdGen.getAndIncrement(), accessControlConfiguration, authZParameterValidateHandler,
+        this(HANDLER_ID_GEN.getAndIncrement(), accessControlConfiguration, authZParameterValidateHandler,
              adminIdentityResolver, authorization, sidecarMetrics, authorizationCache);
     }
 

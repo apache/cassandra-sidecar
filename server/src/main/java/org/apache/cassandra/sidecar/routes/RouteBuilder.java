@@ -121,7 +121,6 @@ public class RouteBuilder
      */
     public SettableVertxRoute build()
     {
-        RouteBuilder builder = this;
         return new SettableVertxRoute()
         {
             @Override
