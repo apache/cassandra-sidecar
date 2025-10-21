@@ -33,6 +33,10 @@ public class AuthMetrics
     private static final String DOMAIN = SERVER_PREFIX + ".Auth";
     public final NamedMetric<Counter> jwtPemRefreshFailures;
     public final NamedMetric<Counter> jwtPemRefreshSuccesses;
+    /**
+     * Captures the time to successfully authorize non-cached requests. Cached authorization requests will
+     * not be recorded in this metric
+     */
     public final NamedMetric<Timer> authorizationTime;
 
     public AuthMetrics(MetricRegistry metricRegistry)
