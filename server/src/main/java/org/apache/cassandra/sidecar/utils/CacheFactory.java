@@ -126,6 +126,11 @@ public class CacheFactory
                                                                               SidecarMetrics sidecarMetrics,
                                                                               Ticker ticker)
     {
+        if (!sidecarConfiguration.accessControlConfiguration().enabled()
+            || !sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration().enabled())
+        {
+            return null;
+        }
         CacheConfiguration permissionCacheConfig = sidecarConfiguration.accessControlConfiguration()
                                                                        .permissionCacheConfiguration();
         if (permissionCacheConfig.expireAfterAccess() == null)

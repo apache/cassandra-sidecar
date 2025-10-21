@@ -91,6 +91,7 @@ class CachedAuthorizationHandlerTest
         when(mockCacheConfig.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse("3s"));
         when(mockCacheConfig.maximumSize()).thenReturn(1000L);
         when(mockCacheConfig.enabled()).thenReturn(true);
+        when(mockAccessControlConfig.enabled()).thenReturn(true);
         when(mockAccessControlConfig.permissionCacheConfiguration()).thenReturn(mockCacheConfig);
 
         testAuthorization = AndAuthorization.create()
@@ -120,14 +121,14 @@ class CachedAuthorizationHandlerTest
     void testAdminBypassesAuthorization()
     {
         when(mockCacheConfig.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse("5m"));
-        when(mockAdminIdentityResolver.isAdmin("admin-identity")).thenReturn(true);
+        when(mockAdminIdentityResolver.isAdmin("admin-identity1")).thenReturn(true);
 
         Authorization expected = PermissionBasedAuthorization.create("CREATE");
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(1, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          expected, metrics, cacheFactory.authorizationCache());
 
-        RoutingContext mockContext = createMockContext("admin-user", "admin-identity", "admin-role");
+        RoutingContext mockContext = createMockContext("admin-user", "admin-identity1", "admin-role1");
         verifySuccess(handler, mockContext);
     }
 
@@ -139,9 +140,9 @@ class CachedAuthorizationHandlerTest
                                          testAuthorization, metrics, cacheFactory.authorizationCache());
 
         RoutingContext mockContext
-        = createMockContext("user1", List.of("identity1", "admin-identity"), List.of("admin-role"));
+        = createMockContext("user1", List.of("identity1", "admin-identity2"), List.of("admin-role2"));
         when(mockAdminIdentityResolver.isAdmin("identity1")).thenReturn(false);
-        when(mockAdminIdentityResolver.isAdmin("admin-identity")).thenReturn(true);
+        when(mockAdminIdentityResolver.isAdmin("admin-identity2")).thenReturn(true);
 
         verifySuccess(handler, mockContext);
     }
