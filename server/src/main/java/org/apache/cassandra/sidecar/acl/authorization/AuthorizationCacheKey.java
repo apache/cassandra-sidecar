@@ -31,13 +31,14 @@ public interface AuthorizationCacheKey
      * (Note: {@link AuthorizationCacheKey} is required because {@link AuthorizationContext} does not have equals
      * comparison)
      *
+     * @param handlerId            handlerId uniquely represents the authorization handler used for a route
      * @param authorizationContext instance of {@link AuthorizationContext}. Used by Vert.x to represent an
      *                             authorization request.
      * @return {@link AuthorizationCacheKey} uniquely represents an authorization request using user and resource
      * context.
      */
-    static AuthorizationCacheKey create(AuthorizationContext authorizationContext)
+    static AuthorizationCacheKey create(int handlerId, AuthorizationContext authorizationContext)
     {
-        return new AuthorizationCacheKeyImpl(authorizationContext.user(), authorizationContext.variables());
+        return new AuthorizationCacheKeyImpl(handlerId, authorizationContext.user(), authorizationContext.variables());
     }
 }

@@ -22,13 +22,14 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.AuthorizationContext;
@@ -38,9 +39,6 @@ import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.impl.AuthorizationHandlerImpl;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
-import org.apache.cassandra.sidecar.config.CacheConfiguration;
-import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
-import org.apache.cassandra.sidecar.metrics.CacheStatsCounter;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 
@@ -53,17 +51,16 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CachedAuthorizationHandler.class);
-    private static final long DEFAULT_CACHE_MAX_SIZE = 100;
+
+    // uniquely identities CachedAuthorizationHandler across different routes. Having same handlerId can lead
+    // to permission bypass across routes.
+    private static final AtomicInteger cachedAuthHandlerIdGen = new AtomicInteger(0);
     private static final HttpException FORBIDDEN_EXCEPTION = new HttpException(403);
+    private final int handlerId;
     private final AccessControlConfiguration accessControlConfiguration;
     private final AuthorizationParameterValidateHandler authZParameterValidateHandler;
     private final AdminIdentityResolver adminIdentityResolver;
     private final AuthMetrics authMetrics;
-    private final CacheStatsCounter cacheMetrics;
-
-    // CachedAuthorizationHandler is instantiated per route, the authorization cache is created per route.
-    // A global authorization cache is intentionally avoided to prevent unnecessary permission matching overhead.
-    // As each route maintains its own cache, it's important to carefully manage the maximum cache size.
     private final AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache;
 
     // This is overridden since Vert.x does not expose this
@@ -73,15 +70,29 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
                                       AuthorizationParameterValidateHandler authZParameterValidateHandler,
                                       AdminIdentityResolver adminIdentityResolver,
                                       Authorization authorization,
-                                      SidecarMetrics sidecarMetrics)
+                                      SidecarMetrics sidecarMetrics,
+                                      AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache)
+    {
+        this(cachedAuthHandlerIdGen.getAndIncrement(), accessControlConfiguration, authZParameterValidateHandler,
+             adminIdentityResolver, authorization, sidecarMetrics, authorizationCache);
+    }
+
+    @VisibleForTesting
+    public CachedAuthorizationHandler(int handlerId,
+                                      AccessControlConfiguration accessControlConfiguration,
+                                      AuthorizationParameterValidateHandler authZParameterValidateHandler,
+                                      AdminIdentityResolver adminIdentityResolver,
+                                      Authorization authorization,
+                                      SidecarMetrics sidecarMetrics,
+                                      AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache)
     {
         super(authorization);
+        this.handlerId = handlerId;
         this.accessControlConfiguration = accessControlConfiguration;
         this.authZParameterValidateHandler = authZParameterValidateHandler;
         this.adminIdentityResolver = adminIdentityResolver;
         this.authMetrics = sidecarMetrics.server().auth();
-        this.cacheMetrics = sidecarMetrics.server().cache().authorizationCacheMetrics;
-        this.authorizationCache = initCache();
+        this.authorizationCache = authorizationCache;
     }
 
     @Override
@@ -102,12 +113,8 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         }
 
         AtomicBoolean ctxNextCalled = new AtomicBoolean(false);
-
-        AuthorizationCacheKey key = AuthorizationCacheKey.create(authorizationContext);
-
-        CompletableFuture<Boolean> authorizationFuture = authorizationCache.get(key,
-            k -> isUserAuthorized(ctx, ctxNextCalled, startTimeNanos)
-        );
+        AuthorizationCacheKey key = AuthorizationCacheKey.create(handlerId, authorizationContext);
+        CompletableFuture<Boolean> authorizationFuture = checkAuthorization(key, ctx, ctxNextCalled, startTimeNanos);
 
         authorizationFuture.whenComplete((authorized, throwable) -> {
             if (throwable != null)
@@ -146,20 +153,15 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         return this;
     }
 
-    protected <K, V> AsyncCache<K, V> initCache()
+    private CompletableFuture<Boolean> checkAuthorization(AuthorizationCacheKey key, RoutingContext ctx,
+                                                          AtomicBoolean ctxNextCalled, long startTimeNanos)
     {
-        CacheConfiguration permissionCacheConfig = accessControlConfiguration.permissionCacheConfiguration();
-        long cacheMaxSize = permissionCacheConfig.maximumSize() / 2;
-        if (permissionCacheConfig.expireAfterAccess() == null)
+        if (!this.accessControlConfiguration.permissionCacheConfiguration().enabled())
         {
-            throw new ConfigurationException("Authorization handler cache must be configured with expireAfterAccess");
+            // We perform authorization checks everytime if caching is disabled
+            return CompletableFuture.completedFuture(isUserAuthorized(ctx, ctxNextCalled, startTimeNanos));
         }
-        return Caffeine.newBuilder()
-                       .expireAfterAccess(permissionCacheConfig.expireAfterAccess().quantity(),
-                                          permissionCacheConfig.expireAfterAccess().unit())
-                       .maximumSize(cacheMaxSize <= 0 ? DEFAULT_CACHE_MAX_SIZE : cacheMaxSize)
-                       .recordStats(() -> cacheMetrics)
-                       .buildAsync();
+        return authorizationCache.get(key, k -> isUserAuthorized(ctx, ctxNextCalled, startTimeNanos));
     }
 
     private boolean isUserAuthorized(RoutingContext ctx, AtomicBoolean ctxNextCalled, long startTimeNanos)

@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -48,15 +47,12 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.ext.auth.authorization.Authorization;
-import io.vertx.ext.auth.authorization.AuthorizationProvider;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import org.apache.cassandra.distributed.api.ICluster;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.shared.Uninterruptibles;
-import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -83,13 +79,13 @@ import org.apache.cassandra.sidecar.modules.multibindings.ClassKey;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.MultiBindingTypeResolver;
 import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys;
-import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.testing.MtlsTestHelper;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
 import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
 import org.apache.cassandra.sidecar.testing.TemporaryCqlSessionProvider;
+import org.apache.cassandra.sidecar.utils.CacheFactory;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 
@@ -110,7 +106,6 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
     protected static final int MIN_VERSION_WITH_MTLS = 5;
-    static final Set<AsyncCache<?, ?>> AUTHORIZATION_CACHES = ConcurrentHashMap.newKeySet();
 
     private static final String ADMIN_IDENTITY = "spiffe://cassandra/sidecar/admin";
     // CASSANDRA_IDENTITY is only used to configure schemas for test setup, do not use this identity for anything else
@@ -913,10 +908,9 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
     private void invalidateAuthorizationHandlerCaches()
     {
-        for (AsyncCache<?, ?> authorizationCache : AUTHORIZATION_CACHES)
-        {
-            authorizationCache.synchronous().invalidateAll();
-        }
+        CacheFactory factory = serverWrapper.injector.getInstance(CacheFactory.class);
+        AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache = factory.authorizationCache();
+        authorizationCache.synchronous().invalidateAll();
     }
 
     private void verifyAccess(HttpMethod method, String testRoute, Path clientKeystorePath, Verifier<HttpResponse<Buffer>> assertions)
@@ -1068,30 +1062,6 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         }
     }
 
-    /**
-     * {@link CollectingCachedAuthorizationHandler} collects authorization caches across routes for invalidating during
-     * tests
-     */
-    static class CollectingCachedAuthorizationHandler extends CachedAuthorizationHandler
-    {
-        public CollectingCachedAuthorizationHandler(AccessControlConfiguration accessControlConfiguration,
-                                                    AuthorizationParameterValidateHandler authZParameterValidateHandler,
-                                                    AdminIdentityResolver adminIdentityResolver,
-                                                    Authorization authorization,
-                                                    SidecarMetrics sidecarMetrics)
-        {
-            super(accessControlConfiguration, authZParameterValidateHandler, adminIdentityResolver, authorization, sidecarMetrics);
-        }
-
-        @Override
-        protected <K, V> AsyncCache<K, V> initCache()
-        {
-            AsyncCache<K, V> cache = super.initCache();
-            AUTHORIZATION_CACHES.add(cache);
-            return cache;
-        }
-    }
-
     static class TestModule extends AbstractModule
     {
         private final MtlsTestHelper mtlsTestHelper;
@@ -1101,23 +1071,6 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         {
             this.mtlsTestHelper = mtlsTestHelper;
             this.cluster = cluster;
-        }
-
-        @Provides
-        @Singleton
-        RouteBuilder.Factory accessProtectedRouteBuilderFactory(SidecarConfiguration sidecarConfiguration,
-                                                                AuthorizationProvider authorizationProvider,
-                                                                AdminIdentityResolver adminIdentityResolver,
-                                                                AuthorizationParameterValidateHandler authorizationParameterValidateHandler,
-                                                                SidecarMetrics metrics)
-        {
-            return new RouteBuilder.Factory(sidecarConfiguration.accessControlConfiguration(), authorizationProvider,
-                                            adminIdentityResolver, authorizationParameterValidateHandler, metrics,
-                                            builder -> new CollectingCachedAuthorizationHandler(builder.accessControlConfiguration,
-                                                                                                builder.authZParameterValidateHandler,
-                                                                                                builder.adminIdentityResolver,
-                                                                                                builder.requiredAuthorization(),
-                                                                                                builder.sidecarMetrics));
         }
 
         @Provides

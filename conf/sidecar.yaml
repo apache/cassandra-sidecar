@@ -296,9 +296,6 @@ access_control:
     # setting refresh_after_write over expire_after_access for AuthCaches
     # expire_after_access: 5m
     refresh_after_write: 5m
-    # The cache size is used to create both global permissions cache and per-route authorization caches.
-    # Each per-route cache uses half of the global maximum cache size, configure cautiously to avoid excessive
-    # memory overhead.
     maximum_size: 1000
     warmup_retries: 5
     warmup_retry_interval: 2s

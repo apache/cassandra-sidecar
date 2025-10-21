@@ -43,8 +43,8 @@ class AuthorizationCacheKeyImplTest
         MultiMap variables1 = MultiMap.caseInsensitiveMultiMap().add("keyspace", "ks1");
         MultiMap variables2 = MultiMap.caseInsensitiveMultiMap().add("keyspace", "ks1");
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables1);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, variables2);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables1);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, variables2);
 
         assertThat(key1).isEqualTo(key2);
         assertThat(key1.hashCode()).isEqualTo(key2.hashCode());
@@ -56,8 +56,8 @@ class AuthorizationCacheKeyImplTest
         User user1 = createUser("user1", List.of("role1", "role2"));
         User user2 = createUser("user1", List.of("role1", "role2"));
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, null);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, null);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, null);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, null);
 
         assertThat(key1).isEqualTo(key2);
         assertThat(key1.hashCode()).isEqualTo(key2.hashCode());
@@ -72,8 +72,8 @@ class AuthorizationCacheKeyImplTest
         MultiMap variables1 = MultiMap.caseInsensitiveMultiMap();
         MultiMap variables2 = MultiMap.caseInsensitiveMultiMap();
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables1);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, variables2);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables1);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, variables2);
 
         assertThat(key1).isEqualTo(key2);
         assertThat(key1.hashCode()).isEqualTo(key2.hashCode());
@@ -87,8 +87,8 @@ class AuthorizationCacheKeyImplTest
 
         MultiMap variables = MultiMap.caseInsensitiveMultiMap().add("keyspace", "ks1");
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, variables);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, variables);
 
         assertThat(key1).isNotEqualTo(key2);
         assertThat(key1.hashCode()).isNotEqualTo(key2.hashCode());
@@ -103,8 +103,8 @@ class AuthorizationCacheKeyImplTest
         MultiMap variables1 = MultiMap.caseInsensitiveMultiMap().add("keyspace", "ks1");
         MultiMap variables2 = MultiMap.caseInsensitiveMultiMap().add("keyspace", "ks2");
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables1);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, variables2);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables1);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, variables2);
 
         assertThat(key1).isNotEqualTo(key2);
         assertThat(key1.hashCode()).isNotEqualTo(key2.hashCode());
@@ -118,8 +118,8 @@ class AuthorizationCacheKeyImplTest
 
         MultiMap variables1 = MultiMap.caseInsensitiveMultiMap().add("keyspace", "ks1");
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables1);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, null);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables1);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, null);
 
         assertThat(key1).isNotEqualTo(key2);
         assertThat(key1.hashCode()).isNotEqualTo(key2.hashCode());
@@ -134,8 +134,8 @@ class AuthorizationCacheKeyImplTest
         MultiMap variables1 = MultiMap.caseInsensitiveMultiMap().add("keyspace", "ks1");
         MultiMap variables2 = MultiMap.caseInsensitiveMultiMap().add("keyspace", "ks1");
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables1);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, variables2);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables1);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, variables2);
 
         // Mutate original MultiMap
         variables1.add("table", "tb1");
@@ -157,8 +157,8 @@ class AuthorizationCacheKeyImplTest
                                       .add("keyspace", "ks1")
                                       .add("table", "tb1");
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables1);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, variables2);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables1);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, variables2);
 
         assertThat(key1).isEqualTo(key2);
         assertThat(key1.hashCode()).isEqualTo(key2.hashCode());
@@ -177,8 +177,8 @@ class AuthorizationCacheKeyImplTest
                                       .add("table", "tb1")
                                       .add("keyspace", "ks1");
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables1);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, variables2);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables1);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, variables2);
 
         // Should be equal regardless of insertion order
         assertThat(key1).isEqualTo(key2);
@@ -198,8 +198,8 @@ class AuthorizationCacheKeyImplTest
                                       .add("keyspace", "ks1")
                                       .add("keyspace", "ks1");
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables1);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, variables2);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables1);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, variables2);
 
         assertThat(key1).isEqualTo(key2);
         assertThat(key1.hashCode()).isEqualTo(key2.hashCode());
@@ -218,8 +218,8 @@ class AuthorizationCacheKeyImplTest
                                       .add("keyspace", "ks1")
                                       .add("keyspace", "ks3");
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables1);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, variables2);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables1);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, variables2);
 
         assertThat(key1).isNotEqualTo(key2);
         assertThat(key1.hashCode()).isNotEqualTo(key2.hashCode());
@@ -234,8 +234,8 @@ class AuthorizationCacheKeyImplTest
         MultiMap variables1 = MultiMap.caseInsensitiveMultiMap().add("Keyspace", "ks1");
         MultiMap variables2 = MultiMap.caseInsensitiveMultiMap().add("keyspace", "ks1");
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables1);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, variables2);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables1);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, variables2);
 
         assertThat(key1).isEqualTo(key2);
     }
@@ -248,11 +248,27 @@ class AuthorizationCacheKeyImplTest
 
         MultiMap variables = MultiMap.caseInsensitiveMultiMap().add("keyspace", "ks1");
 
-        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(user1, variables);
-        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(user2, variables);
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(1, user2, variables);
 
         assertThat(key1).isEqualTo(key2);
         assertThat(key1.hashCode()).isEqualTo(key2.hashCode());
+    }
+
+    @Test
+    void testNotEqualsDifferentHandlerId()
+    {
+        User user1 = createUser("user1", List.of("role1"));
+        User user2 = createUser("user1", List.of("role1"));
+
+        MultiMap variables1 = MultiMap.caseInsensitiveMultiMap().add("keyspace", "ks1");
+        MultiMap variables2 = MultiMap.caseInsensitiveMultiMap().add("keyspace", "ks1");
+
+        AuthorizationCacheKeyImpl key1 = new AuthorizationCacheKeyImpl(1, user1, variables1);
+        AuthorizationCacheKeyImpl key2 = new AuthorizationCacheKeyImpl(2, user2, variables2);
+
+        assertThat(key1).isNotEqualTo(key2);
+        assertThat(key1.hashCode()).isNotEqualTo(key2.hashCode());
     }
 
     private User createUser(String username, List<String> roles)
