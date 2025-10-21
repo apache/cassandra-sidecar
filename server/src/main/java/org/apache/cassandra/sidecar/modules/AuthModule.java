@@ -95,7 +95,7 @@ public class AuthModule extends AbstractModule
                                         adminIdentityResolver,
                                         authorizationParameterValidateHandler,
                                         metrics,
-                                        cacheFactory.authorizationCache());
+                                        cacheFactory.endpointAuthorizationCache());
     }
 
     @Provides

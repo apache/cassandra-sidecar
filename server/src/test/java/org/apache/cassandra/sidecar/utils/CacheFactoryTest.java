@@ -215,9 +215,9 @@ class CacheFactoryTest
     }
 
     @Test
-    void testAuthorizationCacheExpiration() throws ExecutionException, InterruptedException
+    void testEndpointAuthorizationCacheExpiration() throws ExecutionException, InterruptedException
     {
-        AsyncCache<AuthorizationCacheKey, Boolean> cache = cacheFactory.authorizationCache();
+        AsyncCache<AuthorizationCacheKey, Boolean> cache = cacheFactory.endpointAuthorizationCache();
         AuthorizationCacheKey key1
         = createAuthorizationCacheKey(1, "user1", List.of("role1"), "ks1", "tbl1");
         AuthorizationCacheKey key2
@@ -258,9 +258,9 @@ class CacheFactoryTest
     }
 
     @Test
-    void testAuthorizationCacheDifferentKeys() throws ExecutionException, InterruptedException
+    void testEndpointAuthorizationCacheDifferentKeys() throws ExecutionException, InterruptedException
     {
-        AsyncCache<AuthorizationCacheKey, Boolean> cache = cacheFactory.authorizationCache();
+        AsyncCache<AuthorizationCacheKey, Boolean> cache = cacheFactory.endpointAuthorizationCache();
 
         // Different handler IDs
         AuthorizationCacheKey key1
@@ -276,7 +276,7 @@ class CacheFactoryTest
     }
 
     @Test
-    void testAuthorizationCacheThrowsExceptionWhenExpireAfterAccessIsMissing()
+    void testEndpointAuthorizationCacheThrowsExceptionWhenExpireAfterAccessIsMissing()
     {
         CacheConfiguration ssTableImportCacheConfiguration
         = CacheConfigurationImpl.builder()

@@ -46,7 +46,7 @@ public class CacheFactory
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheFactory.class);
 
     private final Cache<SSTableImporter.ImportOptions, Future<Void>> ssTableImportCache;
-    private final AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache;
+    private final AsyncCache<AuthorizationCacheKey, Boolean> endpointAuthorizationCache;
 
     @Inject
     public CacheFactory(SidecarConfiguration configuration,
@@ -64,7 +64,7 @@ public class CacheFactory
                                                                       .sstableImportConfiguration()
                                                                       .cacheConfiguration(),
                                                          ssTableImporter, ticker);
-        this.authorizationCache = initAuthorizationCache(configuration, sidecarMetrics, ticker);
+        this.endpointAuthorizationCache = initEndpointAuthorizationCache(configuration, sidecarMetrics, ticker);
     }
 
     /**
@@ -78,9 +78,9 @@ public class CacheFactory
     /**
      * @return the cache used for authorization requests
      */
-    public AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache()
+    public AsyncCache<AuthorizationCacheKey, Boolean> endpointAuthorizationCache()
     {
-        return authorizationCache;
+        return endpointAuthorizationCache;
     }
 
     /**
@@ -122,9 +122,9 @@ public class CacheFactory
      * @param sidecarMetrics       the Sidecar metrics registry
      * @return instance of {@link AsyncCache} for caching authorization requests
      */
-    private AsyncCache<AuthorizationCacheKey, Boolean> initAuthorizationCache(SidecarConfiguration sidecarConfiguration,
-                                                                              SidecarMetrics sidecarMetrics,
-                                                                              Ticker ticker)
+    private AsyncCache<AuthorizationCacheKey, Boolean> initEndpointAuthorizationCache(SidecarConfiguration sidecarConfiguration,
+                                                                                      SidecarMetrics sidecarMetrics,
+                                                                                      Ticker ticker)
     {
         if (!sidecarConfiguration.accessControlConfiguration().enabled()
             || !sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration().enabled())

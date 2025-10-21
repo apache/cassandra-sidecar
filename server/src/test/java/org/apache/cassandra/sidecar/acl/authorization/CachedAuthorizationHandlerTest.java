@@ -108,7 +108,7 @@ class CachedAuthorizationHandlerTest
 
         routeBuilderFactory = new RouteBuilder.Factory(mockAccessControlConfig, mockAuthorizationProvider,
                                                        mockAdminIdentityResolver, mockValidateHandler, metrics,
-                                                       cacheFactory.authorizationCache());
+                                                       cacheFactory.endpointAuthorizationCache());
     }
 
     @AfterEach
@@ -126,7 +126,7 @@ class CachedAuthorizationHandlerTest
         Authorization expected = PermissionBasedAuthorization.create("CREATE");
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(1, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         expected, metrics, cacheFactory.authorizationCache());
+                                         expected, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext = createMockContext("admin-user", "admin-identity1", "admin-role1");
         verifySuccess(handler, mockContext);
@@ -137,7 +137,7 @@ class CachedAuthorizationHandlerTest
     {
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(2, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         testAuthorization, metrics, cacheFactory.authorizationCache());
+                                         testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext
         = createMockContext("user1", List.of("identity1", "admin-identity2"), List.of("admin-role2"));
@@ -152,7 +152,7 @@ class CachedAuthorizationHandlerTest
     {
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(3, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         testAuthorization, metrics, cacheFactory.authorizationCache());
+                                         testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext = createMockContext("user2", "identity2", "role2");
         when(mockAdminIdentityResolver.isAdmin("identity2")).thenReturn(false);
@@ -166,7 +166,7 @@ class CachedAuthorizationHandlerTest
         Authorization expected = PermissionBasedAuthorization.create("CREATE");
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(4, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         expected, metrics, cacheFactory.authorizationCache());
+                                         expected, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext = createMockContext("user3", "identity3", "role3");
         when(mockAdminIdentityResolver.isAdmin("identity3")).thenReturn(false);
@@ -179,7 +179,7 @@ class CachedAuthorizationHandlerTest
     {
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(5, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         testAuthorization, metrics, cacheFactory.authorizationCache());
+                                         testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext1 = createMockContext("user4", "identity4", "role4");
         RoutingContext mockContext2 = createMockContext("user4", "identity4", "role4");
@@ -205,7 +205,7 @@ class CachedAuthorizationHandlerTest
     {
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(6, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         testAuthorization, metrics, cacheFactory.authorizationCache());
+                                         testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext1 = createMockContext("user5", "identity5", "role5");
         RoutingContext mockContext2 = createMockContext("user5", "identity6", "role6");
@@ -228,7 +228,7 @@ class CachedAuthorizationHandlerTest
     {
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(7, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         testAuthorization, metrics, cacheFactory.authorizationCache());
+                                         testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         handler.variableConsumer(routeBuilderFactory.builderForRoute().routeGenericVariableConsumer());
 
@@ -254,7 +254,7 @@ class CachedAuthorizationHandlerTest
     {
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(8, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         testAuthorization, metrics, cacheFactory.authorizationCache());
+                                         testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         handler.variableConsumer(routeBuilderFactory.builderForRoute().routeGenericVariableConsumer());
 
@@ -283,7 +283,7 @@ class CachedAuthorizationHandlerTest
     {
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(9, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         testAuthorization, metrics, cacheFactory.authorizationCache());
+                                         testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext = createMockContext("user8", "identity9", "role9");
 
@@ -309,7 +309,7 @@ class CachedAuthorizationHandlerTest
     {
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(10, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         testAuthorization, metrics, cacheFactory.authorizationCache());
+                                         testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext = createMockContext("user9", List.of(), List.of());
         when(mockAdminIdentityResolver.isAdmin(any())).thenReturn(false);
@@ -323,7 +323,7 @@ class CachedAuthorizationHandlerTest
         Authorization expected = PermissionBasedAuthorization.create("CREATE");
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(11, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         expected, metrics, cacheFactory.authorizationCache());
+                                         expected, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext = createMockContext("user10", List.of(), List.of());
         when(mockAdminIdentityResolver.isAdmin(any())).thenReturn(false);
@@ -339,7 +339,7 @@ class CachedAuthorizationHandlerTest
 
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(12, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         testAuthorization, metrics, cacheFactory.authorizationCache());
+                                         testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext1 = createMockContext("user11", "identity11", "role11");
         RoutingContext mockContext2 = createMockContext("user11", "identity11", "role11");
@@ -376,14 +376,14 @@ class CachedAuthorizationHandlerTest
         // Handler 1 requires MODIFY permission
         CachedAuthorizationHandler handler1
         = new CachedAuthorizationHandler(100, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         testAuthorization, metrics, cacheFactory.authorizationCache());
+                                         testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         // Handler 2 requires CREATE permission
         Authorization createAuthorization = AndAuthorization.create()
                                                             .addAuthorization(PermissionBasedAuthorization.create("CREATE"));
         CachedAuthorizationHandler handler2
         = new CachedAuthorizationHandler(200, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         createAuthorization, metrics, cacheFactory.authorizationCache());
+                                         createAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         // Same user accessing both routes
         RoutingContext mockContext1 = createMockContext("user12", "identity12", "role12");
@@ -424,12 +424,12 @@ class CachedAuthorizationHandlerTest
         CachedAuthorizationHandler handler1
         = new CachedAuthorizationHandler(sharedHandlerId, mockAccessControlConfig, mockValidateHandler,
                                          mockAdminIdentityResolver, testAuthorization, metrics,
-                                         cacheFactory.authorizationCache());
+                                         cacheFactory.endpointAuthorizationCache());
 
         CachedAuthorizationHandler handler2
         = new CachedAuthorizationHandler(sharedHandlerId, mockAccessControlConfig, mockValidateHandler,
                                          mockAdminIdentityResolver, testAuthorization, metrics,
-                                         cacheFactory.authorizationCache());
+                                         cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext1 = createMockContext("user13", "identity13", "role13");
         RoutingContext mockContext2 = createMockContext("user13", "identity13", "role13");
@@ -462,7 +462,7 @@ class CachedAuthorizationHandlerTest
         CachedAuthorizationHandler handler1
         = new CachedAuthorizationHandler(sharedHandlerId, mockAccessControlConfig, mockValidateHandler,
                                          mockAdminIdentityResolver, testAuthorization, metrics,
-                                         cacheFactory.authorizationCache());
+                                         cacheFactory.endpointAuthorizationCache());
 
         // Handler 2 requires CREATE permission
         Authorization createAuthorization = AndAuthorization.create()
@@ -471,7 +471,7 @@ class CachedAuthorizationHandlerTest
         CachedAuthorizationHandler handler2
         = new CachedAuthorizationHandler(sharedHandlerId, mockAccessControlConfig, mockValidateHandler,
                                          mockAdminIdentityResolver, createAuthorization, metrics,
-                                         cacheFactory.authorizationCache());
+                                         cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext1 = createMockContext("user13", "identity13", "role13");
         RoutingContext mockContext2 = createMockContext("user13", "identity13", "role13");

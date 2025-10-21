@@ -83,7 +83,7 @@ class RouteBuilderTest
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
 
         Factory factory = new Factory(mockConfig, mockAuthorizationProvider, mockAdminIdentityResolver,
-                                      mockHandler, metrics, cacheFactory.authorizationCache());
+                                      mockHandler, metrics, cacheFactory.endpointAuthorizationCache());
         RouteBuilder routeBuilder = factory.builderForRoute();
         Router mockRouter = mock(Router.class);
         SettableVertxRoute route = routeBuilder.build();
@@ -151,7 +151,7 @@ class RouteBuilderTest
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
 
         Factory factory = new Factory(mockConfig, mockAuthorizationProvider, mockAdminIdentityResolver,
-                                      mockHandler, metrics, cacheFactory.authorizationCache());
+                                      mockHandler, metrics, cacheFactory.endpointAuthorizationCache());
         RouteBuilder routeBuilder = routeBuilderFunction.apply(factory);
         SettableVertxRoute route = routeBuilder.handler(handler).build();
         test.accept(route);

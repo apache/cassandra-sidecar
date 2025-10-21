@@ -909,7 +909,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     private void invalidateAuthorizationHandlerCaches()
     {
         CacheFactory factory = serverWrapper.injector.getInstance(CacheFactory.class);
-        AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache = factory.authorizationCache();
+        AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache = factory.endpointAuthorizationCache();
         authorizationCache.synchronous().invalidateAll();
     }
 
