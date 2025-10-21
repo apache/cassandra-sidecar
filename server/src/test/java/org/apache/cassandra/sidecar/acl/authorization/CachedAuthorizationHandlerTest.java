@@ -66,6 +66,7 @@ import static org.mockito.Mockito.when;
  */
 class CachedAuthorizationHandlerTest
 {
+    private SidecarConfiguration sidecarConfiguration;
     private AccessControlConfiguration mockAccessControlConfig;
     private AuthorizationParameterValidateHandler mockValidateHandler;
     private AdminIdentityResolver mockAdminIdentityResolver;
@@ -73,7 +74,7 @@ class CachedAuthorizationHandlerTest
     private SidecarMetrics metrics;
     private Authorization testAuthorization;
     private RouteBuilder.Factory routeBuilderFactory;
-    private CacheFactory cacheFactory;
+    private SSTableImporter sstableImporter;
 
     @BeforeEach
     void setUp()
@@ -100,11 +101,11 @@ class CachedAuthorizationHandlerTest
         AuthorizationProvider mockAuthorizationProvider = mock(AuthorizationProvider.class);
 
         ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl();
-        SidecarConfiguration sidecarConfiguration = mock(SidecarConfiguration.class);
+        sidecarConfiguration = mock(SidecarConfiguration.class);
         when(sidecarConfiguration.serviceConfiguration()).thenReturn(serviceConfiguration);
         when(sidecarConfiguration.accessControlConfiguration()).thenReturn(mockAccessControlConfig);
-        SSTableImporter sstableImporter = mock(SSTableImporter.class);
-        cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
+        sstableImporter = mock(SSTableImporter.class);
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
 
         routeBuilderFactory = new RouteBuilder.Factory(mockAccessControlConfig, mockAuthorizationProvider,
                                                        mockAdminIdentityResolver, mockValidateHandler, metrics,
@@ -124,6 +125,7 @@ class CachedAuthorizationHandlerTest
         when(mockAdminIdentityResolver.isAdmin("admin-identity1")).thenReturn(true);
 
         Authorization expected = PermissionBasedAuthorization.create("CREATE");
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(1, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          expected, metrics, cacheFactory.endpointAuthorizationCache());
@@ -135,6 +137,7 @@ class CachedAuthorizationHandlerTest
     @Test
     void testMultipleIdentitiesOneIsAdmin()
     {
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(2, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
@@ -150,6 +153,7 @@ class CachedAuthorizationHandlerTest
     @Test
     void testNonAdminRequiresAuthorization()
     {
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(3, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
@@ -164,6 +168,7 @@ class CachedAuthorizationHandlerTest
     void testNonAdminDifferentPermissionForbidden()
     {
         Authorization expected = PermissionBasedAuthorization.create("CREATE");
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(4, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          expected, metrics, cacheFactory.endpointAuthorizationCache());
@@ -177,6 +182,7 @@ class CachedAuthorizationHandlerTest
     @Test
     void testCacheHitSameUser()
     {
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(5, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
@@ -203,6 +209,7 @@ class CachedAuthorizationHandlerTest
     @Test
     void testCacheMissDifferentUsers()
     {
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(6, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
@@ -226,6 +233,7 @@ class CachedAuthorizationHandlerTest
     @Test
     void testCacheHitSameUserSameResource()
     {
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(7, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
@@ -252,6 +260,7 @@ class CachedAuthorizationHandlerTest
     @Test
     void testCacheMissSameUserDifferentResources()
     {
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(8, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
@@ -281,6 +290,7 @@ class CachedAuthorizationHandlerTest
     @Test
     void testValidationFailure()
     {
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(9, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
@@ -307,6 +317,7 @@ class CachedAuthorizationHandlerTest
     @Test
     void testEmptyIdentitiesWithPermission()
     {
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(10, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
@@ -321,6 +332,7 @@ class CachedAuthorizationHandlerTest
     void testEmptyIdentitiesWithoutPermission()
     {
         Authorization expected = PermissionBasedAuthorization.create("CREATE");
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(11, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          expected, metrics, cacheFactory.endpointAuthorizationCache());
@@ -337,6 +349,7 @@ class CachedAuthorizationHandlerTest
         // Disable cache
         when(mockCacheConfig.enabled()).thenReturn(false);
 
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
         = new CachedAuthorizationHandler(12, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
@@ -373,6 +386,8 @@ class CachedAuthorizationHandlerTest
     @Test
     void testDifferentHandlerIdsPreventsSharedCacheEntries()
     {
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
+
         // Handler 1 requires MODIFY permission
         CachedAuthorizationHandler handler1
         = new CachedAuthorizationHandler(100, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
@@ -419,6 +434,7 @@ class CachedAuthorizationHandlerTest
     void testSameHandlerIdSamePermissionSharesCacheEntries()
     {
         int sharedHandlerId = 300;
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
 
         // Create two handler instances with the SAME handlerId
         CachedAuthorizationHandler handler1
@@ -457,6 +473,7 @@ class CachedAuthorizationHandlerTest
     void testSameHandlerIdDifferentPermissionsStillSharesCacheEntries()
     {
         int sharedHandlerId = 300;
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
 
         // Create two handler instances with the SAME handlerId
         CachedAuthorizationHandler handler1
