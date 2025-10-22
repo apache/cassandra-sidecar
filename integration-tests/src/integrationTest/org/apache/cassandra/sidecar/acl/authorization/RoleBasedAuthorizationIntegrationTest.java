@@ -944,7 +944,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         List<Future<HttpResponse<Buffer>>> futures = new ArrayList<>();
         for (int i = 0; i < times; i++)
         {
-            futures.add(createUnblockingRequest(client, method, route));
+            futures.add(createNonBlockingRequest(client, method, route));
         }
 
         // Now block for response
