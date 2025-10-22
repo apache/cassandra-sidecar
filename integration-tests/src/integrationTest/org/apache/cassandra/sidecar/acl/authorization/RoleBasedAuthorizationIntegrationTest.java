@@ -955,7 +955,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         }
     }
 
-    private Future<HttpResponse<Buffer>> createUnblockingRequest(WebClient client, HttpMethod method, String route)
+    private Future<HttpResponse<Buffer>> createNonBlockingRequest(WebClient client, HttpMethod method, String route)
     {
         return client.request(method, serverWrapper.serverPort, "127.0.0.1", route).send();
     }
