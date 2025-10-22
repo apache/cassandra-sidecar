@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.livemigration;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -34,11 +35,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.MigrationState;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 
 import static org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.NOT_COMPLETED_STATUS;
 
@@ -55,16 +55,16 @@ public class LiveMigrationStatusTrackerImpl implements LiveMigrationStatusTracke
     static final String STATUS_FILE_NAME = "live_migration_status.json";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationStatusTrackerImpl.class);
-    private final Vertx vertx;
+    private final ExecutorPools executorPools;
     private final ObjectMapper objectMapper;
 
     // Per-instance locks to ensure atomicity of file operations
     private final ConcurrentHashMap<String, Object> instanceLocks = new ConcurrentHashMap<>();
 
     @Inject
-    public LiveMigrationStatusTrackerImpl(Vertx vertx)
+    public LiveMigrationStatusTrackerImpl(ExecutorPools executorPools)
     {
-        this.vertx = vertx;
+        this.executorPools = executorPools;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -86,9 +86,16 @@ public class LiveMigrationStatusTrackerImpl implements LiveMigrationStatusTracke
     public Future<Void> setMigrationStatus(InstanceMetadata instanceMetadata,
                                            LiveMigrationStatus status)
     {
-        Promise<Void> promise = Promise.promise();
+        if (null == instanceMetadata)
+        {
+            return Future.failedFuture(new IllegalArgumentException("instanceMetadata cannot be null"));
+        }
+        if (null == status)
+        {
+           return Future.failedFuture(new IllegalArgumentException("Live migration status cannot be null"));
+        }
 
-        vertx.executeBlocking(() -> {
+        return executorPools.internal().executeBlocking(() -> {
             synchronized (getLockForInstance(instanceMetadata.host()))
             {
                 try
@@ -103,25 +110,27 @@ public class LiveMigrationStatusTrackerImpl implements LiveMigrationStatusTracke
 
                     LOGGER.info("Live migration file for instance {} successfully created at {}.",
                                 instanceMetadata.host(), statusFilePath.toAbsolutePath());
-                    promise.complete();
                     return null;
                 }
                 catch (JsonProcessingException e)
                 {
                     LOGGER.error("Failed to serialize LiveMigrationStatus to JSON string. Status={}", status, e);
-                    promise.fail(e);
-                    return null;
+                    throw e;
+                }
+                catch (FileAlreadyExistsException e)
+                {
+                    LOGGER.error("Live migration status file already exists for instance {}. " +
+                                 "Status file should be created only once.",
+                                 instanceMetadata.host(), e);
+                    throw e;
                 }
                 catch (IOException e)
                 {
                     LOGGER.error("Failed to save LiveMigrationStatus. Status={}", status, e);
-                    promise.fail(e);
-                    return null;
+                    throw e;
                 }
             }
         }, false);
-
-        return promise.future();
     }
 
     /**
@@ -130,9 +139,12 @@ public class LiveMigrationStatusTrackerImpl implements LiveMigrationStatusTracke
     @Override
     public Future<LiveMigrationStatus> getMigrationStatus(InstanceMetadata instanceMetadata)
     {
-        Promise<LiveMigrationStatus> promise = Promise.promise();
+        if (null == instanceMetadata)
+        {
+            return Future.failedFuture(new IllegalArgumentException("instanceMetadata cannot be null"));
+        }
 
-        vertx.executeBlocking(() -> {
+        return executorPools.internal().executeBlocking(() -> {
             synchronized (getLockForInstance(instanceMetadata.host()))
             {
                 try
@@ -142,25 +154,19 @@ public class LiveMigrationStatusTrackerImpl implements LiveMigrationStatusTracke
 
                     if (!Files.exists(statusFile))
                     {
-                        promise.complete(NOT_COMPLETED_STATUS);
-                        return null;
+                        return NOT_COMPLETED_STATUS;
                     }
 
                     String content = Files.readString(statusFile, StandardCharsets.UTF_8);
-                    LiveMigrationStatus status = objectMapper.readValue(content, LiveMigrationStatus.class);
-                    promise.complete(status);
-                    return null;
+                    return objectMapper.readValue(content, LiveMigrationStatus.class);
                 }
                 catch (IOException e)
                 {
                     LOGGER.error("Failed to read LiveMigrationStatus for instance {}", instanceMetadata.host(), e);
-                    promise.fail(e);
-                    return null;
+                    throw e;
                 }
             }
         }, false);
-
-        return promise.future();
     }
 
     /**
@@ -179,9 +185,12 @@ public class LiveMigrationStatusTrackerImpl implements LiveMigrationStatusTracke
     @Override
     public Future<Void> clearMigrationStatus(InstanceMetadata instanceMetadata)
     {
-        Promise<Void> promise = Promise.promise();
+        if (null == instanceMetadata)
+        {
+            return Future.failedFuture(new IllegalArgumentException("instanceMetadata cannot be null"));
+        }
 
-        vertx.executeBlocking(() -> {
+        return executorPools.internal().executeBlocking(() -> {
             synchronized (getLockForInstance(instanceMetadata.host()))
             {
                 try
@@ -191,9 +200,8 @@ public class LiveMigrationStatusTrackerImpl implements LiveMigrationStatusTracke
 
                     if (!Files.exists(statusFile))
                     {
-                        promise.fail(new IllegalArgumentException(
-                        "Live Migration status file does not exist for instance " + instanceMetadata.host()));
-                        return null;
+                        throw new IllegalStateException(
+                        "Live Migration status file does not exist for instance " + instanceMetadata.host());
                     }
 
                     // Read and verify status
@@ -202,27 +210,23 @@ public class LiveMigrationStatusTrackerImpl implements LiveMigrationStatusTracke
 
                     if (status.state() != MigrationState.COMPLETED)
                     {
-                        promise.fail(new IllegalArgumentException(
-                        "Live Migration status is not set as completed for instance " + instanceMetadata.host()));
-                        return null;
+                        throw new IllegalStateException(
+                        "Live Migration status is not set as completed for instance " + instanceMetadata.host());
                     }
 
                     // Delete the file
                     Files.delete(statusFile);
                     LOGGER.info("Live migration status file deleted for instance {}", instanceMetadata.host());
-                    promise.complete();
                     return null;
                 }
                 catch (IOException e)
                 {
-                    LOGGER.error("Failed to clear LiveMigrationStatus for instance {}", instanceMetadata.host(), e);
-                    promise.fail(e);
-                    return null;
+                    LOGGER.error("Failed to clear LiveMigrationStatus for instance {}. " +
+                                 "Please check and manually delete the file if needed.", instanceMetadata.host(), e);
+                    throw e;
                 }
             }
         }, false);
-
-        return promise.future();
     }
 
     /**

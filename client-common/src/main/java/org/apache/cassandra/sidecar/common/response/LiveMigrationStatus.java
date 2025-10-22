@@ -39,6 +39,10 @@ public class LiveMigrationStatus
     public LiveMigrationStatus(@JsonProperty("state") MigrationState state,
                                @JsonProperty("endTime") Long endTime)
     {
+        if (state == MigrationState.COMPLETED && endTime == null)
+        {
+            throw new IllegalArgumentException("endTime cannot be null if state is COMPLETED");
+        }
         this.state = state;
         this.endTime = endTime;
     }

@@ -92,7 +92,7 @@ public class LiveMigrationStatusClearHandler extends AbstractHandler<Void> imple
                      })
                      .onFailure(e -> {
                          LOGGER.error("Error while clearing live migration status for instance {}", host, e);
-                         if (e instanceof IllegalArgumentException)
+                         if (e instanceof IllegalStateException)
                          {
                              context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, e.getMessage(), e));
                          }

@@ -28,9 +28,11 @@ import org.junit.jupiter.api.io.TempDir;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.MigrationState;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 
 import static org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.NOT_COMPLETED_STATUS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +42,7 @@ import static org.mockito.Mockito.when;
 class LiveMigrationStatusTrackerImplTest
 {
     final Vertx vertx = Vertx.vertx();
+    final ExecutorPools executorPools = ExecutorPoolsHelper.createdSharedTestPool(vertx);
 
     @Test
     void testHappyPath(@TempDir Path tempDir) throws InterruptedException
@@ -50,7 +53,7 @@ class LiveMigrationStatusTrackerImplTest
         // Get the status again (should be COMPLETED)
         // Clear the status
         // Get the status again (should be NOT_COMPLETED)
-        LiveMigrationStatusTrackerImpl tracker = new LiveMigrationStatusTrackerImpl(vertx);
+        LiveMigrationStatusTrackerImpl tracker = new LiveMigrationStatusTrackerImpl(executorPools);
         InstanceMetadata mockInstanceMetadata = mock(InstanceMetadata.class);
         when(mockInstanceMetadata.host()).thenReturn("test-host");
         when(mockInstanceMetadata.stagingDir()).thenReturn(tempDir.toString());
@@ -99,7 +102,7 @@ class LiveMigrationStatusTrackerImplTest
     @Test
     void testClearStatusBeforeUpdatingStatus(@TempDir Path tempDir) throws InterruptedException
     {
-        LiveMigrationStatusTrackerImpl tracker = new LiveMigrationStatusTrackerImpl(vertx);
+        LiveMigrationStatusTrackerImpl tracker = new LiveMigrationStatusTrackerImpl(executorPools);
         InstanceMetadata mockInstanceMetadata = mock(InstanceMetadata.class);
         when(mockInstanceMetadata.host()).thenReturn("test-host");
         when(mockInstanceMetadata.stagingDir()).thenReturn(tempDir.toString());
@@ -111,13 +114,13 @@ class LiveMigrationStatusTrackerImplTest
         awaitForFuture(clearStatusFuture);
 
         assertThat(clearStatusFuture.failed()).isTrue();
-        assertThat(clearStatusFuture.cause()).isInstanceOf(IllegalArgumentException.class);
+        assertThat(clearStatusFuture.cause()).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     void testClearStatusBeforeMarkingMigrationAsComplete(@TempDir Path tempDir) throws InterruptedException
     {
-        LiveMigrationStatusTrackerImpl tracker = new LiveMigrationStatusTrackerImpl(vertx);
+        LiveMigrationStatusTrackerImpl tracker = new LiveMigrationStatusTrackerImpl(executorPools);
         InstanceMetadata mockInstanceMetadata = mock(InstanceMetadata.class);
         when(mockInstanceMetadata.host()).thenReturn("test-host");
         when(mockInstanceMetadata.stagingDir()).thenReturn(tempDir.toString());
@@ -139,7 +142,7 @@ class LiveMigrationStatusTrackerImplTest
         Future<Void> clearStatusFuture = tracker.clearMigrationStatus(mockInstanceMetadata);
         awaitForFuture(clearStatusFuture);
         assertThat(clearStatusFuture.failed()).isTrue();
-        assertThat(clearStatusFuture.cause()).isInstanceOf(IllegalArgumentException.class);
+        assertThat(clearStatusFuture.cause()).isInstanceOf(IllegalStateException.class);
 
         // status file should exist as clearing status failed.
         assertThat(Files.exists(tempDir.resolve(LiveMigrationStatusTrackerImpl.STATUS_FILE_NAME))).isTrue();
