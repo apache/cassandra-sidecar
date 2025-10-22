@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
+import io.vertx.core.Future;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.AuthorizationContext;
@@ -43,6 +44,7 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
+import static io.vertx.core.Future.fromCompletionStage;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 
 /**
@@ -105,28 +107,12 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
             return;
         }
 
-        User user = ctx.user();
-        AuthorizationContext authorizationContext = AuthorizationContext.create(user);
-        if (this.variableHandler != null)
-        {
-            this.variableHandler.accept(ctx, authorizationContext);
-        }
-
         AtomicBoolean ctxNextCalled = new AtomicBoolean(false);
-        AuthorizationCacheKey key = AuthorizationCacheKey.create(handlerId, authorizationContext);
-        CompletableFuture<Boolean> authorizationFuture = checkAuthorization(key, ctx, ctxNextCalled, startTimeNanos);
+        Future<Boolean> authorizationFuture
+        = fromCompletionStage(checkAuthorization(ctx, ctxNextCalled, startTimeNanos));
 
-        authorizationFuture.whenComplete((authorized, throwable) -> {
-            if (throwable != null)
-            {
-                LOGGER.error("Error encountered during authorization cache computation", throwable);
-                if (!ctx.failed())
-                {
-                    ctx.fail(FORBIDDEN.code(), FORBIDDEN_EXCEPTION);
-                }
-                return;
-            }
-
+        authorizationFuture
+        .onSuccess(authorized -> {
             // We avoid calling ctx.next() and ctx.fail() when it is already done during cache value computation
             if (Boolean.TRUE.equals(authorized))
             {
@@ -142,6 +128,13 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
                     ctx.fail(FORBIDDEN.code(), FORBIDDEN_EXCEPTION);
                 }
             }
+        })
+        .onFailure(cause -> {
+            LOGGER.error("Error encountered during authorization cache computation", cause);
+            if (!ctx.failed())
+            {
+                ctx.fail(FORBIDDEN.code(), FORBIDDEN_EXCEPTION);
+            }
         });
     }
 
@@ -153,15 +146,28 @@ public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
         return this;
     }
 
-    private CompletableFuture<Boolean> checkAuthorization(AuthorizationCacheKey key, RoutingContext ctx,
-                                                          AtomicBoolean ctxNextCalled, long startTimeNanos)
+    private CompletableFuture<Boolean> checkAuthorization(RoutingContext ctx, AtomicBoolean ctxNextCalled,
+                                                          long startTimeNanos)
     {
         if (!this.accessControlConfiguration.permissionCacheConfiguration().enabled())
         {
             // We perform authorization checks everytime if caching is disabled
             return CompletableFuture.completedFuture(isUserAuthorized(ctx, ctxNextCalled, startTimeNanos));
         }
+
+        AuthorizationCacheKey key = createAuthorizationKey(ctx);
         return authorizationCache.get(key, k -> isUserAuthorized(ctx, ctxNextCalled, startTimeNanos));
+    }
+
+    private AuthorizationCacheKey createAuthorizationKey(RoutingContext ctx)
+    {
+        User user = ctx.user();
+        AuthorizationContext authorizationContext = AuthorizationContext.create(user);
+        if (this.variableHandler != null)
+        {
+            this.variableHandler.accept(ctx, authorizationContext);
+        }
+        return AuthorizationCacheKey.create(handlerId, authorizationContext);
     }
 
     private boolean isUserAuthorized(RoutingContext ctx, AtomicBoolean ctxNextCalled, long startTimeNanos)

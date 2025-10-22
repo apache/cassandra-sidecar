@@ -65,7 +65,7 @@ public class AuthorizationCacheKeyImpl implements AuthorizationCacheKey
                 // We convert to lower case, since Vert.x Multimap representation is case insensitive for variables stored
                 flattenedVariables.add(entry.getKey().toLowerCase() + ":" + entry.getValue());
             }
-            this.variables = Set.copyOf(flattenedVariables);
+            this.variables = flattenedVariables;
         }
         this.hashCode = Objects.hash(this.handlerId, this.roles, this.variables);
     }
