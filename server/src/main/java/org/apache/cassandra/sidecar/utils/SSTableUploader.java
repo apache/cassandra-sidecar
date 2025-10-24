@@ -40,6 +40,7 @@ import io.vertx.core.file.OpenOptions;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.core.streams.WriteStream;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
+import org.jetbrains.annotations.VisibleForTesting;
 
 /**
  * A class that handles SSTable Uploads
@@ -107,10 +108,13 @@ public class SSTableUploader
         LOGGER.debug("Uploading data to={}", tempFilename);
         return fs.open(tempFilename, new OpenOptions()) // open the temp file
                  .map(file -> new RateLimitedWriteStream(rateLimiter, file))
-                 .compose(file -> {
-                     readStream.resume();
-                     return readStream.pipeTo(file);
-                 }); // stream to file
+                 .compose(file -> pipeStreamToFile(readStream, file)); // stream to file
+    }
+
+    @VisibleForTesting
+    protected Future<Void> pipeStreamToFile(ReadStream<Buffer> readStream, RateLimitedWriteStream file)
+    {
+        return readStream.pipeTo(file);
     }
 
     private Future<String> createTempFile(String uploadDirectory, String componentFileName, String permissions)
