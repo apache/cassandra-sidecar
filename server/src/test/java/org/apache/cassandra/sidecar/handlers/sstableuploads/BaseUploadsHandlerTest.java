@@ -230,11 +230,12 @@ class BaseUploadsHandlerTest
         @Provides
         public SSTableUploader ssTableUploader(Vertx vertx, @Named("IngressFileRateLimiter") SidecarRateLimiter rateLimiter)
         {
-            return new SSTableUploader(vertx, rateLimiter) {
+            return new SSTableUploader(vertx, rateLimiter)
+            {
                 @Override
                 protected Future<Void> pipeStreamToFile(ReadStream<Buffer> readStream, RateLimitedWriteStream file)
                 {
-                    if (artificialDelayInMillisBeforeStreamingToFile> 0)
+                    if (artificialDelayInMillisBeforeStreamingToFile > 0)
                     {
                         return vertx.timer(artificialDelayInMillisBeforeStreamingToFile, TimeUnit.MILLISECONDS)
                                     .compose(t -> super.pipeStreamToFile(readStream, file));
