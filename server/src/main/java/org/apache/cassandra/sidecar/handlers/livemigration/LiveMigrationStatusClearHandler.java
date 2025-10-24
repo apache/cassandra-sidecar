@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.modules.ApiModule.OK_STATUS;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -88,7 +89,7 @@ public class LiveMigrationStatusClearHandler extends AbstractHandler<Void> imple
         statusTracker.clearMigrationStatus(instanceMetadata)
                      .onSuccess(v -> {
                          LOGGER.info("Successfully cleared live migration status for instance {}", host);
-                         context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
+                         context.json(OK_STATUS);
                      })
                      .onFailure(e -> {
                          LOGGER.error("Error while clearing live migration status for instance {}", host, e);

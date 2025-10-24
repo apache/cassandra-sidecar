@@ -24,7 +24,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
@@ -73,7 +72,7 @@ public class LiveMigrationStatusGetHandler extends AbstractHandler<Void> impleme
     {
         InstanceMetadata instance = metadataFetcher.instance(host);
         statusTracker.getMigrationStatus(instance)
-                     .compose(status -> routingContext.response().send(Json.encode(status)))
+                     .compose(routingContext::json)
                      .onFailure(e -> routingContext.response()
                                                    .setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code())
                                                    .end(e.getMessage()));
