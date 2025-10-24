@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.acl;
+package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
@@ -37,11 +37,14 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.AuthenticationException;
+import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.client.HttpResponse;
@@ -82,6 +85,7 @@ import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
 import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
 import org.apache.cassandra.sidecar.testing.TemporaryCqlSessionProvider;
+import org.apache.cassandra.sidecar.utils.CacheFactory;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 
@@ -91,19 +95,18 @@ import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
 import static org.apache.cassandra.testing.TlsTestUtils.getSSLOptions;
 import static org.apache.cassandra.testing.TlsTestUtils.withAuthenticatedSession;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
-import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test for role based access control in Sidecar
  * Note:
- * - Do not add new test cases in this class. Add them into test method, example refer to testForAdmin.
  * - Create a new keyspace or test role for each test method as required to prevent permissions overlapping
  */
 class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
     protected static final int MIN_VERSION_WITH_MTLS = 5;
+
     private static final String ADMIN_IDENTITY = "spiffe://cassandra/sidecar/admin";
     // CASSANDRA_IDENTITY is only used to configure schemas for test setup, do not use this identity for anything else
     private static final String CASSANDRA_IDENTITY = "spiffe://cassandra/sidecar/cassandra_role";
@@ -121,6 +124,12 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     public static final RoleWithIdentityTestScenario NON_ADMIN_READ_TEST_KEYSPACE_ROLE =
     new RoleWithIdentityTestScenario("non_admin_test_keyspace", "non_admin_test_role", "spiffe://cassandra/sidecar/non_admin_test_user")
     .addPermission("data/non_admin_test_keyspace", "SCHEMA:READ");
+    public static final RoleWithIdentityTestScenario NON_ADMIN_CACHE_REVOCATION_TEST_KEYSPACE_ROLE =
+    new RoleWithIdentityTestScenario("non_admin_cache_revocation_test_keyspace", "non_admin_test_role", "spiffe://cassandra/sidecar/non_admin_test_user")
+    .addPermission("data/non_admin_cache_revocation_test_keyspace", "SCHEMA:READ");
+    public static final RoleWithIdentityTestScenario NON_ADMIN_CACHE_FORBIDDEN_TEST_KEYSPACE_ROLE =
+    new RoleWithIdentityTestScenario("non_admin_cache_forbidden_test_keyspace", "non_admin_test_role", "spiffe://cassandra/sidecar/non_admin_test_user")
+    .addPermission("data/non_admin_cache_forbidden_test_keyspace", "GOSSIP:READ");
     public static final RoleWithIdentityTestScenario NON_ADMIN_CREATE_SNAPSHOT_TEST_KEYSPACE_ROLE =
     new RoleWithIdentityTestScenario("grant_table_test_keyspace", "non_admin_test_role", "spiffe://cassandra/sidecar/non_admin_test_user")
     .addPermission("data/grant_table_test_keyspace/test_table", "SNAPSHOT:CREATE");
@@ -171,6 +180,8 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     static final List<RoleWithIdentityTestScenario> ROLE_WITH_IDENTITY_TEST_SCENARIOS = List.of(SUPERUSER,
                                                                                                 NON_SUPERUSER_ROLE_WITH_TRANSITIVE_SUPERUSER_ROLE,
                                                                                                 NON_ADMIN_READ_TEST_KEYSPACE_ROLE,
+                                                                                                NON_ADMIN_CACHE_REVOCATION_TEST_KEYSPACE_ROLE,
+                                                                                                NON_ADMIN_CACHE_FORBIDDEN_TEST_KEYSPACE_ROLE,
                                                                                                 NON_ADMIN_CREATE_SNAPSHOT_TEST_KEYSPACE_ROLE,
                                                                                                 NON_ADMIN_CREATE_SNAPSHOT_KEYSPACE_LEVEL_ROLE,
                                                                                                 NON_ADMIN_CREATE_SNAPSHOT_ALL_TABLES_ROLE,
@@ -463,21 +474,20 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                     "data/multiple_permissions_required_test_keyspace/test_table",
                                     "SNAPSHOT:READ");
 
-            // wait for cache refresh
-            loopAssert(2, 100, () -> {
-                verifyAccess(HttpMethod.GET, listSnapshotRoute, nonAdminClientKeystorePath, response -> {
-                    assertThat(response).isNotNull();
-                    assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                    ListSnapshotFilesResponse snapshotFiles = response.bodyAsJson(ListSnapshotFilesResponse.class);
-                    List<ListSnapshotFilesResponse.FileInfo> filesToStream =
-                    snapshotFiles.snapshotFilesInfo()
-                                 .stream()
-                                 .filter(info -> info.fileName.endsWith("-Data.db"))
-                                 .sorted(Comparator.comparing(o -> o.fileName))
-                                 .collect(Collectors.toList());
-                    assertThat(filesToStream).isNotNull().isNotEmpty();
-                    componentDownloadUrl[0] = filesToStream.get(0).componentDownloadUrl();
-                });
+            invalidateAuthorizationHandlerCaches();
+
+            verifyAccess(HttpMethod.GET, listSnapshotRoute, nonAdminClientKeystorePath, response -> {
+                assertThat(response).isNotNull();
+                assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                ListSnapshotFilesResponse snapshotFiles = response.bodyAsJson(ListSnapshotFilesResponse.class);
+                List<ListSnapshotFilesResponse.FileInfo> filesToStream =
+                snapshotFiles.snapshotFilesInfo()
+                             .stream()
+                             .filter(info -> info.fileName.endsWith("-Data.db"))
+                             .sorted(Comparator.comparing(o -> o.fileName))
+                             .collect(Collectors.toList());
+                assertThat(filesToStream).isNotNull().isNotEmpty();
+                componentDownloadUrl[0] = filesToStream.get(0).componentDownloadUrl();
             });
 
             // grant sidecar permission for streaming
@@ -486,21 +496,22 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                     "data/multiple_permissions_required_test_keyspace/test_table",
                                     "SNAPSHOT:STREAM");
 
+            invalidateAuthorizationHandlerCaches();
+
             // STREAM SSTable request requires both Sidecar SNAPSHOT:STREAM permission and Cassandra's SELECT
             // permission on a table it accesses data.
-            loopAssert(2, 100, () -> {
-                // request denied without SELECT permission
-                verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
-            });
+
+            // request denied without SELECT permission
+            verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
 
             // grant SELECT permission to non_admin_test_role
             grantTablePermission(session, "multiple_permissions_required_test_keyspace", "test_table", "non_admin_test_role");
         }, sslOptions);
 
-        loopAssert(2, 100, () -> {
-            // request denied without SELECT permission
-            verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
-        });
+        invalidateAuthorizationHandlerCaches();
+
+        // request goes through with SELECT permission
+        verifyAccess(HttpMethod.GET, componentDownloadUrl[0], nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
     }
 
     @Test
@@ -656,6 +667,157 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                                HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
     }
 
+    @Test
+    void testAuthorizationCaching()
+    {
+        SidecarMetrics metrics = serverWrapper.injector.getInstance(SidecarMetrics.class);
+
+        CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
+
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_test_keyspace");
+
+        WebClient client = trustedClient(nonAdminClientKeystorePath.toString(), mtlsTestHelper.clientKeyStorePassword(),
+                                         mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
+        try
+        {
+            createMultipleRequests(client, HttpMethod.GET, keyspaceSchemaRoute, 2, HttpResponseStatus.OK.code());
+        }
+        finally
+        {
+            client.close();
+        }
+
+        // Verify cache stats, 1 hit 1 miss
+        CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(callStats.missCount()).isEqualTo(1);
+        assertThat(callStats.hitCount()).isEqualTo(1);
+    }
+
+    @Test
+    void testAuthorizationCachingWithPermissionRevocation()
+    {
+        SidecarMetrics metrics = serverWrapper.injector.getInstance(SidecarMetrics.class);
+
+        CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
+
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_cache_revocation_test_keyspace");
+
+        WebClient client = trustedClient(nonAdminClientKeystorePath.toString(), mtlsTestHelper.clientKeyStorePassword(),
+                                         mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
+
+        createMultipleRequests(client, HttpMethod.GET, keyspaceSchemaRoute, 2, HttpResponseStatus.OK.code());
+
+        CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(callStats.missCount()).isEqualTo(1);
+        assertThat(callStats.hitCount()).isEqualTo(1);
+
+        // Revoke permission
+        Path clientKeystorePath = cassandraIdentityClientKeyStore();
+        SSLOptions sslOptions = getSSLOptions(clientKeystorePath.toString(),
+                                              mtlsTestHelper.clientKeyStorePassword(),
+                                              mtlsTestHelper.trustStorePath(),
+                                              mtlsTestHelper.trustStorePassword());
+        withAuthenticatedSession(cluster.get(1), "cassandra", "cassandra", session -> {
+            session.execute(String.format("DELETE FROM sidecar_internal.role_permissions_v1 " +
+                                          "WHERE role = '%s' AND resource = 'data/%s'", "non_admin_test_role",
+                                          "non_admin_cache_revocation_test_keyspace"));
+        }, sslOptions);
+
+        invalidateAuthorizationHandlerCaches();
+
+        try
+        {
+            // After cache expires, verify permission revocation takes effect
+            createMultipleRequests(client, HttpMethod.GET, keyspaceSchemaRoute, 2, HttpResponseStatus.FORBIDDEN.code());
+        }
+        finally
+        {
+            client.close();
+        }
+
+        CacheStats finalCallStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        // After cache expires, we should see a new miss and a hit for subsequent call
+        assertThat(finalCallStats.missCount()).isEqualTo(1);
+        assertThat(finalCallStats.hitCount()).isEqualTo(1);
+    }
+
+    @Test
+    void testAuthorizationCachingForForbiddenRequests()
+    {
+        SidecarMetrics metrics = serverWrapper.injector.getInstance(SidecarMetrics.class);
+
+        CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
+
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_cache_forbidden_test_keyspace");
+
+        // user has GOSSIP:READ permission but not SCHEMA:READ
+        WebClient client = trustedClient(nonAdminClientKeystorePath.toString(), mtlsTestHelper.clientKeyStorePassword(),
+                                         mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
+
+        try
+        {
+            createMultipleRequests(client, HttpMethod.GET, keyspaceSchemaRoute, 2, HttpResponseStatus.FORBIDDEN.code());
+        }
+        finally
+        {
+            client.close();
+        }
+
+        // Verify cache stats, 1 hit 1 miss
+        CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(callStats.missCount()).isEqualTo(1);
+        assertThat(callStats.hitCount()).isEqualTo(1);
+    }
+
+    @Test
+    void testSameUserAccessingDifferentRoutes() throws Exception
+    {
+        SidecarMetrics metrics = serverWrapper.injector.getInstance(SidecarMetrics.class);
+
+        CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
+
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_test_keyspace");
+        String createSnapshotRoute = String.format("/api/v1/keyspaces/%s/tables/%s/snapshots/my-snapshot-different-access",
+                                                   "grant_table_test_keyspace", "test_table");
+
+        verifyAccess(HttpMethod.GET, keyspaceSchemaRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+        verifyAccess(HttpMethod.PUT, createSnapshotRoute, nonAdminClientKeystorePath, assertStatus(HttpResponseStatus.OK));
+
+        // Verify cache stats, both miss
+        CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(callStats.missCount()).isEqualTo(2);
+        assertThat(callStats.hitCount()).isEqualTo(0);
+    }
+
+    @Test
+    void testAdminBypassCaching() throws Exception
+    {
+        SidecarMetrics metrics = serverWrapper.injector.getInstance(SidecarMetrics.class);
+
+        CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
+
+        String keyspaceSchemaRoute = String.format("/api/v1/keyspaces/%s/schema", "non_admin_test_keyspace");
+        // Uses client keystore with admin identity. Configured admin identities bypass authorization checks
+        Path clientKeystorePath = mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
+                                                                     certificateBuilder.addSanUriName(ADMIN_IDENTITY));
+
+        WebClient client = trustedClient(clientKeystorePath.toString(), mtlsTestHelper.clientKeyStorePassword(),
+                                         mtlsTestHelper.trustStorePath(), mtlsTestHelper.trustStorePassword());
+        try
+        {
+            createMultipleRequests(client, HttpMethod.GET, keyspaceSchemaRoute, 2, HttpResponseStatus.OK.code());
+        }
+        finally
+        {
+            client.close();
+        }
+
+        // Verify cache stats, 1 hit 1 miss
+        CacheStats callStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
+        assertThat(callStats.missCount()).isEqualTo(1);
+        assertThat(callStats.hitCount()).isEqualTo(1);
+    }
+
     @Override
     protected void initializeSchemaForTest()
     {
@@ -744,6 +906,13 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                       "where role = '%s' and resource = '%s'", permission, role, resource));
     }
 
+    private void invalidateAuthorizationHandlerCaches()
+    {
+        CacheFactory factory = serverWrapper.injector.getInstance(CacheFactory.class);
+        AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache = factory.endpointAuthorizationCache();
+        authorizationCache.synchronous().invalidateAll();
+    }
+
     private void verifyAccess(HttpMethod method, String testRoute, Path clientKeystorePath, Verifier<HttpResponse<Buffer>> assertions)
     {
         verifyAccess(method, testRoute, clientKeystorePath.toString(), assertions);
@@ -767,6 +936,28 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     private HttpResponse<Buffer> createRequest(WebClient client, HttpMethod method, String route)
     {
         return getBlocking(client.request(method, serverWrapper.serverPort, "127.0.0.1", route).send());
+    }
+
+    private void createMultipleRequests(WebClient client, HttpMethod method, String route, int times,
+                                        int expectedResponseCode)
+    {
+        List<Future<HttpResponse<Buffer>>> futures = new ArrayList<>();
+        for (int i = 0; i < times; i++)
+        {
+            futures.add(createNonBlockingRequest(client, method, route));
+        }
+
+        // Now block for response
+        for (int i = 0; i < times; i++)
+        {
+            HttpResponse<Buffer> response = getBlocking(futures.get(i));
+            assertThat(response.statusCode()).isEqualTo(expectedResponseCode);
+        }
+    }
+
+    private Future<HttpResponse<Buffer>> createNonBlockingRequest(WebClient client, HttpMethod method, String route)
+    {
+        return client.request(method, serverWrapper.serverPort, "127.0.0.1", route).send();
     }
 
     private void configureAdminAndSidecarIdentity(IInstance instance)

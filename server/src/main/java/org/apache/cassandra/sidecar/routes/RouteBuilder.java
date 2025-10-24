@@ -26,6 +26,9 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import com.google.common.annotations.VisibleForTesting;
+
+import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.auth.authorization.AndAuthorization;
@@ -35,15 +38,18 @@ import io.vertx.ext.auth.authorization.AuthorizationProvider;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.AuthorizationHandler;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
+import org.apache.cassandra.sidecar.acl.authorization.AuthorizationCacheKey;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationParameterValidateHandler;
-import org.apache.cassandra.sidecar.acl.authorization.AuthorizationWithAdminBypassHandler;
+import org.apache.cassandra.sidecar.acl.authorization.CachedAuthorizationHandler;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.apache.cassandra.sidecar.handlers.AccessProtected;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE;
@@ -58,20 +64,20 @@ public class RouteBuilder
     private final AuthorizationProvider authorizationProvider;
     private final AdminIdentityResolver adminIdentityResolver;
     private final AuthorizationParameterValidateHandler authZParameterValidateHandler;
-
+    private final SidecarMetrics sidecarMetrics;
+    private final AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache;
     private boolean setBodyHandler;
     private boolean accessProtected = true;
     private final List<Handler<RoutingContext>> handlers = new ArrayList<>();
 
-    private RouteBuilder(AccessControlConfiguration accessControlConfiguration,
-                         AuthorizationProvider authorizationProvider,
-                         AdminIdentityResolver adminIdentityResolver,
-                         AuthorizationParameterValidateHandler authZParameterValidateHandler)
+    private RouteBuilder(Factory factory)
     {
-        this.accessControlConfiguration = accessControlConfiguration;
-        this.authorizationProvider = authorizationProvider;
-        this.adminIdentityResolver = adminIdentityResolver;
-        this.authZParameterValidateHandler = authZParameterValidateHandler;
+        this.accessControlConfiguration = factory.accessControlConfiguration;
+        this.authorizationProvider = factory.authorizationProvider;
+        this.adminIdentityResolver = factory.adminIdentityResolver;
+        this.authZParameterValidateHandler = factory.authZParameterValidateHandler;
+        this.sidecarMetrics = factory.sidecarMetrics;
+        this.authorizationCache = factory.authorizationCache;
     }
 
     /**
@@ -138,9 +144,10 @@ public class RouteBuilder
                 if (accessControlConfiguration.enabled())
                 {
                     // authorization handler added before route specific handler chain
-                    AuthorizationWithAdminBypassHandler authorizationHandler
-                    = new AuthorizationWithAdminBypassHandler(authZParameterValidateHandler, adminIdentityResolver,
-                                                              requiredAuthorization());
+                    AuthorizationHandler authorizationHandler =
+                    new CachedAuthorizationHandler(accessControlConfiguration, authZParameterValidateHandler,
+                                                   adminIdentityResolver, requiredAuthorization(), sidecarMetrics,
+                                                   authorizationCache);
                     authorizationHandler.addAuthorizationProvider(authorizationProvider);
                     authorizationHandler.variableConsumer(routeGenericVariableConsumer());
 
@@ -152,7 +159,8 @@ public class RouteBuilder
         };
     }
 
-    private Authorization requiredAuthorization()
+    @VisibleForTesting
+    public Authorization requiredAuthorization()
     {
         Set<Authorization> requiredAuthorizations = handlers
                                                     .stream()
@@ -173,7 +181,8 @@ public class RouteBuilder
         return andAuthorization;
     }
 
-    private BiConsumer<RoutingContext, AuthorizationContext> routeGenericVariableConsumer()
+    @VisibleForTesting
+    public BiConsumer<RoutingContext, AuthorizationContext> routeGenericVariableConsumer()
     {
         return (routingCtx, authZContext) -> {
             Optional<QualifiedTableName> optional = RoutingContextUtils.getAsOptional(routingCtx, SC_QUALIFIED_TABLE_NAME);
@@ -206,25 +215,27 @@ public class RouteBuilder
         private final AuthorizationProvider authorizationProvider;
         private final AdminIdentityResolver adminIdentityResolver;
         private final AuthorizationParameterValidateHandler authZParameterValidateHandler;
+        private final SidecarMetrics sidecarMetrics;
+        private final AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache;
 
         public Factory(AccessControlConfiguration accessControlConfiguration,
                        AuthorizationProvider authorizationProvider,
                        AdminIdentityResolver adminIdentityResolver,
-                       AuthorizationParameterValidateHandler authZParameterValidateHandler)
+                       AuthorizationParameterValidateHandler authZParameterValidateHandler,
+                       SidecarMetrics sidecarMetrics,
+                       AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache)
         {
-
             this.accessControlConfiguration = accessControlConfiguration;
             this.authorizationProvider = authorizationProvider;
             this.adminIdentityResolver = adminIdentityResolver;
             this.authZParameterValidateHandler = authZParameterValidateHandler;
+            this.sidecarMetrics = sidecarMetrics;
+            this.authorizationCache = authorizationCache;
         }
 
         public RouteBuilder builderForRoute()
         {
-            return new RouteBuilder(accessControlConfiguration,
-                                    authorizationProvider,
-                                    adminIdentityResolver,
-                                    authZParameterValidateHandler);
+            return new RouteBuilder(this);
         }
 
         public VertxRoute buildRouteWithHandler(Handler<RoutingContext> handler)

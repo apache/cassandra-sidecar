@@ -66,6 +66,7 @@ dependencies {
         exclude group: 'junit', module: 'junit'
     }
     integrationTestImplementation("io.vertx:vertx-dropwizard-metrics:${project.vertxVersion}")
+    integrationTestImplementation("com.github.ben-manes.caffeine:caffeine:${project.caffeineVersion}")
     integrationTestImplementation("io.vertx:vertx-web-client:${project.vertxVersion}")
 
     integrationTestImplementation(group: 'net.java.dev.jna', name: 'jna', version: '5.9.0')

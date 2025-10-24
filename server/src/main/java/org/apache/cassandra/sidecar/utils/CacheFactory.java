@@ -22,6 +22,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -29,8 +30,11 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
+import org.apache.cassandra.sidecar.acl.authorization.AuthorizationCacheKey;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
-import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -42,19 +46,25 @@ public class CacheFactory
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheFactory.class);
 
     private final Cache<SSTableImporter.ImportOptions, Future<Void>> ssTableImportCache;
+    private final AsyncCache<AuthorizationCacheKey, Boolean> endpointAuthorizationCache;
 
     @Inject
-    public CacheFactory(ServiceConfiguration configuration, SSTableImporter ssTableImporter)
+    public CacheFactory(SidecarConfiguration configuration,
+                        SSTableImporter ssTableImporter,
+                        SidecarMetrics sidecarMetrics)
     {
-        this(configuration, ssTableImporter, Ticker.systemTicker());
+        this(configuration, ssTableImporter, sidecarMetrics, Ticker.systemTicker());
     }
 
     @VisibleForTesting
-    CacheFactory(ServiceConfiguration configuration, SSTableImporter ssTableImporter, Ticker ticker)
+    CacheFactory(SidecarConfiguration configuration, SSTableImporter ssTableImporter, SidecarMetrics sidecarMetrics,
+                 Ticker ticker)
     {
-        this.ssTableImportCache = initSSTableImportCache(configuration.sstableImportConfiguration()
+        this.ssTableImportCache = initSSTableImportCache(configuration.serviceConfiguration()
+                                                                      .sstableImportConfiguration()
                                                                       .cacheConfiguration(),
                                                          ssTableImporter, ticker);
+        this.endpointAuthorizationCache = initEndpointAuthorizationCache(configuration, sidecarMetrics, ticker);
     }
 
     /**
@@ -63,6 +73,14 @@ public class CacheFactory
     public Cache<SSTableImporter.ImportOptions, Future<Void>> ssTableImportCache()
     {
         return ssTableImportCache;
+    }
+
+    /**
+     * @return the cache used for authorization requests
+     */
+    public AsyncCache<AuthorizationCacheKey, Boolean> endpointAuthorizationCache()
+    {
+        return endpointAuthorizationCache;
     }
 
     /**
@@ -94,5 +112,39 @@ public class CacheFactory
                                         }
                        )
                        .build();
+    }
+
+    /**
+     * Initializes the Authorization Cache using the provided {@code configuration}. We want to create only one
+     * instance of authorization cache.
+     *
+     * @param sidecarConfiguration the Sidecar configuration
+     * @param sidecarMetrics       the Sidecar metrics registry
+     * @return instance of {@link AsyncCache} for caching authorization requests
+     */
+    private AsyncCache<AuthorizationCacheKey, Boolean> initEndpointAuthorizationCache(SidecarConfiguration sidecarConfiguration,
+                                                                                      SidecarMetrics sidecarMetrics,
+                                                                                      Ticker ticker)
+    {
+        if (!sidecarConfiguration.accessControlConfiguration().enabled()
+            || !sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration().enabled())
+        {
+            return null;
+        }
+        CacheConfiguration permissionCacheConfig = sidecarConfiguration.accessControlConfiguration()
+                                                                       .permissionCacheConfiguration();
+        if (permissionCacheConfig.expireAfterAccess() == null)
+        {
+            throw new ConfigurationException("Authorization handler cache must be configured with expireAfterAccess");
+        }
+        LOGGER.info("Building Authorization Cache with expireAfterAccess={}, maxSize={}",
+                    permissionCacheConfig.expireAfterAccess(), permissionCacheConfig.maximumSize());
+        return Caffeine.newBuilder()
+                       .ticker(ticker)
+                       .expireAfterAccess(permissionCacheConfig.expireAfterAccess().quantity(),
+                                          permissionCacheConfig.expireAfterAccess().unit())
+                       .maximumSize(permissionCacheConfig.maximumSize())
+                       .recordStats(() -> sidecarMetrics.server().cache().authorizationCacheMetrics)
+                       .buildAsync();
     }
 }
