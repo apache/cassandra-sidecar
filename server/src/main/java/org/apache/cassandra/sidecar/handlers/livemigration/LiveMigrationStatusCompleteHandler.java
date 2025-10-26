@@ -129,6 +129,6 @@ public class LiveMigrationStatusCompleteHandler extends AbstractHandler<Void> im
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        return Set.of(BasicPermissions.STREAM_FILES.toAuthorization());
+        return Set.of(BasicPermissions.DATA_COPY.toAuthorization());
     }
 }
