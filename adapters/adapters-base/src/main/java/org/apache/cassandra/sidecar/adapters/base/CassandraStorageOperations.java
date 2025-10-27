@@ -323,4 +323,14 @@ public class CassandraStorageOperations implements StorageOperations
         return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
                         .getCompactionThroughputMbPerSec();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void flush(@NotNull String keyspace, @NotNull String... tableNames) throws IOException
+    {
+        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                 .forceKeyspaceFlush(keyspace, tableNames);
+    }
 }

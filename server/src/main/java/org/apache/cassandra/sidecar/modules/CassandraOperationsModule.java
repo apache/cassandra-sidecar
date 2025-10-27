@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.modules;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
@@ -45,6 +46,7 @@ import org.apache.cassandra.sidecar.handlers.KeyspaceSchemaHandler;
 import org.apache.cassandra.sidecar.handlers.ListOperationalJobsHandler;
 import org.apache.cassandra.sidecar.handlers.NativeUpdateHandler;
 import org.apache.cassandra.sidecar.handlers.NodeDecommissionHandler;
+import org.apache.cassandra.sidecar.handlers.NodeFlushHandler;
 import org.apache.cassandra.sidecar.handlers.OperationalJobHandler;
 import org.apache.cassandra.sidecar.handlers.RingHandler;
 import org.apache.cassandra.sidecar.handlers.SchemaHandler;
@@ -154,6 +156,29 @@ public class CassandraOperationsModule extends AbstractModule
                                               NodeDecommissionHandler nodeDecommissionHandler)
     {
         return factory.buildRouteWithHandler(nodeDecommissionHandler);
+    }
+
+    @POST
+    @Path(ApiEndpointsV1.NODE_FLUSH_ROUTE)
+    @Operation(summary = "Flush node memtables",
+               description = "Flushes memtables for the specified keyspace and optional table names")
+    @APIResponse(description = "Node flush operation completed successfully",
+                 responseCode = "200",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = OperationalJobResponse.class)))
+    @APIResponse(description = "Node flush operation initiated successfully",
+                 responseCode = "202",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = OperationalJobResponse.class)))
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.CassandraNodeFlushRouteKey.class)
+    VertxRoute cassandraNodeFlushRoute(RouteBuilder.Factory factory,
+                                       NodeFlushHandler nodeFlushHandler)
+    {
+        return factory.builderForRoute()
+                      .setBodyHandler(true)
+                      .handler(nodeFlushHandler)
+                      .build();
     }
 
     @GET

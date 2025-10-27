@@ -1,0 +1,472 @@
+diff --git a/CHANGES.txt b/CHANGES.txt
+index 0fb5a93..2036d33 100644
+--- a/CHANGES.txt
++++ b/CHANGES.txt
+@@ -1,5 +1,6 @@
+ 0.3.0
+ -----
++ * Sidecar endpoint for moving a node to a new token (CASSSIDECAR-344)
+  * Improve FilteringMetricRegistry implementation (CASSSIDECAR-347)
+  * Add lifecycle APIs for starting and stopping Cassandra (CASSSIDECAR-266)
+  * Implementation of CassandraClusterSchemaMonitor (CASSSIDECAR-245)
+diff --git a/adapters/adapters-base/src/main/java/org/apache/cassandra/sidecar/adapters/base/CassandraStorageOperations.java b/adapters/adapters-base/src/main/java/org/apache/cassandra/sidecar/adapters/base/CassandraStorageOperations.java
+index 7bfdfdd..5ec27ec 100644
+--- a/adapters/adapters-base/src/main/java/org/apache/cassandra/sidecar/adapters/base/CassandraStorageOperations.java
++++ b/adapters/adapters-base/src/main/java/org/apache/cassandra/sidecar/adapters/base/CassandraStorageOperations.java
+@@ -323,4 +323,14 @@ public class CassandraStorageOperations implements StorageOperations
+         return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                         .getCompactionThroughputMbPerSec();
+     }
++
++    /**
++     * {@inheritDoc}
++     */
++    @Override
++    public void move(String newToken)
++    {
++        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
++                 .move(newToken);
++    }
+ }
+diff --git a/adapters/adapters-base/src/main/java/org/apache/cassandra/sidecar/adapters/base/jmx/GossipDependentStorageJmxOperations.java b/adapters/adapters-base/src/main/java/org/apache/cassandra/sidecar/adapters/base/jmx/GossipDependentStorageJmxOperations.java
+index a40255e..28ca98c 100644
+--- a/adapters/adapters-base/src/main/java/org/apache/cassandra/sidecar/adapters/base/jmx/GossipDependentStorageJmxOperations.java
++++ b/adapters/adapters-base/src/main/java/org/apache/cassandra/sidecar/adapters/base/jmx/GossipDependentStorageJmxOperations.java
+@@ -219,4 +219,10 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
+     {
+         return delegate.getCompactionThroughputMbPerSec();
+     }
++
++    @Override
++    public void move(String newToken)
++    {
++        delegate.move(newToken);
++    }
+ }
+diff --git a/adapters/adapters-base/src/main/java/org/apache/cassandra/sidecar/adapters/base/jmx/StorageJmxOperations.java b/adapters/adapters-base/src/main/java/org/apache/cassandra/sidecar/adapters/base/jmx/StorageJmxOperations.java
+index c76ccce..7b0c482 100644
+--- a/adapters/adapters-base/src/main/java/org/apache/cassandra/sidecar/adapters/base/jmx/StorageJmxOperations.java
++++ b/adapters/adapters-base/src/main/java/org/apache/cassandra/sidecar/adapters/base/jmx/StorageJmxOperations.java
+@@ -228,4 +228,11 @@ public interface StorageJmxOperations
+      * @return the current compaction throughput in megabytes per second, or 0 if throughput cannot be determined
+      */
+     int getCompactionThroughputMbPerSec();
++
++    /**
++     * Triggers the node move operation to move this node to a new token
++     *
++     * @param newToken the new token for the node to move to
++     */
++    void move(String newToken);
+ }
+diff --git a/client-common/src/main/java/org/apache/cassandra/sidecar/common/ApiEndpointsV1.java b/client-common/src/main/java/org/apache/cassandra/sidecar/common/ApiEndpointsV1.java
+index d67e4cd..90a1a2e 100644
+--- a/client-common/src/main/java/org/apache/cassandra/sidecar/common/ApiEndpointsV1.java
++++ b/client-common/src/main/java/org/apache/cassandra/sidecar/common/ApiEndpointsV1.java
+@@ -140,6 +140,7 @@ public final class ApiEndpointsV1
+     public static final String LIST_OPERATIONAL_JOBS_ROUTE = API_V1 + CASSANDRA + OPERATIONAL_JOBS;
+     public static final String OPERATIONAL_JOB_ROUTE = API_V1 + CASSANDRA + PER_OPERATIONAL_JOB;
+     public static final String NODE_DECOMMISSION_ROUTE = API_V1 + CASSANDRA + "/operations/decommission";
++    public static final String NODE_MOVE_ROUTE = API_V1 + CASSANDRA + "/operations/move";
+     public static final String STREAM_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/streams";
+     public static final String TABLE_STATS_ROUTE = API_V1 + CASSANDRA + PER_KEYSPACE + PER_TABLE + "/stats";
+ 
+diff --git a/client/src/main/java/org/apache/cassandra/sidecar/client/RequestContext.java b/client/src/main/java/org/apache/cassandra/sidecar/client/RequestContext.java
+index 2e630c3..7d22941 100644
+--- a/client/src/main/java/org/apache/cassandra/sidecar/client/RequestContext.java
++++ b/client/src/main/java/org/apache/cassandra/sidecar/client/RequestContext.java
+@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.common.request.ListOperationalJobsRequest;
+ import org.apache.cassandra.sidecar.common.request.ListSnapshotFilesRequest;
+ import org.apache.cassandra.sidecar.common.request.NativeUpdateRequest;
+ import org.apache.cassandra.sidecar.common.request.NodeDecommissionRequest;
++import org.apache.cassandra.sidecar.common.request.NodeMoveRequest;
+ import org.apache.cassandra.sidecar.common.request.NodeSettingsRequest;
+ import org.apache.cassandra.sidecar.common.request.OperationalJobRequest;
+ import org.apache.cassandra.sidecar.common.request.ReportSchemaRequest;
+@@ -582,6 +583,18 @@ public class RequestContext
+             return request(NODE_DECOMMISSION_REQUEST);
+         }
+ 
++        /**
++         * Sets the {@code request} to be a {@link NodeMoveRequest} and returns a reference to this Builder
++         * enabling method chaining.
++         *
++         * @param newToken the new token for the node to move to
++         * @return a reference to this Builder
++         */
++        public Builder nodeMoveRequest(String newToken)
++        {
++            return request(new NodeMoveRequest(newToken));
++        }
++
+         /**
+          * Sets the {@code request} to be a {@link GossipUpdateRequest} for the
+          * given {@link NodeCommandRequestPayload.State state}, and returns a reference to this Builder enabling method chaining.
+diff --git a/client/src/main/java/org/apache/cassandra/sidecar/client/SidecarClient.java b/client/src/main/java/org/apache/cassandra/sidecar/client/SidecarClient.java
+index 373bd33..6157078 100644
+--- a/client/src/main/java/org/apache/cassandra/sidecar/client/SidecarClient.java
++++ b/client/src/main/java/org/apache/cassandra/sidecar/client/SidecarClient.java
+@@ -823,6 +823,21 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
+                                             .build());
+     }
+ 
++    /**
++     * Executes the node move request using the default retry policy and configured selection policy
++     *
++     * @param instance the instance where the request will be executed
++     * @param newToken the new token for the node to move to
++     * @return a completable future of the operational job response
++     */
++    public CompletableFuture<OperationalJobResponse> nodeMove(SidecarInstance instance, String newToken)
++    {
++        return executor.executeRequestAsync(requestBuilder()
++                                            .singleInstanceSelectionPolicy(instance)
++                                            .nodeMoveRequest(newToken)
++                                            .build());
++    }
++
+     /**
+      * Sends a request to start or stop Cassandra gossiping on the provided instance.
+      * <p>
+diff --git a/client/src/testFixtures/java/org/apache/cassandra/sidecar/client/SidecarClientTest.java b/client/src/testFixtures/java/org/apache/cassandra/sidecar/client/SidecarClientTest.java
+index b13a209..d38c826 100644
+--- a/client/src/testFixtures/java/org/apache/cassandra/sidecar/client/SidecarClientTest.java
++++ b/client/src/testFixtures/java/org/apache/cassandra/sidecar/client/SidecarClientTest.java
+@@ -1393,6 +1393,26 @@ abstract class SidecarClientTest
+         validateResponseServed(ApiEndpointsV1.NODE_DECOMMISSION_ROUTE);
+     }
+ 
++    @Test
++    public void testNodeMove() throws Exception
++    {
++        UUID jobId = UUID.randomUUID();
++        String newToken = "123456789";
++        String nodeMoveString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"SUCCEEDED\",\"instance\":\"127.0.0.1\"}";
++
++        MockResponse response = new MockResponse()
++                                .setResponseCode(OK.code())
++                                .setHeader("content-type", "application/json")
++                                .setBody(nodeMoveString);
++        enqueue(response);
++
++        SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(servers.get(0));
++        OperationalJobResponse result = client.nodeMove(sidecarInstance, newToken).get(30, TimeUnit.SECONDS);
++        assertThat(result).isNotNull();
++        assertThat(result.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
++        validateResponseServed(ApiEndpointsV1.NODE_MOVE_ROUTE + "?newToken=" + newToken);
++    }
++
+     @Test
+     void testFailsWithOneAttemptPerServer()
+     {
+diff --git a/integration-tests/src/integrationTest/org/apache/cassandra/sidecar/routes/CassandraNodeOperationsIntegrationTest.java b/integration-tests/src/integrationTest/org/apache/cassandra/sidecar/routes/CassandraNodeOperationsIntegrationTest.java
+index c530541..806e6b5 100644
+--- a/integration-tests/src/integrationTest/org/apache/cassandra/sidecar/routes/CassandraNodeOperationsIntegrationTest.java
++++ b/integration-tests/src/integrationTest/org/apache/cassandra/sidecar/routes/CassandraNodeOperationsIntegrationTest.java
+@@ -1,4 +1,161 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
+ package org.apache.cassandra.sidecar.routes;
+ 
+-public class CassandraNodeOperationsIntegrationTest {
+-}
++import java.util.concurrent.TimeUnit;
++
++import org.junit.jupiter.api.Test;
++
++import io.vertx.core.buffer.Buffer;
++import io.vertx.core.json.JsonObject;
++import io.vertx.ext.web.client.HttpResponse;
++import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
++import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
++import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
++
++import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
++import static io.netty.handler.codec.http.HttpResponseStatus.OK;
++import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
++import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
++import static org.assertj.core.api.Assertions.assertThat;
++
++/**
++ * Integration tests for Cassandra node operations
++ */
++public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecarIntegrationTestBase
++{
++    public static final String CASSANDRA_VERSION_4_0 = "4.0";
++
++    @Override
++    protected void initializeSchemaForTest()
++    {
++        // No schema init needed
++    }
++
++    @Override
++    protected void beforeTestStart()
++    {
++        // wait for the schema initialization
++        waitForSchemaReady(30, TimeUnit.SECONDS);
++    }
++
++    @Test
++    void testNodeMoveOperationSuccess()
++    {
++        // Use a test token - this is a valid token for Murmur3Partitioner 
++        String testToken = "123456789";
++
++        // Initiate move operation
++        HttpResponse<Buffer> moveResponse = getBlocking(
++        trustedClient().put(serverWrapper.serverPort, "localhost", ApiEndpointsV1.NODE_MOVE_ROUTE + "?newToken=" + testToken)
++                       .send());
++
++        assertThat(moveResponse.statusCode()).isIn(OK.code(), ACCEPTED.code());
++
++        JsonObject responseBody = moveResponse.bodyAsJsonObject();
++        assertThat(responseBody).isNotNull();
++        assertThat(responseBody.getString("jobId")).isNotNull();
++        assertThat(responseBody.getString("operation")).isEqualTo("move");
++        assertThat(responseBody.getString("jobStatus")).isIn(
++        OperationalJobStatus.CREATED.name(),
++        OperationalJobStatus.RUNNING.name(),
++        OperationalJobStatus.SUCCEEDED.name()
++        );
++
++        // Verify the job eventually completes (or at least gets processed)
++        loopAssert(30, 500, () -> {
++            HttpResponse<Buffer> streamStatsResponse = getBlocking(
++            trustedClient().get(serverWrapper.serverPort, "localhost", ApiEndpointsV1.STREAM_STATS_ROUTE)
++                           .send());
++
++            assertThat(streamStatsResponse.statusCode()).isEqualTo(OK.code());
++
++            JsonObject streamStats = streamStatsResponse.bodyAsJsonObject();
++            assertThat(streamStats).isNotNull();
++            // The operationMode should be either NORMAL (completed) or MOVING (in progress)
++            assertThat(streamStats.getString("operationMode")).isIn("NORMAL", "MOVING");
++        });
++        
++        // Validate the operational job status using the OperationalJobHandler
++        String jobId = responseBody.getString("jobId");
++        validateOperationalJobStatus(jobId, "move");
++    }
++
++    /**
++     * Validates the operational job status by querying the OperationalJobHandler endpoint
++     * and waiting for the job to reach a final state if necessary.
++     *
++     * @param jobId the ID of the operational job to validate
++     * @param expectedOperation the expected operation name (e.g., "move", "decommission", "drain")
++     */
++    private void validateOperationalJobStatus(String jobId, String expectedOperation)
++    {
++        String operationalJobRoute = ApiEndpointsV1.OPERATIONAL_JOB_ROUTE.replace(":operationId", jobId);
++        
++        HttpResponse<Buffer> jobStatusResponse = getBlocking(
++        trustedClient().get(serverWrapper.serverPort, "localhost", operationalJobRoute)
++                       .send());
++        
++        assertThat(jobStatusResponse.statusCode()).isEqualTo(OK.code());
++        
++        JsonObject jobStatusBody = jobStatusResponse.bodyAsJsonObject();
++        assertThat(jobStatusBody).isNotNull();
++        assertThat(jobStatusBody.getString("jobId")).isEqualTo(jobId);
++        assertThat(jobStatusBody.getString("operation")).isEqualTo(expectedOperation);
++        assertThat(jobStatusBody.getString("jobStatus")).isIn(
++        OperationalJobStatus.RUNNING.name(),
++        OperationalJobStatus.SUCCEEDED.name()
++        );
++        
++        // If the job is still running, wait for it to complete or reach a final state
++        if (OperationalJobStatus.RUNNING.name().equals(jobStatusBody.getString("jobStatus")))
++        {
++            loopAssert(30, 500, () -> {
++                HttpResponse<Buffer> finalJobStatusResponse = getBlocking(
++                trustedClient().get(serverWrapper.serverPort, "localhost", operationalJobRoute)
++                               .send());
++                
++                assertThat(finalJobStatusResponse.statusCode()).isEqualTo(OK.code());
++                
++                JsonObject finalJobStatusBody = finalJobStatusResponse.bodyAsJsonObject();
++                assertThat(finalJobStatusBody).isNotNull();
++                assertThat(finalJobStatusBody.getString("jobStatus")).isIn(
++                OperationalJobStatus.SUCCEEDED.name(),
++                OperationalJobStatus.FAILED.name()
++                );
++            });
++        }
++    }
++
++    /**
++     * {@inheritDoc}
++     */
++    @Override
++    protected void tearDown() throws Exception
++    {
++        try
++        {
++            super.tearDown();
++        }
++        catch (IllegalStateException ex)
++        {
++            logger.error("Exception in tear down", ex);
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/server-common/src/main/java/org/apache/cassandra/sidecar/common/server/StorageOperations.java b/server-common/src/main/java/org/apache/cassandra/sidecar/common/server/StorageOperations.java
+index d135e61..e0b0252 100644
+--- a/server-common/src/main/java/org/apache/cassandra/sidecar/common/server/StorageOperations.java
++++ b/server-common/src/main/java/org/apache/cassandra/sidecar/common/server/StorageOperations.java
+@@ -174,4 +174,11 @@ public interface StorageOperations
+      * @return the current compaction throughput in megabytes per second, or 0 if throughput cannot be determined
+      */
+     int getCompactionThroughputMbPerSec();
++
++    /**
++     * Triggers the node move operation to move the node to a new token.
++     *
++     * @param newToken the new token for the node to move to
++     */
++    void move(String newToken);
+ }
+diff --git a/server/src/main/java/org/apache/cassandra/sidecar/acl/authorization/BasicPermissions.java b/server/src/main/java/org/apache/cassandra/sidecar/acl/authorization/BasicPermissions.java
+index b57ac62..1acd0b4 100644
+--- a/server/src/main/java/org/apache/cassandra/sidecar/acl/authorization/BasicPermissions.java
++++ b/server/src/main/java/org/apache/cassandra/sidecar/acl/authorization/BasicPermissions.java
+@@ -62,6 +62,7 @@ public class BasicPermissions
+     // sidecar operation related permissions
+     public static final Permission READ_OPERATIONAL_JOB = new DomainAwarePermission("OPERATIONAL_JOB:READ", OPERATION_SCOPE);
+     public static final Permission DECOMMISSION_NODE = new DomainAwarePermission("NODE:DECOMMISSION", OPERATION_SCOPE);
++    public static final Permission MOVE_NODE = new DomainAwarePermission("NODE:MOVE", OPERATION_SCOPE);
+ 
+     // Permissions related to Schema Reporting
+     public static final Permission REPORT_SCHEMA = new DomainAwarePermission("SCHEMA:PUBLISH", CLUSTER_SCOPE);
+diff --git a/server/src/main/java/org/apache/cassandra/sidecar/handlers/AbstractHandler.java b/server/src/main/java/org/apache/cassandra/sidecar/handlers/AbstractHandler.java
+index a7c4f7f..72cc0a9 100644
+--- a/server/src/main/java/org/apache/cassandra/sidecar/handlers/AbstractHandler.java
++++ b/server/src/main/java/org/apache/cassandra/sidecar/handlers/AbstractHandler.java
+@@ -29,14 +29,21 @@ import io.vertx.core.net.SocketAddress;
+ import io.vertx.ext.web.RoutingContext;
+ import io.vertx.ext.web.handler.HttpException;
+ import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
++import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
++import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
+ import org.apache.cassandra.sidecar.common.server.data.Name;
+ import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
+ import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
+ import org.apache.cassandra.sidecar.common.utils.Preconditions;
+ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
++import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+ import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
++import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
++import org.apache.cassandra.sidecar.job.OperationalJob;
++import org.apache.cassandra.sidecar.job.OperationalJobManager;
+ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
+ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
++import org.apache.cassandra.sidecar.utils.OperationalJobUtils;
+ import org.jetbrains.annotations.NotNull;
+ 
+ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
+@@ -317,4 +324,32 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
+         }
+         return host;
+     }
++
++    /**
++     * Handles the submission and execution of an operational job.
++     *
++     * @param jobManager the manager responsible for submitting and tracking operational jobs
++     * @param config     the service configuration containing execution parameters
++     * @param context    the routing context for the HTTP request/response
++     * @param job        the operational job to be executed
++     */
++    protected void handleOperationalJob(OperationalJobManager jobManager, ServiceConfiguration config, RoutingContext context, OperationalJob job)
++    {
++        try
++        {
++            jobManager.trySubmitJob(job);
++        }
++        catch (OperationalJobConflictException oje)
++        {
++            String reason = oje.getMessage();
++            logger.error("Conflicting job encountered. reason={}", reason);
++            context.response().setStatusCode(HttpResponseStatus.CONFLICT.code());
++            context.json(new OperationalJobResponse(job.jobId(), OperationalJobStatus.FAILED, job.name(), reason));
++            return;
++        }
++
++        // Get the result, waiting for the specified wait time for result
++        job.asyncResult(executorPools.service(), config.operationalJobExecutionMaxWaitTime())
++           .onComplete(v -> OperationalJobUtils.sendStatusBasedResponse(context, job));
++    }
+ }
+diff --git a/server/src/main/java/org/apache/cassandra/sidecar/modules/CassandraOperationsModule.java b/server/src/main/java/org/apache/cassandra/sidecar/modules/CassandraOperationsModule.java
+index 9b1278a..d7a1834 100644
+--- a/server/src/main/java/org/apache/cassandra/sidecar/modules/CassandraOperationsModule.java
++++ b/server/src/main/java/org/apache/cassandra/sidecar/modules/CassandraOperationsModule.java
+@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.handlers.KeyspaceSchemaHandler;
+ import org.apache.cassandra.sidecar.handlers.ListOperationalJobsHandler;
+ import org.apache.cassandra.sidecar.handlers.NativeUpdateHandler;
+ import org.apache.cassandra.sidecar.handlers.NodeDecommissionHandler;
++import org.apache.cassandra.sidecar.handlers.NodeMoveHandler;
+ import org.apache.cassandra.sidecar.handlers.OperationalJobHandler;
+ import org.apache.cassandra.sidecar.handlers.RingHandler;
+ import org.apache.cassandra.sidecar.handlers.SchemaHandler;
+@@ -156,6 +157,26 @@ public class CassandraOperationsModule extends AbstractModule
+         return factory.buildRouteWithHandler(nodeDecommissionHandler);
+     }
+ 
++    @PUT
++    @Path(ApiEndpointsV1.NODE_MOVE_ROUTE)
++    @Operation(summary = "Move node to new token",
++               description = "Moves the Cassandra node to a new token in the ring")
++    @APIResponse(description = "Node move operation completed successfully",
++                 responseCode = "200",
++                 content = @Content(mediaType = "application/json",
++                 schema = @Schema(implementation = OperationalJobResponse.class)))
++    @APIResponse(description = "Node move operation initiated successfully",
++                 responseCode = "202",
++                 content = @Content(mediaType = "application/json",
++                 schema = @Schema(implementation = OperationalJobResponse.class)))
++    @ProvidesIntoMap
++    @KeyClassMapKey(VertxRouteMapKeys.CassandraNodeMoveRouteKey.class)
++    VertxRoute cassandraNodeMoveRoute(RouteBuilder.Factory factory,
++                                      NodeMoveHandler nodeMoveHandler)
++    {
++        return factory.buildRouteWithHandler(nodeMoveHandler);
++    }
++
+     @GET
+     @Path(ApiEndpointsV1.STREAM_STATS_ROUTE)
+     @Operation(summary = "Get stream statistics",
+diff --git a/server/src/main/java/org/apache/cassandra/sidecar/modules/multibindings/VertxRouteMapKeys.java b/server/src/main/java/org/apache/cassandra/sidecar/modules/multibindings/VertxRouteMapKeys.java
+index e3bec84..5a0b164 100644
+--- a/server/src/main/java/org/apache/cassandra/sidecar/modules/multibindings/VertxRouteMapKeys.java
++++ b/server/src/main/java/org/apache/cassandra/sidecar/modules/multibindings/VertxRouteMapKeys.java
+@@ -83,6 +83,11 @@ public interface VertxRouteMapKeys
+         HttpMethod HTTP_METHOD = HttpMethod.PUT;
+         String ROUTE_URI = ApiEndpointsV1.NODE_DECOMMISSION_ROUTE;
+     }
++    interface CassandraNodeMoveRouteKey extends RouteClassKey
++    {
++        HttpMethod HTTP_METHOD = HttpMethod.PUT;
++        String ROUTE_URI = ApiEndpointsV1.NODE_MOVE_ROUTE;
++    }
+     interface CassandraNodeSettingsRouteKey extends RouteClassKey
+     {
+         HttpMethod HTTP_METHOD = HttpMethod.GET;

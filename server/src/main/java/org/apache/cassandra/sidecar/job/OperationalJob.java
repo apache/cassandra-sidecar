@@ -189,7 +189,7 @@ public abstract class OperationalJob implements Task<Void>
     /**
      * OperationalJob body. The implementation is executed in a blocking manner.
      */
-    protected abstract void executeInternal();
+    protected abstract void executeInternal() throws Exception;
 
     /**
      * Execute the job behavior as specified in the internal execution {@link #executeInternal()},
