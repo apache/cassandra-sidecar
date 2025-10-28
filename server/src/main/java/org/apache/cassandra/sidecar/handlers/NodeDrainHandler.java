@@ -31,19 +31,17 @@ import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.job.NodeDecommissionJob;
+import org.apache.cassandra.sidecar.job.NodeDrainJob;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.OperationalJobUtils;
 import org.jetbrains.annotations.NotNull;
 
-import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
-
 /**
- * Provides REST API for asynchronously decommissioning the corresponding Cassandra node
+ * Provides REST API for asynchronously draining the corresponding Cassandra node
  */
-public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements AccessProtected
+public class NodeDrainHandler extends AbstractHandler<Void> implements AccessProtected
 {
     private final OperationalJobManager jobManager;
     private final ServiceConfiguration config;
@@ -56,11 +54,11 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
      * @param validator       a validator instance to validate Cassandra-specific input
      */
     @Inject
-    protected NodeDecommissionHandler(InstanceMetadataFetcher metadataFetcher,
-                                      ExecutorPools executorPools,
-                                      ServiceConfiguration serviceConfiguration,
-                                      CassandraInputValidator validator,
-                                      OperationalJobManager jobManager)
+    protected NodeDrainHandler(InstanceMetadataFetcher metadataFetcher,
+                               ExecutorPools executorPools,
+                               ServiceConfiguration serviceConfiguration,
+                               CassandraInputValidator validator,
+                               OperationalJobManager jobManager)
     {
         super(metadataFetcher, executorPools, validator);
         this.jobManager = jobManager;
@@ -70,7 +68,7 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        return Collections.singleton(BasicPermissions.DECOMMISSION_NODE.toAuthorization());
+        return Collections.singleton(BasicPermissions.DRAIN_NODE.toAuthorization());
     }
 
     /**
@@ -81,10 +79,10 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
                                HttpServerRequest httpRequest,
                                @NotNull String host,
                                SocketAddress remoteAddress,
-                               Boolean isForce)
+                               Void unused)
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
-        NodeDecommissionJob job = new NodeDecommissionJob(UUIDs.timeBased(), operations, isForce);
+        NodeDrainJob job = new NodeDrainJob(UUIDs.timeBased(), operations);
         this.jobManager.trySubmitJob(job,
                                      (completedJob, exception) ->
                                      OperationalJobUtils.sendStatusBasedResponse(context, completedJob, exception),
@@ -96,8 +94,9 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
      * {@inheritDoc}
      */
     @Override
-    protected Boolean extractParamsOrThrow(RoutingContext context)
+    protected Void extractParamsOrThrow(RoutingContext context)
     {
-        return parseBooleanQueryParam(context.request(), "force", false);
+        // No parameters needed for drain operation
+        return null;
     }
 }

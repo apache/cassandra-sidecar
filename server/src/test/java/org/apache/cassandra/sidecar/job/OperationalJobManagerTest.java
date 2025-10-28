@@ -19,29 +19,26 @@
 package org.apache.cassandra.sidecar.job;
 
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.utils.UUIDs;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
 
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests to validate the Job submission behavior for scenarios which are a combination of values for
@@ -71,59 +68,74 @@ class OperationalJobManagerTest
     }
 
     @Test
-    void testWithNoDownstreamJob()
+    void testWithNoDownstreamJob() throws InterruptedException
     {
         OperationalJobTracker tracker = new OperationalJobTracker(4);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        CountDownLatch latch = new CountDownLatch(1);
 
         OperationalJob testJob = OperationalJobTest.createOperationalJob(SUCCEEDED);
-        manager.trySubmitJob(testJob);
-        testJob.execute(Promise.promise());
+        BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (job, exception) -> {
+            assertThat(exception).isNull();
+            latch.countDown();
+        };
+
+        manager.trySubmitJob(testJob, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
         assertThat(testJob.asyncResult().isComplete()).isTrue();
         assertThat(testJob.status()).isEqualTo(SUCCEEDED);
         assertThat(tracker.get(testJob.jobId())).isNotNull();
     }
 
     @Test
-    void testWithRunningDownstreamJob()
+    void testWithRunningDownstreamJob() throws InterruptedException
     {
         OperationalJob runningJob = OperationalJobTest.createOperationalJob(RUNNING);
         OperationalJobTracker tracker = new OperationalJobTracker(4);
-        ExecutorPools mockPools = mock(ExecutorPools.class);
-        TaskExecutorPool mockExecPool = mock(TaskExecutorPool.class);
-        when(mockPools.internal()).thenReturn(mockExecPool);
-        when(mockExecPool.runBlocking(any())).thenReturn(null);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
-        assertThatThrownBy(() -> manager.trySubmitJob(runningJob))
-        .isExactlyInstanceOf(OperationalJobConflictException.class)
-        .hasMessage("The same operational job is already running on Cassandra. operationName='Operation X'");
+        CountDownLatch latch = new CountDownLatch(1);
+
+        BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (job, exception) -> {
+            assertThat(exception).isInstanceOf(OperationalJobConflictException.class);
+            assertThat(exception.getMessage()).isEqualTo("The same operational job is already running on Cassandra. operationName='Operation X'");
+            latch.countDown();
+        };
+
+        manager.trySubmitJob(runningJob, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
     }
 
     @Test
-    void testWithLongRunningJob()
+    void testWithLongRunningJob() throws InterruptedException
     {
         UUID jobId = UUIDs.timeBased();
-
         OperationalJobTracker tracker = new OperationalJobTracker(4);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        CountDownLatch latch = new CountDownLatch(1);
 
-        OperationalJob testJob = OperationalJobTest.createOperationalJob(jobId, SecondBoundConfiguration.parse("10s"));
+        OperationalJob testJob = OperationalJobTest.createOperationalJob(jobId, SecondBoundConfiguration.parse("2s"));
+        BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (job, exception) -> {
+            assertThat(exception).isNull();
+            latch.countDown();
+        };
 
-        manager.trySubmitJob(testJob);
-        // execute the job async.
-        vertx.executeBlocking(testJob::execute);
-        // by the time of checking, the job should still be running. It runs for 10 seconds.
+        manager.trySubmitJob(testJob, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        // Job should be running initially
         assertThat(testJob.asyncResult().isComplete()).isFalse();
         assertThat(tracker.get(jobId)).isNotNull();
+        
+        // Wait for completion
+        assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+        assertThat(testJob.asyncResult().isComplete()).isTrue();
     }
 
     @Test
-    void testWithFailingJob()
+    void testWithFailingJob() throws InterruptedException
     {
         UUID jobId = UUIDs.timeBased();
-
         OperationalJobTracker tracker = new OperationalJobTracker(4);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        CountDownLatch latch = new CountDownLatch(1);
 
         String msg = "Test Job failed";
         OperationalJob failingJob = new OperationalJob(jobId)
@@ -141,10 +153,15 @@ class OperationalJobManagerTest
             }
         };
 
-        manager.trySubmitJob(failingJob);
-        failingJob.execute(Promise.promise());
-        assertThat(failingJob.asyncResult().isComplete()).isTrue();
-        assertThat(failingJob.asyncResult().failed()).isTrue();
+        BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (job, exception) -> {
+            assertThat(exception).isNull(); // Exception handled internally by job
+            assertThat(job.asyncResult().isComplete()).isTrue();
+            assertThat(job.asyncResult().failed()).isTrue();
+            latch.countDown();
+        };
+
+        manager.trySubmitJob(failingJob, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
         assertThat(tracker.get(jobId)).isNotNull();
     }
 }

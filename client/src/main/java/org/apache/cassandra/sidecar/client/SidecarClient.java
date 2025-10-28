@@ -826,6 +826,20 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     }
 
     /**
+     * Executes the node drain request using the default retry policy and configured selection policy
+     *
+     * @param instance the instance where the request will be executed
+     * @return a completable future of the jobs list
+     */
+    public CompletableFuture<OperationalJobResponse> nodeDrain(SidecarInstance instance)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .nodeDrainRequest()
+                                            .build());
+    }
+
+    /**
      * Sends a request to start or stop Cassandra gossiping on the provided instance.
      * <p>
      * This operation asynchronously triggers start or stop of gossip via Cassandra's JMX interface.

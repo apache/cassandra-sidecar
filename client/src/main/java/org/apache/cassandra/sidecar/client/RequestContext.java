@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.common.request.ListOperationalJobsRequest;
 import org.apache.cassandra.sidecar.common.request.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.request.NativeUpdateRequest;
 import org.apache.cassandra.sidecar.common.request.NodeDecommissionRequest;
+import org.apache.cassandra.sidecar.common.request.NodeDrainRequest;
 import org.apache.cassandra.sidecar.common.request.NodeSettingsRequest;
 import org.apache.cassandra.sidecar.common.request.OperationalJobRequest;
 import org.apache.cassandra.sidecar.common.request.ReportSchemaRequest;
@@ -89,6 +90,7 @@ public class RequestContext
     protected static final GossipInfoRequest GOSSIP_INFO_REQUEST = new GossipInfoRequest();
     protected static final ListOperationalJobsRequest LIST_JOBS_REQUEST = new ListOperationalJobsRequest();
     protected static final NodeDecommissionRequest NODE_DECOMMISSION_REQUEST = new NodeDecommissionRequest();
+    protected static final NodeDrainRequest NODE_DRAIN_REQUEST = new NodeDrainRequest();
 
     protected static final StreamStatsRequest STREAM_STATS_REQUEST = new StreamStatsRequest();
     protected static final LifecycleInfoRequest LIFECYCLE_INFO_REQUEST = new LifecycleInfoRequest();
@@ -580,6 +582,17 @@ public class RequestContext
         public Builder nodeDecommissionRequest()
         {
             return request(NODE_DECOMMISSION_REQUEST);
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link NodeDrainRequest} and returns a reference to this Builder
+         * enabling method chaining.
+         *
+         * @return a reference to this Builder
+         */
+        public Builder nodeDrainRequest()
+        {
+            return request(NODE_DRAIN_REQUEST);
         }
 
         /**

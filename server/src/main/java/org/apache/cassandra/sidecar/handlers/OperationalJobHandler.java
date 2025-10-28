@@ -85,7 +85,7 @@ public class OperationalJobHandler extends AbstractHandler<UUID> implements Acce
                          return job;
                      })
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, jobId))
-                     .onSuccess(job -> OperationalJobUtils.sendStatusBasedResponse(context, job));
+                     .onSuccess(job -> OperationalJobUtils.sendStatusBasedResponse(context, job, null));
     }
 
     /**

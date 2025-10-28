@@ -173,6 +173,12 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
     }
 
     @Override
+    public void drain() throws IOException, InterruptedException, ExecutionException
+    {
+        delegate.drain();
+    }
+
+    @Override
     public String getClusterName()
     {
         return delegate.getClusterName();

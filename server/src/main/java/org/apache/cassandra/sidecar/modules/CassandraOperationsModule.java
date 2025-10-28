@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.handlers.KeyspaceSchemaHandler;
 import org.apache.cassandra.sidecar.handlers.ListOperationalJobsHandler;
 import org.apache.cassandra.sidecar.handlers.NativeUpdateHandler;
 import org.apache.cassandra.sidecar.handlers.NodeDecommissionHandler;
+import org.apache.cassandra.sidecar.handlers.NodeDrainHandler;
 import org.apache.cassandra.sidecar.handlers.OperationalJobHandler;
 import org.apache.cassandra.sidecar.handlers.RingHandler;
 import org.apache.cassandra.sidecar.handlers.SchemaHandler;
@@ -154,6 +155,26 @@ public class CassandraOperationsModule extends AbstractModule
                                               NodeDecommissionHandler nodeDecommissionHandler)
     {
         return factory.buildRouteWithHandler(nodeDecommissionHandler);
+    }
+
+    @PUT
+    @Path(ApiEndpointsV1.NODE_DRAIN_ROUTE)
+    @Operation(summary = "Drain node",
+               description = "Drains the Cassandra node by flushing memtables and stopping writes")
+    @APIResponse(description = "Node drain operation completed successfully",
+                 responseCode = "200",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = OperationalJobResponse.class)))
+    @APIResponse(description = "Node drain operation initiated successfully",
+                 responseCode = "202",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = OperationalJobResponse.class)))
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.CassandraNodeDrainRouteKey.class)
+    VertxRoute cassandraNodeDrainRoute(RouteBuilder.Factory factory,
+                                       NodeDrainHandler nodeDrainHandler)
+    {
+        return factory.buildRouteWithHandler(nodeDrainHandler);
     }
 
     @GET

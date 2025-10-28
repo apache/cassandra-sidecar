@@ -240,6 +240,16 @@ public class CassandraStorageOperations implements StorageOperations
      * {@inheritDoc}
      */
     @Override
+    public void drain() throws IOException, InterruptedException, ExecutionException
+    {
+        jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                 .drain();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean isGossipRunning()
     {
         return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
