@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Upgrade caffeine dependency (CASSSIDECAR-332)
  * Add Live Migration Status endpoint to persist Live Migration status and for safety (CASSSIDECAR-345)
  * Sidecar endpoint for draining a node (CASSSIDECAR-342)
  * Avoid resuming stream early during SSTable upload (CASSSIDECAR-359)
