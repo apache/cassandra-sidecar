@@ -107,9 +107,9 @@ public class CassandraAdapter implements ICassandraAdapter
 
     @Override
     @NotNull
-    public Map<String, String> cqlNodeSettings()
+    public Map<String, String> v2NodeSettings()
     {
-        throw new UnsupportedOperationException("CQL node settings are not provided by this adapter");
+        throw new UnsupportedOperationException("V2 node settings are not provided by this adapter");
     }
 
     @Override

@@ -419,7 +419,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      */
     @Override
     @NotNull
-    public Map<String, String> cqlNodeSettings() throws CassandraUnavailableException
+    public Map<String, String> v2NodeSettings() throws CassandraUnavailableException
     {
         if (nodeSettingsFromCql == null)
         {

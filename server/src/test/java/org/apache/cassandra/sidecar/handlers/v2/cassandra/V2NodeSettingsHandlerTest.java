@@ -62,7 +62,7 @@ public class V2NodeSettingsHandlerTest
     private CassandraAdapterDelegate buildMockAdapterDelegate()
     {
         CassandraAdapterDelegate cassandraAdapterDelegate = Mockito.mock(CassandraAdapterDelegate.class);
-        Mockito.when(cassandraAdapterDelegate.cqlNodeSettings()).thenReturn(Map.of("concurrent_reads", "16"));
+        Mockito.when(cassandraAdapterDelegate.v2NodeSettings()).thenReturn(Map.of("concurrent_reads", "16"));
         return cassandraAdapterDelegate;
     }
 

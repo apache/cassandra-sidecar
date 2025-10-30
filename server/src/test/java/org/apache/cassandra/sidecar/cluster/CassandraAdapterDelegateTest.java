@@ -144,26 +144,26 @@ public class CassandraAdapterDelegateTest
     public void nativeProtocolHealthCheckWhenHealthCheckSucceedsShouldSetNodeSettingsFromCql()
     {
         cassandraAdapterDelegate.nativeProtocolHealthCheck();
-        Map<String, String> actual = cassandraAdapterDelegate.cqlNodeSettings();
+        Map<String, String> actual = cassandraAdapterDelegate.v2NodeSettings();
         Map<String, String> expected = Map.of("concurrent_reads", "16");
         Assertions.assertEquals(expected, actual);
     }
 
     @Test
-    public void cqlNodeSettingsWhenHealthCheckHasNotRanShouldThrowCassandraUnavailableException()
+    public void v2NodeSettingsWhenHealthCheckHasNotRanShouldThrowCassandraUnavailableException()
     {
-        Assertions.assertThrows(CassandraUnavailableException.class, () -> cassandraAdapterDelegate.cqlNodeSettings());
+        Assertions.assertThrows(CassandraUnavailableException.class, () -> cassandraAdapterDelegate.v2NodeSettings());
     }
 
     @Test
-    public void cqlNodeSettingsWhenHealthCheckSucceedsThenFailsShouldUnsetCqlNodeSettings()
+    public void cqlNodeSettingsWhenHealthCheckSucceedsThenFailsShouldUnsetV2NodeSettings()
     {
         cassandraAdapterDelegate.nativeProtocolHealthCheck();
-        Map<String, String> actual = cassandraAdapterDelegate.cqlNodeSettings();
+        Map<String, String> actual = cassandraAdapterDelegate.v2NodeSettings();
         Map<String, String> expected = Map.of("concurrent_reads", "16");
         Assertions.assertEquals(expected, actual);
-        cassandraAdapterDelegate.cqlNodeSettings();
+        cassandraAdapterDelegate.v2NodeSettings();
         cassandraAdapterDelegate.nativeProtocolHealthCheck();
-        Assertions.assertThrows(CassandraUnavailableException.class, () -> cassandraAdapterDelegate.cqlNodeSettings());
+        Assertions.assertThrows(CassandraUnavailableException.class, () -> cassandraAdapterDelegate.v2NodeSettings());
     }
 }

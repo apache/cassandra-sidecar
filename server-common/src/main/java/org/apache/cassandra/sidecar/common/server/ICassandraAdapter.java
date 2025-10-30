@@ -57,7 +57,7 @@ public interface ICassandraAdapter
      * @return A map of name: value mappings for the settings in system_view.settings.
      * @throws CassandraUnavailableException when CQL is not available
      */
-    @NotNull Map<String, String> cqlNodeSettings() throws CassandraUnavailableException;
+    @NotNull Map<String, String> v2NodeSettings() throws CassandraUnavailableException;
 
     /**
      * Execute the provided query on the locally-managed Cassandra instance
