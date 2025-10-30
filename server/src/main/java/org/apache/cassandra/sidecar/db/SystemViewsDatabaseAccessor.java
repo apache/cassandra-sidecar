@@ -99,7 +99,7 @@ public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSch
     }
 
     @NotNull
-    public Map<String, String> getSettings() throws SchemaUnavailableException
+    public Map<String, String> allSettings() throws SchemaUnavailableException
     {
         BoundStatement statement = tableSchema.selectAllSettings().bind();
         return querySettings(statement);
