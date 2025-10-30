@@ -68,7 +68,13 @@ class RoutesIntegrationTest extends SharedClusterSidecarIntegrationTestBase
         assertThat(gossipInfo.heartbeat()).isNotNull();
         assertThat(gossipInfo.hostId()).isNotNull();
         String releaseVersion = cluster.getFirstRunningInstance().getReleaseVersionString();
+        releaseVersion = stripSnapshot(releaseVersion);
         assertThat(gossipInfo.releaseVersion()).startsWith(releaseVersion);
+    }
+
+    private String stripSnapshot(String version)
+    {
+        return version.replace("-SNAPSHOT", "");
     }
 
     @Test

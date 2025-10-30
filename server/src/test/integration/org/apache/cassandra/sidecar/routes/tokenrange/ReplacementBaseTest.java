@@ -21,8 +21,6 @@ package org.apache.cassandra.sidecar.routes.tokenrange;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -33,9 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
-import com.google.common.collect.Sets;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.junit5.VertxTestContext;
@@ -44,6 +40,7 @@ import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.shared.NetworkTopology;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.IClusterExtension;
 import org.apache.cassandra.testing.IRingEntry;
@@ -61,23 +58,15 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
                                               CountDownLatch transientStateEnd,
                                               IClusterExtension<? extends IInstance> cluster,
                                               List<? extends IInstance> nodesToRemove,
-                                              Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings)
+                                              Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings,
+                                              TestTokenSupplier tokenSupplier)
     throws Exception
     {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         try
         {
-            Set<String> dcReplication;
-            if (annotation.numDcs() > 1)
-            {
-                createTestKeyspace(ImmutableMap.of("replication_factor", DEFAULT_RF));
-                dcReplication = Sets.newHashSet(Arrays.asList("datacenter1", "datacenter2"));
-            }
-            else
-            {
-                createTestKeyspace(ImmutableMap.of("datacenter1", DEFAULT_RF));
-                dcReplication = Collections.singleton("datacenter1");
-            }
+            maybeReconfigureCMS(cluster);
+            Set<String> dcReplication = getDcReplication(annotation);
 
             IInstance seed = cluster.get(1);
             List<String> removedNodeAddresses = nodesToRemove.stream()
@@ -129,7 +118,13 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
                                    nodeNumber -> nodeNums.contains(nodeNumber) ? "Replacing" : "Normal");
 
                 int nodeCount = annotation.nodesPerDc() * annotation.numDcs();
-                validateTokenRanges(mappingResponse, generateExpectedRanges(nodeCount));
+                TestTokenSupplier finalTokenSupplier = tokenSupplier != null ? tokenSupplier :
+                                                       TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
+                                                                                                 annotation.newNodesPerDc(),
+                                                                                                 annotation.numDcs(),
+                                                                                                 1);
+                validateTokenRanges(mappingResponse,
+                                    generateExpectedRanges(nodeCount, finalTokenSupplier));
                 validateReplicaMapping(mappingResponse, newNodes, expectedRangeMappings);
 
                 completeContextOrThrow(context);
@@ -159,21 +154,27 @@ class ReplacementBaseTest extends BaseTokenRangeIntegrationTest
             IInstance replacement =
             addInstanceLocal(cluster, removedConfig.localDatacenter(), removedConfig.localRack(),
                              c -> {
-                                 c.set("auto_bootstrap", true);
+                                 c.set("auto_bootstrap", true)
                                  // explicitly DOES NOT set instances that failed startup as "shutdown"
                                  // so subsequent attempts to shut down the instance are honored
-                                 c.set("dtest.api.startup.failure_as_shutdown", false);
+                                  .set("dtest.api.startup.failure_as_shutdown", false);
                                  c.with(Feature.GOSSIP,
                                         Feature.JMX,
                                         Feature.NATIVE_PROTOCOL);
                                  c.set("storage_port", remPort);
                              });
 
-            startAsync("Start replacement node node" + replacement.config().num(),
+            startAsync("Start replacement node node" + replacement.config().set("progress_barrier_timeout", "10s").num(),
                        () -> cluster.start(replacement, Map.of("cassandra.skip_schema_check", "true",
                                                                "cassandra.schema_delay_ms", Long.toString(TimeUnit.SECONDS.toMillis(10L)),
                                                                "cassandra.broadcast_interval_ms", Long.toString(TimeUnit.SECONDS.toMillis(30L)),
                                                                "cassandra.ring_delay_ms", Long.toString(TimeUnit.SECONDS.toMillis(10L)),
+                                                               // Allow progress with less than EACH_QUORUM
+                                                               "progress_barrier_default_consistency_level", "QUORUM",
+                                                               "progress_barrier_timeout", "30s",
+                                                               "cms_await_timeout", "60s",
+                                                               "accord.enabled", "false",
+                                                               "write_request_timeout", "10s",
                                                                // This property tells cassandra that this new instance is replacing the node with
                                                                // address remAddress and port remPort
                                                                "cassandra.replace_address_first_boot", remAddress + ":" + remPort)));

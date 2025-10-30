@@ -23,7 +23,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.implementation.bind.annotation.*;
+// import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
 
 import static org.apache.cassandra.sidecar.testing.IntegrationTestBase.awaitLatchOrTimeout;
@@ -45,12 +46,24 @@ public class BBHelperJoiningNode
         }
     }
 
+    @SuppressWarnings("unused")
     public static void finishJoiningRing(boolean didBootstrap, Collection<?> tokens, @SuperCall Callable<Void> orig) throws Exception
     {
         // trigger bootstrap start and wait until bootstrap is ready from test
         transientStateStart.countDown();
         awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
         orig.call();
+    }
+
+    @SuppressWarnings("unused")
+    public static boolean bootstrap(@SuperCall Callable<Boolean> orig)
+    {
+        // trigger bootstrap start and wait until bootstrap is ready from test
+        transientStateStart.countDown();
+        awaitLatchOrTimeout(transientStateEnd, 4, TimeUnit.MINUTES, "transientStateEnd");
+        // don't actually call the original which tries to commit, and fails because other nodes
+        // are down and therefore the commit won't complete
+        return false;
     }
 
     public static void reset()

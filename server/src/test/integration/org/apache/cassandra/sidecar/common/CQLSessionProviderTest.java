@@ -47,7 +47,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class CQLSessionProviderTest extends IntegrationTestBase
 {
 
-    public static final String OK_KEYSPACE_RESPONSE_START = "{\"schema\":\"CREATE KEYSPACE ";
+    // Cassandra has started including virtual keyspace information at the beginning of the schema response.
+    // Therefore, the first entry no longer includes `CREATE KEYSPACE`. Just look for the schema start tag instead.
+    public static final String OK_KEYSPACE_RESPONSE_START = "{\"schema\":";
     public static final String KEYSPACE_FAILED_RESPONSE_START = "{\"status\":\"Service Unavailable\",";
 
     @Override

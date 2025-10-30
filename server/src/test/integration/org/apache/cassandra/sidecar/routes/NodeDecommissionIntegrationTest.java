@@ -50,7 +50,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 @ExtendWith(VertxExtension.class)
 public class NodeDecommissionIntegrationTest extends IntegrationTestBase
 {
-    @CassandraIntegrationTest(nodesPerDc = 2)
+    @CassandraIntegrationTest(nodesPerDc = 2, network = true)
     void decommissionNodeDefault(VertxTestContext context)
     {
         final AtomicReference<String> jobId = new AtomicReference<>();
