@@ -70,7 +70,13 @@ public class V2NodeSettingsHandler extends AbstractHandler<Void> implements Acce
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        Authorization authorization = BasicPermissions.READ_SETTINGS.toAuthorization("data/system_views/settings");
-        return Set.of(authorization);
+                Set<String> eligibleResources = Set.of(DATA_SCOPE.variableAwareResource(),
+                                               // Keyspace access to system_views
+                                               "data/system_views",
+                                               // Access to all tables in keyspace system_views
+                                               "data/system_views/*",
+                                               // Access to the settings table in the system_views keyspace
+                                               "data/system_views/settings");
+        return Set.of(CassandraPermissions.SELECT.toAuthorization(eligibleResources));
     }
 }
