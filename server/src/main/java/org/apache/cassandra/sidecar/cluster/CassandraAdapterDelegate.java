@@ -302,7 +302,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                         systemViewsSchema.initialize(activeSession, b -> false);
                         isSystemViewSchemaInitialized.compareAndSet(false, true);
                     }
-                    nodeSettingsFromCql = systemViewsDatabaseAccessor.getSettings();
+                    nodeSettingsFromCql = systemViewsDatabaseAccessor.allSettings();
                 }
                 catch (RuntimeException e)
                 {

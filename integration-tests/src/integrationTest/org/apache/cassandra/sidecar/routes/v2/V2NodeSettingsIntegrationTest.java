@@ -83,7 +83,7 @@ public class V2NodeSettingsIntegrationTest extends SharedClusterSidecarIntegrati
         });
     }
 
-    private V2NodeSettings ensureSettingsAvailable(String expectedSettingKey, String expectedSettingValue)
+    private void ensureSettingsAvailable(String expectedSettingKey, String expectedSettingValue)
     {
         loopAssert(60, () -> {
             HttpResponse<Buffer> response = null;
