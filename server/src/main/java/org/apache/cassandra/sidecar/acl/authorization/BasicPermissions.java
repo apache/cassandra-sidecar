@@ -89,8 +89,4 @@ public class BasicPermissions
     // Lifecycle permissions
     public static final Permission READ_LIFECYCLE = new DomainAwarePermission("LIFECYCLE:READ", CLUSTER_SCOPE);
     public static final Permission MODIFY_LIFECYCLE = new DomainAwarePermission("LIFECYCLE:MODIFY", CLUSTER_SCOPE);
-
-    // Cassandra Settings Permissions
-    // Caller must have been granted SELECT on `system_view.settings` to hit the /api/v2/cassandra/settings API.
-    public static final Permission READ_SETTINGS = new StandardPermission("SELECT", TABLE_SCOPE);
 }
