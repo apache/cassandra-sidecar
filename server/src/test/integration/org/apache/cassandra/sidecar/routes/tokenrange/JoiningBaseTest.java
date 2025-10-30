@@ -46,6 +46,7 @@ import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 import org.apache.cassandra.testing.IClusterExtension;
+import org.jetbrains.annotations.NotNull;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -60,12 +61,16 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
                                 IClusterExtension<? extends IInstance> cluster,
                                 List<Range<BigInteger>> expectedRanges,
                                 Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings,
-                                boolean isCrossDCKeyspace)
+                                boolean isCrossDCKeyspace,
+                                TokenSupplier tokenSupplier)
     throws Exception
     {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         try
         {
+            maybeReconfigureCMS(cluster);
+            final TokenSupplier finalTokenSupplier = (tokenSupplier != null) ? tokenSupplier :
+                                                     getTokenSupplier(annotation);
             Set<String> dcReplication;
             if (annotation.numDcs() > 1 && isCrossDCKeyspace)
             {
@@ -116,15 +121,11 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
                                         DEFAULT_RF,
                                         dcReplication);
                 int finalNodeCount = (annotation.nodesPerDc() + annotation.newNodesPerDc()) * annotation.numDcs();
-                TokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
-                                                                                        annotation.newNodesPerDc(),
-                                                                                        annotation.numDcs(),
-                                                                                        1);
                 // New split ranges resulting from joining nodes and corresponding tokens
                 List<Range<BigInteger>> splitRanges = extractSplitRanges(annotation.newNodesPerDc() *
                                                                          annotation.numDcs(),
                                                                          finalNodeCount,
-                                                                         tokenSupplier,
+                                                                         finalTokenSupplier,
                                                                          expectedRanges);
 
                 List<Integer> newNodes = newInstances.stream().map(i -> i.config().num()).collect(Collectors.toList());
@@ -144,11 +145,16 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
         }
         finally
         {
-            for (int i = 0;
-                 i < (annotation.newNodesPerDc() * annotation.numDcs()); i++)
-            {
-                transientStateEnd.countDown();
-            }
+            releaseInterceptionPoints(transientStateEnd, annotation);
+        }
+    }
+
+    private static void releaseInterceptionPoints(CountDownLatch transientStateEnd, CassandraIntegrationTest annotation)
+    {
+        for (int i = 0;
+             i < (annotation.newNodesPerDc() * annotation.numDcs()); i++)
+        {
+            transientStateEnd.countDown();
         }
     }
 
@@ -231,10 +237,7 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
     {
 
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
-        TokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
-                                                                                annotation.newNodesPerDc(),
-                                                                                annotation.numDcs(),
-                                                                                1);
+        TokenSupplier tokenSupplier = getTokenSupplier(annotation);
 
         IClusterExtension<? extends IInstance> cluster = cassandraTestContext.configureAndStartCluster(builder -> {
             builder.instanceInitializer(instanceInitializer);
@@ -247,6 +250,7 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
                                cluster,
                                generateExpectedRanges(),
                                expectedRangeMappings,
-                               true);
+                               true,
+                               null);
     }
 }

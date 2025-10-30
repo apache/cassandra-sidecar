@@ -426,7 +426,7 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
     static
     {
         System.setProperty("cassandra.ring_delay_ms", "5000"); // down from 30s default; this change has no effect if GOSSIP feature is enabled
-        System.setProperty("cassandra.consistent.rangemovement", "false");
+//        System.setProperty("cassandra.consistent.rangemovement", "false");
         System.setProperty("cassandra.consistent.simultaneousmoves.allow", "true");
         // End gossip delay settings
         // Set the location of dtest jars

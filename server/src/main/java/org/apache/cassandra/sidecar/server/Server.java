@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.server;
 
+import io.vertx.core.impl.CloseFuture;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,6 +27,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -80,6 +83,7 @@ public class Server
     protected final List<ServerVerticle> deployedServerVerticles = new CopyOnWriteArrayList<>();
     // Keeps track of all the Cassandra instance identifiers where CQL is ready
     private final Set<Integer> cqlReadyInstanceIds = Collections.synchronizedSet(new HashSet<>());
+    private volatile Future<Void> closeFuture;
 
     @Inject
     public Server(Vertx vertx,
@@ -153,6 +157,18 @@ public class Server
      */
     public Future<Void> close()
     {
+        if (closeFuture == null) {
+            synchronized (this) {
+                if (closeFuture == null) {
+                    setCloseFuture();
+                }
+            }
+        }
+        return closeFuture;
+    }
+
+    private void setCloseFuture()
+    {
         LOGGER.info("Stopping Cassandra Sidecar");
         deployedServerVerticles.clear();
         List<Future<Void>> closingFutures = new ArrayList<>();
@@ -182,11 +198,11 @@ public class Server
             closingFutures.add(closingFutureForInstance.future());
         });
 
-        return Future.all(closingFutures)
+        closeFuture = (Future.all(closingFutures)
                      .onSuccess(ignored -> LOGGER.debug("Closed Cassandra adapters"))
                      .transform(v -> {
-                        LOGGER.debug("Closing PeriodicTaskExecutor");
-                        return periodicTaskExecutor.close();
+                         LOGGER.debug("Closing PeriodicTaskExecutor");
+                         return periodicTaskExecutor.close();
                      })
                      .transform(v -> {
                          LOGGER.debug("Closing executor pools");
@@ -197,7 +213,8 @@ public class Server
                          return vertx.close();
                      })
                      .onFailure(t -> LOGGER.error("Failed to gracefully shutdown Cassandra Sidecar", t))
-                     .onSuccess(f -> LOGGER.info("Successfully stopped Cassandra Sidecar"));
+                     .onSuccess(f -> LOGGER.info("Successfully stopped Cassandra Sidecar"))
+        );
     }
 
     /**
