@@ -1,0 +1,218 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.cassandra.sidecar.routes;
+
+import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.Test;
+
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpResponseExpectation;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
+import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
+import org.apache.cassandra.sidecar.testing.QualifiedName;
+import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
+
+import static io.vertx.core.buffer.Buffer.buffer;
+import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
+import static org.apache.cassandra.testing.TestUtils.TEST_KEYSPACE;
+import static org.apache.cassandra.testing.TestUtils.TEST_TABLE_PREFIX;
+import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * Integration tests for the Compaction Stop API endpoint
+ */
+class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestBase
+{
+    private static final String COMPACTION_STOP_ROUTE = "/api/v1/cassandra/operations/compaction/stop";
+    private static final QualifiedName TEST_TABLE = new QualifiedName(TEST_KEYSPACE, TEST_TABLE_PREFIX + "_compaction_test");
+
+    @Override
+    protected void initializeSchemaForTest()
+    {
+        createTestKeyspace(TEST_KEYSPACE, DC1_RF1);
+        createTestTable(TEST_TABLE,
+                        "CREATE TABLE %s ( \n" +
+                        "  id int PRIMARY KEY, \n" +
+                        "  data text \n" +
+                        ");");
+    }
+
+    @Override
+    protected void beforeTestStart()
+    {
+        // Wait for schema initialization
+        waitForSchemaReady(30, TimeUnit.SECONDS);
+    }
+
+    @Test
+    void testStopCompactionByTypeSuccess()
+    {
+        // Create SSTables
+        insertTestData(TEST_TABLE, 1000);
+        cluster.stream().forEach(instance -> instance.flush(TEST_KEYSPACE));
+
+        // Trigger non-blocking compaction in background
+        cluster.stream().forEach(instance -> instance.nodetool("compact", TEST_KEYSPACE));
+
+        // Call compaction stop endpoint
+        String payload = "{\"compaction_type\":\"COMPACTION\"}";
+        HttpResponse<Buffer> response = getBlocking(
+            trustedClient()
+                .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                .sendBuffer(buffer(payload))
+                .expecting(HttpResponseExpectation.SC_OK)
+        );
+
+        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+        CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
+        assertThat(stopResponse).isNotNull();
+        assertThat(stopResponse.status()).isEqualTo("SUCCESS");
+        assertThat(stopResponse.compactionType()).isEqualTo("COMPACTION");
+        assertThat(stopResponse.errorCode()).isEqualTo("200 OK");
+        assertThat(stopResponse.reason()).isEqualTo("Operation Succeeded");
+    }
+
+    @Test
+    void testStopCompactionByIdSuccess()
+    {
+        // Note: Use placeholder compactionId to verify OK HTTP Response
+        String payload = "{\"compaction_id\":\"test-compaction-id\"}";
+
+        // Test endpoint accepts request even if no compaction with ID exists - mimics nodetool functionality
+        HttpResponse<Buffer> response = getBlocking(
+            trustedClient()
+                .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                .sendBuffer(buffer(payload))
+                .expecting(HttpResponseExpectation.SC_OK)
+        );
+
+        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+        CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
+        assertThat(stopResponse).isNotNull();
+        assertThat(stopResponse.status()).isEqualTo("SUCCESS");
+        assertThat(stopResponse.compactionId()).isEqualTo("test-compaction-id");
+    }
+
+    @Test
+    void testStopCompactionBothParameters()
+    {
+        String payload = "{\"compaction_type\":\"VALIDATION\",\"compaction_id\":\"test-id-123\"}";
+        HttpResponse<Buffer> response = getBlocking(
+            trustedClient()
+                .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                .sendBuffer(buffer(payload))
+                .expecting(HttpResponseExpectation.SC_OK)
+        );
+
+        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+        CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
+        assertThat(stopResponse).isNotNull();
+        assertThat(stopResponse.status()).isEqualTo("SUCCESS");
+        assertThat(stopResponse.compactionType()).isEqualTo("VALIDATION");
+        assertThat(stopResponse.compactionId()).isEqualTo("test-id-123");
+    }
+
+    @Test
+    void testStopCompactionMissingBothParameters()
+    {
+        String payload = "{}";
+        HttpResponse<Buffer> response = getBlocking(
+            trustedClient()
+                .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                .sendBuffer(buffer(payload))
+        );
+
+        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
+        JsonObject errorResponse = response.bodyAsJsonObject();
+        assertThat(errorResponse).isNotNull();
+    }
+
+    @Test
+    void testStopCompactionInvalidType()
+    {
+        String payload = "{\"compaction_type\":\"INVALID_TYPE\"}";
+        HttpResponse<Buffer> response = getBlocking(
+            trustedClient()
+                .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                .sendBuffer(buffer(payload))
+        );
+
+        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
+    }
+
+    @Test
+    void testStopCompactionMalformedJson()
+    {
+        String payload = "{invalid json";
+        HttpResponse<Buffer> response = getBlocking(
+            trustedClient()
+                .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                .sendBuffer(buffer(payload))
+        );
+
+        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
+    }
+
+    @Test
+    void testStopCompactionAllSupportedTypes()
+    {
+        String[] supportedTypes = {
+            "COMPACTION", "VALIDATION", "CLEANUP", "SCRUB",
+            "UPGRADE_SSTABLES", "INDEX_BUILD", "ANTICOMPACTION", "VERIFY"
+        };
+
+        for (String type : supportedTypes)
+        {
+            String payload = String.format("{\"compaction_type\":\"%s\"}", type);
+            HttpResponse<Buffer> response = getBlocking(
+                trustedClient()
+                    .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                    .sendBuffer(buffer(payload))
+                    .expecting(HttpResponseExpectation.SC_OK)
+            );
+
+            assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+            CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
+            assertThat(stopResponse.status()).isEqualTo("SUCCESS");
+            assertThat(stopResponse.compactionType()).isEqualTo(type);
+        }
+    }
+
+    /**
+     * Inserts test data into the specified table
+     *
+     * @param tableName the qualified name of the table
+     * @param rowCount  the number of rows to insert
+     */
+    private void insertTestData(QualifiedName tableName, int rowCount)
+    {
+        for (int i = 1; i <= rowCount; i++)
+        {
+            String statement = String.format(
+                "INSERT INTO %s (id, data) VALUES (%d, 'test_data_%d');",
+                tableName, i, i
+            );
+            cluster.schemaChangeIgnoringStoppedInstances(statement);
+        }
+    }
+}

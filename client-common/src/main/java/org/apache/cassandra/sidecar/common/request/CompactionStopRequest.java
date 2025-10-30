@@ -16,32 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.adapters.base.jmx;
+package org.apache.cassandra.sidecar.common.request;
 
-import java.util.List;
-import java.util.Map;
+import io.netty.handler.codec.http.HttpMethod;
+import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 
 /**
- * An interface that pulls methods from the Cassandra CompactionManager JMX proxy
+ * Represents a request to execute node decommission operation
  */
-public interface CompactionManagerJmxOperations
+public class CompactionStopRequest extends JsonRequest<OperationalJobResponse>
 {
-    String COMPACTION_MANAGER_OBJ_NAME = "org.apache.cassandra.db:type=CompactionManager";
+    /**
+     * Constructs a request to execute a node decommission operation
+     */
+    public CompactionStopRequest()
+    {
+        super(ApiEndpointsV1.COMPACTION_STOP_ROUTE);
+    }
 
     /**
-     * Returns active compactions as a list of compaction info maps
-     *
-     * @return list of compaction info maps
+     * {@inheritDoc}
      */
-    List<Map<String, String>> getCompactions();
-
-    /**
-     * Stop compaction by type
-     */
-    void stopCompaction(String type);
-
-    /**
-     * Stop compaction by ID
-     */
-    void stopCompactionById(String compactionId);
+    @Override
+    public HttpMethod method()
+    {
+        return HttpMethod.POST;
+    }
 }

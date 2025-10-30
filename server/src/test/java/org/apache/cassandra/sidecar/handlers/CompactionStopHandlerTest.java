@@ -1,0 +1,317 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.cassandra.sidecar.handlers;
+
+import java.util.Collections;
+import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
+import com.google.inject.util.Modules;
+import io.vertx.core.Vertx;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
+import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
+import org.apache.cassandra.sidecar.modules.SidecarModules;
+import org.apache.cassandra.sidecar.server.Server;
+
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.vertx.core.buffer.Buffer.buffer;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/**
+ * Tests for the {@link CompactionStopHandler} class
+ */
+@ExtendWith(VertxExtension.class)
+public class CompactionStopHandlerTest
+{
+    private static final String TEST_ROUTE = "/api/v1/cassandra/operations/compaction/stop";
+
+    Vertx vertx;
+    Server server;
+    CompactionManagerOperations mockCompactionManagerOperations = mock(CompactionManagerOperations.class);
+
+    @BeforeEach
+    void before() throws InterruptedException
+    {
+        Injector injector;
+        Module testOverride = Modules.override(new TestModule()).with(new CompactionStopHandlerTestModule());
+        injector = Guice.createInjector(Modules.override(SidecarModules.all()).with(testOverride));
+        vertx = injector.getInstance(Vertx.class);
+        server = injector.getInstance(Server.class);
+        VertxTestContext context = new VertxTestContext();
+        server.start().onSuccess(s -> context.completeNow()).onFailure(context::failNow);
+        context.awaitCompletion(5, TimeUnit.SECONDS);
+    }
+
+    @AfterEach
+    void after() throws InterruptedException
+    {
+        if (server != null)
+        {
+            VertxTestContext closeContext = new VertxTestContext();
+            server.close()
+                  .onComplete(res -> closeContext.completeNow());
+            closeContext.awaitCompletion(60, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test
+    void testStopCompactionByTypeHappyPath(VertxTestContext ctx)
+    {
+        WebClient client = WebClient.create(vertx);
+        String payload = "{\"compaction_type\":\"COMPACTION\"}";
+        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      verify(mockCompactionManagerOperations, times(1)).stopCompaction(isNull(), eq("COMPACTION"));
+
+                      assertThat(resp.statusCode()).isEqualTo(OK.code());
+                      CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
+                      assertThat(response.status()).isEqualTo("SUCCESS");
+                      assertThat(response.compactionType()).isEqualTo("COMPACTION");
+                      assertThat(response.errorCode()).isEqualTo("200 OK");
+                      assertThat(response.reason()).isEqualTo("Operation Succeeded");
+                  });
+                  ctx.completeNow();
+              }));
+    }
+
+    @Test
+    void testStopCompactionByIdHappyPath(VertxTestContext ctx)
+    {
+        WebClient client = WebClient.create(vertx);
+        String payload = "{\"compaction_id\":\"abc-123\"}";
+        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      verify(mockCompactionManagerOperations, times(1)).stopCompaction(eq("abc-123"), isNull());
+
+                      assertThat(resp.statusCode()).isEqualTo(OK.code());
+                      CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
+                      assertThat(response.status()).isEqualTo("SUCCESS");
+                      assertThat(response.compactionId()).isEqualTo("abc-123");
+                      assertThat(response.errorCode()).isEqualTo("200 OK");
+                  });
+                  ctx.completeNow();
+              }));
+    }
+
+    @Test
+    void testStopCompactionByBothFieldsHappyPath(VertxTestContext ctx)
+    {
+        WebClient client = WebClient.create(vertx);
+        String payload = "{\"compaction_type\":\"VALIDATION\",\"compaction_id\":\"xyz-456\"}";
+        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      verify(mockCompactionManagerOperations, times(1))
+                          .stopCompaction(eq("xyz-456"), eq("VALIDATION"));
+
+                      assertThat(resp.statusCode()).isEqualTo(OK.code());
+                      CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
+                      assertThat(response.status()).isEqualTo("SUCCESS");
+                      assertThat(response.compactionType()).isEqualTo("VALIDATION");
+                      assertThat(response.compactionId()).isEqualTo("xyz-456");
+                  });
+                  ctx.completeNow();
+              }));
+    }
+
+    @Test
+    void testMissingBothFields(VertxTestContext ctx)
+    {
+        WebClient client = WebClient.create(vertx);
+        String payload = "{}";
+        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
+                      verify(mockCompactionManagerOperations, times(0))
+                          .stopCompaction(anyString(), anyString());
+                  });
+                  ctx.completeNow();
+              }));
+    }
+
+    @Test
+    void testBothFieldsEmpty(VertxTestContext ctx)
+    {
+        WebClient client = WebClient.create(vertx);
+        String payload = "{\"compaction_type\":\"\",\"compaction_id\":\"\"}";
+        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
+                      verify(mockCompactionManagerOperations, times(0))
+                          .stopCompaction(anyString(), anyString());
+                  });
+                  ctx.completeNow();
+              }));
+    }
+
+    @Test
+    void testInvalidCompactionType(VertxTestContext ctx)
+    {
+        WebClient client = WebClient.create(vertx);
+        String payload = "{\"compaction_type\":\"INVALID_TYPE\"}";
+        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
+                      verify(mockCompactionManagerOperations, times(0))
+                          .stopCompaction(anyString(), anyString());
+                  });
+                  ctx.completeNow();
+              }));
+    }
+
+    @Test
+    void testMalformedJson(VertxTestContext ctx)
+    {
+        WebClient client = WebClient.create(vertx);
+        String payload = "{invalid json";
+        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
+                      verify(mockCompactionManagerOperations, times(0))
+                          .stopCompaction(anyString(), anyString());
+                  });
+                  ctx.completeNow();
+              }));
+    }
+
+    @Test
+    void testTrimWhitespace(VertxTestContext ctx)
+    {
+        WebClient client = WebClient.create(vertx);
+        String payload = "{\"compaction_type\":\"  COMPACTION  \"}";
+        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      // Should trim and uppercase the type
+                      verify(mockCompactionManagerOperations, times(1))
+                          .stopCompaction(isNull(), eq("  COMPACTION  "));
+
+                      assertThat(resp.statusCode()).isEqualTo(OK.code());
+                  });
+                  ctx.completeNow();
+              }));
+    }
+
+    @Test
+    void testCaseInsensitiveCompactionType(VertxTestContext ctx)
+    {
+        WebClient client = WebClient.create(vertx);
+        String payload = "{\"compaction_type\":\"compaction\"}";
+        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+              .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                  ctx.verify(() -> {
+                      // Should accept lowercase and validate after uppercasing
+                      verify(mockCompactionManagerOperations, times(1))
+                          .stopCompaction(isNull(), eq("compaction"));
+
+                      assertThat(resp.statusCode()).isEqualTo(OK.code());
+                  });
+                  ctx.completeNow();
+              }));
+    }
+
+    @Test
+    void testAllSupportedCompactionTypes(VertxTestContext ctx)
+    {
+        String[] supportedTypes = {
+            "COMPACTION", "VALIDATION", "KEY_CACHE_SAVE", "ROW_CACHE_SAVE",
+            "COUNTER_CACHE_SAVE", "CLEANUP", "SCRUB", "UPGRADE_SSTABLES",
+            "INDEX_BUILD", "TOMBSTONE_COMPACTION", "UNKNOWN", "ANTICOMPACTION",
+            "VERIFY", "VIEW_BUILD", "INDEX_SUMMARY", "RELOCATE",
+            "GARBAGE_COLLECT", "WRITE"
+        };
+
+        WebClient client = WebClient.create(vertx);
+
+        for (String type : supportedTypes)
+        {
+            String payload = "{\"compaction_type\":\"" + type + "\"}";
+            client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+                  .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
+                      ctx.verify(() -> {
+                          assertThat(resp.statusCode()).isEqualTo(OK.code());
+                          CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
+                          assertThat(response.status()).isEqualTo("SUCCESS");
+                      });
+                  }));
+        }
+        ctx.completeNow();
+    }
+
+    /**
+     * Test guice module for {@link CompactionStopHandler} tests
+     */
+    class CompactionStopHandlerTestModule extends AbstractModule
+    {
+        @Provides
+        @Singleton
+        public InstancesMetadata instanceMetadata()
+        {
+            final int instanceId = 100;
+            final String host = "127.0.0.1";
+            final InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
+            when(instanceMetadata.host()).thenReturn(host);
+            when(instanceMetadata.port()).thenReturn(9042);
+            when(instanceMetadata.id()).thenReturn(instanceId);
+            when(instanceMetadata.stagingDir()).thenReturn("");
+
+            CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
+            when(delegate.compactionManagerOperations()).thenReturn(mockCompactionManagerOperations);
+            when(instanceMetadata.delegate()).thenReturn(delegate);
+
+            InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
+            when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
+            when(mockInstancesMetadata.instanceFromId(instanceId)).thenReturn(instanceMetadata);
+            when(mockInstancesMetadata.instanceFromHost(host)).thenReturn(instanceMetadata);
+
+            return mockInstancesMetadata;
+        }
+    }
+}

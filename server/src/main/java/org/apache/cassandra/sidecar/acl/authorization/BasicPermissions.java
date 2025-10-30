@@ -80,6 +80,7 @@ public class BasicPermissions
     public static final Permission READ_RING_KEYSPACE_SCOPED = new DomainAwarePermission("RING:READ", KEYSPACE_SCOPE);
     public static final Permission READ_TOPOLOGY = new DomainAwarePermission("TOPOLOGY:READ", KEYSPACE_SCOPE);
     public static final Permission MODIFY_NATIVE = new DomainAwarePermission("NATIVE:MODIFY", CLUSTER_SCOPE);
+    public static final Permission MODIFY_COMPACTION = new DomainAwarePermission("COMPACTION:MODIFY", CLUSTER_SCOPE);
 
 
     // cassandra stats permissions

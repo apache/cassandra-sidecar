@@ -63,6 +63,7 @@ import org.apache.cassandra.sidecar.common.request.data.RestoreJobProgressReques
 import org.apache.cassandra.sidecar.common.request.data.UpdateCdcServiceConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
+import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
@@ -766,6 +767,20 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                             .singleInstanceSelectionPolicy(instance)
                                             .compactionStatsRequest()
                                             .build());
+    }
+
+    /**
+     * Executes the compaction stats request using the default retry policy and provided {@code instance}.
+     *
+     * @param instance the instance where the request will be executed
+     * @return a completable future of the compaction stats
+     */
+    public CompletableFuture<CompactionStopResponse> compactionStop(SidecarInstance instance)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                .singleInstanceSelectionPolicy(instance)
+                .compactionStopRequest()
+                .build());
     }
 
     /**

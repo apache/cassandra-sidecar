@@ -27,6 +27,7 @@ import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSche
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV2;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
+import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
@@ -39,6 +40,7 @@ import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.response.v2.V2NodeSettings;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.handlers.CompactionStatsHandler;
+import org.apache.cassandra.sidecar.handlers.CompactionStopHandler;
 import org.apache.cassandra.sidecar.handlers.ConnectedClientStatsHandler;
 import org.apache.cassandra.sidecar.handlers.GossipInfoHandler;
 import org.apache.cassandra.sidecar.handlers.GossipUpdateHandler;
@@ -111,6 +113,27 @@ public class CassandraOperationsModule extends AbstractModule
                                              CompactionStatsHandler compactionStatsHandler)
     {
         return factory.buildRouteWithHandler(compactionStatsHandler);
+    }
+
+    @PUT
+    @Path(ApiEndpointsV1.COMPACTION_STOP_ROUTE)
+    @Operation(summary = "Stop compaction operation",
+               description = "Stops a compaction operation on the Cassandra node")
+    @APIResponse(description = "Compaction stop operation completed",
+                 responseCode = "200",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = CompactionStopResponse.class)))
+    @APIResponse(responseCode = "400",
+                 description = "Invalid request - malformed JSON body or \n invalid compaction parameters")
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.CassandraCompactionStopRouteKey.class)
+    VertxRoute cassandraCompactionStopRoute(RouteBuilder.Factory factory,
+                                            CompactionStopHandler compactionStopHandler)
+    {
+        return factory.builderForRoute()
+                      .setBodyHandler(true)  // IMPORTANT: needed for JSON body parsing
+                      .handler(compactionStopHandler)
+                      .build();
     }
 
     @GET
