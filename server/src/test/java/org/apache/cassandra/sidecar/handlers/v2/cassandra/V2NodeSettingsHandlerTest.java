@@ -53,9 +53,7 @@ public class V2NodeSettingsHandlerTest
         V2NodeSettingsHandler v2NodeSettingsHandler = new V2NodeSettingsHandler(metadataFetcher, executorPools);
         RoutingContext context = buildMockContext();
         v2NodeSettingsHandler.handle(context);
-        V2NodeSettings v2NodeSettings = V2NodeSettings.builder()
-                                                      .nodeSettings(Map.of("concurrent_reads", "16"))
-                                                      .build();
+        V2NodeSettings v2NodeSettings = new V2NodeSettings(Map.of("concurrent_reads", "16"));
         Mockito.verify(context, Mockito.times(1)).json(v2NodeSettings);
     }
 

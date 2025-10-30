@@ -26,12 +26,15 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.acl.authorization.CassandraPermissions;
 import org.apache.cassandra.sidecar.common.response.v2.V2NodeSettings;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 import org.apache.cassandra.sidecar.handlers.AccessProtected;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
+
+import static org.apache.cassandra.sidecar.acl.authorization.DataResourceScope.DATA_SCOPE;
 
 /**
  * V2NodeSettingsHandler is responsible for providing access to the configurations of the
@@ -61,9 +64,7 @@ public class V2NodeSettingsHandler extends AbstractHandler<Void> implements Acce
     protected void handleInternal(RoutingContext context, HttpServerRequest httpRequest, @NotNull String host, SocketAddress remoteAddress, Void request)
     {
         Map<String, String> cqlSettings = metadataFetcher.delegate(host).cqlNodeSettings();
-        V2NodeSettings v2nodeSettings = V2NodeSettings.builder()
-                                                    .nodeSettings(cqlSettings)
-                                                    .build();
+        V2NodeSettings v2nodeSettings = new V2NodeSettings(cqlSettings);
         context.json(v2nodeSettings);
     }
 

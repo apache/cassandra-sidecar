@@ -21,7 +21,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 
 /**
@@ -36,26 +35,16 @@ public class V2NodeSettings
     /**
      * Constructs a new {@link NodeSettings}.
      */
-    public V2NodeSettings()
-    {
-        this(builder());
-    }
 
-    public V2NodeSettings(V2NodeSettings.Builder builder)
+    public V2NodeSettings(Map<String, String> nodeSettings)
     {
-        this.nodeSettings = builder.nodeSettings;
-
+        this.nodeSettings = nodeSettings;
     }
 
     @JsonProperty("nodeSettings")
     public Map<String, String> nodeSettings()
     {
         return nodeSettings;
-    }
-
-    public static Builder builder()
-    {
-        return new Builder();
     }
 
     @Override
@@ -72,42 +61,4 @@ public class V2NodeSettings
         return Objects.hash(nodeSettings);
     }
 
-    /**
-     * A builder class to enable construction of V2NodeSettings objects.
-     */
-    public static final class Builder implements DataObjectBuilder<Builder, V2NodeSettings>
-    {
-        private Map<String, String> nodeSettings;
-
-        private Builder()
-        {
-        }
-
-        @Override
-        public V2NodeSettings.Builder self()
-        {
-            return this;
-        }
-
-        /**
-         * Sets a value for the Cassandra settings map and returns a reference to this Builder enabling method chaining.
-         * @param nodeSettings Map of Cassandra setting name to setting value.
-         * @return a reference to this Builder
-         */
-        public V2NodeSettings.Builder nodeSettings(Map<String, String> nodeSettings)
-        {
-            return update(b -> b.nodeSettings = nodeSettings);
-        }
-
-        /**
-         * Returns a {@code NodeSettings} built from the parameters previously set.
-         *
-         * @return a {@code NodeSettings} built with parameters of this {@code NodeSettings.Builder}
-         */
-        @Override
-        public V2NodeSettings build()
-        {
-            return new V2NodeSettings(this);
-        }
-    }
 }
