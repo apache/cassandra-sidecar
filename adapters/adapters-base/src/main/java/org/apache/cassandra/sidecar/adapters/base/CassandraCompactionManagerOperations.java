@@ -72,7 +72,7 @@ public class CassandraCompactionManagerOperations implements CompactionManagerOp
         }
         else
         {
-            // Handler guarantees compactionType is non-null/non-empty at this point
+            // Handler guarantees compactionType is non-null/non-empty
             proxy.stopCompaction(compactionType);
         }
     }
