@@ -48,19 +48,24 @@ public class V2NodeSettingsIntegrationTest extends SharedClusterSidecarIntegrati
     @Test
     public void testV2NodeSettings()
     {
-        ensureSettingsAvailable();
+        // Start by setting a known configuration for concurrent_reads
+        String concurrencyKey = "concurrent_reads";
+        String expectedValue = "20";
+        cluster.getFirstRunningInstance().nodetool("setconcurrency", "READ", expectedValue);
+        ensureSettingsAvailable(concurrencyKey, expectedValue);
 
         // Disabling NTR should make CQL settings become unavailable
         cluster.getFirstRunningInstance().nodetool("disablebinary");
         ensureSettingsBecomeUnavailable("CQL NodeSettings unavailable");
 
-        // Re-enable NTR, settings should become available again.
+        // Re-enable NTR, settings should become available again. The value of concurrent_reads should not change.
         cluster.getFirstRunningInstance().nodetool("enablebinary");
-        ensureSettingsAvailable();
+        ensureSettingsAvailable(concurrencyKey, expectedValue);
 
         // Changing a configuration should eventually reflect in settings API.
-        cluster.getFirstRunningInstance().nodetool("setconcurrency", "READ", "10");
-        ensureSettingsAvailable();
+        expectedValue = "10";
+        cluster.getFirstRunningInstance().nodetool("setconcurrency", "READ", expectedValue);
+        ensureSettingsAvailable(concurrencyKey, expectedValue);
 
         cluster.stopUnchecked(cluster.getFirstRunningInstance());
         ensureSettingsBecomeUnavailable("NodeSettings unavailable");
@@ -78,7 +83,7 @@ public class V2NodeSettingsIntegrationTest extends SharedClusterSidecarIntegrati
         });
     }
 
-    private void ensureSettingsAvailable()
+    private V2NodeSettings ensureSettingsAvailable(String expectedSettingKey, String expectedSettingValue)
     {
         loopAssert(60, () -> {
             HttpResponse<Buffer> response = null;
@@ -99,6 +104,7 @@ public class V2NodeSettingsIntegrationTest extends SharedClusterSidecarIntegrati
                    .executeInternalWithResult("SELECT name, value FROM system_views.settings;")
                    .forEach(row -> cqlSettings.put(row.getString("name"), row.getString("value")));
             assertThat(nodeSettings.nodeSettings()).isEqualTo(cqlSettings);
+            assertThat(cqlSettings.get(expectedSettingKey)).isEqualTo(expectedSettingValue);
         });
     }
 
