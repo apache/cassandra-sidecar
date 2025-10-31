@@ -66,7 +66,6 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
                     "UPGRADE_SSTABLES",
                     "INDEX_BUILD",
                     "TOMBSTONE_COMPACTION",
-                    "UNKNOWN",
                     "ANTICOMPACTION",
                     "VERIFY",
                     "VIEW_BUILD",

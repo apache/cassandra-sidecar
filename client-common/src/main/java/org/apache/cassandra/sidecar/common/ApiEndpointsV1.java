@@ -29,6 +29,7 @@ public final class ApiEndpointsV1
 
     public static final String HEALTH = "/__health";
     public static final String CASSANDRA = "/cassandra";
+    public static final String OPERATIONS = "/operations";
 
     public static final String NATIVE = "/native";
     public static final String JMX = "/jmx";
@@ -148,7 +149,7 @@ public final class ApiEndpointsV1
     public static final String NODE_DRAIN_ROUTE = API_V1 + CASSANDRA + "/operations/drain";
     public static final String STREAM_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/streams";
     public static final String TABLE_STATS_ROUTE = API_V1 + CASSANDRA + PER_KEYSPACE + PER_TABLE + "/stats";
-    public static final String COMPACTION_STOP_ROUTE = API_V1 + CASSANDRA + "/operations/compaction/stop";
+    public static final String COMPACTION_STOP_ROUTE = API_V1 + CASSANDRA + OPERATIONS + "/compaction/stop";
 
     // Live Migration APIs
     public static final String LIVE_MIGRATION_API_PREFIX = API_V1 + "/live-migration";

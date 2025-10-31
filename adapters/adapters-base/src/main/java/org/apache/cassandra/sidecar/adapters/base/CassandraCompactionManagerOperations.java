@@ -20,10 +20,12 @@ package org.apache.cassandra.sidecar.adapters.base;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.cassandra.sidecar.adapters.base.jmx.CompactionManagerJmxOperations;
 import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.adapters.base.jmx.CompactionManagerJmxOperations.COMPACTION_MANAGER_OBJ_NAME;
 
@@ -72,8 +74,8 @@ public class CassandraCompactionManagerOperations implements CompactionManagerOp
         }
         else
         {
-            // Handler guarantees compactionType is non-null/non-empty
-            proxy.stopCompaction(compactionType);
+            proxy.stopCompaction(Objects.requireNonNull(compactionType,
+                    "compactionType must not be null when compactionId is not provided"));
         }
     }
 }

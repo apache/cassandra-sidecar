@@ -29,11 +29,11 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CompactionStopResponse
 {
-    public static final String COMPACTION_TYPE = "compaction_type";
-    public static final String COMPACTION_ID = "compaction_id";
-    public static final String STATUS = "status";
-    public static final String ERROR_CODE = "error_code";
-    public static final String REASON = "reason";
+    public static final String COMPACTION_TYPE_KEY = "compaction_type";
+    public static final String COMPACTION_ID_KEY = "compaction_id";
+    public static final String STATUS_KEY = "status";
+    public static final String ERROR_CODE_KEY = "error_code";
+    public static final String REASON_KEY = "reason";
 
     private final String compactionType;
     private final String compactionId;
@@ -60,11 +60,11 @@ public class CompactionStopResponse
      * @param reason         the reason for the status (e.g., "Operation Succeeded", "Malformed Request", "Server-side error")
      */
     @JsonCreator
-    public CompactionStopResponse(@JsonProperty(COMPACTION_TYPE) String compactionType,
-                                  @JsonProperty(COMPACTION_ID) String compactionId,
-                                  @JsonProperty(STATUS) String status,
-                                  @JsonProperty(ERROR_CODE) String errorCode,
-                                  @JsonProperty(REASON) String reason)
+    public CompactionStopResponse(@JsonProperty(COMPACTION_TYPE_KEY) String compactionType,
+                                  @JsonProperty(COMPACTION_ID_KEY) String compactionId,
+                                  @JsonProperty(STATUS_KEY) String status,
+                                  @JsonProperty(ERROR_CODE_KEY) String errorCode,
+                                  @JsonProperty(REASON_KEY) String reason)
     {
         this.compactionType = compactionType;
         this.compactionId = compactionId;
@@ -76,7 +76,7 @@ public class CompactionStopResponse
     /**
      * @return the type of compaction that was requested to stop
      */
-    @JsonProperty(COMPACTION_TYPE)
+    @JsonProperty(COMPACTION_TYPE_KEY)
     public String compactionType()
     {
         return compactionType;
@@ -85,7 +85,7 @@ public class CompactionStopResponse
     /**
      * @return the ID of the compaction that was requested to stop
      */
-    @JsonProperty(COMPACTION_ID)
+    @JsonProperty(COMPACTION_ID_KEY)
     public String compactionId()
     {
         return compactionId;
@@ -94,7 +94,7 @@ public class CompactionStopResponse
     /**
      * @return the status of the stop operation
      */
-    @JsonProperty(STATUS)
+    @JsonProperty(STATUS_KEY)
     public String status()
     {
         return status;
@@ -103,7 +103,7 @@ public class CompactionStopResponse
     /**
      * @return the error code
      */
-    @JsonProperty(ERROR_CODE)
+    @JsonProperty(ERROR_CODE_KEY)
     public String errorCode()
     {
         return errorCode;
@@ -112,7 +112,7 @@ public class CompactionStopResponse
     /**
      * @return the reason for the status
      */
-    @JsonProperty(REASON)
+    @JsonProperty(REASON_KEY)
     public String reason()
     {
         return reason;

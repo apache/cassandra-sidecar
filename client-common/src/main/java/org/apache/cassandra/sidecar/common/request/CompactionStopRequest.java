@@ -23,7 +23,7 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 
 /**
- * Represents a request to execute node decommission operation
+ * Represents a request to execute node stop operation
  */
 public class CompactionStopRequest extends JsonRequest<OperationalJobResponse>
 {
