@@ -37,7 +37,6 @@ import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
-import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.handlers.data.StreamSSTableComponentRequestParam;
 import org.apache.cassandra.sidecar.utils.BaseFileSystem;
@@ -57,10 +56,10 @@ public class SnapshotPathBuilder extends BaseFileSystem
      * Creates a new SnapshotPathBuilder for snapshots of an instance with the given {@code vertx} instance and
      * {@code instancesMetadata Cassandra configuration}.
      *
-     * @param vertx           the vertx instance
+     * @param vertx             the vertx instance
      * @param instancesMetadata the configuration for Cassandra
-     * @param validator       a validator instance to validate Cassandra-specific input
-     * @param executorPools   executor pools for blocking executions
+     * @param validator         a validator instance to validate Cassandra-specific input
+     * @param executorPools     executor pools for blocking executions
      */
     @Inject
     public SnapshotPathBuilder(Vertx vertx,
@@ -158,15 +157,12 @@ public class SnapshotPathBuilder extends BaseFileSystem
             validator.validateTableId(request.tableId());
         }
         validator.validateSnapshotName(request.snapshotName());
-        // Only allow .db and TOC.txt components here
         String secondaryIndexName = request.secondaryIndexName();
         if (secondaryIndexName != null)
         {
-            Preconditions.checkArgument(!secondaryIndexName.isEmpty(), "secondaryIndexName cannot be empty");
-            Preconditions.checkArgument(secondaryIndexName.charAt(0) == '.', "Invalid secondary index name");
-            String indexName = secondaryIndexName.substring(1);
-            validator.validatePattern(indexName, indexName, "secondary index", false);
+            validator.validateIndexName(secondaryIndexName);
         }
+        // Only allow .db and TOC.txt components here
         validator.validateRestrictedComponentName(request.componentName());
     }
 

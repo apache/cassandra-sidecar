@@ -25,9 +25,14 @@ import com.google.inject.name.Named;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
+import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.DigestAlgorithmProvider;
+import org.apache.cassandra.sidecar.utils.FastCassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.JdkMd5DigestProvider;
+import org.apache.cassandra.sidecar.utils.RegexBasedCassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 import org.apache.cassandra.sidecar.utils.XXHash32Provider;
 
@@ -81,5 +86,27 @@ public class UtilitiesModule extends AbstractModule
     SidecarVersionProvider sidecarVersionProvider()
     {
         return new SidecarVersionProvider("/sidecar.version");
+    }
+
+    @Provides
+    @Singleton
+    CassandraInputValidator cassandraInputValidatorFactory(SidecarConfiguration configuration)
+    {
+        CassandraInputValidationConfiguration config = configuration.cassandraInputValidationConfiguration();
+
+        if (config.validatorConfiguration() == null
+            || config.validatorConfiguration().className() == null
+            || RegexBasedCassandraInputValidator.class.getName().equals(config.validatorConfiguration().className()))
+        {
+            // When the validator configuration is not set assume legacy configuration
+            // and provide the regex-based validator.
+            return new RegexBasedCassandraInputValidator(config);
+        }
+        else if (FastCassandraInputValidator.class.getName().equals(config.validatorConfiguration().className()))
+        {
+            return new FastCassandraInputValidator(config);
+        }
+
+        throw new ConfigurationException("Unrecognized validator provider " + config.validatorConfiguration().className() + " configured");
     }
 }

@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -98,13 +99,19 @@ class SidecarConfigurationTest
         CassandraInputValidationConfiguration validationConfiguration =
         configuration.cassandraInputValidationConfiguration();
 
+        assertThat(validationConfiguration.validatorConfiguration()).isNotNull();
+        assertThat(validationConfiguration.validatorConfiguration().className())
+        .isEqualTo("org.apache.cassandra.sidecar.utils.FastCassandraInputValidator");
+        assertThat(validationConfiguration.validatorConfiguration().namedParameters())
+        .containsExactlyInAnyOrderEntriesOf(Map.of("valid_terminations", ".abc,.def",
+                                                   "valid_restricted_terminations", ".xml"));
         assertThat(validationConfiguration.forbiddenKeyspaces()).contains("a", "b", "c");
         assertThat(validationConfiguration.allowedPatternForName()).isEqualTo("[a-z]+");
         assertThat(validationConfiguration.allowedPatternForQuotedName()).isEqualTo("[A-Z]+");
         assertThat(validationConfiguration.allowedPatternForComponentName())
-        .isEqualTo("(.db|.cql|.json|.crc32|TOC.txt)");
+        .isEqualTo("(\\.db|\\.cql|\\.json|\\.crc32|TOC\\.txt)");
         assertThat(validationConfiguration.allowedPatternForRestrictedComponentName())
-        .isEqualTo("(.db|TOC.txt)");
+        .isEqualTo("(\\.db|TOC\\.txt)");
     }
 
     @Test
@@ -492,7 +499,7 @@ class SidecarConfigurationTest
     void testDnsResolverResolveToIp() throws Exception
     {
         String yaml = "sidecar:\n" +
-                "  dns_resolver: resolve_to_ip";
+                      "  dns_resolver: resolve_to_ip";
         SidecarConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml);
         ServiceConfiguration serviceConfiguration = config.serviceConfiguration();
         assertThat(serviceConfiguration).isNotNull();
@@ -740,8 +747,8 @@ class SidecarConfigurationTest
         assertThat(config.allowedPatternForName()).isEqualTo("[a-zA-Z][a-zA-Z0-9_]{0,47}");
         assertThat(config.allowedPatternForQuotedName()).isEqualTo("[a-zA-Z_0-9]{1,48}");
         assertThat(config.allowedPatternForComponentName())
-        .isEqualTo("[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)");
-        assertThat(config.allowedPatternForRestrictedComponentName()).isEqualTo("[a-zA-Z0-9_-]+(.db|TOC.txt)");
+        .isEqualTo("[a-zA-Z0-9_-]+(\\.db|\\.cql|\\.json|\\.crc32|TOC\\.txt)");
+        assertThat(config.allowedPatternForRestrictedComponentName()).isEqualTo("[a-zA-Z0-9_-]+(\\.db|TOC\\.txt)");
     }
 
     void validateVertxFilesystemOptionsClasspathResolvingDisabled(FileSystemOptionsConfiguration config)
