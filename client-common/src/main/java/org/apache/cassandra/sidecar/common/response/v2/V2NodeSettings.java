@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.common.response.v2;
 import java.util.Map;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 
@@ -29,14 +30,14 @@ import org.apache.cassandra.sidecar.common.response.NodeSettings;
 public class V2NodeSettings
 {
     // Contains Cassandra node settings from system_views.setting table.
-    @JsonProperty("nodeSettings")
     private final Map<String, String> nodeSettings;
 
     /**
      * Constructs a new {@link NodeSettings}.
      */
 
-    public V2NodeSettings(Map<String, String> nodeSettings)
+    @JsonCreator
+    public V2NodeSettings(@JsonProperty("nodeSettings") Map<String, String> nodeSettings)
     {
         this.nodeSettings = nodeSettings;
     }
