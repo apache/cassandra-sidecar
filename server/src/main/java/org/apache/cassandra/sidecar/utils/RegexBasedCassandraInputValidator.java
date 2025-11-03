@@ -26,6 +26,7 @@ import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.CassandraInputException;
+import org.apache.cassandra.sidecar.exceptions.ForbiddenCassandraInputException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -62,7 +63,7 @@ public class RegexBasedCassandraInputValidator implements CassandraInputValidato
         validateNamePattern(name, "keyspace");
 
         if (validationConfiguration.forbiddenKeyspaces().contains(name.name()))
-            throw new CassandraInputException("Forbidden keyspace: " + keyspace);
+            throw new ForbiddenCassandraInputException("Forbidden keyspace: " + keyspace);
 
         return name;
     }
