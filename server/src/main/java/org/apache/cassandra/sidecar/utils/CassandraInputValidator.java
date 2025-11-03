@@ -85,7 +85,7 @@ public interface CassandraInputValidator
     /**
      * Validates that the index name has only valid characters
      *
-     * @param secondaryIndexName¬ the name of the secondary index
+     * @param secondaryIndexName the name of the secondary index
      */
     void validateIndexName(String secondaryIndexName);
 
