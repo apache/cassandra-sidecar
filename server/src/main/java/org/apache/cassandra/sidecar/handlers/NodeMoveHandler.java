@@ -18,17 +18,20 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.math.BigInteger;
 import java.util.Collections;
 import java.util.Set;
 
 import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.common.request.data.NodeMoveRequestPayload;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -38,10 +41,12 @@ import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
+
 /**
  * Provides REST API for asynchronously moving the corresponding Cassandra node to a new token
  */
-public class NodeMoveHandler extends AbstractHandler<String> implements AccessProtected
+public class NodeMoveHandler extends AbstractHandler<NodeMoveRequestPayload> implements AccessProtected
 {
     private final OperationalJobManager jobManager;
     private final ServiceConfiguration config;
@@ -79,10 +84,10 @@ public class NodeMoveHandler extends AbstractHandler<String> implements AccessPr
                                HttpServerRequest httpRequest,
                                @NotNull String host,
                                SocketAddress remoteAddress,
-                               String newToken)
+                               NodeMoveRequestPayload requestPayload)
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
-        NodeMoveJob job = new NodeMoveJob(UUIDs.timeBased(), newToken, operations);
+        NodeMoveJob job = new NodeMoveJob(UUIDs.timeBased(), requestPayload.newToken(), operations);
         handleOperationalJob(jobManager, config, context, job);
     }
 
@@ -90,24 +95,22 @@ public class NodeMoveHandler extends AbstractHandler<String> implements AccessPr
      * {@inheritDoc}
      */
     @Override
-    protected String extractParamsOrThrow(RoutingContext context)
+    protected NodeMoveRequestPayload extractParamsOrThrow(RoutingContext context)
     {
-        String newToken = context.request().getParam("newToken");
-        if (newToken == null || newToken.isBlank())
+        String body = context.body().asString();
+        if (body == null || body.equalsIgnoreCase("null"))
         {
-            throw new IllegalArgumentException("newToken parameter is required");
+            logger.warn("Bad request. Received null payload.");
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Request body must be JSON with a non-null \"newToken\" field");
         }
-
-        String trimmedToken = newToken.trim();
         try
         {
-            new BigInteger(trimmedToken);
+            return Json.decodeValue(body, NodeMoveRequestPayload.class);
         }
-        catch (NumberFormatException e)
+        catch (DecodeException e)
         {
-            throw new IllegalArgumentException(
-            String.format("newToken parameter must be a valid integer. Provided value=%s", newToken), e);
+            logger.warn("Bad request. Received invalid JSON payload.");
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid newToken value: " + e.getMessage());
         }
-        return trimmedToken;
     }
 }

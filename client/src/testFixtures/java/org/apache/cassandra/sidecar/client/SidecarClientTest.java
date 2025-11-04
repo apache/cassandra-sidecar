@@ -1410,7 +1410,12 @@ abstract class SidecarClientTest
         OperationalJobResponse result = client.nodeMove(sidecarInstance, newToken).get(30, TimeUnit.SECONDS);
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
-        validateResponseServed(ApiEndpointsV1.NODE_MOVE_ROUTE + "?newToken=" + newToken);
+        validateResponseServed(ApiEndpointsV1.NODE_MOVE_ROUTE, request -> {
+            // Verify that the request body contains the expected JSON payload
+            String requestBody = request.getBody().readUtf8();
+            assertThat(requestBody).contains("\"newToken\":\"" + newToken + "\"");
+            assertThat(request.getHeader("Content-Type")).isEqualTo("application/json");
+        });
     }
 
     @Test

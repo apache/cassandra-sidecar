@@ -117,10 +117,11 @@ public class NodeMoveHandlerTest
         .when(mockStorageOperations).move(anyString());
 
         WebClient client = WebClient.create(vertx);
-        String testRoute = MOVE_ROUTE + "?newToken=123456789";
-        client.put(server.actualPort(), LOCAL_HOST, testRoute)
+        String requestBody = "{\"newToken\":\"123456789\"}";
+        client.put(server.actualPort(), LOCAL_HOST, MOVE_ROUTE)
               .expect(ResponsePredicate.SC_ACCEPTED)
-              .send(context.succeeding(response -> {
+              .putHeader("content-type", "application/json")
+              .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(ACCEPTED.code());
                   OperationalJobResponse moveResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(moveResponse).isNotNull();
@@ -135,9 +136,10 @@ public class NodeMoveHandlerTest
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         WebClient client = WebClient.create(vertx);
-        String testRoute = MOVE_ROUTE + "?newToken=123456789";
-        client.put(server.actualPort(), LOCAL_HOST, testRoute)
-              .send(context.succeeding(response -> {
+        String requestBody = "{\"newToken\":\"123456789\"}";
+        client.put(server.actualPort(), LOCAL_HOST, MOVE_ROUTE)
+              .putHeader("content-type", "application/json")
+              .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   LOGGER.info("Move Response: {}", response.bodyAsString());
 
@@ -156,10 +158,11 @@ public class NodeMoveHandlerTest
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         doThrow(new RuntimeException("Simulated failure")).when(mockStorageOperations).move(anyString());
         WebClient client = WebClient.create(vertx);
-        String testRoute = MOVE_ROUTE + "?newToken=123456789";
-        client.put(server.actualPort(), LOCAL_HOST, testRoute)
+        String requestBody = "{\"newToken\":\"123456789\"}";
+        client.put(server.actualPort(), LOCAL_HOST, MOVE_ROUTE)
               .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> {
+              .putHeader("content-type", "application/json")
+              .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   context.completeNow();
               }));
@@ -170,10 +173,11 @@ public class NodeMoveHandlerTest
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_MOVING);
         WebClient client = WebClient.create(vertx);
-        String testRoute = MOVE_ROUTE + "?newToken=123456789";
-        client.put(server.actualPort(), LOCAL_HOST, testRoute)
+        String requestBody = "{\"newToken\":\"123456789\"}";
+        client.put(server.actualPort(), LOCAL_HOST, MOVE_ROUTE)
               .expect(ResponsePredicate.SC_CONFLICT)
-              .send(context.succeeding(response -> {
+              .putHeader("content-type", "application/json")
+              .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(CONFLICT.code());
                   LOGGER.info("Move Response: {}", response.bodyAsString());
                   OperationalJobResponse moveResponse = response.bodyAsJson(OperationalJobResponse.class);
@@ -188,9 +192,11 @@ public class NodeMoveHandlerTest
     void testMoveWithMissingToken(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
+        String requestBody = "{}"; // Empty JSON body
         client.put(server.actualPort(), LOCAL_HOST, MOVE_ROUTE)
               .expect(ResponsePredicate.SC_BAD_REQUEST)
-              .send(context.succeeding(response -> {
+              .putHeader("content-type", "application/json")
+              .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   verify(mockStorageOperations, never()).move(anyString());
                   context.completeNow();
@@ -201,10 +207,11 @@ public class NodeMoveHandlerTest
     void testMoveWithEmptyToken(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = MOVE_ROUTE + "?newToken="; // Empty token parameter
-        client.put(server.actualPort(), LOCAL_HOST, testRoute)
+        String requestBody = "{\"newToken\":\"\"}"; // Empty token in JSON
+        client.put(server.actualPort(), LOCAL_HOST, MOVE_ROUTE)
               .expect(ResponsePredicate.SC_BAD_REQUEST)
-              .send(context.succeeding(response -> {
+              .putHeader("content-type", "application/json")
+              .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   verify(mockStorageOperations, never()).move(anyString());
                   context.completeNow();
@@ -215,10 +222,11 @@ public class NodeMoveHandlerTest
     void testMoveWithInvalidToken(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String testRoute = MOVE_ROUTE + "?newToken=invalidtoken"; // Invalid token parameter
-        client.put(server.actualPort(), LOCAL_HOST, testRoute)
+        String requestBody = "{\"newToken\":\"invalidtoken\"}"; // Invalid token in JSON
+        client.put(server.actualPort(), LOCAL_HOST, MOVE_ROUTE)
               .expect(ResponsePredicate.SC_BAD_REQUEST)
-              .send(context.succeeding(response -> {
+              .putHeader("content-type", "application/json")
+              .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
                   verify(mockStorageOperations, never()).move(anyString());
                   context.completeNow();
@@ -230,9 +238,10 @@ public class NodeMoveHandlerTest
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         WebClient client = WebClient.create(vertx);
-        String testRoute = MOVE_ROUTE + "?newToken=-9223372036854775808"; // Negative token (valid for Murmur3)
-        client.put(server.actualPort(), LOCAL_HOST, testRoute)
-              .send(context.succeeding(response -> {
+        String requestBody = "{\"newToken\":\"-9223372036854775808\"}"; // Negative token (valid for Murmur3)
+        client.put(server.actualPort(), LOCAL_HOST, MOVE_ROUTE)
+              .putHeader("content-type", "application/json")
+              .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   OperationalJobResponse moveResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(moveResponse).isNotNull();
@@ -247,9 +256,10 @@ public class NodeMoveHandlerTest
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         WebClient client = WebClient.create(vertx);
-        String testRoute = MOVE_ROUTE + "?newToken=0"; // Zero token
-        client.put(server.actualPort(), LOCAL_HOST, testRoute)
-              .send(context.succeeding(response -> {
+        String requestBody = "{\"newToken\":\"0\"}"; // Zero token
+        client.put(server.actualPort(), LOCAL_HOST, MOVE_ROUTE)
+              .putHeader("content-type", "application/json")
+              .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   OperationalJobResponse moveResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(moveResponse).isNotNull();

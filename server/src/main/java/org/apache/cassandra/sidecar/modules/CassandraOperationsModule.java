@@ -174,7 +174,10 @@ public class CassandraOperationsModule extends AbstractModule
     VertxRoute cassandraNodeMoveRoute(RouteBuilder.Factory factory,
                                       NodeMoveHandler nodeMoveHandler)
     {
-        return factory.buildRouteWithHandler(nodeMoveHandler);
+        return factory.builderForRoute()
+                      .setBodyHandler(true)
+                      .handler(nodeMoveHandler)
+                      .build();
     }
 
     @GET

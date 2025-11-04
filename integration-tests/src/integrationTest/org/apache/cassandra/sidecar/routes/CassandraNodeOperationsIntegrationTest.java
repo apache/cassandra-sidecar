@@ -60,11 +60,13 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
     {
         // Use a test token - this is a valid token for Murmur3Partitioner 
         String testToken = "123456789";
+        String requestBody = "{\"newToken\":\"" + testToken + "\"}";
 
         // Initiate move operation
         HttpResponse<Buffer> moveResponse = getBlocking(
-        trustedClient().put(serverWrapper.serverPort, "localhost", ApiEndpointsV1.NODE_MOVE_ROUTE + "?newToken=" + testToken)
-                       .send());
+        trustedClient().put(serverWrapper.serverPort, "localhost", ApiEndpointsV1.NODE_MOVE_ROUTE)
+                       .putHeader("content-type", "application/json")
+                       .sendBuffer(Buffer.buffer(requestBody)));
 
         assertThat(moveResponse.statusCode()).isIn(OK.code(), ACCEPTED.code());
 
@@ -91,7 +93,7 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
             // The operationMode should be either NORMAL (completed) or MOVING (in progress)
             assertThat(streamStats.getString("operationMode")).isIn("NORMAL", "MOVING");
         });
-        
+
         // Validate the operational job status using the OperationalJobHandler
         String jobId = responseBody.getString("jobId");
         validateOperationalJobStatus(jobId, "move");
@@ -101,19 +103,19 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
      * Validates the operational job status by querying the OperationalJobHandler endpoint
      * and waiting for the job to reach a final state if necessary.
      *
-     * @param jobId the ID of the operational job to validate
+     * @param jobId             the ID of the operational job to validate
      * @param expectedOperation the expected operation name (e.g., "move", "decommission", "drain")
      */
     private void validateOperationalJobStatus(String jobId, String expectedOperation)
     {
         String operationalJobRoute = ApiEndpointsV1.OPERATIONAL_JOB_ROUTE.replace(":operationId", jobId);
-        
+
         HttpResponse<Buffer> jobStatusResponse = getBlocking(
         trustedClient().get(serverWrapper.serverPort, "localhost", operationalJobRoute)
                        .send());
-        
+
         assertThat(jobStatusResponse.statusCode()).isEqualTo(OK.code());
-        
+
         JsonObject jobStatusBody = jobStatusResponse.bodyAsJsonObject();
         assertThat(jobStatusBody).isNotNull();
         assertThat(jobStatusBody.getString("jobId")).isEqualTo(jobId);
@@ -122,7 +124,7 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
         OperationalJobStatus.RUNNING.name(),
         OperationalJobStatus.SUCCEEDED.name()
         );
-        
+
         // If the job is still running, wait for it to complete or reach a final state
         if (OperationalJobStatus.RUNNING.name().equals(jobStatusBody.getString("jobStatus")))
         {
@@ -130,9 +132,9 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
                 HttpResponse<Buffer> finalJobStatusResponse = getBlocking(
                 trustedClient().get(serverWrapper.serverPort, "localhost", operationalJobRoute)
                                .send());
-                
+
                 assertThat(finalJobStatusResponse.statusCode()).isEqualTo(OK.code());
-                
+
                 JsonObject finalJobStatusBody = finalJobStatusResponse.bodyAsJsonObject();
                 assertThat(finalJobStatusBody).isNotNull();
                 assertThat(finalJobStatusBody.getString("jobStatus")).isIn(

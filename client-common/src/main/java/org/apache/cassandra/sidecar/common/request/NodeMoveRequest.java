@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.common.request;
 
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.request.data.NodeMoveRequestPayload;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 
 /**
@@ -27,6 +28,8 @@ import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
  */
 public class NodeMoveRequest extends JsonRequest<OperationalJobResponse>
 {
+    private final NodeMoveRequestPayload payload;
+
     /**
      * Constructs a request to execute a node move operation
      *
@@ -34,7 +37,8 @@ public class NodeMoveRequest extends JsonRequest<OperationalJobResponse>
      */
     public NodeMoveRequest(String newToken)
     {
-        super(ApiEndpointsV1.NODE_MOVE_ROUTE + "?newToken=" + newToken);
+        super(ApiEndpointsV1.NODE_MOVE_ROUTE);
+        this.payload = new NodeMoveRequestPayload(newToken);
     }
 
     /**
@@ -44,5 +48,14 @@ public class NodeMoveRequest extends JsonRequest<OperationalJobResponse>
     public HttpMethod method()
     {
         return HttpMethod.PUT;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Object requestBody()
+    {
+        return payload;
     }
 }
