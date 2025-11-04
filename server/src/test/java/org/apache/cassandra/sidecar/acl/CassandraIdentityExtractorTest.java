@@ -36,6 +36,9 @@ import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CacheConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
 
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
@@ -49,14 +52,20 @@ import static org.mockito.Mockito.when;
  */
 class CassandraIdentityExtractorTest
 {
+    private static final MetricRegistryFactory FACTORY
+    = new MetricRegistryFactory(CassandraIdentityExtractorTest.class.getName(),
+                                Collections.emptyList(),
+                                Collections.emptyList());
     Vertx vertx;
     ExecutorPools executorPools;
+    SidecarMetrics sidecarMetrics;
 
     @BeforeEach
     void setup()
     {
         vertx = Vertx.vertx();
         executorPools = createdSharedTestPool(vertx);
+        sidecarMetrics = new SidecarMetricsImpl(FACTORY, null);
     }
 
     @AfterEach
@@ -137,7 +146,7 @@ class CassandraIdentityExtractorTest
         when(mockCacheConfig.maximumSize()).thenReturn(10L);
         when(mockAccessControlConfig.permissionCacheConfiguration()).thenReturn(mockCacheConfig);
 
-        return new IdentityToRoleCache(vertx, executorPools, mockSidecarConfig, mockDbAccessor);
+        return new IdentityToRoleCache(vertx, executorPools, mockSidecarConfig, mockDbAccessor, sidecarMetrics);
     }
 
     private X509Certificate certificate(String identity) throws Exception

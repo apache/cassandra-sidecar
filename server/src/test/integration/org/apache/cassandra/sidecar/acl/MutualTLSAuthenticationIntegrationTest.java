@@ -39,7 +39,6 @@ import org.apache.cassandra.testing.AuthMode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.CassandraTestContext;
 
-import static org.apache.cassandra.sidecar.acl.RoleBasedAuthorizationIntegrationTest.MIN_VERSION_WITH_MTLS;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.AUTH_ROLE;
 import static org.apache.cassandra.sidecar.testing.IntegrationTestModule.ADMIN_IDENTITY;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,6 +47,8 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 @ExtendWith(VertxExtension.class)
 class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
 {
+    protected static final int MIN_VERSION_WITH_MTLS = 5;
+
     @CassandraIntegrationTest()
     void testAuthenticatedAdminRequest(VertxTestContext context) throws Exception
     {

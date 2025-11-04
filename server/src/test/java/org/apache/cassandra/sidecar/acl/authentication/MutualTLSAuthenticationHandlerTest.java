@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -66,6 +67,7 @@ import io.vertx.ext.web.handler.impl.ChainAuthHandlerImpl;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
@@ -381,12 +383,17 @@ class MutualTLSAuthenticationHandlerTest
 
 
             String className = "org.apache.cassandra.sidecar.acl.authorization.AllowAllAuthorizationProvider";
-            AccessControlConfiguration accessControlConfiguration
-            = new AccessControlConfigurationImpl(true,
-                                                 authenticatorsConfiguration(),
-                                                 new ParameterizedClassConfigurationImpl(className, Collections.emptyMap()),
-                                                 Collections.singleton(ADMIN_IDENTITY),
-                                                 new CacheConfigurationImpl());
+            CacheConfigurationImpl permissionCacheConfiguration = CacheConfigurationImpl.builder()
+                                                                                        .expireAfterAccess(MillisecondBoundConfiguration.parse("30s"))
+                                                                                        .maximumSize(100)
+                                                                                        .build();
+            AccessControlConfiguration accessControlConfiguration = AccessControlConfigurationImpl.builder()
+                                                                                                  .enabled(true)
+                                                                                                  .authenticatorsConfiguration(authenticatorsConfiguration())
+                                                                                                  .authorizerConfiguration(new ParameterizedClassConfigurationImpl(className, Collections.emptyMap()))
+                                                                                                  .adminIdentities(Set.of(ADMIN_IDENTITY))
+                                                                                                  .permissionCacheConfiguration(permissionCacheConfiguration)
+                                                                                                  .build();
 
             return super.abstractConfig(sslConfiguration, builder -> builder.accessControlConfiguration(accessControlConfiguration));
         }

@@ -89,7 +89,8 @@ public class LifecycleProviderIntegrationTester
 
         // Simulate node crashing by directly calling the lifecycle provider's stop method
         cassandraNodeCrasher.run();
-        waitForLastUpdateToConverge(String.format("Instance %s has unexpectedly diverged from the desired state RUNNING to STOPPED.", sidecarHost), TIMEOUT_SECONDS);
+        waitForLastUpdateToConverge(String.format("Instance %s has unexpectedly diverged from the desired state RUNNING to STOPPED.", sidecarHost),
+                                    TIMEOUT_SECONDS);
 
         // CQL status should be down since instance is crashed
         waitForCqlStatus("NOT_OK", TIMEOUT_SECONDS);

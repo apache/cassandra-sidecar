@@ -172,7 +172,7 @@ public class PeriodicTaskConfigurationImpl implements PeriodicTaskConfiguration
      */
     public static class Builder implements DataObjectBuilder<Builder, PeriodicTaskConfigurationImpl>
     {
-        private boolean enabled;
+        private boolean enabled = DEFAULT_ENABLED;
         private MillisecondBoundConfiguration initialDelay;
         private MillisecondBoundConfiguration executeInterval;
 

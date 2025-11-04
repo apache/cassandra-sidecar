@@ -46,10 +46,10 @@ class LiveMigrationTaskImplTest
 
     private LiveMigrationTaskImpl createTask()
     {
-        return createTask(new LiveMigrationDataCopyRequest("test-task-id", 5, 0.8, 10));
+        return createTask("test-task-id", new LiveMigrationDataCopyRequest(5, 0.8, 10));
     }
 
-    private LiveMigrationTaskImpl createTask(LiveMigrationDataCopyRequest request)
+    private LiveMigrationTaskImpl createTask(String id, LiveMigrationDataCopyRequest request)
     {
         Vertx vertx = mock(Vertx.class);
         SidecarClientProvider sidecarClientProvider = mock(SidecarClientProvider.class);
@@ -62,7 +62,7 @@ class LiveMigrationTaskImplTest
         ExecutorPools executorPools = ExecutorPoolsHelper.createdSharedTestPool(vertx);
 
         return new LiveMigrationTaskImpl(vertx, executorPools, sidecarClientProvider, liveMigrationConfiguration,
-                                         request, SOURCE, PORT, instanceMetadata);
+                                         id, request, SOURCE, PORT, instanceMetadata);
     }
 
     @Test

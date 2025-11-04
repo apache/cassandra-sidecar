@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.common.request.ListOperationalJobsRequest;
 import org.apache.cassandra.sidecar.common.request.ListSnapshotFilesRequest;
 import org.apache.cassandra.sidecar.common.request.NativeUpdateRequest;
 import org.apache.cassandra.sidecar.common.request.NodeDecommissionRequest;
+import org.apache.cassandra.sidecar.common.request.NodeDrainRequest;
 import org.apache.cassandra.sidecar.common.request.NodeMoveRequest;
 import org.apache.cassandra.sidecar.common.request.NodeSettingsRequest;
 import org.apache.cassandra.sidecar.common.request.OperationalJobRequest;
@@ -581,6 +582,17 @@ public class RequestContext
         public Builder nodeDecommissionRequest()
         {
             return request(NODE_DECOMMISSION_REQUEST);
+        }
+
+        /**
+         * Sets the {@code request} to be a {@link NodeDrainRequest} and returns a reference to this Builder
+         * enabling method chaining.
+         *
+         * @return a reference to this Builder
+         */
+        public Builder nodeDrainRequest()
+        {
+            return request(NODE_DRAIN_REQUEST);
         }
 
         /**

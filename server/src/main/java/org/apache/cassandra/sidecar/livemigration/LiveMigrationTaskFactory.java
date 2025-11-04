@@ -34,13 +34,15 @@ public interface LiveMigrationTaskFactory
      * Creates a live migration task. Newly created task will not start downloading files on its own.
      * It has to be started explicitly using {@link LiveMigrationTask#start()}.
      *
+     * @param id               id of live migration task
      * @param request          Live migration request
      * @param source           Source from which data should be downloaded
      * @param port             Source sidecar port
      * @param instanceMetadata Instance metadata for which data copy should be initiated.
      * @return Live migration task
      */
-    LiveMigrationTask create(LiveMigrationDataCopyRequest request,
+    LiveMigrationTask create(String id,
+                             LiveMigrationDataCopyRequest request,
                              String source,
                              int port,
                              InstanceMetadata instanceMetadata);

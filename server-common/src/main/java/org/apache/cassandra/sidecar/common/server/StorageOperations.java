@@ -119,6 +119,11 @@ public interface StorageOperations
     void decommission(boolean force);
 
     /**
+     * Triggers the node drain operation
+     */
+    void drain() throws IOException, InterruptedException, ExecutionException;
+
+    /**
      * @return returns true if gossip is running, false otherwise
      */
     boolean isGossipRunning();

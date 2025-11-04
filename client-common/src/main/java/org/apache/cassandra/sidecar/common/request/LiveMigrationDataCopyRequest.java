@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.common.request;
 
-import java.util.UUID;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,10 +28,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class LiveMigrationDataCopyRequest
 {
-    /**
-     * Unique identifier for this data copy request.
-     */
-    public final String id;
 
     /**
      * Maximum number of download iterations to attempt (must be &gt; 0).
@@ -58,18 +52,6 @@ public class LiveMigrationDataCopyRequest
                                         @JsonProperty("successThreshold") double successThreshold,
                                         @JsonProperty("maxConcurrency") int maxConcurrency)
     {
-        this(UUID.randomUUID().toString(), maxIterations, successThreshold, maxConcurrency);
-    }
-
-    public LiveMigrationDataCopyRequest(String id,
-                                        int maxIterations,
-                                        double successThreshold,
-                                        int maxConcurrency)
-    {
-        if (id == null || id.isEmpty())
-        {
-            throw new IllegalArgumentException("id cannot be null or empty.");
-        }
 
         if (maxIterations <= 0)
         {
@@ -89,7 +71,6 @@ public class LiveMigrationDataCopyRequest
                                                + ". It cannot be less than or equal to zero.");
         }
 
-        this.id = id;
         this.maxIterations = maxIterations;
         this.successThreshold = successThreshold;
         this.maxConcurrency = maxConcurrency;

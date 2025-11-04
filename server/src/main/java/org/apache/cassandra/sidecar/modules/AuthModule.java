@@ -58,6 +58,7 @@ import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
 import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
+import org.apache.cassandra.sidecar.utils.CacheFactory;
 
 /**
  * Provides authentication and authorization (role-based) capability
@@ -85,12 +86,16 @@ public class AuthModule extends AbstractModule
     RouteBuilder.Factory accessProtectedRouteBuilderFactory(SidecarConfiguration sidecarConfiguration,
                                                             AuthorizationProvider authorizationProvider,
                                                             AdminIdentityResolver adminIdentityResolver,
-                                                            AuthorizationParameterValidateHandler authorizationParameterValidateHandler)
+                                                            AuthorizationParameterValidateHandler authorizationParameterValidateHandler,
+                                                            SidecarMetrics metrics,
+                                                            CacheFactory cacheFactory)
     {
         return new RouteBuilder.Factory(sidecarConfiguration.accessControlConfiguration(),
                                         authorizationProvider,
                                         adminIdentityResolver,
-                                        authorizationParameterValidateHandler);
+                                        authorizationParameterValidateHandler,
+                                        metrics,
+                                        cacheFactory.endpointAuthorizationCache());
     }
 
     @Provides

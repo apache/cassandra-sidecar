@@ -251,6 +251,6 @@ public class LiveMigrationFileStreamHandler extends AbstractHandler<Void> implem
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        return Set.of(BasicPermissions.STREAM_FILES.toAuthorization());
+        return Set.of(BasicPermissions.DATA_COPY.toAuthorization());
     }
 }

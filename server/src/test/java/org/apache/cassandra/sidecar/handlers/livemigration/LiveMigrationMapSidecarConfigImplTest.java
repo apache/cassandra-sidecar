@@ -31,6 +31,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.LiveMigrationConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -61,16 +62,55 @@ class LiveMigrationMapSidecarConfigImplTest
         InstanceMetadata localhost4Metadata = instanceMetadata("localhost4", 4);
 
         assertThat(migrationMapSidecarConfig.getMigrationMap()).isNotNull();
-        assertThat(migrationMapSidecarConfig.getMigrationMap().size()).isEqualTo(1);
+        assertThat(migrationMapSidecarConfig.getMigrationMap().result().size()).isEqualTo(1);
 
-        assertThat(migrationMapSidecarConfig.isSource(localhost1Metadata)).isTrue();
-        assertThat(migrationMapSidecarConfig.isDestination(localhost1Metadata)).isFalse();
+        assertThat(migrationMapSidecarConfig.isSource(localhost1Metadata).result()).isTrue();
+        assertThat(migrationMapSidecarConfig.isDestination(localhost1Metadata).result()).isFalse();
+        assertThat(migrationMapSidecarConfig.isAny(localhost1Metadata).result()).isTrue();
+        assertThat(migrationMapSidecarConfig.getSource(localhost1Metadata.host()).cause())
+        .isInstanceOf(LiveMigrationInvalidRequestException.class);
 
-        assertThat(migrationMapSidecarConfig.isSource(localhost2Metadata)).isFalse();
-        assertThat(migrationMapSidecarConfig.isDestination(localhost2Metadata)).isFalse();
+        assertThat(migrationMapSidecarConfig.isSource(localhost2Metadata).result()).isFalse();
+        assertThat(migrationMapSidecarConfig.isDestination(localhost2Metadata).result()).isFalse();
+        assertThat(migrationMapSidecarConfig.isAny(localhost2Metadata).result()).isFalse();
+        assertThat(migrationMapSidecarConfig.getSource(localhost2Metadata.host()).cause())
+        .isInstanceOf(LiveMigrationInvalidRequestException.class);
 
-        assertThat(migrationMapSidecarConfig.isSource(localhost4Metadata)).isFalse();
-        assertThat(migrationMapSidecarConfig.isDestination(localhost4Metadata)).isTrue();
+        assertThat(migrationMapSidecarConfig.isSource(localhost4Metadata).result()).isFalse();
+        assertThat(migrationMapSidecarConfig.isDestination(localhost4Metadata).result()).isTrue();
+        assertThat(migrationMapSidecarConfig.isAny(localhost4Metadata).result()).isTrue();
+        assertThat(migrationMapSidecarConfig.getSource(localhost4Metadata.host()).result()).isEqualTo(localhost1Metadata.host());
+    }
+
+    @Test
+    void testLiveMigrationNotConfigured()
+    {
+        LiveMigrationConfiguration liveMigrationConfiguration =
+        new LiveMigrationConfigurationImpl(Collections.emptySet(),
+                                           Collections.emptySet(),
+                                           Map.of(),
+                                           20);
+
+        SidecarConfigurationImpl sidecarConfig =
+        SidecarConfigurationImpl.builder()
+                                .liveMigrationConfiguration(liveMigrationConfiguration).build();
+
+        InstanceMetadata localhostMetadata = instanceMetadata("localhost1", 1);
+
+        LiveMigrationMapSidecarConfigImpl migrationMapSidecarConfig =
+        new LiveMigrationMapSidecarConfigImpl(sidecarConfig);
+
+        assertThat(migrationMapSidecarConfig.isSource(localhostMetadata).result())
+        .isEqualTo(false);
+        assertThat(migrationMapSidecarConfig.isDestination(localhostMetadata).result())
+        .isEqualTo(false);
+        assertThat(migrationMapSidecarConfig.isAny(localhostMetadata).result())
+        .isEqualTo(false);
+        assertThat(migrationMapSidecarConfig.getSource(localhostMetadata.host()).cause())
+        .isInstanceOf(LiveMigrationInvalidRequestException.class);
+
+        assertThat(migrationMapSidecarConfig.getSource(null).cause())
+        .isInstanceOf(IllegalArgumentException.class);
     }
 
     InstanceMetadata instanceMetadata(String host, int id)

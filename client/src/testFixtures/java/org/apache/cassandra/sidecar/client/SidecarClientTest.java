@@ -87,6 +87,8 @@ import org.apache.cassandra.sidecar.common.response.LifecycleInfoResponse;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.MigrationState;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
@@ -112,6 +114,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.PARTIAL_CONTENT;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.JOB_ID_PATH_PARAM;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.KEYSPACE_PATH_PARAM;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_STATUS_ROUTE;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.OPERATIONAL_JOB_ID_PATH_PARAM;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.TABLE_PATH_PARAM;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CONTENT_XXHASH32;
@@ -1391,6 +1394,25 @@ abstract class SidecarClientTest
         assertThat(result).isNotNull();
         assertThat(result.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
         validateResponseServed(ApiEndpointsV1.NODE_DECOMMISSION_ROUTE);
+    }
+
+    @Test
+    public void testNodeDrain() throws Exception
+    {
+        UUID jobId = UUID.randomUUID();
+        String nodeDrainString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"SUCCEEDED\",\"instance\":\"127.0.0.1\"}";
+
+        MockResponse response = new MockResponse()
+                                .setResponseCode(OK.code())
+                                .setHeader("content-type", "application/json")
+                                .setBody(nodeDrainString);
+        enqueue(response);
+
+        SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(servers.get(0));
+        OperationalJobResponse result = client.nodeDrain(sidecarInstance).get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
+        validateResponseServed(ApiEndpointsV1.NODE_DRAIN_ROUTE);
     }
 
     @Test

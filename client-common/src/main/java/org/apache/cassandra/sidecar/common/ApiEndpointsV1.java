@@ -141,6 +141,7 @@ public final class ApiEndpointsV1
     public static final String OPERATIONAL_JOB_ROUTE = API_V1 + CASSANDRA + PER_OPERATIONAL_JOB;
     public static final String NODE_DECOMMISSION_ROUTE = API_V1 + CASSANDRA + "/operations/decommission";
     public static final String NODE_MOVE_ROUTE = API_V1 + CASSANDRA + "/operations/move";
+    public static final String NODE_DRAIN_ROUTE = API_V1 + CASSANDRA + "/operations/drain";
     public static final String STREAM_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/streams";
     public static final String TABLE_STATS_ROUTE = API_V1 + CASSANDRA + PER_KEYSPACE + PER_TABLE + "/stats";
 
@@ -161,6 +162,8 @@ public final class ApiEndpointsV1
 
     public static final String LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE = LIVE_MIGRATION_API_PREFIX + "/data-copy-tasks";
     public static final String LIVE_MIGRATION_DATA_COPY_TASK_ROUTE = LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE + "/:taskId";
+    public static final String LIVE_MIGRATION_STATUS_ROUTE = LIVE_MIGRATION_API_PREFIX + "/status";
+
 
     public static final String OPENAPI_JSON_ROUTE = "/spec/openapi.json";
     public static final String OPENAPI_YAML_ROUTE = "/spec/openapi.yaml";

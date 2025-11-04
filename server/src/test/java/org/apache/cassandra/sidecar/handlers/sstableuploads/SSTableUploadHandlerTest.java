@@ -116,6 +116,18 @@ class SSTableUploadHandlerTest extends BaseUploadsHandlerTest
     }
 
     @Test
+    void testUploadWithDelayBeforePipingStreamToFile_expectSuccessfulUpload(VertxTestContext context) throws IOException
+    {
+        artificialDelayInMillisBeforeStreamingToFile = 250;
+        UUID uploadId = UUID.randomUUID();
+        sendUploadRequestAndVerify(context, uploadId, "ks", "tbl", "with-correct-xxhash-Data.db",
+                                   new XXHash32Digest("b9510d6b", "55555555"),
+                                   Files.size(Paths.get(FILE_TO_BE_UPLOADED)),
+                                   HttpResponseStatus.OK.code(),
+                                   false);
+    }
+
+    @Test
     void testUploadWithIncorrectMd5_expectErrorCode(VertxTestContext context) throws IOException
     {
         UUID uploadId = UUID.randomUUID();

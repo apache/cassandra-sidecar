@@ -32,6 +32,11 @@ public interface CacheConfiguration
     MillisecondBoundConfiguration expireAfterAccess();
 
     /**
+     * @return the configured amount of time after which cache entries are refreshed.
+     */
+    MillisecondBoundConfiguration refreshAfterWrite();
+
+    /**
      * @return the maximum number of entries the cache may contain
      */
     long maximumSize();

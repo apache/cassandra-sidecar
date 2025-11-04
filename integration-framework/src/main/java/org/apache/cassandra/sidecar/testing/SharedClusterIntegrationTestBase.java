@@ -35,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -114,6 +115,7 @@ import org.apache.cassandra.testing.TestVersionSupplier;
 
 import static org.apache.cassandra.sidecar.config.yaml.S3ClientConfigurationImpl.DEFAULT_API_CALL_TIMEOUT;
 import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS;
+import static org.apache.cassandra.testing.DriverTestUtils.buildContactPoints;
 import static org.apache.cassandra.testing.utils.IInstanceUtils.tryGetIntConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -183,15 +185,15 @@ public abstract class SharedClusterIntegrationTestBase
         this.testVersion = maybeTestVersion.get();
         logger.info("Testing with version={}", testVersion);
 
+        beforeClusterProvisioning();
+
         classLoaderWrapper = new IsolatedDTestClassLoaderWrapper();
         classLoaderWrapper.initializeDTestJarClassLoader(testVersion, TestVersion.class);
-
-        beforeClusterProvisioning();
+        mtlsTestHelper = new MtlsTestHelper(secretsPath);
         cluster = provisionClusterWithRetries(this.testVersion);
         assertThat(cluster).isNotNull();
         afterClusterProvisioned();
         initializeSchemaForTest();
-        mtlsTestHelper = new MtlsTestHelper(secretsPath);
         startSidecar(cluster);
         beforeTestStart();
     }
@@ -316,16 +318,41 @@ public abstract class SharedClusterIntegrationTestBase
         createTestKeyspace(name.maybeQuotedKeyspace(), rf);
     }
 
+    protected void createTestKeyspace(Session session, QualifiedName name, Map<String, Integer> rf)
+    {
+        createTestKeyspace(session, name.maybeQuotedKeyspace(), rf);
+    }
+
     protected void createTestKeyspace(String keyspace, Map<String, Integer> rf)
     {
-        cluster.schemaChangeIgnoringStoppedInstances("CREATE KEYSPACE IF NOT EXISTS " + keyspace
-                                                     + " WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', " +
-                                                     generateRfString(rf) + " };");
+        createTestKeyspace(cluster::schemaChangeIgnoringStoppedInstances, keyspace, rf);
+    }
+
+    protected void createTestKeyspace(Session session, String keyspace, Map<String, Integer> rf)
+    {
+        createTestKeyspace(session::execute, keyspace, rf);
+    }
+
+    protected void createTestKeyspace(Consumer<String> queryExecution, String keyspace, Map<String, Integer> rf)
+    {
+        queryExecution.accept("CREATE KEYSPACE IF NOT EXISTS " + keyspace
+                              + " WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', " +
+                              generateRfString(rf) + " };");
     }
 
     protected void createTestTable(QualifiedName name, String createTableStatement)
     {
-        cluster.schemaChangeIgnoringStoppedInstances(String.format(createTableStatement, name));
+        createTestTable(cluster::schemaChangeIgnoringStoppedInstances, name, createTableStatement);
+    }
+
+    protected void createTestTable(Session session, QualifiedName name, String createTableStatement)
+    {
+        createTestTable(session::execute, name, createTableStatement);
+    }
+
+    protected void createTestTable(Consumer<String> queryExecution, QualifiedName name, String createTableStatement)
+    {
+        queryExecution.accept(String.format(createTableStatement, name));
     }
 
     /**
@@ -442,17 +469,17 @@ public abstract class SharedClusterIntegrationTestBase
         {
             return;
         }
-        closeServer(serverWrapper.server);
+        closeServer(serverWrapper);
     }
 
-    protected void closeServer(Server s) throws InterruptedException
+    protected void closeServer(ServerWrapper wrapper) throws InterruptedException
     {
-        if (s == null)
+        if (wrapper == null)
         {
             return;
         }
         CountDownLatch closeLatch = new CountDownLatch(1);
-        s.close().onSuccess(res -> closeLatch.countDown());
+        wrapper.server.close().onSuccess(res -> closeLatch.countDown());
         if (closeLatch.await(60, TimeUnit.SECONDS))
         {
             logger.info("Close event received before timeout.");
@@ -559,6 +586,11 @@ public abstract class SharedClusterIntegrationTestBase
 
     public static Cluster createDriverCluster(ICluster<? extends IInstance> dtest)
     {
+        return createDriverCluster(dtest, null);
+    }
+
+    public static Cluster createDriverCluster(ICluster<? extends IInstance> dtest, Consumer<com.datastax.driver.core.Cluster.Builder> overrideBuilder)
+    {
         dtest.stream().forEach((i) -> {
             if (!i.config().has(Feature.NATIVE_PROTOCOL) || !i.config().has(Feature.GOSSIP))
             {
@@ -573,7 +605,10 @@ public abstract class SharedClusterIntegrationTestBase
                                                               i.config().getInt("native_transport_port"));
             builder.addContactPointsWithPorts(address);
         });
-
+        if (overrideBuilder != null)
+        {
+            overrideBuilder.accept(builder);
+        }
         return builder.build();
     }
 
@@ -653,7 +688,7 @@ public abstract class SharedClusterIntegrationTestBase
         @Singleton
         public CQLSessionProvider cqlSessionProvider()
         {
-            List<InetSocketAddress> contactPoints = buildContactPoints();
+            List<InetSocketAddress> contactPoints = buildContactPoints(instances);
             return new TemporaryCqlSessionProvider(contactPoints,
                                                    SharedExecutorNettyOptions.INSTANCE);
         }
@@ -714,14 +749,6 @@ public abstract class SharedClusterIntegrationTestBase
         public LifecycleProvider lifecycleProvider()
         {
             return new InJvmDTestLifecycleProvider(instances);
-        }
-
-        private List<InetSocketAddress> buildContactPoints()
-        {
-            return StreamSupport.stream(instances.spliterator(), false)
-                                .map(instance -> new InetSocketAddress(instance.config().broadcastAddress().getAddress(),
-                                                                       tryGetIntConfig(instance, "native_transport_port", 9042)))
-                                .collect(Collectors.toList());
         }
 
         public static SidecarConfigurationImpl.Builder defaultConfigurationBuilder(

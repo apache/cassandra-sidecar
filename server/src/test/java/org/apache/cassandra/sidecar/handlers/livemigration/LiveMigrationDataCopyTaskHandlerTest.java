@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +60,7 @@ import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE;
+import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_STATUS_ROUTE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -70,16 +73,16 @@ class LiveMigrationDataCopyTaskHandlerTest
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationDataCopyTaskHandlerTest.class);
 
-    // Destination host in the forklift name map corresponding to the FIRST_SOURCE_HOST
+    // Destination host in the live migration map corresponding to the FIRST_SOURCE_HOST
     private static final String FIRST_DESTINATION_HOST = "127.0.0.1";
 
-    // Source host in the forklift name map corresponding to the FIRST_DESTINATION_HOST
+    // Source host in the live migration map corresponding to the FIRST_DESTINATION_HOST
     private static final String FIRST_SOURCE_HOST = "127.0.0.2";
 
-    // Destination host in the forklift name map corresponding to the SECOND_SOURCE_HOST
+    // Destination host in the live migration map corresponding to the SECOND_SOURCE_HOST
     private static final String SECOND_DESTINATION_HOST = "127.0.0.4";
 
-    // Source host in the forklift name map corresponding to the SECOND_DESTINATION_HOST
+    // Source host in the live migration map corresponding to the SECOND_DESTINATION_HOST
     private static final String SECOND_SOURCE_HOST = "127.0.0.3";
 
     private final Vertx vertx = Vertx.vertx();
@@ -95,13 +98,14 @@ class LiveMigrationDataCopyTaskHandlerTest
     }
 
     @BeforeEach
-    void setup() throws InterruptedException
+    void setup(@TempDir Path tempDir) throws InterruptedException
     {
         DataCopyHandlerTestModule handlerTestModule = new DataCopyHandlerTestModule();
+        InstanceFetcherTestModule instanceFetcherTestModule = new InstanceFetcherTestModule(tempDir);
 
         injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                .with(Modules.override(new TestModule())
-                                                            .with(handlerTestModule)));
+                                                            .with(handlerTestModule, instanceFetcherTestModule)));
         server = injector.getInstance(Server.class);
         VertxTestContext context = new VertxTestContext();
 
@@ -127,13 +131,13 @@ class LiveMigrationDataCopyTaskHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         LiveMigrationTaskFactory taskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
-        when(taskFactory.create(any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
+        when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "SUCCESS", 1000, 10, 1000, 10, 10, 0, 1000)),
-                                          "dummysource",
-                                          9043));
+            new LiveMigrationTaskResponse(invocation.getArgument(0),
+                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                          List.of(new Status(0, "SUCCESS", 1000, 10, 1000, 10, 10, 0, 1000))
+            ));
         });
 
         final JsonObject dataCopyTaskPayload = getDataCopyTaskPayload();
@@ -187,13 +191,13 @@ class LiveMigrationDataCopyTaskHandlerTest
         WebClient client = WebClient.create(vertx);
 
         LiveMigrationTaskFactory taskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
-        when(taskFactory.create(any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
+        when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "STARTING", -1, -1, -1, -1, 0, 0, 0)),
-                                          "dummysource",
-                                          9043));
+            new LiveMigrationTaskResponse(invocation.getArgument(0),
+                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                          List.of(new Status(0, "STARTING", -1, -1, -1, -1, 0, 0, 0))
+            ));
         }); // Task in starting state only.
 
         final JsonObject dataCopyTaskPayload = getDataCopyTaskPayload();
@@ -218,18 +222,53 @@ class LiveMigrationDataCopyTaskHandlerTest
     }
 
     @Test
+    public void testTaskSubmissionWhenLiveMigrationAlreadyMarkedAsCompleted(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+
+        LiveMigrationTaskFactory taskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
+        when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
+        .thenAnswer(invocation -> new FakeLiveMigrationTask(new LiveMigrationTaskResponse(
+        invocation.getArgument(0),
+        "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+        List.of(new Status(0, "STARTING", -1, -1, -1, -1, 0, 0, 0))
+        ))); // Task in starting state only.
+
+        final JsonObject dataCopyTaskPayload = getDataCopyTaskPayload();
+
+        // First make request to live migration status API to mimic live migration completion and then
+        // submit data copy task.
+        client.post(server.actualPort(), FIRST_DESTINATION_HOST, LIVE_MIGRATION_STATUS_ROUTE)
+              .send()
+              .compose(response -> {
+                  assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                  return Future.succeededFuture(response);
+              })
+              .compose(response -> client.post(server.actualPort(), FIRST_DESTINATION_HOST, LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE)
+                                         .as(BodyCodec.jsonObject())
+                                         .sendJsonObject(dataCopyTaskPayload))
+              .compose(dataCopyTaskResponse -> {
+                  assertThat(dataCopyTaskResponse.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
+                  return Future.succeededFuture();
+              })
+              .onSuccess(v -> context.completeNow())
+              .onFailure(context::failNow) // The call should not result a failure
+              .onComplete(result -> client.close());
+    }
+
+    @Test
     void testCreateTaskCancelAndCreateAnotherTask(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
 
         LiveMigrationTaskFactory taskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
-        when(taskFactory.create(any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
+        when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "STARTING", -1, -1, -1, -1, 0, 0, 0)),
-                                          "dummysource",
-                                          9043));
+            new LiveMigrationTaskResponse(invocation.getArgument(0),
+                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                          List.of(new Status(0, "STARTING", -1, -1, -1, -1, 0, 0, 0))
+            ));
         }); // Task in starting state only.
 
         final JsonObject dataCopyTaskPayload = getDataCopyTaskPayload();
@@ -270,13 +309,13 @@ class LiveMigrationDataCopyTaskHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         LiveMigrationTaskFactory taskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
-        when(taskFactory.create(any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
+        when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "SUCCESS", 1000, 10, 1000, 10, 10, 0, 1000)),
-                                          "dummysource",
-                                          9043));
+            new LiveMigrationTaskResponse(invocation.getArgument(0),
+                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                          List.of(new Status(0, "SUCCESS", 1000, 10, 1000, 10, 10, 0, 1000))
+            ));
         });
 
         // successThreshold is range bound and valid range is (0.0, 1.0] and thus the below value should throw
@@ -299,13 +338,13 @@ class LiveMigrationDataCopyTaskHandlerTest
         WebClient client = WebClient.create(vertx);
         LiveMigrationTaskFactory taskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
         SidecarConfiguration sidecarConfiguration = injector.getInstance(SidecarConfiguration.class);
-        when(taskFactory.create(any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
+        when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "SUCCESS", 1000, 10, 1000, 10, 10, 0, 1000)),
-                                          "dummysource",
-                                          9043));
+            new LiveMigrationTaskResponse(invocation.getArgument(0),
+                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                          List.of(new Status(0, "SUCCESS", 1000, 10, 1000, 10, 10, 0, 1000))
+            ));
         });
 
         // Here, we are trying to trigger a data copy request with max concurrency greater than the allowed limit.
@@ -359,13 +398,13 @@ class LiveMigrationDataCopyTaskHandlerTest
         WebClient client = WebClient.create(vertx);
 
         LiveMigrationTaskFactory taskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
-        when(taskFactory.create(any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
+        when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "SUCCESS", 1000, 2, 1000, 2, 2, 0, 1000)),
-                                          "dummysource",
-                                          9043));
+            new LiveMigrationTaskResponse(invocation.getArgument(0),
+                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                          List.of(new Status(0, "SUCCESS", 1000, 2, 1000, 2, 2, 0, 1000))
+            ));
         });
 
         final JsonObject dataCopyTaskPayload = getDataCopyTaskPayload();
@@ -405,13 +444,13 @@ class LiveMigrationDataCopyTaskHandlerTest
         WebClient client = WebClient.create(vertx);
 
         LiveMigrationTaskFactory taskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
-        when(taskFactory.create(any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
+        when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "CANCELLED", 1000, 2, 1000, 2, 1, 0, 100)),
-                                          "dummysource",
-                                          9043));
+            new LiveMigrationTaskResponse(invocation.getArgument(0),
+                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                          List.of(new Status(0, "CANCELLED", 1000, 2, 1000, 2, 1, 0, 100))
+            ));
         });
 
         final JsonObject dataCopyTaskPayload = getDataCopyTaskPayload();

@@ -63,6 +63,7 @@ public class BasicPermissions
     public static final Permission READ_OPERATIONAL_JOB = new DomainAwarePermission("OPERATIONAL_JOB:READ", OPERATION_SCOPE);
     public static final Permission DECOMMISSION_NODE = new DomainAwarePermission("NODE:DECOMMISSION", OPERATION_SCOPE);
     public static final Permission MOVE_NODE = new DomainAwarePermission("NODE:MOVE", OPERATION_SCOPE);
+    public static final Permission DRAIN_NODE = new DomainAwarePermission("NODE:DRAIN", OPERATION_SCOPE);
 
     // Permissions related to Schema Reporting
     public static final Permission REPORT_SCHEMA = new DomainAwarePermission("SCHEMA:PUBLISH", CLUSTER_SCOPE);
@@ -84,7 +85,7 @@ public class BasicPermissions
 
     // Live Migration permissions
     public static final Permission LIST_FILES = new DomainAwarePermission("LIVE_MIGRATION:LIST_FILES", CLUSTER_SCOPE);
-    public static final Permission STREAM_FILES = new DomainAwarePermission("LIVE_MIGRATION:STREAM", CLUSTER_SCOPE);
+    public static final Permission DATA_COPY = new DomainAwarePermission("LIVE_MIGRATION:DATA_COPY", CLUSTER_SCOPE);
 
     // Lifecycle permissions
     public static final Permission READ_LIFECYCLE = new DomainAwarePermission("LIFECYCLE:READ", CLUSTER_SCOPE);

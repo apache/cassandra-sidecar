@@ -22,7 +22,7 @@ import java.util.Map;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -42,20 +42,9 @@ public class LiveMigrationMapSidecarConfigImpl implements LiveMigrationMap
     }
 
     @Override
-    public boolean isSource(@NotNull InstanceMetadata instanceMeta)
+    @NotNull
+    public Future<Map<String, String>> getMigrationMap()
     {
-        return liveMigrationConfiguration.migrationMap().containsKey(instanceMeta.host());
-    }
-
-    @Override
-    public boolean isDestination(@NotNull InstanceMetadata instanceMeta)
-    {
-        return liveMigrationConfiguration.migrationMap().containsValue(instanceMeta.host());
-    }
-
-    @Override
-    public Map<String, String> getMigrationMap()
-    {
-        return liveMigrationConfiguration.migrationMap();
+        return Future.succeededFuture(liveMigrationConfiguration.migrationMap());
     }
 }

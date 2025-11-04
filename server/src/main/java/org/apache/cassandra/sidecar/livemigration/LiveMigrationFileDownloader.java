@@ -51,9 +51,11 @@ import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo.FileType;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.MigrationState;
 import org.apache.cassandra.sidecar.concurrent.AsyncConcurrentTaskExecutor;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
 import org.apache.cassandra.sidecar.livemigration.OperationStatus.State;
 import org.jetbrains.annotations.NotNull;
 
@@ -74,6 +76,7 @@ class LiveMigrationFileDownloader
     private final InstanceMetadata instanceMetadata;
     private final LiveMigrationConfiguration liveMigrationConfiguration;
     private final SidecarClient sidecarClient;
+    private final String id;
     private final String source;
     private final int port;
     private final String logPrefix;
@@ -90,12 +93,13 @@ class LiveMigrationFileDownloader
         this.statusUpdater = builder.statusUpdater;
         this.instanceMetadata = builder.instanceMetadata;
         this.liveMigrationConfiguration = builder.liveMigrationConfiguration;
+        this.id = builder.id;
         this.source = builder.source;
         this.port = builder.port;
         this.executorPools = builder.executorPools;
 
         this.operationStatus = OperationStatus.startingState();
-        this.logPrefix = String.format("liveMigrationRequest=%s iteration=%s ", request.id, iteration);
+        this.logPrefix = String.format("liveMigrationRequest=%s iteration=%s ", id, iteration);
     }
 
     public static Builder builder()
@@ -111,12 +115,39 @@ class LiveMigrationFileDownloader
      */
     public Future<OperationStatus> downloadFiles()
     {
-        return fetchSourceFileList()
+        return checkLiveMigrationStatusOfSource()
+               .compose(v -> fetchSourceFileList())
                .compose(this::cleanupUnnecessaryFiles)
                .compose(this::prepareDownloadList)
                .compose(this::executeDownloadIfNeeded)
                .onSuccess(result -> LOGGER.info("{} Operation completed with status: {}", logPrefix, result))
                .otherwise(this::handleDownloadFailure);
+    }
+
+
+    /**
+     * Checks whether the live migration status at the source is NOT_COMPLETED or COMPLETED.
+     * This check helps a corner where destination is not aware that live migration was
+     * already completed and trying to download the files again.
+     *
+     * @return a {@link Future} which succeeds when live migration at source is not marked
+     * as completed, a failed Future otherwise.
+     */
+    private Future<Void> checkLiveMigrationStatusOfSource()
+    {
+        return Future.fromCompletionStage(
+                     sidecarClient.liveMigrationStatus(new SidecarInstanceImpl(source, port)))
+                     .compose(sourceLiveMigrationStatus -> {
+                         if (sourceLiveMigrationStatus.state() == MigrationState.NOT_COMPLETED)
+                         {
+                             return Future.succeededFuture();
+                         }
+                         else
+                         {
+                             return Future.failedFuture(
+                             new LiveMigrationInvalidRequestException("Live migration has completed at source."));
+                         }
+                     });
     }
 
     private Future<InstanceFilesListResponse> fetchSourceFileList()
@@ -538,6 +569,7 @@ class LiveMigrationFileDownloader
         private Consumer<OperationStatus> statusUpdater;
         private InstanceMetadata instanceMetadata;
         private LiveMigrationConfiguration liveMigrationConfiguration;
+        private String id;
         private String source;
         private int port;
 
@@ -629,6 +661,17 @@ class LiveMigrationFileDownloader
         }
 
         /**
+         * Sets the {@code id} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param id the {@code id} to set
+         * @return a reference to this Builder
+         */
+        public Builder id(String id)
+        {
+            return update(b -> b.id = id);
+        }
+
+        /**
          * Sets the {@code source} and returns a reference to this Builder enabling method chaining.
          *
          * @param source the {@code source} to set
@@ -674,6 +717,7 @@ class LiveMigrationFileDownloader
             Objects.requireNonNull(sidecarClient);
             Objects.requireNonNull(statusUpdater);
             Objects.requireNonNull(liveMigrationConfiguration);
+            Objects.requireNonNull(id);
             Objects.requireNonNull(request);
             Objects.requireNonNull(source);
             Objects.requireNonNull(executorPools);

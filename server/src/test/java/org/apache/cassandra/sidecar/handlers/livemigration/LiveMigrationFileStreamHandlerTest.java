@@ -43,6 +43,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.codec.BodyCodec;
@@ -55,6 +56,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.livemigration.LiveMigrationStatusTracker;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
@@ -63,6 +65,7 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMe
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.createFile;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -152,6 +155,21 @@ class LiveMigrationFileStreamHandlerTest
 
         String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
         shouldSucceed(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP);
+    }
+
+    @Test
+    public void testDownloadFailsWhenLiveMigrationCompletedAsCompleted(VertxTestContext context) throws IOException
+    {
+        String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
+        createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
+
+        LiveMigrationStatusTracker statusTracker = injector.getInstance(LiveMigrationStatusTracker.class);
+        when(statusTracker.hasMigrationCompleted(any(InstanceMetadata.class)))
+        .thenReturn(Future.succeededFuture(true));
+
+
+        String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0" + filePath;
+        shouldThrowError(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
     }
 
     @Test
@@ -434,6 +452,11 @@ class LiveMigrationFileStreamHandlerTest
 
             bind(SidecarConfiguration.class).toInstance(sidecarConfiguration);
             install(new HelperTestModules.InstanceMetadataTestModule(instanceMetaList));
+
+            LiveMigrationStatusTracker statusTracker = mock(LiveMigrationStatusTracker.class);
+            when(statusTracker.hasMigrationCompleted(any(InstanceMetadata.class)))
+            .thenReturn(Future.succeededFuture(false));
+            bind(LiveMigrationStatusTracker.class).toInstance(statusTracker);
         }
     }
 }

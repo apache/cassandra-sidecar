@@ -18,12 +18,18 @@
 
 package org.apache.cassandra.sidecar.testing;
 
+import java.util.Objects;
+
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.JksOptions;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 
 import static io.vertx.core.Vertx.vertx;
-import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.EMPTY_PASSWORD_STRING;
+import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.PASSWORD_STRING;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Builds on top of {@link SharedClusterIntegrationTestBase} and adds functionality to interact
@@ -33,6 +39,35 @@ public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClus
 {
     private WebClient trustedClient;
     private WebClient noAuthClient;
+
+    /**
+     * A utility functional interface to perform verifications for a test
+     *
+     * @param <T> the type accepted by the verifier
+     */
+    @FunctionalInterface
+    public interface Verifier<T>
+    {
+        void accept(T v) throws AssertionError;
+
+        default Verifier<T> andThen(Verifier<T> after)
+        {
+            Objects.requireNonNull(after);
+
+            return v -> {
+                accept(v);
+                after.accept(v);
+            };
+        }
+    }
+
+    protected static Verifier<HttpResponse<Buffer>> assertStatus(HttpResponseStatus expectedStatus)
+    {
+        return response -> {
+            assertThat(response).isNotNull();
+            assertThat(response.statusCode()).isEqualTo(expectedStatus.code());
+        };
+    }
 
     @Override
     protected void beforeClusterShutdown()
@@ -55,21 +90,32 @@ public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClus
      */
     public WebClient trustedClient()
     {
-        if (trustedClient != null)
+        if (trustedClient == null)
         {
-            return trustedClient;
+            trustedClient = trustedClient(mtlsTestHelper.clientKeyStorePath(), PASSWORD_STRING,
+                                          mtlsTestHelper.trustStorePath(), PASSWORD_STRING);
         }
+        return trustedClient;
+    }
 
+    /**
+     * @param clientKeyStorePath     the path to the client keyStore
+     * @param clientKeyStorePassword the password for the client keyStore
+     * @param trustStorePath         the path to the trustStore
+     * @param trustStorePassword     the password for the trustStore
+     * @return a client that configures the truststore and the client keystore
+     */
+    public WebClient trustedClient(String clientKeyStorePath, String clientKeyStorePassword, String trustStorePath, String trustStorePassword)
+    {
         WebClientOptions clientOptions = new WebClientOptions()
                                          .setKeyStoreOptions(new JksOptions()
-                                                             .setPath(mtlsTestHelper.clientKeyStorePath())
-                                                             .setPassword(EMPTY_PASSWORD_STRING))
+                                                             .setPath(clientKeyStorePath)
+                                                             .setPassword(clientKeyStorePassword))
                                          .setTrustStoreOptions(new JksOptions()
-                                                               .setPath(mtlsTestHelper.trustStorePath())
-                                                               .setPassword(EMPTY_PASSWORD_STRING))
+                                                               .setPath(trustStorePath)
+                                                               .setPassword(trustStorePassword))
                                          .setSsl(true);
-        trustedClient = WebClient.create(vertx(), clientOptions);
-        return trustedClient;
+        return WebClient.create(vertx(), clientOptions);
     }
 
     /**

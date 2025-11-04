@@ -19,13 +19,8 @@
 package org.apache.cassandra.sidecar.testing;
 
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.function.Consumer;
 
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
 import org.apache.cassandra.testing.utils.tls.CertificateBundle;
@@ -35,14 +30,14 @@ import org.apache.cassandra.testing.utils.tls.CertificateBundle;
  */
 public class MtlsTestHelper
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MtlsTestHelper.class);
-    public static final char[] EMPTY_PASSWORD = new char[0];
-    public static final String EMPTY_PASSWORD_STRING = "";
+    public static final String PASSWORD_STRING = "cassandra";
+    public static final char[] PASSWORD = PASSWORD_STRING.toCharArray();
     /**
      * A system property that can enable / disable testing with Mutual TLS
      */
     public static final String CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS = "cassandra.integration.sidecar.test.enable_mtls";
     private final boolean enableMtlsForTesting;
+    private final Path secretsPath;
     CertificateBundle certificateAuthority;
     Path truststorePath;
     Path serverKeyStorePath;
@@ -56,10 +51,11 @@ public class MtlsTestHelper
     public MtlsTestHelper(Path secretsPath, boolean enableMtlsForTesting) throws Exception
     {
         this.enableMtlsForTesting = enableMtlsForTesting;
-        maybeInitializeSecrets(Objects.requireNonNull(secretsPath, "secretsPath cannot be null"));
+        this.secretsPath = Objects.requireNonNull(secretsPath, "secretsPath cannot be null");
+        maybeInitializeSecrets();
     }
 
-    void maybeInitializeSecrets(Path secretsPath) throws Exception
+    void maybeInitializeSecrets() throws Exception
     {
         if (!enableMtlsForTesting)
         {
@@ -67,11 +63,10 @@ public class MtlsTestHelper
         }
 
         certificateAuthority =
-        new CertificateBuilder().subject("CN=Apache Cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
-                                .alias("fakerootca")
+        new CertificateBuilder().subject("CN=Apache cassandra Root CA, OU=Certification Authority, O=Unknown, C=Unknown")
                                 .isCertificateAuthority(true)
                                 .buildSelfSigned();
-        truststorePath = certificateAuthority.toTempKeyStorePath(secretsPath, EMPTY_PASSWORD, EMPTY_PASSWORD);
+        truststorePath = certificateAuthority.toTempKeyStorePath(secretsPath, PASSWORD, PASSWORD);
 
         CertificateBuilder serverKeyStoreBuilder =
         new CertificateBuilder().subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
@@ -79,15 +74,28 @@ public class MtlsTestHelper
         // Add SANs for every potential hostname Sidecar will serve
         for (int i = 1; i <= 20; i++)
         {
-            serverKeyStoreBuilder.addSanDnsName("localhost" + i);
+            serverKeyStoreBuilder.addSanDnsName("localhost" + i)
+                                 .addSanIpAddress("127.0.0." + i);
         }
 
         CertificateBundle serverKeyStore = serverKeyStoreBuilder.buildIssuedBy(certificateAuthority);
-        serverKeyStorePath = serverKeyStore.toTempKeyStorePath(secretsPath, EMPTY_PASSWORD, EMPTY_PASSWORD);
-        CertificateBundle clientKeyStore = new CertificateBuilder().subject("CN=Apache Cassandra, OU=mtls_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
-                                                                   .addSanDnsName("localhost")
-                                                                   .buildIssuedBy(certificateAuthority);
-        clientKeyStorePath = clientKeyStore.toTempKeyStorePath(secretsPath, EMPTY_PASSWORD, EMPTY_PASSWORD);
+        serverKeyStorePath = serverKeyStore.toTempKeyStorePath(secretsPath, PASSWORD, PASSWORD);
+        clientKeyStorePath = issueClientKeyStore(null);
+    }
+
+    public Path issueClientKeyStore(Consumer<CertificateBuilder> certificateBuilderConsumer) throws Exception
+    {
+        CertificateBuilder builder = new CertificateBuilder()
+                                     .subject("CN=Apache Cassandra, OU=ssl_test, O=Unknown, L=Unknown, ST=Unknown, C=Unknown")
+                                     .addSanDnsName("localhost")
+                                     .addSanIpAddress("127.0.0.1");
+
+        if (certificateBuilderConsumer != null)
+        {
+            certificateBuilderConsumer.accept(builder);
+        }
+        CertificateBundle clientKeystore = builder.buildIssuedBy(certificateAuthority);
+        return clientKeystore.toTempKeyStorePath(secretsPath, PASSWORD, PASSWORD);
     }
 
     public boolean isEnabled()
@@ -105,9 +113,14 @@ public class MtlsTestHelper
         return clientKeyStorePath.toString();
     }
 
+    public String clientKeyStorePassword()
+    {
+        return PASSWORD_STRING;
+    }
+
     public String trustStorePassword()
     {
-        return EMPTY_PASSWORD_STRING;
+        return PASSWORD_STRING;
     }
 
     public String trustStoreType()
@@ -122,30 +135,11 @@ public class MtlsTestHelper
 
     public String serverKeyStorePassword()
     {
-        return EMPTY_PASSWORD_STRING;
+        return PASSWORD_STRING;
     }
 
     public String serverKeyStoreType()
     {
         return "PKCS12";
-    }
-
-    public Map<String, String> mtlOptionMap()
-    {
-        if (!isEnabled())
-        {
-            return Collections.emptyMap();
-        }
-
-        LOGGER.info("Test mTLS certificate is enabled. "
-                    + "Will use test keystore as truststore so the client will trust the server");
-        Map<String, String> optionMap = new HashMap<>();
-        optionMap.put("truststore_path", trustStorePath());
-        optionMap.put("truststore_password", EMPTY_PASSWORD_STRING);
-        optionMap.put("truststore_type", trustStoreType());
-        optionMap.put("keystore_path", clientKeyStorePath.toString());
-        optionMap.put("keystore_password", EMPTY_PASSWORD_STRING);
-        optionMap.put("keystore_type", "PKCS12");
-        return optionMap;
     }
 }

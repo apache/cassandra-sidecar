@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.metrics.server;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import org.apache.cassandra.sidecar.metrics.NamedMetric;
 
 import static org.apache.cassandra.sidecar.metrics.server.ServerMetrics.SERVER_PREFIX;
@@ -32,17 +33,27 @@ public class AuthMetrics
     private static final String DOMAIN = SERVER_PREFIX + ".Auth";
     public final NamedMetric<Counter> jwtPemRefreshFailures;
     public final NamedMetric<Counter> jwtPemRefreshSuccesses;
+    /**
+     * Captures the time to successfully authorize non-cached requests. Cached authorization requests will
+     * not be recorded in this metric
+     */
+    public final NamedMetric<Timer> authorizationTime;
 
     public AuthMetrics(MetricRegistry metricRegistry)
     {
-        jwtPemRefreshFailures = NamedMetric.builder(name -> metricRegistry.counter(name))
+        jwtPemRefreshFailures = NamedMetric.builder(metricRegistry::counter)
                                         .withDomain(DOMAIN)
                                         .withName("JwtPemRefreshFailures")
                                         .build();
 
-        jwtPemRefreshSuccesses = NamedMetric.builder(name -> metricRegistry.counter(name))
+        jwtPemRefreshSuccesses = NamedMetric.builder(metricRegistry::counter)
                                          .withDomain(DOMAIN)
                                          .withName("JwtPemRefreshSuccesses")
                                          .build();
+
+        authorizationTime = NamedMetric.builder(metricRegistry::timer)
+                                       .withDomain(DOMAIN)
+                                       .withName("authorizationTime")
+                                       .build();
     }
 }

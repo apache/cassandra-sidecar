@@ -98,14 +98,14 @@ public class DataCopyTaskManagerTest
     {
         Injector injector = getInjector();
         DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest("task1", 1, 1.0, 2);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2);
 
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
 
         assertThat(future.succeeded()).isTrue();
         assertThat(future.result()).isNotNull();
-        assertThat(future.result().id()).isEqualTo("task1");
+        assertThat(future.result().id()).isNotNull();
     }
 
     @Test
@@ -113,7 +113,7 @@ public class DataCopyTaskManagerTest
     {
         Injector injector = getInjector();
         DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest("task1", 1, 1.0, 10); // exceeds max concurrency of 5
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 10); // exceeds max concurrency of 5
 
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
@@ -133,7 +133,7 @@ public class DataCopyTaskManagerTest
         LiveMigrationTask inProgressTask = getInProgressTask("existing-task");
         dataCopyTaskManager.currentTasks.put(dest1Id, inProgressTask);
 
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest("new-task", 1, 1.0, 2);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2);
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
 
@@ -152,13 +152,13 @@ public class DataCopyTaskManagerTest
         LiveMigrationTask completedTask = getSucceededTask("completed-task", source1Name);
         dataCopyTaskManager.currentTasks.put(dest1Id, completedTask);
 
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest("new-task", 1, 1.0, 2);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2);
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
 
         assertThat(future.succeeded()).isTrue();
         assertThat(future.result()).isNotNull();
-        assertThat(future.result().id()).isEqualTo("new-task");
+        assertThat(future.result().id()).isNotEqualTo("completed-task");
     }
 
     @Test
@@ -225,44 +225,6 @@ public class DataCopyTaskManagerTest
         .isInstanceOf(LiveMigrationTaskNotFoundException.class);
     }
 
-    @Test
-    public void testValidateDataDirsSourceHasMoreDirs() throws InterruptedException
-    {
-        Injector injector = getInjector();
-        DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
-        InstancesMetadata instancesMetadata = injector.getInstance(InstancesMetadata.class);
-
-        // Mock source instance with more data dirs
-        InstanceMetadata sourceInstance = mock(InstanceMetadata.class);
-        when(sourceInstance.dataDirs()).thenReturn(List.of("/data1", "/data2", "/data3"));
-        when(instancesMetadata.instanceFromHost("source-with-more-dirs")).thenReturn(sourceInstance);
-
-        InstanceMetadata destInstance = instancesMetadata.instanceFromHost(dest1Name);
-
-        Future<String> future = dataCopyTaskManager.validateDataDirs("source-with-more-dirs", destInstance);
-        awaitForFuture(future);
-
-        assertThat(future.failed()).isTrue();
-        assertThat(future.cause()).isInstanceOf(LiveMigrationInvalidRequestException.class);
-        assertThat(future.cause().getMessage()).contains("Source has more data directories than destination");
-    }
-
-    @Test
-    public void testValidateDataDirsSuccess() throws InterruptedException
-    {
-        Injector injector = getInjector();
-        DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
-        InstancesMetadata instancesMetadata = injector.getInstance(InstancesMetadata.class);
-
-        InstanceMetadata destInstance = instancesMetadata.instanceFromHost(dest1Name);
-
-        Future<String> future = dataCopyTaskManager.validateDataDirs(source1Name, destInstance);
-        awaitForFuture(future);
-
-        assertThat(future.succeeded()).isTrue();
-        assertThat(future.result()).isEqualTo(source1Name);
-    }
-
     /**
      * Tests concurrent task creation to ensure only one task can be active at a time per instance.
      * This test specifically validates the atomic compute() operation in createDataCopyTask() method.
@@ -274,9 +236,9 @@ public class DataCopyTaskManagerTest
         DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
 
         LiveMigrationTaskFactory mockTaskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
-        when(mockTaskFactory.create(any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any()))
+        when(mockTaskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
-            String taskId = ((LiveMigrationDataCopyRequest) invocation.getArgument(0)).id;
+            String taskId = invocation.getArgument(0);
             return getInProgressTask(taskId);
         });
 
@@ -294,7 +256,6 @@ public class DataCopyTaskManagerTest
             // Launch multiple threads that all try to create tasks simultaneously
             for (int i = 0; i < numberOfThreads; i++)
             {
-                final int taskNumber = i;
                 executor.submit(() -> {
                     try
                     {
@@ -302,7 +263,7 @@ public class DataCopyTaskManagerTest
                         startLatch.await();
 
                         LiveMigrationDataCopyRequest request
-                        = new LiveMigrationDataCopyRequest("concurrent-task-" + taskNumber, 1, 1.0, 2);
+                        = new LiveMigrationDataCopyRequest(1, 1.0, 2);
                         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
                         results.add(future);
 
@@ -341,7 +302,7 @@ public class DataCopyTaskManagerTest
             // Verify the successful task
             LiveMigrationTask successfulTask = dataCopyTaskManager.currentTasks.values().iterator().next();
             assertThat(successfulTask).isNotNull();
-            assertThat(successfulTask.id()).startsWith("concurrent-task-");
+            assertThat(successfulTask.id()).isNotNull();
 
             // Verify all failed tasks have the correct exception
             long inProgressExceptions = results.stream()
@@ -368,21 +329,21 @@ public class DataCopyTaskManagerTest
 
     private DataCopyTaskManager getDataCopyTaskManager(Injector injector)
     {
-        Vertx vertx = injector.getInstance(Vertx.class);
         InstancesMetadata instancesMetadata = injector.getInstance(InstancesMetadata.class);
         SidecarConfiguration sidecarConfiguration = injector.getInstance(SidecarConfiguration.class);
         LiveMigrationMap liveMigrationMap = injector.getInstance(LiveMigrationMap.class);
         LiveMigrationTaskFactory liveMigrationTaskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
 
-        return new DataCopyTaskManager(vertx, instancesMetadata, sidecarConfiguration, liveMigrationMap, liveMigrationTaskFactory);
+        return new DataCopyTaskManager(instancesMetadata, sidecarConfiguration, liveMigrationMap,
+                                       liveMigrationTaskFactory);
     }
 
     private LiveMigrationTask getInProgressTask(@NotNull String taskId)
     {
         List<LiveMigrationTaskResponse.Status> statusList =
         List.of(new LiveMigrationTaskResponse.Status(0, "PREPARING", 500L, 1, 1, 1, 0, 0, 500L));
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(taskId, 1, 1.0, 1);
-        LiveMigrationTaskResponse response = new LiveMigrationTaskResponse(request, statusList, source1Name, 9043);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 1);
+        LiveMigrationTaskResponse response = new LiveMigrationTaskResponse(taskId, source1Name, 9043, request, statusList);
         return new FakeLiveMigrationTask(response);
     }
 
@@ -390,8 +351,8 @@ public class DataCopyTaskManagerTest
     {
         List<LiveMigrationTaskResponse.Status> statusList =
         List.of(new LiveMigrationTaskResponse.Status(0, "SUCCESS", 1000L, 1, 1, 1, 1, 0, 1000L));
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(taskId, 1, 1.0, 1);
-        LiveMigrationTaskResponse response = new LiveMigrationTaskResponse(request, statusList, sourceHost, 9043);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 1);
+        LiveMigrationTaskResponse response = new LiveMigrationTaskResponse(taskId, sourceHost, 9043, request, statusList);
         return new FakeLiveMigrationTask(response);
     }
 
@@ -440,20 +401,21 @@ public class DataCopyTaskManagerTest
             when(mockSourceInstanceMeta.dataDirs()).thenReturn(List.of("/data1"));
 
             // Configure LiveMigrationTaskFactory to return fake tasks
-            when(mockLiveMigrationTaskFactory.create(any(), anyString(), anyInt(), any())).thenAnswer(invocation -> {
-                LiveMigrationDataCopyRequest request = invocation.getArgument(0);
-                String source = invocation.getArgument(1);
-                int port = invocation.getArgument(2);
+            when(mockLiveMigrationTaskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class))).thenAnswer(invocation -> {
+                String id = invocation.getArgument(0);
+                LiveMigrationDataCopyRequest request = invocation.getArgument(1);
+                String source = invocation.getArgument(2);
+                int port = invocation.getArgument(3);
 
                 final List<LiveMigrationTaskResponse.Status> statusList =
                 List.of(new LiveMigrationTaskResponse.Status(0, "SUCCESS", 1000L, 1, 1, 1, 1, 0, 1000L));
-                final LiveMigrationTaskResponse taskResponse = new LiveMigrationTaskResponse(request, statusList, source, port);
+                final LiveMigrationTaskResponse taskResponse = new LiveMigrationTaskResponse(id, source, port, request, statusList);
                 return new FakeLiveMigrationTask(taskResponse);
             });
 
             try
             {
-                when(mockLiveMigrationmap.getSource(anyString())).thenReturn(source1Name);
+                when(mockLiveMigrationmap.getSource(anyString())).thenReturn(Future.succeededFuture(source1Name));
             }
             catch (Exception e)
             {

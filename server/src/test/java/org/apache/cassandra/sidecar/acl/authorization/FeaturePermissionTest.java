@@ -165,16 +165,19 @@ class FeaturePermissionTest
     {
         ResourceScope dcScope = new ResourceScope()
         {
+            @Override
             public String variableAwareResource()
             {
                 return "{dc}";
             }
 
+            @Override
             public String resolveWithResource(String resource)
             {
                 return resource;
             }
 
+            @Override
             public Set<String> expandedResources()
             {
                 return Collections.emptySet();
@@ -254,5 +257,14 @@ class FeaturePermissionTest
     {
         Permission unrecognizedPermission = permissionFactory.createFeaturePermission("UNRECOGNIZED");
         assertThat(unrecognizedPermission).isNull();
+    }
+
+    @Test
+    void testLiveMigrationFeaturePermission()
+    {
+        CompositePermission liveMigrationFeaturePermission
+        = permissionFactory.createFeaturePermission("LIVE_MIGRATION");
+        assertThat(liveMigrationFeaturePermission).isNotNull();
+        assertThat(liveMigrationFeaturePermission.childPermissions().size()).isEqualTo(2);
     }
 }

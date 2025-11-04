@@ -169,6 +169,11 @@ public interface StorageJmxOperations
     void decommission(boolean force) throws IllegalStateException, IllegalArgumentException, UnsupportedOperationException;
 
     /**
+     * Triggers the node drain operation
+     */
+    void drain() throws IOException, InterruptedException, ExecutionException;
+
+    /**
      * Fetch the operation-mode of the node
      *
      * @return string representation of the operation-mode

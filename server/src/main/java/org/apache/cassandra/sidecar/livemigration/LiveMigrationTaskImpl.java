@@ -42,8 +42,9 @@ import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
  */
 public class LiveMigrationTaskImpl implements LiveMigrationTask
 {
-    final LiveMigrationDataCopyRequest request;
-    final Map<Integer, OperationStatus> statusMap = new TreeMap<>();
+    private final String id;
+    private final LiveMigrationDataCopyRequest request;
+    private final Map<Integer, OperationStatus> statusMap = new TreeMap<>();
     private final InstanceMetadata instanceMetadata;
     private final String source;
     private final int port;
@@ -64,6 +65,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
                                  ExecutorPools executorPools,
                                  SidecarClientProvider sidecarClientProvider,
                                  LiveMigrationConfiguration liveMigrationConfiguration,
+                                 String id,
                                  LiveMigrationDataCopyRequest request,
                                  String source,
                                  int port,
@@ -73,6 +75,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
         this.executorPools = executorPools;
         this.sidecarClientProvider = sidecarClientProvider;
         this.liveMigrationConfiguration = liveMigrationConfiguration;
+        this.id = id;
         this.request = request;
         this.instanceMetadata = instanceMetadata;
         this.source = source;
@@ -85,7 +88,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
     @Override
     public String id()
     {
-        return request.id;
+        return id;
     }
 
     /**
@@ -116,6 +119,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
         }
 
         downloader = LiveMigrationFileDownloader.builder()
+                                                .id(id)
                                                 .vertx(vertx)
                                                 .sidecarClient(sidecarClientProvider.get())
                                                 .request(request)
@@ -179,7 +183,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
     @Override
     public LiveMigrationTaskResponse getResponse()
     {
-        return new LiveMigrationTaskResponse(request, getStatusResponse(), source, port);
+        return new LiveMigrationTaskResponse(id, source, port, request, getStatusResponse());
     }
 
     Consumer<OperationStatus> statusUpdater(int iteration)

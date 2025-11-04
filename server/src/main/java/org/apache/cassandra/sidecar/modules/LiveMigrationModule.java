@@ -20,11 +20,14 @@ package org.apache.cassandra.sidecar.modules;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.ProvidesIntoMap;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
 import org.apache.cassandra.sidecar.handlers.FileStreamHandler;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationApiEnableDisableHandler;
@@ -36,6 +39,11 @@ import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationGetDataC
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationListInstanceFilesHandler;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationMap;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationMapSidecarConfigImpl;
+import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationStatusClearHandler;
+import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationStatusCompleteHandler;
+import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationStatusGetHandler;
+import org.apache.cassandra.sidecar.livemigration.LiveMigrationStatusTracker;
+import org.apache.cassandra.sidecar.livemigration.LiveMigrationStatusTrackerImpl;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationTaskFactory;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationTaskFactoryImpl;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
@@ -60,6 +68,7 @@ public class LiveMigrationModule extends AbstractModule
     {
         bind(LiveMigrationMap.class).to(LiveMigrationMapSidecarConfigImpl.class);
         bind(LiveMigrationTaskFactory.class).to(LiveMigrationTaskFactoryImpl.class);
+        bind(LiveMigrationStatusTracker.class).to(LiveMigrationStatusTrackerImpl.class);
     }
 
     @GET
@@ -83,6 +92,7 @@ public class LiveMigrationModule extends AbstractModule
         return factory.builderForRoute()
                       .setBodyHandler(true)
                       .handler(liveMigrationApiEnableDisableHandler::isDestination)
+                      .handler(liveMigrationApiEnableDisableHandler::allowIfMigrationNotComplete)
                       .handler(liveMigrationCreateDataCopyTaskHandler)
                       .build();
     }
@@ -185,6 +195,7 @@ public class LiveMigrationModule extends AbstractModule
     {
         return factory.builderForRoute()
                       .handler(liveMigrationApiEnableDisableHandler::isSource)
+                      .handler(liveMigrationApiEnableDisableHandler::allowIfMigrationNotComplete)
                       .handler(liveMigrationFileStreamHandler)
                       .handler(fileStreamHandler)
                       .build();
@@ -212,5 +223,86 @@ public class LiveMigrationModule extends AbstractModule
                       .handler(liveMigrationApiEnableDisableHandler::isSourceOrDestination)
                       .handler(liveMigrationListInstanceFilesHandler)
                       .build();
+    }
+
+    @POST
+    @Path(ApiEndpointsV1.LIVE_MIGRATION_STATUS_ROUTE)
+    @Operation(summary = "Updates live migration status",
+               description = "Updates live migration status as COMPLETED for requested instance")
+    @APIResponse(description = "Live migration status updated successfully",
+                 responseCode = "200",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = LiveMigrationStatus.class)))
+    @APIResponse(responseCode = "400",
+                 description = "When tried to update live migration status when it is already marked as COMPLETED",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(type = SchemaType.OBJECT)))
+    @APIResponse(responseCode = "503",
+                 description = "When could not update live migration status as COMPLETED",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(type = SchemaType.OBJECT)))
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationStatusUpdateRouteKey.class)
+    VertxRoute getStatusUpdateRoute(RouteBuilder.Factory factory,
+                                    LiveMigrationApiEnableDisableHandler liveMigrationApiEnableDisableHandler,
+                                    LiveMigrationStatusCompleteHandler statusCompleteHandler)
+    {
+        return factory.builderForRoute()
+               .handler(liveMigrationApiEnableDisableHandler::isSourceOrDestination)
+               .handler(statusCompleteHandler)
+               .build();
+    }
+
+    @GET
+    @Path(ApiEndpointsV1.LIVE_MIGRATION_STATUS_ROUTE)
+    @Operation(summary = "Get live migration status",
+               description = "Get the status of the live migration")
+    @APIResponse(description = "Live migration status retrieved successfully",
+                 responseCode = "200",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = LiveMigrationStatus.class)))
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationStatusRouteKey.class)
+    VertxRoute getStatusRoute(RouteBuilder.Factory factory,
+                              LiveMigrationApiEnableDisableHandler liveMigrationApiEnableDisableHandler,
+                              LiveMigrationStatusGetHandler statusHandler)
+    {
+        return factory.builderForRoute()
+               .handler(liveMigrationApiEnableDisableHandler::isSourceOrDestination)
+               .handler(statusHandler)
+               .build();
+    }
+
+    @DELETE
+    @Path(ApiEndpointsV1.LIVE_MIGRATION_STATUS_ROUTE)
+    @Operation(summary = "Deletes live migration status",
+               description = "Deletes live migration status for requested instance. " +
+                             "It should be called after clearing the live migration map configuration only.")
+    @APIResponse(description = "Live migration status deleted successfully",
+                 responseCode = "200",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = LiveMigrationStatus.class)))
+    @APIResponse(responseCode = "403",
+                 description = "When tried to delete live migration status before clearing the live migration map",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(type = SchemaType.OBJECT)))
+    @APIResponse(responseCode = "400",
+                 description = "When tried to delete Live migration status before without updating the status as COMPLETED",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(type = SchemaType.OBJECT)))
+    @APIResponse(responseCode = "503",
+                 description = "When faced some issue while deleting the live migration status",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(type = SchemaType.OBJECT)))
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationStatusDeleteRouteKey.class)
+    VertxRoute deleteStatusRoute(RouteBuilder.Factory factory,
+                                 LiveMigrationApiEnableDisableHandler liveMigrationApiEnableDisableHandler,
+                                 LiveMigrationStatusClearHandler statusDeleteHandler)
+    {
+        return factory.builderForRoute()
+               .handler(liveMigrationApiEnableDisableHandler::neitherSourceNorDestination)
+               .handler(statusDeleteHandler)
+               .build();
     }
 }

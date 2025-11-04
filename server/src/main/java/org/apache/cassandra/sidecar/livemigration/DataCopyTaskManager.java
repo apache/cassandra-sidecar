@@ -27,10 +27,10 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
@@ -52,20 +52,17 @@ public class DataCopyTaskManager
 
     @VisibleForTesting
     final ConcurrentHashMap<Integer, LiveMigrationTask> currentTasks = new ConcurrentHashMap<>();
-    private final Vertx vertx;
     private final InstancesMetadata instancesMetadata;
     private final SidecarConfiguration sidecarConfiguration;
     private final LiveMigrationMap liveMigrationMap;
     private final LiveMigrationTaskFactory liveMigrationTaskFactory;
 
     @Inject
-    public DataCopyTaskManager(Vertx vertx,
-                               InstancesMetadata instancesMetadata,
+    public DataCopyTaskManager(InstancesMetadata instancesMetadata,
                                SidecarConfiguration sidecarConfiguration,
                                LiveMigrationMap liveMigrationMap,
                                LiveMigrationTaskFactory liveMigrationTaskFactory)
     {
-        this.vertx = vertx;
         this.instancesMetadata = instancesMetadata;
         this.sidecarConfiguration = sidecarConfiguration;
         this.liveMigrationMap = liveMigrationMap;
@@ -96,21 +93,8 @@ public class DataCopyTaskManager
 
         InstanceMetadata localInstanceMetadata = instancesMetadata.instanceFromHost(currentHost);
 
-        return vertx.executeBlocking(() -> liveMigrationMap.getSource(currentHost))
-                    .compose(source -> validateDataDirs(source, localInstanceMetadata))
-                    .compose(source -> createDataCopyTask(request, source, localInstanceMetadata));
-    }
-
-    Future<String> validateDataDirs(String source, InstanceMetadata localInstanceMetadata)
-    {
-        InstanceMetadata sourceMeta = instancesMetadata.instanceFromHost(source);
-        if (sourceMeta.dataDirs().size() > localInstanceMetadata.dataDirs().size())
-        {
-            return Future.failedFuture(
-            new LiveMigrationInvalidRequestException("Source has more data directories than destination." +
-                                                     " Cannot accept data copy task."));
-        }
-        return Future.succeededFuture(source);
+        return liveMigrationMap.getSource(currentHost)
+                               .compose(source -> createDataCopyTask(request, source, localInstanceMetadata));
     }
 
     Future<LiveMigrationTask> createDataCopyTask(LiveMigrationDataCopyRequest request,
@@ -147,7 +131,7 @@ public class DataCopyTaskManager
             new LiveMigrationDataCopyInProgressException("Another task is already under progress. Cannot accept new task."));
         }
         LOGGER.info("Starting data copy task with id={}, source={}, destination={}",
-                    request.id, source, localInstanceMetadata.host());
+                    newTask.id(), source, localInstanceMetadata.host());
         newTask.start();
         return Future.succeededFuture(newTask);
     }
@@ -157,7 +141,8 @@ public class DataCopyTaskManager
                                  int port,
                                  InstanceMetadata localInstanceMetadata)
     {
-        return liveMigrationTaskFactory.create(request, source, port, localInstanceMetadata);
+
+        return liveMigrationTaskFactory.create(UUIDs.timeBased().toString(), request, source, port, localInstanceMetadata);
     }
 
     /**

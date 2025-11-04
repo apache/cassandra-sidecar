@@ -51,6 +51,7 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceRestoreMetrics;
+import org.apache.cassandra.sidecar.metrics.server.ServerMetricsImpl;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
@@ -82,6 +83,7 @@ class RestoreProcessorTest
         sidecarSchema = mock(SidecarSchema.class);
         SidecarMetrics sidecarMetrics = mock(SidecarMetrics.class);
         when(sidecarMetrics.instance(1)).thenReturn(instanceMetrics);
+        when(sidecarMetrics.server()).thenReturn(new ServerMetricsImpl(registry()));
         SidecarConfiguration sidecarConfig = SidecarConfigurationImpl
                                              .builder()
                                              .restoreJobConfiguration(RestoreJobConfigurationImpl
@@ -133,9 +135,12 @@ class RestoreProcessorTest
         CountDownLatch latch = new CountDownLatch(1);
 
         int total = concurrency * 3;
+        long sliceAge = TimeUnit.SECONDS.toNanos(5);
         for (int i = 0; i < total; i++)
         {
-            RestoreRange range = mockSlowRestoreRange(latch);
+            RestoreRange mockRange = mockRestoreRange();
+            when(mockRange.sliceCreationTimeNanos()).thenReturn(System.nanoTime() - sliceAge);
+            RestoreRange range = mockSlowRestoreRange(latch, mockRange);
             range.completeImportPhase(); // complete prematurely for testing purpose
             processor.submit(range);
         }
@@ -178,7 +183,7 @@ class RestoreProcessorTest
         assertThat(instanceRestoreMetrics.sliceCompletionTime.metric.getSnapshot().getValues()).hasSize(total);
         for (long sliceCompleteDuration : instanceRestoreMetrics.sliceCompletionTime.metric.getSnapshot().getValues())
         {
-            assertThat(sliceCompleteDuration).isPositive();
+            assertThat(sliceCompleteDuration).isGreaterThan(sliceAge);
         }
     }
 
@@ -305,9 +310,19 @@ class RestoreProcessorTest
         return mockSlowRestoreRange(latch, System::nanoTime);
     }
 
+    private RestoreRange mockSlowRestoreRange(CountDownLatch latch, RestoreRange mockRange)
+    {
+        return mockSlowRestoreRange(latch, System::nanoTime, mockRange);
+    }
+
     private RestoreRange mockSlowRestoreRange(CountDownLatch latch, Supplier<Long> timeInNanosSupplier)
     {
         RestoreRange range = mockRestoreRange();
+        return mockSlowRestoreRange(latch, timeInNanosSupplier, range);
+    }
+
+    private RestoreRange mockSlowRestoreRange(CountDownLatch latch, Supplier<Long> timeInNanosSupplier, RestoreRange range)
+    {
         when(range.toAsyncTask(any(), any(), any(), anyDouble(), any(), any(), any(), any())).thenReturn(
         new RestoreRangeHandler()
         {

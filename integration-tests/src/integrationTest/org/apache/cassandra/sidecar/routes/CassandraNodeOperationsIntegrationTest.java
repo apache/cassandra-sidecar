@@ -56,9 +56,47 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
     }
 
     @Test
+    void testNodeDrainOperationSuccess()
+    {
+        // Initiate drain operation
+        HttpResponse<Buffer> drainResponse = getBlocking(
+        trustedClient().put(serverWrapper.serverPort, "localhost", ApiEndpointsV1.NODE_DRAIN_ROUTE)
+                       .send());
+
+        assertThat(drainResponse.statusCode()).isEqualTo(OK.code());
+
+        JsonObject responseBody = drainResponse.bodyAsJsonObject();
+        assertThat(responseBody).isNotNull();
+        assertThat(responseBody.getString("jobId")).isNotNull();
+        assertThat(responseBody.getString("jobStatus")).isIn(
+        OperationalJobStatus.CREATED.name(),
+        OperationalJobStatus.RUNNING.name(),
+        OperationalJobStatus.SUCCEEDED.name()
+        );
+
+        loopAssert(30, 500, () -> {
+            // Verify node status is DRAINED by checking the operationMode via stream stats endpoint
+            HttpResponse<Buffer> streamStatsResponse = getBlocking(
+            trustedClient().get(serverWrapper.serverPort, "localhost", ApiEndpointsV1.STREAM_STATS_ROUTE)
+                           .send());
+
+            assertThat(streamStatsResponse.statusCode()).isEqualTo(OK.code());
+
+            JsonObject streamStats = streamStatsResponse.bodyAsJsonObject();
+            assertThat(streamStats).isNotNull();
+            assertThat(streamStats.getString("operationMode")).isEqualTo("DRAINED");
+        });
+
+        // Validate the operational job status using the OperationalJobHandler
+        String jobId = responseBody.getString("jobId");
+        validateOperationalJobStatus(jobId, "drain");
+    }
+
+
+    @Test
     void testNodeMoveOperationSuccess()
     {
-        // Use a test token - this is a valid token for Murmur3Partitioner 
+        // Use a test token - this is a valid token for Murmur3Partitioner
         String testToken = "123456789";
         String requestBody = "{\"newToken\":\"" + testToken + "\"}";
 
@@ -103,7 +141,7 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
      * Validates the operational job status by querying the OperationalJobHandler endpoint
      * and waiting for the job to reach a final state if necessary.
      *
-     * @param jobId             the ID of the operational job to validate
+     * @param jobId the ID of the operational job to validate
      * @param expectedOperation the expected operation name (e.g., "move", "decommission", "drain")
      */
     private void validateOperationalJobStatus(String jobId, String expectedOperation)
@@ -158,6 +196,14 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
         catch (IllegalStateException ex)
         {
             logger.error("Exception in tear down", ex);
+            // When cluster.close() is called after drain For Cassandra 4.0
+            // it throws IllegalStateException "HintsService has already been shut down".
+            if (!CASSANDRA_VERSION_4_0.equals(this.testVersion.version()))
+            {
+                throw ex;
+            }
+            logger.warn("Suppressing {} for Cassandra version {}",
+                        ex.getClass().getCanonicalName(), CASSANDRA_VERSION_4_0);
         }
     }
 }

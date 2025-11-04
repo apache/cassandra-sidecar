@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -31,14 +32,24 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationParameterValidateHandler;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
+import org.apache.cassandra.sidecar.config.CacheConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
+import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.RouteBuilder.Factory;
 import org.apache.cassandra.sidecar.routes.SettableVertxRoute;
+import org.apache.cassandra.sidecar.utils.CacheFactory;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.SSTableImporter;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -49,15 +60,30 @@ import static org.mockito.Mockito.when;
  */
 class RouteBuilderTest
 {
+    MetricRegistryFactory metricRegistryFactory = new MetricRegistryFactory("cassandra_sidecar", List.of(), List.of());
+    SidecarMetrics metrics = new SidecarMetricsImpl(metricRegistryFactory, null);
+
     @Test
     void testRequiredParameters()
     {
+        CacheConfiguration permissionCacheConfiguration = mock(CacheConfiguration.class);
+        when(permissionCacheConfiguration.maximumSize()).thenReturn(5L);
+        when(permissionCacheConfiguration.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse("5m"));
         AccessControlConfiguration mockConfig = mock(AccessControlConfiguration.class);
+        when(mockConfig.permissionCacheConfiguration()).thenReturn(permissionCacheConfiguration);
         AuthorizationProvider mockAuthorizationProvider = mock(AuthorizationProvider.class);
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
         AuthorizationParameterValidateHandler mockHandler = mock(AuthorizationParameterValidateHandler.class);
 
-        Factory factory = new Factory(mockConfig, mockAuthorizationProvider, mockAdminIdentityResolver, mockHandler);
+        ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl();
+        SidecarConfiguration sidecarConfiguration = mock(SidecarConfiguration.class);
+        when(sidecarConfiguration.serviceConfiguration()).thenReturn(serviceConfiguration);
+        when(sidecarConfiguration.accessControlConfiguration()).thenReturn(mockConfig);
+        SSTableImporter sstableImporter = mock(SSTableImporter.class);
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
+
+        Factory factory = new Factory(mockConfig, mockAuthorizationProvider, mockAdminIdentityResolver,
+                                      mockHandler, metrics, cacheFactory.endpointAuthorizationCache());
         RouteBuilder routeBuilder = factory.builderForRoute();
         Router mockRouter = mock(Router.class);
         SettableVertxRoute route = routeBuilder.build();
@@ -107,12 +133,25 @@ class RouteBuilderTest
                            Function<Factory, RouteBuilder> routeBuilderFunction,
                            Consumer<SettableVertxRoute> test)
     {
+        CacheConfiguration permissionCacheConfiguration = mock(CacheConfiguration.class);
+        when(permissionCacheConfiguration.maximumSize()).thenReturn(5L);
+        when(permissionCacheConfiguration.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse("5m"));
         AccessControlConfiguration mockConfig = mock(AccessControlConfiguration.class);
+        when(mockConfig.permissionCacheConfiguration()).thenReturn(permissionCacheConfiguration);
         when(mockConfig.enabled()).thenReturn(true);
         AuthorizationProvider mockAuthorizationProvider = mock(AuthorizationProvider.class);
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
         AuthorizationParameterValidateHandler mockHandler = mock(AuthorizationParameterValidateHandler.class);
-        Factory factory = new Factory(mockConfig, mockAuthorizationProvider, mockAdminIdentityResolver, mockHandler);
+
+        ServiceConfiguration serviceConfiguration = new ServiceConfigurationImpl();
+        SidecarConfiguration sidecarConfiguration = mock(SidecarConfiguration.class);
+        when(sidecarConfiguration.serviceConfiguration()).thenReturn(serviceConfiguration);
+        when(sidecarConfiguration.accessControlConfiguration()).thenReturn(mockConfig);
+        SSTableImporter sstableImporter = mock(SSTableImporter.class);
+        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
+
+        Factory factory = new Factory(mockConfig, mockAuthorizationProvider, mockAdminIdentityResolver,
+                                      mockHandler, metrics, cacheFactory.endpointAuthorizationCache());
         RouteBuilder routeBuilder = routeBuilderFunction.apply(factory);
         SettableVertxRoute route = routeBuilder.handler(handler).build();
         test.accept(route);

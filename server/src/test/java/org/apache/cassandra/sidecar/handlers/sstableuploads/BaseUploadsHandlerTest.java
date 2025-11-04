@@ -44,9 +44,13 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.streams.ReadStream;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestCassandraAdapterDelegate;
@@ -64,6 +68,7 @@ import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.snapshots.SnapshotUtils;
+import org.apache.cassandra.sidecar.utils.SSTableUploader;
 
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_CHECK_INTERVAL;
 import static org.apache.cassandra.sidecar.config.yaml.TrafficShapingConfigurationImpl.DEFAULT_INBOUND_FILE_GLOBAL_BANDWIDTH_LIMIT;
@@ -94,11 +99,13 @@ class BaseUploadsHandlerTest
     protected TrafficShapingConfiguration trafficShapingConfiguration;
     protected SidecarRateLimiter ingressFileRateLimiter;
     protected CassandraTableOperations mockCFOperations;
+    protected long artificialDelayInMillisBeforeStreamingToFile;
 
 
     @BeforeEach
     void setup() throws InterruptedException, IOException
     {
+        artificialDelayInMillisBeforeStreamingToFile = 0;
         canonicalTemporaryPath = temporaryPath.toFile().getCanonicalPath();
         mockSSTableUploadConfiguration = mock(SSTableUploadConfiguration.class);
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(3);
@@ -217,6 +224,28 @@ class BaseUploadsHandlerTest
         public SidecarConfiguration configuration()
         {
             return sidecarConfiguration;
+        }
+
+        @Singleton
+        @Provides
+        public SSTableUploader ssTableUploader(Vertx vertx, @Named("IngressFileRateLimiter") SidecarRateLimiter rateLimiter)
+        {
+            return new SSTableUploader(vertx, rateLimiter)
+            {
+                @Override
+                protected Future<Void> pipeStreamToFile(ReadStream<Buffer> readStream, RateLimitedWriteStream file)
+                {
+                    if (artificialDelayInMillisBeforeStreamingToFile > 0)
+                    {
+                        return vertx.timer(artificialDelayInMillisBeforeStreamingToFile, TimeUnit.MILLISECONDS)
+                                    .compose(t -> super.pipeStreamToFile(readStream, file));
+                    }
+                    else
+                    {
+                        return super.pipeStreamToFile(readStream, file);
+                    }
+                }
+            };
         }
     }
 }

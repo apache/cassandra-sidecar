@@ -29,6 +29,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -38,6 +39,7 @@ import org.apache.cassandra.sidecar.HelperTestModules.RoutingContextTestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
+import org.apache.cassandra.sidecar.livemigration.LiveMigrationStatusTracker;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -129,6 +131,77 @@ class LiveMigrationApiEnableDisableHandlerTest
         verify(routingContext, times(1)).fail(eq(404));
     }
 
+    @Test
+    public void testIsSourceOrDestination()
+    {
+        final Injector injector = getInjector();
+        final LiveMigrationApiEnableDisableHandler enableDisableHandler = injector.getInstance(LiveMigrationApiEnableDisableHandler.class);
+        final RoutingContext routingContext = injector.getInstance(RoutingContext.class);
+
+        // Test with source instance
+        configureReqLocalHost(injector, SOURCE_META);
+        enableDisableHandler.isSourceOrDestination(routingContext);
+        verify(routingContext, times(1)).next();
+
+        // Test with destination instance
+        configureReqLocalHost(injector, DEST_META);
+        enableDisableHandler.isSourceOrDestination(routingContext);
+        verify(routingContext, times(2)).next();
+
+        // Test with non-migration instance
+        configureReqLocalHost(injector, NON_MIGRATION_INSTANCE_META);
+        enableDisableHandler.isSourceOrDestination(routingContext);
+        verify(routingContext, times(1)).fail(eq(404));
+    }
+
+    @Test
+    public void testNeitherSourceNorDestination()
+    {
+        final Injector injector = getInjector();
+        final LiveMigrationApiEnableDisableHandler enableDisableHandler = injector.getInstance(LiveMigrationApiEnableDisableHandler.class);
+        final RoutingContext routingContext = injector.getInstance(RoutingContext.class);
+
+        // Test with non-migration instance - should succeed
+        configureReqLocalHost(injector, NON_MIGRATION_INSTANCE_META);
+        enableDisableHandler.neitherSourceNorDestination(routingContext);
+        verify(routingContext, times(1)).next();
+
+        // Test with source instance - should fail with FORBIDDEN
+        configureReqLocalHost(injector, SOURCE_META);
+        enableDisableHandler.neitherSourceNorDestination(routingContext);
+        verify(routingContext, times(1)).fail(eq(403));
+
+        // Test with destination instance - should fail with FORBIDDEN
+        configureReqLocalHost(injector, DEST_META);
+        enableDisableHandler.neitherSourceNorDestination(routingContext);
+        verify(routingContext, times(2)).fail(eq(403));
+    }
+
+    @Test
+    public void testAllowIfMigrationNotComplete()
+    {
+        final Injector injector = getInjector();
+        final LiveMigrationApiEnableDisableHandler enableDisableHandler = injector.getInstance(LiveMigrationApiEnableDisableHandler.class);
+        final RoutingContext routingContext = injector.getInstance(RoutingContext.class);
+        final LiveMigrationStatusTracker statusTracker = injector.getInstance(LiveMigrationStatusTracker.class);
+
+        // Test when migration is not completed - should allow
+        configureReqLocalHost(injector, SOURCE_META);
+        when(statusTracker.hasMigrationCompleted(eq(SOURCE_META))).thenReturn(Future.succeededFuture(false));
+        enableDisableHandler.allowIfMigrationNotComplete(routingContext);
+        verify(routingContext, times(1)).next();
+
+        // Test when migration is completed - should fail with BAD_REQUEST
+        when(statusTracker.hasMigrationCompleted(eq(SOURCE_META))).thenReturn(Future.succeededFuture(true));
+        enableDisableHandler.allowIfMigrationNotComplete(routingContext);
+        verify(routingContext, times(1)).fail(eq(400));
+
+        // Test when status check fails - should fail with SERVICE_UNAVAILABLE
+        when(statusTracker.hasMigrationCompleted(eq(SOURCE_META))).thenReturn(Future.failedFuture(new RuntimeException("Test failure")));
+        enableDisableHandler.allowIfMigrationNotComplete(routingContext);
+        verify(routingContext, times(1)).fail(eq(503));
+    }
+
     private void configureReqLocalHost(final Injector injector, final InstanceMetadata source)
     {
         final SocketAddress socketAddress = injector.getInstance(SocketAddress.class);
@@ -150,8 +223,9 @@ class LiveMigrationApiEnableDisableHandlerTest
         protected void configure()
         {
             bind(Vertx.class).toInstance(Vertx.vertx());
-            LiveMigrationMap mockLiveMigrationMap = () -> MIGRATION_MAP;
+            LiveMigrationMap mockLiveMigrationMap = () -> Future.succeededFuture(MIGRATION_MAP);
             bind(LiveMigrationMap.class).toInstance(mockLiveMigrationMap);
+            bind(LiveMigrationStatusTracker.class).toInstance(mock(LiveMigrationStatusTracker.class));
             install(new RoutingContextTestModule());
             install(new InstanceMetadataTestModule(instanceMetadataList));
         }

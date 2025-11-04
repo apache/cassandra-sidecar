@@ -24,6 +24,7 @@ import org.apache.cassandra.sidecar.acl.AuthCache;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
+import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 /**
  * Caches superuser status of cassandra roles. Returns true if the supplied role or any other role granted to it
@@ -38,14 +39,16 @@ public class SuperUserCache extends AuthCache<String, Boolean>
     public SuperUserCache(Vertx vertx,
                           ExecutorPools executorPools,
                           SidecarConfiguration sidecarConfiguration,
-                          SystemAuthDatabaseAccessor systemAuthDatabaseAccessor)
+                          SystemAuthDatabaseAccessor systemAuthDatabaseAccessor,
+                          SidecarMetrics sidecarMetrics)
     {
         super(NAME,
               vertx,
               executorPools,
               systemAuthDatabaseAccessor::isSuperUser,
               systemAuthDatabaseAccessor::findAllRolesToSuperuserStatus,
-              sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration());
+              sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
+              sidecarMetrics.server().cache().superUserCacheMetrics);
     }
 
     public boolean isSuperUser(String role)

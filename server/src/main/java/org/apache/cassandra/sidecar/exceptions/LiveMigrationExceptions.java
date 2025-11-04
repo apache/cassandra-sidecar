@@ -40,7 +40,7 @@ public class LiveMigrationExceptions
 
     /**
      * Exception thrown when a Live Migration request contains invalid parameters or violates
-     *  constraints such as:
+     * constraints such as:
      * <ul>
      * <li>Requested max concurrency exceeds system limits</li>
      * <li>Source instance has more data directories than destination</li>

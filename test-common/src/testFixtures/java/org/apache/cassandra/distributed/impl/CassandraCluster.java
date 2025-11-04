@@ -133,7 +133,7 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
                             : TestTokenSupplier.evenlyDistributedTokens(nodesPerDc, newNodesPerDc, dcCount, 1);
             instanceConfigUpdater = config -> configuration.features.forEach(config::with);
         }
-        if (configuration.additionalInstanceConfig != null)
+        if (configuration.additionalInstanceConfig != null && !configuration.additionalInstanceConfig.isEmpty())
         {
             instanceConfigUpdater = instanceConfigUpdater.andThen(config -> configuration.additionalInstanceConfig.forEach(config::set));
         }

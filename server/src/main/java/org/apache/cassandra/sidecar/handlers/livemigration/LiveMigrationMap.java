@@ -19,8 +19,8 @@
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
 import java.util.Map;
-import java.util.Objects;
 
+import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
 import org.jetbrains.annotations.NotNull;
@@ -34,43 +34,49 @@ public interface LiveMigrationMap
      * Tells whether given instance is configured as source or not.
      *
      * @param instanceMeta Cassandra instance metadata
-     * @return true if given instance is configured as source for live migration.
+     * @return Future that completes with true if given instance is configured as source for live migration.
      */
-    default boolean isSource(@NotNull InstanceMetadata instanceMeta)
+    default Future<Boolean> isSource(@NotNull InstanceMetadata instanceMeta)
     {
-        Map<String, String> map = getMigrationMap();
-        return map != null && map.containsKey(String.valueOf(instanceMeta.host()));
+        return getMigrationMap()
+               .compose(migrationMap -> Future.succeededFuture(migrationMap.containsKey(instanceMeta.host())));
     }
 
     /**
      * Tells whether given instance is configured as destination or not.
      *
      * @param instanceMeta Cassandra instance metadata
-     * @return true if given instance is configured as destination for live migration.
+     * @return Future that completes with true if given instance is configured as destination for live migration.
      */
-    default boolean isDestination(@NotNull InstanceMetadata instanceMeta)
+    default Future<Boolean> isDestination(@NotNull InstanceMetadata instanceMeta)
     {
-        Map<String, String> map = getMigrationMap();
-        return map != null && map.containsValue(String.valueOf(instanceMeta.host()));
+        return getMigrationMap()
+               .compose(migrationMap -> Future.succeededFuture(migrationMap.containsValue(instanceMeta.host())));
     }
 
     /**
      * Tells whether given instance is configured as either source or destination.
      *
      * @param instanceMeta Cassandra instance metadata
-     * @return true if given instance is either source or destination
+     * @return Future that completes with true if given instance is either source or destination
      */
-    default boolean isAny(@NotNull InstanceMetadata instanceMeta)
+    default Future<Boolean> isAny(@NotNull InstanceMetadata instanceMeta)
     {
-        return isSource(instanceMeta) || isDestination(instanceMeta);
+        return Future.join(isSource(instanceMeta), isDestination(instanceMeta))
+                     .compose(results -> {
+                         boolean any = Boolean.TRUE.equals(results.resultAt(0))
+                                       || Boolean.TRUE.equals(results.resultAt(1));
+                         return Future.succeededFuture(any);
+                     });
     }
 
     /**
-     * Returns map of source and destination
+     * Returns map of source and destination. Returns empty map if live migration is not configured.
      *
-     * @return map of source and destination
+     * @return Future that completes with map of source and destination
      */
-    Map<String, String> getMigrationMap();
+    @NotNull
+    Future<Map<String, String>> getMigrationMap();
 
 
     /**
@@ -80,28 +86,36 @@ public interface LiveMigrationMap
      *
      * @param destination the destination host address for which to find the corresponding source host.
      *                    Must not be null.
-     * @return the source host address mapped to the given destination host
-     * @throws LiveMigrationInvalidRequestException if live migration is not configured (migration map is null)
-     *                                              or if no source host is found for the given destination host
+     * @return Future that completes with the source host address mapped to the given destination host,
+     *         or fails with LiveMigrationInvalidRequestException if live migration is not configured
+     *         or if no source host is found for the given destination host
      */
-    default String getSource(String destination)
+    default Future<String> getSource(String destination)
     {
-        Objects.requireNonNull(destination);
-        Map<String, String> migrationMap = getMigrationMap();
-        if (null == migrationMap)
+
+        if (null == destination)
         {
-            throw new LiveMigrationInvalidRequestException("Live migration not configured.");
+            return Future.failedFuture(new IllegalArgumentException("Destination must not be null"));
         }
 
-        for (Map.Entry<String, String> entry : migrationMap.entrySet())
-        {
-            if (entry.getValue().equals(destination))
-            {
-                return entry.getKey();
-            }
-        }
+        return getMigrationMap()
+               .compose(migrationMap -> {
+                   if (null == migrationMap || migrationMap.isEmpty())
+                   {
+                       return Future.failedFuture(new LiveMigrationInvalidRequestException("Live migration is not configured"));
+                   }
 
-        throw new LiveMigrationInvalidRequestException("No source for destination " + destination + " is present " +
-                                                       "in the migration map");
+                   for (Map.Entry<String, String> entry : migrationMap.entrySet())
+                   {
+                       if (entry.getValue().equals(destination))
+                       {
+                           return Future.succeededFuture(entry.getKey());
+                       }
+                   }
+
+                   // Reached here means migration not configured for given destination
+                   return Future.failedFuture(new LiveMigrationInvalidRequestException("No source for destination " + destination + " is present " +
+                                                                                       "in the migration map"));
+               });
     }
 }

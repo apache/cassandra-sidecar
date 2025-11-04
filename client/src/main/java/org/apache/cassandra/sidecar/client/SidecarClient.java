@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.common.request.DeleteServiceConfigRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.ListCdcSegmentsRequest;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationListInstanceFilesRequest;
+import org.apache.cassandra.sidecar.common.request.LiveMigrationStatusRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobProgressRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobSummaryRequest;
 import org.apache.cassandra.sidecar.common.request.Service;
@@ -70,6 +71,7 @@ import org.apache.cassandra.sidecar.common.response.LifecycleInfoResponse;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
@@ -824,6 +826,20 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     }
 
     /**
+     * Executes the node drain request using the default retry policy and configured selection policy
+     *
+     * @param instance the instance where the request will be executed
+     * @return a completable future of the jobs list
+     */
+    public CompletableFuture<OperationalJobResponse> nodeDrain(SidecarInstance instance)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .nodeDrainRequest()
+                                            .build());
+    }
+
+    /**
      * Executes the node move request using the default retry policy and configured selection policy
      *
      * @param instance the instance where the request will be executed
@@ -992,6 +1008,19 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
         return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
                                                             .request(new StreamFileRequest(reqPath, targetFilePath))
                                                             .retryPolicy(new LiveMigrationDownloadRetryPolicy(defaultRetryPolicy, targetFilePath))
+                                                            .build());
+    }
+
+    /**
+     * Requests for the live migration status using sidecar for given {@code instance}.
+     *
+     * @param instance the instance where the request will be executed
+     * @return a completable future of the live migration status response
+     */
+    public CompletableFuture<LiveMigrationStatus> liveMigrationStatus(SidecarInstance instance)
+    {
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .request(new LiveMigrationStatusRequest())
                                                             .build());
     }
 

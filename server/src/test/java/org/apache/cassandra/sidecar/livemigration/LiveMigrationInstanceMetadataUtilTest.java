@@ -261,10 +261,15 @@ class LiveMigrationInstanceMetadataUtilTest
     public void testLocalPath()
     {
         String cassandraHomeDir = tempDir.resolve("testLocalPath").toString();
-        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
+        List<String> dataDirs = List.of(cassandraHomeDir  + "/" + DATA_DIR + 1,
+                                        cassandraHomeDir + "/" + DATA_DIR + 2);
+        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir, dataDirs);
 
         validateLocalPath(instanceMetadata.dataDirs().get(0) + "/" + FILE_NAME,
                           LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/" + FILE_NAME,
+                          instanceMetadata);
+        validateLocalPath(instanceMetadata.dataDirs().get(1) + "/" + FILE_NAME,
+                          LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/1/" + FILE_NAME,
                           instanceMetadata);
         validateLocalPath(instanceMetadata.cdcDir() + "/" + FILE_NAME,
                           LIVE_MIGRATION_CDC_RAW_DIR_PATH + "/0/" + FILE_NAME,
@@ -360,8 +365,14 @@ class LiveMigrationInstanceMetadataUtilTest
 
     InstanceMetadata getInstanceMetadata(String cassandraHomeDir)
     {
+        List<String> dataDirs = List.of(cassandraHomeDir + "/" + DATA_DIR);
+        return getInstanceMetadata(cassandraHomeDir, dataDirs);
+    }
+
+    InstanceMetadata getInstanceMetadata(String cassandraHomeDir, List<String> dataDirs)
+    {
         InstanceMetadata instanceMetadata = Mockito.mock(InstanceMetadata.class);
-        when(instanceMetadata.dataDirs()).thenReturn(Collections.singletonList(cassandraHomeDir + "/" + DATA_DIR));
+        when(instanceMetadata.dataDirs()).thenReturn(dataDirs);
         when(instanceMetadata.cdcDir()).thenReturn(cassandraHomeDir + "/" + CDC_RAW_DIR);
         when(instanceMetadata.commitlogDir()).thenReturn(cassandraHomeDir + "/" + COMMITLOG_DIR);
         when(instanceMetadata.hintsDir()).thenReturn(cassandraHomeDir + "/" + HINTS_DIR);
