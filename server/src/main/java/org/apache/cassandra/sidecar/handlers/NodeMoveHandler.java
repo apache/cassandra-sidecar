@@ -31,8 +31,10 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.adapters.base.utils.DataTypeUtils;
 import org.apache.cassandra.sidecar.common.request.data.NodeMoveRequestPayload;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.utils.StringUtils;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.job.NodeMoveJob;
@@ -47,7 +49,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Provides REST API for asynchronously moving the corresponding Cassandra node to a new token
  */
-public class NodeMoveHandler extends AbstractHandler<NodeMoveRequestPayload> implements AccessProtected
+public class NodeMoveHandler extends AbstractHandler<String> implements AccessProtected
 {
     private final OperationalJobManager jobManager;
     private final ServiceConfiguration config;
@@ -85,10 +87,10 @@ public class NodeMoveHandler extends AbstractHandler<NodeMoveRequestPayload> imp
                                HttpServerRequest httpRequest,
                                @NotNull String host,
                                SocketAddress remoteAddress,
-                               NodeMoveRequestPayload requestPayload)
+                               String newToken)
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
-        NodeMoveJob job = new NodeMoveJob(UUIDs.timeBased(), requestPayload.newToken(), operations);
+        NodeMoveJob job = new NodeMoveJob(UUIDs.timeBased(), newToken, operations);
         this.jobManager.trySubmitJob(job,
                                      (completedJob, exception) ->
                                      OperationalJobUtils.sendStatusBasedResponse(context, completedJob, exception),
@@ -100,7 +102,7 @@ public class NodeMoveHandler extends AbstractHandler<NodeMoveRequestPayload> imp
      * {@inheritDoc}
      */
     @Override
-    protected NodeMoveRequestPayload extractParamsOrThrow(RoutingContext context)
+    protected String extractParamsOrThrow(RoutingContext context)
     {
         String body = context.body().asString();
         if (body == null || body.equalsIgnoreCase("null"))
@@ -110,12 +112,20 @@ public class NodeMoveHandler extends AbstractHandler<NodeMoveRequestPayload> imp
         }
         try
         {
-            return Json.decodeValue(body, NodeMoveRequestPayload.class);
+            NodeMoveRequestPayload payload = Json.decodeValue(body, NodeMoveRequestPayload.class);
+            String newToken = payload.newToken();
+            if (StringUtils.isNullOrEmpty(newToken) || !DataTypeUtils.isValidBigInt(newToken))
+            {
+                throw new IllegalArgumentException(
+                String.format("newToken value must be a valid number. Provided value=%s", newToken));
+            }
+            return newToken.trim();
         }
         catch (DecodeException e)
         {
             logger.warn("Bad request. Received invalid JSON payload.");
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid newToken value: " + e.getMessage());
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                    "Failed to parse NodeMoveRequestPayload error=" + e.getMessage());
         }
     }
 }

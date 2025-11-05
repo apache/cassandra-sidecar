@@ -18,13 +18,9 @@
 
 package org.apache.cassandra.sidecar.common.request.data;
 
-import java.math.BigInteger;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.utils.Preconditions;
-import org.apache.cassandra.sidecar.common.utils.StringUtils;
 
 /**
  * Request payload for node move operations.
@@ -45,21 +41,7 @@ public class NodeMoveRequestPayload
     @JsonCreator
     public NodeMoveRequestPayload(@JsonProperty(value = "newToken", required = true) String newToken)
     {
-        Preconditions.checkArgument(StringUtils.isNotEmpty(newToken),
-                                    "newToken must be provided and non-empty");
-
-        String trimmedToken = newToken.trim();
-        try
-        {
-            new BigInteger(trimmedToken);
-        }
-        catch (NumberFormatException e)
-        {
-            throw new IllegalArgumentException(
-            String.format("newToken parameter must be a valid integer. Provided value=%s", newToken), e);
-        }
-
-        this.newToken = trimmedToken;
+        this.newToken = newToken;
     }
 
     /**

@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.adapters.base.utils;
 
+import java.math.BigInteger;
+
 /**
  * Utility class for data type conversions.
  */
@@ -62,20 +64,20 @@ public class DataTypeUtils
      * This method performs a runtime type check before casting to prevent ClassCastException
      * and provides meaningful error messages when the cast fails.
      *
-     * @param value the object to be cast
-     * @param expectedType the expected type to cast to
+     * @param value              the object to be cast
+     * @param expectedType       the expected type to cast to
      * @param contextDescription descriptive context for error messages (e.g., "keyspace name", "table data")
-     * @param <T> the target type
+     * @param <T>                the target type
      * @return the cast object of type T
      * @throws IllegalStateException if the value is not an instance of the expected type,
-     *         with a descriptive message indicating what was expected vs what was received
+     *                               with a descriptive message indicating what was expected vs what was received
      */
     public static <T> T safeCast(Object value, Class<T> expectedType, String contextDescription)
     {
         if (!expectedType.isInstance(value))
         {
             throw new ClassCastException("Expected " + expectedType.getSimpleName() + " for " + contextDescription + " but got: " +
-                    (value == null ? "null" : value.getClass().getSimpleName()));
+                                         (value == null ? "null" : value.getClass().getSimpleName()));
         }
         return expectedType.cast(value);
     }
@@ -84,11 +86,11 @@ public class DataTypeUtils
      * Safely parses a string to a long with descriptive error handling.
      * This method handles null values and provides meaningful error messages when parsing fails.
      *
-     * @param value the string value to be parsed
+     * @param value              the string value to be parsed
      * @param contextDescription descriptive context for error messages (e.g., "completed bytes", "total bytes")
      * @return the parsed long value
      * @throws IllegalStateException if the value cannot be parsed as a long,
-     *         with a descriptive message indicating what failed to parse
+     *                               with a descriptive message indicating what failed to parse
      */
     public static long safeParseLong(String value, String contextDescription)
     {
@@ -118,5 +120,29 @@ public class DataTypeUtils
     public static long mebibytesToBytes(long mebibytes)
     {
         return mebibytes << 20;
+    }
+
+    /**
+     * Validates whether a string can be parsed as a valid BigInteger.
+     * This method trims whitespace from the input string before validation.
+     *
+     * @param newToken the string to validate as a BigInteger, can be null
+     * @return true if the string can be successfully parsed as a BigInteger, false if null or invalid
+     */
+    public static boolean isValidBigInt(String newToken)
+    {
+        if (newToken == null)
+        {
+            return false;
+        }
+        try
+        {
+            new BigInteger(newToken.trim());
+            return true;
+        }
+        catch (NumberFormatException e)
+        {
+            return false;
+        }
     }
 }

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for {@link NodeMoveRequestPayload}
@@ -32,42 +31,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class NodeMoveRequestPayloadTest
 {
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    @Test
-    void testValidTokens()
-    {
-        NodeMoveRequestPayload payload1 = new NodeMoveRequestPayload("123456789");
-        assertThat(payload1.newToken()).isEqualTo("123456789");
-
-        NodeMoveRequestPayload payload2 = new NodeMoveRequestPayload("-9223372036854775808");
-        assertThat(payload2.newToken()).isEqualTo("-9223372036854775808");
-
-        NodeMoveRequestPayload payload3 = new NodeMoveRequestPayload("0");
-        assertThat(payload3.newToken()).isEqualTo("0");
-    }
-
-    @Test
-    void testInvalidTokens()
-    {
-        assertThatThrownBy(() -> new NodeMoveRequestPayload("invalid"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("newToken parameter must be a valid integer");
-
-        assertThatThrownBy(() -> new NodeMoveRequestPayload(""))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("newToken must be provided and non-empty");
-
-        assertThatThrownBy(() -> new NodeMoveRequestPayload(null))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("newToken must be provided and non-empty");
-    }
-
-    @Test
-    void testTokenTrimming()
-    {
-        NodeMoveRequestPayload payload = new NodeMoveRequestPayload("  123456789  ");
-        assertThat(payload.newToken()).isEqualTo("123456789");
-    }
 
     @Test
     void testJsonSerialization() throws JsonProcessingException
