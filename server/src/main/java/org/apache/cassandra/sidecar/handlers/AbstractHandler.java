@@ -29,21 +29,14 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
-import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
-import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
-import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
-import org.apache.cassandra.sidecar.job.OperationalJob;
-import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-import org.apache.cassandra.sidecar.utils.OperationalJobUtils;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
@@ -323,33 +316,5 @@ public abstract class AbstractHandler<T> implements Handler<RoutingContext>
                    : hostWithoutPort; // return ipv4 directly
         }
         return host;
-    }
-
-    /**
-     * Handles the submission and execution of an operational job.
-     *
-     * @param jobManager the manager responsible for submitting and tracking operational jobs
-     * @param config     the service configuration containing execution parameters
-     * @param context    the routing context for the HTTP request/response
-     * @param job        the operational job to be executed
-     */
-    protected void handleOperationalJob(OperationalJobManager jobManager, ServiceConfiguration config, RoutingContext context, OperationalJob job)
-    {
-        try
-        {
-            jobManager.trySubmitJob(job);
-        }
-        catch (OperationalJobConflictException oje)
-        {
-            String reason = oje.getMessage();
-            logger.error("Conflicting job encountered. reason={}", reason);
-            context.response().setStatusCode(HttpResponseStatus.CONFLICT.code());
-            context.json(new OperationalJobResponse(job.jobId(), OperationalJobStatus.FAILED, job.name(), reason));
-            return;
-        }
-
-        // Get the result, waiting for the specified wait time for result
-        job.asyncResult(executorPools.service(), config.operationalJobExecutionMaxWaitTime())
-           .onComplete(v -> OperationalJobUtils.sendStatusBasedResponse(context, job));
     }
 }

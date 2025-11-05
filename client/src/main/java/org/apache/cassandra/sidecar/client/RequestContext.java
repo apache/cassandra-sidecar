@@ -91,6 +91,7 @@ public class RequestContext
     protected static final GossipInfoRequest GOSSIP_INFO_REQUEST = new GossipInfoRequest();
     protected static final ListOperationalJobsRequest LIST_JOBS_REQUEST = new ListOperationalJobsRequest();
     protected static final NodeDecommissionRequest NODE_DECOMMISSION_REQUEST = new NodeDecommissionRequest();
+    protected static final NodeDrainRequest NODE_DRAIN_REQUEST = new NodeDrainRequest();
 
     protected static final StreamStatsRequest STREAM_STATS_REQUEST = new StreamStatsRequest();
     protected static final LifecycleInfoRequest LIFECYCLE_INFO_REQUEST = new LifecycleInfoRequest();

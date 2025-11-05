@@ -2059,6 +2059,41 @@ abstract class SidecarClientTest
         });
     }
 
+    @Test
+    void testLiveMigrationStatusRequest() throws InterruptedException, ExecutionException
+    {
+        MockResponse response = new MockResponse();
+        response.setResponseCode(200);
+        response.setBody("{\"state\":\"COMPLETED\",\"endTime\":1}");
+        enqueue(response);
+
+        SidecarInstance instance = instances.get(0);
+
+        CompletableFuture<LiveMigrationStatus> result = client.liveMigrationStatus(instance);
+
+        LiveMigrationStatus liveMigrationStatus = result.get();
+
+        assertThat(result.isCompletedExceptionally()).isFalse();
+        assertThat(liveMigrationStatus).isEqualTo(new LiveMigrationStatus(MigrationState.COMPLETED, 1L));
+        validateResponseServed(LIVE_MIGRATION_STATUS_ROUTE);
+    }
+
+    @Test
+    void testLiveMigrationStatusRouteReturnedBadRequest() throws InterruptedException, ExecutionException
+    {
+        MockResponse response = new MockResponse();
+        response.setResponseCode(400);
+        enqueue(response);
+
+        SidecarInstance instance = instances.get(0);
+
+        CompletableFuture<LiveMigrationStatus> result = client.liveMigrationStatus(instance);
+
+        assertThatExceptionOfType(ExecutionException.class).isThrownBy(result::get);
+        assertThat(result.isCompletedExceptionally()).isTrue();
+        validateResponseServed(LIVE_MIGRATION_STATUS_ROUTE);
+    }
+
     private void enqueue(MockResponse response)
     {
         for (MockWebServer server : servers)
