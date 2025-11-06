@@ -138,6 +138,18 @@ public abstract class AuthCache<K, V>
         }
     }
 
+    /**
+     * Invalidate all entries in this cache
+     */
+    public void invalidateAll()
+    {
+        if (cache != null)
+        {
+            cache.invalidateAll();
+            logger.info("All cache entries from {} have been invalidated", this.name);
+        }
+    }
+
     private LoadingCache<K, V> initCache()
     {
         if (config.refreshAfterWrite() == null && config.expireAfterAccess() == null)

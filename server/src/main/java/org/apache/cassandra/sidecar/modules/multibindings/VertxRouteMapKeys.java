@@ -184,6 +184,11 @@ public interface VertxRouteMapKeys
         HttpMethod HTTP_METHOD = HttpMethod.GET;
         String ROUTE_URI = ApiEndpointsV1.RESTORE_JOB_ROUTE;
     }
+    interface InvalidateCacheKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.DELETE;
+        String ROUTE_URI = ApiEndpointsV1.INVALIDATE_CACHE_ROUTE;
+    }
     interface KeyspaceSchemaRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.GET;

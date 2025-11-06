@@ -375,6 +375,21 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     }
 
     /**
+     * Executes the invalidate cache request using the default retry policy and provided {@code instance}
+     *
+     * @param instance  the instance where the request will be executed
+     * @param cacheName the name of the cache to invalidate
+     * @return a completable future with the health response indicating success
+     */
+    public CompletableFuture<HealthResponse> invalidateCache(SidecarInstance instance,
+                                                             String cacheName)
+    {
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                                            .invalidateCacheRequest(cacheName)
+                                                            .build());
+    }
+
+    /**
      * Executes the create snapshot request using the default retry policy and provided {@code instance}
      *
      * @param instance     the instance where the request will be executed

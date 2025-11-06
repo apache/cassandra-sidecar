@@ -116,6 +116,10 @@ public final class ApiEndpointsV1
     public static final String ABORT_RESTORE_JOB_ROUTE = RESTORE_JOB_ROUTE + ABORT;
     public static final String RESTORE_JOB_PROGRESS_ROUTE = RESTORE_JOB_ROUTE + PROGRESS;
 
+    // Auth related APIs
+    public static final String CACHE_NAME_PARAM = ":cacheName";
+    public static final String INVALIDATE_CACHE_ROUTE = API_V1 + "/caches/" + CACHE_NAME_PARAM + "/invalidate";
+
     // CDC APIs
     public static final String CDC_PATH = "/cdc";
     public static final String SEGMENT_PATH_PARAM = ":segment";
