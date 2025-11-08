@@ -60,10 +60,11 @@ public class RegexBasedCassandraInputValidator implements CassandraInputValidato
     public Name validateKeyspaceName(@NotNull String keyspace)
     {
         Name name = new Name(keyspace);
-        validateNamePattern(name, "keyspace");
 
         if (validationConfiguration.forbiddenKeyspaces().contains(name.name()))
             throw new ForbiddenCassandraInputException("Forbidden keyspace: " + keyspace);
+
+        validateNamePattern(name, "keyspace");
 
         return name;
     }

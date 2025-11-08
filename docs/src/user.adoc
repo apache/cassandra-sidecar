@@ -405,6 +405,8 @@ This section defines input validations for Cassandra keyspace and directory name
 * `validator`: The implementation to use for the validation of Casandra inputs.
 ** `class_name`: The name of the class implementing the CassandraInputValidator interface. Out of the box Cassandra Sidecar provides org.apache.cassandra.sidecar.utils.{RegexBasedCassandraInputValidator, FastCassandraInputValidator}.
 ** `parameters`: Configuration parameters that are only applicable to the FastCassandraInputValidator implementation.
+*** `valid_terminations`: Comma-separated list of terminations allowed for the component name.
+*** `valid_restricted_terminations`: Comma-separated list of terminations allowed for the restricted component name.git
 * `forbidden_keyspaces`: This is a list of keyspace names which are forbidden to be used for SSTable imports.
 * `allowed_chars_for_directory`: This is a regular expression which defines the characters that can be used in directory names used for SSTable imports. By default `"[a-zA-Z][a-zA-Z0-9_]{0,47}"`
 * `allowed_chars_for_quoted_name`: This is a regular expression which defines the characters that can be used in quoted names used for SSTable imports. If a quoted name does not match this regular expression, the SSTable import request will be rejected. By default, `"[a-zA-Z_0-9]{1,48}"`
