@@ -38,8 +38,16 @@ public interface CompactionManagerOperations
      * If compactionId is provided, it takes precedence over compactionType.
      *
      * @param compactionId   the compaction ID to stop (nullable)
-     * @param compactionType the type of compaction to stop (nullable)
      * @throws IllegalArgumentException if both parameters are null or empty
      */
-    void stopCompaction(String compactionId, String compactionType);
+    void stopCompactionById(String compactionId);
+
+    /**
+     * Stops compaction based on compaction ID or type.
+     * If compactionId is provided, it takes precedence over compactionType.
+     *
+     * @param compactionType   the compaction ID to stop (nullable)
+     * @throws IllegalArgumentException if both parameters are null or empty
+     */
+    void stopCompaction(String compactionType);
 }

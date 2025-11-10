@@ -150,11 +150,14 @@ public final class ApiEndpointsV1
     public static final String STREAM_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/streams";
     public static final String TABLE_STATS_ROUTE = API_V1 + CASSANDRA + PER_KEYSPACE + PER_TABLE + "/stats";
     public static final String COMPACTION_STOP_ROUTE = API_V1 + CASSANDRA + OPERATIONS + "/compaction/stop";
+    public static final String NODE_DRAIN_ROUTE = API_V1 + CASSANDRA + OPERATIONS + "/drain";
+    public static final String LIFECYCLE_ROUTE = API_V1 + CASSANDRA + "/lifecycle";
 
     // Live Migration APIs
     public static final String LIVE_MIGRATION_API_PREFIX = API_V1 + "/live-migration";
 
     public static final String LIVE_MIGRATION_FILES_ROUTE = LIVE_MIGRATION_API_PREFIX + "/files";
+    public static final String LIVE_MIGRATION_STATUS_ROUTE = LIVE_MIGRATION_API_PREFIX + "/status";
 
     public static final String DIR_TYPE_PARAM = "dirType";
     public static final String DIR_INDEX_PARAM = "dirIndex";

@@ -56,7 +56,7 @@ class CassandraCompactionManagerOperationsTest
     {
         // Test stopCompactionById called when providing compactionId
         String compactionId = "abc-123";
-        compactionManagerOperations.stopCompaction(compactionId, null);
+        compactionManagerOperations.stopCompaction(compactionId);
 
         verify(mockJmxOperations, times(1)).stopCompactionById(compactionId);
         verify(mockJmxOperations, times(0)).stopCompaction(org.mockito.ArgumentMatchers.anyString());
@@ -67,7 +67,7 @@ class CassandraCompactionManagerOperationsTest
     {
         // Test stopCompaction called when no compactionId provided
         String compactionType = "COMPACTION";
-        compactionManagerOperations.stopCompaction(null, compactionType);
+        compactionManagerOperations.stopCompaction(compactionType);
 
         verify(mockJmxOperations, times(1)).stopCompaction(compactionType);
         verify(mockJmxOperations, times(0)).stopCompactionById(org.mockito.ArgumentMatchers.anyString());
@@ -79,7 +79,7 @@ class CassandraCompactionManagerOperationsTest
         // Test compactionId takes precedence when both compactionId and compactionType provided
         String compactionId = "xyz-456";
         String compactionType = "VALIDATION";
-        compactionManagerOperations.stopCompaction(compactionId, compactionType);
+        compactionManagerOperations.stopCompaction(compactionType);
 
         verify(mockJmxOperations, times(1)).stopCompactionById(compactionId);
         verify(mockJmxOperations, times(0)).stopCompaction(org.mockito.ArgumentMatchers.anyString());
@@ -90,22 +90,10 @@ class CassandraCompactionManagerOperationsTest
     {
         // Test trim does not result in empty string
         String compactionId = "  abc-123  ";
-        compactionManagerOperations.stopCompaction(compactionId, null);
+        compactionManagerOperations.stopCompaction(compactionId);
 
         verify(mockJmxOperations, times(1)).stopCompactionById(compactionId);
         verify(mockJmxOperations, times(0)).stopCompaction(org.mockito.ArgumentMatchers.anyString());
-    }
-
-    @Test
-    void testStopCompactionFallbackToTypeWhenEmptyId()
-    {
-        // Test stopCompaction runs when compactionId empty string
-        String compactionId = "   ";
-        String compactionType = "COMPACTION";
-        compactionManagerOperations.stopCompaction(compactionId, compactionType);
-
-        verify(mockJmxOperations, times(1)).stopCompaction(compactionType);
-        verify(mockJmxOperations, times(0)).stopCompactionById(org.mockito.ArgumentMatchers.anyString());
     }
 
     @Test
@@ -122,7 +110,7 @@ class CassandraCompactionManagerOperationsTest
 
         for (String type : supportedTypes)
         {
-            compactionManagerOperations.stopCompaction(null, type);
+            compactionManagerOperations.stopCompaction(type);
             verify(mockJmxOperations, times(1)).stopCompaction(type);
         }
     }
@@ -131,7 +119,7 @@ class CassandraCompactionManagerOperationsTest
     void testStopCompactionJmxProxyCalledOnce()
     {
         // Test JMX proxy obtained exactly once per call
-        compactionManagerOperations.stopCompaction("test-id", null);
+        compactionManagerOperations.stopCompactionById("test-id");
 
         verify(mockJmxClient, times(1))
             .proxy(CompactionManagerJmxOperations.class, COMPACTION_MANAGER_OBJ_NAME);

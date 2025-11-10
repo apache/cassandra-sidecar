@@ -60,7 +60,7 @@ public class CassandraCompactionManagerOperations implements CompactionManagerOp
      * {@inheritDoc}
      */
     @Override
-    public void stopCompaction(String compactionId, String compactionType)
+    public void stopCompactionById(String compactionId)
     {
         CompactionManagerJmxOperations proxy = jmxClient.proxy(
                 CompactionManagerJmxOperations.class,
@@ -68,14 +68,19 @@ public class CassandraCompactionManagerOperations implements CompactionManagerOp
         );
 
         // compactionId takes precedence over type if both are provided
-        if (compactionId != null && !compactionId.trim().isEmpty())
-        {
+        if (compactionId != null && !compactionId.trim().isEmpty()) {
             proxy.stopCompactionById(compactionId);
         }
-        else
-        {
-            proxy.stopCompaction(Objects.requireNonNull(compactionType,
-                    "compactionType must not be null when compactionId is not provided"));
-        }
+    }
+
+    @Override
+    public void stopCompaction(String compactionType) {
+        CompactionManagerJmxOperations proxy = jmxClient.proxy(
+                CompactionManagerJmxOperations.class,
+                COMPACTION_MANAGER_OBJ_NAME
+        );
+
+        proxy.stopCompaction(Objects.requireNonNull(compactionType,
+                "compactionType must not be null when compactionId is not provided"));
     }
 }

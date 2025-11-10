@@ -18,9 +18,7 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 
 import com.google.inject.Inject;
@@ -32,6 +30,7 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.common.data.CompactionType;
 import org.apache.cassandra.sidecar.common.request.data.CompactionStopRequestPayload;
 import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
 import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
@@ -53,29 +52,6 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  */
 public class CompactionStopHandler extends AbstractHandler<CompactionStopRequestPayload> implements AccessProtected
 {
-    // Supported compaction types based on Cassandra's OperationType enum
-    private final Set<String> SUPPORTED_COMPACTION_TYPES = Collections.unmodifiableSet(
-            new HashSet<>(Arrays.asList(
-                    "COMPACTION",
-                    "VALIDATION",
-                    "KEY_CACHE_SAVE",
-                    "ROW_CACHE_SAVE",
-                    "COUNTER_CACHE_SAVE",
-                    "CLEANUP",
-                    "SCRUB",
-                    "UPGRADE_SSTABLES",
-                    "INDEX_BUILD",
-                    "TOMBSTONE_COMPACTION",
-                    "ANTICOMPACTION",
-                    "VERIFY",
-                    "VIEW_BUILD",
-                    "INDEX_SUMMARY",
-                    "RELOCATE",
-                    "GARBAGE_COLLECT",
-                    "WRITE"
-            ))
-    );
-
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
      *
@@ -122,19 +98,27 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
     private CompactionStopResponse stopCompaction(CompactionManagerOperations operations,
                                                   CompactionStopRequestPayload request)
     {
-        String compactionType = request.compactionType();
+        CompactionType compactionType = request.compactionType();
         String compactionId = request.compactionId();
 
-        // Attempt to stop the compaction
-        operations.stopCompaction(compactionId, compactionType);
+        // Convert enum to string for the operation (if not null)
+        // Use .name() to get uppercase, which Cassandra's OperationType expects
+        String compactionTypeStr = compactionType != null ? compactionType.name() : null;
 
+        // Attempt to stop the compaction
+        // If compactionId is provided, use it (takes precedence over type)
+        if (compactionId != null && !compactionId.trim().isEmpty()) {
+            operations.stopCompactionById(compactionId);
+        } else if (compactionTypeStr != null) {
+            operations.stopCompaction(compactionTypeStr);
+        }
+        // If we reach here, at least one of the above conditions was true due to validation in extractParamsOrThrow()
         // Return success response
         return CompactionStopResponse.builder()
-                .compactionType(compactionType)
+                .compactionType(compactionTypeStr)
                 .compactionId(compactionId)
-                .status("SUCCESS")
+                .status("SUBMITTED")
                 .errorCode("200 OK")
-                .reason("Operation Succeeded")
                 .build();
     }
 
@@ -151,8 +135,10 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
         String body = context.body().asString();
         CompactionStopRequestPayload payload;
 
-        // Return 400 BAD_REQUEST upon malformed JSON - avoids falling under processFailure()'s vague
-        // 500 INTERNAL_SERVER_ERROR
+        /*
+         Return 400 BAD_REQUEST upon malformed JSON - avoids falling under processFailure()'s vague
+         500 INTERNAL_SERVER_ERROR. Also catches invalid compaction types via CompactionType.fromString()
+        */
         try
         {
             payload = Json.decodeValue(body, CompactionStopRequestPayload.class);
@@ -163,9 +149,14 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
                     "Invalid JSON payload: " + e.getMessage());
         }
+        catch (IllegalArgumentException e)
+        {
+            logger.warn("Bad request. {}", e.getMessage());
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, e.getMessage());
+        }
 
         // Validate that at least one field is provided
-        if ((payload.compactionType() == null || payload.compactionType().trim().isEmpty()) &&
+        if (payload.compactionType() == null &&
             (payload.compactionId() == null || payload.compactionId().trim().isEmpty()))
         {
             logger.warn("Bad request. Both compaction_type and compaction_id are missing.");
@@ -173,18 +164,6 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
                     "At least one of 'compaction_type' or 'compaction_id' must be provided");
         }
 
-        // Validate compaction type if provided
-        if (payload.compactionType() != null && !payload.compactionType().trim().isEmpty())
-        {
-            String compactionType = payload.compactionType().trim().toUpperCase();
-            if (!SUPPORTED_COMPACTION_TYPES.contains(compactionType))
-            {
-                logger.warn("Bad request. Unsupported compaction type: {}", compactionType);
-                throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                        "Unsupported compaction_type: '" + compactionType +
-                                "'. Supported types: " + SUPPORTED_COMPACTION_TYPES);
-            }
-        }
         return payload;
     }
 }

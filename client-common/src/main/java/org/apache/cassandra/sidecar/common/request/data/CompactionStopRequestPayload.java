@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.common.request.data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.common.data.CompactionType;
 
 /**
  * Request payload for stopping compaction operations.
@@ -34,7 +35,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CompactionStopRequestPayload
 {
-    private final String compactionType;
+    private final CompactionType compactionType;
     private final String compactionId;
 
     /**
@@ -45,10 +46,9 @@ public class CompactionStopRequestPayload
      */
     @JsonCreator
     public CompactionStopRequestPayload(
-    @JsonProperty(value = "compaction_type") String compactionType,
+    @JsonProperty(value = "compaction_type") CompactionType compactionType,
     @JsonProperty(value = "compaction_id") String compactionId
-    )
-    {
+    ) {
         this.compactionType = compactionType;
         this.compactionId = compactionId;
     }
@@ -57,18 +57,18 @@ public class CompactionStopRequestPayload
      * @return the type of compaction to stop
      */
     @JsonProperty("compaction_type")
-    public String compactionType()
+    public CompactionType compactionType()
     {
-        return compactionType;
+        return this.compactionType;
     }
 
     /**
-     * @return the ID of a specific compaction to stop, or null to stop all of the specified type
+     * @return the ID of a specific compaction to stop, or null to stop all specified type
      */
     @JsonProperty("compaction_id")
     public String compactionId()
     {
-        return compactionId;
+        return this.compactionId;
     }
 
     @Override
