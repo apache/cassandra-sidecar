@@ -1,0 +1,164 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: Publish Test Artifacts
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - trunk
+  workflow_dispatch:
+    # Allow manual triggering for testing
+
+permissions:
+  contents: write  # Required for creating releases
+  packages: write  # Required for pushing to GHCR
+
+jobs:
+  # Build and publish test artifacts after successful CI
+  publish:
+    name: Publish test artifacts
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Java 11
+        uses: actions/setup-java@v5
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(grep "^version=" gradle.properties | cut -d'=' -f2)
+          COMMIT_SHORT=$(git rev-parse --short HEAD)
+          BUILD_DATE=$(date -u +"%Y%m%d")
+          TEST_VERSION="${VERSION}-test-${BUILD_DATE}-${COMMIT_SHORT}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "test_version=$TEST_VERSION" >> $GITHUB_OUTPUT
+          echo "commit_short=$COMMIT_SHORT" >> $GITHUB_OUTPUT
+          echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+          echo "Building test artifact version: $TEST_VERSION"
+
+      - name: Build distribution tarball
+        run: |
+          ./gradlew distTar --stacktrace
+        env:
+          SKIP_SIGNING: true
+
+      - name: Rename tarball
+        run: |
+          ORIGINAL=$(find build/distributions -name "*.tar.gz" -type f | head -n 1)
+          TEST_NAME="apache-cassandra-sidecar-${{ steps.version.outputs.test_version }}.tar.gz"
+          cp "$ORIGINAL" "$TEST_NAME"
+          echo "Created test artifact tarball: $TEST_NAME"
+          ls -lh "$TEST_NAME"
+
+      - name: Build and push Docker image (latest tag)
+        run: |
+          ./gradlew :server:jib \
+            -Djib.to.image=ghcr.io/apache/cassandra-sidecar:latest \
+            -Djib.to.auth.username=${{ github.actor }} \
+            -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
+            --stacktrace
+        env:
+          SKIP_SIGNING: true
+
+      - name: Delete existing test-artifacts release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete test-artifacts --yes --repo ${{ github.repository }} || true
+          git push --delete origin test-artifacts || true
+
+      - name: Create test artifacts release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: test-artifacts
+          name: "Test Artifacts - ${{ steps.version.outputs.build_date }}"
+          prerelease: true
+          draft: false
+          body: |
+            ## Test Artifacts (Not an Official Release)
+
+            **⚠️ These are automated test artifacts built after successful CI runs. They are NOT official releases.**
+
+            This contains test builds of Apache Cassandra Sidecar from the `trunk` branch after all CI tests pass.
+
+            ### Build Information
+
+            - **Version**: ${{ steps.version.outputs.test_version }}
+            - **Base Version**: ${{ steps.version.outputs.version }}
+            - **Commit**: ${{ steps.version.outputs.commit_short }} (${{ github.sha }})
+            - **Build Date**: ${{ steps.version.outputs.build_date }}
+            - **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - **CI Run**: ${{ github.event.workflow_run.html_url }}
+
+            ### Test Coverage
+
+            All tests passed before creating these artifacts:
+            - ✅ Unit tests (Java 11, 17, 21)
+            - ✅ Lightweight integration tests (Java 11, 17, 21 × Cassandra 4.0, 4.1, 5.0, 5.1)
+            - ✅ Heavyweight integration tests (Java 11, 17, 21 × Cassandra 4.0, 4.1, 5.0, 5.1)
+            - ✅ Static analysis (SpotBugs, Apache RAT, JaCoCo)
+
+            ### Artifacts
+
+            - **Distribution Tarball**: `apache-cassandra-sidecar-${{ steps.version.outputs.test_version }}.tar.gz`
+            - **Docker Image**: `ghcr.io/apache/cassandra-sidecar:latest`
+
+            ### Download URLs
+
+            These URLs always point to the latest test artifacts:
+
+            ```
+            https://github.com/${{ github.repository }}/releases/download/test-artifacts/apache-cassandra-sidecar-${{ steps.version.outputs.test_version }}.tar.gz
+            ```
+
+            Docker pull:
+            ```bash
+            docker pull ghcr.io/apache/cassandra-sidecar:latest
+            ```
+
+            ### Usage
+
+            These artifacts are suitable for:
+            - Testing and development
+            - Integration testing
+            - Preview of upcoming changes
+
+            ---
+
+            **Note**: These are test artifacts, not official releases. Do not use in production.
+          files: |
+            apache-cassandra-sidecar-${{ steps.version.outputs.test_version }}.tar.gz
