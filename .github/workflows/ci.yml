@@ -136,7 +136,7 @@ jobs:
         with:
           name: unit-test-results-java-${{ matrix.java }}
           path: |
-            **/build/test-results/test/*.xml
+            **/build/test-results/test/**
             **/build/reports/tests/
           retention-days: 30
 
@@ -231,7 +231,7 @@ jobs:
         with:
           name: integration-lightweight-results-java-${{ matrix.java }}-cassandra-${{ matrix.cassandra }}
           path: |
-            **/build/test-results/integrationTest*/*.xml
+            **/build/test-results/integrationTest*/**
             **/build/reports/tests/integrationTest*/
           retention-days: 30
 
@@ -315,6 +315,6 @@ jobs:
         with:
           name: integration-heavyweight-results-java-${{ matrix.java }}-cassandra-${{ matrix.cassandra }}
           path: |
-            **/build/test-results/integrationTest*/*.xml
+            **/build/test-results/integrationTest*/**
             **/build/reports/tests/integrationTest*/
           retention-days: 30
