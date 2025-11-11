@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: ["11", "17", "21"]
+        java: ["11", "17"]
 
     steps:
       - name: Checkout repository
@@ -162,7 +162,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: ["11", "17", "21"]
+        java: ["11", "17"]
         cassandra: ["4.0", "4.1", "5.0", "5.1"]
         include:
           - cassandra: "4.0"
@@ -246,7 +246,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: ["11", "17", "21"]
+        java: ["11", "17"]
         cassandra: ["4.0", "4.1", "5.0", "5.1"]
         include:
           - cassandra: "4.0"
