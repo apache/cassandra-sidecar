@@ -35,7 +35,7 @@ plugins {
     // and is published
     id('maven-publish')
     // and produces a docker image
-    id('com.google.cloud.tools.jib') version '3.4.4'
+    id('com.google.cloud.tools.jib') version '3.4.5'
     // and generates an openAPI specification
     id('io.smallrye.openapi') version "${smallryeOpenApiVersion}"
 }
@@ -81,9 +81,9 @@ configurations {
 }
 
 dependencies {
-    compileOnly('org.jetbrains:annotations:23.0.0')
-    testCompileOnly('org.jetbrains:annotations:23.0.0')
-    integrationTestCompileOnly('org.jetbrains:annotations:23.0.0')
+    compileOnly('org.jetbrains:annotations:26.0.2-1')
+    testCompileOnly('org.jetbrains:annotations:26.0.2-1')
+    integrationTestCompileOnly('org.jetbrains:annotations:26.0.2-1')
 
     implementation("io.vertx:vertx-web:${project.vertxVersion}") {
         exclude group: 'junit', module: 'junit'
@@ -93,7 +93,7 @@ dependencies {
     implementation("io.vertx:vertx-auth-jwt:$vertxVersion")
     implementation("io.vertx:vertx-auth-oauth2:$vertxVersion")
 
-    implementation('com.datastax.cassandra:cassandra-driver-core:3.11.3')
+    implementation('com.datastax.cassandra:cassandra-driver-core:4.0.0')
     implementation("com.google.inject:guice:${guiceVersion}")
     implementation("com.github.ben-manes.caffeine:caffeine:${caffeineVersion}")
 
@@ -102,7 +102,7 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:${project.logbackVersion}")
 
 
-    implementation(group: 'org.apache.commons', name: 'commons-lang3', version: '3.13.0')
+    implementation(group: 'org.apache.commons', name: 'commons-lang3', version: '3.19.0')
     implementation(group: 'commons-codec', name: 'commons-codec', version: "${project.commonsCodecVersion}")
 
     // Jackson for yaml-based configuration parsing
@@ -137,7 +137,7 @@ dependencies {
     implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}", classifier: 'osx-x86_64')
 
     // DataHub client is used to convert and report Cassandra schema on a periodic basis
-    implementation(group: 'io.acryl', name: 'datahub-client', version: '0.15.0-3')
+    implementation(group: 'io.acryl', name: 'datahub-client', version: '15.0.4')
     
     // OpenAPI support
     implementation("org.eclipse.microprofile.openapi:microprofile-openapi-api:${project.microprofileOpenApiVersion}")
@@ -149,19 +149,19 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
-    testImplementation "org.assertj:assertj-core:3.24.2"
+    testImplementation "org.assertj:assertj-core:3.27.6"
     testImplementation "org.quicktheories:quicktheories:0.26"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
 
-    testImplementation('com.google.guava:guava-testlib:32.0.0-jre') {
+    testImplementation('com.google.guava:guava-testlib:33.5.0-jre') {
         exclude group: 'junit', module: 'junit'
     }
 
-    testImplementation('com.datastax.cassandra:cassandra-driver-core:3.11.3:tests')
-    testImplementation('org.mockito:mockito-core:4.10.0')
-    testImplementation('org.mockito:mockito-inline:4.10.0')
+    testImplementation('com.datastax.cassandra:cassandra-driver-core:4.0.0:tests')
+    testImplementation('org.mockito:mockito-core:5.2.0')
+    testImplementation('org.mockito:mockito-inline:5.2.0')
     testImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
-    testImplementation("com.auth0:java-jwt:4.4.0")
+    testImplementation("com.auth0:java-jwt:4.5.0")
     testImplementation(testFixtures(project(":client-common")))
     testImplementation(testFixtures(project(":server-common")))
     testImplementation(testFixtures(project(":test-common")))
@@ -176,10 +176,10 @@ dependencies {
     testFixturesApi(testFixtures(project(":vertx-auth-mtls")))
     testFixturesImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
     testFixturesImplementation("com.google.inject:guice:${guiceVersion}")
-    testFixturesImplementation('org.mockito:mockito-core:4.10.0')
+    testFixturesImplementation('org.mockito:mockito-core:5.2.0')
     testFixturesImplementation("org.junit.jupiter:junit-jupiter-api:${project.junitVersion}")
     testFixturesImplementation("org.junit.jupiter:junit-jupiter-params:${project.junitVersion}")
-    testFixturesImplementation("org.assertj:assertj-core:3.24.2")
+    testFixturesImplementation("org.assertj:assertj-core:3.27.6")
     testFixturesImplementation("io.vertx:vertx-web:${project.vertxVersion}") {
         exclude group: 'junit', module: 'junit'
     }
@@ -190,7 +190,7 @@ dependencies {
     // Needed for snapshot manifest validation
     integrationTestImplementation(group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: "${project.jacksonVersion}")
 
-    containerTestImplementation('com.adobe.testing:s3mock-testcontainers:2.17.0') // 3.x version do not support java 11
+    containerTestImplementation('com.adobe.testing:s3mock-testcontainers:4.10.0') // 3.x version do not support java 11
 }
 
 test {

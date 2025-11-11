@@ -69,10 +69,10 @@ dependencies {
     integrationTestImplementation("com.github.ben-manes.caffeine:caffeine:${project.caffeineVersion}")
     integrationTestImplementation("io.vertx:vertx-web-client:${project.vertxVersion}")
 
-    integrationTestImplementation(group: 'net.java.dev.jna', name: 'jna', version: '5.9.0')
+    integrationTestImplementation(group: 'net.java.dev.jna', name: 'jna', version: '5.18.1')
     integrationTestImplementation(project(path: ":integration-framework"))
     integrationTestImplementation("com.google.inject:guice:${guiceVersion}")
-    testRuntimeOnly 'com.fasterxml.jackson.core:jackson-annotations:2.14.2'
+    testRuntimeOnly 'com.fasterxml.jackson.core:jackson-annotations:2.20'
 
     integrationTestCompileOnly(group: 'com.intellij', name: 'annotations', version: '12.0')
 }

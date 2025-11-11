@@ -67,21 +67,21 @@ dependencies {
     implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}", classifier: 'osx-x86_64')
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
 
-    compileOnly('org.jetbrains:annotations:23.0.0')
+    compileOnly('org.jetbrains:annotations:26.0.2-1')
 
     testImplementation(testFixtures(project(':client')))
 
     testImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
-    testImplementation("org.assertj:assertj-core:3.24.2")
+    testImplementation("org.assertj:assertj-core:3.27.6")
     testImplementation("org.junit.jupiter:junit-jupiter-api:${project.junitVersion}")
     testImplementation("org.junit.jupiter:junit-jupiter-params:${project.junitVersion}")
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.10.0")
-    testImplementation('org.mockito:mockito-core:4.10.0')
+    testImplementation("com.squareup.okhttp3:mockwebserver:5.3.0")
+    testImplementation('org.mockito:mockito-core:5.20.0')
 
     // logging dependencies for tests
-    testImplementation("org.apache.logging.log4j:log4j-api:2.20.0")
-    testImplementation("org.apache.logging.log4j:log4j-core:2.20.0")
-    testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.20.0")
+    testImplementation("org.apache.logging.log4j:log4j-api:2.25.2")
+    testImplementation("org.apache.logging.log4j:log4j-core:2.25.2")
+    testImplementation("org.apache.logging.log4j:log4j-slf4j-impl:2.25.2")
 }
 
 spotbugsTest.enabled = false
