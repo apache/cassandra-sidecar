@@ -62,7 +62,8 @@ public class SidecarModules
                        new SidecarSchemaModule(),
                        new SSTablesAccessModule(),
                        new TelemetryModule(),
-                       new UtilitiesModule());
+                       new UtilitiesModule(),
+                       new SysInfoModule());
     }
 
     /**

@@ -80,7 +80,9 @@ public enum FeaturePermission
      * Permission for live migration data copy operations. This feature permission grants access to
      * stream files and list files, which are necessary for copying data during live migration processes.
      */
-    LIVE_MIGRATION("LIVE_MIGRATION", DATA_COPY, LIST_FILES);
+    LIVE_MIGRATION("LIVE_MIGRATION", DATA_COPY, LIST_FILES),
+
+    SYSTEM("SYSTEM", BasicPermissions.SYSTEM);
 
     public static final List<CompositePermission> ALL_FEATURE_PERMISSIONS
     = Arrays.stream(values()).map(FeaturePermission::permission).collect(Collectors.toList());

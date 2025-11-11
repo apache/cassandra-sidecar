@@ -177,6 +177,9 @@ public final class ApiEndpointsV1
     // Lifecycle APIs
     public static final String LIFECYCLE_ROUTE = API_V1 + CASSANDRA + "/lifecycle";
 
+    private static final String SYSTEM_API_PREFIX = API_V1 + "/system";
+    public static final String SYSTEM_DISK_INFO_ROUTE = SYSTEM_API_PREFIX + "/diskinfo";
+
     private ApiEndpointsV1()
     {
         throw new IllegalStateException(getClass() + " is a constants container and shall not be instantiated");
