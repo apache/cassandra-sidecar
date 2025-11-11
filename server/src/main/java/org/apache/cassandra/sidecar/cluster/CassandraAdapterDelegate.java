@@ -246,7 +246,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     /**
      * Performs health checks by utilizing the native protocol
      */
-    protected synchronized void nativeProtocolHealthCheck()
+    protected void nativeProtocolHealthCheck()
     {
         Session activeSession;
         try
