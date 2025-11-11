@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.cluster;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -58,8 +59,6 @@ import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
-import org.apache.cassandra.sidecar.db.SystemViewsDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.schema.SystemViewsSchema;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
@@ -109,9 +108,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private final InstanceHealthMetrics healthMetrics;
     private volatile Host host;
     private volatile boolean closed = false;
-    private final SystemViewsSchema systemViewsSchema;
-    private final AtomicBoolean isSystemViewSchemaInitialized = new AtomicBoolean(false);
-    private final SystemViewsDatabaseAccessor systemViewsDatabaseAccessor;
+
     /**
      * Constructs a new {@link CassandraAdapterDelegate} for the given {@code cassandraInstance}
      *
@@ -147,8 +144,6 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         this.jmxClient = jmxClient;
         this.healthMetrics = healthMetrics;
         this.notificationListener = initializeJmxListener();
-        this.systemViewsSchema = new SystemViewsSchema();
-        this.systemViewsDatabaseAccessor = new SystemViewsDatabaseAccessor(systemViewsSchema, session);
     }
 
     // TODO: re-organize the methods in the class to group the public/protected/private methods together
@@ -271,7 +266,6 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         try
         {
             // NOTE: We cannot use `executeLocal` here as there may be no adapter yet.
-            SimpleStatement healthCheckStatement = new SimpleStatement("SELECT release_version FROM system.local");
             Metadata metadata = activeSession.getCluster().getMetadata();
             host = getHost(metadata);
             if (host == null)
@@ -281,35 +275,14 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 nodeSettingsFromCql = null;
                 return;
             }
-            healthCheckStatement.setHost(host);
-            healthCheckStatement.setConsistencyLevel(ConsistencyLevel.ONE);
-            Row row = activeSession.execute(healthCheckStatement).one();
+            nodeSettingsFromCql = queryNodeSettingsFromCql(activeSession, host);
             // This should never happen but added for completeness
-            Preconditions.checkArgument(row != null, "Session execution result should never be null");
+            Preconditions.checkArgument(nodeSettingsFromCql != null &&
+                                        !nodeSettingsFromCql.isEmpty(), "Session execution result should never be null");
 
             if (isNativeUp.compareAndSet(false, true))
             {
                 notifyNativeConnection();
-            }
-
-            if (isNativeUp.get())
-            {
-                try
-                {
-                    // Once CQL is confirmed alive for the first time, we'll initialize systemViewsSchema.
-                    if (!isSystemViewSchemaInitialized.get())
-                    {
-                        systemViewsSchema.initialize(activeSession, b -> false);
-                        isSystemViewSchemaInitialized.compareAndSet(false, true);
-                    }
-                    nodeSettingsFromCql = systemViewsDatabaseAccessor.allSettings();
-                }
-                catch (RuntimeException e)
-                {
-                    LOGGER.warn("Unable to retrieve node settings from Cassandra instance {}. Node settings will be null",
-                                cassandraInstanceId, e);
-                    nodeSettingsFromCql = null;
-                }
             }
         }
         catch (IllegalArgumentException | NoHostAvailableException e)
@@ -414,18 +387,20 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     /**
      * Returns the cached node settings read from the system_views.settings table. These are retrieved after a successful
      * health check for native transport.
+     *
      * @return Cached node settings from system_view.settings.
-     * @throws CassandraUnavailableException Thrown when native transport is not available. 
+     * @throws CassandraUnavailableException Thrown when native transport is not available.
      */
     @Override
     @NotNull
     public Map<String, String> v2NodeSettings() throws CassandraUnavailableException
     {
-        if (nodeSettingsFromCql == null)
+        Map<String, String> settings = nodeSettingsFromCql;
+        if (settings == null)
         {
             throw new CassandraUnavailableException(CQL, "CQL NodeSettings unavailable");
         }
-        return nodeSettingsFromCql;
+        return settings;
     }
 
     @Override
@@ -619,6 +594,20 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
             vertx.eventBus().publish(ON_CASSANDRA_JMX_DISCONNECTED.address(), disconnectMessage);
             LOGGER.info("JMX disconnection from cassandraInstanceId={}", cassandraInstanceId);
         }
+    }
+
+    protected Map<String, String> queryNodeSettingsFromCql(Session activeSession, Host host)
+    {
+        SimpleStatement allSystemSettingsStatement = new SimpleStatement("SELECT name, value FROM system_views.settings");
+        allSystemSettingsStatement.setHost(host);
+        allSystemSettingsStatement.setConsistencyLevel(ConsistencyLevel.ONE);
+        ResultSet result = activeSession.execute(allSystemSettingsStatement);
+        Map<String, String> nodeSettings = new HashMap<>();
+        for (Row setting : result.all())
+        {
+            nodeSettings.put(setting.getString("name"), setting.getString("value"));
+        }
+        return Collections.unmodifiableMap(nodeSettings);
     }
 
     @NotNull

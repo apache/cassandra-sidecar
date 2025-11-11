@@ -113,17 +113,12 @@ public class CassandraAdapterDelegateTest
         ResultSet resultSet = Mockito.mock(ResultSet.class);
         when(resultSet.all()).thenReturn(List.of(row));
         when(resultSet.one()).thenReturn(row);
-        when(session.execute(any(BoundStatement.class))).thenReturn(resultSet);
-
-        Row healthCheckResponse = Mockito.mock(Row.class);
-        ResultSet healthCheckResultSet = Mockito.mock(ResultSet.class);
-        when(healthCheckResultSet.one()).thenReturn(healthCheckResponse);
         when(session.execute(argThat((Statement s) ->
-                (s instanceof SimpleStatement) && "SELECT release_version FROM system.local".equals(
+                (s instanceof SimpleStatement) && "SELECT name, value FROM system_views.settings".equals(
                         ((SimpleStatement) s).getQueryString()
                 )
         )))
-        .thenReturn(healthCheckResultSet)
+        .thenReturn(resultSet)
         .thenThrow(NoHostAvailableException.class);
 
         CQLSessionProvider cqlSessionProvider = Mockito.mock(CQLSessionProvider.class);
@@ -164,6 +159,7 @@ public class CassandraAdapterDelegateTest
         Assertions.assertEquals(expected, actual);
         cassandraAdapterDelegate.v2NodeSettings();
         cassandraAdapterDelegate.nativeProtocolHealthCheck();
+        Assertions.assertFalse(cassandraAdapterDelegate.isNativeUp());
         Assertions.assertThrows(CassandraUnavailableException.class, () -> cassandraAdapterDelegate.v2NodeSettings());
     }
 }
