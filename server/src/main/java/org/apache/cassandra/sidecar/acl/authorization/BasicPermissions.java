@@ -39,8 +39,8 @@ import static org.apache.cassandra.sidecar.acl.authorization.ResourceScopes.TABL
  */
 public class BasicPermissions
 {
-    // Auth cache related permissions
-    public static final Permission AUTH_CACHE = new StandardPermission("AUTH_CACHE", CLUSTER_SCOPE);
+    // Cache related permissions
+    public static final Permission INVALIDATE_CACHE = new DomainAwarePermission("CACHE:INVALIDATE", CLUSTER_SCOPE);
 
     // SSTable staging related permissions
     public static final Permission UPLOAD_STAGED_SSTABLE = new DomainAwarePermission("STAGED_SSTABLE:UPLOAD", TABLE_SCOPE);

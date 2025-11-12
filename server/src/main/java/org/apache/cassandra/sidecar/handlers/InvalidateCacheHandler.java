@@ -74,7 +74,7 @@ public class InvalidateCacheHandler extends AbstractHandler<String> implements A
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        return Collections.singleton(BasicPermissions.AUTH_CACHE.toAuthorization());
+        return Collections.singleton(BasicPermissions.INVALIDATE_CACHE.toAuthorization());
     }
 
     @Override

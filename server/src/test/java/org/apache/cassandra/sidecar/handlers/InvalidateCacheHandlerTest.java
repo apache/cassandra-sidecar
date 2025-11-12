@@ -43,6 +43,7 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.acl.AuthCache;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationCacheKey;
 import org.apache.cassandra.sidecar.acl.authorization.RoleAuthorizationsCache;
@@ -110,92 +111,52 @@ public class InvalidateCacheHandlerTest
     @Test
     void testInvalidateIdentityToRoleCache(VertxTestContext context)
     {
-        String testRoute = String.format(TEST_ROUTE_TEMPLATE, "identity_to_role_cache");
-
-        WebClient client = WebClient.create(vertx);
-        client.delete(server.actualPort(), "127.0.0.1", testRoute)
-              .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
-
-                  // Verify the correct cache was invalidated
-                  verify(mockIdentityToRoleCache).invalidateAll();
-                  verifyNoInteractions(mockRoleAuthorizationsCache);
-                  verifyNoInteractions(mockSuperUserCache);
-
-                  context.completeNow();
-              }));
+        verifyInvalidateCache(context, "identity_to_role_cache", mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
     }
 
     @Test
     void testInvalidateIdentityToRoleCacheAlternativeName(VertxTestContext context)
     {
-        String testRoute = String.format(TEST_ROUTE_TEMPLATE, "IdentityToRoleCache");
-
-        WebClient client = WebClient.create(vertx);
-        client.delete(server.actualPort(), "127.0.0.1", testRoute)
-              .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
-
-                  // Verify case-insensitive matching works
-                  verify(mockIdentityToRoleCache).invalidateAll();
-                  verifyNoInteractions(mockRoleAuthorizationsCache);
-                  verifyNoInteractions(mockSuperUserCache);
-
-                  context.completeNow();
-              }));
+        verifyInvalidateCache(context, "IdentityToRoleCache", mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
     }
 
     @Test
     void testInvalidateRoleAuthorizationsCache(VertxTestContext context)
     {
-        String testRoute = String.format(TEST_ROUTE_TEMPLATE, "role_permissions_cache");
-
-        WebClient client = WebClient.create(vertx);
-        client.delete(server.actualPort(), "127.0.0.1", testRoute)
-              .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
-
-                  // Verify the correct cache was invalidated
-                  verify(mockRoleAuthorizationsCache).invalidateAll();
-                  verifyNoInteractions(mockIdentityToRoleCache);
-                  verifyNoInteractions(mockSuperUserCache);
-
-                  context.completeNow();
-              }));
+        verifyInvalidateCache(context, "role_permissions_cache", mockRoleAuthorizationsCache, mockIdentityToRoleCache, mockSuperUserCache);
     }
 
     @Test
     void testInvalidateRoleAuthorizationsCacheAlternativeName(VertxTestContext context)
     {
-        String testRoute = String.format(TEST_ROUTE_TEMPLATE, "RoleAuthorizationsCache");
-
-        WebClient client = WebClient.create(vertx);
-        client.delete(server.actualPort(), "127.0.0.1", testRoute)
-              .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
-
-                  // Verify alternative name works
-                  verify(mockRoleAuthorizationsCache).invalidateAll();
-                  verifyNoInteractions(mockIdentityToRoleCache);
-                  verifyNoInteractions(mockSuperUserCache);
-
-                  context.completeNow();
-              }));
+        verifyInvalidateCache(context, "RoleAuthorizationsCache", mockRoleAuthorizationsCache, mockIdentityToRoleCache, mockSuperUserCache);
     }
 
     @Test
     void testInvalidateSuperUserCache(VertxTestContext context)
     {
-        String testRoute = String.format(TEST_ROUTE_TEMPLATE, "super_user_cache");
+        verifyInvalidateCache(context, "super_user_cache", mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
+    }
 
+    @Test
+    void testInvalidateSuperUserCacheAlternativeName(VertxTestContext context)
+    {
+        verifyInvalidateCache(context, "SuperUserCache", mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
+    }
+
+    /**
+     * Helper method to test cache invalidation for alternative cache names.
+     * Verifies that the specified cache is invalidated and other caches are not touched.
+     *
+     * @param context the test context
+     * @param cacheName the name of the cache to invalidate (sent in the HTTP request)
+     * @param cacheToInvalidate the mock cache that should be invalidated
+     * @param cachesToNotInteract other mock caches that should not be touched
+     */
+    @SuppressWarnings("rawtypes")
+    private void verifyInvalidateCache(VertxTestContext context, String cacheName, AuthCache cacheToInvalidate, AuthCache... cachesToNotInteract)
+    {
+        String testRoute = String.format(TEST_ROUTE_TEMPLATE, cacheName);
         WebClient client = WebClient.create(vertx);
         client.delete(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
@@ -204,30 +165,12 @@ public class InvalidateCacheHandlerTest
                   assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
 
                   // Verify the correct cache was invalidated
-                  verify(mockSuperUserCache).invalidateAll();
-                  verifyNoInteractions(mockIdentityToRoleCache);
-                  verifyNoInteractions(mockRoleAuthorizationsCache);
+                  verify(cacheToInvalidate).invalidateAll();
 
-                  context.completeNow();
-              }));
-    }
-
-    @Test
-    void testInvalidateSuperUserCacheAlternativeName(VertxTestContext context)
-    {
-        String testRoute = String.format(TEST_ROUTE_TEMPLATE, "SuperUserCache");
-
-        WebClient client = WebClient.create(vertx);
-        client.delete(server.actualPort(), "127.0.0.1", testRoute)
-              .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
-
-                  // Verify alternative name works
-                  verify(mockSuperUserCache).invalidateAll();
-                  verifyNoInteractions(mockIdentityToRoleCache);
-                  verifyNoInteractions(mockRoleAuthorizationsCache);
+                  // Verify other caches weren't touched
+                  for (AuthCache cache : cachesToNotInteract) {
+                      verifyNoInteractions(cache);
+                  }
 
                   context.completeNow();
               }));
