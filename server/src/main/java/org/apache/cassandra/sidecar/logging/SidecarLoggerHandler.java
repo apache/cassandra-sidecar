@@ -79,6 +79,7 @@ public class SidecarLoggerHandler implements LoggerHandler
      * @deprecated Superseded by {@link #customFormatter(LoggerFormatter)}
      */
     @Override
+    @Deprecated
     public LoggerHandler customFormatter(Function<HttpServerRequest, String> formatter)
     {
         return loggerHandler.customFormatter(formatter);

@@ -18,30 +18,33 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.AuthorizationContext;
+import io.vertx.ext.auth.authorization.AuthorizationProvider;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthorizationHandler;
 import io.vertx.ext.web.handler.HttpException;
-import io.vertx.ext.web.handler.impl.AuthorizationHandlerImpl;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
 import static io.vertx.core.Future.fromCompletionStage;
@@ -50,150 +53,211 @@ import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 /**
  * {@link CachedAuthorizationHandler} caches all authorization requests using {@link AuthorizationCacheKey}.
  */
-public class CachedAuthorizationHandler extends AuthorizationHandlerImpl
+public class CachedAuthorizationHandler implements AuthorizationHandler
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CachedAuthorizationHandler.class);
 
     // uniquely identities CachedAuthorizationHandler across different routes. Having same handlerId can lead
     // to permission bypass across routes.
     private static final AtomicInteger HANDLER_ID_GEN = new AtomicInteger(0);
-    private static final HttpException FORBIDDEN_EXCEPTION = new HttpException(403);
     private final int handlerId;
     private final AccessControlConfiguration accessControlConfiguration;
-    private final AuthorizationParameterValidateHandler authZParameterValidateHandler;
     private final AdminIdentityResolver adminIdentityResolver;
     private final AuthMetrics authMetrics;
-    private final AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache;
+    private final AsyncCache<AuthorizationCacheKey, Future<Boolean>> authorizationCache;
 
-    // This is overridden since Vert.x does not expose this
-    private BiConsumer<RoutingContext, AuthorizationContext> variableHandler;
+    protected final Authorization authorization;
+    protected final Collection<AuthorizationProvider> authorizationProviders;
+    protected BiConsumer<RoutingContext, AuthorizationContext> variableHandler;
 
     public CachedAuthorizationHandler(AccessControlConfiguration accessControlConfiguration,
-                                      AuthorizationParameterValidateHandler authZParameterValidateHandler,
                                       AdminIdentityResolver adminIdentityResolver,
                                       Authorization authorization,
                                       SidecarMetrics sidecarMetrics,
-                                      AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache)
+                                      AsyncCache<AuthorizationCacheKey, Future<Boolean>> authorizationCache)
     {
-        this(HANDLER_ID_GEN.getAndIncrement(), accessControlConfiguration, authZParameterValidateHandler,
-             adminIdentityResolver, authorization, sidecarMetrics, authorizationCache);
+        this(HANDLER_ID_GEN.getAndIncrement(), accessControlConfiguration, adminIdentityResolver,
+             authorization, sidecarMetrics, authorizationCache);
     }
 
     @VisibleForTesting
     public CachedAuthorizationHandler(int handlerId,
                                       AccessControlConfiguration accessControlConfiguration,
-                                      AuthorizationParameterValidateHandler authZParameterValidateHandler,
                                       AdminIdentityResolver adminIdentityResolver,
                                       Authorization authorization,
                                       SidecarMetrics sidecarMetrics,
-                                      AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache)
+                                      AsyncCache<AuthorizationCacheKey, Future<Boolean>> authorizationCache)
     {
-        super(authorization);
+        this.authorization = Objects.requireNonNull(authorization, "authorization cannot be null");
+        this.authorizationProviders = new ArrayList<>();
         this.handlerId = handlerId;
         this.accessControlConfiguration = accessControlConfiguration;
-        this.authZParameterValidateHandler = authZParameterValidateHandler;
         this.adminIdentityResolver = adminIdentityResolver;
         this.authMetrics = sidecarMetrics.server().auth();
         this.authorizationCache = authorizationCache;
     }
 
     @Override
-    public void handle(RoutingContext ctx)
+    public void handle(RoutingContext context)
     {
         long startTimeNanos = System.nanoTime();
-        authZParameterValidateHandler.handle(ctx);
-        if (ctx.failed()) // failed due to validation
+        User user = context.user();
+        if (user == null)
         {
+            context.fail(FORBIDDEN.code(), new HttpException(FORBIDDEN.code()));
             return;
         }
 
-        AtomicBoolean ctxNextCalled = new AtomicBoolean(false);
-        Future<Boolean> authorizationFuture
-        = fromCompletionStage(checkAuthorization(ctx, ctxNextCalled, startTimeNanos));
+        try
+        {
+            // this handler can perform asynchronous operations
+            if (!context.request().isEnded())
+            {
+                context.request().pause();
+            }
 
-        authorizationFuture
-        .onSuccess(authorized -> {
-            // We avoid calling ctx.next() and ctx.fail() when it is already done during cache value computation
-            if (Boolean.TRUE.equals(authorized))
+            // create the authorization context
+            AuthorizationContext authorizationContext = AuthorizationContext.create(user);
+            if (variableHandler != null)
             {
-                if (!ctxNextCalled.get())
+                variableHandler.accept(context, authorizationContext);
+            }
+
+            checkAuthorization(authorizationContext, startTimeNanos)
+            .onSuccess(ignored -> {
+                if (!context.request().isEnded())
                 {
-                    ctx.next();
+                    context.request().resume();
                 }
-            }
-            else
-            {
-                if (!ctx.failed())
+                context.next();
+            })
+            .onFailure(cause -> {
+                LOGGER.error("Authorization failed for user='{}'", user, cause);
+                // resume as the error handler may allow this request to become valid again
+                if (!context.request().isEnded())
                 {
-                    ctx.fail(FORBIDDEN.code(), FORBIDDEN_EXCEPTION);
+                    context.request().resume();
                 }
-            }
-        })
-        .onFailure(cause -> {
-            LOGGER.error("Error encountered during authorization cache computation", cause);
-            if (!ctx.failed())
+                context.fail(FORBIDDEN.code(), cause);
+            });
+        }
+        catch (Throwable e)
+        {
+            // resume as the error handler may allow this request to become valid again
+            if (!context.request().isEnded())
             {
-                ctx.fail(FORBIDDEN.code(), FORBIDDEN_EXCEPTION);
+                context.request().resume();
             }
-        });
+            context.fail(e);
+        }
     }
 
     @Override
     public AuthorizationHandler variableConsumer(BiConsumer<RoutingContext, AuthorizationContext> handler)
     {
-        this.variableHandler = handler;
-        super.variableConsumer(handler);
+        variableHandler = handler;
         return this;
     }
 
-    private CompletableFuture<Boolean> checkAuthorization(RoutingContext ctx, AtomicBoolean ctxNextCalled,
-                                                          long startTimeNanos)
+    @Override
+    public AuthorizationHandler addAuthorizationProvider(AuthorizationProvider authorizationProvider)
     {
-        if (!this.accessControlConfiguration.permissionCacheConfiguration().enabled())
+        authorizationProviders.add(Objects.requireNonNull(authorizationProvider,
+                                                          "authorizationProvider cannot be null"));
+        return this;
+    }
+
+    protected Future<Boolean> checkAuthorization(AuthorizationContext authorizationContext, long startTimeNanos)
+    {
+        if (!accessControlConfiguration.permissionCacheConfiguration().enabled())
         {
             // We perform authorization checks everytime if caching is disabled
-            return CompletableFuture.completedFuture(isUserAuthorized(ctx, ctxNextCalled, startTimeNanos));
+            return authorizeUser(authorizationContext, startTimeNanos);
         }
 
-        AuthorizationCacheKey key = createAuthorizationKey(ctx);
-        return authorizationCache.get(key, k -> isUserAuthorized(ctx, ctxNextCalled, startTimeNanos));
+        AuthorizationCacheKey key = AuthorizationCacheKey.create(handlerId, authorizationContext);
+        return fromCompletionStage(authorizationCache.get(key, k -> authorizeUser(authorizationContext, startTimeNanos)))
+               .compose(future -> future);
     }
 
-    private AuthorizationCacheKey createAuthorizationKey(RoutingContext ctx)
+    protected Future<Boolean> authorizeUser(AuthorizationContext authorizationContext, long startTimeNanos)
     {
-        User user = ctx.user();
-        AuthorizationContext authorizationContext = AuthorizationContext.create(user);
-        if (this.variableHandler != null)
-        {
-            this.variableHandler.accept(ctx, authorizationContext);
-        }
-        return AuthorizationCacheKey.create(handlerId, authorizationContext);
-    }
-
-    private boolean isUserAuthorized(RoutingContext ctx, AtomicBoolean ctxNextCalled, long startTimeNanos)
-    {
-        User user = ctx.user();
-        List<String> identities = extractIdentities(user);
+        List<String> identities = extractIdentities(authorizationContext.user());
 
         // Admin identities bypass route specific authorization checks
         if (isAdmin(identities))
         {
-            return true;
+            return Future.succeededFuture(true);
         }
 
-        super.handle(ctx);
-        if (!ctx.failed())
-        {
-            ctxNextCalled.set(true);
+        Promise<Boolean> promise = Promise.promise();
+        // check or fetch authorizations
+        checkOrFetchAuthorizations(promise, authorizationContext, authorizationProviders.iterator());
+
+        Future<Boolean> future = promise.future();
+        future.onSuccess(ignored -> {
             long durationNanos = System.nanoTime() - startTimeNanos;
             // authorization time recorded here is only taking into account authorizations that are not cached
+            // and only successful authorizations are recorded
             authMetrics.authorizationTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
-            return true;
-        }
-        return false;
+        });
+        return future;
     }
 
-    private boolean isAdmin(List<String> identities)
+    /**
+     * this method checks that the specified authorization match the current content.
+     * It doesn't fetch all providers at once in order to do early-out, but rather tries to be smart and fetch authorizations one provider at a time
+     *
+     * @param promise              the promise
+     * @param authorizationContext the current authorization context
+     * @param providers            the providers iterator
+     */
+    protected void checkOrFetchAuthorizations(Promise<Boolean> promise, AuthorizationContext authorizationContext, Iterator<AuthorizationProvider> providers)
+    {
+        if (authorization.match(authorizationContext))
+        {
+            promise.complete(true); // Authorization succeeds
+            return;
+        }
+
+        User user = authorizationContext.user();
+
+        // there was no match, in this case we do the following:
+        // 1) contact the next provider we haven't contacted yet
+        // 2) if there is a match, get out right away otherwise repeat 1)
+        while (providers.hasNext())
+        {
+            AuthorizationProvider provider = providers.next();
+            // we haven't fetched authorization from this provider yet
+            if (!user.authorizations().getProviderIds().contains(provider.getId()))
+            {
+                try
+                {
+                    provider.getAuthorizations(user, authorizationResult -> {
+                        if (authorizationResult.failed())
+                        {
+                            LOGGER.warn("An error occurred getting authorization - providerId='{}'", provider.getId(), authorizationResult.cause());
+                            // note that we don't 'record' the fact that we tried to fetch the authorization provider. therefore, it will be re-fetched later-on
+                        }
+                        checkOrFetchAuthorizations(promise, authorizationContext, providers);
+                    });
+                }
+                catch (Exception e)
+                {
+                    // if getAuthorizations throws we want to handle this case
+                    // otherwise the promise will be lost
+                    LOGGER.error("Exception thrown while retrieving authorizations - providerId='{}'", provider.getId(), e);
+                    checkOrFetchAuthorizations(promise, authorizationContext, providers);
+                }
+                // get out right now as the callback will decide what to do next
+                return;
+            }
+        }
+        // exhausted all authorization providers
+        promise.fail(new HttpException(FORBIDDEN.code()));
+    }
+
+    protected boolean isAdmin(List<String> identities)
     {
         for (String identity : identities)
         {

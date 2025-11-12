@@ -217,7 +217,7 @@ class CacheFactoryTest
     @Test
     void testEndpointAuthorizationCacheExpiration() throws ExecutionException, InterruptedException
     {
-        AsyncCache<AuthorizationCacheKey, Boolean> cache = cacheFactory.endpointAuthorizationCache();
+        AsyncCache<AuthorizationCacheKey, Future<Boolean>> cache = cacheFactory.endpointAuthorizationCache();
         AuthorizationCacheKey key1
         = createAuthorizationCacheKey(1, "user1", List.of("role1"), "ks1", "tbl1");
         AuthorizationCacheKey key2
@@ -260,7 +260,7 @@ class CacheFactoryTest
     @Test
     void testEndpointAuthorizationCacheDifferentKeys() throws ExecutionException, InterruptedException
     {
-        AsyncCache<AuthorizationCacheKey, Boolean> cache = cacheFactory.endpointAuthorizationCache();
+        AsyncCache<AuthorizationCacheKey, Future<Boolean>> cache = cacheFactory.endpointAuthorizationCache();
 
         // Different handler IDs
         AuthorizationCacheKey key1
@@ -343,12 +343,12 @@ class CacheFactoryTest
         return AuthorizationCacheKey.create(handlerId, authContext);
     }
 
-    private Boolean authorizationCacheEntry(AsyncCache<AuthorizationCacheKey, Boolean> cache,
+    private Boolean authorizationCacheEntry(AsyncCache<AuthorizationCacheKey, Future<Boolean>> cache,
                                             AuthorizationCacheKey key,
                                             Boolean value) throws ExecutionException, InterruptedException
     {
-        CompletableFuture<Boolean> future = cache.get(key, k -> value);
+        CompletableFuture<Future<Boolean>> future = cache.get(key, k -> Future.succeededFuture(value));
         assertThat(future).isNotNull();
-        return future.get();
+        return future.get().toCompletionStage().toCompletableFuture().get();
     }
 }

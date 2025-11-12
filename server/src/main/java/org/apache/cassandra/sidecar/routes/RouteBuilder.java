@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.auth.authorization.AndAuthorization;
@@ -40,6 +41,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthorizationHandler;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.InputTrustHandler;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationCacheKey;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationParameterValidateHandler;
@@ -60,12 +62,13 @@ import static org.apache.cassandra.sidecar.routes.RoutingContextUtils.SC_QUALIFI
  */
 public class RouteBuilder
 {
+    private static final RouteGenericVariableConsumer ROUTE_GENERIC_VARIABLE_CONSUMER = new RouteGenericVariableConsumer();
     private final AccessControlConfiguration accessControlConfiguration;
     private final AuthorizationProvider authorizationProvider;
     private final AdminIdentityResolver adminIdentityResolver;
     private final AuthorizationParameterValidateHandler authZParameterValidateHandler;
     private final SidecarMetrics sidecarMetrics;
-    private final AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache;
+    private final AsyncCache<AuthorizationCacheKey, Future<Boolean>> authorizationCache;
     private boolean setBodyHandler;
     private boolean accessProtected = true;
     private final List<Handler<RoutingContext>> handlers = new ArrayList<>();
@@ -107,6 +110,7 @@ public class RouteBuilder
     /**
      * Indicate the route does not require authorization.
      * <p>Note that the method is to be accessed by {@link Factory} only
+     *
      * @return a reference to {@link RouteBuilder} for chaining
      */
     RouteBuilder setUnauthorized()
@@ -144,14 +148,16 @@ public class RouteBuilder
                 if (accessControlConfiguration.enabled())
                 {
                     // authorization handler added before route specific handler chain
-                    AuthorizationHandler authorizationHandler =
-                    new CachedAuthorizationHandler(accessControlConfiguration, authZParameterValidateHandler,
-                                                   adminIdentityResolver, requiredAuthorization(), sidecarMetrics,
-                                                   authorizationCache);
+                    AuthorizationHandler authorizationHandler = new CachedAuthorizationHandler(accessControlConfiguration,
+                                                                                               adminIdentityResolver,
+                                                                                               requiredAuthorization(),
+                                                                                               sidecarMetrics,
+                                                                                               authorizationCache);
                     authorizationHandler.addAuthorizationProvider(authorizationProvider);
                     authorizationHandler.variableConsumer(routeGenericVariableConsumer());
 
-                    route.handler(authorizationHandler);
+                    route.handler(wrapInputTrustHandler(authZParameterValidateHandler))
+                         .handler(authorizationHandler);
                 }
 
                 handlers.forEach(route::handler);
@@ -184,26 +190,39 @@ public class RouteBuilder
     @VisibleForTesting
     public BiConsumer<RoutingContext, AuthorizationContext> routeGenericVariableConsumer()
     {
-        return (routingCtx, authZContext) -> {
-            Optional<QualifiedTableName> optional = RoutingContextUtils.getAsOptional(routingCtx, SC_QUALIFIED_TABLE_NAME);
-            String keyspace = null;
-            String table = null;
-            if (optional.isPresent())
-            {
-                QualifiedTableName qualifiedTableName = optional.get();
-                keyspace = qualifiedTableName.keyspace();
-                table = qualifiedTableName.tableName();
-            }
+        return ROUTE_GENERIC_VARIABLE_CONSUMER;
+    }
+
+    private InputTrustHandler wrapInputTrustHandler(Handler<RoutingContext> handler)
+    {
+        return event -> {
+            handler.handle(event);
+            event.next();
+        };
+    }
+
+    static class RouteGenericVariableConsumer implements BiConsumer<RoutingContext, AuthorizationContext>
+    {
+        @Override
+        public void accept(RoutingContext routingContext, AuthorizationContext authorizationContext)
+        {
+            Optional<QualifiedTableName> optional = RoutingContextUtils.getAsOptional(routingContext, SC_QUALIFIED_TABLE_NAME);
+            if (optional.isEmpty())
+                return;
+
+            QualifiedTableName qualifiedTableName = optional.get();
+            String keyspace = qualifiedTableName.keyspace();
+            String table = qualifiedTableName.tableName();
 
             if (keyspace != null)
             {
-                authZContext.variables().add(KEYSPACE, keyspace);
+                authorizationContext.variables().add(KEYSPACE, keyspace);
             }
             if (table != null)
             {
-                authZContext.variables().add(TABLE, table);
+                authorizationContext.variables().add(TABLE, table);
             }
-        };
+        }
     }
 
     /**
@@ -216,14 +235,14 @@ public class RouteBuilder
         private final AdminIdentityResolver adminIdentityResolver;
         private final AuthorizationParameterValidateHandler authZParameterValidateHandler;
         private final SidecarMetrics sidecarMetrics;
-        private final AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache;
+        private final AsyncCache<AuthorizationCacheKey, Future<Boolean>> authorizationCache;
 
         public Factory(AccessControlConfiguration accessControlConfiguration,
                        AuthorizationProvider authorizationProvider,
                        AdminIdentityResolver adminIdentityResolver,
                        AuthorizationParameterValidateHandler authZParameterValidateHandler,
                        SidecarMetrics sidecarMetrics,
-                       AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache)
+                       AsyncCache<AuthorizationCacheKey, Future<Boolean>> authorizationCache)
         {
             this.accessControlConfiguration = accessControlConfiguration;
             this.authorizationProvider = authorizationProvider;

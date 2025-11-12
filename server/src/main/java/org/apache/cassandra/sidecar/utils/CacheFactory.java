@@ -48,7 +48,7 @@ public class CacheFactory
     public static final String ENDPOINT_AUTHORIZATION_CACHE_NAME = "endpoint_authorization_cache";
 
     private final Cache<SSTableImporter.ImportOptions, Future<Void>> ssTableImportCache;
-    private final AsyncCache<AuthorizationCacheKey, Boolean> endpointAuthorizationCache;
+    private final AsyncCache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache;
 
     @Inject
     public CacheFactory(SidecarConfiguration configuration,
@@ -80,7 +80,7 @@ public class CacheFactory
     /**
      * @return the cache used for authorization requests
      */
-    public AsyncCache<AuthorizationCacheKey, Boolean> endpointAuthorizationCache()
+    public AsyncCache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache()
     {
         return endpointAuthorizationCache;
     }
@@ -122,11 +122,12 @@ public class CacheFactory
      *
      * @param sidecarConfiguration the Sidecar configuration
      * @param sidecarMetrics       the Sidecar metrics registry
+     * @param ticker               the ticker for the cache
      * @return instance of {@link AsyncCache} for caching authorization requests
      */
-    private AsyncCache<AuthorizationCacheKey, Boolean> initEndpointAuthorizationCache(SidecarConfiguration sidecarConfiguration,
-                                                                                      SidecarMetrics sidecarMetrics,
-                                                                                      Ticker ticker)
+    private AsyncCache<AuthorizationCacheKey, Future<Boolean>> initEndpointAuthorizationCache(SidecarConfiguration sidecarConfiguration,
+                                                                                              SidecarMetrics sidecarMetrics,
+                                                                                              Ticker ticker)
     {
         if (!sidecarConfiguration.accessControlConfiguration().enabled()
             || !sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration().enabled())
@@ -143,6 +144,7 @@ public class CacheFactory
                     permissionCacheConfig.expireAfterAccess(), permissionCacheConfig.maximumSize());
         return Caffeine.newBuilder()
                        .ticker(ticker)
+                       .executor(MoreExecutors.directExecutor())
                        .expireAfterAccess(permissionCacheConfig.expireAfterAccess().quantity(),
                                           permissionCacheConfig.expireAfterAccess().unit())
                        .maximumSize(permissionCacheConfig.maximumSize())

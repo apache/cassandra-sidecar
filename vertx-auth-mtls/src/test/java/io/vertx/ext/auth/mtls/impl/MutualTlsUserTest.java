@@ -27,14 +27,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Test for {@link MutualTlsUser}
  */
-public class MutualTlsUserTest
+class MutualTlsUserTest
 {
     @Test
-    public void testPrincipal()
+    void testPrincipal()
     {
         MutualTlsUser mutualTlsUser = MutualTlsUser.fromIdentities(Arrays.asList("identity1", "identity2"));
         assertThat(mutualTlsUser.identities().size()).isEqualTo(2);
         assertThat(mutualTlsUser.principal().containsKey("identities")).isTrue();
         assertThat(mutualTlsUser.principal().getString("identities")).isEqualTo("identity1,identity2");
+    }
+
+    @Test
+    void testToString()
+    {
+        MutualTlsUser user = MutualTlsUser.fromIdentities(Arrays.asList("identity1", "identity2"));
+        assertThat(user.toString()).isEqualTo("MutualTlsUser{identities=[identity1, identity2]}");
     }
 }
