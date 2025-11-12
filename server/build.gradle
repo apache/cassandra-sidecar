@@ -137,7 +137,7 @@ dependencies {
     implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: "${project.boringSslVersion}", classifier: 'osx-x86_64')
 
     // DataHub client is used to convert and report Cassandra schema on a periodic basis
-    implementation(group: 'io.acryl', name: 'datahub-client', version: '0.15.0-3')
+    implementation(group: 'io.acryl', name: 'datahub-client', version: '15.0.4')
     
     // OpenAPI support
     implementation("org.eclipse.microprofile.openapi:microprofile-openapi-api:${project.microprofileOpenApiVersion}")
