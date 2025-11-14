@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.client;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -466,11 +467,12 @@ public class RequestContext
          * and returns a reference to this Builder enabling method chaining.
          *
          * @param cacheName the name of the cache to invalidate
+         * @param keys the specific keys to invalidate, or null to invalidate all keys
          * @return a reference to this Builder
          */
-        public Builder invalidateCacheRequest(String cacheName)
+        public Builder invalidateCacheRequest(String cacheName, @Nullable List<String> keys)
         {
-            return request(new InvalidateCacheRequest(cacheName));
+            return request(new InvalidateCacheRequest(cacheName, keys));
         }
 
         /**

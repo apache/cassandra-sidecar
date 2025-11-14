@@ -379,13 +379,14 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
      *
      * @param instance  the instance where the request will be executed
      * @param cacheName the name of the cache to invalidate
+     * @param keys the specific keys to invalidate, or null to invalidate all keys
      * @return a completable future with the health response indicating success
      */
     public CompletableFuture<HealthResponse> invalidateCache(SidecarInstance instance,
-                                                             String cacheName)
+                                                             String cacheName, @Nullable List<String> keys)
     {
         return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
-                                                            .invalidateCacheRequest(cacheName)
+                                                            .invalidateCacheRequest(cacheName, keys)
                                                             .build());
     }
 

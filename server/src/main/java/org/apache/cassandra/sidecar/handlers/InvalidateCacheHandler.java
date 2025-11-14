@@ -18,6 +18,7 @@
 package org.apache.cassandra.sidecar.handlers;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
@@ -43,12 +44,13 @@ import static org.apache.cassandra.sidecar.modules.ApiModule.OK_STATUS;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * Provides REST API for invalidating authentication and authorization caches.
- * Supports invalidating identity-to-role mappings, role authorizations,
- * super user cache, and endpoint authorization cache.
+ * Provides REST API for invalidating caches.
+ * Supports full cache invalidation or selective key-based invalidation where applicable.
+ * Currently, supports authentication and authorization caches including identity-to-role mappings,
+ * role authorizations, superuser cache and endpoint authorization cache.
  */
 @Singleton
-public class InvalidateCacheHandler extends AbstractHandler<String> implements AccessProtected
+public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandler.Params> implements AccessProtected
 {
     private final IdentityToRoleCache identityToRoleCache;
     private final RoleAuthorizationsCache roleAuthorizationsCache;
@@ -78,9 +80,31 @@ public class InvalidateCacheHandler extends AbstractHandler<String> implements A
     }
 
     @Override
-    protected String extractParamsOrThrow(RoutingContext context)
+    protected Params extractParamsOrThrow(RoutingContext context)
     {
-        return context.pathParam("cacheName");
+        String cacheName = context.pathParam("cacheName");
+        List<String> keys = context.queryParam("keys");
+        return new Params(cacheName, keys);
+    }
+
+    /**
+     * Simple holder class for cache invalidation parameters
+     */
+    protected static class Params
+    {
+        final String cacheName;
+        final List<String> keys;
+
+        Params(String cacheName, List<String> keys)
+        {
+            this.cacheName = cacheName;
+            this.keys = keys;
+        }
+
+        boolean invalidateAll()
+        {
+            return keys == null || keys.isEmpty();
+        }
     }
 
     @Override
@@ -88,24 +112,53 @@ public class InvalidateCacheHandler extends AbstractHandler<String> implements A
                                   HttpServerRequest httpRequest,
                                   @NotNull String host,
                                   SocketAddress remoteAddress,
-                                  String cacheName)
+                                  Params params)
     {
+        String cacheName = params.cacheName;
+        boolean invalidateAll = params.invalidateAll();
+
         switch (cacheName.toLowerCase())
         {
             case "identity_to_role_cache":
             case "identitytorolecache":
-                identityToRoleCache.invalidateAll();
-                break;
-            case "role_permissions_cache":
-            case "roleauthorizationscache":
-                roleAuthorizationsCache.invalidateAll();
+                if (invalidateAll)
+                {
+                    identityToRoleCache.invalidateAll();
+                }
+                else
+                {
+                    identityToRoleCache.invalidateAll(params.keys);
+                }
                 break;
             case "super_user_cache":
             case "superusercache":
-                superUserCache.invalidateAll();
+                if (invalidateAll)
+                {
+                    superUserCache.invalidateAll();
+                }
+                else
+                {
+                    superUserCache.invalidateAll(params.keys);
+                }
+                break;
+            case "role_authorization_cache":
+            case "roleauthorizationcache":
+                if (!invalidateAll)
+                {
+                    context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                                   "role_authorization_cache does not support selective key invalidation"));
+                    return;
+                }
+                roleAuthorizationsCache.invalidateAll();
                 break;
             case "endpoint_authorization_cache":
             case "endpointauthorizationcache":
+                if (!invalidateAll)
+                {
+                    context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                                   "endpoint_authorization_cache does not support selective key invalidation"));
+                    return;
+                }
                 endpointAuthorizationCache.synchronous().invalidateAll();
                 break;
             default:
@@ -114,7 +167,8 @@ public class InvalidateCacheHandler extends AbstractHandler<String> implements A
                 return;
         }
 
-        logger.info("Cache {} invalidated successfully", cacheName);
+        logger.info("Cache {} invalidated successfully. Keys: {}", cacheName,
+                    invalidateAll ? "all" : params.keys);
         context.json(OK_STATUS);
     }
 }

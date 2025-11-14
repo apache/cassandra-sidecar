@@ -18,9 +18,12 @@
 
 package org.apache.cassandra.sidecar.common.request;
 
+import java.util.List;
+
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Represents a request to invalidate the specified cache
@@ -31,10 +34,40 @@ public class InvalidateCacheRequest extends JsonRequest<HealthResponse>
      * Constructs a request to execute cache invalidation operation
      *
      * @param cacheName the name of the cache to invalidate
+     * @param keys the specific keys to invalidate, or null to invalidate all keys
      */
-    public InvalidateCacheRequest(String cacheName)
+    public InvalidateCacheRequest(String cacheName, @Nullable List<String> keys)
     {
-        super(ApiEndpointsV1.INVALIDATE_CACHE_ROUTE.replaceAll(ApiEndpointsV1.CACHE_NAME_PARAM, cacheName));
+        super(buildRequestURI(cacheName, keys));
+    }
+
+    /**
+     * Builds the request URI with optional query parameters for specific keys
+     *
+     * @param cacheName the name of the cache to invalidate
+     * @param keys the specific keys to invalidate, or null to invalidate all keys
+     * @return the complete request URI with query parameters if keys are provided
+     */
+    private static String buildRequestURI(String cacheName, @Nullable List<String> keys)
+    {
+        String baseUri = ApiEndpointsV1.INVALIDATE_CACHE_ROUTE
+                         .replaceAll(ApiEndpointsV1.CACHE_NAME_PARAM, cacheName);
+
+        if (keys == null || keys.isEmpty())
+        {
+            return baseUri;
+        }
+
+        StringBuilder uri = new StringBuilder(baseUri).append('?');
+        for (int i = 0; i < keys.size(); i++)
+        {
+            if (i > 0)
+            {
+                uri.append('&');
+            }
+            uri.append("keys=").append(keys.get(i));
+        }
+        return uri.toString();
     }
 
     /**

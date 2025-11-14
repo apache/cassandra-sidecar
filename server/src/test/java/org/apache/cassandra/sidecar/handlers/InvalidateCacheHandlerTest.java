@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -37,6 +38,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
@@ -52,8 +54,10 @@ import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.utils.CacheFactory;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -108,74 +112,73 @@ public class InvalidateCacheHandlerTest
             LOGGER.error("Close event timed out.");
     }
 
+    // IdentityToRoleCache tests
     @Test
     void testInvalidateIdentityToRoleCache(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "identity_to_role_cache", mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
+        verifyInvalidateCache(context, "identity_to_role_cache", null, OK, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
     }
 
     @Test
     void testInvalidateIdentityToRoleCacheAlternativeName(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "IdentityToRoleCache", mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
+        verifyInvalidateCache(context, "IdentityToRoleCache", null, OK, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
     }
 
     @Test
+    void testInvalidateIdentityToRoleCacheWithKeys(VertxTestContext context)
+    {
+        verifyInvalidateCache(context, "identity_to_role_cache",
+                             asList("key1", "key2"),
+                             OK,
+                             mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
+    }
+
+    // RoleAuthorizationsCache tests
+    @Test
     void testInvalidateRoleAuthorizationsCache(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "role_permissions_cache", mockRoleAuthorizationsCache, mockIdentityToRoleCache, mockSuperUserCache);
+        verifyInvalidateCache(context, "role_authorization_cache", null, OK, mockRoleAuthorizationsCache, mockIdentityToRoleCache, mockSuperUserCache);
     }
 
     @Test
     void testInvalidateRoleAuthorizationsCacheAlternativeName(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "RoleAuthorizationsCache", mockRoleAuthorizationsCache, mockIdentityToRoleCache, mockSuperUserCache);
+        verifyInvalidateCache(context, "RoleAuthorizationCache", null, OK, mockRoleAuthorizationsCache, mockIdentityToRoleCache, mockSuperUserCache);
     }
 
     @Test
+    void testInvalidateRoleAuthorizationsCacheWithKeys(VertxTestContext context)
+    {
+        verifyInvalidateCache(context, "role_authorization_cache",
+                             asList("key1"),
+                             BAD_REQUEST,
+                             null, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
+    }
+
+    // SuperUserCache tests
+    @Test
     void testInvalidateSuperUserCache(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "super_user_cache", mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
+        verifyInvalidateCache(context, "super_user_cache", null, OK, mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
     }
 
     @Test
     void testInvalidateSuperUserCacheAlternativeName(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "SuperUserCache", mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
+        verifyInvalidateCache(context, "SuperUserCache", null, OK, mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
     }
 
-    /**
-     * Helper method to test cache invalidation for alternative cache names.
-     * Verifies that the specified cache is invalidated and other caches are not touched.
-     *
-     * @param context the test context
-     * @param cacheName the name of the cache to invalidate (sent in the HTTP request)
-     * @param cacheToInvalidate the mock cache that should be invalidated
-     * @param cachesToNotInteract other mock caches that should not be touched
-     */
-    @SuppressWarnings("rawtypes")
-    private void verifyInvalidateCache(VertxTestContext context, String cacheName, AuthCache cacheToInvalidate, AuthCache... cachesToNotInteract)
+    @Test
+    void testInvalidateSuperUserCacheWithKeys(VertxTestContext context)
     {
-        String testRoute = String.format(TEST_ROUTE_TEMPLATE, cacheName);
-        WebClient client = WebClient.create(vertx);
-        client.delete(server.actualPort(), "127.0.0.1", testRoute)
-              .expect(ResponsePredicate.SC_OK)
-              .send(context.succeeding(response -> {
-                  assertThat(response.statusCode()).isEqualTo(OK.code());
-                  assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
-
-                  // Verify the correct cache was invalidated
-                  verify(cacheToInvalidate).invalidateAll();
-
-                  // Verify other caches weren't touched
-                  for (AuthCache cache : cachesToNotInteract) {
-                      verifyNoInteractions(cache);
-                  }
-
-                  context.completeNow();
-              }));
+        verifyInvalidateCache(context, "super_user_cache",
+                             asList("user1", "user2", "user3"),
+                             OK,
+                             mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
     }
 
+    // EndpointAuthorizationCache tests
     @Test
     void testInvalidateEndpointAuthorizationCache(VertxTestContext context)
     {
@@ -221,6 +224,16 @@ public class InvalidateCacheHandlerTest
     }
 
     @Test
+    void testInvalidateEndpointAuthorizationCacheWithKeys(VertxTestContext context)
+    {
+        verifyInvalidateCache(context, "endpoint_authorization_cache",
+                             asList("key1"),
+                             BAD_REQUEST,
+                             null, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
+    }
+
+    // Error case tests
+    @Test
     void testInvalidateUnknownCache(VertxTestContext context)
     {
         String testRoute = String.format(TEST_ROUTE_TEMPLATE, "unknown_cache");
@@ -236,6 +249,72 @@ public class InvalidateCacheHandlerTest
                   verifyNoInteractions(mockIdentityToRoleCache);
                   verifyNoInteractions(mockRoleAuthorizationsCache);
                   verifyNoInteractions(mockSuperUserCache);
+
+                  context.completeNow();
+              }));
+    }
+
+    /**
+     * Helper method to test cache invalidation
+     * Verifies that the specified cache is invalidated (or returns the expected error) and other caches are not touched.
+     *
+     * @param context the test context
+     * @param cacheName the name of the cache to invalidate (sent in the HTTP request)
+     * @param keys the specific keys to invalidate, or null to invalidate all keys
+     * @param expectedStatus the expected HTTP response status (OK, BAD_REQUEST, NOT_FOUND, etc.)
+     * @param cacheToInvalidate the mock cache that should be invalidated (null if expecting an error)
+     * @param cachesToNotInteract other mock caches that should not be touched
+     */
+    @SuppressWarnings("rawtypes")
+    private void verifyInvalidateCache(VertxTestContext context, String cacheName, List<String> keys,
+                                       HttpResponseStatus expectedStatus,
+                                       AuthCache cacheToInvalidate, AuthCache... cachesToNotInteract)
+    {
+        String testRoute = String.format(TEST_ROUTE_TEMPLATE, cacheName);
+
+        // Append query parameters if keys are provided
+        if (keys != null && !keys.isEmpty())
+        {
+            StringBuilder queryParams = new StringBuilder("?");
+            for (int i = 0; i < keys.size(); i++)
+            {
+                if (i > 0) queryParams.append("&");
+                queryParams.append("keys=").append(keys.get(i));
+            }
+            testRoute = testRoute + queryParams;
+        }
+
+        WebClient client = WebClient.create(vertx);
+        ResponsePredicate predicate = expectedStatus == OK
+                                      ? ResponsePredicate.SC_OK
+                                      : (expectedStatus == NOT_FOUND
+                                         ? ResponsePredicate.SC_NOT_FOUND
+                                         : ResponsePredicate.SC_BAD_REQUEST);
+
+        client.delete(server.actualPort(), "127.0.0.1", testRoute)
+              .expect(predicate)
+              .send(context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(expectedStatus.code());
+
+                  if (expectedStatus == OK)
+                  {
+                      assertThat(response.bodyAsJsonObject().getString("status")).isEqualTo("OK");
+
+                      // Verify the correct cache was invalidated
+                      if (keys == null || keys.isEmpty())
+                      {
+                          verify(cacheToInvalidate).invalidateAll();
+                      }
+                      else
+                      {
+                          verify(cacheToInvalidate).invalidateAll(keys);
+                      }
+                  }
+
+                  // Verify other caches weren't touched
+                  for (AuthCache cache : cachesToNotInteract) {
+                      verifyNoInteractions(cache);
+                  }
 
                   context.completeNow();
               }));
