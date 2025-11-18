@@ -35,7 +35,7 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 @Singleton
 public class SuperUserCache extends AuthCache<String, Boolean>
 {
-    private static final String NAME = "super_user_cache";
+    public static final String NAME = "super_user_cache";
 
     @Inject
     public SuperUserCache(Vertx vertx,

@@ -29,6 +29,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.acl.AuthCache;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.acl.authorization.AuthorizationCacheKey;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
@@ -41,6 +42,7 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.modules.ApiModule.OK_STATUS;
+import static org.apache.cassandra.sidecar.utils.CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
@@ -52,6 +54,11 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandler.Params> implements AccessProtected
 {
+    private static final String IDENTITY_TO_ROLE_CACHE_NO_UNDERSCORE = "identitytorolecache";
+    private static final String SUPER_USER_CACHE_NO_UNDERSCORE = "superusercache";
+    private static final String ROLE_AUTHORIZATIONS_CACHE_NO_UNDERSCORE = "roleauthorizationscache";
+    private static final String ENDPOINT_AUTHORIZATION_CACHE_NO_UNDERSCORE = "endpointauthorizationcache";
+
     private final IdentityToRoleCache identityToRoleCache;
     private final RoleAuthorizationsCache roleAuthorizationsCache;
     private final SuperUserCache superUserCache;
@@ -119,40 +126,20 @@ public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandl
 
         switch (cacheName.toLowerCase())
         {
-            case "identity_to_role_cache":
-            case "identitytorolecache":
-                if (invalidateAll)
-                {
-                    identityToRoleCache.invalidateAll();
-                }
-                else
-                {
-                    identityToRoleCache.invalidateAll(params.keys);
-                }
+            case IdentityToRoleCache.NAME:
+            case IDENTITY_TO_ROLE_CACHE_NO_UNDERSCORE:
+                invalidateAuthCache(identityToRoleCache, params, true);
                 break;
-            case "super_user_cache":
-            case "superusercache":
-                if (invalidateAll)
-                {
-                    superUserCache.invalidateAll();
-                }
-                else
-                {
-                    superUserCache.invalidateAll(params.keys);
-                }
+            case SuperUserCache.NAME:
+            case SUPER_USER_CACHE_NO_UNDERSCORE:
+                invalidateAuthCache(superUserCache, params, true);
                 break;
-            case "role_authorization_cache":
-            case "roleauthorizationcache":
-                if (!invalidateAll)
-                {
-                    context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                                   "role_authorization_cache does not support selective key invalidation"));
-                    return;
-                }
-                roleAuthorizationsCache.invalidateAll();
+            case RoleAuthorizationsCache.NAME:
+            case ROLE_AUTHORIZATIONS_CACHE_NO_UNDERSCORE:
+                invalidateAuthCache(roleAuthorizationsCache, params, false);
                 break;
-            case "endpoint_authorization_cache":
-            case "endpointauthorizationcache":
+            case ENDPOINT_AUTHORIZATION_CACHE_NAME:
+            case ENDPOINT_AUTHORIZATION_CACHE_NO_UNDERSCORE:
                 if (!invalidateAll)
                 {
                     context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST,
@@ -170,5 +157,31 @@ public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandl
         logger.info("Cache {} invalidated successfully. Keys: {}", cacheName,
                     invalidateAll ? "all" : params.keys);
         context.json(OK_STATUS);
+    }
+
+    /**
+     * Generic method to invalidate an AuthCache with optional list of keys for invalidation
+     *
+     * @param cache                         AuthCache to invalidate
+     * @param params                        params containing cache name and keys
+     * @param supportsSelectiveInvalidation whether cache supports selective key invalidation
+     * @param <V> the cache value type
+     */
+    private <V> void invalidateAuthCache(AuthCache<String, V> cache, Params params, boolean supportsSelectiveInvalidation)
+    {
+        if (!supportsSelectiveInvalidation && !params.invalidateAll())
+        {
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                    params.cacheName + " does not support selective key invalidation");
+        }
+
+        if (params.invalidateAll())
+        {
+            cache.invalidateAll();
+        }
+        else
+        {
+            cache.invalidateAll(params.keys);
+        }
     }
 }

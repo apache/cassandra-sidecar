@@ -45,6 +45,8 @@ public class CacheFactory
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CacheFactory.class);
 
+    public static final String ENDPOINT_AUTHORIZATION_CACHE_NAME = "endpoint_authorization_cache";
+
     private final Cache<SSTableImporter.ImportOptions, Future<Void>> ssTableImportCache;
     private final AsyncCache<AuthorizationCacheKey, Boolean> endpointAuthorizationCache;
 

@@ -116,7 +116,7 @@ public class InvalidateCacheHandlerTest
     @Test
     void testInvalidateIdentityToRoleCache(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "identity_to_role_cache", null, OK, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
+        verifyInvalidateCache(context, IdentityToRoleCache.NAME, null, OK, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
     }
 
     @Test
@@ -128,7 +128,7 @@ public class InvalidateCacheHandlerTest
     @Test
     void testInvalidateIdentityToRoleCacheWithKeys(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "identity_to_role_cache",
+        verifyInvalidateCache(context, IdentityToRoleCache.NAME,
                              asList("key1", "key2"),
                              OK,
                              mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
@@ -138,19 +138,19 @@ public class InvalidateCacheHandlerTest
     @Test
     void testInvalidateRoleAuthorizationsCache(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "role_authorization_cache", null, OK, mockRoleAuthorizationsCache, mockIdentityToRoleCache, mockSuperUserCache);
+        verifyInvalidateCache(context, RoleAuthorizationsCache.NAME, null, OK, mockRoleAuthorizationsCache, mockIdentityToRoleCache, mockSuperUserCache);
     }
 
     @Test
     void testInvalidateRoleAuthorizationsCacheAlternativeName(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "RoleAuthorizationCache", null, OK, mockRoleAuthorizationsCache, mockIdentityToRoleCache, mockSuperUserCache);
+        verifyInvalidateCache(context, "RoleAuthorizationsCache", null, OK, mockRoleAuthorizationsCache, mockIdentityToRoleCache, mockSuperUserCache);
     }
 
     @Test
     void testInvalidateRoleAuthorizationsCacheWithKeys(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "role_authorization_cache",
+        verifyInvalidateCache(context, RoleAuthorizationsCache.NAME,
                              asList("key1"),
                              BAD_REQUEST,
                              null, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
@@ -160,7 +160,7 @@ public class InvalidateCacheHandlerTest
     @Test
     void testInvalidateSuperUserCache(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "super_user_cache", null, OK, mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
+        verifyInvalidateCache(context, SuperUserCache.NAME, null, OK, mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
     }
 
     @Test
@@ -172,7 +172,7 @@ public class InvalidateCacheHandlerTest
     @Test
     void testInvalidateSuperUserCacheWithKeys(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "super_user_cache",
+        verifyInvalidateCache(context, SuperUserCache.NAME,
                              asList("user1", "user2", "user3"),
                              OK,
                              mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
@@ -182,7 +182,7 @@ public class InvalidateCacheHandlerTest
     @Test
     void testInvalidateEndpointAuthorizationCache(VertxTestContext context)
     {
-        String testRoute = String.format(TEST_ROUTE_TEMPLATE, "endpoint_authorization_cache");
+        String testRoute = String.format(TEST_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
 
         WebClient client = WebClient.create(vertx);
         client.delete(server.actualPort(), "127.0.0.1", testRoute)
@@ -226,7 +226,7 @@ public class InvalidateCacheHandlerTest
     @Test
     void testInvalidateEndpointAuthorizationCacheWithKeys(VertxTestContext context)
     {
-        verifyInvalidateCache(context, "endpoint_authorization_cache",
+        verifyInvalidateCache(context, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME,
                              asList("key1"),
                              BAD_REQUEST,
                              null, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);

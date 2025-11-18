@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test;
 import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
 import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -82,20 +81,18 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     private static final String CASSANDRA_IDENTITY = "spiffe://cassandra/sidecar/cassandra_role";
     private static final String SIDECAR_ROLE_IDENTITY = "spiffe://cassandra/sidecar/sidecar_role";
     private static final String TEST_USER_IDENTITY = "spiffe://cassandra/sidecar/test_user";
+    private static final String TEST_USER2_IDENTITY = "spiffe://cassandra/sidecar/test_user2";
     private static final String TEST_SUPERUSER_IDENTITY = "spiffe://cassandra/sidecar/test_superuser";
     private static final String TEST_SUPERUSER2_IDENTITY = "spiffe://cassandra/sidecar/test_superuser2";
+    private static final String TEST_SUPERUSER3_IDENTITY = "spiffe://cassandra/sidecar/test_superuser3";
     private static final String SCHEMA_ROUTE = "/api/v1/cassandra/schema";
     private static final String CACHE_INVALIDATE_ROUTE_TEMPLATE = "/api/v1/caches/%s/invalidate";
 
-    // Cache name constants
-    private static final String IDENTITY_TO_ROLE_CACHE = "identity_to_role_cache";
-    private static final String ROLE_AUTHORIZATION_CACHE = "role_authorization_cache";
-    private static final String SUPER_USER_CACHE = "super_user_cache";
-    private static final String ENDPOINT_AUTHORIZATION_CACHE = "endpoint_authorization_cache";
-
     private Path testUserKeystorePath;
+    private Path testUser2KeystorePath;
     private Path superuserKeystorePath;
     private Path superuser2KeystorePath;
+    private Path superuser3KeystorePath;
 
     @Override
     protected void beforeClusterProvisioning()
@@ -154,7 +151,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                                       Map.of());
 
             CacheConfiguration permissionCacheConfiguration = CacheConfigurationImpl.builder()
-                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("5m"))
+                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("5s"))
                                                                                     .build();
 
             AccessControlConfiguration accessControlConfiguration = AccessControlConfigurationImpl.builder()
@@ -200,10 +197,14 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         {
             testUserKeystorePath = mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
                                                                       certificateBuilder.addSanUriName(TEST_USER_IDENTITY));
+            testUser2KeystorePath = mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
+                                                                       certificateBuilder.addSanUriName(TEST_USER2_IDENTITY));
             superuserKeystorePath = mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
                                                                        certificateBuilder.addSanUriName(TEST_SUPERUSER_IDENTITY));
             superuser2KeystorePath = mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
                                                                         certificateBuilder.addSanUriName(TEST_SUPERUSER2_IDENTITY));
+            superuser3KeystorePath = mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
+                                                                        certificateBuilder.addSanUriName(TEST_SUPERUSER3_IDENTITY));
         }
         catch (Exception e)
         {
@@ -231,7 +232,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     void testInvalidateIdentityToRoleCache()
     {
         IdentityToRoleCache identityToRoleCache = serverWrapper.injector.getInstance(IdentityToRoleCache.class);
-        verifyFullCacheInvalidation(IDENTITY_TO_ROLE_CACHE,
+        verifyFullCacheInvalidation(IdentityToRoleCache.NAME,
                                    identityToRoleCache::getAll,
                                    testUserKeystorePath,
                                    TEST_USER_IDENTITY,
@@ -243,13 +244,13 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     void testInvalidateIdentityToRoleCacheWithKeys()
     {
         IdentityToRoleCache identityToRoleCache = serverWrapper.injector.getInstance(IdentityToRoleCache.class);
-        verifySelectiveKeyInvalidation(IDENTITY_TO_ROLE_CACHE,
+        verifySelectiveKeyInvalidation(IdentityToRoleCache.NAME,
                                       identityToRoleCache::getAll,
                                       testUserKeystorePath,
-                                      superuserKeystorePath,
+                                      testUser2KeystorePath,
                                       TEST_USER_IDENTITY,
                                       TEST_USER_IDENTITY,
-                                      TEST_SUPERUSER_IDENTITY,
+                                      TEST_USER2_IDENTITY,
                                       testUserKeystorePath);
     }
 
@@ -259,16 +260,16 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         RoleAuthorizationsCache roleAuthorizationsCache = serverWrapper.injector.getInstance(RoleAuthorizationsCache.class);
 
         // Clear the cache first to ensure clean state
-        String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, ROLE_AUTHORIZATION_CACHE);
+        String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, RoleAuthorizationsCache.NAME);
         verifyAccess(HttpMethod.DELETE, clearCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        String endpointCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, ENDPOINT_AUTHORIZATION_CACHE);
+        String endpointCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
         verifyAccess(HttpMethod.DELETE, endpointCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
 
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
         loopAssert(3, () -> assertThat(roleAuthorizationsCache.get("unique_cache_entry_key").get("test_role")).isNotNull());
 
         // Invalidate cache and verify its empty
-        String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, ROLE_AUTHORIZATION_CACHE);
+        String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, RoleAuthorizationsCache.NAME);
         verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
         loopAssert(3, () -> assertThat(roleAuthorizationsCache.getAll().isEmpty()));
 
@@ -281,7 +282,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     void testInvalidateRoleAuthorizationsCacheWithKeys()
     {
         RoleAuthorizationsCache roleAuthorizationsCache = serverWrapper.injector.getInstance(RoleAuthorizationsCache.class);
-        verifyKeyBasedInvalidationNotSupported(ROLE_AUTHORIZATION_CACHE,
+        verifyKeyBasedInvalidationNotSupported(RoleAuthorizationsCache.NAME,
                                               roleAuthorizationsCache::getAll,
                                               testUserKeystorePath);
     }
@@ -290,7 +291,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     void testInvalidateSuperUserCache()
     {
         SuperUserCache superUserCache = serverWrapper.injector.getInstance(SuperUserCache.class);
-        verifyFullCacheInvalidation(SUPER_USER_CACHE,
+        verifyFullCacheInvalidation(SuperUserCache.NAME,
                                    superUserCache::getAll,
                                    superuser2KeystorePath,
                                    "test_superuser2_role",
@@ -302,13 +303,13 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     void testInvalidateSuperUserCacheWithKeys()
     {
         SuperUserCache superUserCache = serverWrapper.injector.getInstance(SuperUserCache.class);
-        verifySelectiveKeyInvalidation(SUPER_USER_CACHE,
+        verifySelectiveKeyInvalidation(SuperUserCache.NAME,
                                       superUserCache::getAll,
-                                      superuserKeystorePath,
                                       superuser2KeystorePath,
+                                      superuser3KeystorePath,
                                       "test_superuser2_role",
                                       "test_superuser2_role",
-                                      "test_superuser_role",
+                                      "test_superuser3_role",
                                       superuser2KeystorePath);
     }
 
@@ -319,14 +320,14 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         AsyncCache<AuthorizationCacheKey, Boolean> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
 
         // Clear the cache first to ensure clean state
-        String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, ENDPOINT_AUTHORIZATION_CACHE);
+        String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
         verifyAccess(HttpMethod.DELETE, clearCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
 
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
         loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap().isEmpty()));
 
         // Invalidate cache and verify
-        String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, ENDPOINT_AUTHORIZATION_CACHE);
+        String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
         verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
         loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap().isEmpty()));
 
@@ -341,7 +342,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         CacheFactory cacheFactory = serverWrapper.injector.getInstance(CacheFactory.class);
         AsyncCache<AuthorizationCacheKey, Boolean> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
 
-        verifyKeyBasedInvalidationNotSupported(ENDPOINT_AUTHORIZATION_CACHE,
+        verifyKeyBasedInvalidationNotSupported(CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME,
                                               () -> endpointAuthorizationCache.synchronous().asMap(),
                                               testUserKeystorePath);
     }
@@ -368,16 +369,28 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         session.execute("CREATE ROLE IF NOT EXISTS \"test_role\" WITH SUPERUSER = false AND LOGIN = true");
         session.execute(String.format("ADD IDENTITY IF NOT EXISTS '%s' TO ROLE 'test_role'", TEST_USER_IDENTITY));
 
+        session.execute("CREATE ROLE IF NOT EXISTS \"test_role2\" WITH SUPERUSER = false AND LOGIN = true");
+        session.execute(String.format("ADD IDENTITY IF NOT EXISTS '%s' TO ROLE 'test_role2'", TEST_USER2_IDENTITY));
+
+        // Create a test superuser role for testing SuperUserCache
         session.execute("CREATE ROLE IF NOT EXISTS \"test_superuser_role\" WITH SUPERUSER = true AND LOGIN = true");
         session.execute(String.format("ADD IDENTITY IF NOT EXISTS '%s' TO ROLE 'test_superuser_role'", TEST_SUPERUSER_IDENTITY));
 
         session.execute("CREATE ROLE IF NOT EXISTS \"test_superuser2_role\" WITH SUPERUSER = true AND LOGIN = true");
         session.execute(String.format("ADD IDENTITY IF NOT EXISTS '%s' TO ROLE 'test_superuser2_role'", TEST_SUPERUSER2_IDENTITY));
 
+        session.execute("CREATE ROLE IF NOT EXISTS \"test_superuser3_role\" WITH SUPERUSER = true AND LOGIN = true");
+        session.execute(String.format("ADD IDENTITY IF NOT EXISTS '%s' TO ROLE 'test_superuser3_role'", TEST_SUPERUSER3_IDENTITY));
+
+        // Insert permissions into role_permissions_v1 to populate RoleAuthorizationsCache
         session.execute("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
                        "VALUES ('test_role', 'cluster', {'SCHEMA:READ'})");
         session.execute("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
                        "VALUES ('test_role', 'data', {'SNAPSHOT:CREATE'})");
+        session.execute("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
+                       "VALUES ('test_role2', 'cluster', {'SCHEMA:READ'})");
+        session.execute("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
+                       "VALUES ('test_role2', 'data', {'SNAPSHOT:CREATE'})");
     }
 
     private void configureAdminAndSidecarIdentity(IInstance instance)
@@ -455,7 +468,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         // Clear cache and populate
         String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName);
         verifyAccess(HttpMethod.DELETE, clearCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        String endpointCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, ENDPOINT_AUTHORIZATION_CACHE);
+        String endpointCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
         verifyAccess(HttpMethod.DELETE, endpointCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, populateKeystore, assertStatus(HttpResponseStatus.OK));
         loopAssert(3, () -> assertThat(cacheSupplier.get()).isNotEmpty());
@@ -500,7 +513,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         // Clear cache and populate
         String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName);
         verifyAccess(HttpMethod.DELETE, clearCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        String endpointCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, ENDPOINT_AUTHORIZATION_CACHE);
+        String endpointCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
         verifyAccess(HttpMethod.DELETE, endpointCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, populateKeystore1, assertStatus(HttpResponseStatus.OK));
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, populateKeystore2, assertStatus(HttpResponseStatus.OK));
@@ -552,7 +565,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         // Clear cache and populate
         String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName);
         verifyAccess(HttpMethod.DELETE, clearCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        String endpointCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, ENDPOINT_AUTHORIZATION_CACHE);
+        String endpointCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
         verifyAccess(HttpMethod.DELETE, endpointCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, populateKeystore, assertStatus(HttpResponseStatus.OK));
 
