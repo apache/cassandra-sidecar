@@ -151,7 +151,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                                       Map.of());
 
             CacheConfiguration permissionCacheConfiguration = CacheConfigurationImpl.builder()
-                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("5s"))
+                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("5m"))
                                                                                     .build();
 
             AccessControlConfiguration accessControlConfiguration = AccessControlConfigurationImpl.builder()
@@ -250,7 +250,8 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                       List.of(TEST_USER_IDENTITY),
                                       List.of(TEST_USER_IDENTITY),
                                       TEST_USER2_IDENTITY,
-                                      testUserKeystorePath);
+                                      testUserKeystorePath,
+                                      TEST_USER_IDENTITY);
     }
 
     @Test
@@ -263,7 +264,8 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                       List.of(TEST_USER_IDENTITY, TEST_USER2_IDENTITY),
                                       List.of(TEST_USER_IDENTITY, TEST_USER2_IDENTITY),
                                       TEST_SUPERUSER_IDENTITY,
-                                      testUserKeystorePath);
+                                      testUserKeystorePath,
+                                      TEST_USER_IDENTITY);
     }
 
     @Test
@@ -321,7 +323,8 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                       List.of("test_superuser2_role"),
                                       List.of("test_superuser2_role"),
                                       "test_superuser3_role",
-                                      superuser2KeystorePath);
+                                      superuser2KeystorePath,
+                                      "test_superuser2_role");
     }
 
     @Test
@@ -331,10 +334,11 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         verifySelectiveKeyInvalidation(SuperUserCache.NAME,
                                       superUserCache::getAll,
                                       List.of(superuserKeystorePath, superuser2KeystorePath, superuser3KeystorePath),
-                                      List.of("test_superuser_role", "test_superuser3_role"),
-                                      List.of("test_superuser_role", "test_superuser3_role"),
-                                      "test_superuser2_role",
-                                      superuserKeystorePath);
+                                      List.of("test_superuser2_role", "test_superuser3_role"),
+                                      List.of("test_superuser2_role", "test_superuser3_role"),
+                                      "test_superuser_role",
+                                      superuser2KeystorePath,
+                                      "test_superuser2_role");
     }
 
     @Test
@@ -541,6 +545,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
      * @param verifyRemovedKeys the keys that should be removed from cache
      * @param verifyRemainingKey at least one key that should remain in cache
      * @param repopulateKeystore keystore to use for re-populating after invalidation
+     * @param expectedRepopulatedKey the key expected to be back in cache after re-population
      */
     private void verifySelectiveKeyInvalidation(String cacheName,
                                                java.util.function.Supplier<java.util.Map<String, ?>> cacheSupplier,
@@ -548,7 +553,8 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                                List<String> keysToInvalidate,
                                                List<String> verifyRemovedKeys,
                                                String verifyRemainingKey,
-                                               Path repopulateKeystore)
+                                               Path repopulateKeystore,
+                                               String expectedRepopulatedKey)
     {
         // Clear cache and populate
         String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName);
@@ -561,7 +567,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         }
 
         // Verify cache has multiple entries
-        loopAssert(3, () -> assertThat(cacheSupplier.get()).hasSizeGreaterThan(populateKeystores.size() - 1));
+        loopAssert(3, () -> assertThat(cacheSupplier.get()).hasSizeGreaterThanOrEqualTo(populateKeystores.size()));
         for (String removedKey : verifyRemovedKeys)
         {
             loopAssert(3, () -> assertThat(cacheSupplier.get()).containsKey(removedKey));
@@ -595,8 +601,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
 
         // Re-populate and verify
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, repopulateKeystore, assertStatus(HttpResponseStatus.OK));
-        // Only verify that the key corresponding to repopulateKeystore is back
-        loopAssert(3, () -> assertThat(cacheSupplier.get()).containsKey(verifyRemovedKeys.get(0)));
+        loopAssert(3, () -> assertThat(cacheSupplier.get()).containsKey(expectedRepopulatedKey));
     }
 
     /**
