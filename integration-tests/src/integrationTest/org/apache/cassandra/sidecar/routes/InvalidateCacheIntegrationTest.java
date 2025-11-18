@@ -151,7 +151,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                                       Map.of());
 
             CacheConfiguration permissionCacheConfiguration = CacheConfigurationImpl.builder()
-                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("5m"))
+                                                                                    .expireAfterAccess(MillisecondBoundConfiguration.parse("5s"))
                                                                                     .build();
 
             AccessControlConfiguration accessControlConfiguration = AccessControlConfigurationImpl.builder()
