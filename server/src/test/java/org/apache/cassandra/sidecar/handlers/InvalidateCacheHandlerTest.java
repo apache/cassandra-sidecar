@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -57,7 +58,6 @@ import org.apache.cassandra.sidecar.utils.CacheFactory;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -129,9 +129,9 @@ public class InvalidateCacheHandlerTest
     void testInvalidateIdentityToRoleCacheWithKeys(VertxTestContext context)
     {
         verifyInvalidateCache(context, IdentityToRoleCache.NAME,
-                             asList("key1", "key2"),
-                             OK,
-                             mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
+                              Arrays.asList("key1", "key2"),
+                              OK,
+                              mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
     }
 
     // RoleAuthorizationsCache tests
@@ -151,7 +151,7 @@ public class InvalidateCacheHandlerTest
     void testInvalidateRoleAuthorizationsCacheWithKeys(VertxTestContext context)
     {
         verifyInvalidateCache(context, RoleAuthorizationsCache.NAME,
-                             asList("key1"),
+                             Arrays.asList("key1"),
                              BAD_REQUEST,
                              null, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
     }
@@ -173,7 +173,7 @@ public class InvalidateCacheHandlerTest
     void testInvalidateSuperUserCacheWithKeys(VertxTestContext context)
     {
         verifyInvalidateCache(context, SuperUserCache.NAME,
-                             asList("user1", "user2", "user3"),
+                             Arrays.asList("user1", "user2", "user3"),
                              OK,
                              mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
     }
@@ -227,7 +227,7 @@ public class InvalidateCacheHandlerTest
     void testInvalidateEndpointAuthorizationCacheWithKeys(VertxTestContext context)
     {
         verifyInvalidateCache(context, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME,
-                             asList("key1"),
+                             Arrays.asList("key1"),
                              BAD_REQUEST,
                              null, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
     }
@@ -312,7 +312,8 @@ public class InvalidateCacheHandlerTest
                   }
 
                   // Verify other caches weren't touched
-                  for (AuthCache cache : cachesToNotInteract) {
+                  for (AuthCache cache : cachesToNotInteract)
+                  {
                       verifyNoInteractions(cache);
                   }
 
