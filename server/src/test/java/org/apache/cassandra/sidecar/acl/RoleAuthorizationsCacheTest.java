@@ -110,7 +110,7 @@ class RoleAuthorizationsCacheTest
                                                                     sidecarMetrics);
         assertThat(cache.getAll().size()).isZero();
         assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(2);
-        CacheStats initialCallStats = sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot();
+        CacheStats initialCallStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
         assertThat(initialCallStats.hitCount()).isZero();
         assertThat(initialCallStats.missCount()).isOne();
         assertThat(cache.getAll().size()).isOne();
@@ -123,20 +123,20 @@ class RoleAuthorizationsCacheTest
 
         // New entries fetched during refreshes
         assertThat(cache.getAuthorizations("test_role2").size()).isOne();
-        CacheStats afterRefreshStats = sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot();
+        CacheStats afterRefreshStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
         assertThat(afterRefreshStats.hitCount()).isZero();
         assertThat(afterRefreshStats.missCount()).isOne();
         assertThat(cache.getAll().size()).isOne();
         assertThat(afterRefreshStats.evictionCount()).isOne();
 
         assertThat(cache.getAuthorizations("test_role2").size()).isOne();
-        CacheStats validEntryStats = sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot();
+        CacheStats validEntryStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
         assertThat(validEntryStats.hitCount()).isOne();
         assertThat(validEntryStats.missCount()).isZero();
 
         // check for not existing role
         cache.getAuthorizations("non_existing_role");
-        CacheStats afterMissStats = sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot();
+        CacheStats afterMissStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
         assertThat(afterMissStats.missCount()).isEqualTo(0);
         // It is a hit, since we load entire role_permissions table during each refresh
         assertThat(afterMissStats.hitCount()).isOne();
@@ -167,7 +167,7 @@ class RoleAuthorizationsCacheTest
         assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(1);
         assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(1);
 
-        CacheStats multipleRetrievalStats = sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot();
+        CacheStats multipleRetrievalStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
         assertThat(multipleRetrievalStats.hitCount()).isEqualTo(4);
         assertThat(multipleRetrievalStats.loadSuccessCount()).isEqualTo(1);
         assertThat(multipleRetrievalStats.loadFailureCount()).isEqualTo(0);
@@ -324,13 +324,13 @@ class RoleAuthorizationsCacheTest
                                                                     mockSidecarPermissionsAccessor,
                                                                     sidecarMetrics);
 
-        CacheStats initialStats = sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot();
+        CacheStats initialStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
         assertThat(initialStats.loadCount()).isZero();
         assertThat(initialStats.totalLoadTime()).isZero();
 
         cache.getAuthorizations("test_role1");
 
-        CacheStats afterLoadStats = sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot();
+        CacheStats afterLoadStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
         assertThat(afterLoadStats.loadCount()).isOne();
         assertThat(afterLoadStats.totalLoadTime()).isGreaterThan(0);
 
@@ -354,7 +354,7 @@ class RoleAuthorizationsCacheTest
                                                                     mockSidecarPermissionsAccessor,
                                                                     sidecarMetrics);
 
-        CacheStats initialStats = sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot();
+        CacheStats initialStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
         assertThat(initialStats.loadFailureCount()).isZero();
 
         try
@@ -366,7 +366,7 @@ class RoleAuthorizationsCacheTest
             // ignore exception
         }
 
-        CacheStats afterFailureStats = sidecarMetrics.server().cache().rolePermissionsCacheMetrics.snapshot();
+        CacheStats afterFailureStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
         assertThat(afterFailureStats.loadFailureCount()).isEqualTo(1);
         assertThat(afterFailureStats.loadCount()).isEqualTo(1);
         assertThat(afterFailureStats.loadSuccessCount()).isEqualTo(0);
@@ -392,7 +392,7 @@ class RoleAuthorizationsCacheTest
                                           mockSidecarPermissionsAccessor,
                                           sidecarMetrics))
         .isInstanceOf(ConfigurationException.class)
-        .hasMessageContaining("role_permissions_cache must be configured with either refreshAfterWrite or expireAfterAccess");
+        .hasMessageContaining("role_authorizations_cache must be configured with either refreshAfterWrite or expireAfterAccess");
     }
 
     @Test

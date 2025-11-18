@@ -48,7 +48,7 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 @Singleton
 public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<Authorization>>>
 {
-    public static final String NAME = "role_permissions_cache";
+    public static final String NAME = "role_authorizations_cache";
     protected static final String UNIQUE_CACHE_ENTRY = "unique_cache_entry_key";
 
     @Inject
@@ -71,7 +71,7 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
                                                                 sidecarSchema,
                                                                 sidecarPermissionsDatabaseAccessor)),
               sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
-              sidecarMetrics.server().cache().rolePermissionsCacheMetrics);
+              sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics);
     }
 
     /**

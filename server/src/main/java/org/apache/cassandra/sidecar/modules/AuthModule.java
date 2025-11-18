@@ -167,7 +167,7 @@ public class AuthModule extends AbstractModule
     @Path(ApiEndpointsV1.INVALIDATE_CACHE_ROUTE)
     @Operation(summary = "Invalidate the specified cache",
     description = "Invalidates entries in the specified cache. Supports full cache invalidation or selective key-based invalidation where applicable. " +
-                  "Valid cache names: identity_to_role_cache, role_authorization_cache, super_user_cache, endpoint_authorization_cache.")
+                  "Valid cache names: identity_to_role_cache, role_authorizations_cache, super_user_cache, endpoint_authorization_cache.")
     @APIResponse(description = "Cache invalidated successfully",
     responseCode = "200")
     @ProvidesIntoMap
