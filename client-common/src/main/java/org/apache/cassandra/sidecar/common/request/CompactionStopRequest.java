@@ -25,7 +25,7 @@ import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 /**
  * Represents a request to execute node stop operation
  */
-public class CompactionStopRequest extends JsonRequest<OperationalJobResponse>
+public class CompactionStopRequest extends JsonRequest<CompactionStopRequest>
 {
     /**
      * Constructs a request to execute a node decommission operation

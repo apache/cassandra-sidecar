@@ -21,6 +21,8 @@ package org.apache.cassandra.sidecar.handlers;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
+import org.apache.cassandra.sidecar.common.data.CompactionType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,7 +54,6 @@ import static io.vertx.core.buffer.Buffer.buffer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -103,14 +104,12 @@ public class CompactionStopHandlerTest
         client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
-                      verify(mockCompactionManagerOperations, times(1)).stopCompaction(isNull(), eq("COMPACTION"));
+                      verify(mockCompactionManagerOperations, times(1)).stopCompaction(eq("COMPACTION"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                       CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
-                      assertThat(response.status()).isEqualTo("SUCCESS");
-                      assertThat(response.compactionType()).isEqualTo("COMPACTION");
-                      assertThat(response.errorCode()).isEqualTo("200 OK");
-                      assertThat(response.reason()).isEqualTo("Operation Succeeded");
+                      assertThat(response.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
+                      assertThat(response.compactionType()).isEqualTo(CompactionType.COMPACTION);
                   });
                   ctx.completeNow();
               }));
@@ -124,13 +123,12 @@ public class CompactionStopHandlerTest
         client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
-                      verify(mockCompactionManagerOperations, times(1)).stopCompaction(eq("abc-123"), isNull());
+                      verify(mockCompactionManagerOperations, times(1)).stopCompaction(eq("abc-123"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                       CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
-                      assertThat(response.status()).isEqualTo("SUCCESS");
+                      assertThat(response.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
                       assertThat(response.compactionId()).isEqualTo("abc-123");
-                      assertThat(response.errorCode()).isEqualTo("200 OK");
                   });
                   ctx.completeNow();
               }));
@@ -145,12 +143,12 @@ public class CompactionStopHandlerTest
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       verify(mockCompactionManagerOperations, times(1))
-                          .stopCompaction(eq("xyz-456"), eq("VALIDATION"));
+                          .stopCompaction(eq("xyz-456"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                       CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
-                      assertThat(response.status()).isEqualTo("SUCCESS");
-                      assertThat(response.compactionType()).isEqualTo("VALIDATION");
+                      assertThat(response.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
+                      assertThat(response.compactionType()).isEqualTo(CompactionType.VALIDATION);
                       assertThat(response.compactionId()).isEqualTo("xyz-456");
                   });
                   ctx.completeNow();
@@ -167,7 +165,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
                       verify(mockCompactionManagerOperations, times(0))
-                          .stopCompaction(anyString(), anyString());
+                          .stopCompaction(anyString());
                   });
                   ctx.completeNow();
               }));
@@ -183,7 +181,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
                       verify(mockCompactionManagerOperations, times(0))
-                          .stopCompaction(anyString(), anyString());
+                          .stopCompaction(anyString());
                   });
                   ctx.completeNow();
               }));
@@ -199,7 +197,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
                       verify(mockCompactionManagerOperations, times(0))
-                          .stopCompaction(anyString(), anyString());
+                          .stopCompaction( anyString());
                   });
                   ctx.completeNow();
               }));
@@ -215,7 +213,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
                       verify(mockCompactionManagerOperations, times(0))
-                          .stopCompaction(anyString(), anyString());
+                          .stopCompaction(anyString());
                   });
                   ctx.completeNow();
               }));
@@ -231,7 +229,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       // Should trim and uppercase the type
                       verify(mockCompactionManagerOperations, times(1))
-                          .stopCompaction(isNull(), eq("  COMPACTION  "));
+                          .stopCompaction(eq("  COMPACTION  "));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                   });
@@ -249,7 +247,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       // Should accept lowercase and validate after uppercasing
                       verify(mockCompactionManagerOperations, times(1))
-                          .stopCompaction(isNull(), eq("compaction"));
+                          .stopCompaction(eq("compaction"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                   });
@@ -278,7 +276,7 @@ public class CompactionStopHandlerTest
                       ctx.verify(() -> {
                           assertThat(resp.statusCode()).isEqualTo(OK.code());
                           CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
-                          assertThat(response.status()).isEqualTo("SUCCESS");
+                          assertThat(response.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
                       });
                   }));
         }

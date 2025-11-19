@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.CompactionInfo;
 import org.junit.jupiter.api.Test;
@@ -90,9 +91,8 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
         CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
         assertThat(stopResponse).isNotNull();
-        assertThat(stopResponse.status()).isEqualTo("SUBMITTED");
+        assertThat(stopResponse.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
         assertThat(stopResponse.compactionType()).isEqualTo("COMPACTION");
-        assertThat(stopResponse.errorCode()).isEqualTo("200 OK");
         assertThat(stopResponse.reason()).isEqualTo("Operation Succeeded");
     }
 
@@ -112,7 +112,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
         CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
         assertThat(stopResponse).isNotNull();
-        assertThat(stopResponse.status()).isEqualTo("SUBMITTED");
+        assertThat(stopResponse.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
         assertThat(stopResponse.compactionId()).isEqualTo("test-compaction-id");
     }
 
@@ -129,7 +129,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
         assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
         CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
         assertThat(stopResponse).isNotNull();
-        assertThat(stopResponse.status()).isEqualTo("SUBMITTED");
+        assertThat(stopResponse.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
         assertThat(stopResponse.compactionType()).isEqualTo("VALIDATION");
         assertThat(stopResponse.compactionId()).isEqualTo("test-id-123");
     }
@@ -190,7 +190,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
             CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
-            assertThat(stopResponse.status()).isEqualTo("SUBMITTED");
+            assertThat(stopResponse.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
             assertThat(stopResponse.compactionType()).isEqualTo(type);
         }
     }

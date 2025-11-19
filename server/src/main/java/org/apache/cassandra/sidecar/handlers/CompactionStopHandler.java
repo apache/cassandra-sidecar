@@ -30,6 +30,7 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
 import org.apache.cassandra.sidecar.common.data.CompactionType;
 import org.apache.cassandra.sidecar.common.request.data.CompactionStopRequestPayload;
 import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
@@ -109,16 +110,15 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
         // If compactionId is provided, use it (takes precedence over type)
         if (compactionId != null && !compactionId.trim().isEmpty()) {
             operations.stopCompactionById(compactionId);
-        } else if (compactionTypeStr != null) {
+        } else if (compactionType != null) {
             operations.stopCompaction(compactionTypeStr);
         }
         // If we reach here, at least one of the above conditions was true due to validation in extractParamsOrThrow()
         // Return success response
         return CompactionStopResponse.builder()
-                .compactionType(compactionTypeStr)
+                .compactionType(compactionType)
                 .compactionId(compactionId)
-                .status("SUBMITTED")
-                .errorCode("200 OK")
+                .status(CompactionStopStatus.SUBMITTED)
                 .build();
     }
 

@@ -22,6 +22,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
+import org.apache.cassandra.sidecar.common.data.CompactionType;
 
 /**
  * Response class for the Compaction Stop API
@@ -32,22 +34,15 @@ public class CompactionStopResponse
     public static final String COMPACTION_TYPE_KEY = "compaction_type";
     public static final String COMPACTION_ID_KEY = "compaction_id";
     public static final String STATUS_KEY = "status";
-    public static final String ERROR_CODE_KEY = "error_code";
-    public static final String REASON_KEY = "reason";
-
-    private final String compactionType;
+    private final CompactionType compactionType;
     private final String compactionId;
-    private final String status;
-    private final String errorCode;
-    private final String reason;
+    private final CompactionStopStatus status;
 
     private CompactionStopResponse(Builder builder)
     {
         this.compactionType = builder.compactionType;
         this.compactionId = builder.compactionId;
         this.status = builder.status;
-        this.errorCode = builder.errorCode;
-        this.reason = builder.reason;
     }
 
     /**
@@ -56,28 +51,22 @@ public class CompactionStopResponse
      * @param compactionType the type of compaction that was requested to stop
      * @param compactionId   the ID of the compaction that was requested to stop
      * @param status         the status of the stop operation (e.g., "PENDING", "FAILED")
-     * @param errorCode      the error code (e.g., "200 OK", "400 BAD REQUEST", "404 NOT FOUND", "503 SERVICE UNAVAILABLE")
-     * @param reason         the reason for the status (e.g., "Operation Succeeded", "Malformed Request", "Server-side error")
      */
     @JsonCreator
-    public CompactionStopResponse(@JsonProperty(COMPACTION_TYPE_KEY) String compactionType,
+    public CompactionStopResponse(@JsonProperty(COMPACTION_TYPE_KEY) CompactionType compactionType,
                                   @JsonProperty(COMPACTION_ID_KEY) String compactionId,
-                                  @JsonProperty(STATUS_KEY) String status,
-                                  @JsonProperty(ERROR_CODE_KEY) String errorCode,
-                                  @JsonProperty(REASON_KEY) String reason)
+                                  @JsonProperty(STATUS_KEY) CompactionStopStatus status)
     {
         this.compactionType = compactionType;
         this.compactionId = compactionId;
         this.status = status;
-        this.errorCode = errorCode;
-        this.reason = reason;
     }
 
     /**
      * @return the type of compaction that was requested to stop
      */
     @JsonProperty(COMPACTION_TYPE_KEY)
-    public String compactionType()
+    public CompactionType compactionType()
     {
         return compactionType;
     }
@@ -95,27 +84,9 @@ public class CompactionStopResponse
      * @return the status of the stop operation
      */
     @JsonProperty(STATUS_KEY)
-    public String status()
+    public CompactionStopStatus status()
     {
         return status;
-    }
-
-    /**
-     * @return the error code
-     */
-    @JsonProperty(ERROR_CODE_KEY)
-    public String errorCode()
-    {
-        return errorCode;
-    }
-
-    /**
-     * @return the reason for the status
-     */
-    @JsonProperty(REASON_KEY)
-    public String reason()
-    {
-        return reason;
     }
 
     @Override
@@ -125,9 +96,7 @@ public class CompactionStopResponse
                              "compactionType='%s', " +
                              "compactionId='%s', " +
                              "status='%s', " +
-                             "errorCode='%s', " +
-                             "reason='%s'}",
-                             compactionType, compactionId, status, errorCode, reason);
+                             compactionType, compactionId, status);
     }
 
     public static Builder builder()
@@ -140,11 +109,9 @@ public class CompactionStopResponse
      */
     public static final class Builder implements DataObjectBuilder<Builder, CompactionStopResponse>
     {
-        private String compactionType;
+        private CompactionType compactionType;
         private String compactionId;
-        private String status;
-        private String errorCode;
-        private String reason;
+        private CompactionStopStatus status;
 
         private Builder()
         {
@@ -162,7 +129,7 @@ public class CompactionStopResponse
          * @param compactionType the {@code compactionType} to set
          * @return a reference to this Builder
          */
-        public Builder compactionType(String compactionType)
+        public Builder compactionType(CompactionType compactionType)
         {
             return update(b -> b.compactionType = compactionType);
         }
@@ -184,32 +151,11 @@ public class CompactionStopResponse
          * @param status the {@code status} to set
          * @return a reference to this Builder
          */
-        public Builder status(String status)
+        public Builder status(CompactionStopStatus status)
         {
             return update(b -> b.status = status);
         }
 
-        /**
-         * Sets the {@code errorCode} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param errorCode the {@code errorCode} to set
-         * @return a reference to this Builder
-         */
-        public Builder errorCode(String errorCode)
-        {
-            return update(b -> b.errorCode = errorCode);
-        }
-
-        /**
-         * Sets the {@code reason} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param reason the {@code reason} to set
-         * @return a reference to this Builder
-         */
-        public Builder reason(String reason)
-        {
-            return update(b -> b.reason = reason);
-        }
 
         /**
          * Returns a {@code CompactionStopResponse} built from the parameters previously set.
