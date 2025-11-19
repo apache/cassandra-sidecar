@@ -94,26 +94,6 @@ public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandl
         return new Params(cacheName, keys);
     }
 
-    /**
-     * Simple holder class for cache invalidation parameters
-     */
-    protected static class Params
-    {
-        final String cacheName;
-        final List<String> keys;
-
-        Params(String cacheName, List<String> keys)
-        {
-            this.cacheName = cacheName;
-            this.keys = keys;
-        }
-
-        boolean invalidateAll()
-        {
-            return keys == null || keys.isEmpty();
-        }
-    }
-
     @Override
     protected void handleInternal(RoutingContext context,
                                   HttpServerRequest httpRequest,
@@ -142,16 +122,14 @@ public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandl
             case ENDPOINT_AUTHORIZATION_CACHE_NO_UNDERSCORE:
                 if (!invalidateAll)
                 {
-                    context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                                   "endpoint_authorization_cache does not support selective key invalidation"));
-                    return;
+                    throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                                   "endpoint_authorization_cache does not support selective key invalidation");
                 }
                 endpointAuthorizationCache.synchronous().invalidateAll();
                 break;
             default:
-                context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND,
-                                               "Unknown cache: " + cacheName));
-                return;
+                throw wrapHttpException(HttpResponseStatus.NOT_FOUND,
+                                               "Unknown cache: " + cacheName);
         }
 
         logger.info("Cache {} invalidated successfully. Keys: {}", cacheName,
@@ -184,4 +162,25 @@ public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandl
             cache.invalidateAll(params.keys);
         }
     }
+
+    /**
+     * Simple holder class for cache invalidation parameters
+     */
+    protected static class Params
+    {
+        final String cacheName;
+        final List<String> keys;
+
+        Params(String cacheName, List<String> keys)
+        {
+            this.cacheName = cacheName;
+            this.keys = keys;
+        }
+
+        boolean invalidateAll()
+        {
+            return keys == null || keys.isEmpty();
+        }
+    }
+
 }

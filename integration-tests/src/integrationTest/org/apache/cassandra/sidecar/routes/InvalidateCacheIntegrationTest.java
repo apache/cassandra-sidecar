@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +64,7 @@ import org.apache.cassandra.sidecar.utils.CacheFactory;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 
+import static java.net.URLEncoder.encode;
 import static org.apache.cassandra.testing.DriverTestUtils.buildContactPoints;
 import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
 import static org.apache.cassandra.testing.TlsTestUtils.getSSLOptions;
@@ -580,7 +582,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         StringBuilder routeBuilder = new StringBuilder(String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName));
         for (int i = 0; i < keysToInvalidate.size(); i++)
         {
-            routeBuilder.append(i == 0 ? "?keys=" : "&keys=").append(keysToInvalidate.get(i));
+            routeBuilder.append(i == 0 ? "?keys=" : "&keys=").append(encode(keysToInvalidate.get(i), StandardCharsets.UTF_8));
         }
         String invalidateCacheRoute = routeBuilder.toString();
 

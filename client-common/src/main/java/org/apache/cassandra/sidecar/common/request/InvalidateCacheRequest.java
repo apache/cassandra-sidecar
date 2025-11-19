@@ -18,12 +18,16 @@
 
 package org.apache.cassandra.sidecar.common.request;
 
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.jetbrains.annotations.Nullable;
+
+import static java.net.URLEncoder.encode;
 
 /**
  * Represents a request to invalidate the specified cache
@@ -65,7 +69,15 @@ public class InvalidateCacheRequest extends JsonRequest<HealthResponse>
             {
                 uri.append('&');
             }
-            uri.append("keys=").append(keys.get(i));
+            try
+            {
+                uri.append("keys=").append(encode(keys.get(i), StandardCharsets.UTF_8.name()));
+            }
+            catch (UnsupportedEncodingException e)
+            {
+                // UTF-8 is always supported, this should never happen
+                throw new RuntimeException("UTF-8 encoding not supported", e);
+            }
         }
         return uri.toString();
     }
