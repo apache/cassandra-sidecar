@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
+import org.apache.cassandra.sidecar.utils.FastCassandraInputValidator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -69,7 +70,7 @@ public abstract class AbstractSnapshotPathBuilderTest
     @BeforeEach
     protected void setup() throws IOException
     {
-        CassandraInputValidator validator = new CassandraInputValidator();
+        CassandraInputValidator validator = new FastCassandraInputValidator();
 
         InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
         InstanceMetadata mockInstanceMeta = mock(InstanceMetadata.class);

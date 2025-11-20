@@ -21,16 +21,22 @@ package org.apache.cassandra.sidecar.config.yaml;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
+import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
+import org.apache.cassandra.sidecar.utils.RegexBasedCassandraInputValidator;
 
 /**
  * Encapsulate configuration values for validation properties used for Cassandra inputs
  */
 public class CassandraInputValidationConfigurationImpl implements CassandraInputValidationConfiguration
 {
+    public static final String VALIDATOR_PROPERTY = "validator";
+    private static final ParameterizedClassConfiguration DEFAULT_VALIDATOR_CONFIGURATION
+    = new ParameterizedClassConfigurationImpl(RegexBasedCassandraInputValidator.class.getName(), Map.of());
     public static final String FORBIDDEN_KEYSPACES_PROPERTY = "forbidden_keyspaces";
     public static final Set<String> DEFAULT_FORBIDDEN_KEYSPACES =
     Collections.unmodifiableSet(new HashSet<>(Arrays.asList("system_schema",
@@ -47,10 +53,13 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
     public static final String DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME = "[a-zA-Z_0-9]{1,48}";
     public static final String ALLOWED_CHARS_FOR_COMPONENT_NAME_PROPERTY = "allowed_chars_for_component_name";
     public static final String DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME =
-    "[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)";
+    "[a-zA-Z0-9_-]+(\\.db|\\.cql|\\.json|\\.crc32|TOC\\.txt)";
     public static final String ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME_PROPERTY =
     "allowed_chars_for_restricted_component_name";
-    public static final String DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME = "[a-zA-Z0-9_-]+(.db|TOC.txt)";
+    public static final String DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME = "[a-zA-Z0-9_-]+(\\.db|TOC\\.txt)";
+
+    @JsonProperty(value = VALIDATOR_PROPERTY)
+    protected final ParameterizedClassConfiguration validatorConfiguration;
 
     @JsonProperty(FORBIDDEN_KEYSPACES_PROPERTY)
     protected final Set<String> forbiddenKeyspaces;
@@ -69,24 +78,37 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
 
     public CassandraInputValidationConfigurationImpl()
     {
-        this(DEFAULT_FORBIDDEN_KEYSPACES,
+        this(DEFAULT_VALIDATOR_CONFIGURATION,
+             DEFAULT_FORBIDDEN_KEYSPACES,
              DEFAULT_ALLOWED_CHARS_FOR_NAME,
              DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME,
              DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME,
              DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME);
     }
 
-    public CassandraInputValidationConfigurationImpl(Set<String> forbiddenKeyspaces,
+    public CassandraInputValidationConfigurationImpl(ParameterizedClassConfiguration validatorConfiguration,
+                                                     Set<String> forbiddenKeyspaces,
                                                      String allowedPatternForName,
                                                      String allowedPatternForQuotedName,
                                                      String allowedPatternForComponentName,
                                                      String allowedPatternForRestrictedComponentName)
     {
+        this.validatorConfiguration = validatorConfiguration;
         this.forbiddenKeyspaces = forbiddenKeyspaces;
         this.allowedPatternForName = allowedPatternForName;
         this.allowedPatternForQuotedName = allowedPatternForQuotedName;
         this.allowedPatternForComponentName = allowedPatternForComponentName;
         this.allowedPatternForRestrictedComponentName = allowedPatternForRestrictedComponentName;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = VALIDATOR_PROPERTY)
+    public ParameterizedClassConfiguration validatorConfiguration()
+    {
+        return validatorConfiguration;
     }
 
     /**

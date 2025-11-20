@@ -1,0 +1,320 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: CI
+
+on:
+  pull_request:
+    branches: [trunk]
+  push:
+    branches: [trunk]
+
+# Cancel in-progress runs for PRs when new commits are pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Build Cassandra dtest jars once for all test jobs to reuse
+  build-dtest-jars:
+    name: Build dtest jars
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Java 11
+        uses: actions/setup-java@v5
+        with:
+          java-version: "11"
+          distribution: "temurin"
+          cache: "gradle"
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ant
+
+      - name: Setup network aliases for multi-node tests
+        run: |
+          for i in {2..20}; do
+            sudo ip addr add 127.0.0.$i/8 dev lo
+          done
+
+      - name: Cache dtest jars
+        id: cache-dtest-jars
+        uses: actions/cache@v4
+        with:
+          path: dtest-jars/
+          key: dtest-jars-${{ hashFiles('scripts/build-dtest-jars.sh', 'gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Dtest jars cache status
+        run: |
+          if [ "${{ steps.cache-dtest-jars.outputs.cache-hit }}" == "true" ]; then
+            echo "✅ Dtest jars restored from cache (saves ~25 minutes)"
+          else
+            echo "⚠️ Cache miss - will build dtest jars (~25 minutes)"
+          fi
+
+      - name: Build dtest jars
+        if: steps.cache-dtest-jars.outputs.cache-hit != 'true'
+        run: |
+          ./scripts/build-dtest-jars.sh
+
+      - name: Upload dtest jars artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: dtest-jars
+          path: dtest-jars/
+          retention-days: 90
+
+  # Run unit tests with static analysis on all Java versions
+  unit-tests:
+    name: Unit tests (Java ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    needs: build-dtest-jars
+    permissions:
+      contents: read
+      checks: write
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ["11", "17"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Java ${{ matrix.java }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: "temurin"
+          cache: "gradle"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
+
+      - name: Download dtest jars
+        uses: actions/download-artifact@v5
+        with:
+          name: dtest-jars
+          path: dtest-jars/
+
+      - name: Run build with static analysis
+        run: |
+          ./gradlew build -x integrationTest -x checkstyleMain -x checkstyleTest -x checkstyleTestFixtures -x javadoc --stacktrace
+        env:
+          CASSANDRA_DEP_DIR: ${{ github.workspace }}/dtest-jars
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: unit-test-results-java-${{ matrix.java }}
+          path: |
+            **/build/test-results/test/**
+            **/build/reports/tests/
+          retention-days: 30
+
+      - name: Upload static analysis reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: static-analysis-reports-java-${{ matrix.java }}
+          path: |
+            **/build/reports/spotbugs/
+            **/build/reports/rat/
+            **/build/reports/jacoco/
+          retention-days: 30
+
+  # Run lightweight integration tests on full matrix
+  integration-tests-lightweight:
+    name: Integration tests lightweight (Java ${{ matrix.java }}, C* ${{ matrix.cassandra }})
+    runs-on: ubuntu-latest
+    needs: [build-dtest-jars, unit-tests]
+    permissions:
+      contents: read
+      checks: write
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ["11", "17"]
+        cassandra: ["4.0", "4.1", "5.0", "5.1"]
+        include:
+          - cassandra: "4.0"
+            dtestVersion: "4.0.16"
+          - cassandra: "4.1"
+            dtestVersion: "4.1.6"
+          - cassandra: "5.0"
+            dtestVersion: "5.0.3"
+          - cassandra: "5.1"
+            dtestVersion: "5.1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Java ${{ matrix.java }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: "temurin"
+          cache: "gradle"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ant
+
+      - name: Setup network aliases for multi-node tests
+        run: |
+          for i in {2..20}; do
+            sudo ip addr add 127.0.0.$i/8 dev lo
+          done
+
+      - name: Download dtest jars
+        uses: actions/download-artifact@v5
+        with:
+          name: dtest-jars
+          path: dtest-jars/
+
+      - name: Install dtest jars to local Maven
+        run: |
+          ./scripts/install-shaded-dtest-jar-local.sh
+        env:
+          CASSANDRA_DEP_DIR: ${{ github.workspace }}/dtest-jars
+
+      - name: Run lightweight integration tests
+        run: |
+          ./gradlew --no-daemon \
+            -PdtestVersion=${{ matrix.dtestVersion }} \
+            -Dcassandra.sidecar.versions_to_test="${{ matrix.cassandra }}" \
+            integrationTestLightWeight \
+            --stacktrace
+        env:
+          CASSANDRA_DEP_DIR: ${{ github.workspace }}/dtest-jars
+          INTEGRATION_MAX_PARALLEL_FORKS: 3
+          INTEGRATION_MAX_HEAP_SIZE: 2500M
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: integration-lightweight-results-java-${{ matrix.java }}-cassandra-${{ matrix.cassandra }}
+          path: |
+            **/build/test-results/integrationTest*/**
+            **/build/reports/tests/integrationTest*/
+          retention-days: 30
+
+  # Run heavyweight integration tests on full matrix
+  integration-tests-heavyweight:
+    name: Integration tests heavyweight (Java ${{ matrix.java }}, C* ${{ matrix.cassandra }})
+    runs-on: ubuntu-latest
+    needs: [build-dtest-jars, unit-tests]
+    permissions:
+      contents: read
+      checks: write
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ["11", "17"]
+        cassandra: ["4.0", "4.1", "5.0", "5.1"]
+        include:
+          - cassandra: "4.0"
+            dtestVersion: "4.0.16"
+          - cassandra: "4.1"
+            dtestVersion: "4.1.6"
+          - cassandra: "5.0"
+            dtestVersion: "5.0.3"
+          - cassandra: "5.1"
+            dtestVersion: "5.1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Java ${{ matrix.java }}
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: "temurin"
+          cache: "gradle"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ant
+
+      - name: Setup network aliases for multi-node tests
+        run: |
+          for i in {2..20}; do
+            sudo ip addr add 127.0.0.$i/8 dev lo
+          done
+
+      - name: Download dtest jars
+        uses: actions/download-artifact@v5
+        with:
+          name: dtest-jars
+          path: dtest-jars/
+
+      - name: Install dtest jars to local Maven
+        run: |
+          ./scripts/install-shaded-dtest-jar-local.sh
+        env:
+          CASSANDRA_DEP_DIR: ${{ github.workspace }}/dtest-jars
+
+      - name: Run heavyweight integration tests
+        run: |
+          ./gradlew --no-daemon \
+            -PdtestVersion=${{ matrix.dtestVersion }} \
+            -Dcassandra.sidecar.versions_to_test="${{ matrix.cassandra }}" \
+            integrationTestHeavyWeight \
+            --stacktrace
+        env:
+          CASSANDRA_DEP_DIR: ${{ github.workspace }}/dtest-jars
+          INTEGRATION_MAX_PARALLEL_FORKS: 3
+          INTEGRATION_MAX_HEAP_SIZE: 3600M
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: integration-heavyweight-results-java-${{ matrix.java }}-cassandra-${{ matrix.cassandra }}
+          path: |
+            **/build/test-results/integrationTest*/**
+            **/build/reports/tests/integrationTest*/
+          retention-days: 30

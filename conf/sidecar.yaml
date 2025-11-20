@@ -375,6 +375,23 @@ metrics:
 #      value: "vertx.eventbus.*"              # exclude all metrics starts with vertx.eventbus
 
 cassandra_input_validation:
+  validator:
+    # Implementation to use for the validation of Casandra inputs. Out of the box, Cassandra Sidecar provides
+    # org.apache.cassandra.sidecar.utils.{RegexBasedCassandraInputValidator, FastCassandraInputValidator}.
+    #
+    # - RegexBasedCassandraInputValidator default implementation the uses regular expressions to perform validations
+    # - FastCassandraInputValidator optimized implementation that does not use regular expressions. This implementation
+    #                               ignores the regular expressions configured in the cassandra_input_validation
+    #                               configuration.
+  - class_name: org.apache.cassandra.sidecar.utils.RegexBasedCassandraInputValidator
+    # Configuration parameters that are only applicable to the FastCassandraInputValidator implementation
+    #parameters:
+    #  # Comma-separated list of terminations allowed for the component name. By default, allowed component
+    #  # names can only end in .db, .cql, .json, .crc32, or TOC.txt
+    #  valid_terminations: ".db,.cql,.json,.crc32,TOC.txt"
+    #  # Comma-separated list of terminations allowed for the restricted component name. By default, allowed
+    #  # restricted component names con only end in .db or TOC.txt
+    #  valid_restricted_terminations: ".db,TOC.txt"
   forbidden_keyspaces:
     - system_schema
     - system_traces
@@ -386,8 +403,8 @@ cassandra_input_validation:
     - sidecar_internal
   allowed_chars_for_directory: "[a-zA-Z][a-zA-Z0-9_]{0,47}"
   allowed_chars_for_quoted_name: "[a-zA-Z_0-9]{1,48}"
-  allowed_chars_for_component_name: "[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)"
-  allowed_chars_for_restricted_component_name: "[a-zA-Z0-9_-]+(.db|TOC.txt)"
+  allowed_chars_for_component_name: "[a-zA-Z0-9_-]+(\\.db|\\.cql|\\.json|\\.crc32|TOC\\.txt)"
+  allowed_chars_for_restricted_component_name: "[a-zA-Z0-9_-]+(\\.db|TOC\\.txt)"
 
 blob_restore:
   job_discovery_active_loop_delay: 5m

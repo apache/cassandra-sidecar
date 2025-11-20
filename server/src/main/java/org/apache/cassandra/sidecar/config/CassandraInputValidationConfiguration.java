@@ -26,6 +26,11 @@ import java.util.Set;
 public interface CassandraInputValidationConfiguration
 {
     /**
+     * @return configuration needed to configure the {@link org.apache.cassandra.sidecar.utils.CassandraInputValidator}
+     */
+    ParameterizedClassConfiguration validatorConfiguration();
+
+    /**
      * @return a set of forbidden keyspaces
      */
     Set<String> forbiddenKeyspaces();

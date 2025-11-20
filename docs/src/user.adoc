@@ -402,11 +402,16 @@ The `metrics` configuration defines how Cassandra Sidecar exposes metrics over J
 
 This section defines input validations for Cassandra keyspace and directory names which are used for SSTable imports. The following properties are defined:
 
+* `validator`: The implementation to use for the validation of Casandra inputs.
+** `class_name`: The name of the class implementing the CassandraInputValidator interface. Out of the box Cassandra Sidecar provides org.apache.cassandra.sidecar.utils.{RegexBasedCassandraInputValidator, FastCassandraInputValidator}.
+** `parameters`: Configuration parameters that are only applicable to the FastCassandraInputValidator implementation.
+*** `valid_terminations`: Comma-separated list of terminations allowed for the component name.
+*** `valid_restricted_terminations`: Comma-separated list of terminations allowed for the restricted component name.git
 * `forbidden_keyspaces`: This is a list of keyspace names which are forbidden to be used for SSTable imports.
 * `allowed_chars_for_directory`: This is a regular expression which defines the characters that can be used in directory names used for SSTable imports. By default `"[a-zA-Z][a-zA-Z0-9_]{0,47}"`
 * `allowed_chars_for_quoted_name`: This is a regular expression which defines the characters that can be used in quoted names used for SSTable imports. If a quoted name does not match this regular expression, the SSTable import request will be rejected. By default, `"[a-zA-Z_0-9]{1,48}"`
-* `allowed_chars_for_component_name`: This is a regular expression which defines which characters can be used for SSTable component file names. By default, `"[a-zA-Z0-9_-]+(.db|.cql|.json|.crc32|TOC.txt)"`.
-* `allowed_chars_for_restricted_component_name`: This is a regular expression which defines which characters can be used in the SSTable component file names for `.db` and `TOC.txt` files. By default, `"[a-zA-Z0-9_-]+(.db|TOC.txt)"`.
+* `allowed_chars_for_component_name`: This is a regular expression which defines which characters can be used for SSTable component file names. By default, `"[a-zA-Z0-9_-]+(\\.db|\\.cql|\\.json|\\.crc32|TOC\\.txt)"`.
+* `allowed_chars_for_restricted_component_name`: This is a regular expression which defines which characters can be used in the SSTable component file names for `.db` and `TOC.txt` files. By default, `"[a-zA-Z0-9_-]+(\\.db|TOC\\.txt)"`.
 
 [[blob-restore]]
 ### blob_restore

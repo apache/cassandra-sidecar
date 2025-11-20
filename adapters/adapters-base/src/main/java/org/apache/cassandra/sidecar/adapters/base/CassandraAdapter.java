@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.adapters.base;
 
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.Objects;
 
 import com.datastax.driver.core.ConsistencyLevel;
@@ -102,6 +103,13 @@ public class CassandraAdapter implements ICassandraAdapter
     public NodeSettings nodeSettings()
     {
         throw new UnsupportedOperationException("Node settings are not provided by this adapter");
+    }
+
+    @Override
+    @NotNull
+    public Map<String, String> v2NodeSettings()
+    {
+        throw new UnsupportedOperationException("V2 node settings are not provided by this adapter");
     }
 
     @Override

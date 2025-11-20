@@ -16,31 +16,34 @@
 # limitations under the License.
 #
 
-version=0.3.0
-junitVersion=5.9.2
-vertxVersion=4.5.13
-nettyVersion=4.1.118.Final
-guavaVersion=27.0.1-jre
-guiceVersion=7.0.0
-slf4jVersion=2.0.17
-logbackVersion=1.5.15
-jacksonVersion=2.14.3
-caffeineVersion=3.2.2
-dtestApiVersion=0.0.17
-assertjCoreVersion=3.24.2
-# trunk is currently 5.1 - update when trunk moves
-dtestVersion=5.1
-dtestDependencyName=cassandra-dtest-local-all
-awsSdkVersion=2.26.12
-# The dep is to introduce xxhash impl
-commonsCodecVersion=1.16.1
-# openSSL
-boringSslVersion=2.0.61.Final
-# OpenAPI dependencies
-smallryeOpenApiVersion=4.1.1
-microprofileOpenApiVersion=3.1.1
-jakartaWsRsVersion=3.1.0
-swaggerVersion=2.2.21
-# Cdc dependencies
-kryoVersion=4.0.2
-analyticsVersion=0.1.0
+version: 2
+updates:
+  # Gradle dependencies
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "gradle"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # GitHub Actions versions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
