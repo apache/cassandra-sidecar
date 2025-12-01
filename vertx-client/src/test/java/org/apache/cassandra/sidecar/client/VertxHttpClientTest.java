@@ -178,10 +178,11 @@ class VertxHttpClientTest
 
         @Override
         protected Future<HttpResponse<Buffer>> sendFileStream(HttpRequest<Buffer> vertxRequest,
-                                                              SimpleEntry<Long, AsyncFile> pair)
+                                                              SimpleEntry<Long, AsyncFile> pair,
+                                                              String filename)
         {
             capturedFiles.add(pair.getValue());
-            return super.sendFileStream(vertxRequest, pair);
+            return super.sendFileStream(vertxRequest, pair, filename);
         }
     }
 

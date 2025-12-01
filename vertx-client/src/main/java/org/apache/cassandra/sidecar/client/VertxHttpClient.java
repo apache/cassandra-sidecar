@@ -219,7 +219,7 @@ public class VertxHttpClient implements HttpClient
         Promise<HttpResponse> promise = Promise.promise();
         // open the local file
         openFileForRead(vertx.fileSystem(), filename)
-        .compose(pair -> sendFileStream(vertxRequest, pair))
+        .compose(pair -> sendFileStream(vertxRequest, pair, filename))
         .onFailure(promise::fail)
         .onSuccess(response -> {
             byte[] raw = response.body() != null ? response.body().getBytes() : null;
@@ -239,11 +239,13 @@ public class VertxHttpClient implements HttpClient
      *
      * @param vertxRequest the HTTP request to send the file stream with
      * @param pair a pair containing file size and the AsyncFile handle
+     * @param filename the name of the file being uploaded (for logging purposes)
      * @return a Future that completes when the file has been sent
      */
     protected Future<io.vertx.ext.web.client.HttpResponse<Buffer>> sendFileStream(
         HttpRequest<Buffer> vertxRequest,
-        AbstractMap.SimpleEntry<Long, AsyncFile> pair)
+        AbstractMap.SimpleEntry<Long, AsyncFile> pair,
+        String filename)
     {
         AsyncFile asyncFile = pair.getValue();
         return vertxRequest.ssl(config.ssl())
@@ -253,7 +255,7 @@ public class VertxHttpClient implements HttpClient
                                            .setReadBufferSize(config.sendReadBufferSize()))
                            .onComplete(ar -> {
                                asyncFile.close().onFailure(err ->
-                                   LOGGER.warn("Failed to close file after upload", err)
+                                   LOGGER.warn("Failed to close file after upload: {}", filename, err)
                                );
                            });
     }
