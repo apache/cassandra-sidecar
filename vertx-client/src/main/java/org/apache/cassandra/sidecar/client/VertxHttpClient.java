@@ -255,7 +255,7 @@ public class VertxHttpClient implements HttpClient
                                            .setReadBufferSize(config.sendReadBufferSize()))
                            .onComplete(ar -> {
                                asyncFile.close().onFailure(err ->
-                                   LOGGER.warn("Failed to close file after upload: {}", filename, err)
+                                   LOGGER.warn("Failed to close file after upload: filename='{}'", filename, err)
                                );
                            });
     }
