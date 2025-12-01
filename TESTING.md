@@ -36,7 +36,7 @@ This document provides a comprehensive guide to running tests for the Apache Cas
 
 ### Required Software
 
-1. **Java 11 or higher** (OpenJDK or Oracle)
+1. **Java 11 or higher**
 2. **Docker** for running integration tests that leverage the S3MockContainer to test the S3 client. Unless your test requires the S3 Mock Container, please create a unit or integration test. 
 3. **Git** for cloning repositories
 
@@ -76,6 +76,39 @@ for i in {2..20}; do sudo ifconfig lo0 alias "127.0.0.${i}"; done
 Create temporary aliases for nodes 2-20:
 ```bash
 for i in {2..20}; do sudo ip addr add "127.0.0.${i}/8" dev lo; done
+```
+
+#### Hostname Configuration
+
+In addition to network aliases, you must add hostname entries to `/etc/hosts` for localhost1 through localhost20.
+
+Add the following entries to `/etc/hosts`:
+```
+127.0.0.1    localhost1
+127.0.0.2    localhost2
+127.0.0.3    localhost3
+127.0.0.4    localhost4
+127.0.0.5    localhost5
+127.0.0.6    localhost6
+127.0.0.7    localhost7
+127.0.0.8    localhost8
+127.0.0.9    localhost9
+127.0.0.10   localhost10
+127.0.0.11   localhost11
+127.0.0.12   localhost12
+127.0.0.13   localhost13
+127.0.0.14   localhost14
+127.0.0.15   localhost15
+127.0.0.16   localhost16
+127.0.0.17   localhost17
+127.0.0.18   localhost18
+127.0.0.19   localhost19
+127.0.0.20   localhost20
+```
+
+**Note**: Editing `/etc/hosts` requires sudo privileges:
+```bash
+sudo vi /etc/hosts
 ```
 
 ## Test Types
@@ -154,7 +187,7 @@ Test fixtures provide shared test utilities and data across modules.
 ### Quick Test Commands
 
 ```bash
-# Run all tests (unit + integration)
+# Run all tests (unit + integration + container)
 ./gradlew check
 
 # Run only unit tests
@@ -165,6 +198,9 @@ Test fixtures provide shared test utilities and data across modules.
 
 # Skip integration tests
 ./gradlew check -x integrationTest
+
+# Skip container tests
+./gradlew check -x containerTest
 
 # Run with specific Cassandra versions
 ./gradlew test -Dcassandra.sidecar.versions_to_test=4.1,5.1
@@ -331,9 +367,9 @@ Enable debug logging by modifying `server/src/test/resources/logback-in-jvm-dtes
 <logger name="org.apache.cassandra.sidecar" level="DEBUG"/>
 ```
 
-### Performance Testing
+### Troubleshooting Long-Running Tests
 
-For performance-sensitive tests:
+For resource-intensive tests:
 
 1. Use `@Tag("heavy")` to categorize expensive tests
 2. Monitor test execution times (logged automatically for tests ≥ 60 seconds)
@@ -349,7 +385,7 @@ For performance-sensitive tests:
 #### Java Version Issues
 - Verify Java 11+ compatibility
 - Check JVM arguments in CI environments
-- Review module path configurations
+- Review JVM options defined in [gradle/common/java11Options.gradle](gradle/common/java11Options.gradle)
 
 ## Additional Resources
 
