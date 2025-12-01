@@ -30,8 +30,8 @@ We warmly welcome and appreciate contributions from the community.
   * [Integration with IntelliJ IDEA](#idea)
 * [Source Code Best Practices](#best-practices)
   * [Introducing new APIs](#new-apis)
-    * [Guidelines](#api-guidelines)
-    * [Implementation Considerations](#implementation-considerations)
+    * [API Proposal Process](#api-guidelines)
+    * [Implementation Details](#implementation-details)
   * [Asynchronous Programming](#async-programming)
   * [Thread Pool Model](#thread-pools)
   * [One-shot Timers and Periodic Timers](#timers)
@@ -97,43 +97,45 @@ components of each feature.
 
 ### <a name="new-apis"></a>Introducing New APIs
 
-An API is a `Route` in Vertx's terminology. To add a new API, we want to define the route. For detailed RESTful API design principles and standards, please refer to the [API Design Guidelines](#api-design) section.
+To add a new API to Cassandra Sidecar, we need to follow a proposal process and then implement the route. For detailed RESTful API design principles and standards, please refer to the [RESTful API Guidelines](#api-design) section.
 
-#### <a name="api-guidelines"></a>Guidelines
+#### <a name="api-guidelines"></a>API Proposal Process
 
 We welcome contributions to improve the Cassandra Sidecar, especially in the form of new APIs that enhance operability, observability, and integration with Cassandra clusters. To ensure high-quality and maintainable additions, contributors are encouraged to follow the process outlined below:
 
-1. Proposing API Designs
+1. **Proposing API Designs**
 
-Before implementing a new API or making a significant change to an existing one, contributors should submit a design proposal in the following manner.
+   Before implementing a new API or making a significant change to an existing one, contributors should submit a design proposal in the following manner:
 
-The author should propose the API spec in the JIRA ticket and additionally in a 1-pager (depending on the complexity of the proposal) in Google docs. This should align with the API Design Guidelines.
-For proposals involving a group of APIs, the API spec proposal can be referenced in a [DISCUSS] thread in the mailing-list to get a broader community feedback and iterate on the proposal.
+   * Propose the API spec in the JIRA ticket and additionally in a 1-pager (depending on the complexity of the proposal) in Google docs. This should align with the RESTful API Guidelines.
+   * For proposals involving a group of APIs, the API spec proposal can be referenced in a [DISCUSS] thread in the mailing-list to get broader community feedback and iterate on the proposal.
 
-Sample proposal in JIRA with API spec: https://issues.apache.org/jira/projects/CASSSIDECAR/issues/CASSSIDECAR-274
+   Sample proposal in JIRA with API spec: https://issues.apache.org/jira/projects/CASSSIDECAR/issues/CASSSIDECAR-274
 
-2. Cassandra Compatibility Considerations
+2. **Cassandra Compatibility Considerations**
 
-The Sidecar supports multiple Cassandra versions. When designing APIs, contributors must:
+   The Sidecar supports multiple Cassandra versions. When designing APIs, contributors must:
 
-* Explicitly define the compatibility matrix: Indicate which Cassandra versions the API supports and document any version-specific limitations or differences in behavior.
-* Use the Sidecar's internal version abstraction layers to encapsulate compatibility logic and avoid scattered version checks.
-* Where necessary, degrade gracefully or provide clear error messages when functionality is not available in a specific Cassandra version.
+   * Explicitly define the compatibility matrix: Indicate which Cassandra versions the API supports and document any version-specific limitations or differences in behavior.
+   * Use the Sidecar's internal version abstraction layers to encapsulate compatibility logic and avoid scattered version checks.
+   * Where necessary, degrade gracefully or provide clear error messages when functionality is not available in a specific Cassandra version.
 
-3. Job Management for Long-Running Commands
+3. **Job Management for Long-Running Commands**
 
-Long-running or asynchronous operations (e.g., decommission) should use the Sidecar's job management framework, which provides:
+   Long-running or asynchronous operations (e.g., decommission) should use the Sidecar's job management framework, which provides:
 
-* Job tracking with UUIDs returned to clients for polling job status.
-* A consistent API pattern for managing and polling for status of asynchronous jobs.
+   * Job tracking with UUIDs returned to clients for polling job status.
+   * A consistent API pattern for managing and polling for status of asynchronous jobs.
 
-Contributors must:
+   Contributors must:
 
-* Avoid blocking handlers for long-running operations.
-* Implement new jobs using the provided OperationalJob abstraction.
-* Document any job-specific resource requirements, expected durations, and user-visible statuses.
+   * Avoid blocking handlers for long-running operations.
+   * Implement new jobs using the provided OperationalJob abstraction.
+   * Document any job-specific resource requirements, expected durations, and user-visible statuses.
 
-### Implementation Considerations
+#### Implementation Details
+
+In Vertx's terminology, an API is implemented as a `Route`. The following section explains how to define and implement routes in the Sidecar codebase.
 
 First, identify in which module does the API belong to.
 All the modules are listed under [modules](server/src/main/java/org/apache/cassandra/sidecar/modules). 
