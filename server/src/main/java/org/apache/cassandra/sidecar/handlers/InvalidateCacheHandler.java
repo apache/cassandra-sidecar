@@ -25,6 +25,7 @@ import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
@@ -62,7 +63,7 @@ public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandl
     private final IdentityToRoleCache identityToRoleCache;
     private final RoleAuthorizationsCache roleAuthorizationsCache;
     private final SuperUserCache superUserCache;
-    private final AsyncCache<AuthorizationCacheKey, Boolean> endpointAuthorizationCache;
+    private final AsyncCache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache;
 
     @Inject
     public InvalidateCacheHandler(InstanceMetadataFetcher metadataFetcher,
@@ -123,13 +124,13 @@ public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandl
                 if (!invalidateAll)
                 {
                     throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                                   "endpoint_authorization_cache does not support selective key invalidation");
+                                            "endpoint_authorization_cache does not support selective key invalidation");
                 }
                 endpointAuthorizationCache.synchronous().invalidateAll();
                 break;
             default:
                 throw wrapHttpException(HttpResponseStatus.NOT_FOUND,
-                                               "Unknown cache: " + cacheName);
+                                        "Unknown cache: " + cacheName);
         }
 
         logger.info("Cache {} invalidated successfully. Keys: {}", cacheName,
@@ -143,7 +144,7 @@ public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandl
      * @param cache                         AuthCache to invalidate
      * @param params                        params containing cache name and keys
      * @param supportsSelectiveInvalidation whether cache supports selective key invalidation
-     * @param <V> the cache value type
+     * @param <V>                           the cache value type
      */
     private <V> void invalidateAuthCache(AuthCache<String, V> cache, Params params, boolean supportsSelectiveInvalidation)
     {
@@ -182,5 +183,4 @@ public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandl
             return keys == null || keys.isEmpty();
         }
     }
-
 }
