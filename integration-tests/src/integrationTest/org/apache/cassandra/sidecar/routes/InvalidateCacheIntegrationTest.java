@@ -34,6 +34,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.client.HttpResponse;
@@ -347,7 +348,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     void testInvalidateEndpointAuthorizationCache()
     {
         CacheFactory cacheFactory = serverWrapper.injector.getInstance(CacheFactory.class);
-        AsyncCache<AuthorizationCacheKey, Boolean> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
+        AsyncCache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
 
         // Clear the cache first to ensure clean state
         String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
@@ -370,7 +371,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     void testInvalidateEndpointAuthorizationCacheWithKeys()
     {
         CacheFactory cacheFactory = serverWrapper.injector.getInstance(CacheFactory.class);
-        AsyncCache<AuthorizationCacheKey, Boolean> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
+        AsyncCache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
 
         verifyKeyBasedInvalidationNotSupported(CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME,
                                               () -> endpointAuthorizationCache.synchronous().asMap(),
