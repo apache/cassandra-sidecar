@@ -20,19 +20,25 @@ package org.apache.cassandra.sidecar.common.request;
 
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
-import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
+import org.apache.cassandra.sidecar.common.request.data.CompactionStopRequestPayload;
+import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
 
 /**
- * Represents a request to execute node stop operation
+ * Represents a request to execute compaction stop operation
  */
-public class CompactionStopRequest extends JsonRequest<CompactionStopRequest>
+public class CompactionStopRequest extends JsonRequest<CompactionStopResponse>
 {
+    private final CompactionStopRequestPayload payload;
+
     /**
-     * Constructs a request to execute a node decommission operation
+     * Constructs a request to execute a compaction stop operation with a payload
+     *
+     * @param payload the payload containing compaction type or ID to stop
      */
-    public CompactionStopRequest()
+    public CompactionStopRequest(CompactionStopRequestPayload payload)
     {
         super(ApiEndpointsV1.COMPACTION_STOP_ROUTE);
+        this.payload = payload;
     }
 
     /**
@@ -42,5 +48,14 @@ public class CompactionStopRequest extends JsonRequest<CompactionStopRequest>
     public HttpMethod method()
     {
         return HttpMethod.POST;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Object requestBody()
+    {
+        return payload;
     }
 }

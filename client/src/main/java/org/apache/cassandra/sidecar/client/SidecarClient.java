@@ -57,6 +57,7 @@ import org.apache.cassandra.sidecar.common.request.data.AbortRestoreJobRequestPa
 import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
+import org.apache.cassandra.sidecar.common.request.data.CompactionStopRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.Digest;
 import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.RestoreJobProgressRequestParams;
@@ -770,17 +771,19 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
     }
 
     /**
-     * Executes the compaction stats request using the default retry policy and provided {@code instance}.
+     * Executes the compaction stop request using the default retry policy and provided {@code instance}.
      *
      * @param instance the instance where the request will be executed
-     * @return a completable future of the compaction stats
+     * @param payload the payload containing compaction type or ID to stop
+     * @return a completable future of the compaction stop response
      */
-    public CompletableFuture<CompactionStopResponse> compactionStop(SidecarInstance instance)
+    public CompletableFuture<CompactionStopResponse> compactionStop(SidecarInstance instance,
+                                                                    CompactionStopRequestPayload payload)
     {
         return executor.executeRequestAsync(requestBuilder()
-                .singleInstanceSelectionPolicy(instance)
-                .compactionStopRequest()
-                .build());
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .compactionStopRequest(payload)
+                                            .build());
     }
 
     /**

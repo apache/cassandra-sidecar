@@ -92,11 +92,10 @@ public class CompactionStopResponse
     @Override
     public String toString()
     {
-        return String.format("CompactionStopResponse{" +
-                             "compactionType='%s', " +
-                             "compactionId='%s', " +
-                             "status='%s', " +
-                             compactionType, compactionId, status);
+        return String.format(
+                "CompactionStopResponse{compactionType='%s', compactionId='%s', status='%s'}",
+                compactionType, compactionId, status
+        );
     }
 
     public static Builder builder()

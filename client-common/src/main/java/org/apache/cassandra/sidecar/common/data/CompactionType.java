@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.common.data;
 
 import java.util.Locale;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * Supported compaction types based on Cassandra's OperationType enum
  */
@@ -50,8 +52,10 @@ public enum CompactionType
     }
 
     /**
+     * Case-insensitive factory method for Jackson deserialization
      * @return {@link CompactionType} from string
      */
+    @JsonCreator
     public static CompactionType fromString(String name)
     {
         if (name == null || name.trim().isEmpty())

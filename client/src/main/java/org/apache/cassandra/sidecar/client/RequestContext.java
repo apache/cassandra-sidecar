@@ -63,6 +63,7 @@ import org.apache.cassandra.sidecar.common.request.TableStatsRequest;
 import org.apache.cassandra.sidecar.common.request.TimeSkewRequest;
 import org.apache.cassandra.sidecar.common.request.TokenRangeReplicasRequest;
 import org.apache.cassandra.sidecar.common.request.UploadSSTableRequest;
+import org.apache.cassandra.sidecar.common.request.data.CompactionStopRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.Digest;
 import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
@@ -561,11 +562,12 @@ public class RequestContext
          * Sets the {@code request} to be a {@link CompactionStopRequest} and returns a reference to this Builder
          * enabling method chaining.
          *
+         * @param payload the payload containing compaction type or ID to stop
          * @return a reference to this Builder
          */
-        public Builder compactionStopRequest()
+        public Builder compactionStopRequest(CompactionStopRequestPayload payload)
         {
-            return request(new CompactionStopRequest());
+            return request(new CompactionStopRequest(payload));
         }
 
         /**

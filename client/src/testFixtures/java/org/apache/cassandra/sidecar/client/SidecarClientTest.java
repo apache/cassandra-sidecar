@@ -63,8 +63,9 @@ import org.apache.cassandra.sidecar.client.request.RequestExecutorTest;
 import org.apache.cassandra.sidecar.client.retry.RetryAction;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
+import org.apache.cassandra.sidecar.common.data.CompactionType;
 import org.apache.cassandra.sidecar.common.data.Lifecycle.CassandraState;
-import org.apache.cassandra.sidecar.common.data.Lifecycle.OperationStatus;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
@@ -72,12 +73,14 @@ import org.apache.cassandra.sidecar.common.request.NodeSettingsRequest;
 import org.apache.cassandra.sidecar.common.request.Request;
 import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload;
+import org.apache.cassandra.sidecar.common.request.data.CompactionStopRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
 import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateCdcServiceConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
+import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
@@ -88,7 +91,6 @@ import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus;
-import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.MigrationState;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
@@ -98,6 +100,7 @@ import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TimeSkewResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.MigrationState;
 import org.apache.cassandra.sidecar.common.response.data.CdcSegmentInfo;
 import org.apache.cassandra.sidecar.common.response.data.ClientConnectionEntry;
 import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
@@ -1751,6 +1754,67 @@ abstract class SidecarClientTest
             assertThat(result.completedCompactionsRate().fifteenMinuteRate()).isEqualTo(0.45);
             validateResponseServed(server, ApiEndpointsV1.COMPACTION_STATS_ROUTE, req -> {});
         }
+    }
+
+    @Test
+    void testCompactionStop() throws Exception
+    {
+        SidecarInstanceImpl instance = instances.get(0);
+        MockWebServer server = servers.get(0);
+
+        // Test stop by type
+        String responseByType = "{\"status\":\"SUBMITTED\",\"compaction_type\":\"COMPACTION\"}";
+        server.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(responseByType));
+
+        CompactionStopRequestPayload stopByType = new CompactionStopRequestPayload(
+                CompactionType.COMPACTION,
+                null
+        );
+        CompletableFuture<CompactionStopResponse> response1 = client.compactionStop(instance, stopByType);
+        assertThat(response1).isNotNull();
+
+        CompactionStopResponse compactionResponse1 = response1.get();
+
+        assertThat(compactionResponse1.compactionType()).isEqualTo(CompactionType.COMPACTION);
+        assertThat(compactionResponse1.compactionId()).isEqualTo(null);
+        assertThat(compactionResponse1.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
+
+        // Test stop by ID
+        String responseById = "{\"status\":\"SUBMITTED\",\"compaction_id\":\"test-id-1\"}";
+        server.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(responseById));
+
+        CompactionStopRequestPayload stopById = new CompactionStopRequestPayload(null,
+                "test-id-1");
+        CompletableFuture<CompactionStopResponse> response2 = client.compactionStop(instance, stopById);
+        CompactionStopResponse compactionResponse2 = response2.get();
+
+        assertThat(compactionResponse2.compactionType()).isEqualTo(null);
+        assertThat(compactionResponse2.compactionId()).isEqualTo("test-id-1");
+        assertThat(compactionResponse2.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
+
+        // Test id precedence when both inputs provided
+        String responseBothInputs = "{\"status\":\"SUBMITTED\"," +
+                "\"compaction_id\":\"test-id-2\", " +
+                "\"compaction_type\":\"VALIDATION\"}";
+        server.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(responseBothInputs));
+
+        CompactionStopRequestPayload stopAfterBothInputs = new
+                CompactionStopRequestPayload(CompactionType.VALIDATION, "test-id-2");
+        CompletableFuture<CompactionStopResponse> response3 = client.compactionStop(instance, stopAfterBothInputs);
+        assertThat(response3).isNotNull();
+
+        CompactionStopResponse compactionResponse3 = response3.get();
+        assertThat(compactionResponse3.compactionType()).isEqualTo(CompactionType.VALIDATION);
+        assertThat(compactionResponse3.compactionId()).isEqualTo("test-id-2");
+        assertThat(compactionResponse3.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
+
+        // Verify the request body contains both fields when both are provided
+        server.takeRequest(); // First request (stop by type)
+        server.takeRequest(); // Second request (stop by ID)
+        RecordedRequest thirdRequest = server.takeRequest(); // Third request (both inputs)
+        String requestBody = thirdRequest.getBody().readString(Charset.defaultCharset());
+        assertThat(requestBody).contains("\"compaction_id\":\"test-id-2\"");
+        assertThat(requestBody).contains("\"compaction_type\":\"VALIDATION\"");
     }
 
     @Test
