@@ -40,6 +40,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
@@ -78,8 +79,8 @@ public class InvalidateCacheHandlerTest
     IdentityToRoleCache mockIdentityToRoleCache = mock(IdentityToRoleCache.class);
     RoleAuthorizationsCache mockRoleAuthorizationsCache = mock(RoleAuthorizationsCache.class);
     SuperUserCache mockSuperUserCache = mock(SuperUserCache.class);
-    AsyncCache<AuthorizationCacheKey, Boolean> mockEndpointAuthorizationCache = mock(AsyncCache.class);
-    Cache<AuthorizationCacheKey, Boolean> mockSyncCache = mock(Cache.class);
+    AsyncCache<AuthorizationCacheKey, Future<Boolean>> mockEndpointAuthorizationCache = mock(AsyncCache.class);
+    Cache<AuthorizationCacheKey, Future<Boolean>> mockSyncCache = mock(Cache.class);
 
     @BeforeEach
     void before() throws InterruptedException
@@ -151,9 +152,9 @@ public class InvalidateCacheHandlerTest
     void testInvalidateRoleAuthorizationsCacheWithKeys(VertxTestContext context)
     {
         verifyInvalidateCache(context, RoleAuthorizationsCache.NAME,
-                             Arrays.asList("key1"),
-                             BAD_REQUEST,
-                             null, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
+                              Arrays.asList("key1"),
+                              BAD_REQUEST,
+                              null, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
     }
 
     // SuperUserCache tests
@@ -173,9 +174,9 @@ public class InvalidateCacheHandlerTest
     void testInvalidateSuperUserCacheWithKeys(VertxTestContext context)
     {
         verifyInvalidateCache(context, SuperUserCache.NAME,
-                             Arrays.asList("user1", "user2", "user3"),
-                             OK,
-                             mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
+                              Arrays.asList("user1", "user2", "user3"),
+                              OK,
+                              mockSuperUserCache, mockIdentityToRoleCache, mockRoleAuthorizationsCache);
     }
 
     // EndpointAuthorizationCache tests
@@ -227,9 +228,9 @@ public class InvalidateCacheHandlerTest
     void testInvalidateEndpointAuthorizationCacheWithKeys(VertxTestContext context)
     {
         verifyInvalidateCache(context, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME,
-                             Arrays.asList("key1"),
-                             BAD_REQUEST,
-                             null, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
+                              Arrays.asList("key1"),
+                              BAD_REQUEST,
+                              null, mockIdentityToRoleCache, mockRoleAuthorizationsCache, mockSuperUserCache);
     }
 
     // Error case tests
@@ -258,11 +259,11 @@ public class InvalidateCacheHandlerTest
      * Helper method to test cache invalidation
      * Verifies that the specified cache is invalidated (or returns the expected error) and other caches are not touched.
      *
-     * @param context the test context
-     * @param cacheName the name of the cache to invalidate (sent in the HTTP request)
-     * @param keys the specific keys to invalidate, or null to invalidate all keys
-     * @param expectedStatus the expected HTTP response status (OK, BAD_REQUEST, NOT_FOUND, etc.)
-     * @param cacheToInvalidate the mock cache that should be invalidated (null if expecting an error)
+     * @param context             the test context
+     * @param cacheName           the name of the cache to invalidate (sent in the HTTP request)
+     * @param keys                the specific keys to invalidate, or null to invalidate all keys
+     * @param expectedStatus      the expected HTTP response status (OK, BAD_REQUEST, NOT_FOUND, etc.)
+     * @param cacheToInvalidate   the mock cache that should be invalidated (null if expecting an error)
      * @param cachesToNotInteract other mock caches that should not be touched
      */
     @SuppressWarnings("rawtypes")
