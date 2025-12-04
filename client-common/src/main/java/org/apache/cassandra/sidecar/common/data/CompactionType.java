@@ -64,7 +64,7 @@ public enum CompactionType
         }
         try
         {
-            return valueOf(name.toUpperCase(Locale.ROOT));
+            return valueOf(name.trim().toUpperCase(Locale.ROOT));
         }
         catch (IllegalArgumentException unknownEnum)
         {

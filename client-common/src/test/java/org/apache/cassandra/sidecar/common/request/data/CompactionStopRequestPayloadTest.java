@@ -134,7 +134,7 @@ class CompactionStopRequestPayloadTest
     {
         String json = "{\"compaction_type\":\"  COMPACTION  \",\"compaction_id\":\"  test-id  \"}";
         CompactionStopRequestPayload payload = MAPPER.readValue(json, CompactionStopRequestPayload.class);
-        assertThat(payload.compactionType()).isEqualTo("  COMPACTION  ");
+        assertThat(payload.compactionType()).isEqualTo(CompactionType.COMPACTION);
         assertThat(payload.compactionId()).isEqualTo("  test-id  ");
     }
 
@@ -143,7 +143,7 @@ class CompactionStopRequestPayloadTest
     {
         CompactionStopRequestPayload payload = new CompactionStopRequestPayload(CompactionType.COMPACTION, "abc-123");
         String toString = payload.toString();
-        assertThat(toString).contains("COMPACTION");
+        assertThat(toString).contains("compaction");
         assertThat(toString).contains("abc-123");
         assertThat(toString).contains("CompactionStopRequestPayload");
     }
@@ -151,18 +151,12 @@ class CompactionStopRequestPayloadTest
     @Test
     void testAllSupportedCompactionTypes() throws JsonProcessingException
     {
-        String[] supportedTypes = {
-            "COMPACTION", "VALIDATION", "KEY_CACHE_SAVE", "ROW_CACHE_SAVE",
-            "COUNTER_CACHE_SAVE", "CLEANUP", "SCRUB", "UPGRADE_SSTABLES",
-            "INDEX_BUILD", "TOMBSTONE_COMPACTION", "UNKNOWN", "ANTICOMPACTION",
-            "VERIFY", "VIEW_BUILD", "INDEX_SUMMARY", "RELOCATE",
-            "GARBAGE_COLLECT", "WRITE"
-        };
 
+        // Check each compactionType field for CompactionStopRequestPayload is recognized as a supported compaction type
         for (CompactionType type : CompactionType.values()) {
             CompactionStopRequestPayload payload = new CompactionStopRequestPayload(type, null);
             String json = MAPPER.writeValueAsString(payload);
-            assertThat(json).contains(type.toString());
+            assertThat(json).contains(type.toString().toUpperCase());
 
             CompactionStopRequestPayload deser = MAPPER.readValue(json, CompactionStopRequestPayload.class);
             assertThat(deser.compactionType()).isEqualTo(type);

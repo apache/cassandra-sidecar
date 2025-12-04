@@ -71,12 +71,35 @@ public class CompactionStopRequestPayload
         return this.compactionId;
     }
 
+    /**
+     * Checks compaction ID valid - not null or empty post-trim
+     * */
+    public boolean hasValidCompactionId() {
+        return compactionId != null && !compactionId.trim().isEmpty();
+    }
+
+    /**
+     * Checks compaction type not null for invalid compactionId cases
+    * */
+    public boolean hasValidCompactionType() {
+        return compactionType != null;
+    }
+
+    /**
+     * Checks at least one valid parameter provided
+     *
+     * @return true if either compaction ID or compaction type is valid, false otherwise
+     */
+    public boolean atLeastOneParamProvided() {
+        return hasValidCompactionId() || hasValidCompactionType();
+    }
+
     @Override
     public String toString()
     {
         return "CompactionStopRequestPayload{" +
-               "compactionType='" + compactionType + '\'' +
-               ", compactionId='" + compactionId + '\'' +
-               '}';
+               "compactionType='" + compactionType + "'" +
+               ", compactionId='" + compactionId + "'" +
+               "}";
     }
 }

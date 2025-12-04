@@ -62,13 +62,12 @@ public class CassandraCompactionManagerOperations implements CompactionManagerOp
     @Override
     public void stopCompactionById(String compactionId)
     {
-        CompactionManagerJmxOperations proxy = jmxClient.proxy(
-                CompactionManagerJmxOperations.class,
-                COMPACTION_MANAGER_OBJ_NAME
-        );
-
         // compactionId takes precedence over type if both are provided
         if (compactionId != null && !compactionId.trim().isEmpty()) {
+            CompactionManagerJmxOperations proxy = jmxClient.proxy(
+                    CompactionManagerJmxOperations.class,
+                    COMPACTION_MANAGER_OBJ_NAME
+            );
             proxy.stopCompactionById(compactionId);
         }
     }

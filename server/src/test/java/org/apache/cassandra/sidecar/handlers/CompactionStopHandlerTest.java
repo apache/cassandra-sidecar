@@ -104,7 +104,7 @@ public class CompactionStopHandlerTest
         client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
-                      verify(mockCompactionManagerOperations, times(1)).stopCompaction(eq("COMPACTION"));
+                      verify(mockCompactionManagerOperations, times(1)).stopCompaction(eq("compaction"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                       CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
@@ -123,7 +123,7 @@ public class CompactionStopHandlerTest
         client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
-                      verify(mockCompactionManagerOperations, times(1)).stopCompaction(eq("abc-123"));
+                      verify(mockCompactionManagerOperations, times(1)).stopCompactionById(eq("abc-123"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                       CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
@@ -143,7 +143,7 @@ public class CompactionStopHandlerTest
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       verify(mockCompactionManagerOperations, times(1))
-                          .stopCompaction(eq("xyz-456"));
+                          .stopCompactionById(eq("xyz-456"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                       CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
@@ -229,7 +229,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       // Should trim and uppercase the type
                       verify(mockCompactionManagerOperations, times(1))
-                          .stopCompaction(eq("  COMPACTION  "));
+                          .stopCompaction(eq("compaction"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                   });

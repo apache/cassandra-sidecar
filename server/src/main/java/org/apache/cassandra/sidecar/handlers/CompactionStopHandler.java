@@ -103,14 +103,14 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
         String compactionId = request.compactionId();
 
         // Convert enum to string for the operation (if not null)
-        // Use .name() to get uppercase, which Cassandra's OperationType expects
-        String compactionTypeStr = compactionType != null ? compactionType.name() : null;
+        // Use .toString() to get lowercase, matching Cassandra's compaction type format
+        String compactionTypeStr = compactionType != null ? compactionType.toString() : null;
 
         // Attempt to stop the compaction
         // If compactionId is provided, use it (takes precedence over type)
-        if (compactionId != null && !compactionId.trim().isEmpty()) {
+        if (request.hasValidCompactionId()) {
             operations.stopCompactionById(compactionId);
-        } else if (compactionType != null) {
+        } else if (request.hasValidCompactionType()) {
             operations.stopCompaction(compactionTypeStr);
         }
         // If we reach here, at least one of the above conditions was true due to validation in extractParamsOrThrow()
@@ -156,8 +156,7 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
         }
 
         // Validate that at least one field is provided
-        if (payload.compactionType() == null &&
-            (payload.compactionId() == null || payload.compactionId().trim().isEmpty()))
+        if (!payload.atLeastOneParamProvided())
         {
             logger.warn("Bad request. Both compaction_type and compaction_id are missing.");
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,

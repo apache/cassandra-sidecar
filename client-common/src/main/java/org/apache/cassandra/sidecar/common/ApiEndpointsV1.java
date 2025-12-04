@@ -29,7 +29,6 @@ public final class ApiEndpointsV1
 
     public static final String HEALTH = "/__health";
     public static final String CASSANDRA = "/cassandra";
-    public static final String OPERATIONS = "/operations";
 
     public static final String NATIVE = "/native";
     public static final String JMX = "/jmx";
@@ -140,6 +139,7 @@ public final class ApiEndpointsV1
     public static final String CONNECTED_CLIENT_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/connected-clients";
     public static final String COMPACTION_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/compaction";
 
+    private static final String OPERATION_ROUTE = "/operations";
     private static final String OPERATIONAL_JOBS = "/operational-jobs";
     private static final String PER_OPERATIONAL_JOB = OPERATIONAL_JOBS + '/' + OPERATIONAL_JOB_ID_PATH_PARAM;
     public static final String LIST_OPERATIONAL_JOBS_ROUTE = API_V1 + CASSANDRA + OPERATIONAL_JOBS;
@@ -149,13 +149,12 @@ public final class ApiEndpointsV1
     public static final String NODE_DRAIN_ROUTE = API_V1 + CASSANDRA + "/operations/drain";
     public static final String STREAM_STATS_ROUTE = API_V1 + CASSANDRA + "/stats/streams";
     public static final String TABLE_STATS_ROUTE = API_V1 + CASSANDRA + PER_KEYSPACE + PER_TABLE + "/stats";
-    public static final String COMPACTION_STOP_ROUTE = API_V1 + CASSANDRA + OPERATIONS + "/compaction/stop";
+    public static final String COMPACTION_STOP_ROUTE = API_V1 + CASSANDRA + OPERATION_ROUTE + "/compaction/stop";
 
     // Live Migration APIs
     public static final String LIVE_MIGRATION_API_PREFIX = API_V1 + "/live-migration";
 
     public static final String LIVE_MIGRATION_FILES_ROUTE = LIVE_MIGRATION_API_PREFIX + "/files";
-    public static final String LIVE_MIGRATION_STATUS_ROUTE = LIVE_MIGRATION_API_PREFIX + "/status";
 
     public static final String DIR_TYPE_PARAM = "dirType";
     public static final String DIR_INDEX_PARAM = "dirIndex";
@@ -168,6 +167,8 @@ public final class ApiEndpointsV1
 
     public static final String LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE = LIVE_MIGRATION_API_PREFIX + "/data-copy-tasks";
     public static final String LIVE_MIGRATION_DATA_COPY_TASK_ROUTE = LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE + "/:taskId";
+    public static final String LIVE_MIGRATION_STATUS_ROUTE = LIVE_MIGRATION_API_PREFIX + "/status";
+
 
     public static final String OPENAPI_JSON_ROUTE = "/spec/openapi.json";
     public static final String OPENAPI_YAML_ROUTE = "/spec/openapi.yaml";
