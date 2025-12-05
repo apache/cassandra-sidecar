@@ -40,12 +40,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integration tests for clear snapshot endpoint
  */
-public class ClearSnapshotIntegrationTest extends SharedClusterSidecarIntegrationTestBase
+class ClearSnapshotIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
     private static final String SNAPSHOT_ROUTE_TEMPLATE = "/api/v1/keyspaces/%s/tables/%s/snapshots/%s";
 
     @Test
-    public void deleteSnapshotFailsWhenKeyspaceDoesNotExist()
+    void deleteSnapshotFailsWhenKeyspaceDoesNotExist()
     {
         String testRoute = String.format(SNAPSHOT_ROUTE_TEMPLATE, "non_existent", "testtable", "my-snapshot");
         assertNotFoundOnDeleteSnapshot(testRoute);
