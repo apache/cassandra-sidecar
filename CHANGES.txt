@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Adding support for quoted tables and keyspaces in snapshot cleanup (CASSSIDECAR-388)
  * File descriptor leak after file streamed in Sidecar Client (CASSSIDECAR-386)
  * Endpoint to invalidate auth caches as required (CASSSIDECAR-364)
  * Add /api/v2/cassandra/settings which will return Cassandra configurations stored in system_views.settings (CASSSIDECAR-272)
