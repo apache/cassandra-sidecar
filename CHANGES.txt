@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Added system disk information endpoint to Cassandra Sidecar (CASSSIDECAR-366)
  * Adding support for quoted tables and keyspaces in snapshot cleanup (CASSSIDECAR-388)
  * File descriptor leak after file streamed in Sidecar Client (CASSSIDECAR-386)
  * Endpoint to invalidate auth caches as required (CASSSIDECAR-364)
