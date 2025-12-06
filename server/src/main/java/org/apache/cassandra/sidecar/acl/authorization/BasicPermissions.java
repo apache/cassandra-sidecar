@@ -94,5 +94,5 @@ public class BasicPermissions
     public static final Permission MODIFY_LIFECYCLE = new DomainAwarePermission("LIFECYCLE:MODIFY", CLUSTER_SCOPE);
 
     // System information related permissions
-    public static final Permission SYSTEM = new StandardPermission("SYSTEM", CLUSTER_SCOPE);
+    public static final Permission DISK_INFO = new StandardPermission("DISK_INFO:READ", CLUSTER_SCOPE);
 }

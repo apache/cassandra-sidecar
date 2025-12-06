@@ -22,13 +22,11 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.benmanes.caffeine.cache.CacheLoader;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -58,10 +56,9 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class DiskInfoHandler extends AbstractHandler<Void> implements AccessProtected
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(DiskInfoHandler.class);
-    private static final String CACHE_KEY = "disk_info";
     private static final Duration CACHE_TTL = Duration.ofMinutes(5);
 
-    private final LoadingCache<String, List<DiskInfo>> diskInfoCache;
+    private final AtomicReference<CacheEntry> diskInfoCache;
 
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
@@ -74,37 +71,51 @@ public class DiskInfoHandler extends AbstractHandler<Void> implements AccessProt
     protected DiskInfoHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools, CassandraInputValidator validator)
     {
         super(metadataFetcher, executorPools, validator);
-
-        this.diskInfoCache = Caffeine.newBuilder()
-                                     .expireAfterWrite(CACHE_TTL)
-                                     .maximumSize(1)
-                                     .build(new DiskInfoCacheLoader());
+        this.diskInfoCache = new AtomicReference<>();
     }
 
     /**
-     * Cache loader that fetches disk information from the system using OSHI
+     * Loads disk information from the system using OSHI
      */
-    private static class DiskInfoCacheLoader implements CacheLoader<String, List<DiskInfo>>
+    private List<DiskInfo> loadDiskInfo()
     {
-        @Override
-        public List<DiskInfo> load(@NotNull String key)
+        SystemInfo systemInfo = new SystemInfo();
+        List<OSFileStore> fileStoreList = systemInfo.getOperatingSystem().getFileSystem().getFileStores();
+        List<DiskInfo> diskInfoList = new ArrayList<>(fileStoreList.size());
+
+        for (OSFileStore fileStore : fileStoreList)
         {
-            SystemInfo systemInfo = new SystemInfo();
-            List<OSFileStore> fileStoreList = systemInfo.getOperatingSystem().getFileSystem().getFileStores();
-            List<DiskInfo> diskInfoList = new ArrayList<>(fileStoreList.size());
-
-            for (OSFileStore fileStore : fileStoreList)
-            {
-                diskInfoList.add(new DiskInfo(fileStore.getTotalSpace(),
-                                              fileStore.getFreeSpace(),
-                                              fileStore.getUsableSpace(),
-                                              fileStore.getName(),
-                                              fileStore.getMount(),
-                                              fileStore.getType()));
-            }
-
-            return diskInfoList;
+            diskInfoList.add(new DiskInfo(fileStore.getTotalSpace(),
+                                          fileStore.getFreeSpace(),
+                                          fileStore.getUsableSpace(),
+                                          fileStore.getName(),
+                                          fileStore.getMount(),
+                                          fileStore.getType()));
         }
+
+        return diskInfoList;
+    }
+
+    /**
+     * Gets cached disk info or loads fresh data if cache is expired or empty
+     */
+    private List<DiskInfo> getCachedDiskInfo()
+    {
+        CacheEntry current = diskInfoCache.get();
+
+        // Check if cache is empty or expired
+        if (current == null || current.isExpired())
+        {
+            List<DiskInfo> freshData = loadDiskInfo();
+            CacheEntry newEntry = new CacheEntry(freshData, CACHE_TTL);
+
+            // Try to update with CAS
+            if (diskInfoCache.compareAndSet(current, newEntry)) {
+                return freshData;
+            }
+        }
+
+        return diskInfoCache.get().diskInfo;
     }
 
     @Override
@@ -122,18 +133,38 @@ public class DiskInfoHandler extends AbstractHandler<Void> implements AccessProt
                                   Void request)
     {
         executorPools.internal()
-                     .executeBlocking(() -> diskInfoCache.get(CACHE_KEY))
+                     .executeBlocking(this::getCachedDiskInfo)
                      .onSuccess(context::json)
                      .onFailure(e -> {
                          LOGGER.warn("Failed to fetch disk information", e);
                          context.fail(wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE,
-                                                       e.getMessage(), e));
+                                                        e.getMessage(), e));
                      });
     }
 
     @Override
     public Set<Authorization> requiredAuthorizations()
     {
-        return Set.of(BasicPermissions.SYSTEM.toAuthorization());
+        return Set.of(BasicPermissions.DISK_INFO.toAuthorization());
+    }
+
+    /**
+     * Cache entry that holds the disk information and the expiry time
+     */
+    private static class CacheEntry
+    {
+        final List<DiskInfo> diskInfo;
+        final long expiryTime;
+
+        CacheEntry(List<DiskInfo> diskInfo, Duration ttl)
+        {
+            this.diskInfo = diskInfo;
+            this.expiryTime = System.currentTimeMillis() + ttl.toMillis();
+        }
+
+        boolean isExpired()
+        {
+            return System.currentTimeMillis() > expiryTime;
+        }
     }
 }

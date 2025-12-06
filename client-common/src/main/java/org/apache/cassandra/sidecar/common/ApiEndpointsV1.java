@@ -178,7 +178,7 @@ public final class ApiEndpointsV1
     public static final String LIFECYCLE_ROUTE = API_V1 + CASSANDRA + "/lifecycle";
 
     private static final String SYSTEM_API_PREFIX = API_V1 + "/system";
-    public static final String SYSTEM_DISK_INFO_ROUTE = SYSTEM_API_PREFIX + "/diskinfo";
+    public static final String SYSTEM_DISK_INFO_ROUTE = SYSTEM_API_PREFIX + "/disk-info";
 
     private ApiEndpointsV1()
     {

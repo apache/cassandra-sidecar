@@ -28,6 +28,7 @@ import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DA
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DELETE_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DELETE_SNAPSHOT;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DELETE_STAGED_SSTABLE;
+import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DISK_INFO;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.EDIT_RESTORE_JOB;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.IMPORT_STAGED_SSTABLE;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.LIST_FILES;
@@ -82,7 +83,7 @@ public enum FeaturePermission
      */
     LIVE_MIGRATION("LIVE_MIGRATION", DATA_COPY, LIST_FILES),
 
-    SYSTEM("SYSTEM", BasicPermissions.SYSTEM);
+    SYSTEM("SYSTEM", DISK_INFO);
 
     public static final List<CompositePermission> ALL_FEATURE_PERMISSIONS
     = Arrays.stream(values()).map(FeaturePermission::permission).collect(Collectors.toList());
