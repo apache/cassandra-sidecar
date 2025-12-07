@@ -41,6 +41,7 @@ import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 import org.apache.cassandra.sidecar.handlers.AccessProtected;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.TimeProvider;
 import org.jetbrains.annotations.NotNull;
 import oshi.SystemInfo;
 import oshi.software.os.OSFileStore;
@@ -59,6 +60,7 @@ public class DiskInfoHandler extends AbstractHandler<Void> implements AccessProt
     private static final Duration CACHE_TTL = Duration.ofMinutes(5);
 
     private final AtomicReference<CacheEntry> diskInfoCache;
+    private final TimeProvider timeProvider;
 
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
@@ -68,10 +70,45 @@ public class DiskInfoHandler extends AbstractHandler<Void> implements AccessProt
      * @param validator       a validator instance to validate Cassandra-specific input
      */
     @Inject
-    protected DiskInfoHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools, CassandraInputValidator validator)
+    protected DiskInfoHandler(InstanceMetadataFetcher metadataFetcher,
+                              ExecutorPools executorPools,
+                              CassandraInputValidator validator,
+                              TimeProvider timeProvider)
     {
         super(metadataFetcher, executorPools, validator);
         this.diskInfoCache = new AtomicReference<>();
+        this.timeProvider = timeProvider;
+    }
+
+
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        return Set.of(BasicPermissions.DISK_INFO.toAuthorization());
+    }
+
+    @Override
+    protected Void extractParamsOrThrow(RoutingContext context)
+    {
+        // No params to extract
+        return null;
+    }
+
+    @Override
+    protected void handleInternal(RoutingContext context,
+                                  HttpServerRequest httpRequest,
+                                  @NotNull String host,
+                                  SocketAddress remoteAddress,
+                                  Void request)
+    {
+        executorPools.internal()
+                     .executeBlocking(this::getCachedDiskInfo)
+                     .onSuccess(context::json)
+                     .onFailure(e -> {
+                         LOGGER.warn("Failed to fetch disk information", e);
+                         context.fail(wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE,
+                                                        e.getMessage(), e));
+                     });
     }
 
     /**
@@ -107,10 +144,11 @@ public class DiskInfoHandler extends AbstractHandler<Void> implements AccessProt
         if (current == null || current.isExpired())
         {
             List<DiskInfo> freshData = loadDiskInfo();
-            CacheEntry newEntry = new CacheEntry(freshData, CACHE_TTL);
+            CacheEntry newEntry = new CacheEntry(freshData, timeProvider, CACHE_TTL);
 
             // Try to update with CAS
-            if (diskInfoCache.compareAndSet(current, newEntry)) {
+            if (diskInfoCache.compareAndSet(current, newEntry))
+            {
                 return freshData;
             }
         }
@@ -118,53 +156,26 @@ public class DiskInfoHandler extends AbstractHandler<Void> implements AccessProt
         return diskInfoCache.get().diskInfo;
     }
 
-    @Override
-    protected Void extractParamsOrThrow(RoutingContext context)
-    {
-        // No params to extract
-        return null;
-    }
-
-    @Override
-    protected void handleInternal(RoutingContext context,
-                                  HttpServerRequest httpRequest,
-                                  @NotNull String host,
-                                  SocketAddress remoteAddress,
-                                  Void request)
-    {
-        executorPools.internal()
-                     .executeBlocking(this::getCachedDiskInfo)
-                     .onSuccess(context::json)
-                     .onFailure(e -> {
-                         LOGGER.warn("Failed to fetch disk information", e);
-                         context.fail(wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE,
-                                                        e.getMessage(), e));
-                     });
-    }
-
-    @Override
-    public Set<Authorization> requiredAuthorizations()
-    {
-        return Set.of(BasicPermissions.DISK_INFO.toAuthorization());
-    }
 
     /**
      * Cache entry that holds the disk information and the expiry time
      */
     private static class CacheEntry
     {
-        final List<DiskInfo> diskInfo;
-        final long expiryTime;
+        private final List<DiskInfo> diskInfo;
+        private final long expiryTime;
+        private final TimeProvider timeProvider;
 
-        CacheEntry(List<DiskInfo> diskInfo, Duration ttl)
+        CacheEntry(List<DiskInfo> diskInfo, TimeProvider timeProvider, Duration ttl)
         {
             this.diskInfo = diskInfo;
-            this.expiryTime = System.currentTimeMillis() + ttl.toMillis();
+            this.timeProvider = timeProvider;
+            this.expiryTime = timeProvider.currentTimeMillis() + ttl.toMillis();
         }
 
         boolean isExpired()
         {
-            return System.currentTimeMillis() > expiryTime;
+            return timeProvider.currentTimeMillis() > expiryTime;
         }
     }
 }
