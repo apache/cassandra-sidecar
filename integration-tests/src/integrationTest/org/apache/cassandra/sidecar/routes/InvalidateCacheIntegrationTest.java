@@ -355,12 +355,12 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         verifyAccess(HttpMethod.DELETE, clearCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
 
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap().isEmpty()));
+        loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap()).isEmpty());
 
         // Invalidate cache and verify
         String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
         verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap().isEmpty()));
+        loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap()).isEmpty());
 
         // Re-populate cache with test user and verify test user is back in cache
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
