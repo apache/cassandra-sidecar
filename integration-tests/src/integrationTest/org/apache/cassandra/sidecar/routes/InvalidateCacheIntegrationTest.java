@@ -288,7 +288,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         // Invalidate cache and verify its empty
         String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, RoleAuthorizationsCache.NAME);
         verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        loopAssert(3, () -> assertThat(roleAuthorizationsCache.getAll().isEmpty()));
+        loopAssert(3, () -> assertThat(roleAuthorizationsCache.getAll()).isEmpty());
 
         // Re-populate cache with test user and verify test user is back in cache
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
@@ -353,9 +353,10 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         // Clear the cache first to ensure clean state
         String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
         verifyAccess(HttpMethod.DELETE, clearCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
+        loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap()).isEmpty());
 
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap()).isEmpty());
+        loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap()).isNotEmpty());
 
         // Invalidate cache and verify
         String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
