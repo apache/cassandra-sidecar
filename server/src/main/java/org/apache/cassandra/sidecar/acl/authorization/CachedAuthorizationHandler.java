@@ -30,9 +30,11 @@ import java.util.function.BiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.Cache;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.AuthorizationContext;
@@ -47,7 +49,6 @@ import org.apache.cassandra.sidecar.metrics.server.AuthMetrics;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
-import static io.vertx.core.Future.fromCompletionStage;
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractIdentities;
 
 /**
@@ -64,7 +65,7 @@ public class CachedAuthorizationHandler implements AuthorizationHandler
     private final AccessControlConfiguration accessControlConfiguration;
     private final AdminIdentityResolver adminIdentityResolver;
     private final AuthMetrics authMetrics;
-    private final AsyncCache<AuthorizationCacheKey, Future<Boolean>> authorizationCache;
+    private final Cache<AuthorizationCacheKey, Future<Boolean>> authorizationCache;
 
     protected final Authorization authorization;
     protected final Collection<AuthorizationProvider> authorizationProviders;
@@ -74,7 +75,7 @@ public class CachedAuthorizationHandler implements AuthorizationHandler
                                       AdminIdentityResolver adminIdentityResolver,
                                       Authorization authorization,
                                       SidecarMetrics sidecarMetrics,
-                                      AsyncCache<AuthorizationCacheKey, Future<Boolean>> authorizationCache)
+                                      Cache<AuthorizationCacheKey, Future<Boolean>> authorizationCache)
     {
         this(HANDLER_ID_GEN.getAndIncrement(), accessControlConfiguration, adminIdentityResolver,
              authorization, sidecarMetrics, authorizationCache);
@@ -86,7 +87,7 @@ public class CachedAuthorizationHandler implements AuthorizationHandler
                                       AdminIdentityResolver adminIdentityResolver,
                                       Authorization authorization,
                                       SidecarMetrics sidecarMetrics,
-                                      AsyncCache<AuthorizationCacheKey, Future<Boolean>> authorizationCache)
+                                      Cache<AuthorizationCacheKey, Future<Boolean>> authorizationCache)
     {
         this.authorization = Objects.requireNonNull(authorization, "authorization cannot be null");
         this.authorizationProviders = new ArrayList<>();
@@ -123,22 +124,27 @@ public class CachedAuthorizationHandler implements AuthorizationHandler
                 variableHandler.accept(context, authorizationContext);
             }
 
+            Context originCtx = Vertx.currentContext();
             checkAuthorization(authorizationContext, startTimeNanos)
             .onSuccess(ignored -> {
-                if (!context.request().isEnded())
-                {
-                    context.request().resume();
-                }
-                context.next();
+                originCtx.runOnContext(v -> {
+                    if (!context.request().isEnded())
+                    {
+                        context.request().resume();
+                    }
+                    context.next();
+                });
             })
             .onFailure(cause -> {
                 LOGGER.error("Authorization failed for user='{}'", user, cause);
-                // resume as the error handler may allow this request to become valid again
-                if (!context.request().isEnded())
-                {
-                    context.request().resume();
-                }
-                context.fail(FORBIDDEN.code(), cause);
+                originCtx.runOnContext(v -> {
+                    // resume as the error handler may allow this request to become valid again
+                    if (!context.request().isEnded())
+                    {
+                        context.request().resume();
+                    }
+                    context.fail(FORBIDDEN.code(), cause);
+                });
             });
         }
         catch (Throwable e)
@@ -176,8 +182,10 @@ public class CachedAuthorizationHandler implements AuthorizationHandler
         }
 
         AuthorizationCacheKey key = AuthorizationCacheKey.create(handlerId, authorizationContext);
-        return fromCompletionStage(authorizationCache.get(key, k -> authorizeUser(authorizationContext, startTimeNanos)))
-               .compose(future -> future);
+        // Cache.get() returns the cached Future<Boolean> directly. This is simpler than AsyncCache which
+        // would wrap the result in a CompletableFuture, requiring unwrapping via compose(future -> future).
+        // The synchronous Cache API provides thread-safe deduplication of concurrent loads for the same key.
+        return authorizationCache.get(key, k -> authorizeUser(authorizationContext, startTimeNanos));
     }
 
     protected Future<Boolean> authorizeUser(AuthorizationContext authorizationContext, long startTimeNanos)

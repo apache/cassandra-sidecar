@@ -22,7 +22,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -48,7 +47,7 @@ public class CacheFactory
     public static final String ENDPOINT_AUTHORIZATION_CACHE_NAME = "endpoint_authorization_cache";
 
     private final Cache<SSTableImporter.ImportOptions, Future<Void>> ssTableImportCache;
-    private final AsyncCache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache;
+    private final Cache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache;
 
     @Inject
     public CacheFactory(SidecarConfiguration configuration,
@@ -80,7 +79,7 @@ public class CacheFactory
     /**
      * @return the cache used for authorization requests
      */
-    public AsyncCache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache()
+    public Cache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache()
     {
         return endpointAuthorizationCache;
     }
@@ -119,15 +118,24 @@ public class CacheFactory
     /**
      * Initializes the Authorization Cache using the provided {@code configuration}. We want to create only one
      * instance of authorization cache.
+     * <p>
+     * This cache stores {@code Future<Boolean>} values representing asynchronous authorization check results.
+     * The cache uses Caffeine's thread-safe {@code get(key, mappingFunction)} which ensures that for concurrent
+     * requests with the same authorization key, only one authorization check is performed, and all requesters
+     * receive the same Future instance.
+     * <p>
+     * Note: We use a synchronous {@link Cache} rather than {@link com.github.benmanes.caffeine.cache.AsyncCache}
+     * to avoid double-wrapping of Future values and to maintain better control over Vert.x context switching
+     * (see CASSSIDECAR-368).
      *
      * @param sidecarConfiguration the Sidecar configuration
      * @param sidecarMetrics       the Sidecar metrics registry
      * @param ticker               the ticker for the cache
-     * @return instance of {@link AsyncCache} for caching authorization requests
+     * @return instance of {@link Cache} for caching authorization requests with {@code Future<Boolean>} values
      */
-    private AsyncCache<AuthorizationCacheKey, Future<Boolean>> initEndpointAuthorizationCache(SidecarConfiguration sidecarConfiguration,
-                                                                                              SidecarMetrics sidecarMetrics,
-                                                                                              Ticker ticker)
+    private Cache<AuthorizationCacheKey, Future<Boolean>> initEndpointAuthorizationCache(SidecarConfiguration sidecarConfiguration,
+                                                                                         SidecarMetrics sidecarMetrics,
+                                                                                         Ticker ticker)
     {
         if (!sidecarConfiguration.accessControlConfiguration().enabled()
             || !sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration().enabled())
@@ -149,6 +157,6 @@ public class CacheFactory
                                           permissionCacheConfig.expireAfterAccess().unit())
                        .maximumSize(permissionCacheConfig.maximumSize())
                        .recordStats(() -> sidecarMetrics.server().cache().authorizationCacheMetrics)
-                       .buildAsync();
+                       .build();
     }
 }

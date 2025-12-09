@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
 import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.Cache;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -348,34 +349,34 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     void testInvalidateEndpointAuthorizationCache()
     {
         CacheFactory cacheFactory = serverWrapper.injector.getInstance(CacheFactory.class);
-        AsyncCache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
+        Cache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
 
         // Clear the cache first to ensure clean state
         String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
         verifyAccess(HttpMethod.DELETE, clearCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap()).isEmpty());
+        loopAssert(3, () -> assertThat(endpointAuthorizationCache.asMap()).isEmpty());
 
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap()).isNotEmpty());
+        loopAssert(3, () -> assertThat(endpointAuthorizationCache.asMap()).isNotEmpty());
 
         // Invalidate cache and verify
         String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
         verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap()).isEmpty());
+        loopAssert(3, () -> assertThat(endpointAuthorizationCache.asMap()).isEmpty());
 
         // Re-populate cache with test user and verify test user is back in cache
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        loopAssert(3, () -> assertThat(endpointAuthorizationCache.synchronous().asMap()).isNotEmpty());
+        loopAssert(3, () -> assertThat(endpointAuthorizationCache.asMap()).isNotEmpty());
     }
 
     @Test
     void testInvalidateEndpointAuthorizationCacheWithKeys()
     {
         CacheFactory cacheFactory = serverWrapper.injector.getInstance(CacheFactory.class);
-        AsyncCache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
+        Cache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
 
         verifyKeyBasedInvalidationNotSupported(CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME,
-                                              () -> endpointAuthorizationCache.synchronous().asMap(),
+                                              () -> endpointAuthorizationCache.asMap(),
                                               testUserKeystorePath);
     }
 

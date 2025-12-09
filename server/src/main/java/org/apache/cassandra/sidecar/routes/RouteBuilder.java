@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.Cache;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
@@ -68,7 +68,7 @@ public class RouteBuilder
     private final AdminIdentityResolver adminIdentityResolver;
     private final AuthorizationParameterValidateHandler authZParameterValidateHandler;
     private final SidecarMetrics sidecarMetrics;
-    private final AsyncCache<AuthorizationCacheKey, Future<Boolean>> authorizationCache;
+    private final Cache<AuthorizationCacheKey, Future<Boolean>> authorizationCache;
     private boolean setBodyHandler;
     private boolean accessProtected = true;
     private final List<Handler<RoutingContext>> handlers = new ArrayList<>();
@@ -235,14 +235,14 @@ public class RouteBuilder
         private final AdminIdentityResolver adminIdentityResolver;
         private final AuthorizationParameterValidateHandler authZParameterValidateHandler;
         private final SidecarMetrics sidecarMetrics;
-        private final AsyncCache<AuthorizationCacheKey, Future<Boolean>> authorizationCache;
+        private final Cache<AuthorizationCacheKey, Future<Boolean>> authorizationCache;
 
         public Factory(AccessControlConfiguration accessControlConfiguration,
                        AuthorizationProvider authorizationProvider,
                        AdminIdentityResolver adminIdentityResolver,
                        AuthorizationParameterValidateHandler authZParameterValidateHandler,
                        SidecarMetrics sidecarMetrics,
-                       AsyncCache<AuthorizationCacheKey, Future<Boolean>> authorizationCache)
+                       Cache<AuthorizationCacheKey, Future<Boolean>> authorizationCache)
         {
             this.accessControlConfiguration = accessControlConfiguration;
             this.authorizationProvider = authorizationProvider;

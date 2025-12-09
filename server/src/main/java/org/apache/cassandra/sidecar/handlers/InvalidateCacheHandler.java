@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.Cache;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -63,7 +64,7 @@ public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandl
     private final IdentityToRoleCache identityToRoleCache;
     private final RoleAuthorizationsCache roleAuthorizationsCache;
     private final SuperUserCache superUserCache;
-    private final AsyncCache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache;
+    private final Cache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache;
 
     @Inject
     public InvalidateCacheHandler(InstanceMetadataFetcher metadataFetcher,
@@ -126,7 +127,7 @@ public class InvalidateCacheHandler extends AbstractHandler<InvalidateCacheHandl
                     throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
                                             "endpoint_authorization_cache does not support selective key invalidation");
                 }
-                endpointAuthorizationCache.synchronous().invalidateAll();
+                endpointAuthorizationCache.invalidateAll();
                 break;
             default:
                 throw wrapHttpException(HttpResponseStatus.NOT_FOUND,
