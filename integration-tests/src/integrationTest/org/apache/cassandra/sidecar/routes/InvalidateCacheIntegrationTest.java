@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
-import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
