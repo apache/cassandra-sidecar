@@ -206,7 +206,8 @@ class CachedAuthorizationHandlerTest
             handler.handle(mockContext2);
         }
 
-        verify(mockContext2, times(5)).next();
+        // handle is async in handler. There could be a slight delay on showing a total of 5 invocations.
+        loopAssert(1, () -> verify(mockContext2, times(5)).next());
 
         // Verify cache hit for mockContext2
         CacheStats multipleCallStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
