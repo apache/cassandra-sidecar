@@ -33,6 +33,7 @@ We warmly welcome and appreciate contributions from the community.
   * [Introducing new APIs](#new-apis)
   * [Asynchronous Programming](#async-programming)
   * [Thread Pool Model](#thread-pools)
+  * [Vert.x Threading Model](#vertx-threading)
   * [One-shot Timers and Periodic Timers](#timers)
   * [Guice in Sidecar](#guice)
   * [Handler Chaining](#chaining-handlers)
@@ -197,6 +198,30 @@ duration. In other words, they are not time sensitive.
 The `service` worker pool has the name `sidecar-worker-pool`.
 
 The `internal` worker pool has the name `sidecar-internal-worker-pool`.
+
+### <a name="vertx-threading"></a>Vert.x Threading Model
+
+**Critical**: Each HTTP request MUST be processed by exactly ONE Vert.x event loop thread throughout its entire lifecycle.
+
+When integrating external async APIs (Caffeine cache, AWS SDK, CompletableFuture-based libraries), their callbacks execute on
+arbitrary threads. This violates Vert.x's threading model and can cause race conditions, data corruption, and intermittent bugs.
+
+**Pattern**: Always capture the Vert.x context at handler entry and restore it before accessing request state:
+
+```java
+public void handle(RoutingContext context) {
+    Context originCtx = Vertx.currentContext();  // Capture context
+
+    externalAsyncOperation()
+    .onSuccess(result -> {
+        originCtx.runOnContext(v -> {  // Restore context
+            context.next();
+        });
+    });
+}
+```
+
+For detailed examples and best practices, see the [Vert.x Threading Model Guide](docs/vertx-threading-model.md).
 
 ### <a name="timers"></a>One-shot Timers and Periodic Timers
 
