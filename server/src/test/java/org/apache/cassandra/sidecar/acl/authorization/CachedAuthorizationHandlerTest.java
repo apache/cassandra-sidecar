@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authorization.AndAuthorization;
@@ -33,6 +34,7 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.AuthorizationProvider;
 import io.vertx.ext.auth.authorization.PermissionBasedAuthorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
@@ -74,10 +76,12 @@ class CachedAuthorizationHandlerTest
     private Authorization testAuthorization;
     private RouteBuilder.Factory routeBuilderFactory;
     private SSTableImporter sstableImporter;
+    private Vertx vertx;
 
     @BeforeEach
     void setUp()
     {
+        vertx = Vertx.vertx();
         mockAccessControlConfig = mock(AccessControlConfiguration.class);
         AuthorizationParameterValidateHandler mockValidateHandler = mock(AuthorizationParameterValidateHandler.class);
         mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
@@ -118,6 +122,7 @@ class CachedAuthorizationHandlerTest
     @AfterEach
     void tearDown()
     {
+        TestResourceReaper.create().with(vertx).close();
         registry().removeMatching((name, metric) -> true);
     }
 
@@ -496,6 +501,7 @@ class CachedAuthorizationHandlerTest
         when(mockServerRequest.pause()).thenReturn(mockServerRequest);
         when(mockServerRequest.resume()).thenReturn(mockServerRequest);
         when(mockContext.request()).thenReturn(mockServerRequest);
+        when(mockContext.vertx()).thenReturn(vertx);
         User mockUser = createMockUser(username, identities, roles);
         when(mockContext.user()).thenReturn(mockUser);
 
@@ -544,7 +550,7 @@ class CachedAuthorizationHandlerTest
 
         if (success)
         {
-            loopAssert(2, 100, () -> verify(mockContext).next());
+            loopAssert(2, 100, () -> verify(mockContext, times(1)).next());
         }
         else
         {
@@ -556,25 +562,26 @@ class CachedAuthorizationHandlerTest
         assertThat(firstCallStats.missCount()).isEqualTo(1);
         assertThat(firstCallStats.hitCount()).isEqualTo(0);
 
-        for (int i = 0; i < 5; i++)
+        int totalInvocationCount = 5;
+        for (int invocationCount = 1; invocationCount <= totalInvocationCount; invocationCount++)
         {
             // Reset failed state before each subsequent call to allow handler to process
             when(mockContext.failed()).thenReturn(false);
+            int expectedTimes = invocationCount + 1;
             handler.handle(mockContext);
-        }
-
-        if (success)
-        {
-            loopAssert(2, 100, () -> verify(mockContext, times(6)).next());
-        }
-        else
-        {
-            loopAssert(2, 100, () -> verify(mockContext, times(6)).fail(eq(statusCode), any(Throwable.class)));
+            if (success)
+            {
+                loopAssert(2, 100, () -> verify(mockContext, times(expectedTimes)).next());
+            }
+            else
+            {
+                loopAssert(2, 100, () -> verify(mockContext, times(expectedTimes)).fail(eq(statusCode), any(Throwable.class)));
+            }
         }
 
         // Verify cache hit on subsequent requests
         CacheStats multipleCallStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
         assertThat(multipleCallStats.missCount()).isEqualTo(0);
-        assertThat(multipleCallStats.hitCount()).isEqualTo(5);
+        assertThat(multipleCallStats.hitCount()).isEqualTo(totalInvocationCount);
     }
 }

@@ -124,7 +124,7 @@ public class CachedAuthorizationHandler implements AuthorizationHandler
                 variableHandler.accept(context, authorizationContext);
             }
 
-            Context originCtx = Vertx.currentContext();
+            Context originCtx = context.vertx().getOrCreateContext();
             checkAuthorization(authorizationContext, startTimeNanos)
             .onSuccess(ignored -> {
                 originCtx.runOnContext(v -> {
