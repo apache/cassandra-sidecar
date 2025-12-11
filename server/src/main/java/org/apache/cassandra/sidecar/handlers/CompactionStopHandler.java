@@ -103,8 +103,8 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
         String compactionId = request.compactionId();
 
         // Convert enum to string for the operation (if not null)
-        // Use .toString() to get lowercase, matching Cassandra's compaction type format
-        String compactionTypeStr = compactionType != null ? compactionType.toString() : null;
+        // Use .name() to get uppercase enum name, matching Cassandra's OperationType enum format
+        String compactionTypeStr = compactionType != null ? compactionType.name() : null;
 
         // Attempt to stop the compaction
         // If compactionId is provided, use it (takes precedence over type)

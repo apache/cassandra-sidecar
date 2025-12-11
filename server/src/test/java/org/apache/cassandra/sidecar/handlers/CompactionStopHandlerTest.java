@@ -104,7 +104,7 @@ public class CompactionStopHandlerTest
         client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
-                      verify(mockCompactionManagerOperations, times(1)).stopCompaction(eq("compaction"));
+                      verify(mockCompactionManagerOperations, times(1)).stopCompaction(eq("COMPACTION"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                       CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
@@ -227,9 +227,9 @@ public class CompactionStopHandlerTest
         client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
-                      // Should trim and uppercase the type
+                      // Should trim and pass as uppercase enum name
                       verify(mockCompactionManagerOperations, times(1))
-                          .stopCompaction(eq("compaction"));
+                          .stopCompaction(eq("COMPACTION"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                   });
@@ -245,9 +245,9 @@ public class CompactionStopHandlerTest
         client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
-                      // Should accept lowercase and validate after uppercasing
+                      // Should accept lowercase input and send uppercase to Cassandra
                       verify(mockCompactionManagerOperations, times(1))
-                          .stopCompaction(eq("compaction"));
+                          .stopCompaction(eq("COMPACTION"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                   });

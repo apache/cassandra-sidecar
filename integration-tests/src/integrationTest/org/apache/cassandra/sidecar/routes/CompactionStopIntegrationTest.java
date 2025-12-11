@@ -436,15 +436,14 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
                 if (isEarlyStage || shouldStopAnyway) {
                     double startingProgress = progress;
-                    String originalTaskType = compaction.taskType();
-                    String compactionType = originalTaskType.toUpperCase();  // Convert to uppercase for API
+                    String taskType = compaction.taskType();
 
-                    logger.info("Found in-progress compaction - Original taskType: '{}', Converted: '{}', Progress: {}%, ID: {}",
-                            originalTaskType, compactionType, progress, compaction.id());
+                    logger.info("Found in-progress compaction - taskType: '{}', Progress: {}%, ID: {}",
+                            taskType, progress, compaction.id());
 
                     // Stop compaction by TYPE instead of ID
-                    // API accepts case-insensitive compaction types via JsonCreator - value can be used as-is from stats
-                    String stopPayload = "{\"compaction_type\":\"" + compactionType + "\"}";
+                    // The CompactionType enum handles case-insensitive conversion in fromString()
+                    String stopPayload = "{\"compaction_type\":\"" + taskType + "\"}";
 
                     logger.info("Sending stop payload: {}", stopPayload);
 
@@ -463,7 +462,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
                         return; // Skip verification if stop failed
                     }
                     assertThat(stopResponse.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-                    logger.info("Compaction stop called successfully for type: {} at {}% progress", compactionType, startingProgress);
+                    logger.info("Compaction stop called successfully for type: {} at {}% progress", taskType, startingProgress);
 
                     // Verify that compactions of this type are no longer in active compactions
                     for (int verifyAttempt = 0; verifyAttempt < 10; verifyAttempt++) {
@@ -478,15 +477,15 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
                         // Check if compactions of this TYPE are gone from active compactions
                         boolean compactionsOfTypeGone = statsAfter.activeCompactions().stream()
-                                .noneMatch(c -> c.taskType().toUpperCase().equals(compactionType));
+                                .noneMatch(c -> c.taskType().equalsIgnoreCase(taskType));
 
                         logger.info("Verify attempt {}: Compactions of type {} are gone={}, active count={}",
-                                verifyAttempt + 1, compactionType, compactionsOfTypeGone, statsAfter.activeCompactionsCount());
+                                verifyAttempt + 1, taskType, compactionsOfTypeGone, statsAfter.activeCompactionsCount());
 
                         if (compactionsOfTypeGone) {
                             logger.info("✓ Compactions of type {} stopped successfully at verify attempt {} - " +
                                             "was at {}% when stopped, disappeared from active list",
-                                    compactionType, verifyAttempt, startingProgress);
+                                    taskType, verifyAttempt, startingProgress);
                             break;
                         }
                     }
