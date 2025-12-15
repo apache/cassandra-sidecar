@@ -64,7 +64,7 @@ jobs:
 
       - name: Cache dtest jars
         id: cache-dtest-jars
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: dtest-jars/
           key: dtest-jars-${{ hashFiles('scripts/build-dtest-jars.sh', 'gradle/wrapper/gradle-wrapper.properties') }}
