@@ -34,7 +34,7 @@ import static org.apache.cassandra.sidecar.handlers.AbstractHandler.extractHostA
 /**
  * Handler for enabling or disabling live migration APIs based on instance role and migration status.
  * <p>
- * <h3>Handler Methods:</h3>
+ * <h2>Handler Methods:</h2>
  * <ul>
  *   <li>{@link #isSource(RoutingContext)} - Allows access only if instance is a migration source</li>
  *   <li>{@link #isDestination(RoutingContext)} - Allows access only if instance is a migration destination</li>

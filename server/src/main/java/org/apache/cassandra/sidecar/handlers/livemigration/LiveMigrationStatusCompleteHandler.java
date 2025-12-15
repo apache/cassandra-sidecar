@@ -50,7 +50,7 @@ import org.jetbrains.annotations.NotNull;
  * been migrated already. To ensure safety, other live migration endpoints such as file streaming
  * or data-copy requests will automatically stop serving to requests.
  *
- * <h3>Usage Safety:</h3>
+ * <h2>Usage Safety:</h2>
  * This endpoint should only be called when the live migration process has genuinely completed
  * all data transfer and validation steps. Premature completion can lead to data inconsistency
  * or loss during cluster operations.

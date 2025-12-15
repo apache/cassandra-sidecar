@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.server;
 
-import io.vertx.core.impl.CloseFuture;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,8 +26,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -157,9 +154,12 @@ public class Server
      */
     public Future<Void> close()
     {
-        if (closeFuture == null) {
-            synchronized (this) {
-                if (closeFuture == null) {
+        if (closeFuture == null)
+        {
+            synchronized (this)
+            {
+                if (closeFuture == null)
+                {
                     setCloseFuture();
                 }
             }

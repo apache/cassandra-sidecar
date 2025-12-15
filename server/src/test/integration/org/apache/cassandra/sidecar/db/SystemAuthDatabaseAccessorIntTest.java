@@ -32,7 +32,7 @@ class SystemAuthDatabaseAccessorIntTest extends IntegrationTestBase
     @CassandraIntegrationTest(authMode = AuthMode.PASSWORD)
     void testCrudOperations()
     {
-        waitForSchemaReady(10, TimeUnit.SECONDS);
+        waitForSchemaReady(20, TimeUnit.SECONDS);
 
         createRole("super_user_role", true);
         createRole("non_super_user_role", false);

@@ -49,7 +49,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * migrated again in the future. Clearing the status is necessary to prevent blocking
  * future migrations of the same destination instance.
  *
- * <h3>Usage Safety:</h3>
+ * <h2>Usage Safety:</h2>
  * IMPORTANT: This endpoint should ONLY be called after completing the live migration
  * process and the instance entry has been removed from the Live Migration map
  * Calling this endpoint prematurely may lead to inconsistent migration state.
