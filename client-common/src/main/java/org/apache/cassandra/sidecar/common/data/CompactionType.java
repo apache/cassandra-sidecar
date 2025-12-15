@@ -39,16 +39,16 @@ public enum CompactionType
     TOMBSTONE_COMPACTION,
     ANTICOMPACTION,
     VERIFY,
+    WRITE,
     VIEW_BUILD,
     INDEX_SUMMARY,
     RELOCATE,
-    GARBAGE_COLLECT,
-    WRITE;
+    GARBAGE_COLLECT;
 
     @Override
     public String toString()
     {
-        return name().toLowerCase(Locale.ROOT);
+        return name();
     }
 
     /**
