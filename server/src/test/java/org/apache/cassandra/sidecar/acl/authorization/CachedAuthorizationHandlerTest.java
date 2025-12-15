@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authorization.AndAuthorization;
@@ -33,6 +34,7 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.AuthorizationProvider;
 import io.vertx.ext.auth.authorization.PermissionBasedAuthorization;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
@@ -68,19 +70,20 @@ class CachedAuthorizationHandlerTest
 {
     private SidecarConfiguration sidecarConfiguration;
     private AccessControlConfiguration mockAccessControlConfig;
-    private AuthorizationParameterValidateHandler mockValidateHandler;
     private AdminIdentityResolver mockAdminIdentityResolver;
     private CacheConfiguration mockCacheConfig;
     private SidecarMetrics metrics;
     private Authorization testAuthorization;
     private RouteBuilder.Factory routeBuilderFactory;
     private SSTableImporter sstableImporter;
+    private Vertx vertx;
 
     @BeforeEach
     void setUp()
     {
+        vertx = Vertx.vertx();
         mockAccessControlConfig = mock(AccessControlConfiguration.class);
-        mockValidateHandler = mock(AuthorizationParameterValidateHandler.class);
+        AuthorizationParameterValidateHandler mockValidateHandler = mock(AuthorizationParameterValidateHandler.class);
         mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
         mockCacheConfig = mock(CacheConfiguration.class);
 
@@ -113,13 +116,13 @@ class CachedAuthorizationHandlerTest
 
         // Take baseline before first call. A snapshot call refreshes cache miss and cache hits. But it does not reset
         // load success count or load failure count
-        CacheStats baseline = metrics.server().cache().authorizationCacheMetrics.snapshot();
-
+        metrics.server().cache().authorizationCacheMetrics.snapshot();
     }
 
     @AfterEach
     void tearDown()
     {
+        TestResourceReaper.create().with(vertx).close();
         registry().removeMatching((name, metric) -> true);
     }
 
@@ -132,7 +135,7 @@ class CachedAuthorizationHandlerTest
         Authorization expected = PermissionBasedAuthorization.create("CREATE");
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
-        = new CachedAuthorizationHandler(1, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(1, mockAccessControlConfig, mockAdminIdentityResolver,
                                          expected, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext = createMockContext("admin-user", "admin-identity1", "admin-role1");
@@ -144,7 +147,7 @@ class CachedAuthorizationHandlerTest
     {
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
-        = new CachedAuthorizationHandler(2, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(2, mockAccessControlConfig, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext
@@ -160,7 +163,7 @@ class CachedAuthorizationHandlerTest
     {
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
-        = new CachedAuthorizationHandler(3, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(3, mockAccessControlConfig, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext = createMockContext("user2", "identity2", "role2");
@@ -175,7 +178,7 @@ class CachedAuthorizationHandlerTest
         Authorization expected = PermissionBasedAuthorization.create("CREATE");
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
-        = new CachedAuthorizationHandler(4, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(4, mockAccessControlConfig, mockAdminIdentityResolver,
                                          expected, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext = createMockContext("user3", "identity3", "role3");
@@ -189,7 +192,7 @@ class CachedAuthorizationHandlerTest
     {
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
-        = new CachedAuthorizationHandler(5, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(5, mockAccessControlConfig, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext1 = createMockContext("user4", "identity4", "role4");
@@ -203,7 +206,8 @@ class CachedAuthorizationHandlerTest
             handler.handle(mockContext2);
         }
 
-        verify(mockContext2, times(5)).next();
+        // handle is async in handler. There could be a slight delay on showing a total of 5 invocations.
+        loopAssert(1, () -> verify(mockContext2, times(5)).next());
 
         // Verify cache hit for mockContext2
         CacheStats multipleCallStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
@@ -216,7 +220,7 @@ class CachedAuthorizationHandlerTest
     {
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
-        = new CachedAuthorizationHandler(6, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(6, mockAccessControlConfig, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext1 = createMockContext("user5", "identity5", "role5");
@@ -240,7 +244,7 @@ class CachedAuthorizationHandlerTest
     {
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
-        = new CachedAuthorizationHandler(7, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(7, mockAccessControlConfig, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         handler.variableConsumer(routeBuilderFactory.builderForRoute().routeGenericVariableConsumer());
@@ -267,7 +271,7 @@ class CachedAuthorizationHandlerTest
     {
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
-        = new CachedAuthorizationHandler(8, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(8, mockAccessControlConfig, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         handler.variableConsumer(routeBuilderFactory.builderForRoute().routeGenericVariableConsumer());
@@ -293,39 +297,11 @@ class CachedAuthorizationHandlerTest
     }
 
     @Test
-    void testValidationFailure()
-    {
-        CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
-        CachedAuthorizationHandler handler
-        = new CachedAuthorizationHandler(9, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
-                                         testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
-
-        RoutingContext mockContext = createMockContext("user8", "identity9", "role9");
-
-        // Mock validation handler to fail the context
-        doAnswer(invocation -> {
-            RoutingContext ctx = invocation.getArgument(0);
-            when(ctx.failed()).thenReturn(true);
-            return null;
-        }).when(mockValidateHandler).handle(any(RoutingContext.class));
-
-        handler.handle(mockContext);
-
-        // Should not proceed to authorization or call next()
-        verify(mockContext, times(0)).next();
-
-        // Verify no cache operations when validation fails
-        CacheStats firstCallStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
-        assertThat(firstCallStats.missCount()).isEqualTo(0);
-        assertThat(firstCallStats.hitCount()).isEqualTo(0);
-    }
-
-    @Test
     void testEmptyIdentities()
     {
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handlerWithModifyPermission
-        = new CachedAuthorizationHandler(10, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(10, mockAccessControlConfig, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext1 = createMockContext("user9", List.of(), List.of());
@@ -335,7 +311,7 @@ class CachedAuthorizationHandlerTest
 
         Authorization expected = PermissionBasedAuthorization.create("CREATE");
         CachedAuthorizationHandler handlerWithCreatePermission
-        = new CachedAuthorizationHandler(11, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(11, mockAccessControlConfig, mockAdminIdentityResolver,
                                          expected, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext2 = createMockContext("user10", List.of(), List.of());
@@ -353,7 +329,7 @@ class CachedAuthorizationHandlerTest
 
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
         CachedAuthorizationHandler handler
-        = new CachedAuthorizationHandler(12, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(12, mockAccessControlConfig, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext1 = createMockContext("user11", "identity11", "role11");
@@ -391,14 +367,14 @@ class CachedAuthorizationHandlerTest
 
         // Handler 1 requires MODIFY permission
         CachedAuthorizationHandler handler1
-        = new CachedAuthorizationHandler(100, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(100, mockAccessControlConfig, mockAdminIdentityResolver,
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         // Handler 2 requires CREATE permission
         Authorization createAuthorization = AndAuthorization.create()
                                                             .addAuthorization(PermissionBasedAuthorization.create("CREATE"));
         CachedAuthorizationHandler handler2
-        = new CachedAuthorizationHandler(200, mockAccessControlConfig, mockValidateHandler, mockAdminIdentityResolver,
+        = new CachedAuthorizationHandler(200, mockAccessControlConfig, mockAdminIdentityResolver,
                                          createAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         // Same user accessing both routes
@@ -439,12 +415,12 @@ class CachedAuthorizationHandlerTest
 
         // Create two handler instances with the SAME handlerId
         CachedAuthorizationHandler handler1
-        = new CachedAuthorizationHandler(sharedHandlerId, mockAccessControlConfig, mockValidateHandler,
+        = new CachedAuthorizationHandler(sharedHandlerId, mockAccessControlConfig,
                                          mockAdminIdentityResolver, testAuthorization, metrics,
                                          cacheFactory.endpointAuthorizationCache());
 
         CachedAuthorizationHandler handler2
-        = new CachedAuthorizationHandler(sharedHandlerId, mockAccessControlConfig, mockValidateHandler,
+        = new CachedAuthorizationHandler(sharedHandlerId, mockAccessControlConfig,
                                          mockAdminIdentityResolver, testAuthorization, metrics,
                                          cacheFactory.endpointAuthorizationCache());
 
@@ -478,7 +454,7 @@ class CachedAuthorizationHandlerTest
 
         // Create two handler instances with the SAME handlerId
         CachedAuthorizationHandler handler1
-        = new CachedAuthorizationHandler(sharedHandlerId, mockAccessControlConfig, mockValidateHandler,
+        = new CachedAuthorizationHandler(sharedHandlerId, mockAccessControlConfig,
                                          mockAdminIdentityResolver, testAuthorization, metrics,
                                          cacheFactory.endpointAuthorizationCache());
 
@@ -487,7 +463,7 @@ class CachedAuthorizationHandlerTest
                                                             .addAuthorization(PermissionBasedAuthorization.create("CREATE"));
 
         CachedAuthorizationHandler handler2
-        = new CachedAuthorizationHandler(sharedHandlerId, mockAccessControlConfig, mockValidateHandler,
+        = new CachedAuthorizationHandler(sharedHandlerId, mockAccessControlConfig,
                                          mockAdminIdentityResolver, createAuthorization, metrics,
                                          cacheFactory.endpointAuthorizationCache());
 
@@ -526,6 +502,7 @@ class CachedAuthorizationHandlerTest
         when(mockServerRequest.pause()).thenReturn(mockServerRequest);
         when(mockServerRequest.resume()).thenReturn(mockServerRequest);
         when(mockContext.request()).thenReturn(mockServerRequest);
+        when(mockContext.vertx()).thenReturn(vertx);
         User mockUser = createMockUser(username, identities, roles);
         when(mockContext.user()).thenReturn(mockUser);
 
@@ -574,7 +551,7 @@ class CachedAuthorizationHandlerTest
 
         if (success)
         {
-            loopAssert(2, 100, () -> verify(mockContext).next());
+            loopAssert(2, 100, () -> verify(mockContext, times(1)).next());
         }
         else
         {
@@ -586,25 +563,26 @@ class CachedAuthorizationHandlerTest
         assertThat(firstCallStats.missCount()).isEqualTo(1);
         assertThat(firstCallStats.hitCount()).isEqualTo(0);
 
-        for (int i = 0; i < 5; i++)
+        int totalInvocationCount = 5;
+        for (int invocationCount = 1; invocationCount <= totalInvocationCount; invocationCount++)
         {
             // Reset failed state before each subsequent call to allow handler to process
             when(mockContext.failed()).thenReturn(false);
+            int expectedTimes = invocationCount + 1;
             handler.handle(mockContext);
-        }
-
-        if (success)
-        {
-            loopAssert(2, 100, () -> verify(mockContext, times(6)).next());
-        }
-        else
-        {
-            loopAssert(2, 100, () -> verify(mockContext, times(6)).fail(eq(statusCode), any(Throwable.class)));
+            if (success)
+            {
+                loopAssert(2, 100, () -> verify(mockContext, times(expectedTimes)).next());
+            }
+            else
+            {
+                loopAssert(2, 100, () -> verify(mockContext, times(expectedTimes)).fail(eq(statusCode), any(Throwable.class)));
+            }
         }
 
         // Verify cache hit on subsequent requests
         CacheStats multipleCallStats = metrics.server().cache().authorizationCacheMetrics.snapshot();
         assertThat(multipleCallStats.missCount()).isEqualTo(0);
-        assertThat(multipleCallStats.hitCount()).isEqualTo(5);
+        assertThat(multipleCallStats.hitCount()).isEqualTo(totalInvocationCount);
     }
 }

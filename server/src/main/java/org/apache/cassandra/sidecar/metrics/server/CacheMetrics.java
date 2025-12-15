@@ -31,7 +31,7 @@ public class CacheMetrics
     public final CacheStatsCounter snapshotCacheMetrics;
     public final CacheStatsCounter identityToRoleCacheMetrics;
     public final CacheStatsCounter superUserCacheMetrics;
-    public final CacheStatsCounter rolePermissionsCacheMetrics;
+    public final CacheStatsCounter roleAuthorizationsCacheMetrics;
     public final CacheStatsCounter authorizationCacheMetrics;
 
     public CacheMetrics(MetricRegistry globalMetricRegistry)
@@ -39,7 +39,7 @@ public class CacheMetrics
         snapshotCacheMetrics = new CacheStatsCounter(globalMetricRegistry, SNAPSHOT_CACHE_NAME);
         identityToRoleCacheMetrics = new CacheStatsCounter(globalMetricRegistry, "identity_to_role_cache");
         superUserCacheMetrics = new CacheStatsCounter(globalMetricRegistry, "super_user_cache");
-        rolePermissionsCacheMetrics = new CacheStatsCounter(globalMetricRegistry, "role_permissions_cache");
+        roleAuthorizationsCacheMetrics = new CacheStatsCounter(globalMetricRegistry, "role_authorizations_cache");
         authorizationCacheMetrics = new CacheStatsCounter(globalMetricRegistry, "authorization_cache");
     }
 }

@@ -663,6 +663,59 @@ abstract class SidecarClientTest
     }
 
     @Test
+    void testInvalidateCache() throws Exception
+    {
+        MockResponse response = new MockResponse()
+                                .setResponseCode(OK.code())
+                                .setHeader("content-type", "application/json")
+                                .setBody("{\"status\":\"OK\"}");
+        SidecarInstanceImpl sidecarInstance = instances.get(1);
+        MockWebServer mockWebServer = servers.get(1);
+        mockWebServer.enqueue(response);
+
+        HealthResponse result = client.invalidateCache(sidecarInstance, "identity_to_role_cache", null)
+                                      .get(30, TimeUnit.SECONDS);
+
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualToIgnoringCase("OK");
+        assertThat(result.isOk()).isTrue();
+
+        assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
+        RecordedRequest request = mockWebServer.takeRequest();
+        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.INVALIDATE_CACHE_ROUTE
+                                                .replaceAll(ApiEndpointsV1.CACHE_NAME_PARAM, "identity_to_role_cache"));
+        assertThat(request.getMethod()).isEqualTo("DELETE");
+    }
+
+    @Test
+    void testInvalidateCacheWithKeys() throws Exception
+    {
+        MockResponse response = new MockResponse()
+                                .setResponseCode(OK.code())
+                                .setHeader("content-type", "application/json")
+                                .setBody("{\"status\":\"OK\"}");
+        SidecarInstanceImpl sidecarInstance = instances.get(1);
+        MockWebServer mockWebServer = servers.get(1);
+        mockWebServer.enqueue(response);
+
+        List<String> keys = Arrays.asList("key1", "key2", "key3");
+        HealthResponse result = client.invalidateCache(sidecarInstance, "identity_to_role_cache", keys)
+                                      .get(30, TimeUnit.SECONDS);
+
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualToIgnoringCase("OK");
+        assertThat(result.isOk()).isTrue();
+
+        assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
+        RecordedRequest request = mockWebServer.takeRequest();
+        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.INVALIDATE_CACHE_ROUTE
+                                                .replaceAll(ApiEndpointsV1.CACHE_NAME_PARAM, "identity_to_role_cache")
+                                                + "?keys=key1&keys=key2&keys=key3");
+        assertThat(request.getMethod()).isEqualTo("DELETE");
+    }
+
+
+    @Test
     void testCreateSnapshot() throws Exception
     {
         MockResponse response = new MockResponse().setResponseCode(OK.code());

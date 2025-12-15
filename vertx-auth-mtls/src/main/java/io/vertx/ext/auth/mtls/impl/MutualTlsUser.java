@@ -46,6 +46,14 @@ public class MutualTlsUser extends UserImpl
     }
 
     @Override
+    public String toString()
+    {
+        return "MutualTlsUser{" +
+               "identities=" + identities +
+               '}';
+    }
+
+    @Override
     public boolean equals(Object o)
     {
         if (this == o)

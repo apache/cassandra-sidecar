@@ -30,6 +30,8 @@ import com.google.inject.multibindings.ProvidesIntoMap;
 import io.vertx.core.Vertx;
 import io.vertx.ext.auth.authorization.AuthorizationProvider;
 import io.vertx.ext.web.handler.ChainAuthHandler;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.Path;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.acl.authentication.AuthenticationHandlerFactory;
@@ -44,6 +46,7 @@ import org.apache.cassandra.sidecar.acl.authorization.PermissionFactory;
 import org.apache.cassandra.sidecar.acl.authorization.PermissionFactoryImpl;
 import org.apache.cassandra.sidecar.acl.authorization.RoleAuthorizationsCache;
 import org.apache.cassandra.sidecar.acl.authorization.RoleBasedAuthorizationProvider;
+import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -51,6 +54,7 @@ import org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
+import org.apache.cassandra.sidecar.handlers.InvalidateCacheHandler;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
@@ -59,6 +63,8 @@ import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.RoutingOrder;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
 import org.apache.cassandra.sidecar.utils.CacheFactory;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 
 /**
  * Provides authentication and authorization (role-based) capability
@@ -66,14 +72,14 @@ import org.apache.cassandra.sidecar.utils.CacheFactory;
 public class AuthModule extends AbstractModule
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthModule.class);
-    
+
     @ProvidesIntoMap
     @KeyClassMapKey(TableSchemaMapKeys.SystemAuthSchemaKey.class)
     TableSchema systemAuthSchema() // Note that it returns TableSchema, not CassandraSystemTableSchema, in order to locate the same mapBinder
     {
         return new SystemAuthSchema();
     }
-    
+
     @ProvidesIntoMap
     @KeyClassMapKey(TableSchemaMapKeys.SidecarRolePermissionsSchemaKey.class)
     TableSchema sidecarRolePermissionSchema(SidecarConfiguration sidecarConfiguration)
@@ -155,6 +161,23 @@ public class AuthModule extends AbstractModule
                                                  // eval after the highest ordered handlers, e.g. logger and timeout handlers
                                                  .order(RoutingOrder.HIGHER.order)
                                                  .handler(chainAuthHandler));
+    }
+
+    @DELETE
+    @Path(ApiEndpointsV1.INVALIDATE_CACHE_ROUTE)
+    @Operation(summary = "Invalidate the specified cache",
+    description = "Invalidates entries in the specified cache. Supports full cache invalidation or selective key-based invalidation where applicable. " +
+                  "Valid cache names: identity_to_role_cache, role_authorizations_cache, super_user_cache, endpoint_authorization_cache.")
+    @APIResponse(description = "Cache invalidated successfully",
+    responseCode = "200")
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.InvalidateCacheKey.class)
+    VertxRoute invalidateCacheRouteKey(RouteBuilder.Factory factory,
+                                       InvalidateCacheHandler invalidateCacheHandler)
+    {
+        return factory.builderForRoute()
+                      .handler(invalidateCacheHandler)
+                      .build();
     }
 
     @Provides

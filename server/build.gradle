@@ -147,6 +147,9 @@ dependencies {
     implementation(group: "org.apache.cassandra", name: "cassandra-analytics-cdc_spark3_2.12", version: "${[project.analyticsVersion]}")
     implementation "com.esotericsoftware:kryo-shaded:${kryoVersion}"
 
+    // OSHI core library for fetching system information
+    implementation("com.github.oshi:oshi-core:${oshiVersion}")
+
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
     testImplementation "org.assertj:assertj-core:3.24.2"

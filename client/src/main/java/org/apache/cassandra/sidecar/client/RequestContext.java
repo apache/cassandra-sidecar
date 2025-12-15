@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.client;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -39,6 +40,7 @@ import org.apache.cassandra.sidecar.common.request.GossipHealthRequest;
 import org.apache.cassandra.sidecar.common.request.GossipInfoRequest;
 import org.apache.cassandra.sidecar.common.request.GossipUpdateRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
+import org.apache.cassandra.sidecar.common.request.InvalidateCacheRequest;
 import org.apache.cassandra.sidecar.common.request.LifecycleInfoRequest;
 import org.apache.cassandra.sidecar.common.request.LifecycleUpdateRequest;
 import org.apache.cassandra.sidecar.common.request.ListOperationalJobsRequest;
@@ -461,6 +463,19 @@ public class RequestContext
         }
 
         /**
+         * Sets the {@code request} to be a {@link InvalidateCacheRequest} for the given {@code cacheName}
+         * and returns a reference to this Builder enabling method chaining.
+         *
+         * @param cacheName the name of the cache to invalidate
+         * @param keys the specific keys to invalidate, or null to invalidate all keys
+         * @return a reference to this Builder
+         */
+        public Builder invalidateCacheRequest(String cacheName, @Nullable List<String> keys)
+        {
+            return request(new InvalidateCacheRequest(cacheName, keys));
+        }
+
+        /**
          * Sets the {@code request} to be a {@link CleanSSTableUploadSessionRequest} for the given {@code uploadId}
          * and returns a reference to this Builder enabling method chaining.
          *
@@ -599,7 +614,7 @@ public class RequestContext
          * Sets the {@code request} to be a {@link GossipUpdateRequest} for the
          * given {@link NodeCommandRequestPayload.State state}, and returns a reference to this Builder enabling method chaining.
          *
-         * @param state  the desired state for gossip
+         * @param state the desired state for gossip
          * @return a reference to this Builder
          */
         public Builder nodeGossipUpdateRequest(@NotNull NodeCommandRequestPayload.State state)
@@ -611,7 +626,7 @@ public class RequestContext
          * Sets the {@code request} to be a {@link NativeUpdateRequest} for the
          * given {@link NodeCommandRequestPayload.State state}, and returns a reference to this Builder enabling method chaining.
          *
-         * @param state  the desired state for native transport
+         * @param state the desired state for native transport
          * @return a reference to this Builder
          */
         public Builder nodeNativeUpdateRequest(@NotNull NodeCommandRequestPayload.State state)

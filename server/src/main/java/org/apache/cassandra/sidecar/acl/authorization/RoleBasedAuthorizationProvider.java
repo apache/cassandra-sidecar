@@ -73,11 +73,11 @@ public class RoleBasedAuthorizationProvider implements AuthorizationProvider
                 continue;
             }
 
-            String authorizationId = getId();
             Set<Authorization> authorizations = roleAuthorizationsCache.getAuthorizations(role);
             // when entries in cache are not found, null is returned. We can not add null in user.authorizations()
             if (authorizations != null)
             {
+                String authorizationId = getId();
                 user.authorizations().add(authorizationId, authorizations);
             }
         }

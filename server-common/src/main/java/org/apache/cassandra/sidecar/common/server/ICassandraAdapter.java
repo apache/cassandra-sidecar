@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.common.server;
 
 import java.net.InetSocketAddress;
+import java.util.Map;
 
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.ResultSet;
@@ -50,6 +51,13 @@ public interface ICassandraAdapter
      * @throws CassandraUnavailableException when no JMX connection is established
      */
     @NotNull NodeSettings nodeSettings() throws CassandraUnavailableException;
+
+    /**
+     * The settings for this instance which are stored in the system_view.settings virtual table.
+     * @return A map of name: value mappings for the settings in system_view.settings.
+     * @throws CassandraUnavailableException when CQL is not available
+     */
+    @NotNull Map<String, String> v2NodeSettings() throws CassandraUnavailableException;
 
     /**
      * Execute the provided query on the locally-managed Cassandra instance

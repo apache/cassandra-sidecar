@@ -35,15 +35,20 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 /**
- * Caches role and authorizations held by it. Entries from system_auth.role_permissions table in Cassandra and
- * sidecar_internal.role_permissions_v1 table are processed into authorizations and cached here. All table entries are
- * stored against a unique cache key. Caching against UNIQUE_CACHE_ENTRY is done to make sure new entries in the table
- * are picked up during cache refreshes.
+ * Caches role-to-authorizations mappings. Entries from system_auth.role_permissions table in Cassandra and
+ * sidecar_internal.role_permissions_v1 table are processed into authorizations and cached here.
+ *
+ * <p>All table entries are stored against a single unique cache key ({@link #UNIQUE_CACHE_ENTRY}). This design is
+ * necessary because the role-to-resource-to-permissions relationship is a many-to-many mapping. Without bulk loading,
+ * cache refresh would require expensive full table scans to find all entries for each role.
+ *
+ * <p>As a result, this cache only supports bulk operations and cannot load or invalidate individual keys. The single
+ * key approach ensures that all new entries in the underlying tables are picked up during cache refreshes.
  */
 @Singleton
 public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<Authorization>>>
 {
-    private static final String NAME = "role_permissions_cache";
+    public static final String NAME = "role_authorizations_cache";
     protected static final String UNIQUE_CACHE_ENTRY = "unique_cache_entry_key";
 
     @Inject
@@ -66,7 +71,7 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
                                                                 sidecarSchema,
                                                                 sidecarPermissionsDatabaseAccessor)),
               sidecarConfiguration.accessControlConfiguration().permissionCacheConfiguration(),
-              sidecarMetrics.server().cache().rolePermissionsCacheMetrics);
+              sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics);
     }
 
     /**
