@@ -138,6 +138,31 @@ public abstract class AuthCache<K, V>
         }
     }
 
+    /**
+     * Invalidate multiple keys.
+     * @param keys keys to invalidate
+     */
+    public void invalidateAll(Iterable<? extends K> keys)
+    {
+        if (cache != null)
+        {
+            cache.invalidateAll(keys);
+            logger.info("Cache entries with keys={} have been invalidated from cache={}", keys, this.name);
+        }
+    }
+
+    /**
+     * Invalidate all entries in this cache
+     */
+    public void invalidateAll()
+    {
+        if (cache != null)
+        {
+            cache.invalidateAll();
+            logger.info("All cache entries from {} have been invalidated", this.name);
+        }
+    }
+
     private LoadingCache<K, V> initCache()
     {
         if (config.refreshAfterWrite() == null && config.expireAfterAccess() == null)

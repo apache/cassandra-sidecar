@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.utils;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -30,7 +29,6 @@ import com.google.common.testing.FakeTicker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
@@ -217,7 +215,7 @@ class CacheFactoryTest
     @Test
     void testEndpointAuthorizationCacheExpiration() throws ExecutionException, InterruptedException
     {
-        AsyncCache<AuthorizationCacheKey, Boolean> cache = cacheFactory.endpointAuthorizationCache();
+        Cache<AuthorizationCacheKey, Future<Boolean>> cache = cacheFactory.endpointAuthorizationCache();
         AuthorizationCacheKey key1
         = createAuthorizationCacheKey(1, "user1", List.of("role1"), "ks1", "tbl1");
         AuthorizationCacheKey key2
@@ -260,7 +258,7 @@ class CacheFactoryTest
     @Test
     void testEndpointAuthorizationCacheDifferentKeys() throws ExecutionException, InterruptedException
     {
-        AsyncCache<AuthorizationCacheKey, Boolean> cache = cacheFactory.endpointAuthorizationCache();
+        Cache<AuthorizationCacheKey, Future<Boolean>> cache = cacheFactory.endpointAuthorizationCache();
 
         // Different handler IDs
         AuthorizationCacheKey key1
@@ -343,12 +341,12 @@ class CacheFactoryTest
         return AuthorizationCacheKey.create(handlerId, authContext);
     }
 
-    private Boolean authorizationCacheEntry(AsyncCache<AuthorizationCacheKey, Boolean> cache,
+    private Boolean authorizationCacheEntry(Cache<AuthorizationCacheKey, Future<Boolean>> cache,
                                             AuthorizationCacheKey key,
                                             Boolean value) throws ExecutionException, InterruptedException
     {
-        CompletableFuture<Boolean> future = cache.get(key, k -> value);
+        Future<Boolean> future = cache.get(key, k -> Future.succeededFuture(value));
         assertThat(future).isNotNull();
-        return future.get();
+        return future.toCompletionStage().toCompletableFuture().get();
     }
 }

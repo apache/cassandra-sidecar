@@ -1,6 +1,12 @@
 0.3.0
 -----
  * Sidecar endpoint for moving a node to a new token (CASSSIDECAR-344)
+ * Fix request execution continues on wrong thread (CASSSIDECAR-368)
+ * CachedAuthorizationHandler should pause and resume request while performing authZ operations (CASSSIDECAR-367)
+ * Added system disk information endpoint to Cassandra Sidecar (CASSSIDECAR-366)
+ * Adding support for quoted tables and keyspaces in snapshot cleanup (CASSSIDECAR-388)
+ * File descriptor leak after file streamed in Sidecar Client (CASSSIDECAR-386)
+ * Endpoint to invalidate auth caches as required (CASSSIDECAR-364)
  * Add /api/v2/cassandra/settings which will return Cassandra configurations stored in system_views.settings (CASSSIDECAR-272)
  * Fast Cassandra Input Validator (CASSSIDECAR-361)
  * Upgrade caffeine dependency (CASSSIDECAR-332)

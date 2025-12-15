@@ -76,7 +76,7 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
             return;
         }
 
-        getKeyspaceMetadata(host, input.keyspace())
+        getKeyspaceMetadata(host, input.maybeQuotedKeyspace())
         .onFailure(context::fail) // fail the request with the internal server error thrown from getKeyspaceMetadata
         .onSuccess(keyspaceMetadata -> {
             if (keyspaceMetadata == null)
@@ -88,7 +88,7 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
 
             RoutingContextUtils.put(context, RoutingContextUtils.SC_KEYSPACE_METADATA, keyspaceMetadata);
 
-            String table = input.tableName();
+            String table = input.maybeQuotedTableName();
             if (table == null)
             {
                 context.next();

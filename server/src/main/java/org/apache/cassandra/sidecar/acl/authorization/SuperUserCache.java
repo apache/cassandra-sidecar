@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.acl.authorization;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.acl.AuthCache;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -31,9 +32,10 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
  * (directly or indirectly) has superuser status.
  * Note: {@link SuperUserCache} maintains only the superuser status. It can not guarantee whether a role exists
  */
+@Singleton
 public class SuperUserCache extends AuthCache<String, Boolean>
 {
-    private static final String NAME = "super_user_cache";
+    public static final String NAME = "super_user_cache";
 
     @Inject
     public SuperUserCache(Vertx vertx,

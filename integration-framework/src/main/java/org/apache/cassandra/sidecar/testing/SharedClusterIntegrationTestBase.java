@@ -19,10 +19,12 @@
 
 package org.apache.cassandra.sidecar.testing;
 
+import java.io.IOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -38,6 +40,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -610,6 +613,47 @@ public abstract class SharedClusterIntegrationTestBase
             overrideBuilder.accept(builder);
         }
         return builder.build();
+    }
+
+    /**
+     * Recursively searches for files or directories matching the target name within the given keyspace.
+     * Note: must disable compaction, otherwise the file tree can be mutated while walking and test becomes flaky.
+     * Append WITH_COMPACTION_DISABLED to the table create statement.
+     *
+     * @param hostname     the hostname of the instance
+     * @param keyspaceName the keyspace name
+     * @param target       the target file or directory name to find
+     * @return a list of paths that match the target
+     */
+    protected List<Path> findChildFile(String hostname, String keyspaceName, String target)
+    {
+        InstanceMetadata instance = serverWrapper.injector.getInstance(InstancesMetadata.class).instanceFromHost(hostname);
+        List<String> dataDirs = instance.dataDirs();
+
+        return dataDirs.stream()
+                       .flatMap(dir -> findChildFile(Paths.get(dir, keyspaceName), target).stream())
+                       .collect(Collectors.toList());
+    }
+
+    /**
+     * Recursively searches for files or directories matching the target name within the given path.
+     *
+     * @param path   the root path to search from
+     * @param target the target file or directory name to find
+     * @return a list of paths that match the target
+     */
+    private List<Path> findChildFile(Path path, String target)
+    {
+        try (Stream<Path> walkStream = Files.walk(path))
+        {
+            return walkStream.filter(p -> p.toString().endsWith(target)
+                                          || p.toString().contains("/" + target + "/"))
+                             .collect(Collectors.toList());
+        }
+        catch (IOException e)
+        {
+            return Collections.emptyList();
+        }
     }
 
     /**

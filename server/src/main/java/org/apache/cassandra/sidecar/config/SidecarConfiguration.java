@@ -32,6 +32,7 @@ public interface SidecarConfiguration
      * @return a single configured cassandra instance
      * @deprecated in favor of configuring multiple instances in the yaml under cassandra_instances
      */
+    @Deprecated
     InstanceConfiguration cassandra();
 
     /**

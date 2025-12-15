@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.AuthenticationException;
-import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -909,8 +909,8 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
     private void invalidateAuthorizationHandlerCaches()
     {
         CacheFactory factory = serverWrapper.injector.getInstance(CacheFactory.class);
-        AsyncCache<AuthorizationCacheKey, Boolean> authorizationCache = factory.endpointAuthorizationCache();
-        authorizationCache.synchronous().invalidateAll();
+        Cache<AuthorizationCacheKey, Future<Boolean>> authorizationCache = factory.endpointAuthorizationCache();
+        authorizationCache.invalidateAll();
     }
 
     private void verifyAccess(HttpMethod method, String testRoute, Path clientKeystorePath, Verifier<HttpResponse<Buffer>> assertions)

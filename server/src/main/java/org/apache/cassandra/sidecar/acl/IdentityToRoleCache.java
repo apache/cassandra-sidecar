@@ -34,7 +34,7 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 @Singleton
 public class IdentityToRoleCache extends AuthCache<String, String>
 {
-    private static final String NAME = "identity_to_role_cache";
+    public static final String NAME = "identity_to_role_cache";
 
     @Inject
     public IdentityToRoleCache(Vertx vertx,
