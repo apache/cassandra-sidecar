@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -103,7 +104,7 @@ class NodeMoveJobTest
     }
 
     @Test
-    void testStatusWhenFailed()
+    void testStatusWhenFailed() throws IOException
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         RuntimeException testException = new RuntimeException("Test failure");
@@ -119,7 +120,7 @@ class NodeMoveJobTest
     }
 
     @Test
-    void testExecuteInternalCallsMove()
+    void testExecuteInternalCallsMove() throws IOException
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         NodeMoveJob job = new NodeMoveJob(jobId, newToken, mockStorageOperations);
@@ -132,7 +133,7 @@ class NodeMoveJobTest
     }
 
     @Test
-    void testExecuteInternalHandlesException()
+    void testExecuteInternalHandlesException() throws IOException
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         RuntimeException testException = new RuntimeException("Test exception");

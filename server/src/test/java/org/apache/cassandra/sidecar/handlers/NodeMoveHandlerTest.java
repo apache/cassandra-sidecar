@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -110,7 +111,7 @@ public class NodeMoveHandlerTest
     }
 
     @Test
-    void testMoveLongRunning(VertxTestContext context)
+    void testMoveLongRunning(VertxTestContext context) throws IOException
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         doAnswer(AdditionalAnswers.answersWithDelay(6000, invocation -> null))
@@ -147,13 +148,20 @@ public class NodeMoveHandlerTest
                   assertThat(moveResponse).isNotNull();
                   assertThat(moveResponse.status()).isEqualTo(SUCCEEDED);
                   assertThat(moveResponse.operation()).isEqualTo("move");
-                  verify(mockStorageOperations).move("123456789");
+                  try
+                  {
+                      verify(mockStorageOperations).move("123456789");
+                  }
+                  catch (IOException e)
+                  {
+                      throw new RuntimeException(e);
+                  }
                   context.completeNow();
               }));
     }
 
     @Test
-    void testMoveFailed(VertxTestContext context)
+    void testMoveFailed(VertxTestContext context) throws IOException
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         doThrow(new RuntimeException("Simulated failure")).when(mockStorageOperations).move(anyString());
@@ -183,7 +191,14 @@ public class NodeMoveHandlerTest
                   OperationalJobResponse moveResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(moveResponse).isNotNull();
                   assertThat(moveResponse.jobId()).isNotNull();
-                  verify(mockStorageOperations, never()).move(anyString()); // Should not call move when already moving
+                  try
+                  {
+                      verify(mockStorageOperations, never()).move(anyString()); // Should not call move when already moving
+                  }
+                  catch (IOException e)
+                  {
+                      throw new RuntimeException(e);
+                  }
                   context.completeNow();
               }));
     }
@@ -198,7 +213,14 @@ public class NodeMoveHandlerTest
               .putHeader("content-type", "application/json")
               .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                  verify(mockStorageOperations, never()).move(anyString());
+                  try
+                  {
+                      verify(mockStorageOperations, never()).move(anyString());
+                  }
+                  catch (IOException e)
+                  {
+                      throw new RuntimeException(e);
+                  }
                   context.completeNow();
               }));
     }
@@ -213,7 +235,14 @@ public class NodeMoveHandlerTest
               .putHeader("content-type", "application/json")
               .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                  verify(mockStorageOperations, never()).move(anyString());
+                  try
+                  {
+                      verify(mockStorageOperations, never()).move(anyString());
+                  }
+                  catch (IOException e)
+                  {
+                      throw new RuntimeException(e);
+                  }
                   context.completeNow();
               }));
     }
@@ -228,7 +257,14 @@ public class NodeMoveHandlerTest
               .putHeader("content-type", "application/json")
               .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
-                  verify(mockStorageOperations, never()).move(anyString());
+                  try
+                  {
+                      verify(mockStorageOperations, never()).move(anyString());
+                  }
+                  catch (IOException e)
+                  {
+                      throw new RuntimeException(e);
+                  }
                   context.completeNow();
               }));
     }
@@ -246,7 +282,14 @@ public class NodeMoveHandlerTest
                   OperationalJobResponse moveResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(moveResponse).isNotNull();
                   assertThat(moveResponse.status()).isEqualTo(SUCCEEDED);
-                  verify(mockStorageOperations).move("-9223372036854775808");
+                  try
+                  {
+                      verify(mockStorageOperations).move("-9223372036854775808");
+                  }
+                  catch (IOException e)
+                  {
+                      throw new RuntimeException(e);
+                  }
                   context.completeNow();
               }));
     }
@@ -264,7 +307,14 @@ public class NodeMoveHandlerTest
                   OperationalJobResponse moveResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(moveResponse).isNotNull();
                   assertThat(moveResponse.status()).isEqualTo(SUCCEEDED);
-                  verify(mockStorageOperations).move("0");
+                  try
+                  {
+                      verify(mockStorageOperations).move("0");
+                  }
+                  catch (IOException e)
+                  {
+                      throw new RuntimeException(e);
+                  }
                   context.completeNow();
               }));
     }

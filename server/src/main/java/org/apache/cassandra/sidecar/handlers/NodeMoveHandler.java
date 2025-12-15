@@ -23,6 +23,7 @@ import java.util.Set;
 
 import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.DecodeException;
@@ -49,6 +50,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Provides REST API for asynchronously moving the corresponding Cassandra node to a new token
  */
+@Singleton
 public class NodeMoveHandler extends AbstractHandler<String> implements AccessProtected
 {
     private final OperationalJobManager jobManager;
@@ -107,7 +109,6 @@ public class NodeMoveHandler extends AbstractHandler<String> implements AccessPr
         String body = context.body().asString();
         if (body == null || body.equalsIgnoreCase("null"))
         {
-            logger.warn("Bad request. Received null payload.");
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Request body must be JSON with a non-null \"newToken\" field");
         }
         try
@@ -123,7 +124,6 @@ public class NodeMoveHandler extends AbstractHandler<String> implements AccessPr
         }
         catch (DecodeException e)
         {
-            logger.warn("Bad request. Received invalid JSON payload.");
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
                                     "Failed to parse NodeMoveRequestPayload error=" + e.getMessage());
         }

@@ -338,7 +338,7 @@ public class CassandraStorageOperations implements StorageOperations
      * {@inheritDoc}
      */
     @Override
-    public void move(String newToken)
+    public void move(String newToken) throws IOException
     {
         jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
                  .move(newToken);

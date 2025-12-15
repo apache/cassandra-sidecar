@@ -54,7 +54,7 @@ public class NodeMoveJob extends OperationalJob
      * {@inheritDoc}
      */
     @Override
-    protected void executeInternal()
+    protected void executeInternal() throws Exception
     {
         LOGGER.info("Executing move operation. jobId={} newToken={}", this.jobId(), newToken);
         storageOperations.move(newToken);

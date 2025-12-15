@@ -227,7 +227,7 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
     }
 
     @Override
-    public void move(String newToken)
+    public void move(String newToken) throws IOException
     {
         delegate.move(newToken);
     }

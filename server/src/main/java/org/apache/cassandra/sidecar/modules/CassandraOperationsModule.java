@@ -193,6 +193,10 @@ public class CassandraOperationsModule extends AbstractModule
                  responseCode = "202",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(implementation = OperationalJobResponse.class)))
+    @APIResponse(description = "Conflicting node move job encountered",
+                 responseCode = "409",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(implementation = OperationalJobResponse.class)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.CassandraNodeMoveRouteKey.class)
     VertxRoute cassandraNodeMoveRoute(RouteBuilder.Factory factory,

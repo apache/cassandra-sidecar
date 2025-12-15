@@ -185,5 +185,5 @@ public interface StorageOperations
      *
      * @param newToken the new token for the node to move to
      */
-    void move(String newToken);
+    void move(String newToken) throws IOException;
 }
