@@ -455,7 +455,7 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
             // Optional: Remove final modifier for older JDKs
             try
             {
-                Field modifiersField = Field.class.getDeclaredField("modifiers");
+                Field modifiersField = getModifiersField();
                 modifiersField.setAccessible(true);
                 modifiersField.setInt(sharedClassesField, sharedClassesField.getModifiers() & ~Modifier.FINAL);
             }
@@ -477,6 +477,42 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
         {
             // Unable to access the field, log or handle as needed
             throw new RuntimeException("Unable to access SHARED_CLASSES field", e);
+        }
+    }
+
+    public static Field getModifiersField() throws NoSuchFieldException
+    {
+        return getField(Field.class, "modifiers");
+    }
+
+    public static Field getField(Class<?> clazz, String fieldName) throws NoSuchFieldException
+    {
+        // below code works before Java 12
+        try
+        {
+            return clazz.getDeclaredField(fieldName);
+        }
+        catch (NoSuchFieldException e)
+        {
+            // this is mitigation for JDK 17 (https://bugs.openjdk.org/browse/JDK-8210522)
+            try
+            {
+                Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+                getDeclaredFields0.setAccessible(true);
+                Field[] fields = (Field[]) getDeclaredFields0.invoke(clazz, false);
+                for (Field field : fields)
+                {
+                    if (fieldName.equals(field.getName()))
+                    {
+                        return field;
+                    }
+                }
+            }
+            catch (ReflectiveOperationException ex)
+            {
+                e.addSuppressed(ex);
+            }
+            throw e;
         }
     }
 }

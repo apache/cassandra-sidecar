@@ -26,11 +26,16 @@ plugins {
     id 'java-test-fixtures'
 }
 apply from: "$rootDir/gradle/common/publishing.gradle"
+apply from: "${project.rootDir}/gradle/common/java11Options.gradle"
 
 sourceCompatibility = JavaVersion.VERSION_11
 
 test {
     useJUnitPlatform()
+    if (JavaVersion.current().isJava11Compatible()) {
+        jvmArgs(project.ext.JDK11_OPTIONS)
+        println("JVM arguments for $project.name are $allJvmArgs")
+    }
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
     reports {
         junitXml.setRequired(true)

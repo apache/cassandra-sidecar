@@ -407,6 +407,10 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                     LOGGER.warn("Failed to provision cluster due to port collision after {} retries", i, cause);
                     lastCause = cause;
                 }
+                else if (cannotFindSeedsForCmsInitialization(cause))
+                {
+                    LOGGER.warn("Failed to provision cluster due to lack of CMS seed after {} retries", i, cause);
+                }
                 else
                 {
                     throw new RuntimeException("Failed to provision cluster", cause);
@@ -415,6 +419,15 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         }
 
         throw new RuntimeException("Failed to provision cluster after exhausting all attempts", lastCause);
+    }
+
+    private static boolean cannotFindSeedsForCmsInitialization(Throwable cause)
+    {
+        // See org.apache.cassandra.tcm.Startup around line 222
+        return ThrowableUtils.getCause(cause,
+                                       t -> t instanceof IllegalArgumentException &&
+                                            t.getMessage().startsWith("Found no candidates during initialization. " +
+                                                                      "Check if the seeds are up:")) != null;
     }
 
     private static boolean portNotAvailableToBind(Throwable cause)

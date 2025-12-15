@@ -24,7 +24,7 @@ plugins {
 
 version project.version
 
-ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-5.1.jar" // latest supported Cassandra build is 4.1
+ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-4.1.11.jar" // latest supported Cassandra build is 5.1
 def dtestJarFullPath = "${dependencyLocation}${ext.dtestJar}"
 File dtestJarFile = new File(dtestJarFullPath)
 println("Using DTest jar: " + dtestJarFullPath + "; present? " + dtestJarFile.exists())
