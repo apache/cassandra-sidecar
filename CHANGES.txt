@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Fix for deadlock during JMX reconnection (CASSSIDECAR-390)
  * Fast Cassandra Input Validator (CASSSIDECAR-361)
  * Upgrade caffeine dependency (CASSSIDECAR-332)
  * Add Live Migration Status endpoint to persist Live Migration status and for safety (CASSSIDECAR-345)
