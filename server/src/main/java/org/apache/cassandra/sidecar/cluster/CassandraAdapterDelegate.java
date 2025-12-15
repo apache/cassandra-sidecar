@@ -608,12 +608,8 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 switch (type)
                 {
                     case JMXConnectionNotification.OPENED:
-                        // Do not notify here as we may not have set up our own delegate yet
-                        // Instead, run the JMX Health Check, which will notify once we have
-                        // created or updated the adapter.
-                        jmxHealthCheck();
+                        LOGGER.info("JMX connection opened");
                         break;
-
                     case JMXConnectionNotification.CLOSED:
                     case JMXConnectionNotification.FAILED:
                     case JMXConnectionNotification.NOTIFS_LOST:
