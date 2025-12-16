@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Upgrade vertx to 4.5.23 (CASSSIDECAR-391)
  * Fix for deadlock during JMX reconnection (CASSSIDECAR-390)
  * Fix request execution continues on wrong thread (CASSSIDECAR-368)
  * CachedAuthorizationHandler should pause and resume request while performing authZ operations (CASSSIDECAR-367)
