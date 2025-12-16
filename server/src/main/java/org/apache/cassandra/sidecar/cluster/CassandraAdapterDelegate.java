@@ -645,7 +645,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 switch (type)
                 {
                     case JMXConnectionNotification.OPENED:
-                        LOGGER.info("JMX connection opened");
+                        LOGGER.debug("JMX connection opened");
                         break;
                     case JMXConnectionNotification.CLOSED:
                     case JMXConnectionNotification.FAILED:

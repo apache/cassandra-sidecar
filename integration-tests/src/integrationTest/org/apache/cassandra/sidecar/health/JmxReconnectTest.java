@@ -31,6 +31,7 @@ import java.rmi.NoSuchObjectException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
@@ -39,6 +40,7 @@ import javax.management.remote.rmi.RMIConnector;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
@@ -55,7 +57,7 @@ import static net.bytebuddy.matcher.ElementMatchers.none;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class JMXReconnectTest extends SharedClusterSidecarIntegrationTestBase
+public class JmxReconnectTest extends SharedClusterSidecarIntegrationTestBase
 {
     @Override
     protected void initializeSchemaForTest()
@@ -132,7 +134,7 @@ public class JMXReconnectTest extends SharedClusterSidecarIntegrationTestBase
     public static class GetAttributeAdvice
     {
         // Call RMIClientCommunicatorAdmin.gotIOException when RMIConnector.getAttribute is called
-        // and the stack stace has doStart method call.
+        // and the stack trace has doStart method call.
         @Advice.OnMethodEnter
         static void before(@Advice.This Object self)
         {
@@ -213,14 +215,15 @@ public class JMXReconnectTest extends SharedClusterSidecarIntegrationTestBase
      * @throws NoSuchFieldException      if reflection fails to find required fields
      */
     @Test
-    void testJMXReconnect() throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException, NoSuchFieldException
+    @Timeout(value = 1, unit = TimeUnit.MINUTES)
+    void testJmxReconnect() throws Exception
     {
         // Validate JMX is working by calling ring API
-        validateJMXWithRingAPI();
+        validateJmxWithRingAPI();
 
         // Retrieve the instances of RMIClientCommunicatorAdmin class.
         // We need to use reflection as it's loaded by the bootstrap classloader(null).
-        Class<?> h = Class.forName("org.apache.cassandra.sidecar.health.JMXReconnectTest$ObjectHolder", false, null);
+        Class<?> h = Class.forName("org.apache.cassandra.sidecar.health.JmxReconnectTest$ObjectHolder", false, null);
         List<Object> rmiClientCommunicatorAdminList = (List<Object>) h.getField("instance").get(null);
 
         // RMIClientCommunicatorAdmin is private inner class of RMIConnector.
@@ -232,10 +235,10 @@ public class JMXReconnectTest extends SharedClusterSidecarIntegrationTestBase
         gotIOExceptionMethod.invoke(rmiClientCommunicatorAdminList.get(1), new NoSuchObjectException("Injected"));
 
         // Validate JMX is working by calling ring API
-        validateJMXWithRingAPI();
+        validateJmxWithRingAPI();
     }
 
-    private void validateJMXWithRingAPI()
+    private void validateJmxWithRingAPI()
     {
         HttpResponse<Buffer> response = getBlocking(trustedClient()
                                                     .get(serverWrapper.serverPort, "localhost", ApiEndpointsV1.RING_ROUTE)
