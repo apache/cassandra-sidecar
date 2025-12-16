@@ -114,12 +114,6 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
                 instance.nodetool("disableautocompaction");
                 logger.info("Disabled auto-compaction globally");
 
-                // Also explicitly disable for system keyspaces
-                instance.nodetool("disableautocompaction", "system");
-                instance.nodetool("disableautocompaction", "system_schema");
-                instance.nodetool("disableautocompaction", "system_distributed");
-                instance.nodetool("disableautocompaction", "system_traces");
-
                 // And for our test keyspace
                 instance.nodetool("disableautocompaction", TEST_KEYSPACE);
 
@@ -129,51 +123,6 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
                 logger.warn("Failed to disable autocompaction in beforeTestStart: {}", e.getMessage());
             }
         });
-    }
-
-    @Test
-    void testStopCompactionByTypeSuccess() {
-        // Create SSTables
-        insertTestData(TEST_TABLE, 1000);
-        cluster.stream().forEach(instance -> instance.flush(TEST_KEYSPACE));
-
-        // Trigger non-blocking compaction in background
-        cluster.stream().forEach(instance -> instance.nodetool("compact", TEST_KEYSPACE));
-
-        // Call compaction stop endpoint
-        String payload = "{\"compaction_type\":\"COMPACTION\"}";
-        HttpResponse<Buffer> response = getBlocking(
-                trustedClient()
-                        .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
-                        .sendBuffer(buffer(payload))
-                        .expecting(HttpResponseExpectation.SC_OK)
-        );
-
-        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-        CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
-        assertThat(stopResponse).isNotNull();
-        assertThat(stopResponse.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
-        assertThat(stopResponse.compactionType()).isEqualTo(CompactionType.COMPACTION);
-    }
-
-    @Test
-    void testStopCompactionByIdSuccess() {
-        // Note: Use placeholder compactionId to verify OK HTTP Response
-        String payload = "{\"compaction_id\":\"test-id\"}";
-
-        // Test endpoint accepts request even if no compaction with ID exists - mimics nodetool functionality
-        HttpResponse<Buffer> response = getBlocking(
-                trustedClient()
-                        .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
-                        .sendBuffer(buffer(payload))
-                        .expecting(HttpResponseExpectation.SC_OK)
-        );
-
-        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
-        CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
-        assertThat(stopResponse).isNotNull();
-        assertThat(stopResponse.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
-        assertThat(stopResponse.compactionId()).isEqualTo("test-id");
     }
 
     @Test
@@ -342,16 +291,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
         try {
             logger.info("Testing that compaction stop by type actually stops compactions");
 
-            // 1. FIRST disable auto-compaction for test tables
-            for (QualifiedName tableName : COMPACTION_TEST_TABLES) {
-                cluster.stream().forEach(instance -> {
-                    try {
-                        instance.nodetool("disableautocompaction", TEST_KEYSPACE, tableName.table());
-                    } catch (Exception e) {
-                        logger.warn("Failed to disable autocompaction: {}", e.getMessage());
-                    }
-                });
-            }
+
 
             // 2. THEN set compaction throughput to slow value
             cluster.stream().forEach(instance -> {
@@ -474,17 +414,6 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
         try {
             logger.info("Testing that compaction stop by ID actually stops compactions");
 
-            // 1. FIRST disable auto-compaction for test tables
-            for (QualifiedName tableName : COMPACTION_TEST_TABLES) {
-                cluster.stream().forEach(instance -> {
-                    try {
-                        instance.nodetool("disableautocompaction", TEST_KEYSPACE, tableName.table());
-                    } catch (Exception e) {
-                        logger.warn("Failed to disable autocompaction: {}", e.getMessage());
-                    }
-                });
-            }
-
             // 2. THEN set compaction throughput to slow value
             cluster.stream().forEach(instance -> {
                 try {
@@ -545,6 +474,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
                             .expecting(HttpResponseExpectation.SC_OK)
             );
 
+
             CompactionStatsResponse stats = statsResponse.bodyAsJson(CompactionStatsResponse.class);
 
             if (stats.activeCompactions().isEmpty()) {
@@ -580,6 +510,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
                             .expecting(HttpResponseExpectation.SC_OK)
             );
 
+            assertThat(stopResponse).isNotNull();
             assertThat(stopResponse.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
             CompactionStopResponse response = stopResponse.bodyAsJson(CompactionStopResponse.class);
             assertThat(response.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
