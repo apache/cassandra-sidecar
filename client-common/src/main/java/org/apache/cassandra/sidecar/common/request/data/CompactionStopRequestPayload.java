@@ -68,7 +68,7 @@ public class CompactionStopRequestPayload
     @JsonProperty("compaction_id")
     public String compactionId()
     {
-        return this.compactionId;
+        return this.compactionId != null ? this.compactionId.trim() : null;
     }
 
     /**

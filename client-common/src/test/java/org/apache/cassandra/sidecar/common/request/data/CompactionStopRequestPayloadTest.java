@@ -135,7 +135,7 @@ class CompactionStopRequestPayloadTest
         String json = "{\"compaction_type\":\"  COMPACTION  \",\"compaction_id\":\"  test-id  \"}";
         CompactionStopRequestPayload payload = MAPPER.readValue(json, CompactionStopRequestPayload.class);
         assertThat(payload.compactionType()).isEqualTo(CompactionType.COMPACTION);
-        assertThat(payload.compactionId()).isEqualTo("  test-id  ");
+        assertThat(payload.compactionId()).isEqualTo("test-id");
     }
 
     @Test

@@ -69,17 +69,23 @@ public class CassandraCompactionManagerOperations implements CompactionManagerOp
                     COMPACTION_MANAGER_OBJ_NAME
             );
             proxy.stopCompactionById(compactionId);
+        } else {
+            throw new IllegalArgumentException("compaction id is null or empty");
         }
     }
 
     @Override
     public void stopCompaction(String compactionType) {
-        CompactionManagerJmxOperations proxy = jmxClient.proxy(
-                CompactionManagerJmxOperations.class,
-                COMPACTION_MANAGER_OBJ_NAME
-        );
+        if (compactionType != null && !compactionType.trim().isEmpty()) {
+            CompactionManagerJmxOperations proxy = jmxClient.proxy(
+                    CompactionManagerJmxOperations.class,
+                    COMPACTION_MANAGER_OBJ_NAME
+            );
 
-        proxy.stopCompaction(Objects.requireNonNull(compactionType,
-                "compactionType must not be null when compactionId is not provided"));
+            proxy.stopCompaction(Objects.requireNonNull(compactionType,
+                    "compactionType must not be null when compactionId is not provided"));
+        } else {
+            throw new IllegalArgumentException("compaction type is null or empty");
+        }
     }
 }
