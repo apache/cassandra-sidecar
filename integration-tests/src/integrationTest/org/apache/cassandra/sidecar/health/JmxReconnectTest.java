@@ -57,6 +57,9 @@ import static net.bytebuddy.matcher.ElementMatchers.none;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Integration test that validates JMX reconnection handling to prevent deadlocks during connection recovery.
+ */
 public class JmxReconnectTest extends SharedClusterSidecarIntegrationTestBase
 {
     @Override
