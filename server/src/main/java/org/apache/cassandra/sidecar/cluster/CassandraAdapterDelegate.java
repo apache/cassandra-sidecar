@@ -632,6 +632,10 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     /**
      * A {@link NotificationListener} implementation that reacts to {@link JMXConnectionNotification} notifications
      * and updates the state of the JMX connection internally.
+     * <strong>Important:</strong> This notification handler must NOT attempt to establish new JMX connections
+     * during notification processing, as this can result in a deadlock condition.
+     *
+     * @see <a href="https://issues.apache.org/jira/browse/CASSSIDECAR-390">CASSSIDECAR-390</a>
      */
     protected class JmxNotificationListener implements NotificationListener
     {

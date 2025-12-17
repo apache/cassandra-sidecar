@@ -204,6 +204,7 @@ public class JmxReconnectTest extends SharedClusterSidecarIntegrationTestBase
      *   <li>This sequence creates a potential deadlock in ClientCommunicatorAdmin.restart</li>
      * </ol>
      * <p>
+     * Jira link for the issue: <a href="https://issues.apache.org/jira/browse/CASSSIDECAR-390">CASSSIDECAR-390</a>
      * The test uses bytecode instrumentation to inject IOException failures at specific points in the
      * JMX reconnection flow, then validates that the system can recover and continue processing
      * JMX requests successfully.
