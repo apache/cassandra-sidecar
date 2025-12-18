@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.common.utils;
 
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -46,17 +45,5 @@ public class StringUtils
     public static boolean isNotEmpty(@Nullable String string)
     {
         return !isNullOrEmpty(string);
-    }
-
-    /**
-     * @return true if string contains target; false otherwise
-     */
-    public static boolean contains(@NotNull String string, @NotNull String target)
-    {
-        if (isNullOrEmpty(string) || isNullOrEmpty(target))
-        {
-            return false;
-        }
-        return string.contains(target);
     }
 }

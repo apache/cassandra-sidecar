@@ -236,9 +236,9 @@ public abstract class SharedClusterIntegrationTestBase
 
     private static boolean portNotAvailableToBind(Throwable cause)
     {
-        return (cause instanceof BindException && StringUtils.contains(cause.getMessage(), "Address already in use")) ||
+        return (cause instanceof BindException && TestUtils.containsString(cause.getMessage(), "Address already in use")) ||
                // InboundConnectionInitiator in Cassandra throws a ConfigurationException with this string
-               StringUtils.contains(cause.getMessage(), "is in use by another process");
+               TestUtils.containsString(cause.getMessage(), "is in use by another process");
     }
 
 

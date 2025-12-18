@@ -31,6 +31,9 @@ import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
+import org.jetbrains.annotations.NotNull;
+
+import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
 
 /**
  * Helper class for integration testing functionality
@@ -116,6 +119,18 @@ public final class TestUtils
                .add(new CassandraFactory(dnsResolver, driverUtils, tableSchemaFetcher))
                .add(new Cassandra41Factory(dnsResolver, driverUtils, tableSchemaFetcher))
                .build();
+    }
+
+    /**
+     * @return true if string contains target; false otherwise
+     */
+    public static boolean containsString(@NotNull String string, @NotNull String target)
+    {
+        if (string == null || target == null)
+        {
+            return false;
+        }
+        return string.contains(target);
     }
 
     /**
