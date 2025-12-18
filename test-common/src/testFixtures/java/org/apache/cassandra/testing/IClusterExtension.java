@@ -35,15 +35,6 @@ import org.apache.cassandra.distributed.api.IInstanceConfig;
 public interface IClusterExtension<I extends IInstance> extends ICluster<I>
 {
     /**
-     * Change the schema of the cluster, tolerating stopped nodes.  N.B. the schema
-     * will not automatically be updated when stopped nodes are restarted, individual tests need to
-     * re-synchronize somehow (by gossip or some other mechanism).
-     *
-     * @param query Schema altering statement
-     */
-    void schemaChangeIgnoringStoppedInstances(String query);
-
-    /**
      * Create a new instance and add it to the cluster, without starting it.
      *
      * @param dc   the instance should be in
@@ -52,16 +43,6 @@ public interface IClusterExtension<I extends IInstance> extends ICluster<I>
      * @return the instance added
      */
     I addInstance(String dc, String rack, Consumer<IInstanceConfig> fn);
-
-    /**
-     * @return the first instance with running state
-     */
-    I getFirstRunningInstance();
-
-    /**
-     * @return a newly created instance configuration
-     */
-    IInstanceConfig newInstanceConfig();
 
     /**
      * @return a reference to the delegated {@link ICluster} instance
@@ -104,15 +85,6 @@ public interface IClusterExtension<I extends IInstance> extends ICluster<I>
      * @param instance instance to stop
      */
     void stopUnchecked(IInstance instance);
-
-    /**
-     * Creates an {@link IInstanceConfig} for the given {@code nodeNum}. The configuration is ready to be used
-     * in the cluster.
-     *
-     * @param nodeNum the 1-index based node number
-     * @return the {@link IInstanceConfig}
-     */
-    IInstanceConfig createInstanceConfig(int nodeNum);
 
     /**
      * @param instance the instance where ring will be executed
