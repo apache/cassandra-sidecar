@@ -156,19 +156,19 @@ public class Server
     {
         if (closeFuture == null)
         {
-            synchronized (this)
-            {
-                if (closeFuture == null)
-                {
-                    setCloseFuture();
-                }
-            }
+            closeInternal();
         }
         return closeFuture;
     }
 
-    private void setCloseFuture()
+    // Schedule closeFuture once only
+    private synchronized void closeInternal()
     {
+        if (closeFuture != null)
+        {
+            return;
+        }
+
         LOGGER.info("Stopping Cassandra Sidecar");
         deployedServerVerticles.clear();
         List<Future<Void>> closingFutures = new ArrayList<>();
@@ -199,21 +199,21 @@ public class Server
         });
 
         closeFuture = (Future.all(closingFutures)
-                     .onSuccess(ignored -> LOGGER.debug("Closed Cassandra adapters"))
-                     .transform(v -> {
-                         LOGGER.debug("Closing PeriodicTaskExecutor");
-                         return periodicTaskExecutor.close();
-                     })
-                     .transform(v -> {
-                         LOGGER.debug("Closing executor pools");
-                         return executorPools.close();
-                     })
-                     .transform(v -> {
-                         LOGGER.debug("Closing vertx");
-                         return vertx.close();
-                     })
-                     .onFailure(t -> LOGGER.error("Failed to gracefully shutdown Cassandra Sidecar", t))
-                     .onSuccess(f -> LOGGER.info("Successfully stopped Cassandra Sidecar"))
+                             .onSuccess(ignored -> LOGGER.debug("Closed Cassandra adapters"))
+                             .transform(v -> {
+                                 LOGGER.debug("Closing PeriodicTaskExecutor");
+                                 return periodicTaskExecutor.close();
+                             })
+                             .transform(v -> {
+                                 LOGGER.debug("Closing executor pools");
+                                 return executorPools.close();
+                             })
+                             .transform(v -> {
+                                 LOGGER.debug("Closing vertx");
+                                 return vertx.close();
+                             })
+                             .onFailure(t -> LOGGER.error("Failed to gracefully shutdown Cassandra Sidecar", t))
+                             .onSuccess(f -> LOGGER.info("Successfully stopped Cassandra Sidecar"))
         );
     }
 

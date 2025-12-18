@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.common.utils;
 
-import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
