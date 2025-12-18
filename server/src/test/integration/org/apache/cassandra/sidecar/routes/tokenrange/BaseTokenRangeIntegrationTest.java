@@ -20,9 +20,7 @@ package org.apache.cassandra.sidecar.routes.tokenrange;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,9 +31,7 @@ import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
-import com.google.common.collect.Sets;
 
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -346,13 +342,13 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
         Set<String> dcReplication;
         if (annotation.numDcs() > 1)
         {
-            createTestKeyspace(ImmutableMap.of("replication_factor", DEFAULT_RF));
-            dcReplication = Sets.newHashSet(Arrays.asList("datacenter1", "datacenter2"));
+            createTestKeyspace(Map.of("replication_factor", DEFAULT_RF));
+            dcReplication = Set.of("datacenter1", "datacenter2");
         }
         else
         {
-            createTestKeyspace(ImmutableMap.of("datacenter1", DEFAULT_RF));
-            dcReplication = Collections.singleton("datacenter1");
+            createTestKeyspace(Map.of("datacenter1", DEFAULT_RF));
+            dcReplication = Set.of("datacenter1");
         }
         return dcReplication;
     }

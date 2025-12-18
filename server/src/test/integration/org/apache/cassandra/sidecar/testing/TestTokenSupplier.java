@@ -32,7 +32,7 @@ import org.apache.cassandra.distributed.api.TokenSupplier;
 public class TestTokenSupplier implements TokenSupplier
 {
 
-    private List<String>[] tokens;
+    private final List<String>[] tokens;
 
     /**
      * Tokens are allocation used in tests to simulate token allocation nodes for an approx even distribution
