@@ -42,11 +42,9 @@ import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
-import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 import org.apache.cassandra.testing.IClusterExtension;
-import org.jetbrains.annotations.NotNull;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -151,8 +149,8 @@ class JoiningBaseTest extends BaseTokenRangeIntegrationTest
 
     private static void releaseInterceptionPoints(CountDownLatch transientStateEnd, CassandraIntegrationTest annotation)
     {
-        for (int i = 0;
-             i < (annotation.newNodesPerDc() * annotation.numDcs()); i++)
+        int total = annotation.newNodesPerDc() * annotation.numDcs();
+        for (int i = 0; i < total; i++)
         {
             transientStateEnd.countDown();
         }

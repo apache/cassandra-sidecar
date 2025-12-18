@@ -68,7 +68,7 @@ class ReplacementMultiDCTest extends ReplacementBaseTest
                                                                                                                                "write_request_timeout", "10s")));
 
         int initialClusterSize = cluster.size();
-        List<IInstance> nodesToRemove = Arrays.asList(cluster.get(initialClusterSize-1), cluster.get(initialClusterSize));
+        List<IInstance> nodesToRemove = Arrays.asList(cluster.get(initialClusterSize - 1), cluster.get(initialClusterSize));
         runReplacementTestScenario(context,
                                    BBHelperReplacementsMultiDC.nodeStart,
                                    BBHelperReplacementsMultiDC.transientStateStart,
@@ -85,8 +85,8 @@ class ReplacementMultiDCTest extends ReplacementBaseTest
         // Swap 6 for 12 so we don't have overlapping ranges
         tokenSupplier.swap(6, 12);
         // duplicate tokens for nodes 11 & 12 in 13 & 14 (replacement nodes) as they should use the same token
-        tokenSupplier.dup(12, 14);
-        tokenSupplier.dup(13, 15);
+        tokenSupplier.copyToken(12, 14);
+        tokenSupplier.copyToken(13, 15);
         return tokenSupplier;
     }
 
@@ -118,7 +118,7 @@ class ReplacementMultiDCTest extends ReplacementBaseTest
         int nodeCount = annotation.nodesPerDc() * annotation.numDcs();
         // Get a copy so we can make modifications so it will generate the tokens for the final configuration
         TestTokenSupplier tokenSupplier = getTestTokenSupplier();
-        List<Range<BigInteger>> expectedRanges = generateExpectedRanges(nodeCount,tokenSupplier);
+        List<Range<BigInteger>> expectedRanges = generateExpectedRanges(nodeCount, tokenSupplier);
         Map<Range<BigInteger>, List<String>> dc1Mapping = new HashMap<>();
         Map<Range<BigInteger>, List<String>> dc2Mapping = new HashMap<>();
 

@@ -24,7 +24,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.dynamic.TypeResolutionStrategy;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
@@ -51,7 +50,8 @@ public class BBHelperMovingNode
         {
             TypePool typePool = TypePool.Default.of(cl);
 
-            if (installTcm(cl, typePool)) {
+            if (installTcm(cl, typePool))
+            {
                 return;
             }
             if (installPreTcm(cl, typePool))
@@ -86,11 +86,11 @@ public class BBHelperMovingNode
             return false;
         }
         new ByteBuddy().rebase(description.resolve(), ClassFileLocator.ForClassLoader.of(cl))
-                           .method(named("executeNext"))
-                           .intercept(MethodDelegation.to(BBHelperMovingNode.class))
-                           // Defer class loading until all dependencies are loaded
-                           .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
-                           .load(cl, ClassLoadingStrategy.Default.INJECTION);
+                       .method(named("executeNext"))
+                       .intercept(MethodDelegation.to(BBHelperMovingNode.class))
+                       // Defer class loading until all dependencies are loaded
+                       .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
+                       .load(cl, ClassLoadingStrategy.Default.INJECTION);
         return true;
     }
 

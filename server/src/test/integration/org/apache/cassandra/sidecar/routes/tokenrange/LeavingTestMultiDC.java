@@ -61,7 +61,7 @@ class LeavingTestMultiDC extends LeavingBaseTest
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         // We'll manually swap around tokens, so use 0 as number of new DCs
         TestTokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(6, 0, 2, 1);
-        tokenSupplier.swap(5,10);
+        tokenSupplier.swap(5, 10);
         IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperLeavingNodesMultiDC::install, cassandraTestContext, tokenSupplier, null);
         runLeavingTestScenario(context,
                                leavingNodesPerDC,
@@ -154,13 +154,8 @@ class LeavingTestMultiDC extends LeavingBaseTest
         dc1Mapping.put(expectedRanges.get(12), Arrays.asList("127.0.0.5", "127.0.0.1", "127.0.0.3"));
         dc2Mapping.put(expectedRanges.get(12), Arrays.asList("127.0.0.4", "127.0.0.2", "127.0.0.8"));
 
-        return new HashMap<>()
-        {
-            {
-                put("datacenter1", dc1Mapping);
-                put("datacenter2", dc2Mapping);
-            }
-        };
+        return Map.of("datacenter1", dc1Mapping,
+                      "datacenter2", dc2Mapping);
     }
 
     /**

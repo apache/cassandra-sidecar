@@ -283,7 +283,7 @@ class StreamCdcSegmentHandlerTest
 
         File cdcTempDir = new File(CDC_RAW_TEMP_DIR);
         assertThat(cdcTempDir.exists()).isTrue();
-        int attempts = 20;
+        int attempts = 10;
         while (attempts > 0)
         {
             File[] files = cdcTempDir.listFiles();

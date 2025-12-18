@@ -63,7 +63,7 @@ class JoiningMultiDCTest extends JoiningBaseTest
         // We'll manually swap around tokens, so use 0 as number of new DCs
         TestTokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(6, 0, 2, 1);
 
-        tokenSupplier.swap(5,10);
+        tokenSupplier.swap(5, 10);
         IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperDoubleClusterMultiDC::install, cassandraTestContext, tokenSupplier, null);
 
         runJoiningTestScenario(context,

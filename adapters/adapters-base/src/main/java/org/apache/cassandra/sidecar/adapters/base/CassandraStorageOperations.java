@@ -138,7 +138,8 @@ public class CassandraStorageOperations implements StorageOperations
             // the original cause, which we will process correctly in CreateSnapshotHandler
             // if the exception was an IllegalArgumentException
             IllegalArgumentException iex = ThrowableUtils.getCause(e, IllegalArgumentException.class);
-            if (iex != null) {
+            if (iex != null)
+            {
                 throw iex;
             }
             String errorMessage = e.getMessage();

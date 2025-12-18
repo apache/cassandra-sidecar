@@ -192,7 +192,8 @@ class MovingMultiDCTest extends MovingBaseTest
                     return;
                 }
 
-                if (installTcm(cl, typePool)) {
+                if (installTcm(cl, typePool))
+                {
                     return;
                 }
                 throw new RuntimeException("Could not intercept node move");

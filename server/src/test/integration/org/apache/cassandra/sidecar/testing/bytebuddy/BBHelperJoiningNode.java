@@ -23,8 +23,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import net.bytebuddy.implementation.bind.annotation.*;
-// import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
 
 import static org.apache.cassandra.sidecar.testing.IntegrationTestBase.awaitLatchOrTimeout;

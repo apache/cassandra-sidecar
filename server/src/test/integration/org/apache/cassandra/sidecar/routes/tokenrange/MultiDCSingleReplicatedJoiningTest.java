@@ -52,7 +52,7 @@ import org.apache.cassandra.testing.IClusterExtension;
  */
 @Tag("heavy")
 @ExtendWith(VertxExtension.class)
-public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
+public class MultiDCSingleReplicatedJoiningTest extends JoiningBaseTest
 {
     @CassandraIntegrationTest(
     nodesPerDc = 5, newNodesPerDc = 1, numDcs = 2, network = true, buildCluster = false)
@@ -63,7 +63,7 @@ public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
         BBHelperMultiDC.reset();
         // We'll manually swap around tokens, so use 0 as number of new DCs
         TestTokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(6, 0, 2, 1);
-        tokenSupplier.swap(5,10);
+        tokenSupplier.swap(5, 10);
         IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperMultiDC::install, cassandraTestContext, tokenSupplier,
                                                                            builder -> builder.additionalInstanceConfig(Map.of("progress_barrier_default_consistency_level", "QUORUM",
                                                                                                                               "progress_barrier_timeout", "30s",
@@ -76,7 +76,7 @@ public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
                                BBHelperMultiDC.transientStateEnd,
                                cluster,
                                generateExpectedRanges(false, tokenSupplier, annotation),
-                               generateExpectedRangeMappingOneof2DCs(tokenSupplier, annotation),
+                               generateExpectedRangeMappingOneOf2DCs(tokenSupplier, annotation),
                                false,
                                tokenSupplier);
     }
@@ -98,7 +98,7 @@ public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
      * Range 2 - B, C, D (with E being the joining node)
      * Expected Range 2 - B, C, D, E
      */
-    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingOneof2DCs(TokenSupplier tokenSupplier, CassandraIntegrationTest annotation)
+    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingOneOf2DCs(TokenSupplier tokenSupplier, CassandraIntegrationTest annotation)
     {
         List<Range<BigInteger>> expectedRanges = generateExpectedRanges(false, tokenSupplier, annotation);
         Map<Range<BigInteger>, List<String>> dc1Mapping = new HashMap<>();
@@ -139,12 +139,7 @@ public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
         // Range 12
         dc1Mapping.put(expectedRanges.get(11), Arrays.asList("127.0.0.5", "127.0.0.1", "127.0.0.3"));
 
-        return new HashMap<>()
-        {
-            {
-                put("datacenter1", dc1Mapping);
-            }
-        };
+        return Map.of("datacenter1", dc1Mapping);
     }
 
     /**
@@ -157,8 +152,8 @@ public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
 
         public static void install(ClassLoader cl, Integer nodeNumber)
         {
-            // Test case involves adding 2 nodes to a 12 node cluster (5 per DC)
-            // We intercept the bootstrap of nodes (13,14) to validate token ranges
+            // Test case involves adding 2 nodes to a 10 node cluster (5 per DC)
+            // We intercept the bootstrap of nodes (11,12) to validate token ranges
             if (nodeNumber > 10)
             {
                 BootstrapBBUtils.installFinishJoiningRingInterceptor(cl, BBHelperMultiDC.class);

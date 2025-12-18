@@ -30,6 +30,7 @@ import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableMap;
@@ -43,6 +44,7 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.TokenSupplier;
+import org.apache.cassandra.distributed.shared.NetworkTopology;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
@@ -157,12 +159,16 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
 
         int totalNodeCount = (annotation.nodesPerDc() + annotation.newNodesPerDc()) * annotation.numDcs();
         return cassandraTestContext.configureAndStartCluster(configuration -> {
-            configuration.clusterBuilderUpdater = clusterBuilder -> clusterBuilder.withInstanceInitializer(initializer)
-                                                                                  .withTokenSupplier(mdcTokenSupplier)
-                                                                                  .withNodeIdTopology(networkTopology(totalNodeCount,
-                                                                                                                      (nodeId) -> nodeId % 2 != 0 ?
-                                                                                                                                  dcAndRack("datacenter1", "rack1") :
-                                                                                                                                  dcAndRack("datacenter2", "rack2")));
+            IntFunction<NetworkTopology.DcAndRack> supplier = nodeId -> {
+                return nodeId % 2 != 0 ?
+                       dcAndRack("datacenter1", "rack1") :
+                       dcAndRack("datacenter2", "rack2");
+            };
+
+            configuration.clusterBuilderUpdater = clusterBuilder ->
+                                                  clusterBuilder.withInstanceInitializer(initializer)
+                                                                .withTokenSupplier(mdcTokenSupplier)
+                                                                .withNodeIdTopology(networkTopology(totalNodeCount, supplier));
 
             if (additionalConfigurator != null)
             {
@@ -171,13 +177,15 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
         });
     }
 
-    protected List<Range<BigInteger>> generateExpectedRanges(boolean isCrossDCKeyspace) {
+    protected List<Range<BigInteger>> generateExpectedRanges(boolean isCrossDCKeyspace)
+    {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         TokenSupplier tokenSupplier = getTokenSupplier(annotation);
         return generateExpectedRanges(isCrossDCKeyspace, tokenSupplier, annotation);
     }
 
-    protected List<Range<BigInteger>> generateExpectedRanges(TokenSupplier tokenSupplier) {
+    protected List<Range<BigInteger>> generateExpectedRanges(TokenSupplier tokenSupplier)
+    {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         return generateExpectedRanges(true, tokenSupplier, annotation);
     }

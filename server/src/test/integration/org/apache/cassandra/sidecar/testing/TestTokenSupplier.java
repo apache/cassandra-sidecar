@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.cassandra.distributed.api.TokenSupplier;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Static factory holder that provides a token supplier
@@ -138,7 +137,7 @@ public class TestTokenSupplier implements TokenSupplier
         return tokens[nodeId - 1];
     }
 
-    public void dup(int src, int dst)
+    public void copyToken(int src, int dst)
     {
         tokens[dst] = tokens[src];
     }

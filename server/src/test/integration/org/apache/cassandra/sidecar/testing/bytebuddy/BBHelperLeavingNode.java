@@ -54,7 +54,8 @@ public class BBHelperLeavingNode
     public static void intercept(ClassLoader cl, Class<?> delegateClass)
     {
         TypePool typePool = TypePool.Default.of(cl);
-        if (installTCM(cl, typePool, delegateClass) || installPreTCM(cl, typePool, delegateClass)) {
+        if (installTCM(cl, typePool, delegateClass) || installPreTCM(cl, typePool, delegateClass))
+        {
             return;
         }
         throw new RuntimeException("Could not intercept leaving node");

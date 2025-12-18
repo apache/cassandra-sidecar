@@ -48,7 +48,8 @@ public class StringUtils
         return !isNullOrEmpty(string);
     }
 
-    public static boolean contains(@NotNull String string, @NotNull String target) {
+    public static boolean contains(@NotNull String string, @NotNull String target)
+    {
         if (isNullOrEmpty(string) || isNullOrEmpty(target))
         {
             return false;

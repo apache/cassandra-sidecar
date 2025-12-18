@@ -24,7 +24,6 @@ import net.bytebuddy.dynamic.TypeResolutionStrategy;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.pool.TypePool;
-import org.apache.cassandra.distributed.api.IInvokableInstance;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
@@ -48,7 +47,7 @@ public class BootstrapBBUtils
         {
             return;
         }
-        throw new RuntimeException("Could not intercept node move");
+        throw new RuntimeException("Could not intercept");
     }
 
     private static boolean installPreTcm(ClassLoader cl, TypePool typePool, Class<?> interceptor)
