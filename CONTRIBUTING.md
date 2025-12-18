@@ -107,10 +107,10 @@ We welcome contributions to improve the Cassandra Sidecar, especially in the for
 
    Before implementing a new API or making a significant change to an existing one, contributors should submit a design proposal in the following manner:
 
-   * Propose the API spec in the JIRA ticket and additionally in a 1-pager (depending on the complexity of the proposal) in Google docs. This should align with the RESTful API Guidelines.
+   * Propose the API spec in the JIRA ticket and additionally in a 1-pager (depending on the complexity of the proposal) in publicly shared document (eg. Google docs). This should align with the RESTful API Guidelines.
    * For proposals involving a group of APIs, the API spec proposal can be referenced in a [DISCUSS] thread in the mailing-list to get broader community feedback and iterate on the proposal.
 
-   Sample proposal in JIRA with API spec: https://issues.apache.org/jira/projects/CASSSIDECAR/issues/CASSSIDECAR-274
+   Sample proposal in JIRA with API spec: [CASSSIDECAR-274](https://issues.apache.org/jira/projects/CASSSIDECAR/issues/CASSSIDECAR-274)
 
 2. **Cassandra Compatibility Considerations**
 
@@ -497,25 +497,25 @@ We should primarily follow RESTful design principles as they provide a clear, st
 
 #### Design Principles
 
-1. Resource Naming - Use nouns in endpoint URLs to represent resources, not verbs (See exceptions). The HTTP method (GET, POST, PUT, DELETE) should define the action.
+1. Resource Naming - Use nouns in endpoint URLs to represent resources, not verbs (See exceptions).
 2. Use HTTP Methods to denote the action to be performed on the resource and HTTP Response codes to denote the outcome of the operation. For more details, refer to  Requests and Responses
 3. URI Naming Conventions
-   * Follow a consistent usage of plural nouns for resources. eg. /keyspaces/123
+   * Follow a consistent usage of plural nouns for resources. eg. ```/keyspaces/123```
    * Should be all lower case, with "-" as the word separator.
-   * Use Sub-resources for Hierarchical Relationships. eg. Orders by a user can be scoped as nested resource within users resource -   /users/{userId}/orders/{orderId}.
+   * Use Sub-resources for Hierarchical Relationships. eg. Orders by a user can be scoped as nested resource within users resource - ```/users/{userId}/orders/{orderId}```.
 4. Response Format
    * Prefer to represent primitive types as corresponding types in JSON. eg.
 
 ```json
 {
-"userId": 123,             // number
-"isActive": true,          // boolean
-"userName": "JohnDoe",     // string
-"createdDate": "2024-08-20T12:34:56Z" // string (for date-time)
+  "userId": 123,             // number
+  "isActive": true,          // boolean
+  "userName": "JohnDoe",     // string
+  "createdDate": "2024-08-20T12:34:56Z" // string (for date-time)
 }
 ```
 
-5. Pagination – do not return unbounded responses. Always ensure that the API responses are bounded to a reasonable default. eg. /users?page=2&limit=10
+5. Pagination – do not return unbounded responses. Always ensure that the API responses are bounded to a reasonable default. eg. ```/users?page=2&limit=10```
 6. Filtering & Sorting – Support filtering and sorting where applicable.
 7. Versioning - APIs must use semantic versioning, with the major-version encoded into the URL. For more information, see Lifecycle.
 
@@ -524,17 +524,22 @@ We should primarily follow RESTful design principles as they provide a clear, st
 There may be cases where adhering strictly to REST may not be practical, such as cases where the application behavior does not fit into the state-machine model, dealing with complex workflows, real-time communication, or client-specific requirements. In these situations, minor deviations from REST principles may be necessary to meet specific needs, ensuring that the API remains effective and user-friendly.
 
 For example:
-When Casasndra node operations are mapped to APIs, like decommission or repair, the tradeoff has been made in favor of readability and single-responsibility when compared to a purely RESTful design.
+When Cassandra operations are mapped to APIs, like decommission or repair, the tradeoff has been made in favor of readability and single-responsibility when compared to a purely RESTful design.
 
 Current design:
+
+```
 PUT /api/v1/cassandra/operations/decommission
 PUT /api/v1/cassandra/operations/repair
-
+```
 Potential RESTful alternative
+
+```
 PUT /api/v1/cassandra/node
 {
-state: "DECOMMISSION" or "REPAIR"
+    state: "DECOMMISSION" or "REPAIR"
 }
+```
 
 #### Requests and Responses
 
@@ -543,22 +548,22 @@ state: "DECOMMISSION" or "REPAIR"
 * Embed sufficient context in the response if there are dynamic fields that are returned based on type of the resource/action being performed, so that the caller can elegantly manage conditional availability of fields
 * Always return a response body
 * Response Method:
-  * Reserve GET for requests to retrieve data associated with the resource without mutating any underlying state
-  * Reserve POST for creation of new resources, or in some cases, to trigger an action.
-  * Reserve PUT for idempotent requests that mutate the state of an existing resource. For ambiguous actions where POST do not apply, PUT is preferred, provided the idempotency rule holds.
-  * Reserve PATCH to update a part of a resource
-  * Reserve HEAD to fetch the metadata for a resource, specifically in cases when operating on a large resource while avoiding downloading the body
-  * Reserve DELETE when an existing resource needs to be deleted.
+  * Reserve ```GET``` for requests to retrieve data associated with the resource without mutating any underlying state
+  * Reserve ```POST``` for creation of new resources, or in some cases, to trigger an action.
+  * Reserve ```PUT``` for idempotent requests that mutate the state of an existing resource. For ambiguous actions where POST do not apply, PUT is preferred, provided the idempotency rule holds.
+  * Reserve ```PATCH``` to update a part of a resource
+  * Reserve ```HEAD``` to fetch the metadata for a resource, specifically in cases when operating on a large resource while avoiding downloading the body
+  * Reserve ```DELETE``` when an existing resource needs to be deleted.
 * Response Status:
-  * 202 Accepted - Request accepted and processing asynchronously. For cases which successfully completed requests, 200 OK is used instead.
-  * 409 Conflict - Resource conflict (e.g., duplicate name, job already running)
-  * 500 Internal Server Error - Server-side exceptions or failures
+  * ```202 Accepted``` - Request accepted and processing asynchronously. For cases which successfully completed requests, ```200 OK``` is used instead.
+  * ```409 Conflict``` - Resource conflict (e.g., duplicate name, job already running)
+  * ```500 Internal Server Error``` - Server-side exceptions or failures
 
 #### API Lifecycle
 
 ##### Versioning
 
-Per the REST guidelines, APIs must be versioned with the version number encoded into the URI eg. /v1/resource. This makes the version explicit and easy to identify. It's also easy to manage from a routing perspective.
+Per the REST guidelines, APIs must be versioned with the version number encoded into the URI eg. ```/v1/resource```. This makes the version explicit and easy to identify. It's also easy to manage from a routing perspective.
 
 The following section highlights the incompatible changes to the API that warrant an API version change and the deprecation path for the older version of the API.
 
