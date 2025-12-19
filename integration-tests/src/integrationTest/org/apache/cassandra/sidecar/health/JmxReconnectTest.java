@@ -41,6 +41,8 @@ import javax.management.remote.rmi.RMIConnector;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.DisabledOnJre;
+import org.junit.jupiter.api.condition.JRE;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
@@ -211,6 +213,11 @@ public class JmxReconnectTest extends SharedClusterSidecarIntegrationTestBase
      * The test uses bytecode instrumentation to inject IOException failures at specific points in the
      * JMX reconnection flow, then validates that the system can recover and continue processing
      * JMX requests successfully.
+     * <p>
+     * <b>Note:</b> This test is disabled on JDK 17+ because bytecode instrumentation requires access
+     * to internal JMX classes (javax.management.remote.rmi) which are strongly encapsulated by the
+     * module system. The `--add-opens` flags don't work reliably with ByteBuddy's bootstrap class
+     * loader instrumentation in JDK 17+.
      *
      * @throws ClassNotFoundException    if reflection fails to find required classes
      * @throws NoSuchMethodException     if reflection fails to find required methods
@@ -220,6 +227,8 @@ public class JmxReconnectTest extends SharedClusterSidecarIntegrationTestBase
      */
     @Test
     @Timeout(value = 1, unit = TimeUnit.MINUTES)
+    @DisabledOnJre(value = {JRE.JAVA_17, JRE.JAVA_18, JRE.JAVA_19, JRE.JAVA_20, JRE.JAVA_21, JRE.OTHER},
+                   disabledReason = "Bytecode instrumentation of internal JMX classes is incompatible with JDK 17+ module system")
     void testJmxReconnect() throws Exception
     {
         // Validate JMX is working by calling ring API

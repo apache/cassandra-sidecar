@@ -33,8 +33,6 @@ import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.jetbrains.annotations.NotNull;
 
-import static org.apache.cassandra.sidecar.common.utils.StringUtils.isNullOrEmpty;
-
 /**
  * Helper class for integration testing functionality
  */
