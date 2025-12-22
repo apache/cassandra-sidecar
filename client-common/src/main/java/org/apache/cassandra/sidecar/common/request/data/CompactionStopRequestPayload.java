@@ -75,7 +75,7 @@ public class CompactionStopRequestPayload
      * */
     public boolean hasValidCompactionId()
     {
-        return compactionId != null && !compactionId.trim().isEmpty();
+        return this.compactionId != null && !this.compactionId.trim().isEmpty();
     }
 
     /**
@@ -83,7 +83,7 @@ public class CompactionStopRequestPayload
     * */
     public boolean hasValidCompactionType()
     {
-        return compactionType != null;
+        return this.compactionType != null;
     }
 
     /**

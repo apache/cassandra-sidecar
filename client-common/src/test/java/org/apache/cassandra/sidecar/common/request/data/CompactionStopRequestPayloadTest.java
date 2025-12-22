@@ -175,4 +175,15 @@ class CompactionStopRequestPayloadTest
         assertThat(deser.compactionType()).isEqualTo(CompactionType.COMPACTION);
         assertThat(deser.compactionId()).isEqualTo("Test-ID-123");
     }
+
+    @Test
+    void testHasValidCompactionIdWithBothFields() throws JsonProcessingException
+    {
+        String json = "{\"compaction_type\":\"VALIDATION\",\"compaction_id\":\"xyz-456\"}";
+        CompactionStopRequestPayload payload = MAPPER.readValue(json, CompactionStopRequestPayload.class);
+        assertThat(payload.hasValidCompactionId()).isTrue();
+        assertThat(payload.hasValidCompactionType()).isTrue();
+        assertThat(payload.compactionId()).isEqualTo("xyz-456");
+        assertThat(payload.compactionType()).isEqualTo(CompactionType.VALIDATION);
+    }
 }

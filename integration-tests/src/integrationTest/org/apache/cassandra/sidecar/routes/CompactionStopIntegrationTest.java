@@ -176,8 +176,11 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
     @Test
     void testStopCompactionAllSupportedTypes() {
         String[] supportedTypes = {
-                "COMPACTION", "VALIDATION", "CLEANUP", "SCRUB",
-                "UPGRADE_SSTABLES", "INDEX_BUILD", "ANTICOMPACTION", "VERIFY"
+                "COMPACTION", "VALIDATION", "KEY_CACHE_SAVE", "ROW_CACHE_SAVE",
+                "COUNTER_CACHE_SAVE", "CLEANUP", "SCRUB", "UPGRADE_SSTABLES",
+                "INDEX_BUILD", "TOMBSTONE_COMPACTION", "ANTICOMPACTION",
+                "VERIFY", "VIEW_BUILD", "INDEX_SUMMARY", "RELOCATE",
+                "GARBAGE_COLLECT", "WRITE"
         };
 
         for (String type : supportedTypes)

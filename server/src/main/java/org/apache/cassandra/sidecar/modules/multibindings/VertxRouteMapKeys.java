@@ -56,7 +56,7 @@ public interface VertxRouteMapKeys
     }
     interface CassandraCompactionStopRouteKey extends RouteClassKey
     {
-        HttpMethod HTTP_METHOD = HttpMethod.POST;
+        HttpMethod HTTP_METHOD = HttpMethod.PUT;
         String ROUTE_URI = ApiEndpointsV1.COMPACTION_STOP_ROUTE;
     }
     interface CassandraGossipHealthRouteKey extends RouteClassKey
