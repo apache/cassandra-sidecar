@@ -248,10 +248,12 @@ public class NodeMoveHandlerTest
     }
 
     @Test
-    void testMoveWithInvalidToken(VertxTestContext context)
+    void testMoveWithInvalidTokenTooLong(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String requestBody = "{\"newToken\":\"invalidtoken\"}"; // Invalid token in JSON
+        // Create a token string that is exactly 128 characters (should fail)
+        String longToken = "a".repeat(128);
+        String requestBody = "{\"newToken\":\"" + longToken + "\"}";
         client.put(server.actualPort(), LOCAL_HOST, MOVE_ROUTE)
               .expect(ResponsePredicate.SC_BAD_REQUEST)
               .putHeader("content-type", "application/json")
@@ -260,6 +262,58 @@ public class NodeMoveHandlerTest
                   try
                   {
                       verify(mockStorageOperations, never()).move(anyString());
+                  }
+                  catch (IOException e)
+                  {
+                      throw new RuntimeException(e);
+                  }
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testMoveWithValidAlphanumericToken(VertxTestContext context)
+    {
+        when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
+        WebClient client = WebClient.create(vertx);
+        String requestBody = "{\"newToken\":\"validtoken123\"}"; // Valid alphanumeric token
+        client.put(server.actualPort(), LOCAL_HOST, MOVE_ROUTE)
+              .putHeader("content-type", "application/json")
+              .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  OperationalJobResponse moveResponse = response.bodyAsJson(OperationalJobResponse.class);
+                  assertThat(moveResponse).isNotNull();
+                  assertThat(moveResponse.status()).isEqualTo(SUCCEEDED);
+                  try
+                  {
+                      verify(mockStorageOperations).move("validtoken123");
+                  }
+                  catch (IOException e)
+                  {
+                      throw new RuntimeException(e);
+                  }
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testMoveWithTokenAtMaxLength(VertxTestContext context)
+    {
+        when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
+        WebClient client = WebClient.create(vertx);
+        // Create a token string that is 127 characters (should pass)
+        String maxLengthToken = "a".repeat(127);
+        String requestBody = "{\"newToken\":\"" + maxLengthToken + "\"}";
+        client.put(server.actualPort(), LOCAL_HOST, MOVE_ROUTE)
+              .putHeader("content-type", "application/json")
+              .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  OperationalJobResponse moveResponse = response.bodyAsJson(OperationalJobResponse.class);
+                  assertThat(moveResponse).isNotNull();
+                  assertThat(moveResponse.status()).isEqualTo(SUCCEEDED);
+                  try
+                  {
+                      verify(mockStorageOperations).move(maxLengthToken);
                   }
                   catch (IOException e)
                   {

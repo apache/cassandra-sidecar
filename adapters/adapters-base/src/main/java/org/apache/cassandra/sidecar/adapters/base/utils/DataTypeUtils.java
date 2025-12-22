@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.adapters.base.utils;
 
-import java.math.BigInteger;
-
 /**
  * Utility class for data type conversions.
  */
@@ -120,29 +118,5 @@ public class DataTypeUtils
     public static long mebibytesToBytes(long mebibytes)
     {
         return mebibytes << 20;
-    }
-
-    /**
-     * Validates whether a string can be parsed as a valid BigInteger.
-     * This method trims whitespace from the input string before validation.
-     *
-     * @param newToken the string to validate as a BigInteger, can be null
-     * @return true if the string can be successfully parsed as a BigInteger, false if null or invalid
-     */
-    public static boolean isValidBigInt(String newToken)
-    {
-        if (newToken == null)
-        {
-            return false;
-        }
-        try
-        {
-            new BigInteger(newToken.trim());
-            return true;
-        }
-        catch (NumberFormatException e)
-        {
-            return false;
-        }
     }
 }

@@ -32,7 +32,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.adapters.base.utils.DataTypeUtils;
 import org.apache.cassandra.sidecar.common.request.data.NodeMoveRequestPayload;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.utils.StringUtils;
@@ -53,6 +52,8 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class NodeMoveHandler extends AbstractHandler<String> implements AccessProtected
 {
+    private static final int MAX_TOKEN_LENGTH = 128;
+
     private final OperationalJobManager jobManager;
     private final ServiceConfiguration config;
 
@@ -115,12 +116,19 @@ public class NodeMoveHandler extends AbstractHandler<String> implements AccessPr
         {
             NodeMoveRequestPayload payload = Json.decodeValue(body, NodeMoveRequestPayload.class);
             String newToken = payload.newToken();
-            if (StringUtils.isNullOrEmpty(newToken) || !DataTypeUtils.isValidBigInt(newToken))
+            if (StringUtils.isNullOrEmpty(newToken))
+            {
+                throw new IllegalArgumentException("newToken value cannot be null or empty");
+            }
+
+            String trimmedToken = newToken.trim();
+            if (trimmedToken.length() >= MAX_TOKEN_LENGTH)
             {
                 throw new IllegalArgumentException(
-                String.format("newToken value must be a valid number. Provided value=%s", newToken));
+                String.format("newToken value must be less than %d characters. Provided value length=%d",
+                              MAX_TOKEN_LENGTH, trimmedToken.length()));
             }
-            return newToken.trim();
+            return trimmedToken;
         }
         catch (DecodeException e)
         {
