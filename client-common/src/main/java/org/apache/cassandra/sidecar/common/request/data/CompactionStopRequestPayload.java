@@ -48,7 +48,8 @@ public class CompactionStopRequestPayload
     public CompactionStopRequestPayload(
     @JsonProperty(value = "compaction_type") CompactionType compactionType,
     @JsonProperty(value = "compaction_id") String compactionId
-    ) {
+    )
+    {
         this.compactionType = compactionType;
         this.compactionId = compactionId;
     }
@@ -74,14 +75,16 @@ public class CompactionStopRequestPayload
     /**
      * Checks compaction ID valid - not null or empty post-trim
      * */
-    public boolean hasValidCompactionId() {
+    public boolean hasValidCompactionId()
+    {
         return compactionId != null && !compactionId.trim().isEmpty();
     }
 
     /**
      * Checks compaction type not null for invalid compactionId cases
     * */
-    public boolean hasValidCompactionType() {
+    public boolean hasValidCompactionType()
+    {
         return compactionType != null;
     }
 
@@ -90,7 +93,8 @@ public class CompactionStopRequestPayload
      *
      * @return true if either compaction ID or compaction type is valid, false otherwise
      */
-    public boolean atLeastOneParamProvided() {
+    public boolean atLeastOneParamProvided()
+    {
         return hasValidCompactionId() || hasValidCompactionType();
     }
 

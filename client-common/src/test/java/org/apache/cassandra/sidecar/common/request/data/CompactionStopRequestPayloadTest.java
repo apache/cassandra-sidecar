@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cassandra.sidecar.common.data.CompactionType;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for {@link CompactionStopRequestPayload} serialization and deserialization
@@ -153,7 +152,8 @@ class CompactionStopRequestPayloadTest
     {
 
         // Check each compactionType field for CompactionStopRequestPayload is recognized as a supported compaction type
-        for (CompactionType type : CompactionType.values()) {
+        for (CompactionType type : CompactionType.values())
+        {
             CompactionStopRequestPayload payload = new CompactionStopRequestPayload(type, null);
             String json = MAPPER.writeValueAsString(payload);
             assertThat(json).contains(type.toString().toUpperCase());

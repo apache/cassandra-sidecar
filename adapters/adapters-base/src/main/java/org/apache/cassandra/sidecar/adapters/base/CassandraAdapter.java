@@ -81,8 +81,10 @@ public class CassandraAdapter implements ICassandraAdapter
         this.tableOperations = Objects.requireNonNull(createTableOperations(jmxClient), "tableOperations is required");
         this.compactionManagerOperations = Objects.requireNonNull(createCompactionManagerOperations(jmxClient), "compactionManagerOperations is required");
         this.metricsOperations = Objects.requireNonNull(createMetricsOperations(jmxClient, tableSchemaFetcher), "metricsOperations is required");
-        this.compactionStatsOperations = Objects.requireNonNull(createCompactionStatsOperations(storageOperations, metricsOperations,
-                                                                                                compactionManagerOperations), "compactionStatsOperations is required");
+        this.compactionStatsOperations = Objects.requireNonNull(createCompactionStatsOperations(
+                storageOperations,
+                metricsOperations,
+                compactionManagerOperations), "compactionStatsOperations is required");
     }
 
     /**

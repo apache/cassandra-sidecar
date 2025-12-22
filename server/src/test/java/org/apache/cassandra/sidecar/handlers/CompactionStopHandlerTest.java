@@ -21,8 +21,6 @@ package org.apache.cassandra.sidecar.handlers;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
-import org.apache.cassandra.sidecar.common.data.CompactionType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,14 +33,18 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
+
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
+import org.apache.cassandra.sidecar.common.data.CompactionType;
 import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
 import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
@@ -197,7 +199,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
                       verify(mockCompactionManagerOperations, times(0))
-                          .stopCompaction( anyString());
+                          .stopCompaction(anyString());
                   });
                   ctx.completeNow();
               }));

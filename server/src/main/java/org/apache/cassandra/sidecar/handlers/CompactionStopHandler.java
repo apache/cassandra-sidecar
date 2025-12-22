@@ -63,12 +63,14 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
     @Inject
     protected CompactionStopHandler(final InstanceMetadataFetcher metadataFetcher,
                                     final ExecutorPools executorPools,
-                                    final CassandraInputValidator validator) {
+                                    final CassandraInputValidator validator)
+    {
         super(metadataFetcher, executorPools, validator);
     }
 
     @Override
-    public Set<Authorization> requiredAuthorizations() {
+    public Set<Authorization> requiredAuthorizations()
+    {
         return Collections.singleton(BasicPermissions.MODIFY_COMPACTION.toAuthorization());
     }
 
@@ -80,7 +82,8 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
                                HttpServerRequest httpRequest,
                                @NotNull String host,
                                SocketAddress remoteAddress,
-                               CompactionStopRequestPayload request) {
+                               CompactionStopRequestPayload request)
+    {
         CompactionManagerOperations compactionManagerOps = metadataFetcher.delegate(host).compactionManagerOperations();
 
         executorPools.service()
@@ -108,9 +111,12 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
 
         // Attempt to stop the compaction
         // If compactionId is provided, use it (takes precedence over type)
-        if (request.hasValidCompactionId()) {
+        if (request.hasValidCompactionId())
+        {
             operations.stopCompactionById(compactionId);
-        } else if (request.hasValidCompactionType()) {
+        }
+        else if (request.hasValidCompactionType())
+        {
             operations.stopCompaction(compactionTypeStr);
         }
         // If we reach here, at least one of the above conditions was true due to validation in extractParamsOrThrow()
