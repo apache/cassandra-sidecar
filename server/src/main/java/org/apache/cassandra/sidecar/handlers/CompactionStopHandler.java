@@ -45,7 +45,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Handler for stopping compaction operations via the Cassandra Compaction Manager.
  *
- * <p>Handles {@code POST /api/v1/cassandra/operations/compaction/stop} requests to stop
+ * <p>Handles {@code PUT /api/v1/cassandra/operations/compaction/stop} requests to stop
  * compaction operations. Expects a JSON payload with compaction_type and/or compaction_id:
  * <pre>
  *   { "compaction_type": "COMPACTION", "compaction_id": "abc-123" }

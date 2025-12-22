@@ -34,8 +34,8 @@ public interface CompactionManagerOperations
     List<Map<String, String>> getCompactions();
 
     /**
-     * Stops compaction based on compaction ID or type.
-     * If compactionId is provided, it takes precedence over compactionType.
+     * Stops compaction based on compaction ID.
+     * This method takes precedence over stopCompaction if both type and ID are provided.
      *
      * @param compactionId   the compaction ID to stop (nullable)
      * @throws IllegalArgumentException if both parameters are null or empty
@@ -43,8 +43,7 @@ public interface CompactionManagerOperations
     void stopCompactionById(String compactionId);
 
     /**
-     * Stops compaction based on compaction ID or type.
-     * If compactionId is provided, it takes precedence over compactionType.
+     * Stops compaction based on type if no compaction ID is provided.
      *
      * @param compactionType   the compaction ID to stop (nullable)
      * @throws IllegalArgumentException if both parameters are null or empty

@@ -130,7 +130,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
         String payload = "{\"compaction_type\":\"VALIDATION\",\"compaction_id\":\"test-id-123\"}";
         HttpResponse<Buffer> response = getBlocking(
                 trustedClient()
-                        .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                        .put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
                         .sendBuffer(buffer(payload))
                         .expecting(HttpResponseExpectation.SC_OK)
         );
@@ -148,7 +148,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
         String payload = "{}";
         HttpResponse<Buffer> response = getBlocking(
                 trustedClient()
-                        .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                        .put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
                         .sendBuffer(buffer(payload))
         );
 
@@ -162,7 +162,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
         String payload = "{\"compaction_type\":\"INVALID_TYPE\"}";
         HttpResponse<Buffer> response = getBlocking(
                 trustedClient()
-                        .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                        .put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
                         .sendBuffer(buffer(payload))
         );
 
@@ -174,7 +174,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
         String payload = "{invalid json";
         HttpResponse<Buffer> response = getBlocking(
                 trustedClient()
-                        .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                        .put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
                         .sendBuffer(buffer(payload))
         );
 
@@ -192,7 +192,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
             String payload = String.format("{\"compaction_type\":\"%s\"}", type);
             HttpResponse<Buffer> response = getBlocking(
                     trustedClient()
-                            .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                            .put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
                             .sendBuffer(buffer(payload))
                             .expecting(HttpResponseExpectation.SC_OK)
             );
@@ -386,7 +386,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
             HttpResponse<Buffer> stopResponse = getBlocking(
                     trustedClient()
-                            .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                            .put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
                             .sendBuffer(buffer(stopPayload))
                             .expecting(HttpResponseExpectation.SC_OK)
             );
@@ -505,7 +505,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
             HttpResponse<Buffer> stopResponse = getBlocking(
                     trustedClient()
-                            .post(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                            .put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
                             .sendBuffer(buffer(stopPayload))
                             .expecting(HttpResponseExpectation.SC_OK)
             );

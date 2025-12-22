@@ -27,23 +27,26 @@ import com.fasterxml.jackson.annotation.JsonCreator;
  */
 public enum CompactionType
 {
-    COMPACTION,
+    CLEANUP,
+    SCRUB,
+    UPGRADE_SSTABLE,
+    VERIFY,
+    MAJOR_COMPACTION,
+    RELOCATE,
+    GARBAGE_COLLECT,
+    FLUSH,
+    WRITE,
+    ANTICOMPCATION,
     VALIDATION,
+    INDEX_BUILD,
+    VIEW_BUILD,
+    COMPACTION,
+    TOMBSTONE_COMPACTION,
+    STREAM,
     KEY_CACHE_SAVE,
     ROW_CACHE_SAVE,
     COUNTER_CACHE_SAVE,
-    CLEANUP,
-    SCRUB,
-    UPGRADE_SSTABLES,
-    INDEX_BUILD,
-    TOMBSTONE_COMPACTION,
-    ANTICOMPACTION,
-    VERIFY,
-    WRITE,
-    VIEW_BUILD,
-    INDEX_SUMMARY,
-    RELOCATE,
-    GARBAGE_COLLECT;
+    INDEX_SUMMARY;
 
     @Override
     public String toString()

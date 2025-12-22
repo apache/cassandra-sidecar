@@ -37,11 +37,13 @@ public interface CompactionManagerJmxOperations
 
     /**
      * Stop compaction by type
+     * @throws IllegalArgumentException when compaction type is null
      */
     void stopCompaction(String type);
 
     /**
      * Stop compaction by ID
+     * @throws IllegalArgumentException when compaction ID is null
      */
     void stopCompactionById(String compactionId);
 }

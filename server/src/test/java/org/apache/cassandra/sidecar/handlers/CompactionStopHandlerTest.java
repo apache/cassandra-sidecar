@@ -101,7 +101,7 @@ public class CompactionStopHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"compaction_type\":\"COMPACTION\"}";
-        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+        client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       verify(mockCompactionManagerOperations, times(1)).stopCompaction(eq("COMPACTION"));
@@ -120,7 +120,7 @@ public class CompactionStopHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"compaction_id\":\"abc-123\"}";
-        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+        client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       verify(mockCompactionManagerOperations, times(1)).stopCompactionById(eq("abc-123"));
@@ -139,7 +139,7 @@ public class CompactionStopHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"compaction_type\":\"VALIDATION\",\"compaction_id\":\"xyz-456\"}";
-        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+        client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       verify(mockCompactionManagerOperations, times(1))
@@ -160,7 +160,7 @@ public class CompactionStopHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{}";
-        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+        client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
@@ -176,7 +176,7 @@ public class CompactionStopHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"compaction_type\":\"\",\"compaction_id\":\"\"}";
-        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+        client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
@@ -192,7 +192,7 @@ public class CompactionStopHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"compaction_type\":\"INVALID_TYPE\"}";
-        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+        client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
@@ -208,7 +208,7 @@ public class CompactionStopHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{invalid json";
-        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+        client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
@@ -224,7 +224,7 @@ public class CompactionStopHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"compaction_type\":\"  COMPACTION  \"}";
-        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+        client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       // Should trim and pass as uppercase enum name
@@ -242,7 +242,7 @@ public class CompactionStopHandlerTest
     {
         WebClient client = WebClient.create(vertx);
         String payload = "{\"compaction_type\":\"compaction\"}";
-        client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+        client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       // Should accept lowercase input and send uppercase to Cassandra
@@ -271,7 +271,7 @@ public class CompactionStopHandlerTest
         for (String type : supportedTypes)
         {
             String payload = "{\"compaction_type\":\"" + type + "\"}";
-            client.post(server.actualPort(), "127.0.0.1", TEST_ROUTE)
+            client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
                   .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                       ctx.verify(() -> {
                           assertThat(resp.statusCode()).isEqualTo(OK.code());

@@ -25,7 +25,6 @@ import java.util.Objects;
 import org.apache.cassandra.sidecar.adapters.base.jmx.CompactionManagerJmxOperations;
 import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
-import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.adapters.base.jmx.CompactionManagerJmxOperations.COMPACTION_MANAGER_OBJ_NAME;
 
@@ -70,7 +69,8 @@ public class CassandraCompactionManagerOperations implements CompactionManagerOp
             );
             proxy.stopCompactionById(compactionId);
         } else {
-            throw new IllegalArgumentException("compaction id is null or empty");
+            throw new IllegalArgumentException("compaction process with compaction ID " + compactionId +
+                    " is null or empty");
         }
     }
 
@@ -83,7 +83,8 @@ public class CassandraCompactionManagerOperations implements CompactionManagerOp
             );
 
             proxy.stopCompaction(Objects.requireNonNull(compactionType,
-                    "compactionType must not be null when compactionId is not provided"));
+                    "compaction process with compaction type " + compactionType +
+                            " must not be null when compactionId is not provided"));
         } else {
             throw new IllegalArgumentException("compaction type is null or empty");
         }

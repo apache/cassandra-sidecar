@@ -47,7 +47,7 @@ public class CompactionStopRequest extends JsonRequest<CompactionStopResponse>
     @Override
     public HttpMethod method()
     {
-        return HttpMethod.POST;
+        return HttpMethod.PUT;
     }
 
     /**
