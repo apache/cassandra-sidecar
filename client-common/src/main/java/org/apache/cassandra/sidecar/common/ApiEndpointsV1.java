@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.common;
 
-
 /**
  * A constants container class for API endpoints of version 1.
  */

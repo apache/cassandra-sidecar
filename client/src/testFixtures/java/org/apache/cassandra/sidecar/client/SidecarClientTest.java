@@ -1767,10 +1767,7 @@ abstract class SidecarClientTest
         String responseByType = "{\"status\":\"SUBMITTED\",\"compaction_type\":\"COMPACTION\"}";
         server.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(responseByType));
 
-        CompactionStopRequestPayload stopByType = new CompactionStopRequestPayload(
-                CompactionType.COMPACTION,
-                null
-        );
+        CompactionStopRequestPayload stopByType = new CompactionStopRequestPayload(CompactionType.COMPACTION, null);
         CompletableFuture<CompactionStopResponse> response1 = client.compactionStop(instance, stopByType);
         assertThat(response1).isNotNull();
 
@@ -1784,8 +1781,7 @@ abstract class SidecarClientTest
         String responseById = "{\"status\":\"SUBMITTED\",\"compaction_id\":\"test-id-1\"}";
         server.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(responseById));
 
-        CompactionStopRequestPayload stopById = new CompactionStopRequestPayload(null,
-                "test-id-1");
+        CompactionStopRequestPayload stopById = new CompactionStopRequestPayload(null, "test-id-1");
         CompletableFuture<CompactionStopResponse> response2 = client.compactionStop(instance, stopById);
         CompactionStopResponse compactionResponse2 = response2.get();
 
@@ -1795,12 +1791,12 @@ abstract class SidecarClientTest
 
         // Test id precedence when both inputs provided
         String responseBothInputs = "{\"status\":\"SUBMITTED\"," +
-                "\"compaction_id\":\"test-id-2\", " +
-                "\"compaction_type\":\"VALIDATION\"}";
+                                    "\"compaction_id\":\"test-id-2\", " +
+                                    "\"compaction_type\":\"VALIDATION\"}";
         server.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(responseBothInputs));
 
-        CompactionStopRequestPayload stopAfterBothInputs = new
-                CompactionStopRequestPayload(CompactionType.VALIDATION, "test-id-2");
+        CompactionStopRequestPayload stopAfterBothInputs
+        = new CompactionStopRequestPayload(CompactionType.VALIDATION, "test-id-2");
         CompletableFuture<CompactionStopResponse> response3 = client.compactionStop(instance, stopAfterBothInputs);
         assertThat(response3).isNotNull();
 

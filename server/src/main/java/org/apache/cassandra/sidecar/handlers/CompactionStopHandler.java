@@ -151,22 +151,18 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
         }
         catch (DecodeException e)
         {
-            logger.warn("Bad request. Received invalid JSON payload: {}", e.getMessage());
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                    "Invalid JSON payload: " + e.getMessage());
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid JSON payload: " + e.getMessage());
         }
         catch (IllegalArgumentException e)
         {
-            logger.warn("Bad request. {}", e.getMessage());
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, e.getMessage());
         }
 
         // Validate that at least one field is provided
         if (!payload.atLeastOneParamProvided())
         {
-            logger.warn("Bad request. Both compaction_type and compaction_id are missing.");
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                    "At least one of 'compaction_type' or 'compaction_id' must be provided");
+                                    "At least one of 'compaction_type' or 'compaction_id' must be provided");
         }
 
         return payload;

@@ -45,10 +45,8 @@ public class CompactionStopRequestPayload
      * @param compactionId   optional ID of a specific compaction to stop
      */
     @JsonCreator
-    public CompactionStopRequestPayload(
-    @JsonProperty(value = "compaction_type") CompactionType compactionType,
-    @JsonProperty(value = "compaction_id") String compactionId
-    )
+    public CompactionStopRequestPayload(@JsonProperty(value = "compaction_type") CompactionType compactionType,
+                                        @JsonProperty(value = "compaction_id") String compactionId)
     {
         this.compactionType = compactionType;
         this.compactionId = compactionId;

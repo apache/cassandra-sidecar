@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.handlers;
 
 import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
@@ -145,7 +146,7 @@ public class CompactionStopHandlerTest
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       verify(mockCompactionManagerOperations, times(1))
-                          .stopCompactionById(eq("xyz-456"));
+                      .stopCompactionById(eq("xyz-456"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                       CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
@@ -167,7 +168,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
                       verify(mockCompactionManagerOperations, times(0))
-                          .stopCompaction(anyString());
+                      .stopCompaction(anyString());
                   });
                   ctx.completeNow();
               }));
@@ -183,7 +184,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
                       verify(mockCompactionManagerOperations, times(0))
-                          .stopCompaction(anyString());
+                      .stopCompaction(anyString());
                   });
                   ctx.completeNow();
               }));
@@ -199,7 +200,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
                       verify(mockCompactionManagerOperations, times(0))
-                          .stopCompaction(anyString());
+                      .stopCompaction(anyString());
                   });
                   ctx.completeNow();
               }));
@@ -215,7 +216,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
                       verify(mockCompactionManagerOperations, times(0))
-                          .stopCompaction(anyString());
+                      .stopCompaction(anyString());
                   });
                   ctx.completeNow();
               }));
@@ -231,7 +232,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       // Should trim and pass as uppercase enum name
                       verify(mockCompactionManagerOperations, times(1))
-                          .stopCompaction(eq("COMPACTION"));
+                      .stopCompaction(eq("COMPACTION"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                   });
@@ -249,7 +250,7 @@ public class CompactionStopHandlerTest
                   ctx.verify(() -> {
                       // Should accept lowercase input and send uppercase to Cassandra
                       verify(mockCompactionManagerOperations, times(1))
-                          .stopCompaction(eq("COMPACTION"));
+                      .stopCompaction(eq("COMPACTION"));
 
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                   });
@@ -258,7 +259,7 @@ public class CompactionStopHandlerTest
     }
 
     @Test
-    void testAllSupportedCompactionTypes(VertxTestContext ctx)
+    void testAllSupportedCompactionTypes(VertxTestContext ctx) throws InterruptedException
     {
         String[] supportedTypes = {
             "COMPACTION", "VALIDATION", "KEY_CACHE_SAVE", "ROW_CACHE_SAVE",
@@ -270,6 +271,7 @@ public class CompactionStopHandlerTest
 
         WebClient client = WebClient.create(vertx);
 
+        CountDownLatch expectedCalls = new CountDownLatch(supportedTypes.length);
         for (String type : supportedTypes)
         {
             String payload = "{\"compaction_type\":\"" + type + "\"}";
@@ -279,9 +281,11 @@ public class CompactionStopHandlerTest
                           assertThat(resp.statusCode()).isEqualTo(OK.code());
                           CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
                           assertThat(response.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
+                          expectedCalls.countDown();
                       });
                   }));
         }
+        expectedCalls.await(30, TimeUnit.SECONDS);
         ctx.completeNow();
     }
 

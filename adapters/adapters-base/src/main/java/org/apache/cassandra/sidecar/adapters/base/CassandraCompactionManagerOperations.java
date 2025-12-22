@@ -64,16 +64,14 @@ public class CassandraCompactionManagerOperations implements CompactionManagerOp
         // compactionId takes precedence over type if both are provided
         if (compactionId != null && !compactionId.trim().isEmpty())
         {
-            CompactionManagerJmxOperations proxy = jmxClient.proxy(
-                    CompactionManagerJmxOperations.class,
-                    COMPACTION_MANAGER_OBJ_NAME
-            );
+            CompactionManagerJmxOperations proxy = jmxClient.proxy(CompactionManagerJmxOperations.class,
+                                                                   COMPACTION_MANAGER_OBJ_NAME);
             proxy.stopCompactionById(compactionId);
         }
         else
         {
-            throw new IllegalArgumentException("compaction process with compaction ID " + compactionId +
-                    " is null or empty");
+            throw new IllegalArgumentException("compaction process with compaction ID "
+                                               + compactionId + " is null or empty");
         }
     }
 
@@ -82,18 +80,15 @@ public class CassandraCompactionManagerOperations implements CompactionManagerOp
     {
         if (compactionType != null && !compactionType.trim().isEmpty())
         {
-            CompactionManagerJmxOperations proxy = jmxClient.proxy(
-                    CompactionManagerJmxOperations.class,
-                    COMPACTION_MANAGER_OBJ_NAME
-            );
-
-            proxy.stopCompaction(Objects.requireNonNull(compactionType,
-                    "compaction process with compaction type " + compactionType +
-                            " must not be null when compactionId is not provided"));
+            CompactionManagerJmxOperations proxy = jmxClient.proxy(CompactionManagerJmxOperations.class,
+                                                                   COMPACTION_MANAGER_OBJ_NAME);
+            String errMsg
+            = "compaction process with compaction type " + compactionType + " must not be null when compactionId is not provided";
+            proxy.stopCompaction(Objects.requireNonNull(compactionType, errMsg));
         }
         else
         {
-            throw new IllegalArgumentException("compaction type is null or empty");
+            throw new IllegalArgumentException("compaction type " + compactionType + " is null or empty");
         }
     }
 }

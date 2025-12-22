@@ -55,8 +55,7 @@ public class LifecycleUpdateHandler extends NodeCommandHandler implements Access
     private final LifecycleManager lifecycleManager;
 
     @Inject
-    public LifecycleUpdateHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools,
-                                  LifecycleManager lifecycleManager)
+    public LifecycleUpdateHandler(InstanceMetadataFetcher metadataFetcher, ExecutorPools executorPools, LifecycleManager lifecycleManager)
     {
         super(metadataFetcher, executorPools, null);
         this.lifecycleManager = lifecycleManager;
@@ -80,9 +79,7 @@ public class LifecycleUpdateHandler extends NodeCommandHandler implements Access
                      .executeBlocking(() -> lifecycleManager.updateDesiredState(host, desiredState))
                      .onSuccess(info ->
                                 {
-                                    HttpServerResponse response = context.response().putHeader(
-                                            "Content-Type",
-                                            "application/json");
+                                    HttpServerResponse response = context.response().putHeader("Content-Type", "application/json");
                                     switch (info.status())
                                     {
                                         case CONVERGED:
@@ -92,10 +89,8 @@ public class LifecycleUpdateHandler extends NodeCommandHandler implements Access
                                             response.setStatusCode(HttpResponseStatus.ACCEPTED.code());
                                             break;
                                         default:
-                                            logger.warn("{} request failed with unexpected result. request={}, " +
-                                                            "remoteAddress={}, instance={}, operationStatus={}",
-                                                        this.getClass().getSimpleName(), request, remoteAddress, host,
-                                                    info.status());
+                                            logger.warn("{} request failed with unexpected result. request={}, remoteAddress={}, instance={}, operationStatus={}",
+                                                        this.getClass().getSimpleName(), request, remoteAddress, host, info.status());
                                             response.setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
                                     }
                                     response.end(Json.encode(info));
@@ -104,8 +99,7 @@ public class LifecycleUpdateHandler extends NodeCommandHandler implements Access
     }
 
     @Override
-    protected void processFailure(Throwable cause, RoutingContext context, String host, SocketAddress remoteAddress,
-                                  NodeCommandRequestPayload request)
+    protected void processFailure(Throwable cause, RoutingContext context, String host, SocketAddress remoteAddress, NodeCommandRequestPayload request)
     {
         if (cause instanceof LifecycleTaskConflictException)
         {

@@ -32,8 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class CompactionStopRequestPayloadTest
 {
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-        .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    private static final ObjectMapper MAPPER
+    = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
     @Test
     void testSerDeserWithBothFields() throws JsonProcessingException
@@ -150,7 +150,6 @@ class CompactionStopRequestPayloadTest
     @Test
     void testAllSupportedCompactionTypes() throws JsonProcessingException
     {
-
         // Check each compactionType field for CompactionStopRequestPayload is recognized as a supported compaction type
         for (CompactionType type : CompactionType.values())
         {

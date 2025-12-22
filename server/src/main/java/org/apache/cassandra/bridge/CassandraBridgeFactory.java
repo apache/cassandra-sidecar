@@ -84,8 +84,7 @@ public class CassandraBridgeFactory
             cassandraResourceName(label),
             bridgeResourceName(label),
             typesResourceName(label));
-            Class<CassandraBridge> bridge = (
-                    Class<CassandraBridge>) loader.loadClass(CassandraBridge.IMPLEMENTATION_FQCN);
+            Class<CassandraBridge> bridge = (Class<CassandraBridge>) loader.loadClass(CassandraBridge.IMPLEMENTATION_FQCN);
             Constructor<CassandraBridge> constructor = bridge.getConstructor();
             return constructor.newInstance();
         }
@@ -135,9 +134,7 @@ public class CassandraBridgeFactory
                            }).toArray(URL[]::new);
 
         return AccessController.doPrivileged((PrivilegedAction<ClassLoader>) () ->
-                                                                             new PostDelegationClassLoader(urls,
-                                                                                     Thread.currentThread().
-                                                                                             getContextClassLoader()));
+                                                                             new PostDelegationClassLoader(urls, Thread.currentThread().getContextClassLoader()));
     }
 
 }
