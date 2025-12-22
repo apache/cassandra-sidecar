@@ -28,6 +28,7 @@ import java.util.TreeSet;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Range;
@@ -39,6 +40,7 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
 import org.apache.cassandra.distributed.api.TokenSupplier;
+import org.apache.cassandra.distributed.shared.NetworkTopology;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
@@ -48,7 +50,9 @@ import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 import org.apache.cassandra.testing.IClusterExtension;
+import org.apache.cassandra.testing.SimpleCassandraVersion;
 import org.assertj.core.api.InstanceOfAssertFactories;
+import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.distributed.shared.NetworkTopology.dcAndRack;
 import static org.apache.cassandra.distributed.shared.NetworkTopology.networkTopology;
@@ -61,6 +65,21 @@ import static org.assertj.core.api.Assertions.from;
  */
 public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
 {
+    /**
+     * For tests involving post-TCM cassandra versions, reconfigure the CMS so that it has at least
+     * 3 active nodes, as there are tests that shut down individual nodes and can potentially shut down
+     * the lone CMS node.
+     * @param cluster the cluster to reconfigure
+     */
+    protected static void maybeReconfigureCMS(IClusterExtension<? extends IInstance> cluster)
+    {
+        SimpleCassandraVersion cassandraVersion = SimpleCassandraVersion.create(cluster.getFirstRunningInstance().getReleaseVersionString());
+        if (cassandraVersion.major > 5 || (cassandraVersion.major == 5 && cassandraVersion.minor >= 1))
+        {
+            cluster.get(1).nodetoolResult("cms", "reconfigure", "3").asserts().success();
+        }
+    }
+
     protected void validateTokenRanges(TokenRangeReplicasResponse mappingsResponse,
                                        List<Range<BigInteger>> expectedRanges)
     {
@@ -123,27 +142,29 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
     protected IClusterExtension<? extends IInstance> getMultiDCCluster(BiConsumer<ClassLoader, Integer> initializer,
                                                                        ConfigurableCassandraTestContext cassandraTestContext)
     {
-        return getMultiDCCluster(initializer, cassandraTestContext, null);
+        return getMultiDCCluster(initializer, cassandraTestContext, null, null);
     }
 
     protected IClusterExtension<? extends IInstance> getMultiDCCluster(BiConsumer<ClassLoader, Integer> initializer,
                                                                        ConfigurableCassandraTestContext cassandraTestContext,
+                                                                       TestTokenSupplier tokenSupplier,
                                                                        Consumer<ClusterBuilderConfiguration> additionalConfigurator)
     {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
-        TokenSupplier mdcTokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
-                                                                                   annotation.newNodesPerDc(),
-                                                                                   annotation.numDcs(),
-                                                                                   1);
+        TokenSupplier mdcTokenSupplier = tokenSupplier != null ? tokenSupplier : getTokenSupplier(annotation);
 
         int totalNodeCount = (annotation.nodesPerDc() + annotation.newNodesPerDc()) * annotation.numDcs();
         return cassandraTestContext.configureAndStartCluster(configuration -> {
-            configuration.clusterBuilderUpdater = clusterBuilder -> clusterBuilder.withInstanceInitializer(initializer)
-                                                                                  .withTokenSupplier(mdcTokenSupplier)
-                                                                                  .withNodeIdTopology(networkTopology(totalNodeCount,
-                                                                                                                      (nodeId) -> nodeId % 2 != 0 ?
-                                                                                                                                  dcAndRack("datacenter1", "rack1") :
-                                                                                                                                  dcAndRack("datacenter2", "rack2")));
+            IntFunction<NetworkTopology.DcAndRack> supplier = nodeId -> {
+                return nodeId % 2 != 0 ?
+                       dcAndRack("datacenter1", "rack1") :
+                       dcAndRack("datacenter2", "rack2");
+            };
+
+            configuration.clusterBuilderUpdater = clusterBuilder ->
+                                                  clusterBuilder.withInstanceInitializer(initializer)
+                                                                .withTokenSupplier(mdcTokenSupplier)
+                                                                .withNodeIdTopology(networkTopology(totalNodeCount, supplier));
 
             if (additionalConfigurator != null)
             {
@@ -152,35 +173,45 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
         });
     }
 
+    protected List<Range<BigInteger>> generateExpectedRanges(boolean isCrossDCKeyspace)
+    {
+        CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
+        TokenSupplier tokenSupplier = getTokenSupplier(annotation);
+        return generateExpectedRanges(isCrossDCKeyspace, tokenSupplier, annotation);
+    }
+
+    protected List<Range<BigInteger>> generateExpectedRanges(TokenSupplier tokenSupplier)
+    {
+        CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
+        return generateExpectedRanges(true, tokenSupplier, annotation);
+    }
+
     protected List<Range<BigInteger>> generateExpectedRanges()
     {
         return generateExpectedRanges(true);
     }
 
-    protected List<Range<BigInteger>> generateExpectedRanges(boolean isCrossDCKeyspace)
+    public static @NotNull TokenSupplier getTokenSupplier(CassandraIntegrationTest annotation)
     {
+        return TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
+                                                         annotation.newNodesPerDc(),
+                                                         annotation.numDcs(),
+                                                         1);
+    }
 
-        CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
-        // For single DC keyspaces, the ranges are initially allocated replicas from both DCs. As a result,
-        // we will take into account the node count across all DCs. It is only while accounting for the new/joining
-        // nodes that we will limit the nodes to the single DC, as the pending nodes for the given keyspace will
-        // exclude the nodes from other DCs.
-
+    protected List<Range<BigInteger>> generateExpectedRanges(boolean isCrossDCKeyspace,
+                                                             TokenSupplier tokenSupplier,
+                                                             CassandraIntegrationTest annotation)
+    {
         int nodeCount = isCrossDCKeyspace ?
                         (annotation.nodesPerDc() + annotation.newNodesPerDc()) * annotation.numDcs() :
                         (annotation.nodesPerDc() * annotation.numDcs()) + annotation.newNodesPerDc();
 
-        return generateExpectedRanges(nodeCount);
+        return generateExpectedRanges(nodeCount, tokenSupplier);
     }
 
-    protected List<Range<BigInteger>> generateExpectedRanges(int nodeCount)
+    protected List<Range<BigInteger>> generateExpectedRanges(int nodeCount, TokenSupplier tokenSupplier)
     {
-        CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
-        TokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
-                                                                                annotation.newNodesPerDc(),
-                                                                                annotation.numDcs(),
-                                                                                1);
-
         TreeSet<BigInteger> tokens = new TreeSet<>();
         int node = 1;
         while (node <= nodeCount)
@@ -233,14 +264,14 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
         {
             Range<BigInteger> range = Range.openClosed(BigInteger.valueOf(Long.parseLong(r.start())),
                                                        BigInteger.valueOf(Long.parseLong(r.end())));
-            assertThat(expectedRangeMapping).containsKey("datacenter1");
-            assertThat(expectedRangeMapping.get("datacenter1")).containsKey(range);
+            assertThat(range).isIn(expectedRangeMapping.get("datacenter1").keySet());
             // Replicaset for the same range match expected
             List<String> replicaSetNoPort = r.replicasByDatacenter().get("datacenter1")
                                              .stream()
                                              .map(node -> node.split(":")[0])
                                              .collect(Collectors.toList());
             assertThat(replicaSetNoPort)
+            .describedAs("Range %s replicas do not match", range)
             .containsExactlyInAnyOrderElementsOf(expectedRangeMapping.get("datacenter1").get(range));
 
             if (annotation.numDcs() > 1 && isCrossDCKeyspace)
@@ -304,5 +335,21 @@ public class BaseTokenRangeIntegrationTest extends IntegrationTestBase
         assertThat(replicaRanges.stream()
                                 .map(TokenRangeReplicasResponse.ReplicaInfo::end)
                                 .anyMatch(s -> s.equals("9223372036854775807"))).isTrue();
+    }
+
+    protected @NotNull Set<String> getDcReplication(CassandraIntegrationTest annotation)
+    {
+        Set<String> dcReplication;
+        if (annotation.numDcs() > 1)
+        {
+            createTestKeyspace(Map.of("replication_factor", DEFAULT_RF));
+            dcReplication = Set.of("datacenter1", "datacenter2");
+        }
+        else
+        {
+            createTestKeyspace(Map.of("datacenter1", DEFAULT_RF));
+            dcReplication = Set.of("datacenter1");
+        }
+        return dcReplication;
     }
 }

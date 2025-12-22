@@ -92,19 +92,29 @@ class StreamCdcSegmentHandlerTest
     }
 
     @Test
-    void testRouteSucceeds(VertxTestContext context)
+    void testRouteSucceeds(VertxTestContext context) throws InterruptedException
+    {
+        CountDownLatch latch = new CountDownLatch(1);
+        validateRouteSucceedsInternal(context, latch);
+        latch.await(1, TimeUnit.SECONDS);
+        spinAssertCdcRawTempEmpty();
+        context.completeNow();
+    }
+
+    void validateRouteSucceedsInternal(VertxTestContext context, CountDownLatch completeRequestLatch)
     {
         WebClient client = WebClient.create(vertx);
         String testRoute = "/cdc/segments/CommitLog-1-1.log";
         client.get(server.actualPort(), "localhost", "/api/v1" + testRoute)
               .as(BodyCodec.buffer())
-              .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(resp -> {
-                  context.verify(() -> assertThat(resp.bodyAsString()).isEqualTo("x"));
+                  context.verify(() -> {
+                      assertThat(resp.statusCode()).isEqualTo(200);
+                      assertThat(resp.bodyAsString()).isEqualTo("x");
+                  });
                   client.close();
-                  context.completeNow();
+                  completeRequestLatch.countDown();
               }));
-        spinAssertCdcRawTempEmpty();
     }
 
     @Test  // A variant of testRouteSucceeds. It sends concurrent requests for the same segment and assert the all requests should be satisfied.
@@ -131,13 +141,18 @@ class StreamCdcSegmentHandlerTest
         }
     }
 
-    @Test // The server internal should re-create hardlinks for each request in this scenario.
-    void testSequentialRequestsForSegmentSucceeds(VertxTestContext context)
+    @Test
+    void testSequentialRequestsForSegmentSucceeds(VertxTestContext context) throws InterruptedException
     {
-        for (int i = 0; i < 3; i++)
+        int requests = 10;
+        for (int i = 0; i < requests; i++)
         {
-            testRouteSucceeds(context);
+            CountDownLatch latch = new CountDownLatch(1);
+            validateRouteSucceedsInternal(context, latch);
+            latch.await(1, TimeUnit.SECONDS);
         }
+        spinAssertCdcRawTempEmpty();
+        context.completeNow();
     }
 
     @Test
@@ -194,9 +209,9 @@ class StreamCdcSegmentHandlerTest
                       .isEqualTo("Range does not satisfy boundary requirements. range=[4, 3]");
                   });
                   client.close();
+                  spinAssertCdcRawTempEmpty();
                   context.completeNow();
               }));
-        spinAssertCdcRawTempEmpty();
     }
 
     @Test
@@ -220,9 +235,9 @@ class StreamCdcSegmentHandlerTest
                       assertThat(resp.bodyAsString()).isEqualTo("x");
                   });
                   client.close();
+                  spinAssertCdcRawTempEmpty();
                   context.completeNow();
               }));
-        spinAssertCdcRawTempEmpty();
     }
 
     @Test
@@ -236,9 +251,9 @@ class StreamCdcSegmentHandlerTest
               .send(context.succeeding(resp -> {
                   context.verify(() -> assertThat(resp.bodyAsString()).isEqualTo("x"));
                   client.close();
+                  spinAssertCdcRawTempEmpty();
                   context.completeNow();
               }));
-        spinAssertCdcRawTempEmpty();
     }
 
     @Test

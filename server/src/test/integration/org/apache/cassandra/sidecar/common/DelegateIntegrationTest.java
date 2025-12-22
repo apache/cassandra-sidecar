@@ -207,7 +207,7 @@ class DelegateIntegrationTest extends IntegrationTestBase
     }
 
     @Timeout(value = 2, timeUnit = TimeUnit.MINUTES)
-    @CassandraIntegrationTest(nodesPerDc = 2, newNodesPerDc = 1, startCluster = false)
+    @CassandraIntegrationTest(nodesPerDc = 2, newNodesPerDc = 1, startCluster = false, network = true)
     public void testChangingClusterSize(VertxTestContext context) throws InterruptedException
     {
         // assume the sidecar has 3 managed instances, even though the cluster only starts with 2 instances initially

@@ -47,20 +47,56 @@ public class BBHelperLeavingNode
     {
         if (nodeNum == leavingNodeNum)
         {
-            TypePool typePool = TypePool.Default.of(cl);
-            TypeDescription description = typePool.describe("org.apache.cassandra.service.StorageService")
-                                                  .resolve();
-            new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
-                           .method(named("unbootstrap"))
-                           .intercept(MethodDelegation.to(BBHelperLeavingNode.class))
-                           // Defer class loading until all dependencies are loaded
-                           .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
-                           .load(cl, ClassLoadingStrategy.Default.INJECTION);
+            intercept(cl, BBHelperLeavingNode.class);
         }
     }
 
+    public static void intercept(ClassLoader cl, Class<?> delegateClass)
+    {
+        TypePool typePool = TypePool.Default.of(cl);
+        if (installTCM(cl, typePool, delegateClass) || installPreTCM(cl, typePool, delegateClass))
+        {
+            return;
+        }
+        throw new RuntimeException("Could not intercept leaving node");
+    }
+
+    private static boolean installTCM(ClassLoader cl, TypePool typePool, Class<?> delegateClass)
+    {
+        TypePool.Resolution description = typePool.describe("org.apache.cassandra.tcm.sequences.UnbootstrapStreams");
+        if (!description.isResolved())
+        {
+            return false;
+        }
+        TypeDescription resolved = description.resolve();
+        new ByteBuddy().rebase(resolved, ClassFileLocator.ForClassLoader.of(cl))
+                       .method(named("execute"))
+                       .intercept(MethodDelegation.to(delegateClass))
+                       // Defer class loading until all dependencies are loaded
+                       .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
+                       .load(cl, ClassLoadingStrategy.Default.INJECTION);
+        return true;
+    }
+
+    private static boolean installPreTCM(ClassLoader cl, TypePool typePool, Class<?> delegateClass)
+    {
+        TypePool.Resolution description = typePool.describe("org.apache.cassandra.service.StorageService");
+        if (!description.isResolved())
+        {
+            return false;
+        }
+        TypeDescription resolved = description.resolve();
+        new ByteBuddy().rebase(resolved, ClassFileLocator.ForClassLoader.of(cl))
+                       .method(named("unbootstrap"))
+                       .intercept(MethodDelegation.to(delegateClass))
+                       // Defer class loading until all dependencies are loaded
+                       .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
+                       .load(cl, ClassLoadingStrategy.Default.INJECTION);
+        return true;
+    }
+
     @SuppressWarnings("unused")
-    public static void unbootstrap(@SuperCall Callable<?> orig) throws Exception
+    public static void interceptedMethod(@SuperCall Callable<?> orig) throws Exception
     {
         transientStateStart.countDown();
         awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");

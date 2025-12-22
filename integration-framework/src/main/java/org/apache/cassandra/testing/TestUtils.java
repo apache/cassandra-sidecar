@@ -31,6 +31,7 @@ import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Helper class for integration testing functionality
@@ -119,13 +120,27 @@ public final class TestUtils
     }
 
     /**
+     * @return true if string contains target; false otherwise
+     */
+    public static boolean containsString(@NotNull String string, @NotNull String target)
+    {
+        if (string == null || target == null)
+        {
+            return false;
+        }
+        return string.contains(target);
+    }
+
+    /**
      * Defaults to run in-jvm dtest
      */
     public static void configureDefaultDTestJarProperties()
     {
+        // NOTE: `cassandra.consistent.rangemovement` is no longer supported in Cassandra post-TCM.
+        // While this sped up tests, enabling it will make it easier to "accidentally" make tests that don't
+        // work in a post-TCM world.
         // Settings to reduce the test setup delay incurred if gossip is enabled
         System.setProperty("cassandra.ring_delay_ms", "5000"); // down from 30s default
-        System.setProperty("cassandra.consistent.rangemovement", "false");
         System.setProperty("cassandra.consistent.simultaneousmoves.allow", "true");
         // End gossip delay settings
         // Set the location of dtest jars

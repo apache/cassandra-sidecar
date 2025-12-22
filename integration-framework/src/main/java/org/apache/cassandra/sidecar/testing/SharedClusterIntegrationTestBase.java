@@ -218,9 +218,8 @@ public abstract class SharedClusterIntegrationTestBase
             }
             catch (RuntimeException runtimeException)
             {
-                boolean addressAlreadyInUse = ThrowableUtils.getCause(runtimeException, ex -> ex instanceof BindException &&
-                                                                                              ex.getMessage() != null &&
-                                                                                              ex.getMessage().contains("Address already in use")) != null;
+                boolean addressAlreadyInUse =
+                ThrowableUtils.getCause(runtimeException, SharedClusterIntegrationTestBase::portNotAvailableToBind) != null;
                 if (addressAlreadyInUse)
                 {
                     logger.warn("Failed to provision cluster after {} retries", retry, runtimeException);
@@ -233,6 +232,14 @@ public abstract class SharedClusterIntegrationTestBase
         }
         throw new RuntimeException("Unable to provision cluster after " + MAX_CLUSTER_PROVISION_RETRIES + " retries");
     }
+
+    private static boolean portNotAvailableToBind(Throwable cause)
+    {
+        return (cause instanceof BindException && TestUtils.containsString(cause.getMessage(), "Address already in use")) ||
+               // InboundConnectionInitiator in Cassandra throws a ConfigurationException with this string
+               TestUtils.containsString(cause.getMessage(), "is in use by another process");
+    }
+
 
     @AfterAll
     protected void tearDown() throws Exception

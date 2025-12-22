@@ -407,6 +407,10 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                     LOGGER.warn("Failed to provision cluster due to port collision after {} retries", i, cause);
                     lastCause = cause;
                 }
+                else if (cannotFindSeedsForCmsInitialization(cause))
+                {
+                    LOGGER.warn("Failed to provision cluster due to lack of CMS seed after {} retries", i, cause);
+                }
                 else
                 {
                     throw new RuntimeException("Failed to provision cluster", cause);
@@ -415,6 +419,15 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
         }
 
         throw new RuntimeException("Failed to provision cluster after exhausting all attempts", lastCause);
+    }
+
+    private static boolean cannotFindSeedsForCmsInitialization(Throwable cause)
+    {
+        // See org.apache.cassandra.tcm.Startup around line 222
+        return ThrowableUtils.getCause(cause,
+                                       t -> t instanceof IllegalArgumentException &&
+                                            t.getMessage().startsWith("Found no candidates during initialization. " +
+                                                                      "Check if the seeds are up:")) != null;
     }
 
     private static boolean portNotAvailableToBind(Throwable cause)
@@ -426,7 +439,6 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
     static
     {
         System.setProperty("cassandra.ring_delay_ms", "5000"); // down from 30s default; this change has no effect if GOSSIP feature is enabled
-        System.setProperty("cassandra.consistent.rangemovement", "false");
         System.setProperty("cassandra.consistent.simultaneousmoves.allow", "true");
         // End gossip delay settings
         // Set the location of dtest jars

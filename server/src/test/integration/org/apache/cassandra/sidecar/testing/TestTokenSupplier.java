@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.testing;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -28,8 +29,10 @@ import org.apache.cassandra.distributed.api.TokenSupplier;
 /**
  * Static factory holder that provides a token supplier
  */
-public class TestTokenSupplier
+public class TestTokenSupplier implements TokenSupplier
 {
+
+    private final List<String>[] tokens;
 
     /**
      * Tokens are allocation used in tests to simulate token allocation nodes for an approx even distribution
@@ -40,7 +43,12 @@ public class TestTokenSupplier
      * @param numTokensPerNode no. tokens allocated to each node (this is always 1 if there are no vnodes)
      * @return The token supplier that vends the tokens
      */
-    public static TokenSupplier evenlyDistributedTokens(int numNodesPerDC, int newNodesPerDC, int numDcs, int numTokensPerNode)
+    public static TestTokenSupplier evenlyDistributedTokens(int numNodesPerDC, int newNodesPerDC, int numDcs, int numTokensPerNode)
+    {
+        return new TestTokenSupplier(numNodesPerDC, newNodesPerDC, numDcs, numTokensPerNode);
+    }
+
+    private TestTokenSupplier(int numNodesPerDC, int newNodesPerDC, int numDcs, int numTokensPerNode)
     {
         // Use token count using initial node count to first assign tokens to nodes
         long totalTokens = (long) numNodesPerDC * numDcs * numTokensPerNode;
@@ -48,11 +56,11 @@ public class TestTokenSupplier
         // For multi-DC, since neighboring nodes from different DCs have consecutive tokens, the increment is
         // broadened by a factor of numDcs.
         BigInteger increment = BigInteger.valueOf(((Long.MAX_VALUE / (totalTokens + 2)) * 2 * numDcs));
-        List<String>[] tokens = allocateExistingNodeTokens(numNodesPerDC,
-                                                           newNodesPerDC,
-                                                           numDcs,
-                                                           numTokensPerNode,
-                                                           increment);
+        tokens = allocateExistingNodeTokens(numNodesPerDC,
+                                            newNodesPerDC,
+                                            numDcs,
+                                            numTokensPerNode,
+                                            increment);
 
 
         // Initial value of the first new node
@@ -74,8 +82,6 @@ public class TestTokenSupplier
                 value = value.add(subIncrement);
             }
         }
-
-        return (nodeIdx) -> tokens[nodeIdx - 1];
     }
 
     /**
@@ -117,5 +123,22 @@ public class TestTokenSupplier
             }
         }
         return tokens;
+    }
+
+    public void swap(int i, int j)
+    {
+        List<String> tmp = tokens[i];
+        tokens[i] = tokens[j];
+        tokens[j] = tmp;
+    }
+
+    public Collection<String> tokens(int nodeId)
+    {
+        return tokens[nodeId - 1];
+    }
+
+    public void copyToken(int src, int dst)
+    {
+        tokens[dst] = tokens[src];
     }
 }

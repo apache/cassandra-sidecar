@@ -24,11 +24,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.dynamic.TypeResolutionStrategy;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.pool.TypePool;
 
@@ -49,21 +49,65 @@ public class BBHelperMovingNode
         if (nodeNumber == movingNodeIndex)
         {
             TypePool typePool = TypePool.Default.of(cl);
-            TypeDescription description = typePool.describe("org.apache.cassandra.service.RangeRelocator")
-                                                  .resolve();
-            new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
-                           .method(named("stream"))
-                           .intercept(MethodDelegation.to(BBHelperMovingNode.class))
-                           // Defer class loading until all dependencies are loaded
-                           .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
-                           .load(cl, ClassLoadingStrategy.Default.INJECTION);
+
+            if (installTcm(cl, typePool))
+            {
+                return;
+            }
+            if (installPreTcm(cl, typePool))
+            {
+                return;
+            }
+            throw new RuntimeException("Could not intercept node move");
         }
+    }
+
+    private static boolean installPreTcm(ClassLoader cl, TypePool typePool)
+    {
+        TypePool.Resolution description = typePool.describe("org.apache.cassandra.service.RangeRelocator");
+        if (!description.isResolved())
+        {
+            return false;
+        }
+        new ByteBuddy().rebase(description.resolve(), ClassFileLocator.ForClassLoader.of(cl))
+                       .method(named("stream"))
+                       .intercept(MethodDelegation.to(BBHelperMovingNode.class))
+                       // Defer class loading until all dependencies are loaded
+                       .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
+                       .load(cl, ClassLoadingStrategy.Default.INJECTION);
+        return true;
+    }
+
+    private static boolean installTcm(ClassLoader cl, TypePool typePool)
+    {
+        TypePool.Resolution description = typePool.describe("org.apache.cassandra.tcm.sequences.Move");
+        if (!description.isResolved())
+        {
+            return false;
+        }
+        new ByteBuddy().rebase(description.resolve(), ClassFileLocator.ForClassLoader.of(cl))
+                       .method(named("executeNext"))
+                       .intercept(MethodDelegation.to(BBHelperMovingNode.class))
+                       // Defer class loading until all dependencies are loaded
+                       .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
+                       .load(cl, ClassLoadingStrategy.Default.INJECTION);
+        return true;
     }
 
     @SuppressWarnings("unused")
     public static Future<?> stream(@SuperCall Callable<Future<?>> orig) throws Exception
     {
         Future<?> res = orig.call();
+        transientStateStart.countDown();
+        awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
+        return res;
+    }
+
+    @SuppressWarnings("unused")
+    @RuntimeType
+    public static Object executeNext(@SuperCall Callable<?> orig) throws Exception
+    {
+        Object res = orig.call();
         transientStateStart.countDown();
         awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
         return res;

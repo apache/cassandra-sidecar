@@ -24,7 +24,7 @@ plugins {
 
 version project.version
 
-ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-4.1.8.jar" // latest supported Cassandra build is 4.1
+ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-4.1.11.jar" // latest supported Cassandra build is 5.1
 def dtestJarFullPath = "${dependencyLocation}${ext.dtestJar}"
 File dtestJarFile = new File(dtestJarFullPath)
 println("Using DTest jar: " + dtestJarFullPath + "; present? " + dtestJarFile.exists())
@@ -42,7 +42,7 @@ dependencies {
     // classpath while running integration tests. Instead, a dedicated classloader will load the
     // dtest jar while provisioning the in-jvm dtest Cassandra cluster
     testFixturesCompileOnly(files("${dtestJarFullPath}"))
-    testFixturesApi("org.apache.cassandra:dtest-api:0.0.16")
+    testFixturesApi("org.apache.cassandra:dtest-api:0.0.18")
     // required by in-jvm-dtest class loader, specifically for dtest-4.0.*
     testFixturesImplementation('org.javassist:javassist:3.28.0-GA')
 

@@ -119,7 +119,7 @@ public class IntegrationTestModule extends AbstractModule
         PeriodicTaskConfiguration healthCheckConfiguration
         = new PeriodicTaskConfigurationImpl(true,
                                             MillisecondBoundConfiguration.parse("50ms"),
-                                            MillisecondBoundConfiguration.parse("500ms"));
+                                            MillisecondBoundConfiguration.parse("5000ms"));
 
         SslConfiguration sslConfiguration =
         SslConfigurationImpl.builder()

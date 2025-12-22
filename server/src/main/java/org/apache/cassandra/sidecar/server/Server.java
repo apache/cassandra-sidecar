@@ -80,6 +80,7 @@ public class Server
     protected final List<ServerVerticle> deployedServerVerticles = new CopyOnWriteArrayList<>();
     // Keeps track of all the Cassandra instance identifiers where CQL is ready
     private final Set<Integer> cqlReadyInstanceIds = Collections.synchronizedSet(new HashSet<>());
+    private volatile Future<Void> closeFuture;
 
     @Inject
     public Server(Vertx vertx,
@@ -153,6 +154,21 @@ public class Server
      */
     public Future<Void> close()
     {
+        if (closeFuture == null)
+        {
+            closeInternal();
+        }
+        return closeFuture;
+    }
+
+    // Schedule closeFuture once only
+    private synchronized void closeInternal()
+    {
+        if (closeFuture != null)
+        {
+            return;
+        }
+
         LOGGER.info("Stopping Cassandra Sidecar");
         deployedServerVerticles.clear();
         List<Future<Void>> closingFutures = new ArrayList<>();
@@ -182,22 +198,23 @@ public class Server
             closingFutures.add(closingFutureForInstance.future());
         });
 
-        return Future.all(closingFutures)
-                     .onSuccess(ignored -> LOGGER.debug("Closed Cassandra adapters"))
-                     .transform(v -> {
-                        LOGGER.debug("Closing PeriodicTaskExecutor");
-                        return periodicTaskExecutor.close();
-                     })
-                     .transform(v -> {
-                         LOGGER.debug("Closing executor pools");
-                         return executorPools.close();
-                     })
-                     .transform(v -> {
-                         LOGGER.debug("Closing vertx");
-                         return vertx.close();
-                     })
-                     .onFailure(t -> LOGGER.error("Failed to gracefully shutdown Cassandra Sidecar", t))
-                     .onSuccess(f -> LOGGER.info("Successfully stopped Cassandra Sidecar"));
+        closeFuture = (Future.all(closingFutures)
+                             .onSuccess(ignored -> LOGGER.debug("Closed Cassandra adapters"))
+                             .transform(v -> {
+                                 LOGGER.debug("Closing PeriodicTaskExecutor");
+                                 return periodicTaskExecutor.close();
+                             })
+                             .transform(v -> {
+                                 LOGGER.debug("Closing executor pools");
+                                 return executorPools.close();
+                             })
+                             .transform(v -> {
+                                 LOGGER.debug("Closing vertx");
+                                 return vertx.close();
+                             })
+                             .onFailure(t -> LOGGER.error("Failed to gracefully shutdown Cassandra Sidecar", t))
+                             .onSuccess(f -> LOGGER.info("Successfully stopped Cassandra Sidecar"))
+        );
     }
 
     /**

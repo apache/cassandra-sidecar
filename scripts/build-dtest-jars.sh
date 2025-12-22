@@ -19,11 +19,10 @@
 
 set -xe
 CANDIDATE_BRANCHES=(
-  "cassandra-4.0:64b8d6b9add607b80752cd1a8fbce51839af9ec4"
-  "cassandra-4.1:044727aabafeab2f6fef74c52d349d55c8732ef5"
-  "cassandra-5.0:a0d58a9ce8814d096c1bd8a0440e8e28d8ea15a9"
-  # note the trunk hash cannot be advanced beyond ae0842372ff6dd1437d026f82968a3749f555ff4 (TCM), which breaks integration test
-  "trunk:2a5e1b77c9f8a205dbec1afdea3f4ed1eaf6a4eb"
+  "cassandra-4.0:ec3b425c38d92d20d77d3a87c782ed9c072e1cd9"
+  "cassandra-4.1:2d0fda4511003c883a6a682c1572f749f6d8da10"
+  "cassandra-5.0:6fd83986e91a3ce369d1f2d01a04c8c68c319ae3"
+  "trunk:66a7a366474cb9006e66737eac1746f0343db1e8"
 )
 BRANCHES=( ${BRANCHES:-cassandra-4.0 cassandra-4.1 cassandra-5.0 trunk} )
 echo ${BRANCHES[*]}

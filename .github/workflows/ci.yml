@@ -166,14 +166,19 @@ jobs:
         cassandra: ["4.0", "4.1", "5.0", "5.1"]
         include:
           - cassandra: "4.0"
-            dtestVersion: "4.0.16"
+            dtestVersion: "4.0.20"
           - cassandra: "4.1"
-            dtestVersion: "4.1.6"
+            dtestVersion: "4.1.11"
           - cassandra: "5.0"
-            dtestVersion: "5.0.3"
+            dtestVersion: "5.0.6"
           - cassandra: "5.1"
             dtestVersion: "5.1"
-
+        # Exclude jdk17 for 4.0/4.1 as they don't support 17
+        exclude:
+          - cassandra: "4.0"
+            java: "17"
+          - cassandra: "4.1"
+            java: "17"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -199,6 +204,7 @@ jobs:
         run: |
           for i in {2..20}; do
             sudo ip addr add 127.0.0.$i/8 dev lo
+            sudo echo 127.0.0.${i} localhost${i} | sudo tee -a /etc/hosts
           done
 
       - name: Download dtest jars
@@ -257,7 +263,12 @@ jobs:
             dtestVersion: "5.0.3"
           - cassandra: "5.1"
             dtestVersion: "5.1"
-
+        # Exclude jdk17 for 4.0/4.1 as they don't support 17
+        exclude:
+          - cassandra: "4.0"
+            java: "17"
+          - cassandra: "4.1"
+            java: "17"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -283,7 +294,9 @@ jobs:
         run: |
           for i in {2..20}; do
             sudo ip addr add 127.0.0.$i/8 dev lo
+            sudo echo 127.0.0.${i} localhost${i} | sudo tee -a /etc/hosts
           done
+          cat /etc/hosts
 
       - name: Download dtest jars
         uses: actions/download-artifact@v5

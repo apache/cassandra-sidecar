@@ -61,6 +61,8 @@ To get up and running, create a temporary alias for every node except the first:
  for i in {2..20}; do sudo ifconfig lo0 alias "127.0.0.${i}"; done
 ```
 
+Note that this does not persist across reboots, so you'll have to run it every time you restart.
+
 Getting started: Running The Sidecar
 --------------------------------------
 

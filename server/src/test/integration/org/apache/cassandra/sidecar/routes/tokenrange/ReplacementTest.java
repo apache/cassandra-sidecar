@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.routes.tokenrange;
 
 import java.math.BigInteger;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -35,9 +34,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import org.apache.cassandra.distributed.api.IInstance;
-import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
 import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
@@ -74,7 +73,7 @@ class ReplacementTest extends ReplacementBaseTest
     throws Exception
     {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
-        TokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
+        TestTokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
                                                                                 annotation.newNodesPerDc(),
                                                                                 annotation.numDcs(),
                                                                                 1);
@@ -90,7 +89,7 @@ class ReplacementTest extends ReplacementBaseTest
                                    transientStateEnd,
                                    cluster,
                                    nodesToRemove,
-                                   expectedRangeMappings);
+                                   expectedRangeMappings, tokenSupplier);
     }
 
     /**
@@ -115,7 +114,10 @@ class ReplacementTest extends ReplacementBaseTest
     {
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         int nodeCount = annotation.nodesPerDc() * annotation.numDcs();
-        List<Range<BigInteger>> expectedRanges = generateExpectedRanges(nodeCount);
+        List<Range<BigInteger>> expectedRanges = generateExpectedRanges(nodeCount, TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
+                                                                                                                             annotation.newNodesPerDc(),
+                                                                                                                             annotation.numDcs(),
+                                                                                                                             1));
         Map<Range<BigInteger>, List<String>> mapping = new HashMap<>();
         mapping.put(expectedRanges.get(0), Arrays.asList("127.0.0.1", "127.0.0.2", "127.0.0.3"));
         mapping.put(expectedRanges.get(1), Arrays.asList("127.0.0.2", "127.0.0.3", "127.0.0.4"));
@@ -155,13 +157,27 @@ class ReplacementTest extends ReplacementBaseTest
             }
         }
 
-        public static void finishJoiningRing(boolean didBootstrap, Collection<?> tokens, @SuperCall Callable<Void> orig) throws Exception
+        @SuppressWarnings("unused")
+        @RuntimeType
+        public static Object finishJoiningRing(@SuperCall Callable<?> orig) throws Exception
+        {
+            return intercept(orig);
+        }
+
+        @SuppressWarnings("unused")
+        @RuntimeType
+        public static boolean bootstrap(@SuperCall Callable<Boolean> orig) throws Exception
+        {
+            return intercept(orig);
+        }
+
+        private static <T> T intercept(Callable<T> orig) throws Exception
         {
             nodeStart.countDown();
             // trigger bootstrap start and wait until bootstrap is ready from test
             transientStateStart.countDown();
             awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
-            orig.call();
+            return orig.call();
         }
 
         public static void reset()

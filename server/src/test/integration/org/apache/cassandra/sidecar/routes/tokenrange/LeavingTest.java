@@ -34,14 +34,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.description.type.TypeDescription;
-import net.bytebuddy.dynamic.ClassFileLocator;
-import net.bytebuddy.dynamic.TypeResolutionStrategy;
-import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
-import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
-import net.bytebuddy.pool.TypePool;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
@@ -49,8 +42,6 @@ import org.apache.cassandra.sidecar.testing.bytebuddy.BBHelperLeavingNode;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 import org.apache.cassandra.testing.IClusterExtension;
-
-import static net.bytebuddy.matcher.ElementMatchers.named;
 
 /**
  * Cluster shrink scenarios integration tests for token range replica mapping endpoint with the in-jvm dtest framework.
@@ -63,6 +54,7 @@ class LeavingTest extends LeavingBaseTest
     void retrieveMappingWithKeyspaceLeavingNode(VertxTestContext context,
                                                 ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {
+        CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         BBHelperLeavingNode.reset();
         runLeavingTestScenario(context,
                                cassandraTestContext,
@@ -70,35 +62,32 @@ class LeavingTest extends LeavingBaseTest
                                (cl, nodeNum) -> BBHelperLeavingNode.install(cl, nodeNum, 5),
                                BBHelperLeavingNode.transientStateStart,
                                BBHelperLeavingNode.transientStateEnd,
-                               generateExpectedRangeMappingSingleLeavingNode());
+                               generateExpectedRangeMappingSingleLeavingNode(),
+                               TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
+                                                                         annotation.newNodesPerDc(),
+                                                                         annotation.numDcs(),
+                                                                         1));
     }
 
-    @CassandraIntegrationTest(nodesPerDc = 5, network = true, buildCluster = false)
+    @CassandraIntegrationTest(nodesPerDc = 10, network = true, buildCluster = false)
     void retrieveMappingWithMultipleLeavingNodes(VertxTestContext context,
                                                  ConfigurableCassandraTestContext cassandraTestContext) throws Exception
     {
+        CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         BBHelperMultipleLeavingNodes.reset();
+        TestTokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
+                                                                                    annotation.newNodesPerDc(),
+                                                                                    annotation.numDcs(),
+                                                                                    1);
+        tokenSupplier.swap(4, 8);
         runLeavingTestScenario(context,
                                cassandraTestContext,
                                2,
                                BBHelperMultipleLeavingNodes::install,
                                BBHelperMultipleLeavingNodes.transientStateStart,
                                BBHelperMultipleLeavingNodes.transientStateEnd,
-                               generateExpectedRangeMappingMultipleLeavingNodes());
-    }
-
-    @CassandraIntegrationTest(nodesPerDc = 6, network = true, buildCluster = false)
-    void retrieveMappingHalveClusterSize(VertxTestContext context,
-                                         ConfigurableCassandraTestContext cassandraTestContext) throws Exception
-    {
-        BBHelperHalveClusterSize.reset();
-        runLeavingTestScenario(context,
-                               cassandraTestContext,
-                               3,
-                               BBHelperHalveClusterSize::install,
-                               BBHelperHalveClusterSize.transientStateStart,
-                               BBHelperHalveClusterSize.transientStateEnd,
-                               generateExpectedRangeMappingHalveClusterSize());
+                               generateExpectedRangeMappingMultipleLeavingNodes(tokenSupplier, annotation),
+                               tokenSupplier);
     }
 
     void runLeavingTestScenario(VertxTestContext context,
@@ -107,15 +96,9 @@ class LeavingTest extends LeavingBaseTest
                                 BiConsumer<ClassLoader, Integer> instanceInitializer,
                                 CountDownLatch transientStateStart,
                                 CountDownLatch transientStateEnd,
-                                Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings)
+                                Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings, TokenSupplier tokenSupplier)
     throws Exception
     {
-
-        CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
-        TokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(annotation.nodesPerDc(),
-                                                                                annotation.newNodesPerDc(),
-                                                                                annotation.numDcs(),
-                                                                                1);
 
         IClusterExtension<? extends IInstance> cluster = cassandraTestContext.configureAndStartCluster(builder -> {
             builder.instanceInitializer(instanceInitializer);
@@ -126,7 +109,8 @@ class LeavingTest extends LeavingBaseTest
                                transientStateStart,
                                transientStateEnd,
                                cluster,
-                               expectedRangeMappings);
+                               expectedRangeMappings
+        );
     }
 
     /**
@@ -183,65 +167,21 @@ class LeavingTest extends LeavingBaseTest
      * Expected Range 2 - B, C, D, A (With A taking over the range of the leaving node)
      */
 
-    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingMultipleLeavingNodes()
+    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingMultipleLeavingNodes(TokenSupplier tokenSupplier, CassandraIntegrationTest annotation)
     {
-        List<Range<BigInteger>> expectedRanges = generateExpectedRanges();
+        List<Range<BigInteger>> expectedRanges = generateExpectedRanges(false, tokenSupplier, annotation);
         Map<Range<BigInteger>, List<String>> mapping = new HashMap<>();
-        mapping.put(expectedRanges.get(0), Arrays.asList("127.0.0.1", "127.0.0.2", "127.0.0.3"));
-        mapping.put(expectedRanges.get(1),
-                    Arrays.asList("127.0.0.2", "127.0.0.3", "127.0.0.4", "127.0.0.1"));
-        mapping.put(
-        expectedRanges.get(2),
-        Arrays.asList("127.0.0.3", "127.0.0.4", "127.0.0.5", "127.0.0.2", "127.0.0.1"));
-        mapping.put(
-        expectedRanges.get(3),
-        Arrays.asList("127.0.0.4", "127.0.0.5", "127.0.0.1", "127.0.0.2", "127.0.0.3"));
-        mapping.put(
-        expectedRanges.get(4),
-        Arrays.asList("127.0.0.5", "127.0.0.1", "127.0.0.2", "127.0.0.3"));
-        mapping.put(expectedRanges.get(5), Arrays.asList("127.0.0.1", "127.0.0.2", "127.0.0.3"));
-
-        return Map.of("datacenter1", mapping);
-    }
-
-    /**
-     * Generates expected token range and replica mappings specific to the test case involving a 6 node cluster
-     * with the last 3 nodes leaving the cluster
-     * <p>
-     * Expected ranges are generated by adding RF replicas per range in increasing order. The replica-sets in subsequent
-     * ranges cascade with the next range excluding the first replica, and including the next replica from the nodes.
-     * eg.
-     * Range 1 - A, B, C
-     * Range 2 - B, C, D
-     * <p>
-     * Ranges that including leaving node replicas will have [RF + no. leaving nodes in replica-set] replicas with
-     * the new replicas being the existing nodes in ring-order.
-     * eg.
-     * Range 1 - A, B, C
-     * Range 2 - B, C, D (with D being the leaving node)
-     * Expected Range 2 - B, C, D, A (With A taking over the range of the leaving node)
-     */
-
-    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingHalveClusterSize()
-    {
-        List<Range<BigInteger>> expectedRanges = generateExpectedRanges();
-        Map<Range<BigInteger>, List<String>> mapping = new HashMap<>();
-        mapping.put(expectedRanges.get(0), Arrays.asList("127.0.0.1", "127.0.0.2", "127.0.0.3"));
-        mapping.put(
-        expectedRanges.get(1), Arrays.asList("127.0.0.2", "127.0.0.3", "127.0.0.4", "127.0.0.1"));
-        mapping.put(
-        expectedRanges.get(2),
-        Arrays.asList("127.0.0.3", "127.0.0.4", "127.0.0.5", "127.0.0.1", "127.0.0.2"));
-        mapping.put(
-        expectedRanges.get(3),
-        Arrays.asList("127.0.0.4", "127.0.0.5", "127.0.0.6", "127.0.0.1", "127.0.0.2",
-                      "127.0.0.3"));
-        mapping.put(
-        expectedRanges.get(4),
-        Arrays.asList("127.0.0.5", "127.0.0.6", "127.0.0.1", "127.0.0.2", "127.0.0.3"));
-        mapping.put(
-        expectedRanges.get(5), Arrays.asList("127.0.0.6", "127.0.0.1", "127.0.0.2", "127.0.0.3"));
-        mapping.put(expectedRanges.get(6), Arrays.asList("127.0.0.1", "127.0.0.2", "127.0.0.3"));
+        mapping.put(expectedRanges.get(0), Arrays.asList("127.0.0.1", "127.0.0.3", "127.0.0.2"));
+        mapping.put(expectedRanges.get(1), Arrays.asList("127.0.0.3", "127.0.0.2", "127.0.0.4"));
+        mapping.put(expectedRanges.get(2), Arrays.asList("127.0.0.9", "127.0.0.3", "127.0.0.4", "127.0.0.6"));
+        mapping.put(expectedRanges.get(3), Arrays.asList("127.0.0.7", "127.0.0.9", "127.0.0.4", "127.0.0.6"));
+        mapping.put(expectedRanges.get(4), Arrays.asList("127.0.0.7", "127.0.0.9", "127.0.0.6", "127.0.0.8"));
+        mapping.put(expectedRanges.get(5), Arrays.asList("127.0.0.7", "127.0.0.6", "127.0.0.8"));
+        mapping.put(expectedRanges.get(6), Arrays.asList("127.0.0.7", "127.0.0.5", "127.0.0.8"));
+        mapping.put(expectedRanges.get(7), Arrays.asList("127.0.0.1", "127.0.0.10", "127.0.0.5", "127.0.0.8"));
+        mapping.put(expectedRanges.get(8), Arrays.asList("127.0.0.1", "127.0.0.10", "127.0.0.5", "127.0.0.2"));
+        mapping.put(expectedRanges.get(9), Arrays.asList("127.0.0.1", "127.0.0.10", "127.0.0.3", "127.0.0.2"));
+        mapping.put(expectedRanges.get(10), Arrays.asList("127.0.0.1", "127.0.0.3", "127.0.0.2"));
 
         return Map.of("datacenter1", mapping);
     }
@@ -256,24 +196,16 @@ class LeavingTest extends LeavingBaseTest
 
         public static void install(ClassLoader cl, Integer nodeNumber)
         {
-            // Test case involves 5 node cluster with a 2 leaving nodes
-            // We intercept the shutdown of the leaving nodes (4, 5) to validate token ranges
-            if (nodeNumber > 3)
+            // Test case involves 12 node cluster with a 2 leaving nodes
+            // We intercept the shutdown of the leaving nodes (11, 12) to validate token ranges
+            if (nodeNumber > 8)
             {
-                TypePool typePool = TypePool.Default.of(cl);
-                TypeDescription description = typePool.describe("org.apache.cassandra.service.StorageService")
-                                                      .resolve();
-                new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
-                               .method(named("unbootstrap"))
-                               .intercept(MethodDelegation.to(BBHelperMultipleLeavingNodes.class))
-                               // Defer class loading until all dependencies are loaded
-                               .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
-                               .load(cl, ClassLoadingStrategy.Default.INJECTION);
+                BBHelperLeavingNode.intercept(cl, BBHelperMultipleLeavingNodes.class);
             }
         }
 
         @SuppressWarnings("unused")
-        public static void unbootstrap(@SuperCall Callable<?> orig) throws Exception
+        public static void interceptedMethod(@SuperCall Callable<?> orig) throws Exception
         {
             transientStateStart.countDown();
             awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
@@ -284,47 +216,6 @@ class LeavingTest extends LeavingBaseTest
         {
             transientStateStart = new CountDownLatch(2);
             transientStateEnd = new CountDownLatch(2);
-        }
-    }
-
-    /**
-     * ByteBuddy helper for shrinking cluster by half its size
-     */
-    public static class BBHelperHalveClusterSize
-    {
-        static CountDownLatch transientStateStart = new CountDownLatch(3);
-        static CountDownLatch transientStateEnd = new CountDownLatch(3);
-
-        public static void install(ClassLoader cl, Integer nodeNumber)
-        {
-            // Test case involves halving the size of a 6 node cluster
-            // We intercept the shutdown of the removed nodes (4-6) to validate token ranges
-            if (nodeNumber > 3)
-            {
-                TypePool typePool = TypePool.Default.of(cl);
-                TypeDescription description = typePool.describe("org.apache.cassandra.service.StorageService")
-                                                      .resolve();
-                new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
-                               .method(named("unbootstrap"))
-                               .intercept(MethodDelegation.to(BBHelperHalveClusterSize.class))
-                               // Defer class loading until all dependencies are loaded
-                               .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
-                               .load(cl, ClassLoadingStrategy.Default.INJECTION);
-            }
-        }
-
-        @SuppressWarnings("unused")
-        public static void unbootstrap(@SuperCall Callable<?> orig) throws Exception
-        {
-            transientStateStart.countDown();
-            awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
-            orig.call();
-        }
-
-        public static void reset()
-        {
-            transientStateStart = new CountDownLatch(3);
-            transientStateEnd = new CountDownLatch(3);
         }
     }
 }

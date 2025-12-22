@@ -130,7 +130,7 @@ public class AsyncConcurrentTaskExecutor<T>
      * futures for all tasks. As running tasks complete, pending tasks are automatically
      * triggered to maintain the concurrency level.</p>
      *
-     * <h3>Execution Flow Diagram:</h3>
+     * Execution Flow Diagram:
      * <pre>
      *            index
      *             +
@@ -250,7 +250,7 @@ public class AsyncConcurrentTaskExecutor<T>
      * Currently running tasks are not interrupted, but all pending tasks will be
      * cancelled with a {@link CancellationException}.</p>
      *
-     * <h3>Cancellation Diagram:</h3>
+     * Cancellation Diagram:
      * <pre>
      *                                          index
      *                                          +

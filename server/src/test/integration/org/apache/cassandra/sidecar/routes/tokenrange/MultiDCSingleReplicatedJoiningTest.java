@@ -36,7 +36,9 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import org.apache.cassandra.distributed.api.IInstance;
+import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.sidecar.testing.BootstrapBBUtils;
+import org.apache.cassandra.sidecar.testing.TestTokenSupplier;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
 import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
 import org.apache.cassandra.testing.IClusterExtension;
@@ -50,7 +52,7 @@ import org.apache.cassandra.testing.IClusterExtension;
  */
 @Tag("heavy")
 @ExtendWith(VertxExtension.class)
-public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
+public class MultiDCSingleReplicatedJoiningTest extends JoiningBaseTest
 {
     @CassandraIntegrationTest(
     nodesPerDc = 5, newNodesPerDc = 1, numDcs = 2, network = true, buildCluster = false)
@@ -59,15 +61,24 @@ public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
     throws Exception
     {
         BBHelperMultiDC.reset();
-        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperMultiDC::install, cassandraTestContext);
-
+        // We'll manually swap around tokens, so use 0 as number of new DCs
+        TestTokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(6, 0, 2, 1);
+        tokenSupplier.swap(5, 10);
+        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperMultiDC::install, cassandraTestContext, tokenSupplier,
+                                                                           builder -> builder.additionalInstanceConfig(Map.of("progress_barrier_default_consistency_level", "QUORUM",
+                                                                                                                              "progress_barrier_timeout", "30s",
+                                                                                                                              "cms_await_timeout", "60s",
+                                                                                                                              "accord.enabled", "false",
+                                                                                                                              "write_request_timeout", "10s")));
+        CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         runJoiningTestScenario(context,
                                BBHelperMultiDC.transientStateStart,
                                BBHelperMultiDC.transientStateEnd,
                                cluster,
-                               generateExpectedRanges(false),
-                               generateExpectedRangeMappingOneof2DCs(),
-                               false);
+                               generateExpectedRanges(false, tokenSupplier, annotation),
+                               generateExpectedRangeMappingOneOf2DCs(tokenSupplier, annotation),
+                               false,
+                               tokenSupplier);
     }
 
     /**
@@ -87,65 +98,48 @@ public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
      * Range 2 - B, C, D (with E being the joining node)
      * Expected Range 2 - B, C, D, E
      */
-    private HashMap<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingOneof2DCs()
+    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingOneOf2DCs(TokenSupplier tokenSupplier, CassandraIntegrationTest annotation)
     {
+        List<Range<BigInteger>> expectedRanges = generateExpectedRanges(false, tokenSupplier, annotation);
+        Map<Range<BigInteger>, List<String>> dc1Mapping = new HashMap<>();
 
-        /*
-         * Initial Ranges:
-         * [-9223372036854775808, -5869418568907584607]=[127.0.0.1:52914, 127.0.0.3:52916, 127.0.0.5:52918]
-         * [-5869418568907584607, -5869418568907584606]=[127.0.0.3:52916, 127.0.0.5:52918, 127.0.0.7:52920]
-         * [-5869418568907584606, -2515465100960393407]=[127.0.0.3:52918, 127.0.0.5:52920, 127.0.0.7:52922]
-         * [-2515465100960393407, -2515465100960393406]=[127.0.0.5:52918, 127.0.0.7:52920, 127.0.0.9:52922]
-         * [-2515465100960393406, 838488366986797793]=[127.0.0.5:52918, 127.0.0.7:52920, 127.0.0.9:52922]
-         * [838488366986797793, 838488366986797794]=[127.0.0.7:52920, 127.0.0.9:52922, 127.0.0.1:52914]
-         * [838488366986797794, 4192441834933988993]=[127.0.0.7:52920, 127.0.0.9:52922, 127.0.0.1:52914]
-         * [4192441834933988993, 4192441834933988994]=[127.0.0.9:52922, 127.0.0.1:52914, 127.0.0.3:52916]
-         * [4192441834933988994, 7546395302881180193]=[127.0.0.9:52922, 127.0.0.1:52914, 127.0.0.3:52916]
-         * [7546395302881180193, 7546395302881180194]=[127.0.0.1:52914, 127.0.0.3:52916, 127.0.0.5:52918]
-         * [7546395302881180194, 9223372036854775807]=[127.0.0.1:52914, 127.0.0.3:52916, 127.0.0.5:52918]
-         *
-         * Pending Ranges:
-         * [-5869418568907584607, -5869418568907584606]=[127.0.0.11:58400]
-         * [-5869418568907584606, -4192441834933989006]=[127.0.0.11:58400]
-         * [4192441834933988993, 4192441834933988994]=[127.0.0.11:58400]
-         * [7546395302881180194, -5869418568907584607]=[127.0.0.11:58400] (wrap-around)
-         * [7546395302881180193, 7546395302881180194]=[127.0.0.11:58400]
-         * [4192441834933988994, 7546395302881180193]=[127.0.0.11:58400]
-         *
-         */
-        List<Range<BigInteger>> expectedRanges = generateExpectedRanges(false);
-        Map<Range<BigInteger>, List<String>> mapping = new HashMap<>();
-        // [-9223372036854775808, -5869418568907584607]
-        mapping.put(expectedRanges.get(0), Arrays.asList("127.0.0.1", "127.0.0.3", "127.0.0.5", "127.0.0.11"));
-        // [-5869418568907584607, -5869418568907584606]
-        mapping.put(expectedRanges.get(1), Arrays.asList("127.0.0.3", "127.0.0.5", "127.0.0.7", "127.0.0.11"));
-        // [-5869418568907584606, -4192441834933989006]
-        mapping.put(expectedRanges.get(2), Arrays.asList("127.0.0.3", "127.0.0.5", "127.0.0.7", "127.0.0.11"));
-        // [-4192441834933989006, -2515465100960393407]
-        mapping.put(expectedRanges.get(3), Arrays.asList("127.0.0.3", "127.0.0.5", "127.0.0.7"));
-        // [-2515465100960393407, -2515465100960393406]
-        mapping.put(expectedRanges.get(4), Arrays.asList("127.0.0.5", "127.0.0.7", "127.0.0.9"));
-        // [-2515465100960393406, 838488366986797793]
-        mapping.put(expectedRanges.get(5), Arrays.asList("127.0.0.5", "127.0.0.7", "127.0.0.9"));
-        // [838488366986797793, 838488366986797794]
-        mapping.put(expectedRanges.get(6), Arrays.asList("127.0.0.7", "127.0.0.9", "127.0.0.1"));
-        // [838488366986797794, 4192441834933988993]
-        mapping.put(expectedRanges.get(7), Arrays.asList("127.0.0.7", "127.0.0.9", "127.0.0.1"));
-        // [4192441834933988993, 4192441834933988994]
-        mapping.put(expectedRanges.get(8), Arrays.asList("127.0.0.9", "127.0.0.1", "127.0.0.3", "127.0.0.11"));
-        // [4192441834933988994, 7546395302881180193]
-        mapping.put(expectedRanges.get(9), Arrays.asList("127.0.0.9", "127.0.0.1", "127.0.0.3", "127.0.0.11"));
-        // [7546395302881180193, 7546395302881180194]
-        mapping.put(expectedRanges.get(10), Arrays.asList("127.0.0.1", "127.0.0.3", "127.0.0.5", "127.0.0.11"));
-        // [7546395302881180194, 9223372036854775807]
-        mapping.put(expectedRanges.get(11), Arrays.asList("127.0.0.1", "127.0.0.3", "127.0.0.5", "127.0.0.11"));
+        // Range 1
+        dc1Mapping.put(expectedRanges.get(0), Arrays.asList("127.0.0.5", "127.0.0.1", "127.0.0.3"));
 
-        return new HashMap<String, Map<Range<BigInteger>, List<String>>>()
-        {
-            {
-                put("datacenter1", mapping);
-            }
-        };
+        // Range 2 (write survey range)
+        dc1Mapping.put(expectedRanges.get(1), Arrays.asList("127.0.0.5", "127.0.0.7", "127.0.0.11", "127.0.0.3"));
+
+        // Range 3
+        dc1Mapping.put(expectedRanges.get(2), Arrays.asList("127.0.0.5", "127.0.0.7", "127.0.0.11", "127.0.0.3"));
+
+        // Range 4 (write survey range)
+        dc1Mapping.put(expectedRanges.get(3), Arrays.asList("127.0.0.5", "127.0.0.7", "127.0.0.9", "127.0.0.11"));
+
+        // Range 5
+        dc1Mapping.put(expectedRanges.get(4), Arrays.asList("127.0.0.5", "127.0.0.7", "127.0.0.9", "127.0.0.11"));
+
+        // Range 6 (write survey range)
+        dc1Mapping.put(expectedRanges.get(5), Arrays.asList("127.0.0.7", "127.0.0.9", "127.0.0.11", "127.0.0.1"));
+
+        // Range 7
+        dc1Mapping.put(expectedRanges.get(6), Arrays.asList("127.0.0.7", "127.0.0.9", "127.0.0.1"));
+
+        // Range 8 (write survey range)
+        dc1Mapping.put(expectedRanges.get(7), Arrays.asList("127.0.0.9", "127.0.0.1", "127.0.0.3"));
+
+        // Range 9
+        dc1Mapping.put(expectedRanges.get(8), Arrays.asList("127.0.0.9", "127.0.0.1", "127.0.0.3"));
+
+        // Range 10 (write survey range)
+        dc1Mapping.put(expectedRanges.get(9), Arrays.asList("127.0.0.5", "127.0.0.1", "127.0.0.3"));
+
+        // Range 11
+        dc1Mapping.put(expectedRanges.get(10), Arrays.asList("127.0.0.5", "127.0.0.1", "127.0.0.3"));
+
+        // Range 12
+        dc1Mapping.put(expectedRanges.get(11), Arrays.asList("127.0.0.5", "127.0.0.1", "127.0.0.3"));
+
+        return Map.of("datacenter1", dc1Mapping);
     }
 
     /**
@@ -166,12 +160,24 @@ public class JoiningTestMultiDCSingleReplicated extends JoiningBaseTest
             }
         }
 
+        @SuppressWarnings("unused")
         public static void finishJoiningRing(boolean didBootstrap, Collection<?> tokens, @SuperCall Callable<Void> orig) throws Exception
         {
             // trigger bootstrap start and wait until bootstrap is ready from test
             transientStateStart.countDown();
             awaitLatchOrTimeout(transientStateEnd, 2, TimeUnit.MINUTES, "transientStateEnd");
             orig.call();
+        }
+
+        @SuppressWarnings("unused")
+        public static boolean bootstrap(@SuperCall Callable<Boolean> orig)
+        {
+            // trigger bootstrap start and wait until bootstrap is ready from test
+            transientStateStart.countDown();
+            awaitLatchOrTimeout(transientStateEnd, 4, TimeUnit.MINUTES, "transientStateEnd");
+            // don't actually call the original which tries to commit, and fails because other nodes
+            // are down and therefore the commit won't complete
+            return false;
         }
 
         public static void reset()

@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.testing;
 
 import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.dynamic.TypeResolutionStrategy;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
@@ -35,7 +34,7 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 public class BootstrapBBUtils
 {
     /**
-     * Note that the test class _must_ define the `setBootstrapState` method in order for the installed interceptor to be effective.
+     * Note that the test class _must_ define the `finishJoiningRing` and `bootstrap` methods in order for the installed interceptor to be effective.
      * See {@code ReplacementTest.BBHelperReplacementsNode} for example
      *
      * @param cl          the class loader
@@ -44,13 +43,44 @@ public class BootstrapBBUtils
     public static void installFinishJoiningRingInterceptor(ClassLoader cl, Class<?> interceptor)
     {
         TypePool typePool = TypePool.Default.of(cl);
-        TypeDescription description = typePool.describe("org.apache.cassandra.service.StorageService")
-                                              .resolve();
-        new ByteBuddy().rebase(description, ClassFileLocator.ForClassLoader.of(cl))
+        if (installTcm(cl, typePool, interceptor) || installPreTcm(cl, typePool, interceptor))
+        {
+            return;
+        }
+        throw new RuntimeException("Could not intercept");
+    }
+
+    private static boolean installPreTcm(ClassLoader cl, TypePool typePool, Class<?> interceptor)
+    {
+        TypePool.Resolution resolution = typePool.describe("org.apache.cassandra.service.StorageService");
+        if (!resolution.isResolved())
+        {
+            return false;
+        }
+        new ByteBuddy().rebase(resolution.resolve(), ClassFileLocator.ForClassLoader.of(cl))
                        .method(named("finishJoiningRing").and(takesArguments(2)))
                        .intercept(MethodDelegation.to(interceptor))
                        // Defer class loading until all dependencies are loaded
                        .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
                        .load(cl, ClassLoadingStrategy.Default.INJECTION);
+        return true;
     }
+
+    private static boolean installTcm(ClassLoader cl, TypePool typePool, Class<?> interceptor)
+    {
+
+        TypePool.Resolution resolution = typePool.describe("org.apache.cassandra.tcm.sequences.BootstrapAndJoin");
+        if (!resolution.isResolved())
+        {
+            return false;
+        }
+        new ByteBuddy().rebase(resolution.resolve(), ClassFileLocator.ForClassLoader.of(cl))
+                       .method(named("bootstrap"))
+                       .intercept(MethodDelegation.to(interceptor))
+                       // Defer class loading until all dependencies are loaded
+                       .make(TypeResolutionStrategy.Lazy.INSTANCE, typePool)
+                       .load(cl, ClassLoadingStrategy.Default.INJECTION);
+        return true;
+    }
+
 }

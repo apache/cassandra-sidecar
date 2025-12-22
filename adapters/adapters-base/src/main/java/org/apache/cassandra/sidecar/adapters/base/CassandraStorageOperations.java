@@ -40,6 +40,7 @@ import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.exceptions.NodeBootstrappingException;
 import org.apache.cassandra.sidecar.common.server.exceptions.SnapshotAlreadyExistsException;
+import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -132,10 +133,20 @@ public class CassandraStorageOperations implements StorageOperations
         }
         catch (IOException e)
         {
+            // post-5.0, IOExceptions are thrown when previously something else like
+            // an IllegalArgumentException was thrown. First, try to unwrap the IOException and throw
+            // the original cause, which we will process correctly in CreateSnapshotHandler
+            // if the exception was an IllegalArgumentException
+            IllegalArgumentException iex = ThrowableUtils.getCause(e, IllegalArgumentException.class);
+            if (iex != null)
+            {
+                throw iex;
+            }
             String errorMessage = e.getMessage();
             if (errorMessage != null)
             {
-                if (errorMessage.contains("Snapshot " + tag + " already exists"))
+                if (errorMessage.contains("Snapshot " + tag + " already exists") ||
+                    errorMessage.contains("Snapshot " + tag + " for " + keyspace + "." + table + " already exists"))
                 {
                     throw new SnapshotAlreadyExistsException(e);
                 }

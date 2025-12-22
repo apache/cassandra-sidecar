@@ -31,6 +31,8 @@ We warmly welcome and appreciate contributions from the community.
   * [Testing](#testing)
 * [Source Code Best Practices](#best-practices)
   * [Introducing new APIs](#new-apis)
+    * [API Proposal Process](#api-guidelines)
+    * [Implementation Details](#implementation-details)
   * [Asynchronous Programming](#async-programming)
   * [Thread Pool Model](#thread-pools)
   * [Vert.x Threading Model](#vertx-threading)
@@ -41,6 +43,12 @@ We warmly welcome and appreciate contributions from the community.
   * [Future Composition](#future-composition)
   * [Failure Handling](#failure-handling)
   * [Cassandra Adapters](#cassandra-adapters)
+  * [RESTful API Guidelines](#api-design)
+    * [Design Principles](#design-principles)
+    * [Exceptions](#exceptions)
+    * [Requests and Responses](#requests-and-responses)
+    * [API Lifecycle](#api-lifecycle)
+    * [References](#references)
 
 ## <a name="how-to-contribute"></a>How to Contribute
 
@@ -102,7 +110,45 @@ components of each feature.
 
 ### <a name="new-apis"></a>Introducing New APIs
 
-An API is a `Route` in Vertx's terminology. To add a new API, we want to define the route.
+To add a new API to Cassandra Sidecar, we need to follow a proposal process and then implement the route. For detailed RESTful API design principles and standards, please refer to the [RESTful API Guidelines](#api-design) section.
+
+#### <a name="api-guidelines"></a>API Proposal Process
+
+We welcome contributions to improve the Cassandra Sidecar, especially in the form of new APIs that enhance operability, observability, and integration with Cassandra clusters. To ensure high-quality and maintainable additions, contributors are encouraged to follow the process outlined below:
+
+1. **Proposing API Designs**
+
+   Before implementing a new API or making a significant change to an existing one, contributors should submit a design proposal in the following manner:
+
+   * Propose the API spec in the JIRA ticket and additionally in a 1-pager (depending on the complexity of the proposal) in publicly shared document (eg. Google docs). This should align with the RESTful API Guidelines.
+   * For proposals involving a group of APIs, the API spec proposal can be referenced in a [DISCUSS] thread in the mailing-list to get broader community feedback and iterate on the proposal.
+
+   Sample proposal in JIRA with API spec: [CASSSIDECAR-274](https://issues.apache.org/jira/projects/CASSSIDECAR/issues/CASSSIDECAR-274)
+
+2. **Cassandra Compatibility Considerations**
+
+   The Sidecar supports multiple Cassandra versions. When designing APIs, contributors must:
+
+   * Explicitly define the compatibility matrix: Indicate which Cassandra versions the API supports and document any version-specific limitations or differences in behavior.
+   * Use the Sidecar's internal version abstraction layers to encapsulate compatibility logic and avoid scattered version checks.
+   * Where necessary, degrade gracefully or provide clear error messages when functionality is not available in a specific Cassandra version.
+
+3. **Job Management for Long-Running Commands**
+
+   Long-running or asynchronous operations (e.g., decommission) should use the Sidecar's job management framework, which provides:
+
+   * Job tracking with UUIDs returned to clients for polling job status.
+   * A consistent API pattern for managing and polling for status of asynchronous jobs.
+
+   Contributors must:
+
+   * Avoid blocking handlers for long-running operations.
+   * Implement new jobs using the provided OperationalJob abstraction.
+   * Document any job-specific resource requirements, expected durations, and user-visible statuses.
+
+#### Implementation Details
+
+In Vertx's terminology, an API is implemented as a `Route`. The following section explains how to define and implement routes in the Sidecar codebase.
 
 First, identify in which module does the API belong to.
 All the modules are listed under [modules](server/src/main/java/org/apache/cassandra/sidecar/modules). 
@@ -470,3 +516,115 @@ The `CassandraAdapterFactory` has a version tag which represents the minimum ver
 When adding shims, implement the minimum necessary changes in the new package and name all classes with a version number after the word `Cassandra`.
 For example, if `base`'s minimum version is moved to 5.0, a Cassandra40 adapter package/subproject should be added, with a minimum version of 4.0.0.
 Within that project, the classes should all be named `Cassandra40*`, so `Cassandra40Adapter`, `Cassandra40Factory`, etc.
+
+### <a name="api-design"></a> RESTful API Design Guidelines
+
+We should primarily follow RESTful design principles as they provide a clear, standardized, and scalable approach to resource management. For practical implementation guidance on adding new APIs to the codebase, please refer to the [Introducing New APIs](#new-apis) section.
+
+* The API design must conform to the RESTful design principles outlined below
+* Design proposal must include the request and response structure with HTTP method, description and the complete URL. Each request field should be annotated as required or optional.
+* API implementation must have sufficient input validation to catch injection of commands in fields and to fail-fast on invalid requests with a HTTP 400 BAD_REQUEST status code. See the [Requests and Responses](#requests-and-responses) section below.
+* Design APIs with single responsibility principle.
+* Do not expose internal implementation details either in the API URL or the response. Since the API is the external interface and contract with the clients, it should be generic enough to be loosely coupled to internal implementation.  eg. When exposing  Cassandra operations that are internally grouped under StorageService need not be reflected in the URI, unless it actually corresponds to the use-case or resource being operated upon.
+* Do not make the API specific to a version of Cassandra. One of the design goals of the Sidecar is to  abstract the complexity in managing multiple versions of Cassandra and as such strive to provide the same APIs irrespective of the version of Cassandra.
+* The Sidecar APIs must maintain compatibility with the current trunk version of Apache Cassandra as well as all officially supported prior versions until their respective End-of-Life (EOL) dates. <supported Sidecar versions README>
+  * Support for versions that have reached EOL should be deprecated in Sidecar APIs with clear communication and a defined sunset period
+  * New features or breaking changes in the Sidecar API should be introduced in a backward-compatible manner or versioned accordingly.
+  * Testing and validation must cover the trunk and all supported versions to guarantee consistent behavior and reliability.
+
+#### Design Principles
+
+1. Resource Naming - Use nouns in endpoint URLs to represent resources, not verbs (See exceptions).
+2. Use HTTP Methods to denote the action to be performed on the resource and HTTP Response codes to denote the outcome of the operation. For more details, refer to  Requests and Responses
+3. URI Naming Conventions
+   * Follow a consistent usage of plural nouns for resources. eg. ```/keyspaces/123```
+   * Should be all lower case, with "-" as the word separator.
+   * Use Sub-resources for Hierarchical Relationships. eg. Orders by a user can be scoped as nested resource within users resource - ```/users/{userId}/orders/{orderId}```.
+4. Response Format
+   * Prefer to represent primitive types as corresponding types in JSON. eg.
+
+```json
+{
+  "userId": 123,             // number
+  "isActive": true,          // boolean
+  "userName": "JohnDoe",     // string
+  "createdDate": "2024-08-20T12:34:56Z" // string (for date-time)
+}
+```
+
+5. Pagination – do not return unbounded responses. Always ensure that the API responses are bounded to a reasonable default. eg. ```/users?page=2&limit=10```
+6. Filtering & Sorting – Support filtering and sorting where applicable.
+7. Versioning - APIs must use semantic versioning, with the major-version encoded into the URL. For more information, see Lifecycle.
+
+#### Exceptions
+
+There may be cases where adhering strictly to REST may not be practical, such as cases where the application behavior does not fit into the state-machine model, dealing with complex workflows, real-time communication, or client-specific requirements. In these situations, minor deviations from REST principles may be necessary to meet specific needs, ensuring that the API remains effective and user-friendly.
+
+For example:
+When Cassandra operations are mapped to APIs, like decommission or repair, the tradeoff has been made in favor of readability and single-responsibility when compared to a purely RESTful design.
+
+Current design:
+
+```
+PUT /api/v1/cassandra/operations/decommission
+PUT /api/v1/cassandra/operations/repair
+```
+Potential RESTful alternative
+
+```
+PUT /api/v1/cassandra/node
+{
+    state: "DECOMMISSION" or "REPAIR"
+}
+```
+
+#### Requests and Responses
+
+* Document request and response structures in the API proposal and API specification
+* Call out the required and optional attributes of the request/response structure.
+* Embed sufficient context in the response if there are dynamic fields that are returned based on type of the resource/action being performed, so that the caller can elegantly manage conditional availability of fields
+* Always return a response body
+* Response Method:
+  * Reserve ```GET``` for requests to retrieve data associated with the resource without mutating any underlying state
+  * Reserve ```POST``` for creation of new resources, or in some cases, to trigger an action.
+  * Reserve ```PUT``` for idempotent requests that mutate the state of an existing resource. For ambiguous actions where POST do not apply, PUT is preferred, provided the idempotency rule holds.
+  * Reserve ```PATCH``` to update a part of a resource
+  * Reserve ```HEAD``` to fetch the metadata for a resource, specifically in cases when operating on a large resource while avoiding downloading the body
+  * Reserve ```DELETE``` when an existing resource needs to be deleted.
+* Response Status:
+  * ```202 Accepted``` - Request accepted and processing asynchronously. For cases which successfully completed requests, ```200 OK``` is used instead.
+  * ```409 Conflict``` - Resource conflict (e.g., duplicate name, job already running)
+  * ```500 Internal Server Error``` - Server-side exceptions or failures
+
+#### API Lifecycle
+
+##### Versioning
+
+Per the REST guidelines, APIs must be versioned with the version number encoded into the URI eg. ```/v1/resource```. This makes the version explicit and easy to identify. It's also easy to manage from a routing perspective.
+
+The following section highlights the incompatible changes to the API that warrant an API version change and the deprecation path for the older version of the API.
+
+**Compatible changes**
+
+* Adding new (non-mandatory) fields
+* Adding new operation or new content types
+
+**Incompatible changes**
+
+* Removal of fields
+* Removal or changes to any default fields that were implicitly included
+* Change to field types
+* Removal of operation or content-type
+
+##### Deprecation
+
+* Mark APIs to be removed or phased out due to introduction of the new version as "deprecated" in code.
+* Deprecated versions must be supported until the subsequent API version change, or a reasonable sunset timeframe from the time of EoL.
+* Ensure the API response includes this messaging so clients are aware of the deprecation path and EoL.
+
+#### References
+
+Some industry-standard related specifications and security guidelines.
+
+* [Open API Specification](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.0.md)
+* [OWASP Security Guidelines](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html)

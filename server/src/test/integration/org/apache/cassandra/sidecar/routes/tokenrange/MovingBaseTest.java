@@ -21,9 +21,7 @@ package org.apache.cassandra.sidecar.routes.tokenrange;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,9 +30,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
-import com.google.common.collect.Sets;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.junit5.VertxTestContext;
@@ -65,18 +61,9 @@ class MovingBaseTest extends BaseTokenRangeIntegrationTest
     {
         try
         {
+            maybeReconfigureCMS(cluster);
             CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
-            Set<String> dcReplication;
-            if (annotation.numDcs() > 1)
-            {
-                createTestKeyspace(ImmutableMap.of("replication_factor", DEFAULT_RF));
-                dcReplication = Sets.newHashSet(Arrays.asList("datacenter1", "datacenter2"));
-            }
-            else
-            {
-                createTestKeyspace(ImmutableMap.of("datacenter1", DEFAULT_RF));
-                dcReplication = Collections.singleton("datacenter1");
-            }
+            Set<String> dcReplication = getDcReplication(annotation);
 
             IInstance seed = cluster.get(1);
             int movingNodeIndex = (annotation.numDcs() > 1) ? MULTIDC_MOVING_NODE_IDX : MOVING_NODE_IDX;
