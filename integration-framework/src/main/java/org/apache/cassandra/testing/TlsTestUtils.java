@@ -27,6 +27,7 @@ import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.net.ssl.KeyManagerFactory;
@@ -37,10 +38,12 @@ import com.datastax.driver.core.PlainTextAuthProvider;
 import com.datastax.driver.core.RemoteEndpointAwareNettySSLOptions;
 import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.exceptions.AuthenticationException;
 import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import org.apache.cassandra.distributed.api.IInstance;
+import org.apache.cassandra.distributed.shared.Uninterruptibles;
 
 import static org.apache.cassandra.testing.utils.IInstanceUtils.tryGetIntConfig;
 
@@ -99,6 +102,36 @@ public class TlsTestUtils
         try (com.datastax.driver.core.Cluster c = builder.build(); Session session = c.connect())
         {
             consumer.accept(session);
+        }
+    }
+
+    /**
+     * Waits until the existing role is initialized and attempts to run the {@code runnable}.
+     *
+     * @param runnable the code to run
+     */
+    public static void waitForExistingRoles(Runnable runnable)
+    {
+        for (int i = 0; i < 60; i++)
+        {
+            try
+            {
+                runnable.run();
+                return;
+            }
+            catch (AuthenticationException exception)
+            {
+                if (exception.getMessage() != null &&
+                    exception.getMessage().contains("Provided username cassandra and/or password are incorrect"))
+                {
+                    // Wait until the default username/password is created
+                    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+                }
+                else
+                {
+                    throw exception;
+                }
+            }
         }
     }
 

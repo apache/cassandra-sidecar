@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.exceptions.AuthenticationException;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.inject.AbstractModule;
@@ -52,7 +51,6 @@ import io.vertx.ext.web.client.WebClient;
 import org.apache.cassandra.distributed.api.ICluster;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
-import org.apache.cassandra.distributed.shared.Uninterruptibles;
 import org.apache.cassandra.sidecar.common.response.ListSnapshotFilesResponse;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -93,6 +91,7 @@ import static org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchem
 import static org.apache.cassandra.testing.DriverTestUtils.buildContactPoints;
 import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
 import static org.apache.cassandra.testing.TlsTestUtils.getSSLOptions;
+import static org.apache.cassandra.testing.TlsTestUtils.waitForExistingRoles;
 import static org.apache.cassandra.testing.TlsTestUtils.withAuthenticatedSession;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -962,38 +961,18 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
     private void configureAdminAndSidecarIdentity(IInstance instance)
     {
-        for (int i = 0; i < 60; i++)
-        {
-            try
-            {
-                withAuthenticatedSession(instance, "cassandra", "cassandra", session -> {
+        waitForExistingRoles(() -> withAuthenticatedSession(instance, "cassandra", "cassandra", session -> {
 
-                    // TODO: it would be a good idea to scope down Sidecar role to permissions it needs
-                    session.execute("CREATE ROLE IF NOT EXISTS \"" + "sidecar_role" + "\" " +
-                                    "WITH SUPERUSER = " + true + " " +
-                                    "AND LOGIN = true");
+            // TODO: it would be a good idea to scope down Sidecar role to permissions it needs
+            session.execute("CREATE ROLE IF NOT EXISTS \"" + "sidecar_role" + "\" " +
+                            "WITH SUPERUSER = " + true + " " +
+                            "AND LOGIN = true");
 
-                    String statement1 = String.format("ADD IDENTITY IF NOT EXISTS '%s' TO ROLE '%s'", CASSANDRA_IDENTITY, "cassandra");
-                    session.execute(statement1);
-                    String statement = String.format("ADD IDENTITY IF NOT EXISTS '%s' TO ROLE '%s'", SIDECAR_ROLE_IDENTITY, "sidecar_role");
-                    session.execute(statement);
-                }, null);
-                return;
-            }
-            catch (AuthenticationException exception)
-            {
-                if (exception.getMessage() != null &&
-                    exception.getMessage().contains("Provided username cassandra and/or password are incorrect"))
-                {
-                    // Wait until the default username/password is created
-                    Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
-                }
-                else
-                {
-                    throw exception;
-                }
-            }
-        }
+            String statement1 = String.format("ADD IDENTITY IF NOT EXISTS '%s' TO ROLE '%s'", CASSANDRA_IDENTITY, "cassandra");
+            session.execute(statement1);
+            String statement = String.format("ADD IDENTITY IF NOT EXISTS '%s' TO ROLE '%s'", SIDECAR_ROLE_IDENTITY, "sidecar_role");
+            session.execute(statement);
+        }, null));
     }
 
     private Path cassandraIdentityClientKeyStore()

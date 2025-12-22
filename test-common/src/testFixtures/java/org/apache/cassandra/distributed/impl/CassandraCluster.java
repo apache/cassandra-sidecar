@@ -35,8 +35,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.common.base.Preconditions;
-
 import com.vdurmont.semver4j.Semver;
 import org.apache.cassandra.distributed.UpgradeableCluster;
 import org.apache.cassandra.distributed.api.ICluster;
@@ -54,6 +52,7 @@ import org.apache.cassandra.testing.IClusterExtension;
 import org.apache.cassandra.testing.IRingEntry;
 import org.apache.cassandra.testing.Partitioner;
 import org.apache.cassandra.testing.TestTokenSupplier;
+import org.assertj.core.util.Preconditions;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.distributed.shared.NetworkTopology.dcAndRack;
@@ -172,18 +171,10 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
         return cluster;
     }
 
-    // IClusterExtension methods
-
     @Override
     public void schemaChangeIgnoringStoppedInstances(String query)
     {
         delegate.schemaChangeIgnoringStoppedInstances(query);
-    }
-
-    @Override
-    public I addInstance(String dc, String rack, Consumer<IInstanceConfig> fn)
-    {
-        return ClusterUtils.addInstance(delegate, dc, rack, fn);
     }
 
     @Override
@@ -196,6 +187,31 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
     public IInstanceConfig newInstanceConfig()
     {
         return delegate.newInstanceConfig();
+    }
+
+    @Override
+    public IInstanceConfig createInstanceConfig(int nodeNum)
+    {
+        try
+        {
+            // Use reflection here because in Cassandra 4.0 the createInstanceConfig method is private.
+            Method createInstanceConfigMethod =
+            org.apache.cassandra.distributed.impl.AbstractCluster.class.getDeclaredMethod("createInstanceConfig", int.class);
+            createInstanceConfigMethod.setAccessible(true);
+            return (IInstanceConfig) createInstanceConfigMethod.invoke(delegate, nodeNum);
+        }
+        catch (Throwable e)
+        {
+            throw new RuntimeException("Unable to call createInstanceConfig(" + nodeNum + ")");
+        }
+    }
+
+    // IClusterExtension methods
+
+    @Override
+    public I addInstance(String dc, String rack, Consumer<IInstanceConfig> fn)
+    {
+        return ClusterUtils.addInstance(delegate, dc, rack, fn);
     }
 
     @Override
@@ -226,23 +242,6 @@ public class CassandraCluster<I extends IInstance> implements IClusterExtension<
     public void stopUnchecked(IInstance instance)
     {
         ClusterUtils.stopUnchecked(instance);
-    }
-
-    @Override
-    public IInstanceConfig createInstanceConfig(int nodeNum)
-    {
-        try
-        {
-            // Use reflection here because in Cassandra 4.0 the createInstanceConfig method is private.
-            Method createInstanceConfigMethod =
-            org.apache.cassandra.distributed.impl.AbstractCluster.class.getDeclaredMethod("createInstanceConfig", int.class);
-            createInstanceConfigMethod.setAccessible(true);
-            return (IInstanceConfig) createInstanceConfigMethod.invoke(delegate, nodeNum);
-        }
-        catch (Throwable e)
-        {
-            throw new RuntimeException("Unable to call createInstanceConfig(" + nodeNum + ")");
-        }
     }
 
     @Override

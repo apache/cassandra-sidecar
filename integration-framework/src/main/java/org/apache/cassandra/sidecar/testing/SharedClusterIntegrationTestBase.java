@@ -36,7 +36,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -440,32 +439,6 @@ public abstract class SharedClusterIntegrationTestBase
         assertThat(Uninterruptibles.awaitUninterruptibly(serverWrapper.sidecarSchemaReadyLatch, timeout, timeUnit))
         .describedAs("Sidecar schema is not initialized after " + timeout + ' ' + timeUnit)
         .isTrue();
-    }
-
-    protected void waitForNodeToBeUp(String hostname, long timeout, TimeUnit timeUnit) throws TimeoutException
-    {
-        long startTime = System.nanoTime();
-        while (!serverWrapper.upNodes.contains(hostname))
-        {
-            if (System.nanoTime() - startTime > timeUnit.toNanos(timeout))
-            {
-                throw new TimeoutException("Instance " + hostname + " did not come up after " + timeout + ' ' + timeUnit);
-            }
-            Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
-        }
-    }
-
-    protected void waitForNodeToBeDown(String hostname, long timeout, TimeUnit timeUnit) throws TimeoutException
-    {
-        long startTime = System.nanoTime();
-        while (serverWrapper.upNodes.contains(hostname))
-        {
-            if (System.nanoTime() - startTime > timeUnit.toNanos(timeout))
-            {
-                throw new TimeoutException("Instance " + hostname + " did not come down after " + timeout + ' ' + timeUnit);
-            }
-            Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
-        }
     }
 
     /**
