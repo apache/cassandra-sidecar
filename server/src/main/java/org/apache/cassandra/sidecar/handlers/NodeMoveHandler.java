@@ -52,6 +52,13 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class NodeMoveHandler extends AbstractHandler<String> implements AccessProtected
 {
+    /**
+     * Maximum allowed length for token strings in characters.
+     * <p>
+     * This limit is set conservatively to accommodate all valid token formats, including
+     * the string representation of {@code Long.MIN_VALUE} (-9223372036854775808, 20 characters)
+     * with substantial margin for other token representations or future extensions.
+     */
     private static final int MAX_TOKEN_LENGTH = 128;
 
     private final OperationalJobManager jobManager;
