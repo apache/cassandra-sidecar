@@ -37,6 +37,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.codahale.metrics.MetricRegistry;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
@@ -70,7 +71,7 @@ class ReloadingJwtAuthenticationHandlerTest
                                                                                     "site", "www.apache.org",
                                                                                     "client_id", "id"));
         JwtRoleProcessor mockRoleProcessor = mock(JwtRoleProcessor.class);
-        when(mockRoleProcessor.processRoles(any())).thenReturn(List.of("test_role"));
+        when(mockRoleProcessor.processRoles(any())).thenReturn(Future.succeededFuture(List.of("test_role")));
         PeriodicTaskExecutor mockTaskExecutor = mock(PeriodicTaskExecutor.class);
         doNothing().when(mockTaskExecutor).schedule(any());
         MetricRegistry metricRegistry = new MetricRegistry();
@@ -137,7 +138,7 @@ class ReloadingJwtAuthenticationHandlerTest
                                                                                         "site", site,
                                                                                         "jwt_auth_type", JwtParameters.AuthType.STATELESS.toString().toLowerCase()));
             JwtRoleProcessor mockRoleProcessor = mock(JwtRoleProcessor.class);
-            when(mockRoleProcessor.processRoles(any())).thenReturn(List.of("test_role"));
+            when(mockRoleProcessor.processRoles(any())).thenReturn(Future.succeededFuture(List.of("test_role")));
             ReloadingJwtAuthenticationHandler handler = getReloadingJwtAuthenticationHandler(vertx, parameterExtractor, mockRoleProcessor);
 
             // Wait a bit for the handler to be set

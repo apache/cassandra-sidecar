@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.auth.User;
@@ -56,6 +57,7 @@ import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -130,7 +132,8 @@ class CachedAuthorizationHandlerTest
     void testAdminBypassesAuthorization()
     {
         when(mockCacheConfig.expireAfterAccess()).thenReturn(MillisecondBoundConfiguration.parse("5m"));
-        when(mockAdminIdentityResolver.isAdmin("admin-identity1")).thenReturn(true);
+        when(mockAdminIdentityResolver.isAdmin("admin-identity1"))
+        .thenReturn(Future.succeededFuture(true));
 
         Authorization expected = PermissionBasedAuthorization.create("CREATE");
         CacheFactory cacheFactory = new CacheFactory(sidecarConfiguration, sstableImporter, metrics);
@@ -152,8 +155,9 @@ class CachedAuthorizationHandlerTest
 
         RoutingContext mockContext
         = createMockContext("user1", List.of("identity1", "admin-identity2"), List.of("admin-role2"));
-        when(mockAdminIdentityResolver.isAdmin("identity1")).thenReturn(false);
-        when(mockAdminIdentityResolver.isAdmin("admin-identity2")).thenReturn(true);
+        when(mockAdminIdentityResolver.isAdmin("identity1")).thenReturn(Future.succeededFuture(false));
+        when(mockAdminIdentityResolver.isAdmin("admin-identity2"))
+        .thenReturn(Future.succeededFuture(true));
 
         verifySuccess(handler, mockContext);
     }
@@ -167,7 +171,7 @@ class CachedAuthorizationHandlerTest
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext = createMockContext("user2", "identity2", "role2");
-        when(mockAdminIdentityResolver.isAdmin("identity2")).thenReturn(false);
+        when(mockAdminIdentityResolver.isAdmin("identity2")).thenReturn(Future.succeededFuture(false));
 
         verifySuccess(handler, mockContext);
     }
@@ -182,7 +186,7 @@ class CachedAuthorizationHandlerTest
                                          expected, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext = createMockContext("user3", "identity3", "role3");
-        when(mockAdminIdentityResolver.isAdmin("identity3")).thenReturn(false);
+        when(mockAdminIdentityResolver.isAdmin("identity3")).thenReturn(Future.succeededFuture(false));
 
         verifyFailure(handler, mockContext);
     }
@@ -197,7 +201,7 @@ class CachedAuthorizationHandlerTest
 
         RoutingContext mockContext1 = createMockContext("user4", "identity4", "role4");
         RoutingContext mockContext2 = createMockContext("user4", "identity4", "role4");
-        when(mockAdminIdentityResolver.isAdmin("identity4")).thenReturn(false);
+        when(mockAdminIdentityResolver.isAdmin("identity4")).thenReturn(Future.succeededFuture(false));
 
         verifySuccess(handler, mockContext1);
 
@@ -225,7 +229,7 @@ class CachedAuthorizationHandlerTest
 
         RoutingContext mockContext1 = createMockContext("user5", "identity5", "role5");
         RoutingContext mockContext2 = createMockContext("user5", "identity6", "role6");
-        when(mockAdminIdentityResolver.isAdmin(any())).thenReturn(false);
+        when(mockAdminIdentityResolver.isAdmin(anyString())).thenReturn(Future.succeededFuture(false));
 
         verifySuccess(handler, mockContext1);
 
@@ -248,6 +252,7 @@ class CachedAuthorizationHandlerTest
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         handler.variableConsumer(routeBuilderFactory.builderForRoute().routeGenericVariableConsumer());
+        when(mockAdminIdentityResolver.isAdmin("identity7")).thenReturn(Future.succeededFuture(false));
 
         QualifiedTableName table = new QualifiedTableName("ks", "tbl");
         RoutingContext mockContext1 = createMockContext("user6", "identity7", "role7");
@@ -284,7 +289,7 @@ class CachedAuthorizationHandlerTest
         QualifiedTableName table2 = new QualifiedTableName("ks2", "tbl2");
         when(mockContext2.get("SC_QUALIFIED_TABLE_NAME")).thenReturn(table2);
 
-        when(mockAdminIdentityResolver.isAdmin(any())).thenReturn(false);
+        when(mockAdminIdentityResolver.isAdmin(anyString())).thenReturn(Future.succeededFuture(false));
 
         verifySuccess(handler, mockContext1);
 
@@ -305,7 +310,7 @@ class CachedAuthorizationHandlerTest
                                          testAuthorization, metrics, cacheFactory.endpointAuthorizationCache());
 
         RoutingContext mockContext1 = createMockContext("user9", List.of(), List.of());
-        when(mockAdminIdentityResolver.isAdmin(any())).thenReturn(false);
+        when(mockAdminIdentityResolver.isAdmin(anyString())).thenReturn(Future.succeededFuture(false));
 
         verifySuccess(handlerWithModifyPermission, mockContext1);
 
@@ -336,7 +341,7 @@ class CachedAuthorizationHandlerTest
         RoutingContext mockContext2 = createMockContext("user11", "identity11", "role11");
         RoutingContext mockContext3 = createMockContext("user11", "identity11", "role11");
 
-        when(mockAdminIdentityResolver.isAdmin("identity11")).thenReturn(false);
+        when(mockAdminIdentityResolver.isAdmin("identity11")).thenReturn(Future.succeededFuture(false));
 
         // First call
         handler.handle(mockContext1);
@@ -381,7 +386,7 @@ class CachedAuthorizationHandlerTest
         RoutingContext mockContext1 = createMockContext("user12", "identity12", "role12");
         RoutingContext mockContext2 = createMockContext("user12", "identity12", "role12");
 
-        when(mockAdminIdentityResolver.isAdmin("identity12")).thenReturn(false);
+        when(mockAdminIdentityResolver.isAdmin("identity12")).thenReturn(Future.succeededFuture(false));
 
         // First handler succeeds (user has MODIFY permission)
         handler1.handle(mockContext1);
@@ -427,7 +432,7 @@ class CachedAuthorizationHandlerTest
         RoutingContext mockContext1 = createMockContext("user13", "identity13", "role13");
         RoutingContext mockContext2 = createMockContext("user13", "identity13", "role13");
 
-        when(mockAdminIdentityResolver.isAdmin("identity13")).thenReturn(false);
+        when(mockAdminIdentityResolver.isAdmin("identity13")).thenReturn(Future.succeededFuture(false));
 
         // First handler processes request
         handler1.handle(mockContext1);
@@ -470,7 +475,7 @@ class CachedAuthorizationHandlerTest
         RoutingContext mockContext1 = createMockContext("user13", "identity13", "role13");
         RoutingContext mockContext2 = createMockContext("user13", "identity13", "role13");
 
-        when(mockAdminIdentityResolver.isAdmin("identity13")).thenReturn(false);
+        when(mockAdminIdentityResolver.isAdmin("identity13")).thenReturn(Future.succeededFuture(false));
 
         // First handler processes request
         handler1.handle(mockContext1);

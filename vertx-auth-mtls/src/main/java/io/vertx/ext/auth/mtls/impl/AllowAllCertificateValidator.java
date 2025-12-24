@@ -18,6 +18,7 @@
 
 package io.vertx.ext.auth.mtls.impl;
 
+import io.vertx.core.Future;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.mtls.CertificateValidator;
 
@@ -32,10 +33,12 @@ public class AllowAllCertificateValidator implements CertificateValidator
      * Marks all shared {@link CertificateCredentials} as valid.
      *
      * @param credentials client credentials shared
+     * @return future that immediately succeeds
      */
     @Override
-    public void verifyCertificate(CertificateCredentials credentials)
+    public Future<Void> verifyCertificate(CertificateCredentials credentials)
     {
         // do nothing
+        return Future.succeededFuture();
     }
 }

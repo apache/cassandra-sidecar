@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import io.vertx.core.Future;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.CertificateIdentityExtractor;
@@ -50,19 +51,26 @@ public class SpiffeIdentityExtractor implements CertificateIdentityExtractor
     }
 
     @Override
-    public List<String> validIdentities(CertificateCredentials certificateCredentials) throws CredentialValidationException
+    public Future<List<String>> validIdentities(CertificateCredentials certificateCredentials)
     {
-        // First certificate in certificate chain is usually PrivateKeyEntry.
-        X509Certificate privateCert = certificateCredentials.peerCertificate();
-
-        if (privateCert == null)
+        try
         {
-            throw new CredentialValidationException("No X509Certificate found for validating");
-        }
+            // First certificate in certificate chain is usually PrivateKeyEntry.
+            X509Certificate privateCert = certificateCredentials.peerCertificate();
 
-        String identity = extractIdentity(privateCert);
-        validateIdentity(identity);
-        return Collections.singletonList(identity);
+            if (privateCert == null)
+            {
+                return Future.failedFuture(new CredentialValidationException("No X509Certificate found for validating"));
+            }
+
+            String identity = extractIdentity(privateCert);
+            validateIdentity(identity);
+            return Future.succeededFuture(Collections.singletonList(identity));
+        }
+        catch (CredentialValidationException e)
+        {
+            return Future.failedFuture(e);
+        }
     }
 
     protected String extractIdentity(X509Certificate certificate)

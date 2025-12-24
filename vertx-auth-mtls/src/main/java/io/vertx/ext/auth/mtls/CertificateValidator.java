@@ -18,8 +18,8 @@
 
 package io.vertx.ext.auth.mtls;
 
+import io.vertx.core.Future;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
-import io.vertx.ext.auth.authentication.CredentialValidationException;
 
 /**
  * Interface for validating certificates for mutual TLS authentication.
@@ -40,7 +40,7 @@ public interface CertificateValidator
      * </ul>
      *
      * @param credentials user certificate credentials shared
-     * @throws CredentialValidationException when certificate is not valid.
+     * @return future that succeeds if certificate is valid, or fails if validation fails
      */
-    void verifyCertificate(CertificateCredentials credentials) throws CredentialValidationException;
+    Future<Void> verifyCertificate(CertificateCredentials credentials);
 }

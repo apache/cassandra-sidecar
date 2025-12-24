@@ -31,6 +31,7 @@ import javax.naming.directory.Attributes;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
 
+import io.vertx.core.Future;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.CertificateValidator;
@@ -62,26 +63,34 @@ public class CertificateValidatorImpl implements CertificateValidator
     }
 
     @Override
-    public void verifyCertificate(CertificateCredentials credentials)
+    public Future<Void> verifyCertificate(CertificateCredentials credentials)
     {
-        credentials.checkValid();
-        X509Certificate peerCertificate = credentials.peerCertificate();
-        if (peerCertificate == null)
-        {
-            throw new CredentialValidationException("No X509Certificate found for validating");
-        }
-        validateIssuer(peerCertificate);
         try
         {
-            peerCertificate.checkValidity();
+            credentials.checkValid();
+            X509Certificate peerCertificate = credentials.peerCertificate();
+            if (peerCertificate == null)
+            {
+                return Future.failedFuture(new CredentialValidationException("No X509Certificate found for validating"));
+            }
+            validateIssuer(peerCertificate);
+            try
+            {
+                peerCertificate.checkValidity();
+            }
+            catch (CertificateExpiredException e)
+            {
+                return Future.failedFuture(new CredentialValidationException("Expired certificates shared for authentication", e));
+            }
+            catch (CertificateNotYetValidException e)
+            {
+                return Future.failedFuture(new CredentialValidationException("Invalid certificates shared", e));
+            }
+            return Future.succeededFuture();
         }
-        catch (CertificateExpiredException e)
+        catch (CredentialValidationException e)
         {
-            throw new CredentialValidationException("Expired certificates shared for authentication", e);
-        }
-        catch (CertificateNotYetValidException e)
-        {
-            throw new CredentialValidationException("Invalid certificates shared", e);
+            return Future.failedFuture(e);
         }
     }
 

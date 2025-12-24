@@ -25,19 +25,23 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import io.vertx.ext.auth.mtls.CertificateValidator;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
 
 import static io.vertx.ext.auth.authentication.CertificateCredentialsTest.createTestCredentials;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
  * Tests {@link io.vertx.ext.auth.mtls.impl.CertificateValidatorImpl}
  */
+@ExtendWith(VertxExtension.class)
 public class CertificateValidatorImplTest
 {
     private final CertificateValidator certificateValidator = CertificateValidatorImpl.builder()
@@ -48,35 +52,47 @@ public class CertificateValidatorImplTest
                                                                                       .build();
 
     @Test
-    public void testValidCertificateCredentials()
+    public void testValidCertificateCredentials(VertxTestContext context)
     {
         CertificateCredentials credentials = createTestCredentials();
-        certificateValidator.verifyCertificate(credentials);
+        certificateValidator.verifyCertificate(credentials)
+                           .onFailure(res -> context.failNow("Certificate validation should have succeeded"))
+                           .onSuccess(res -> context.completeNow());
     }
 
     @Test
-    public void testInvalidCertificateType()
+    public void testInvalidCertificateType(VertxTestContext context)
     {
         Certificate certificate = mock(Certificate.class);
         CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(certificate));
-        assertThatThrownBy(() -> certificateValidator.verifyCertificate(credentials))
-        .isInstanceOf(CredentialValidationException.class)
-        .hasMessage("No X509Certificate found for validating");
+        certificateValidator.verifyCertificate(credentials)
+                            .onSuccess(res -> context.failNow("Should have failed"))
+                            .onFailure(res -> context.verify(() -> {
+                                assertThat(res).isInstanceOf(CredentialValidationException.class);
+                                assertThat(res.getMessage())
+                                .isEqualTo("No X509Certificate found for validating");
+                                context.completeNow();
+                            }));
     }
 
     @Test
-    public void testNonTrustedIssuer()
+    public void testNonTrustedIssuer(VertxTestContext context)
     {
         CertificateCredentials credentials = createTestCredentials("CN=Vertx Auth, OU=ssl_test, " +
                                                                    "O=NonTrustedOrganization, " +
                                                                    "L=Unknown, ST=Unknown, C=US");
-        assertThatThrownBy(() -> certificateValidator.verifyCertificate(credentials))
-        .isInstanceOf(CredentialValidationException.class)
-        .hasMessage("NonTrustedOrganization attribute not trusted");
+        certificateValidator.verifyCertificate(credentials)
+                            .onSuccess(res -> context.failNow("Should have failed"))
+                            .onFailure(res -> context.verify(() -> {
+                                assertThat(res).isInstanceOf(CredentialValidationException.class);
+                                assertThat(res.getMessage())
+                                .isEqualTo("NonTrustedOrganization attribute not trusted");
+                                context.completeNow();
+                           }));
     }
 
     @Test
-    public void testInvalidIssuer()
+    public void testInvalidIssuer(VertxTestContext context)
     {
         CertificateValidator certificateValidator
         = CertificateValidatorImpl.builder()
@@ -84,13 +100,17 @@ public class CertificateValidatorImplTest
                                   .trustedIssuerOrganization("MissingIssuerOrganization").trustedIssuerOrganizationUnit("ssl_test")
                                   .trustedIssuerCountry("US").build();
         CertificateCredentials credentials = createTestCredentials("CN=Vertx Auth, OU=ssl_test, L=Unknown, ST=Unknown, C=US");
-        assertThatThrownBy(() -> certificateValidator.verifyCertificate(credentials))
-        .isInstanceOf(CredentialValidationException.class)
-        .hasMessage("Expected attribute O not found");
+        certificateValidator.verifyCertificate(credentials)
+                            .onSuccess(res -> context.failNow("Should have failed"))
+                            .onFailure(res -> context.verify(() -> {
+                                assertThat(res).isInstanceOf(CredentialValidationException.class);
+                                assertThat(res.getMessage()).isEqualTo("Expected attribute O not found");
+                                context.completeNow();
+                            }));
     }
 
     @Test
-    public void testExpiredCertificate() throws Exception
+    public void testExpiredCertificate(VertxTestContext context) throws Exception
     {
         X509Certificate certificate
         = new CertificateBuilder().notAfter(Instant.now().minus(1, ChronoUnit.DAYS))
@@ -98,8 +118,12 @@ public class CertificateValidatorImplTest
                                   .buildSelfSigned()
                                   .certificate();
         CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(certificate));
-        assertThatThrownBy(() -> certificateValidator.verifyCertificate(credentials))
-        .isInstanceOf(CredentialValidationException.class)
-        .hasMessage("Expired certificates shared for authentication");
+        certificateValidator.verifyCertificate(credentials)
+                            .onSuccess(res -> context.failNow("Should have failed"))
+                            .onFailure(res -> context.verify(() -> {
+                                assertThat(res).isInstanceOf(CredentialValidationException.class);
+                                assertThat(res.getMessage()).isEqualTo("Expired certificates shared for authentication");
+                                context.completeNow();
+                            }));
     }
 }

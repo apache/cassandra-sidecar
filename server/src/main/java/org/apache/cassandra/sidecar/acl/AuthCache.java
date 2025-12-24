@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -56,6 +57,7 @@ public abstract class AuthCache<K, V>
     private final CacheConfiguration config;
     private final CacheStatsCounter cacheMetrics;
     private final TaskExecutorPool internalPool;
+    private final TaskExecutorPool servicePool;
     // cache is null when AuthCache is disabled
     private volatile LoadingCache<K, V> cache;
     protected final Vertx vertx;
@@ -71,6 +73,7 @@ public abstract class AuthCache<K, V>
         this.name = name;
         this.vertx = vertx;
         this.internalPool = executorPools.internal();
+        this.servicePool = executorPools.service();
         this.loadFunction = loadFunction;
         this.bulkLoadFunction = bulkLoadFunction;
         this.config = cacheConfiguration;
@@ -92,16 +95,28 @@ public abstract class AuthCache<K, V>
     }
 
     /**
-     * Retrieves a value from the cache. Will call {@link LoadingCache#get(Object)} which will
+     * Retrieves a value from the cache asynchronously. Will call {@link LoadingCache#get(Object)} which will
      * "load" the value if it's not present, thus populating the key. When the cache is disabled, data is fetched
-     * with loadFunction.
+     * with loadFunction. The cache retrieval is offloaded to a worker thread to avoid blocking the event loop.
      *
      * @param k key
-     * @return The current value of {@code K} if cached or loaded.
+     * @return A {@link Future} containing the current value of {@code K} if cached or loaded.
      * <p>
      * See {@link LoadingCache#get(Object)} for possible exceptions.
      */
-    public V get(K k)
+    public Future<V> get(K k)
+    {
+        return servicePool.executeBlocking(() -> getCached(k), false);
+    }
+
+    /**
+     * Helper method to retrieve value from cache synchronously. Used by {@link #get(K)} which offloads
+     * this to a worker thread.
+     *
+     * @param k key
+     * @return The current value of {@code K} if cached or loaded
+     */
+    private V getCached(K k)
     {
         if (!config.enabled())
         {
@@ -111,12 +126,24 @@ public abstract class AuthCache<K, V>
     }
 
     /**
-     * Retrieves all cached entries. Will call {@link LoadingCache#asMap()} which does not trigger "load". When cache
-     * is disabled, data is fetched with bulkLoadFunction.
+     * Retrieves all cached entries asynchronously. Will call {@link LoadingCache#asMap()} which does not trigger "load".
+     * When cache is disabled, data is fetched with bulkLoadFunction. The operation is offloaded to a worker thread
+     * to avoid blocking the event loop.
      *
-     * @return a map of cached key-value pairs
+     * @return A {@link Future} containing a map of cached key-value pairs
      */
-    public Map<K, V> getAll()
+    public Future<Map<K, V>> getAll()
+    {
+        return servicePool.executeBlocking(this::getAllCached, false);
+    }
+
+    /**
+     * Helper method to retrieve all entries from cache synchronously. Used by {@link #getAll()} which offloads
+     * this to a worker thread.
+     *
+     * @return A map of all cached key-value pairs
+     */
+    private Map<K, V> getAllCached()
     {
         if (!config.enabled())
         {

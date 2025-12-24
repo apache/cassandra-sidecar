@@ -18,13 +18,15 @@
 
 package org.apache.cassandra.sidecar.acl;
 
+import java.util.Objects;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
-import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 /**
@@ -52,16 +54,14 @@ public class IdentityToRoleCache extends AuthCache<String, String>
               sidecarMetrics.server().cache().identityToRoleCacheMetrics);
     }
 
-    public boolean containsKey(String identity)
+    public Future<Boolean> containsKey(String identity)
     {
-        try
+        if (cache() == null)
         {
-            return cache() != null && get(identity) != null;
+            return Future.succeededFuture(false);
         }
-        catch (SchemaUnavailableException e)
-        {
-            // Returns false, since SystemAuthSchema is not prepared
-            return false;
-        }
+        return get(identity)
+               .map(Objects::nonNull)
+               .recover(cause -> Future.succeededFuture(false));
     }
 }

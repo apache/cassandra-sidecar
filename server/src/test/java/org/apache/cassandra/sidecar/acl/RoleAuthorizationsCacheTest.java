@@ -27,10 +27,14 @@ import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.ext.auth.authorization.Authorization;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
@@ -61,6 +65,7 @@ import static org.mockito.Mockito.when;
 /**
  * Test for {@link RoleAuthorizationsCache}
  */
+@ExtendWith(VertxExtension.class)
 class RoleAuthorizationsCacheTest
 {
     private static final MetricRegistryFactory FACTORY
@@ -90,7 +95,7 @@ class RoleAuthorizationsCacheTest
     }
 
     @Test
-    void testCacheSizeAlwaysOne() throws InterruptedException
+    void testCacheSizeAlwaysOne(VertxTestContext testContext)
     {
         Map<String, Set<Authorization>> cassandraAuthorizations = new HashMap<>();
         cassandraAuthorizations.put("test_role1", new HashSet<>(Collections.singletonList(CassandraPermissions.SELECT.toAuthorization())));
@@ -108,42 +113,68 @@ class RoleAuthorizationsCacheTest
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor,
                                                                     sidecarMetrics);
-        assertThat(cache.getAll().size()).isZero();
-        assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(2);
-        CacheStats initialCallStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-        assertThat(initialCallStats.hitCount()).isZero();
-        assertThat(initialCallStats.missCount()).isOne();
-        assertThat(cache.getAll().size()).isOne();
-
-        sidecarAuthorizations.put("test_role2", new HashSet<>(Collections.singletonList(BasicPermissions.STREAM_SNAPSHOT.toAuthorization())));
-        when(mockSidecarPermissionsAccessor.rolesToAuthorizations()).thenReturn(sidecarAuthorizations);
-
-        // wait for cache entries to be refreshed
-        Thread.sleep(3000);
-
-        // New entries fetched during refreshes
-        assertThat(cache.getAuthorizations("test_role2").size()).isOne();
-        CacheStats afterRefreshStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-        assertThat(afterRefreshStats.hitCount()).isZero();
-        assertThat(afterRefreshStats.missCount()).isOne();
-        assertThat(cache.getAll().size()).isOne();
-        assertThat(afterRefreshStats.evictionCount()).isOne();
-
-        assertThat(cache.getAuthorizations("test_role2").size()).isOne();
-        CacheStats validEntryStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-        assertThat(validEntryStats.hitCount()).isOne();
-        assertThat(validEntryStats.missCount()).isZero();
-
-        // check for not existing role
-        cache.getAuthorizations("non_existing_role");
-        CacheStats afterMissStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-        assertThat(afterMissStats.missCount()).isEqualTo(0);
-        // It is a hit, since we load entire role_permissions table during each refresh
-        assertThat(afterMissStats.hitCount()).isOne();
+        cache.getAll()
+             .compose(allEntries -> {
+                 testContext.verify(() -> assertThat(allEntries.size()).isZero());
+                 return cache.getAuthorizations("test_role1");
+             })
+             .compose(authorizations -> {
+                 testContext.verify(() -> {
+                     assertThat(authorizations.size()).isEqualTo(2);
+                     CacheStats initialCallStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
+                     assertThat(initialCallStats.hitCount()).isZero();
+                     assertThat(initialCallStats.missCount()).isOne();
+                 });
+                 return cache.getAll();
+             })
+             .compose(allEntries -> {
+                 testContext.verify(() -> assertThat(allEntries.size()).isOne());
+                 // Add new role and wait for cache refresh
+                 sidecarAuthorizations.put("test_role2",
+                                           new HashSet<>(Collections.singletonList(BasicPermissions.
+                                                                                   STREAM_SNAPSHOT.
+                                                                                   toAuthorization())));
+                 when(mockSidecarPermissionsAccessor.rolesToAuthorizations()).thenReturn(sidecarAuthorizations);
+                 return vertx.timer(3000);
+             })
+             .compose(timerId -> cache.getAuthorizations("test_role2"))
+             .compose(authorizations -> {
+                 testContext.verify(() -> {
+                     assertThat(authorizations.size()).isOne();
+                     CacheStats afterRefreshStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
+                     assertThat(afterRefreshStats.hitCount()).isZero();
+                     assertThat(afterRefreshStats.missCount()).isOne();
+                     assertThat(afterRefreshStats.evictionCount()).isOne();
+                 });
+                 return cache.getAll();
+             })
+             .compose(allEntries -> {
+                 testContext.verify(() -> assertThat(allEntries.size()).isOne());
+                 return cache.getAuthorizations("test_role2");
+             })
+             .compose(authorizations -> {
+                 testContext.verify(() -> {
+                     assertThat(authorizations.size()).isOne();
+                     CacheStats validEntryStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
+                     assertThat(validEntryStats.hitCount()).isOne();
+                     assertThat(validEntryStats.missCount()).isZero();
+                 });
+                 return cache.getAuthorizations("non_existing_role");
+             })
+             .onSuccess(result -> {
+                 testContext.verify(() -> {
+                     CacheStats afterMissStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
+                     assertThat(afterMissStats.missCount()).isEqualTo(0);
+                     // It is a hit, since we load entire role_permissions table during each refresh
+                     assertThat(afterMissStats.hitCount()).isOne();
+                 });
+                 testContext.completeNow();
+             })
+             .onFailure(testContext::failNow);
     }
 
     @Test
-    void testMultipleLoadCacheStats()
+    void testMultipleLoadCacheStats(VertxTestContext testContext)
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.findAllRolesAndPermissions()).thenReturn(new HashMap<>());
@@ -160,23 +191,31 @@ class RoleAuthorizationsCacheTest
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor,
                                                                     sidecarMetrics);
-
-        assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(1);
-        assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(1);
-        assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(1);
-        assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(1);
-        assertThat(cache.getAuthorizations("test_role1").size()).isEqualTo(1);
-
-        CacheStats multipleRetrievalStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-        assertThat(multipleRetrievalStats.hitCount()).isEqualTo(4);
-        assertThat(multipleRetrievalStats.loadSuccessCount()).isEqualTo(1);
-        assertThat(multipleRetrievalStats.loadFailureCount()).isEqualTo(0);
-        assertThat(multipleRetrievalStats.missCount()).isEqualTo(1);
-        assertThat(multipleRetrievalStats.loadCount()).isEqualTo(1);
+        Future.all(cache.getAuthorizations("test_role1"),
+                   cache.getAuthorizations("test_role1"),
+                   cache.getAuthorizations("test_role1"),
+                   cache.getAuthorizations("test_role1"),
+                   cache.getAuthorizations("test_role1"))
+        .onSuccess(results -> {
+            testContext.verify(() -> {
+                // Verify all results
+                for (int i = 0; i < 5; i++) {
+                    assertThat(results.<Set<Authorization>>resultAt(i).size()).isEqualTo(1);
+                }
+                CacheStats multipleRetrievalStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
+                assertThat(multipleRetrievalStats.hitCount()).isEqualTo(4);
+                assertThat(multipleRetrievalStats.loadSuccessCount()).isEqualTo(1);
+                assertThat(multipleRetrievalStats.loadFailureCount()).isEqualTo(0);
+                assertThat(multipleRetrievalStats.missCount()).isEqualTo(1);
+                assertThat(multipleRetrievalStats.loadCount()).isEqualTo(1);
+            });
+            testContext.completeNow();
+        })
+        .onFailure(testContext::failNow);
     }
 
     @Test
-    void testNotFoundUser()
+    void testNotFoundUser(VertxTestContext testContext)
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         Map<String, Set<Authorization>> cassandraAuthorizations = cassandraAuthorizations();
@@ -192,17 +231,25 @@ class RoleAuthorizationsCacheTest
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor,
                                                                     sidecarMetrics);
-        assertThat(cache.getAll().size()).isZero();
-
-        cache.warmUp(5);
-
-        // New entries fetched during refreshes
-        assertThat(cache.getAll().size()).isOne();
-        assertThat(cache.getAuthorizations("not_found_user")).isNull();
+        cache.getAll()
+             .compose(allEntries -> {
+                 testContext.verify(() -> assertThat(allEntries.size()).isZero());
+                 cache.warmUp(5);
+                 return cache.getAll();
+             })
+             .compose(allEntries -> {
+                 testContext.verify(() -> assertThat(allEntries.size()).isOne());
+                 return cache.getAuthorizations("not_found_user");
+             })
+             .onSuccess(result -> {
+                 testContext.verify(() -> assertThat(result).isNull());
+                 testContext.completeNow();
+             })
+             .onFailure(testContext::failNow);
     }
 
     @Test
-    void testBulkload() throws InterruptedException
+    void testBulkload(VertxTestContext testContext)
     {
         Map<String, Set<Authorization>> sidecarAuthorizations = sidecarAuthorizations();
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
@@ -216,20 +263,31 @@ class RoleAuthorizationsCacheTest
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor,
                                                                     sidecarMetrics);
-        assertThat(cache.getAll().size()).isZero();
-
-        // warming cache
-        vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
-
-        // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
-        Thread.sleep(3000);
-        assertThat(cache.getAll().size()).isOne();
-        assertThat(cache.get("unique_cache_entry_key").get("test_role1").size()).isOne();
-        assertThat(cache.get("unique_cache_entry_key").get("test_role2").size()).isOne();
+        cache.getAll()
+             .compose(allEntries -> {
+                 testContext.verify(() -> assertThat(allEntries.size()).isZero());
+                 // warming cache
+                 vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
+                 // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
+                 return vertx.timer(3000);
+             })
+             .compose(timerId -> cache.getAll())
+             .compose(allEntries -> {
+                 testContext.verify(() -> assertThat(allEntries.size()).isOne());
+                 return cache.get("unique_cache_entry_key");
+             })
+             .onSuccess(cacheEntry -> {
+                 testContext.verify(() -> {
+                     assertThat(cacheEntry.get("test_role1").size()).isOne();
+                     assertThat(cacheEntry.get("test_role2").size()).isOne();
+                 });
+                 testContext.completeNow();
+             })
+             .onFailure(testContext::failNow);
     }
 
     @Test
-    void testCacheDisabled()
+    void testCacheDisabled(VertxTestContext testContext)
     {
         Map<String, Set<Authorization>> sidecarAuthorizations = sidecarAuthorizations();
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
@@ -248,12 +306,22 @@ class RoleAuthorizationsCacheTest
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor,
                                                                     sidecarMetrics);
-        assertThat(cache.getAuthorizations("test_role1").size()).isOne();
-        assertThat(cache.getAuthorizations("test_role2").size()).isOne();
+        Future.all(
+            cache.getAuthorizations("test_role1"),
+            cache.getAuthorizations("test_role2")
+        )
+        .onSuccess(results -> {
+            testContext.verify(() -> {
+                assertThat(results.<Set<Authorization>>resultAt(0).size()).isOne();
+                assertThat(results.<Set<Authorization>>resultAt(1).size()).isOne();
+            });
+            testContext.completeNow();
+        })
+        .onFailure(testContext::failNow);
     }
 
     @Test
-    void testEmptyEntriesFromSystemAuthDatabaseAccessor() throws InterruptedException
+    void testEmptyEntriesFromSystemAuthDatabaseAccessor(VertxTestContext testContext)
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.findAllRolesAndPermissions()).thenReturn(Collections.emptyMap());
@@ -266,19 +334,28 @@ class RoleAuthorizationsCacheTest
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor,
                                                                     sidecarMetrics);
-        assertThat(cache.getAll().size()).isZero();
-
-        // warming cache
-        vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
-
-        // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
-        Thread.sleep(3000);
-        assertThat(cache.getAll().size()).isOne();
-        assertThat(cache.get("unique_cache_entry_key").size()).isZero();
+        cache.getAll()
+             .compose(allEntries -> {
+                 testContext.verify(() -> assertThat(allEntries.size()).isZero());
+                 // warming cache
+                 vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
+                 // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
+                 return vertx.timer(3000);
+             })
+             .compose(timerId -> cache.getAll())
+             .compose(allEntries -> {
+                 testContext.verify(() -> assertThat(allEntries.size()).isOne());
+                 return cache.get("unique_cache_entry_key");
+             })
+             .onSuccess(cacheEntry -> {
+                 testContext.verify(() -> assertThat(cacheEntry.size()).isZero());
+                 testContext.completeNow();
+             })
+             .onFailure(testContext::failNow);
     }
 
     @Test
-    void testSidecarPermissionsNotAddedWhenSchemaDisabled()
+    void testSidecarPermissionsNotAddedWhenSchemaDisabled(VertxTestContext testContext)
     {
         Map<String, Set<Authorization>> cassandraAuthorizations = cassandraAuthorizations();
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
@@ -296,19 +373,30 @@ class RoleAuthorizationsCacheTest
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor,
                                                                     sidecarMetrics);
-        assertThat(cache.getAll().size()).isZero();
-
-        // force warmup of cache
-        cache.warmUp(5);
-
-        assertThat(cache.getAll().size()).isOne();
-        assertThat(cache.get("unique_cache_entry_key").get("test_role1").size()).isOne();
-        assertThat(cache.get("unique_cache_entry_key").get("test_role2").size()).isOne();
-        assertThat(cache.get("unique_cache_entry_key").get("test_role3")).isNull();
+        cache.getAll()
+             .compose(allEntries -> {
+                 testContext.verify(() -> assertThat(allEntries.size()).isZero());
+                 // force warmup of cache
+                 cache.warmUp(5);
+                 return cache.getAll();
+             })
+             .compose(allEntries -> {
+                 testContext.verify(() -> assertThat(allEntries.size()).isOne());
+                 return cache.get("unique_cache_entry_key");
+             })
+             .onSuccess(cacheEntry -> {
+                 testContext.verify(() -> {
+                     assertThat(cacheEntry.get("test_role1").size()).isOne();
+                     assertThat(cacheEntry.get("test_role2").size()).isOne();
+                     assertThat(cacheEntry.get("test_role3")).isNull();
+                 });
+                 testContext.completeNow();
+             })
+             .onFailure(testContext::failNow);
     }
 
     @Test
-    void testCacheLoadTime()
+    void testCacheLoadTime(VertxTestContext testContext)
     {
         Map<String, Set<Authorization>> cassandraAuthorizations = cassandraAuthorizations();
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
@@ -325,21 +413,27 @@ class RoleAuthorizationsCacheTest
                                                                     sidecarMetrics);
 
         CacheStats initialStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-        assertThat(initialStats.loadCount()).isZero();
-        assertThat(initialStats.totalLoadTime()).isZero();
+        testContext.verify(() -> {
+            assertThat(initialStats.loadCount()).isZero();
+            assertThat(initialStats.totalLoadTime()).isZero();
+        });
 
-        cache.getAuthorizations("test_role1");
-
-        CacheStats afterLoadStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-        assertThat(afterLoadStats.loadCount()).isOne();
-        assertThat(afterLoadStats.totalLoadTime()).isGreaterThan(0);
-
-        double averageLoadTime = afterLoadStats.averageLoadPenalty();
-        assertThat(averageLoadTime).isGreaterThan(0);
+        cache.getAuthorizations("test_role1")
+             .onSuccess(result -> {
+                 testContext.verify(() -> {
+                     CacheStats afterLoadStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
+                     assertThat(afterLoadStats.loadCount()).isOne();
+                     assertThat(afterLoadStats.totalLoadTime()).isGreaterThan(0);
+                     double averageLoadTime = afterLoadStats.averageLoadPenalty();
+                     assertThat(averageLoadTime).isGreaterThan(0);
+                 });
+                 testContext.completeNow();
+             })
+             .onFailure(testContext::failNow);
     }
 
     @Test
-    void testCacheLoadFailureStats()
+    void testCacheLoadFailureStats(VertxTestContext testContext)
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.findAllRolesAndPermissions()).thenThrow(new RuntimeException("Database connection failed"));
@@ -355,21 +449,18 @@ class RoleAuthorizationsCacheTest
                                                                     sidecarMetrics);
 
         CacheStats initialStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-        assertThat(initialStats.loadFailureCount()).isZero();
+        testContext.verify(() -> assertThat(initialStats.loadFailureCount()).isZero());
 
-        try
-        {
-            cache.getAuthorizations("test_role1");
-        }
-        catch (Exception e)
-        {
-            // ignore exception
-        }
-
-        CacheStats afterFailureStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-        assertThat(afterFailureStats.loadFailureCount()).isEqualTo(1);
-        assertThat(afterFailureStats.loadCount()).isEqualTo(1);
-        assertThat(afterFailureStats.loadSuccessCount()).isEqualTo(0);
+        cache.getAuthorizations("test_role1")
+             .onComplete(ar -> {
+                 testContext.verify(() -> {
+                     CacheStats afterFailureStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
+                     assertThat(afterFailureStats.loadFailureCount()).isEqualTo(1);
+                     assertThat(afterFailureStats.loadCount()).isEqualTo(1);
+                     assertThat(afterFailureStats.loadSuccessCount()).isEqualTo(0);
+                 });
+                 testContext.completeNow();
+             });
     }
 
     @Test

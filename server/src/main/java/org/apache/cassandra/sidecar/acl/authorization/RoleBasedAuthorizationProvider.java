@@ -18,14 +18,13 @@
 
 package org.apache.cassandra.sidecar.acl.authorization;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.User;
-import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.auth.authorization.AuthorizationProvider;
 
 import static org.apache.cassandra.sidecar.utils.AuthUtils.extractCassandraRoles;
@@ -66,21 +65,26 @@ public class RoleBasedAuthorizationProvider implements AuthorizationProvider
             return Future.failedFuture("No cassandra roles found associated with the user");
         }
 
+        List<Future<Void>> authorizationFutures = new ArrayList<>(roles.size());
+        String authorizationId = getId();
         for (String role : roles)
         {
             if (role == null)
             {
                 continue;
             }
-
-            Set<Authorization> authorizations = roleAuthorizationsCache.getAuthorizations(role);
-            // when entries in cache are not found, null is returned. We can not add null in user.authorizations()
-            if (authorizations != null)
-            {
-                String authorizationId = getId();
-                user.authorizations().add(authorizationId, authorizations);
-            }
+            authorizationFutures.add(roleAuthorizationsCache
+                                     .getAuthorizations(role)
+                                     .compose(authorizations -> {
+                                         // when entries in cache are not found, null is returned. We can not add null
+                                         // in user.authorizations()
+                                         if (authorizations != null)
+                                         {
+                                             user.authorizations().add(authorizationId, authorizations);
+                                         }
+                                         return Future.succeededFuture();
+                                     }));
         }
-        return Future.succeededFuture();
+        return Future.all(authorizationFutures).mapEmpty();
     }
 }

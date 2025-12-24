@@ -101,6 +101,9 @@ import static org.assertj.core.api.Assumptions.assumeThat;
  * Test for role based access control in Sidecar
  * Note:
  * - Create a new keyspace or test role for each test method as required to prevent permissions overlapping
+ * Note: locally when running authorization tests you need to comment out version 4.1 in
+ * {@link org.apache.cassandra.testing.TestVersionSupplier}. Authorization tests do not run for 4.1, hence 5.1 run
+ * gets skipped too.
  */
 class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {

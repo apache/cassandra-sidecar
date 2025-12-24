@@ -26,9 +26,13 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -42,7 +46,6 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
-import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -50,6 +53,7 @@ import static org.mockito.Mockito.when;
 /**
  * Test for {@link SuperUserCache}
  */
+@ExtendWith(VertxExtension.class)
 class SuperUserCacheTest
 {
     private static final MetricRegistryFactory FACTORY
@@ -75,28 +79,39 @@ class SuperUserCacheTest
     }
 
     @Test
-    void testBulkLoad()
+    void testBulkLoad(VertxTestContext testContext)
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.findAllRolesToSuperuserStatus()).thenReturn(ImmutableMap.of("test_role1", true,
                                                                                         "test_role2", false));
         SidecarConfiguration mockConfig = mockConfig();
         SuperUserCache cache = new SuperUserCache(vertx, executorPools, mockConfig, mockDbAccessor, sidecarMetrics);
-        assertThat(cache.getAll().size()).isZero();
 
-        // warming cache
-        vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
+        cache.getAll()
+             .compose(initialMap -> {
+                 testContext.verify(() -> assertThat(initialMap.size()).isZero());
 
-        // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
-        loopAssert(3, 100, () -> {
-            assertThat(cache.getAll()).hasSize(2);
-            assertThat(cache.isSuperUser("test_role1")).isTrue();
-            assertThat(cache.isSuperUser("test_role2")).isFalse();
-        });
+                 // warming cache
+                 vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
+
+                 // wait for cache warming then verify
+                 return vertx.timer(300).compose(ignored -> cache.getAll());
+             })
+             .compose(allMap -> {
+                 testContext.verify(() -> assertThat(allMap).hasSize(2));
+                 return Future.all(cache.isSuperUser("test_role1"), cache.isSuperUser("test_role2"));
+             })
+             .onComplete(testContext.succeeding(compositeFuture -> {
+                 testContext.verify(() -> {
+                     assertThat(compositeFuture.<Boolean>resultAt(0)).isTrue();
+                     assertThat(compositeFuture.<Boolean>resultAt(1)).isFalse();
+                 });
+                 testContext.completeNow();
+             }));
     }
 
     @Test
-    void testCacheDisabled()
+    void testCacheDisabled(VertxTestContext testContext)
     {
         Map<String, Boolean> superUserMap = new HashMap<>();
         superUserMap.put("test_role1", true);
@@ -107,25 +122,41 @@ class SuperUserCacheTest
         SidecarConfiguration mockConfig = mockConfig();
         when(mockConfig.accessControlConfiguration().permissionCacheConfiguration().enabled()).thenReturn(false);
         SuperUserCache superUserCache = new SuperUserCache(vertx, executorPools, mockConfig, mockDbAccessor, sidecarMetrics);
-        assertThat(superUserCache.get("test_role")).isTrue();
-        assertThat(superUserCache.isSuperUser("test_role")).isTrue();
-        assertThat(superUserCache.getAll().size()).isEqualTo(2);
+        Future.all(superUserCache.get("test_role"),
+                   superUserCache.isSuperUser("test_role"),
+                   superUserCache.getAll())
+              .onComplete(testContext.succeeding(compositeFuture -> {
+                  testContext.verify(() -> {
+                      assertThat(compositeFuture.<Boolean>resultAt(0)).isTrue();
+                      assertThat(compositeFuture.<Boolean>resultAt(1)).isTrue();
+                      assertThat(compositeFuture.<Map<String, Boolean>>resultAt(2).size()).isEqualTo(2);
+                  });
+                  testContext.completeNow();
+              }));
     }
 
     @Test
-    void testEmptyEntriesFetched()
+    void testEmptyEntriesFetched(VertxTestContext testContext)
     {
         SystemAuthDatabaseAccessor mockDbAccessor = mock(SystemAuthDatabaseAccessor.class);
         when(mockDbAccessor.findAllRolesToSuperuserStatus()).thenReturn(Collections.emptyMap());
         SidecarConfiguration mockConfig = mockConfig();
         SuperUserCache cache = new SuperUserCache(vertx, executorPools, mockConfig, mockDbAccessor, sidecarMetrics);
-        assertThat(cache.getAll().size()).isZero();
 
-        // warming cache
-        vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
+        cache.getAll()
+             .compose(initialMap -> {
+                 testContext.verify(() -> assertThat(initialMap.size()).isZero());
 
-        // wait for cache warming. system_auth.role_permissions table bulk loaded against a single key
-        loopAssert(3, 100, () -> assertThat(cache.getAll().size()).isZero());
+                 // warming cache
+                 vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), new JsonObject());
+
+                 // wait for cache warming then verify
+                 return vertx.timer(300).compose(ignored -> cache.getAll());
+             })
+             .onComplete(testContext.succeeding(allMap -> {
+                 testContext.verify(() -> assertThat(allMap.size()).isZero());
+                 testContext.completeNow();
+             }));
     }
 
     private SidecarConfiguration mockConfig()

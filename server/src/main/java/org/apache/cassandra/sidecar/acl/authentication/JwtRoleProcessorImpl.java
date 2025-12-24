@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.acl.authentication;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
@@ -41,29 +42,37 @@ public class JwtRoleProcessorImpl implements JwtRoleProcessor
     }
 
     @Override
-    public List<String> processRoles(JsonObject decodedToken)
+    public Future<List<String>> processRoles(JsonObject decodedToken)
     {
         String identity;
         if ((identity = decodedToken.getString(IDENTITY_KEY)) != null || (identity = decodedToken.getString(SUB_KEY)) != null)
         {
-            String role = identityToRoleCache.get(identity);
-            return role != null ? List.of(role) : List.of();
+            return identityToRoleCache.get(identity).map(role -> role != null ? List.of(role) : List.of());
         }
 
         JsonArray identityKeyArray = decodedToken.getJsonArray(IDENTITIES_KEY);
-        List<String> roles = new ArrayList<>();
-        if (identityKeyArray != null)
+        if (identityKeyArray == null)
         {
-            // noinspection unchecked
-            for (String i : (List<String>) identityKeyArray.getList())
-            {
-                String roleFromIdentity = identityToRoleCache.get(i);
-                if (roleFromIdentity != null)
-                {
-                    roles.add(roleFromIdentity);
-                }
-            }
+            return Future.succeededFuture(List.of());
         }
-        return List.copyOf(roles);
+        List<Future<String>> roleFutures = new ArrayList<>();
+        // noinspection unchecked
+        for (String i : (List<String>) identityKeyArray.getList())
+        {
+            roleFutures.add(identityToRoleCache.get(i));
+        }
+        return Future.all(roleFutures)
+                     .map(compositeFuture -> {
+                         List<String> roles = new ArrayList<>();
+                         for (int i = 0; i < compositeFuture.size(); i++)
+                         {
+                             String roleFromIdentity = compositeFuture.resultAt(i);
+                             if (roleFromIdentity != null)
+                             {
+                                 roles.add(roleFromIdentity);
+                             }
+                         }
+                         return List.copyOf(roles);
+                     });
     }
 }

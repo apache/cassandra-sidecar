@@ -21,7 +21,11 @@ package org.apache.cassandra.sidecar.acl.authorization;
 import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.Future;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.acl.AdminIdentityResolver;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
@@ -34,12 +38,15 @@ import static org.mockito.Mockito.when;
 /**
  * Test for {@link AdminIdentityResolver}
  */
+@ExtendWith(VertxExtension.class)
 class AdminIdentityResolverTest
 {
     @Test
-    void testAdminIdentityFromConfig()
+    void testAdminIdentityFromConfig(VertxTestContext testContext)
     {
         IdentityToRoleCache mockIdentityToRoleCache = mock(IdentityToRoleCache.class);
+        when(mockIdentityToRoleCache.get("spiffe://cassandra/sidecar/test_user"))
+        .thenReturn(Future.succeededFuture(null));
         SuperUserCache mockSuperUserCache = mock(SuperUserCache.class);
         SidecarConfiguration mockConfig = mock(SidecarConfiguration.class);
         AccessControlConfiguration mockAclConfig = mock(AccessControlConfiguration.class);
@@ -48,17 +55,27 @@ class AdminIdentityResolverTest
         AdminIdentityResolver adminIdentityResolver = new AdminIdentityResolver(mockIdentityToRoleCache,
                                                                                 mockSuperUserCache,
                                                                                 mockConfig);
-        assertThat(adminIdentityResolver.isAdmin("spiffe://cassandra/sidecar/admin")).isTrue();
-        assertThat(adminIdentityResolver.isAdmin("spiffe://cassandra/sidecar/test_user")).isFalse();
+        Future.all(adminIdentityResolver.isAdmin("spiffe://cassandra/sidecar/admin"),
+                   adminIdentityResolver.isAdmin("spiffe://cassandra/sidecar/test_user"))
+              .onComplete(testContext.succeeding(compositeFuture -> {
+                  testContext.verify(() -> {
+                      assertThat(compositeFuture.<Boolean>resultAt(0)).isTrue();
+                      assertThat(compositeFuture.<Boolean>resultAt(1)).isFalse();
+                  });
+                  testContext.completeNow();
+              }));
     }
 
     @Test
-    void testSuperUser()
+    void testSuperUser(VertxTestContext testContext)
     {
         IdentityToRoleCache mockIdentityToRoleCache = mock(IdentityToRoleCache.class);
-        when(mockIdentityToRoleCache.get("spiffe://cassandra/sidecar/test_user")).thenReturn("test_role");
+        when(mockIdentityToRoleCache.get("spiffe://cassandra/sidecar/test_user"))
+        .thenReturn(Future.succeededFuture("test_role"));
+        when(mockIdentityToRoleCache.get("spiffe://cassandra/sidecar/admin"))
+        .thenReturn(Future.succeededFuture(null));
         SuperUserCache mockSuperUserCache = mock(SuperUserCache.class);
-        when(mockSuperUserCache.isSuperUser("test_role")).thenReturn(true);
+        when(mockSuperUserCache.isSuperUser("test_role")).thenReturn(Future.succeededFuture(true));
         SidecarConfiguration mockConfig = mock(SidecarConfiguration.class);
         AccessControlConfiguration mockAclConfig = mock(AccessControlConfiguration.class);
         when(mockAclConfig.adminIdentities()).thenReturn(Collections.emptySet());
@@ -66,14 +83,22 @@ class AdminIdentityResolverTest
         AdminIdentityResolver adminIdentityResolver = new AdminIdentityResolver(mockIdentityToRoleCache,
                                                                                 mockSuperUserCache,
                                                                                 mockConfig);
-        assertThat(adminIdentityResolver.isAdmin("spiffe://cassandra/sidecar/test_user")).isTrue();
-        assertThat(adminIdentityResolver.isAdmin("spiffe://cassandra/sidecar/admin")).isFalse();
+        Future.all(adminIdentityResolver.isAdmin("spiffe://cassandra/sidecar/test_user"),
+                   adminIdentityResolver.isAdmin("spiffe://cassandra/sidecar/admin"))
+              .onComplete(testContext.succeeding(compositeFuture -> {
+                  testContext.verify(() -> {
+                      assertThat(compositeFuture.<Boolean>resultAt(0)).isTrue();
+                      assertThat(compositeFuture.<Boolean>resultAt(1)).isFalse();
+                  });
+                  testContext.completeNow();
+              }));
     }
 
     @Test
-    void testNonAdminIdentity()
+    void testNonAdminIdentity(VertxTestContext testContext)
     {
         IdentityToRoleCache mockIdentityToRoleCache = mock(IdentityToRoleCache.class);
+        when(mockIdentityToRoleCache.get("spiffe://cassandra/sidecar/test_user")).thenReturn(Future.succeededFuture(null));
         SuperUserCache mockSuperUserCache = mock(SuperUserCache.class);
         SidecarConfiguration mockConfig = mock(SidecarConfiguration.class);
         AccessControlConfiguration mockAclConfig = mock(AccessControlConfiguration.class);
@@ -82,6 +107,11 @@ class AdminIdentityResolverTest
         AdminIdentityResolver adminIdentityResolver = new AdminIdentityResolver(mockIdentityToRoleCache,
                                                                                 mockSuperUserCache,
                                                                                 mockConfig);
-        assertThat(adminIdentityResolver.isAdmin("spiffe://cassandra/sidecar/test_user")).isFalse();
+
+        adminIdentityResolver.isAdmin("spiffe://cassandra/sidecar/test_user")
+                             .onComplete(testContext.succeeding(isAdmin -> {
+                                 testContext.verify(() -> assertThat(isAdmin).isFalse());
+                                 testContext.completeNow();
+                             }));
     }
 }

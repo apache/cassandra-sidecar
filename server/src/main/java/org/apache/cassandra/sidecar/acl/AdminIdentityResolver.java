@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.acl;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.acl.authorization.SuperUserCache;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -44,19 +45,20 @@ public class AdminIdentityResolver
         this.config = sidecarConfiguration.accessControlConfiguration();
     }
 
-    public boolean isAdmin(String identity)
+    public Future<Boolean> isAdmin(String identity)
     {
         if (config.adminIdentities().contains(identity))
         {
-            return true;
+            return Future.succeededFuture(true);
         }
-
-        String role = identityToRoleCache.get(identity);
-        if (role == null)
-        {
-            return false;
-        }
-        // Cassandra superusers have admin privileges
-        return superUserCache.isSuperUser(role);
+        return identityToRoleCache.get(identity)
+               .compose(role -> {
+                   if (role == null)
+                   {
+                       return Future.succeededFuture(false);
+                   }
+                   // Cassandra superusers have admin privileges
+                   return superUserCache.isSuperUser(role);
+               });
     }
 }

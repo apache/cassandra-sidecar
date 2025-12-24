@@ -190,25 +190,27 @@ public class CachedAuthorizationHandler implements AuthorizationHandler
     protected Future<Boolean> authorizeUser(AuthorizationContext authorizationContext, long startTimeNanos)
     {
         List<String> identities = extractIdentities(authorizationContext.user());
+        return isAdmin(identities)
+               .compose(isAdmin -> {
+                   // Admin identities bypass route specific authorization checks
+                   if (isAdmin)
+                   {
+                       return Future.succeededFuture(true);
+                   }
 
-        // Admin identities bypass route specific authorization checks
-        if (isAdmin(identities))
-        {
-            return Future.succeededFuture(true);
-        }
+                   Promise<Boolean> promise = Promise.promise();
+                   // check or fetch authorizations
+                   checkOrFetchAuthorizations(promise, authorizationContext, authorizationProviders.iterator());
 
-        Promise<Boolean> promise = Promise.promise();
-        // check or fetch authorizations
-        checkOrFetchAuthorizations(promise, authorizationContext, authorizationProviders.iterator());
-
-        Future<Boolean> future = promise.future();
-        future.onSuccess(ignored -> {
-            long durationNanos = System.nanoTime() - startTimeNanos;
-            // authorization time recorded here is only taking into account authorizations that are not cached
-            // and only successful authorizations are recorded
-            authMetrics.authorizationTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
+                   Future<Boolean> future = promise.future();
+                   future.onSuccess(ignored -> {
+                       long durationNanos = System.nanoTime() - startTimeNanos;
+                       // authorization time recorded here is only taking into account authorizations that are not cached
+                       // and only successful authorizations are recorded
+                       authMetrics.authorizationTime.metric.update(durationNanos, TimeUnit.NANOSECONDS);
+                   });
+                   return future;
         });
-        return future;
     }
 
     /**
@@ -264,15 +266,27 @@ public class CachedAuthorizationHandler implements AuthorizationHandler
         promise.fail(new HttpException(FORBIDDEN.code()));
     }
 
-    protected boolean isAdmin(List<String> identities)
+    protected Future<Boolean> isAdmin(List<String> identities)
     {
+        if (identities.isEmpty())
+        {
+            return Future.succeededFuture(false);
+        }
+        List<Future<Boolean>> adminFutures = new ArrayList<>(identities.size());
         for (String identity : identities)
         {
-            if (adminIdentityResolver.isAdmin(identity))
-            {
-                return true;
-            }
+            adminFutures.add(adminIdentityResolver.isAdmin(identity));
         }
-        return false;
+        return Future.all(adminFutures)
+                     .map(cf -> {
+                         for (int i = 0; i < cf.size(); i++)
+                         {
+                             if (Boolean.TRUE.equals(cf.resultAt(i)))
+                             {
+                                 return true;
+                             }
+                         }
+                         return false;
+                     });
     }
 }

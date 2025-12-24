@@ -22,8 +22,12 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,75 +37,111 @@ import static org.mockito.Mockito.when;
 /**
  * Test for {@link JwtRoleProcessorImpl}
  */
+@ExtendWith(VertxExtension.class)
 class JwtRoleProcessorTest
 {
     @Test
-    void testRoleExtractedWithSubField()
+    void testRoleExtractedWithSubField(VertxTestContext testContext)
     {
         IdentityToRoleCache mockIdentityToRoleCache = mock(IdentityToRoleCache.class);
-        when(mockIdentityToRoleCache.get("user_id")).thenReturn("test_role");
+        when(mockIdentityToRoleCache.get("user_id")).thenReturn(Future.succeededFuture("test_role"));
         JwtRoleProcessor roleProcessor = new JwtRoleProcessorImpl(mockIdentityToRoleCache);
         JsonObject decodedToken = new JsonObject();
         decodedToken.put("sub", "user_id");
-        assertThat(roleProcessor.processRoles(decodedToken)).contains("test_role");
+
+        roleProcessor.processRoles(decodedToken)
+                     .onSuccess(roles -> {
+                         testContext.verify(() -> assertThat(roles).contains("test_role"));
+                         testContext.completeNow();
+                     })
+                     .onFailure(testContext::failNow);
     }
 
     @Test
-    void testRoleExtractedWithIdentityField()
+    void testRoleExtractedWithIdentityField(VertxTestContext testContext)
     {
         IdentityToRoleCache mockIdentityToRoleCache = mock(IdentityToRoleCache.class);
-        when(mockIdentityToRoleCache.get("user_id")).thenReturn("test_role");
+        when(mockIdentityToRoleCache.get("user_id")).thenReturn(Future.succeededFuture("test_role"));
         JwtRoleProcessor roleProcessor = new JwtRoleProcessorImpl(mockIdentityToRoleCache);
         JsonObject decodedToken = new JsonObject();
         decodedToken.put("identity", "user_id");
-        assertThat(roleProcessor.processRoles(decodedToken)).contains("test_role");
+
+        roleProcessor.processRoles(decodedToken)
+                     .onSuccess(roles -> {
+                         testContext.verify(() -> assertThat(roles).contains("test_role"));
+                         testContext.completeNow();
+                     })
+                     .onFailure(testContext::failNow);
     }
 
     @Test
-    void testRoleExtractedWithIdentitiesField()
+    void testRoleExtractedWithIdentitiesField(VertxTestContext testContext)
     {
         IdentityToRoleCache mockIdentityToRoleCache = mock(IdentityToRoleCache.class);
-        when(mockIdentityToRoleCache.get("user_id1")).thenReturn("test_role1");
-        when(mockIdentityToRoleCache.get("user_id2")).thenReturn("test_role2");
-        when(mockIdentityToRoleCache.get("user_id3")).thenReturn("test_role3");
+        when(mockIdentityToRoleCache.get("user_id1")).thenReturn(Future.succeededFuture("test_role1"));
+        when(mockIdentityToRoleCache.get("user_id2")).thenReturn(Future.succeededFuture("test_role2"));
+        when(mockIdentityToRoleCache.get("user_id3")).thenReturn(Future.succeededFuture("test_role3"));
         JwtRoleProcessor roleProcessor = new JwtRoleProcessorImpl(mockIdentityToRoleCache);
         JsonObject decodedToken = new JsonObject();
         decodedToken.put("identities", Arrays.asList("user_id1", "user_id2", "user_id3"));
-        List<String> roles = roleProcessor.processRoles(decodedToken);
-        assertThat(roles).containsAll(Arrays.asList("test_role1", "test_role2", "test_role3"));
+        roleProcessor.processRoles(decodedToken)
+                     .onSuccess(roles -> {
+                         testContext.verify(() ->
+                             assertThat(roles).containsAll(Arrays.asList("test_role1", "test_role2", "test_role3"))
+                         );
+                         testContext.completeNow();
+                     })
+                     .onFailure(testContext::failNow);
     }
 
     @Test
-    void testEmptyIdentitiesField()
+    void testEmptyIdentitiesField(VertxTestContext testContext)
     {
         IdentityToRoleCache mockIdentityToRoleCache = mock(IdentityToRoleCache.class);
-        when(mockIdentityToRoleCache.get("user_id1")).thenReturn("test_role1");
-        when(mockIdentityToRoleCache.get("user_id2")).thenReturn("test_role2");
-        when(mockIdentityToRoleCache.get("user_id3")).thenReturn("test_role3");
+        when(mockIdentityToRoleCache.get("user_id1")).thenReturn(Future.succeededFuture("test_role1"));
+        when(mockIdentityToRoleCache.get("user_id2")).thenReturn(Future.succeededFuture("test_role2"));
+        when(mockIdentityToRoleCache.get("user_id3")).thenReturn(Future.succeededFuture("test_role3"));
         JwtRoleProcessor roleProcessor = new JwtRoleProcessorImpl(mockIdentityToRoleCache);
         JsonObject decodedToken = new JsonObject();
         decodedToken.put("identities", List.of());
-        assertThat(roleProcessor.processRoles(decodedToken)).isEmpty();
+        roleProcessor.processRoles(decodedToken)
+                     .onSuccess(roles -> {
+                         testContext.verify(() -> assertThat(roles).isEmpty());
+                         testContext.completeNow();
+                     })
+                     .onFailure(testContext::failNow);
     }
 
     @Test
-    void testNonStringIdentitiesField()
+    void testNonStringIdentitiesField(VertxTestContext testContext)
     {
         IdentityToRoleCache mockIdentityToRoleCache = mock(IdentityToRoleCache.class);
-        when(mockIdentityToRoleCache.get("1")).thenReturn("test_role1");
-        when(mockIdentityToRoleCache.get("2")).thenReturn("test_role2");
+        when(mockIdentityToRoleCache.get("1")).thenReturn(Future.succeededFuture("test_role1"));
+        when(mockIdentityToRoleCache.get("2")).thenReturn(Future.succeededFuture("test_role2"));
         JwtRoleProcessor roleProcessor = new JwtRoleProcessorImpl(mockIdentityToRoleCache);
         JsonObject decodedToken = new JsonObject();
         decodedToken.put("identities", List.of("1", "2"));
-        List<String> roles = roleProcessor.processRoles(decodedToken);
-        assertThat(roles).containsAll(Arrays.asList("test_role1", "test_role2"));
+        roleProcessor.processRoles(decodedToken)
+                     .onSuccess(roles -> {
+                         testContext.verify(() ->
+                             assertThat(roles).containsAll(Arrays.asList("test_role1", "test_role2"))
+                         );
+                         testContext.completeNow();
+                     })
+                     .onFailure(testContext::failNow);
     }
 
     @Test
-    void testUnrecognizedIdentity()
+    void testUnrecognizedIdentity(VertxTestContext testContext)
     {
         IdentityToRoleCache mockIdentityToRoleCache = mock(IdentityToRoleCache.class);
         JwtRoleProcessor roleProcessor = new JwtRoleProcessorImpl(mockIdentityToRoleCache);
-        assertThat(roleProcessor.processRoles(new JsonObject())).isEmpty();
+
+        roleProcessor.processRoles(new JsonObject())
+                     .onSuccess(roles -> {
+                         testContext.verify(() -> assertThat(roles).isEmpty());
+                         testContext.completeNow();
+                     })
+                     .onFailure(testContext::failNow);
     }
 }

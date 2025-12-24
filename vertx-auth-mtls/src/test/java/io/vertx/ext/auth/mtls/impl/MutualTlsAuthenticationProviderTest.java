@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
@@ -45,7 +46,6 @@ import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -82,7 +82,8 @@ class MutualTlsAuthenticationProviderTest
         List<Certificate> certChain = Collections.singletonList(validCert.cert());
         CertificateCredentials credentials = new CertificateCredentials(certChain);
 
-        when(mockIdentityExtracter.validIdentities(credentials)).thenReturn(Collections.singletonList("default"));
+        when(mockIdentityExtracter.validIdentities(credentials))
+        .thenReturn(Future.succeededFuture(Collections.singletonList("default")));
 
         mTlsAuth.authenticate(credentials)
                 .onFailure(res -> context.failNow("mTls should have succeeded"))
@@ -168,7 +169,8 @@ class MutualTlsAuthenticationProviderTest
         Certificate mockCertificate = mock(Certificate.class);
         CertificateCredentials credentials = new CertificateCredentials(Collections.singletonList(mockCertificate));
 
-        doThrow(new RuntimeException("Invalid certificate")).when(mockCertificateValidator).verifyCertificate(credentials);
+        when(mockCertificateValidator.verifyCertificate(credentials))
+        .thenReturn(Future.failedFuture(new RuntimeException("Invalid certificate")));
 
         mTlsAuth.authenticate(credentials)
                 .onSuccess(res -> context.failNow("Should have failed"))
@@ -188,7 +190,8 @@ class MutualTlsAuthenticationProviderTest
         List<Certificate> certChain = Collections.singletonList(validCert.cert());
         CertificateCredentials credentials = new CertificateCredentials(certChain);
 
-        when(mockIdentityExtracter.validIdentities(credentials)).thenThrow(new RuntimeException("Bad Identity"));
+        when(mockIdentityExtracter.validIdentities(credentials))
+        .thenReturn(Future.failedFuture(new RuntimeException("Bad Identity")));
 
         mTlsAuth.authenticate(credentials)
                 .onSuccess(res -> context.failNow("Should have failed"))

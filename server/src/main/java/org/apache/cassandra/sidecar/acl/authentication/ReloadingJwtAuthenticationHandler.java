@@ -165,19 +165,24 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
                 return;
             }
 
-            List<String> roles = extractCassandraRoles(decodedToken);
-            String roleIntended = context.request().getHeader(AUTH_ROLE);
+            extractCassandraRoles(decodedToken)
+                    .onSuccess(roles -> {
+                        String roleIntended = context.request().getHeader(AUTH_ROLE);
 
-            if (isNotEmpty(roleIntended) && !roles.contains(roleIntended))
-            {
-                String errMsg = String.format("User not authorized for role %s", roleIntended);
-                handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, errMsg)));
-                return;
-            }
+                        if (isNotEmpty(roleIntended) && !roles.contains(roleIntended))
+                        {
+                            String errMsg = String.format("User not authorized for role %s", roleIntended);
+                            handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, errMsg)));
+                            return;
+                        }
 
-            List<String> rolesToAdd = isNotEmpty(roleIntended) ? List.of(roleIntended) : roles;
-            user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
-            handler.handle(Future.succeededFuture(user));
+                        List<String> rolesToAdd = isNotEmpty(roleIntended) ? List.of(roleIntended) : roles;
+                        user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
+                        handler.handle(Future.succeededFuture(user));
+                    })
+                    .onFailure(cause -> {
+                        handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, cause)));
+                    });
         });
     }
 
@@ -201,17 +206,13 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
         }
     }
 
-    private List<String> extractCassandraRoles(JsonObject decodedToken)
+    private Future<List<String>> extractCassandraRoles(JsonObject decodedToken)
     {
-        try
-        {
-            return roleProcessor.processRoles(decodedToken);
-        }
-        catch (Exception e)
-        {
-            LOGGER.debug("Error processing cassandra role from JWT token", e);
-        }
-        return List.of();
+        return roleProcessor.processRoles(decodedToken)
+                            .recover(cause -> {
+                                LOGGER.debug("Error processing cassandra role from JWT token", cause);
+                                return Future.succeededFuture(List.of());
+                            });
     }
 
     /**

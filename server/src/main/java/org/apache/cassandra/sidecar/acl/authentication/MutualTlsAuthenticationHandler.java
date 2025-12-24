@@ -82,49 +82,51 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
                     .recover(cause -> { // converts any exception to unauthorized http exception
                         throw wrapHttpException(UNAUTHORIZED, cause);
                     })
-                    .andThen(authN-> {
-                        if (authN.failed())
-                        {
-                            handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, authN.cause())));
-                            return;
-                        }
+                    .compose(user -> {
+                        List<String> identities = extractIdentities(user);
+                        return extractCassandraRoles(identities)
+                                .map(roles -> {
+                                    String roleIntended = ctx.request().getHeader(AUTH_ROLE);
 
-                        List<String> identities = extractIdentities(authN.result());
-                        List<String> roles = extractCassandraRoles(identities);
-                        String roleIntended = ctx.request().getHeader(AUTH_ROLE);
+                                    if (isNotEmpty(roleIntended) && !roles.contains(roleIntended))
+                                    {
+                                        String errMsg = String.format("None of the identities %s are authorized for role %s",
+                                                                      identities, roleIntended);
+                                        throw wrapHttpException(UNAUTHORIZED, errMsg);
+                                    }
 
-                        if (isNotEmpty(roleIntended) && !roles.contains(roleIntended))
-                        {
-                            String errMsg = String.format("None of the identities %s are authorized for role %s",
-                                                          identities, roleIntended);
-                            handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, errMsg)));
-                            return;
-                        }
-
-                        List<String> rolesToAdd = isNotEmpty(roleIntended) ? List.of(roleIntended) : roles;
-                        authN.result().attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
-                        handler.handle(authN);
-                    });
+                                    List<String> rolesToAdd = isNotEmpty(roleIntended) ? List.of(roleIntended) : roles;
+                                    user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
+                                    return user;
+                                });
+                    })
+                    .onComplete(handler);
     }
 
-    private List<String> extractCassandraRoles(List<String> identities)
+    private Future<List<String>> extractCassandraRoles(List<String> identities)
     {
-        List<String> roles = new ArrayList<>();
-        try
+        List<Future<String>> roleFutures = new ArrayList<>();
+        for (String identity : identities)
         {
-            for (String identity : identities)
-            {
-                String role = identityToRoleCache.get(identity);
-                if (role != null)
-                {
-                    roles.add(role);
-                }
-            }
+            roleFutures.add(identityToRoleCache.get(identity)
+                                               .recover(e -> {
+                                                   LOGGER.debug("Could not retrieve role associated with identity: {}",
+                                                                identity, e);
+                                                   return Future.succeededFuture(null);
+                                               }));
         }
-        catch (Exception e)
-        {
-            LOGGER.debug("Could not retrieve roles associated with the identities", e);
-        }
-        return roles;
+        return Future.all(roleFutures)
+                     .map(compositeFuture -> {
+                         List<String> roles = new ArrayList<>();
+                         for (int i = 0; i < compositeFuture.size(); i++)
+                         {
+                             String role = compositeFuture.resultAt(i);
+                             if (role != null)
+                             {
+                                 roles.add(role);
+                             }
+                         }
+                         return roles;
+                     });
     }
 }

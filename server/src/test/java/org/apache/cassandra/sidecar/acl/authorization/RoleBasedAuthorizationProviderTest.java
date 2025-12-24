@@ -26,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.Future;
 import io.vertx.ext.auth.User;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -64,7 +65,8 @@ class RoleBasedAuthorizationProviderTest
     {
         RoleAuthorizationsCache mockRolePermissionsCache = mock(RoleAuthorizationsCache.class);
         when(mockRolePermissionsCache.getAuthorizations("test_role"))
-        .thenReturn(new HashSet<>(Arrays.asList(CassandraPermissions.CREATE.toAuthorization(), BasicPermissions.CREATE_SNAPSHOT.toAuthorization())));
+        .thenReturn(Future.succeededFuture(new HashSet<>(Arrays.asList(CassandraPermissions.CREATE.toAuthorization(),
+                                                                       BasicPermissions.CREATE_SNAPSHOT.toAuthorization()))));
         RoleBasedAuthorizationProvider authorizationProvider = new RoleBasedAuthorizationProvider(mockRolePermissionsCache);
         User user = User.fromName("test_user");
         user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, List.of("test_role"));

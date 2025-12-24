@@ -24,8 +24,12 @@ import java.util.Collections;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
 import io.vertx.ext.auth.authentication.CredentialValidationException;
 import org.apache.cassandra.sidecar.TestResourceReaper;
@@ -43,13 +47,13 @@ import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
 
 import static org.apache.cassandra.sidecar.ExecutorPoolsHelper.createdSharedTestPool;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
  * Test for {@link org.apache.cassandra.sidecar.acl.authentication.CassandraIdentityExtractor}
  */
+@ExtendWith(VertxExtension.class)
 class CassandraIdentityExtractorTest
 {
     private static final MetricRegistryFactory FACTORY
@@ -75,60 +79,95 @@ class CassandraIdentityExtractorTest
     }
 
     @Test
-    void testExtractingIdentityWithRole() throws Exception
+    void testExtractingIdentityWithRole(VertxTestContext testContext) throws Exception
     {
         IdentityToRoleCache cache = identityRoleCache();
         cache.warmUp(5);
 
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
+        when(mockAdminIdentityResolver.isAdmin("spiffe://cassandra/sidecar/test"))
+        .thenReturn(Future.succeededFuture(false));
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(mockAdminIdentityResolver, cache);
 
         X509Certificate certificate = certificate("spiffe://cassandra/sidecar/test");
-        assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate)).size()).isOne();
-        assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate))).contains("spiffe://cassandra/sidecar/test");
+
+        identityExtractor.validIdentities(new CertificateCredentials(certificate))
+                         .onSuccess(identities -> {
+                             testContext.verify(() -> {
+                                 assertThat(identities.size()).isOne();
+                                 assertThat(identities).contains("spiffe://cassandra/sidecar/test");
+                             });
+                             testContext.completeNow();
+                         })
+                         .onFailure(testContext::failNow);
     }
 
     @Test
-    void testExtractingIdentityWithoutRole() throws Exception
+    void testExtractingIdentityWithoutRole(VertxTestContext testContext) throws Exception
     {
         IdentityToRoleCache cache = identityRoleCache();
         cache.warmUp(5);
 
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
+        when(mockAdminIdentityResolver.isAdmin("spiffe://identity/without/role"))
+        .thenReturn(Future.succeededFuture(false));
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(mockAdminIdentityResolver, cache);
 
         X509Certificate certificate = certificate("spiffe://identity/without/role");
-        assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate)))
-        .isInstanceOf(CredentialValidationException.class);
+        identityExtractor.validIdentities(new CertificateCredentials(certificate))
+                         .onComplete(ar -> {
+                             testContext.verify(() -> {
+                                 assertThat(ar.failed()).isTrue();
+                                 assertThat(ar.cause()).isInstanceOf(CredentialValidationException.class);
+                             });
+                             testContext.completeNow();
+                         });
     }
 
     @Test
-    void testAdminIdentities() throws Exception
+    void testAdminIdentities(VertxTestContext testContext) throws Exception
     {
         IdentityToRoleCache cache = identityRoleCache();
 
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
-        when(mockAdminIdentityResolver.isAdmin("spiffe://sidecar/admin/identity")).thenReturn(true);
+        when(mockAdminIdentityResolver.isAdmin("spiffe://sidecar/admin/identity"))
+        .thenReturn(Future.succeededFuture(true));
 
         // passing empty cache
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(mockAdminIdentityResolver, cache);
 
         X509Certificate certificate = certificate("spiffe://sidecar/admin/identity");
-        assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate)).size()).isOne();
-        assertThat(identityExtractor.validIdentities(new CertificateCredentials(certificate))).contains("spiffe://sidecar/admin/identity");
+        identityExtractor.validIdentities(new CertificateCredentials(certificate))
+                         .onSuccess(identities -> {
+                             testContext.verify(() -> {
+                                 assertThat(identities.size()).isOne();
+                                 assertThat(identities).contains("spiffe://sidecar/admin/identity");
+                             });
+                             testContext.completeNow();
+                         })
+                         .onFailure(testContext::failNow);
     }
 
     @Test
-    void testEmptyIdentities() throws Exception
+    void testEmptyIdentities(VertxTestContext testContext) throws Exception
     {
         IdentityToRoleCache cache = identityRoleCache();
 
         AdminIdentityResolver mockAdminIdentityResolver = mock(AdminIdentityResolver.class);
+        when(mockAdminIdentityResolver.isAdmin("spiffe://sidecar/admin/identity"))
+        .thenReturn(Future.succeededFuture(false));
 
         // passing empty cache
         CassandraIdentityExtractor identityExtractor = new CassandraIdentityExtractor(mockAdminIdentityResolver, cache);
         X509Certificate certificate = certificate("spiffe://sidecar/admin/identity");
-        assertThatThrownBy(() -> identityExtractor.validIdentities(new CertificateCredentials(certificate))).isInstanceOf(CredentialValidationException.class);
+        identityExtractor.validIdentities(new CertificateCredentials(certificate))
+                         .onComplete(ar -> {
+                             testContext.verify(() -> {
+                                 assertThat(ar.failed()).isTrue();
+                                 assertThat(ar.cause()).isInstanceOf(CredentialValidationException.class);
+                             });
+                             testContext.completeNow();
+                         });
     }
 
     private IdentityToRoleCache identityRoleCache()

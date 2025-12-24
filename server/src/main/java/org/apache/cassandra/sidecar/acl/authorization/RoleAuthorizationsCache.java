@@ -1,21 +1,3 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.cassandra.sidecar.acl.authorization;
 
 import java.util.Collections;
@@ -24,6 +6,7 @@ import java.util.Set;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.auth.authorization.Authorization;
 import org.apache.cassandra.sidecar.acl.AuthCache;
@@ -79,10 +62,10 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
      *
      * @param ignored key for retrieval. Cache always contains one entry stored against unique_cache_entry_key,
      *                hence key is ignored
-     * @return Cache entry stored against unique_cache_entry_key
+     * @return A {@link Future} containing the cache entry stored against unique_cache_entry_key
      */
     @Override
-    public Map<String, Set<Authorization>> get(String ignored)
+    public Future<Map<String, Set<Authorization>>> get(String ignored)
     {
         // RoleAuthorizationsCache stores all entries of role to authorizations mappings against a single key,
         // which is unique_cache_entry_key. This is to refresh and pick up all entries and their changes from
@@ -95,12 +78,13 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
      * Provides authorizations given user's role.
      *
      * @param role a role a user holds
-     * @return a {@code Set} of {@link Authorization} a role holds.
+     * @return a {@link Future} containing a {@code Set} of {@link Authorization} a role holds.
      */
-    public Set<Authorization> getAuthorizations(String role)
+    public Future<Set<Authorization>> getAuthorizations(String role)
     {
-        Map<String, Set<Authorization>> roleAuthorizations = get(UNIQUE_CACHE_ENTRY);
-        return roleAuthorizations != null ? roleAuthorizations.get(role) : Collections.emptySet();
+        return get(UNIQUE_CACHE_ENTRY)
+               .map(roleAuthorizations ->
+                    roleAuthorizations != null ? roleAuthorizations.get(role) : Collections.emptySet());
     }
 
     private static Map<String, Set<Authorization>> loadAuthorizations(SystemAuthDatabaseAccessor systemAuthDatabaseAccessor,

@@ -20,8 +20,8 @@ package io.vertx.ext.auth.mtls;
 
 import java.util.List;
 
+import io.vertx.core.Future;
 import io.vertx.ext.auth.authentication.CertificateCredentials;
-import io.vertx.ext.auth.authentication.CredentialValidationException;
 
 /**
  * {@link CertificateIdentityExtractor} extracts valid identities from certificate chain. Interface can be extended to
@@ -32,7 +32,7 @@ public interface CertificateIdentityExtractor
     /**
      * Extracts valid identities out of {@link CertificateCredentials} certificate chain. These identities can later
      * be used for authorizing user's resource level permissions. If a valid identity could not be extracted, then
-     * throws {@code CredentialValidationException}
+     * the returned future will be failed.
      *
      * <p>An example of identity could be the following:
      * <ul>
@@ -42,8 +42,8 @@ public interface CertificateIdentityExtractor
      * </ul>
      *
      * @param certificateCredentials certificate chain of user that is already verified
-     * @return list of valid identities extracted from certificate.
-     * @throws CredentialValidationException when a valid identity cannot be extracted from certificate chain.
+     * @return future with list of valid identities extracted from certificate. Failed future when a valid identity
+     *         cannot be extracted from certificate chain.
      */
-    List<String> validIdentities(CertificateCredentials certificateCredentials) throws CredentialValidationException;
+    Future<List<String>> validIdentities(CertificateCredentials certificateCredentials);
 }

@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.acl.authentication;
 
 import java.util.List;
 
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -31,7 +32,7 @@ public interface JwtRoleProcessor
      * Processes list of cassandra roles held by a user, given decoded JWT token
      *
      * @param decodedToken the decoded JWT token as a JsonObject
-     * @return cassandra roles associated with the JWT token
+     * @return future of cassandra roles associated with the JWT token
      */
-    List<String> processRoles(JsonObject decodedToken);
+    Future<List<String>> processRoles(JsonObject decodedToken);
 }
