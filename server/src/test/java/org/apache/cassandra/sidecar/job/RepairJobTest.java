@@ -21,7 +21,9 @@ package org.apache.cassandra.sidecar.job;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
@@ -36,11 +38,13 @@ import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.RepairJobsConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.RepairJobsConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
+import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
 import org.apache.cassandra.sidecar.handlers.data.RepairRequestParam;
 import org.mockito.Mockito;
 
@@ -254,6 +258,14 @@ public class RepairJobTest
         RepairJob job2 = createRepairJob(config, storageOperations, "keyspace1", "table2");
         RepairJob job3 = createRepairJob(config, storageOperations, "keyspace2", "table1");
 
+//        UUID jobId = UUIDs.timeBased();
+        CountDownLatch latch = new CountDownLatch(1);
+//        OperationalJob testJob = OperationalJobTest.createOperationalJob(jobId, SecondBoundConfiguration.parse("2s"));
+        BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (job, exception) -> {
+            assertThat(exception).isNull();
+            latch.countDown();
+        };
+
         // Submit all jobs to the manager
         Promise<Void> promise1 = Promise.promise();
         Promise<Void> promise2 = Promise.promise();
@@ -262,10 +274,10 @@ public class RepairJobTest
         job1.execute(promise1);
         job2.execute(promise2);
         job3.execute(promise3);
-        
-        manager.trySubmitJob(job1);
-        manager.trySubmitJob(job2);
-        manager.trySubmitJob(job3);
+
+        manager.trySubmitJob(job1, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        manager.trySubmitJob(job2, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        manager.trySubmitJob(job3, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
 
         // Wait for all jobs to complete (with timeout)
         if (!promise1.future().isComplete())

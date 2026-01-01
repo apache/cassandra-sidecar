@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.job;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +70,7 @@ public class RepairJob extends OperationalJob
      */
     public enum ParentRepairStatus
     {
-        IN_PROGRESS, COMPLETED, FAILED, NEW_STATUS
+        IN_PROGRESS, COMPLETED, FAILED
     }
 
     /**
@@ -112,7 +113,6 @@ public class RepairJob extends OperationalJob
     @Override
     protected Future<Void> executeInternal()
     {
-        final Promise<Void> repairJobPromise = Promise.promise();
         try
         {
             Map<String, String> options = generateRepairOptions(repairParams.requestPayload());
@@ -139,6 +139,8 @@ public class RepairJob extends OperationalJob
                 return Future.succeededFuture();
             }
 
+            // Create promise only when we need it for periodic status checking
+            final Promise<Void> repairJobPromise = Promise.promise();
             int maxAttempts = config.repairStatusMaxAttempts();
             final AtomicInteger attemptCounter = new AtomicInteger(0);
 
@@ -337,14 +339,21 @@ public class RepairJob extends OperationalJob
         {
             try
             {
-                long startToken = Long.parseLong(repairPayload.startToken());
-                long endToken = Long.parseLong(repairPayload.endToken());
-                if (startToken >= endToken)
+                String startTokenStr = repairPayload.startToken();
+                String endTokenStr = repairPayload.endToken();
+                
+                // Validate tokens using BigInteger for proper numeric comparison
+                BigInteger startToken = new BigInteger(startTokenStr);
+                BigInteger endToken = new BigInteger(endTokenStr);
+                
+                if (startToken.compareTo(endToken) >= 0)
                 {
                     throw new IllegalArgumentException("Start token must be less than end token. " +
-                                                      "Got start: " + startToken + ", end: " + endToken);
+                                                      "Got start: " + startTokenStr + ", end: " + endTokenStr);
                 }
-                options.put(RepairOptions.RANGES.optionName(), repairPayload.startToken() + ":" + repairPayload.endToken());
+                
+                // Use original string values for range construction
+                options.put(RepairOptions.RANGES.optionName(), startTokenStr + ":" + endTokenStr);
             }
             catch (NumberFormatException e)
             {

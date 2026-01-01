@@ -211,10 +211,7 @@ public abstract class OperationalJob implements Task<Void>
                 if (ar.succeeded())
                 {
                     promise.tryComplete();
-                    if (LOGGER.isDebugEnabled())
-                    {
-                        LOGGER.debug("Complete job execution. jobId={} status={}", jobId, status());
-                    }
+                    LOGGER.info("Complete job execution. jobId={} status={}", jobId, status());
                 }
                 else
                 {

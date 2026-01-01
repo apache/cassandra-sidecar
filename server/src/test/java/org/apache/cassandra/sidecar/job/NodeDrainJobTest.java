@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.job;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -73,40 +74,34 @@ class NodeDrainJobTest
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_DRAINING);
 
-        assertThat(nodeDrainJob.isRunningOnCassandra()).isTrue();
+        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isTrue();
     }
 
     @Test
     void testIsRunningOnCassandra_WhenDrained()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_DRAINED);
-
-        assertThat(nodeDrainJob.isRunningOnCassandra()).isFalse();
+        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isFalse();
     }
 
     @Test
     void testIsRunningOnCassandra_WhenNormal()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
-
-        assertThat(nodeDrainJob.isRunningOnCassandra()).isFalse();
-    }
+        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isFalse();    }
 
     @Test
     void testIsRunningOnCassandra_WhenUnknownState()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_UNKNOWN);
-
-        assertThat(nodeDrainJob.isRunningOnCassandra()).isFalse();
+        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isFalse();
     }
 
     @Test
     void testIsRunningOnCassandra_WhenNull()
     {
         when(mockStorageOperations.operationMode()).thenReturn(null);
-
-        assertThat(nodeDrainJob.isRunningOnCassandra()).isFalse();
-    }
+        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isFalse();    }
 
     @Test
     void testStatus_WhenDraining()

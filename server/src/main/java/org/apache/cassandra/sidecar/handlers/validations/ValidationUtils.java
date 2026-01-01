@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.handlers.validations;
 import com.datastax.driver.core.KeyspaceMetadata;
 import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.exceptions.KeyspaceNotFoundException;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 /**
@@ -63,7 +64,7 @@ public class ValidationUtils
      * @return a Future that completes with the KeyspaceMetadata if the keyspace exists,
      *         or fails with an error if the keyspace doesn't exist or an error occurs
      */
-    public static Future<KeyspaceMetadata> validateKeyspaceExists(InstanceMetadataFetcher metadataFetcher,
+    public static Future<KeyspaceMetadata> requireKeyspaceExists(InstanceMetadataFetcher metadataFetcher,
                                                                  ExecutorPools executorPools,
                                                                  String host,
                                                                  String keyspace)
@@ -72,7 +73,7 @@ public class ValidationUtils
                .compose(keyspaceMetadata -> {
                    if (keyspaceMetadata == null)
                    {
-                       return Future.failedFuture("Keyspace " + keyspace + " was not found");
+                       return Future.failedFuture(new KeyspaceNotFoundException(keyspace));
                    }
                    else
                    {

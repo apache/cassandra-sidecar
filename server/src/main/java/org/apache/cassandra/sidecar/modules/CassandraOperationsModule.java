@@ -234,13 +234,13 @@ public class CassandraOperationsModule extends AbstractModule
     }
 
     @GET
-    @Path(ApiEndpointsV1.STREAM_STATS_ROUTE)
-    @Operation(summary = "Get stream statistics",
-               description = "Returns streaming statistics for the Cassandra node")
-    @APIResponse(description = "Stream statistics retrieved successfully",
+    @Path(ApiEndpointsV1.REPAIR_ROUTE)
+    @Operation(summary = "Trigger a repair operation",
+               description = "Returns the status of the repair operation on the Cassandra node")
+    @APIResponse(description = "Repair operation status retrieved successfully",
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = StreamStatsResponse.class)))
+                 schema = @Schema(implementation = OperationalJobResponse.class)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.CassandraRepairRouteKey.class)
     VertxRoute cassandraRepairRoute(RouteBuilder.Factory factory,
@@ -254,6 +254,14 @@ public class CassandraOperationsModule extends AbstractModule
                       .build();
     }
 
+    @GET
+    @Path(ApiEndpointsV1.STREAM_STATS_ROUTE)
+    @Operation(summary = "Get stream statistics",
+    description = "Returns streaming statistics for the Cassandra node")
+    @APIResponse(description = "Stream statistics retrieved successfully",
+    responseCode = "200",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(implementation = StreamStatsResponse.class)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.CassandraStreamStatsRouteKey.class)
     VertxRoute cassandraStreamStatsRoute(RouteBuilder.Factory factory,

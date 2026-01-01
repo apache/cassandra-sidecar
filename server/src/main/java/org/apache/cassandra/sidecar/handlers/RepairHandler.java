@@ -31,14 +31,11 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
-import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
 import org.apache.cassandra.sidecar.handlers.data.RepairRequestParam;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.job.RepairJob;
@@ -122,24 +119,12 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
         RepairJob job = new RepairJob(executorPools.internal(), config.repairConfiguration(), UUIDs.timeBased(), operations, repairRequestParam);
-        try
-        {
-            jobManager.trySubmitJob(job);
-        }
-        catch (OperationalJobConflictException oje)
-        {
-            String reason = oje.getMessage();
-            logger.warn("Conflicting repair job encountered for keyspace {}, tables {}, reason={}",
-                        repairRequestParam.keyspace(),
-                        repairRequestParam.requestPayload().tables(),
-                        reason);
-            context.response().setStatusCode(HttpResponseStatus.CONFLICT.code());
-            context.json(new OperationalJobResponse(job.jobId(), OperationalJobStatus.FAILED, job.name(), reason));
-            return;
-        }
 
-        job.asyncResult(executorPools.service(), config.operationalJobExecutionMaxWaitTime())
-           .onComplete(v -> OperationalJobUtils.sendStatusBasedResponse(context, job));
+        this.jobManager.trySubmitJob(job,
+                                     (completedJob, exception) ->
+                                     OperationalJobUtils.sendStatusBasedResponse(context, completedJob, exception),
+                                     executorPools.service(),
+                                     config.operationalJobExecutionMaxWaitTime());
     }
 
     /**
