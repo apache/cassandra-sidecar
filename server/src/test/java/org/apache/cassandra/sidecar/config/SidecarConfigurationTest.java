@@ -834,8 +834,8 @@ class SidecarConfigurationTest
     @Test
     void testInvalidOperationalJobExecutionMaxWaitTime()
     {
-        String yaml = "service:\\n" +
-                      "  " + ServiceConfigurationImpl.OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY + ": 2m";
+        String yaml = "sidecar:\n" +
+                  "  " + ServiceConfigurationImpl.OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY + ": 2m";
         assertThatExceptionOfType(JsonMappingException.class)
         .isThrownBy(() -> SidecarConfigurationImpl.fromYamlString(yaml))
         .withRootCauseInstanceOf(ConfigurationException.class)
