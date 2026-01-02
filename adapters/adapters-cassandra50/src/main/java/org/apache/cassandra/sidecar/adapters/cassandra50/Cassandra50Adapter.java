@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.adapters.cassandra41;
+package org.apache.cassandra.sidecar.adapters.cassandra50;
 
 import java.net.InetSocketAddress;
 
@@ -34,9 +34,9 @@ import org.jetbrains.annotations.NotNull;
 /**
  * A {@link ICassandraAdapter} implementation for Cassandra 4.x
  */
-public class Cassandra41Adapter extends CassandraAdapter
+public class Cassandra50Adapter extends CassandraAdapter
 {
-    public Cassandra41Adapter(DnsResolver dnsResolver,
+    public Cassandra50Adapter(DnsResolver dnsResolver,
                               JmxClient jmxClient,
                               CQLSessionProvider session,
                               InetSocketAddress localNativeTransportAddress,
@@ -53,7 +53,7 @@ public class Cassandra41Adapter extends CassandraAdapter
     @NotNull
     protected StorageOperations createStorageOperations(DnsResolver dnsResolver, JmxClient jmxClient)
     {
-        return new Cassandra41StorageOperations(jmxClient, dnsResolver);
+        return new Cassandra50StorageOperations(jmxClient, dnsResolver);
     }
 
     /**
@@ -65,6 +65,6 @@ public class Cassandra41Adapter extends CassandraAdapter
     @NotNull
     protected CompactionManagerOperations createCompactionManagerOperations(JmxClient jmxClient)
     {
-        return new Cassandra41CompactionManagerOperations(jmxClient);
+        return new Cassandra50CompactionManagerOperations(jmxClient);
     }
 }

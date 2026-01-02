@@ -91,9 +91,9 @@ class CassandraCompactionManagerOperationsTest
         String[] supportedTypes = {
             "COMPACTION", "VALIDATION", "KEY_CACHE_SAVE", "ROW_CACHE_SAVE",
             "COUNTER_CACHE_SAVE", "CLEANUP", "SCRUB", "UPGRADE_SSTABLES",
-            "INDEX_BUILD", "TOMBSTONE_COMPACTION", "UNKNOWN", "ANTICOMPACTION",
+            "INDEX_BUILD", "TOMBSTONE_COMPACTION", "ANTICOMPACTION",
             "VERIFY", "VIEW_BUILD", "INDEX_SUMMARY", "RELOCATE",
-            "GARBAGE_COLLECT", "WRITE"
+            "GARBAGE_COLLECT"
         };
 
         for (String type : supportedTypes)

@@ -46,7 +46,9 @@ public interface CompactionManagerOperations
      * Stops compaction based on type if no compaction ID is provided.
      *
      * @param compactionType   the compaction ID to stop (nullable)
-     * @throws IllegalArgumentException if both parameters are null or empty
+     * @throws IllegalArgumentException if both parameters are null or empty, or of the provided compactionType is unsupported
      */
     void stopCompaction(String compactionType);
+
+    List<String> supportedCompactionTypes();
 }

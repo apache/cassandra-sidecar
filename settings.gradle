@@ -29,6 +29,7 @@ include "vertx-client-shaded"
 if (JavaVersion.current().isJava11Compatible()) {
     include "adapters:adapters-base"
     include "adapters:adapters-cassandra41"
+    include "adapters:adapters-cassandra50"
     include "docs"
     include "server"
     include "server-common"

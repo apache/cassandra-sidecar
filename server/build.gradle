@@ -180,6 +180,7 @@ dependencies {
     implementation(project(":server-common"))
     implementation(project(":adapters:adapters-base"))
     implementation(project(":adapters:adapters-cassandra41"))
+    implementation(project(":adapters:adapters-cassandra50"))
     implementation(project(":vertx-auth-mtls"))
     implementation(project(":vertx-client"))
 

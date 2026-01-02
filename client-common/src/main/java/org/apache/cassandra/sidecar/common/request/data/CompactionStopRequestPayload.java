@@ -18,24 +18,25 @@
 
 package org.apache.cassandra.sidecar.common.request.data;
 
+import java.util.Locale;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.cassandra.sidecar.common.data.CompactionType;
 
 /**
  * Request payload for stopping compaction operations.
  *
  * <p>Valid JSON:</p>
  * <pre>
- *   { "compaction_type": "COMPACTION", "compaction_id": "abc-123" }
- *   { "compaction_type": "VALIDATION" }
+ *   { "compactionType": "COMPACTION", "compactionId": "abc-123" }
+ *   { "compactionType": "VALIDATION" }
  * </pre>
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CompactionStopRequestPayload
 {
-    private final CompactionType compactionType;
+    private final String compactionType;
     private final String compactionId;
 
     /**
@@ -45,18 +46,35 @@ public class CompactionStopRequestPayload
      * @param compactionId   optional ID of a specific compaction to stop
      */
     @JsonCreator
-    public CompactionStopRequestPayload(@JsonProperty(value = "compaction_type") CompactionType compactionType,
-                                        @JsonProperty(value = "compaction_id") String compactionId)
+    public CompactionStopRequestPayload(@JsonProperty(value = "compactionType") String compactionType,
+                                        @JsonProperty(value = "compactionId") String compactionId)
     {
-        this.compactionType = compactionType;
+        // Normalize compactionType: trim whitespace and convert to uppercase
+        this.compactionType = normalizeCompactionType(compactionType);
         this.compactionId = compactionId;
+    }
+
+    /**
+     * Normalizes the compaction type by trimming whitespace and converting to uppercase.
+     * Returns null for null or empty strings.
+     *
+     * @param compactionType the raw compaction type string
+     * @return normalized compaction type or null
+     */
+    private static String normalizeCompactionType(String compactionType)
+    {
+        if (compactionType == null || compactionType.trim().isEmpty())
+        {
+            return null;
+        }
+        return compactionType.trim().toUpperCase(Locale.ROOT);
     }
 
     /**
      * @return the type of compaction to stop
      */
-    @JsonProperty("compaction_type")
-    public CompactionType compactionType()
+    @JsonProperty("compactionType")
+    public String compactionType()
     {
         return this.compactionType;
     }
@@ -64,7 +82,7 @@ public class CompactionStopRequestPayload
     /**
      * @return the ID of a specific compaction to stop, or null to stop all specified type
      */
-    @JsonProperty("compaction_id")
+    @JsonProperty("compactionId")
     public String compactionId()
     {
         return this.compactionId != null ? this.compactionId.trim() : null;
@@ -79,11 +97,11 @@ public class CompactionStopRequestPayload
     }
 
     /**
-     * Checks compaction type not null for invalid compactionId cases
+     * Checks compaction type not null and not empty for invalid compactionId cases
     * */
     public boolean hasValidCompactionType()
     {
-        return this.compactionType != null;
+        return this.compactionType != null && !this.compactionType.isEmpty();
     }
 
     /**

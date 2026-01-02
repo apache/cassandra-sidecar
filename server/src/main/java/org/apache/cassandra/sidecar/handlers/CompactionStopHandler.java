@@ -31,7 +31,6 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
-import org.apache.cassandra.sidecar.common.data.CompactionType;
 import org.apache.cassandra.sidecar.common.request.data.CompactionStopRequestPayload;
 import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
 import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
@@ -46,9 +45,9 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * Handler for stopping compaction operations via the Cassandra Compaction Manager.
  *
  * <p>Handles {@code PUT /api/v1/cassandra/operations/compaction/stop} requests to stop
- * compaction operations. Expects a JSON payload with compaction_type and/or compaction_id:
+ * compaction operations. Expects a JSON payload with compactionType and/or compactionId:
  * <pre>
- *   { "compaction_type": "COMPACTION", "compaction_id": "abc-123" }
+ *   { "compactionType": "COMPACTION", "compactionId": "abc-123" }
  * </pre>
  */
 public class CompactionStopHandler extends AbstractHandler<CompactionStopRequestPayload> implements AccessProtected
@@ -96,28 +95,34 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
      * Stops the compaction based on the request parameters
      *
      * @param operations the compaction manager operations
-     * @param request    the request payload containing compaction_type and/or compaction_id
+     * @param request    the request payload containing compactionType and/or compactionId
      * @return CompactionStopResponse with the operation result
      */
     private CompactionStopResponse stopCompaction(CompactionManagerOperations operations,
                                                   CompactionStopRequestPayload request)
     {
-        CompactionType compactionType = request.compactionType();
+        String compactionType = request.compactionType();
         String compactionId = request.compactionId();
 
-        // Convert enum to string for the operation (if not null)
-        // Use .name() to get uppercase enum name, matching Cassandra's OperationType enum format
-        String compactionTypeStr = compactionType != null ? compactionType.name() : null;
+        // Validate compaction type supported by this Cassandra version
+        if (compactionType != null && !operations.supportedCompactionTypes().contains(compactionType))
+        {
+            throw new IllegalArgumentException(
+                String.format("Compaction type '%s' not supported in this Cassandra version. " +
+                             "Supported types: %s",
+                             compactionType,
+                             String.join(", ", operations.supportedCompactionTypes())));
+        }
 
-        // Attempt to stop the compaction
-        // If compactionId is provided, use it (takes precedence over type)
+        // Attempt to stop compaction
+        // If compactionId  provided, use it (takes precedence over type)
         if (request.hasValidCompactionId())
         {
             operations.stopCompactionById(compactionId);
         }
         else if (request.hasValidCompactionType())
         {
-            operations.stopCompaction(compactionTypeStr);
+            operations.stopCompaction(compactionType);
         }
         // If we reach here, at least one of the above conditions was true due to validation in extractParamsOrThrow()
         // Return success response
@@ -143,7 +148,7 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
 
         /*
          Return 400 BAD_REQUEST upon malformed JSON - avoids falling under processFailure()'s vague
-         500 INTERNAL_SERVER_ERROR. Also catches invalid compaction types via CompactionType.fromString()
+         500 INTERNAL_SERVER_ERROR. Also catches invalid compaction types
         */
         try
         {
@@ -162,7 +167,7 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
         if (!payload.atLeastOneParamProvided())
         {
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                                    "At least one of 'compaction_type' or 'compaction_id' must be provided");
+                                    "At least one of 'compactionType' or 'compactionId' must be provided");
         }
 
         return payload;

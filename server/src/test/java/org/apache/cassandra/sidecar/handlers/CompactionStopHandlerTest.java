@@ -45,7 +45,6 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
-import org.apache.cassandra.sidecar.common.data.CompactionType;
 import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
 import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
@@ -85,6 +84,14 @@ public class CompactionStopHandlerTest
         VertxTestContext context = new VertxTestContext();
         server.start().onSuccess(s -> context.completeNow()).onFailure(context::failNow);
         context.awaitCompletion(5, TimeUnit.SECONDS);
+
+        // Mock supportedCompactionTypes to return all types for testing
+        when(mockCompactionManagerOperations.supportedCompactionTypes()).thenReturn(
+            java.util.Arrays.asList("COMPACTION", "VALIDATION", "KEY_CACHE_SAVE", "ROW_CACHE_SAVE",
+                "COUNTER_CACHE_SAVE", "CLEANUP", "SCRUB", "UPGRADE_SSTABLES",
+                "INDEX_BUILD", "TOMBSTONE_COMPACTION", "ANTICOMPACTION",
+                "VERIFY", "VIEW_BUILD", "INDEX_SUMMARY", "RELOCATE",
+                "GARBAGE_COLLECT", "MAJOR_COMPACTION"));
     }
 
     @AfterEach
@@ -103,7 +110,7 @@ public class CompactionStopHandlerTest
     void testStopCompactionByTypeHappyPath(VertxTestContext ctx)
     {
         WebClient client = WebClient.create(vertx);
-        String payload = "{\"compaction_type\":\"COMPACTION\"}";
+        String payload = "{\"compactionType\":\"COMPACTION\"}";
         client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
@@ -112,7 +119,7 @@ public class CompactionStopHandlerTest
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                       CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
                       assertThat(response.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
-                      assertThat(response.compactionType()).isEqualTo(CompactionType.COMPACTION);
+                      assertThat(response.compactionType()).isEqualTo("COMPACTION");
                   });
                   ctx.completeNow();
               }));
@@ -122,7 +129,7 @@ public class CompactionStopHandlerTest
     void testStopCompactionByIdHappyPath(VertxTestContext ctx)
     {
         WebClient client = WebClient.create(vertx);
-        String payload = "{\"compaction_id\":\"abc-123\"}";
+        String payload = "{\"compactionId\":\"abc-123\"}";
         client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
@@ -141,7 +148,7 @@ public class CompactionStopHandlerTest
     void testStopCompactionByBothFieldsHappyPath(VertxTestContext ctx)
     {
         WebClient client = WebClient.create(vertx);
-        String payload = "{\"compaction_type\":\"VALIDATION\",\"compaction_id\":\"xyz-456\"}";
+        String payload = "{\"compactionType\":\"VALIDATION\",\"compactionId\":\"xyz-456\"}";
         client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
@@ -151,7 +158,7 @@ public class CompactionStopHandlerTest
                       assertThat(resp.statusCode()).isEqualTo(OK.code());
                       CompactionStopResponse response = resp.bodyAsJson(CompactionStopResponse.class);
                       assertThat(response.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
-                      assertThat(response.compactionType()).isEqualTo(CompactionType.VALIDATION);
+                      assertThat(response.compactionType()).isEqualTo("VALIDATION");
                       assertThat(response.compactionId()).isEqualTo("xyz-456");
                   });
                   ctx.completeNow();
@@ -178,7 +185,7 @@ public class CompactionStopHandlerTest
     void testBothFieldsEmpty(VertxTestContext ctx)
     {
         WebClient client = WebClient.create(vertx);
-        String payload = "{\"compaction_type\":\"\",\"compaction_id\":\"\"}";
+        String payload = "{\"compactionType\":\"\",\"compactionId\":\"\"}";
         client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
@@ -194,7 +201,7 @@ public class CompactionStopHandlerTest
     void testInvalidCompactionType(VertxTestContext ctx)
     {
         WebClient client = WebClient.create(vertx);
-        String payload = "{\"compaction_type\":\"INVALID_TYPE\"}";
+        String payload = "{\"compactionType\":\"INVALID_TYPE\"}";
         client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
@@ -226,7 +233,7 @@ public class CompactionStopHandlerTest
     void testTrimWhitespace(VertxTestContext ctx)
     {
         WebClient client = WebClient.create(vertx);
-        String payload = "{\"compaction_type\":\"  COMPACTION  \"}";
+        String payload = "{\"compactionType\":\"  COMPACTION  \"}";
         client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
@@ -244,7 +251,7 @@ public class CompactionStopHandlerTest
     void testCaseInsensitiveCompactionType(VertxTestContext ctx)
     {
         WebClient client = WebClient.create(vertx);
-        String payload = "{\"compaction_type\":\"compaction\"}";
+        String payload = "{\"compactionType\":\"compaction\"}";
         client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
@@ -266,7 +273,7 @@ public class CompactionStopHandlerTest
             "COUNTER_CACHE_SAVE", "CLEANUP", "SCRUB", "UPGRADE_SSTABLES",
             "INDEX_BUILD", "TOMBSTONE_COMPACTION", "ANTICOMPACTION",
             "VERIFY", "VIEW_BUILD", "INDEX_SUMMARY", "RELOCATE",
-            "GARBAGE_COLLECT", "WRITE"
+            "GARBAGE_COLLECT", "MAJOR_COMPACTION"
         };
 
         WebClient client = WebClient.create(vertx);
@@ -274,7 +281,7 @@ public class CompactionStopHandlerTest
         CountDownLatch expectedCalls = new CountDownLatch(supportedTypes.length);
         for (String type : supportedTypes)
         {
-            String payload = "{\"compaction_type\":\"" + type + "\"}";
+            String payload = "{\"compactionType\":\"" + type + "\"}";
             client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
                   .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                       ctx.verify(() -> {

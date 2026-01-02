@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
-import org.apache.cassandra.sidecar.common.data.CompactionType;
 
 /**
  * Response class for the Compaction Stop API
@@ -31,10 +30,10 @@ import org.apache.cassandra.sidecar.common.data.CompactionType;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CompactionStopResponse
 {
-    public static final String COMPACTION_TYPE_KEY = "compaction_type";
-    public static final String COMPACTION_ID_KEY = "compaction_id";
+    public static final String COMPACTION_TYPE_KEY = "compactionType";
+    public static final String COMPACTION_ID_KEY = "compactionId";
     public static final String STATUS_KEY = "status";
-    private final CompactionType compactionType;
+    private final String compactionType;
     private final String compactionId;
     private final CompactionStopStatus status;
 
@@ -53,7 +52,7 @@ public class CompactionStopResponse
      * @param status         the status of the stop operation (e.g., "PENDING", "FAILED")
      */
     @JsonCreator
-    public CompactionStopResponse(@JsonProperty(COMPACTION_TYPE_KEY) CompactionType compactionType,
+    public CompactionStopResponse(@JsonProperty(COMPACTION_TYPE_KEY) String compactionType,
                                   @JsonProperty(COMPACTION_ID_KEY) String compactionId,
                                   @JsonProperty(STATUS_KEY) CompactionStopStatus status)
     {
@@ -66,7 +65,7 @@ public class CompactionStopResponse
      * @return the type of compaction that was requested to stop
      */
     @JsonProperty(COMPACTION_TYPE_KEY)
-    public CompactionType compactionType()
+    public String compactionType()
     {
         return compactionType;
     }
@@ -108,7 +107,7 @@ public class CompactionStopResponse
      */
     public static final class Builder implements DataObjectBuilder<Builder, CompactionStopResponse>
     {
-        private CompactionType compactionType;
+        private String compactionType;
         private String compactionId;
         private CompactionStopStatus status;
 
@@ -128,7 +127,7 @@ public class CompactionStopResponse
          * @param compactionType the {@code compactionType} to set
          * @return a reference to this Builder
          */
-        public Builder compactionType(CompactionType compactionType)
+        public Builder compactionType(String compactionType)
         {
             return update(b -> b.compactionType = compactionType);
         }

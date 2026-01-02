@@ -64,7 +64,6 @@ import org.apache.cassandra.sidecar.client.retry.RetryAction;
 import org.apache.cassandra.sidecar.client.retry.RetryPolicy;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
-import org.apache.cassandra.sidecar.common.data.CompactionType;
 import org.apache.cassandra.sidecar.common.data.Lifecycle;
 import org.apache.cassandra.sidecar.common.data.Lifecycle.CassandraState;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
@@ -1764,21 +1763,21 @@ abstract class SidecarClientTest
         MockWebServer server = servers.get(0);
 
         // Test stop by type
-        String responseByType = "{\"status\":\"SUBMITTED\",\"compaction_type\":\"COMPACTION\"}";
+        String responseByType = "{\"status\":\"SUBMITTED\",\"compactionType\":\"COMPACTION\"}";
         server.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(responseByType));
 
-        CompactionStopRequestPayload stopByType = new CompactionStopRequestPayload(CompactionType.COMPACTION, null);
+        CompactionStopRequestPayload stopByType = new CompactionStopRequestPayload("COMPACTION", null);
         CompletableFuture<CompactionStopResponse> response1 = client.compactionStop(instance, stopByType);
         assertThat(response1).isNotNull();
 
         CompactionStopResponse compactionResponse1 = response1.get();
 
-        assertThat(compactionResponse1.compactionType()).isEqualTo(CompactionType.COMPACTION);
+        assertThat(compactionResponse1.compactionType()).isEqualTo("COMPACTION");
         assertThat(compactionResponse1.compactionId()).isEqualTo(null);
         assertThat(compactionResponse1.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
 
         // Test stop by ID
-        String responseById = "{\"status\":\"SUBMITTED\",\"compaction_id\":\"test-id-1\"}";
+        String responseById = "{\"status\":\"SUBMITTED\",\"compactionId\":\"test-id-1\"}";
         server.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(responseById));
 
         CompactionStopRequestPayload stopById = new CompactionStopRequestPayload(null, "test-id-1");
@@ -1791,17 +1790,17 @@ abstract class SidecarClientTest
 
         // Test id precedence when both inputs provided
         String responseBothInputs = "{\"status\":\"SUBMITTED\"," +
-                                    "\"compaction_id\":\"test-id-2\", " +
-                                    "\"compaction_type\":\"VALIDATION\"}";
+                                    "\"compactionId\":\"test-id-2\", " +
+                                    "\"compactionType\":\"VALIDATION\"}";
         server.enqueue(new MockResponse().setResponseCode(OK.code()).setBody(responseBothInputs));
 
         CompactionStopRequestPayload stopAfterBothInputs
-        = new CompactionStopRequestPayload(CompactionType.VALIDATION, "test-id-2");
+        = new CompactionStopRequestPayload("VALIDATION", "test-id-2");
         CompletableFuture<CompactionStopResponse> response3 = client.compactionStop(instance, stopAfterBothInputs);
         assertThat(response3).isNotNull();
 
         CompactionStopResponse compactionResponse3 = response3.get();
-        assertThat(compactionResponse3.compactionType()).isEqualTo(CompactionType.VALIDATION);
+        assertThat(compactionResponse3.compactionType()).isEqualTo("VALIDATION");
         assertThat(compactionResponse3.compactionId()).isEqualTo("test-id-2");
         assertThat(compactionResponse3.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
 
@@ -1810,8 +1809,8 @@ abstract class SidecarClientTest
         server.takeRequest(); // Second request (stop by ID)
         RecordedRequest thirdRequest = server.takeRequest(); // Third request (both inputs)
         String requestBody = thirdRequest.getBody().readString(Charset.defaultCharset());
-        assertThat(requestBody).contains("\"compaction_id\":\"test-id-2\"");
-        assertThat(requestBody).contains("\"compaction_type\":\"VALIDATION\"");
+        assertThat(requestBody).contains("\"compactionId\":\"test-id-2\"");
+        assertThat(requestBody).contains("\"compactionType\":\"VALIDATION\"");
     }
 
     @Test

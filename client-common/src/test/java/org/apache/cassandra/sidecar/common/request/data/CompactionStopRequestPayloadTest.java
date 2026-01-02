@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.cassandra.sidecar.common.data.CompactionType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,12 +34,22 @@ class CompactionStopRequestPayloadTest
     private static final ObjectMapper MAPPER
     = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
+    /**
+     * All known compaction types across all Cassandra versions for testing purposes
+     */
+    private static final String[] ALL_COMPACTION_TYPES = {
+        "CLEANUP", "SCRUB", "UPGRADE_SSTABLES", "VERIFY", "RELOCATE",
+        "GARBAGE_COLLECT", "ANTICOMPACTION", "VALIDATION", "INDEX_BUILD",
+        "VIEW_BUILD", "COMPACTION", "TOMBSTONE_COMPACTION", "KEY_CACHE_SAVE",
+        "ROW_CACHE_SAVE", "COUNTER_CACHE_SAVE", "INDEX_SUMMARY", "MAJOR_COMPACTION"
+    };
+
     @Test
     void testSerDeserWithBothFields() throws JsonProcessingException
     {
-        CompactionStopRequestPayload payload = new CompactionStopRequestPayload(CompactionType.COMPACTION, "abc-123");
+        CompactionStopRequestPayload payload = new CompactionStopRequestPayload("COMPACTION", "abc-123");
         String json = MAPPER.writeValueAsString(payload);
-        assertThat(json).isEqualTo("{\"compaction_type\":\"COMPACTION\",\"compaction_id\":\"abc-123\"}");
+        assertThat(json).isEqualTo("{\"compactionType\":\"COMPACTION\",\"compactionId\":\"abc-123\"}");
 
         CompactionStopRequestPayload deser = MAPPER.readValue(json, CompactionStopRequestPayload.class);
         assertThat(deser.compactionType()).isEqualTo(payload.compactionType());
@@ -50,12 +59,12 @@ class CompactionStopRequestPayloadTest
     @Test
     void testSerDeserWithTypeOnly() throws JsonProcessingException
     {
-        CompactionStopRequestPayload payload = new CompactionStopRequestPayload(CompactionType.VALIDATION, null);
+        CompactionStopRequestPayload payload = new CompactionStopRequestPayload("VALIDATION", null);
         String json = MAPPER.writeValueAsString(payload);
-        assertThat(json).isEqualTo("{\"compaction_type\":\"VALIDATION\"}");
+        assertThat(json).isEqualTo("{\"compactionType\":\"VALIDATION\"}");
 
         CompactionStopRequestPayload deser = MAPPER.readValue(json, CompactionStopRequestPayload.class);
-        assertThat(deser.compactionType()).isEqualTo(CompactionType.VALIDATION);
+        assertThat(deser.compactionType()).isEqualTo("VALIDATION");
         assertThat(deser.compactionId()).isNull();
     }
 
@@ -64,7 +73,7 @@ class CompactionStopRequestPayloadTest
     {
         CompactionStopRequestPayload payload = new CompactionStopRequestPayload(null, "xyz-456");
         String json = MAPPER.writeValueAsString(payload);
-        assertThat(json).isEqualTo("{\"compaction_id\":\"xyz-456\"}");
+        assertThat(json).isEqualTo("{\"compactionId\":\"xyz-456\"}");
 
         CompactionStopRequestPayload deser = MAPPER.readValue(json, CompactionStopRequestPayload.class);
         assertThat(deser.compactionType()).isNull();
@@ -86,25 +95,25 @@ class CompactionStopRequestPayloadTest
     @Test
     void testDeserFromJsonWithBothFields() throws JsonProcessingException
     {
-        String json = "{\"compaction_type\":\"CLEANUP\",\"compaction_id\":\"test-123\"}";
+        String json = "{\"compactionType\":\"CLEANUP\",\"compactionId\":\"test-123\"}";
         CompactionStopRequestPayload payload = MAPPER.readValue(json, CompactionStopRequestPayload.class);
-        assertThat(payload.compactionType()).isEqualTo(CompactionType.CLEANUP);
+        assertThat(payload.compactionType()).isEqualTo("CLEANUP");
         assertThat(payload.compactionId()).isEqualTo("test-123");
     }
 
     @Test
     void testDeserFromJsonWithTypeOnly() throws JsonProcessingException
     {
-        String json = "{\"compaction_type\":\"SCRUB\"}";
+        String json = "{\"compactionType\":\"SCRUB\"}";
         CompactionStopRequestPayload payload = MAPPER.readValue(json, CompactionStopRequestPayload.class);
-        assertThat(payload.compactionType()).isEqualTo(CompactionType.SCRUB);
+        assertThat(payload.compactionType()).isEqualTo("SCRUB");
         assertThat(payload.compactionId()).isNull();
     }
 
     @Test
     void testDeserFromJsonWithIdOnly() throws JsonProcessingException
     {
-        String json = "{\"compaction_id\":\"unique-compaction-id\"}";
+        String json = "{\"compactionId\":\"unique-compaction-id\"}";
         CompactionStopRequestPayload payload = MAPPER.readValue(json, CompactionStopRequestPayload.class);
         assertThat(payload.compactionType()).isNull();
         assertThat(payload.compactionId()).isEqualTo("unique-compaction-id");
@@ -122,7 +131,7 @@ class CompactionStopRequestPayloadTest
     @Test
     void testDeserializeWithEmptyStrings() throws JsonProcessingException
     {
-        String json = "{\"compaction_type\":\"\",\"compaction_id\":\"\"}";
+        String json = "{\"compactionType\":\"\",\"compactionId\":\"\"}";
         CompactionStopRequestPayload payload = MAPPER.readValue(json, CompactionStopRequestPayload.class);
         assertThat(payload.compactionType()).isNull();
         assertThat(payload.compactionId()).isEmpty();
@@ -131,16 +140,16 @@ class CompactionStopRequestPayloadTest
     @Test
     void testDeserializeWithWhitespace() throws JsonProcessingException
     {
-        String json = "{\"compaction_type\":\"  COMPACTION  \",\"compaction_id\":\"  test-id  \"}";
+        String json = "{\"compactionType\":\"  COMPACTION  \",\"compactionId\":\"  test-id  \"}";
         CompactionStopRequestPayload payload = MAPPER.readValue(json, CompactionStopRequestPayload.class);
-        assertThat(payload.compactionType()).isEqualTo(CompactionType.COMPACTION);
+        assertThat(payload.compactionType()).isEqualTo("COMPACTION");
         assertThat(payload.compactionId()).isEqualTo("test-id");
     }
 
     @Test
     void testToString()
     {
-        CompactionStopRequestPayload payload = new CompactionStopRequestPayload(CompactionType.COMPACTION, "abc-123");
+        CompactionStopRequestPayload payload = new CompactionStopRequestPayload("COMPACTION", "abc-123");
         String toString = payload.toString();
         assertThat(toString).contains("compaction");
         assertThat(toString).contains("abc-123");
@@ -150,15 +159,15 @@ class CompactionStopRequestPayloadTest
     @Test
     void testAllSupportedCompactionTypes() throws JsonProcessingException
     {
-        // Check each compactionType field for CompactionStopRequestPayload is recognized as a supported compaction type
-        for (CompactionType type : CompactionType.values())
+        // Check each compactionType field for CompactionStopRequestPayload is serialized/deserialized correctly
+        for (String compactionType : ALL_COMPACTION_TYPES)
         {
-            CompactionStopRequestPayload payload = new CompactionStopRequestPayload(type, null);
+            CompactionStopRequestPayload payload = new CompactionStopRequestPayload(compactionType, null);
             String json = MAPPER.writeValueAsString(payload);
-            assertThat(json).contains(type.toString().toUpperCase());
+            assertThat(json).contains(compactionType);
 
             CompactionStopRequestPayload deser = MAPPER.readValue(json, CompactionStopRequestPayload.class);
-            assertThat(deser.compactionType()).isEqualTo(type);
+            assertThat(deser.compactionType()).isEqualTo(compactionType);
         }
     }
 
@@ -166,24 +175,24 @@ class CompactionStopRequestPayloadTest
     void testCasePreservation() throws JsonProcessingException
     {
         // Test preserved in serialization/deserialization
-        CompactionStopRequestPayload lowerCase = new CompactionStopRequestPayload(CompactionType.COMPACTION, "Test-ID-123");
+        CompactionStopRequestPayload lowerCase = new CompactionStopRequestPayload("COMPACTION", "Test-ID-123");
         String json = MAPPER.writeValueAsString(lowerCase);
         assertThat(json).contains("compaction");
         assertThat(json).contains("Test-ID-123");
 
         CompactionStopRequestPayload deser = MAPPER.readValue(json, CompactionStopRequestPayload.class);
-        assertThat(deser.compactionType()).isEqualTo(CompactionType.COMPACTION);
+        assertThat(deser.compactionType()).isEqualTo("COMPACTION");
         assertThat(deser.compactionId()).isEqualTo("Test-ID-123");
     }
 
     @Test
     void testHasValidCompactionIdWithBothFields() throws JsonProcessingException
     {
-        String json = "{\"compaction_type\":\"VALIDATION\",\"compaction_id\":\"xyz-456\"}";
+        String json = "{\"compactionType\":\"VALIDATION\",\"compactionId\":\"xyz-456\"}";
         CompactionStopRequestPayload payload = MAPPER.readValue(json, CompactionStopRequestPayload.class);
         assertThat(payload.hasValidCompactionId()).isTrue();
         assertThat(payload.hasValidCompactionType()).isTrue();
         assertThat(payload.compactionId()).isEqualTo("xyz-456");
-        assertThat(payload.compactionType()).isEqualTo(CompactionType.VALIDATION);
+        assertThat(payload.compactionType()).isEqualTo("VALIDATION");
     }
 }

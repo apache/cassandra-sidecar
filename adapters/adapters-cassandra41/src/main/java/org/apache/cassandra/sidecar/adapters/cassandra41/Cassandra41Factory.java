@@ -31,9 +31,9 @@ import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 
 /**
- * Factory to produce the 4.1 adapter
+ * Factory to produce the Cassandra 4.x adapter
  */
-@MinimumVersion("4.1.0")
+@MinimumVersion("4.0.0")
 public class Cassandra41Factory implements ICassandraFactory
 {
     private final DnsResolver dnsResolver;
@@ -48,12 +48,12 @@ public class Cassandra41Factory implements ICassandraFactory
     }
 
     /**
-     * Returns a new adapter for Cassandra 4.0 clusters.
+     * Returns a new adapter for Cassandra 4.x clusters.
      *
      * @param session                     the session to the Cassandra database
      * @param jmxClient                   the JMX client to connect to the Cassandra database
      * @param localNativeTransportAddress the native transport address and port of the instance
-     * @return a new adapter for the 4.0 clusters
+     * @return a new adapter for the 4.x clusters
      */
     @Override
     public ICassandraAdapter create(CQLSessionProvider session, JmxClient jmxClient,

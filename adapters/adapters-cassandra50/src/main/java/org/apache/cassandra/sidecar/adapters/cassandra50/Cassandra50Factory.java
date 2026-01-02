@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.adapters.base;
+package org.apache.cassandra.sidecar.adapters.cassandra50;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
@@ -34,13 +34,13 @@ import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
  * Factory to produce the Cassandra 5.x adapter
  */
 @MinimumVersion("5.0.0")
-public class CassandraFactory implements ICassandraFactory
+public class Cassandra50Factory implements ICassandraFactory
 {
     private final DnsResolver dnsResolver;
     private final DriverUtils driverUtils;
     private final TableSchemaFetcher tableSchemaFetcher;
 
-    public CassandraFactory(DnsResolver dnsResolver, DriverUtils driverUtils, TableSchemaFetcher tableSchemaFetcher)
+    public Cassandra50Factory(DnsResolver dnsResolver, DriverUtils driverUtils, TableSchemaFetcher tableSchemaFetcher)
     {
         this.dnsResolver = Objects.requireNonNull(dnsResolver, "dnsResolver is required");
         this.driverUtils = Objects.requireNonNull(driverUtils, "driverUtils is required");
@@ -52,14 +52,13 @@ public class CassandraFactory implements ICassandraFactory
      *
      * @param session                     the session to the Cassandra database
      * @param jmxClient                   the JMX client to connect to the Cassandra database
-     * @param localNativeTransportAddress the address and port on which this instance is configured to listen
+     * @param localNativeTransportAddress the native transport address and port of the instance
      * @return a new adapter for the 5.x clusters
      */
     @Override
-    public ICassandraAdapter create(CQLSessionProvider session,
-                                    JmxClient jmxClient,
+    public ICassandraAdapter create(CQLSessionProvider session, JmxClient jmxClient,
                                     InetSocketAddress localNativeTransportAddress)
     {
-        return new CassandraAdapter(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils, tableSchemaFetcher);
+        return new Cassandra50Adapter(dnsResolver, jmxClient, session, localNativeTransportAddress, driverUtils, tableSchemaFetcher);
     }
 }

@@ -15,8 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.cassandra.sidecar.common.data;
+package org.apache.cassandra.sidecar.adapters.cassandra50;
 
 import java.util.Locale;
 
@@ -33,7 +32,6 @@ public enum CompactionType
     VERIFY,
     RELOCATE,
     GARBAGE_COLLECT,
-    WRITE,
     ANTICOMPACTION,
     VALIDATION,
     INDEX_BUILD,
@@ -43,7 +41,8 @@ public enum CompactionType
     KEY_CACHE_SAVE,
     ROW_CACHE_SAVE,
     COUNTER_CACHE_SAVE,
-    INDEX_SUMMARY;
+    INDEX_SUMMARY,
+    MAJOR_COMPACTION;
 
     @Override
     public String toString()
@@ -68,7 +67,13 @@ public enum CompactionType
         }
         catch (IllegalArgumentException unknownEnum)
         {
-            throw new IllegalArgumentException("Unsupported compaction_type: '" + name + "'");
+            String validTypes = String.join(", ",
+                    java.util.Arrays.stream(CompactionType.values())
+                            .map(CompactionType::name)
+                            .toArray(String[]::new));
+            throw new IllegalArgumentException(
+                    String.format("Unsupported compactionType: '%s'. Valid types are: %s",
+                            name, validTypes));
         }
     }
 }

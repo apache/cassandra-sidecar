@@ -15,12 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.cassandra.sidecar.adapters.base;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.apache.cassandra.sidecar.adapters.base.jmx.CompactionManagerJmxOperations;
 import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
@@ -80,15 +81,30 @@ public class CassandraCompactionManagerOperations implements CompactionManagerOp
     {
         if (compactionType != null && !compactionType.trim().isEmpty())
         {
-            CompactionManagerJmxOperations proxy = jmxClient.proxy(CompactionManagerJmxOperations.class,
-                                                                   COMPACTION_MANAGER_OBJ_NAME);
-            String errMsg
-            = "compaction process with compaction type " + compactionType + " must not be null when compactionId is not provided";
-            proxy.stopCompaction(Objects.requireNonNull(compactionType, errMsg));
+            if (supportedCompactionTypes().contains(compactionType))
+            {
+                CompactionManagerJmxOperations proxy = jmxClient.proxy(CompactionManagerJmxOperations.class,
+                        COMPACTION_MANAGER_OBJ_NAME);
+                String errMsg
+                        = "compaction process with compaction type " + compactionType + " must not be null when compactionId is not provided";
+                proxy.stopCompaction(Objects.requireNonNull(compactionType, errMsg));
+            }
+            else
+            {
+                throw new IllegalArgumentException("compaction type " + compactionType + " is not supported");
+            }
         }
         else
         {
             throw new IllegalArgumentException("compaction type " + compactionType + " is null or empty");
         }
+    }
+
+    @Override
+    public List<String> supportedCompactionTypes()
+    {
+        return Arrays.stream(CompactionType.values())
+                .map(CompactionType::name)
+                .collect(Collectors.toList());
     }
 }

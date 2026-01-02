@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.google.common.util.concurrent.Uninterruptibles;
 
 import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
-import org.apache.cassandra.sidecar.common.data.CompactionType;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.data.CompactionInfo;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
@@ -127,7 +126,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
     @Test
     void testStopCompactionBothParameters()
     {
-        String payload = "{\"compaction_type\":\"VALIDATION\",\"compaction_id\":\"test-id-123\"}";
+        String payload = "{\"compactionType\":\"VALIDATION\",\"compactionId\":\"test-id-123\"}";
         HttpResponse<Buffer> response
         = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
                                      .sendBuffer(buffer(payload))
@@ -137,7 +136,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
         CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
         assertThat(stopResponse).isNotNull();
         assertThat(stopResponse.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
-        assertThat(stopResponse.compactionType()).isEqualTo(CompactionType.VALIDATION);
+        assertThat(stopResponse.compactionType()).isEqualTo("VALIDATION");
         assertThat(stopResponse.compactionId()).isEqualTo("test-id-123");
     }
 
@@ -155,7 +154,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
     @Test
     void testStopCompactionInvalidType() {
-        String payload = "{\"compaction_type\":\"INVALID_TYPE\"}";
+        String payload = "{\"compactionType\":\"INVALID_TYPE\"}";
         HttpResponse<Buffer> response
         = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
                                      .sendBuffer(buffer(payload)));
@@ -180,21 +179,67 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
                 "COUNTER_CACHE_SAVE", "CLEANUP", "SCRUB", "UPGRADE_SSTABLES",
                 "INDEX_BUILD", "TOMBSTONE_COMPACTION", "ANTICOMPACTION",
                 "VERIFY", "VIEW_BUILD", "INDEX_SUMMARY", "RELOCATE",
-                "GARBAGE_COLLECT", "WRITE"
+                "GARBAGE_COLLECT", "MAJOR_COMPACTION"
         };
 
-        for (String type : supportedTypes)
+        for (String compactionType : supportedTypes)
         {
-            String payload = String.format("{\"compaction_type\":\"%s\"}", type);
-            HttpResponse<Buffer> response
-            = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
-                                         .sendBuffer(buffer(payload))
-                                         .expecting(HttpResponseExpectation.SC_OK));
+            String payload = String.format("{\"compactionType\":\"%s\"}", compactionType);
 
+            HttpResponse<Buffer> response = getBlocking(
+                    trustedClient().put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                            .sendBuffer(buffer(payload))
+            );
+            if (compactionType.equals("MAJOR_COMPACTION"))
+            {
+                assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
+
+            } else
+            {
+                assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+                CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
+                assertThat(stopResponse.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
+                assertThat(stopResponse.compactionType()).isEqualTo(compactionType);
+            }
+        }
+    }
+
+    @Test
+    void testUnsupportedCompactionTypeForCassandraVersion()
+    {
+        String payload = "{\"compactionType\":\"MAJOR_COMPACTION\"}";
+        HttpResponse<Buffer> response = getBlocking(
+            trustedClient().put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
+                .sendBuffer(buffer(payload))
+        );
+        String cassandraVersion = testVersion.version();
+
+        // Check MAJOR_COMPACTION rejected with Cassandra 4.x, accepted with 5.x
+        if (cassandraVersion.startsWith("4."))
+        {
+            assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
+            JsonObject errorResponse = response.bodyAsJsonObject();
+            assertThat(errorResponse).isNotNull();
+            // Error message could be from handler validation or JMX layer
+            String message = errorResponse.getString("message");
+            assertThat(message)
+                .satisfiesAnyOf(
+                    msg -> assertThat(msg).containsIgnoringCase("not supported"),
+                    msg -> assertThat(msg).containsIgnoringCase("No enum constant"),
+                    msg -> assertThat(msg).contains("MAJOR_COMPACTION")
+                );
+        }
+        else if (cassandraVersion.startsWith("5."))
+        {
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
             CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
             assertThat(stopResponse.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
-            assertThat(stopResponse.compactionType()).isEqualTo(CompactionType.valueOf(type));
+            assertThat(stopResponse.compactionType()).isEqualTo("MAJOR_COMPACTION");
+        }
+        else
+        {
+            // Unknown Cassandra version
+            throw new AssertionError("Unexpected Cassandra version: " + cassandraVersion);
         }
     }
 
@@ -264,7 +309,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
                                                  .noneMatch(c -> c.id().equals(detectedCompactionId));
 
             logger.info("Verification: Compaction with id {} type {} are gone={}, active count={}",
-                        detectedCompactionId, CompactionType.COMPACTION, compactionsOfTypeGone,
+                        detectedCompactionId, "COMPACTION", compactionsOfTypeGone,
                         stats.activeCompactionsCount());
 
             assertThat(compactionsOfTypeGone).isTrue();
@@ -377,7 +422,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
                         actualCompactionType.get(), progress, compaction.id());
 
             // Stop compaction by type
-            String stopPayload = "{\"compaction_type\":\"" + actualCompactionType.get() + "\"}";
+            String stopPayload = "{\"compactionType\":\"" + actualCompactionType.get() + "\"}";
 
             HttpResponse<Buffer> stopResponse
             = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
@@ -508,7 +553,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
                         compaction.taskType(), progress, capturedCompactionId.get());
 
             // Stop compaction by ID
-            String stopPayload = "{\"compaction_id\":\"" + capturedCompactionId.get() + "\"}";
+            String stopPayload = "{\"compactionId\":\"" + capturedCompactionId.get() + "\"}";
 
             HttpResponse<Buffer> stopResponse
             = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
