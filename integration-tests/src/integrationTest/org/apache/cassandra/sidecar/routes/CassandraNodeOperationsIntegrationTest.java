@@ -127,6 +127,7 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
         assertThat(responseBody).isNotNull();
         assertThat(responseBody.getString("jobId")).isNotNull();
         assertThat(responseBody.getString("operation")).isEqualTo("move");
+        logger.error("jobStatus for testNodeMoveOperationSuccess:{}", responseBody.getString("jobStatus"));
         assertThat(responseBody.getString("jobStatus")).isIn(
         OperationalJobStatus.CREATED.name(),
         OperationalJobStatus.RUNNING.name(),
@@ -208,6 +209,7 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
 
             JsonObject streamStats = streamStatsResponse.bodyAsJsonObject();
             assertThat(streamStats).isNotNull();
+            logger.error("operationMode for testNodeMoveOperationFailure:{}", streamStats.getString("operationMode"));
             // The operationMode should be either NORMAL (completed) or MOVING (in progress)
             assertThat(streamStats.getString("operationMode")).isIn("NORMAL", "MOVING");
         });
