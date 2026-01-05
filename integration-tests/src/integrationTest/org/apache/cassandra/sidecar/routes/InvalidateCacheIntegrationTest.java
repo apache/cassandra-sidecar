@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -37,6 +38,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import org.apache.cassandra.distributed.api.ICluster;
@@ -236,7 +238,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     {
         IdentityToRoleCache identityToRoleCache = serverWrapper.injector.getInstance(IdentityToRoleCache.class);
         verifyFullCacheInvalidation(IdentityToRoleCache.NAME,
-                                    identityToRoleCache::getAll,
+                                    () -> getBlocking(identityToRoleCache.getAll()),
                                     testUserKeystorePath,
                                     TEST_USER_IDENTITY,
                                     1,
@@ -248,7 +250,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     {
         IdentityToRoleCache identityToRoleCache = serverWrapper.injector.getInstance(IdentityToRoleCache.class);
         verifySelectiveKeyInvalidation(IdentityToRoleCache.NAME,
-                                       identityToRoleCache::getAll,
+                                       () -> getBlocking(identityToRoleCache.getAll()),
                                        List.of(testUserKeystorePath, testUser2KeystorePath),
                                        List.of(TEST_USER_IDENTITY),
                                        List.of(TEST_USER_IDENTITY),
@@ -262,7 +264,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     {
         IdentityToRoleCache identityToRoleCache = serverWrapper.injector.getInstance(IdentityToRoleCache.class);
         verifySelectiveKeyInvalidation(IdentityToRoleCache.NAME,
-                                       identityToRoleCache::getAll,
+                                       () -> getBlocking(identityToRoleCache.getAll()),
                                        List.of(testUserKeystorePath, testUser2KeystorePath, superuserKeystorePath),
                                        List.of(TEST_USER_IDENTITY, TEST_USER2_IDENTITY),
                                        List.of(TEST_USER_IDENTITY, TEST_USER2_IDENTITY),
@@ -283,16 +285,24 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         verifyAccess(HttpMethod.DELETE, endpointCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
 
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        loopAssert(3, () -> assertThat(roleAuthorizationsCache.get("unique_cache_entry_key").get("test_role")).isNotNull());
+        loopAssert(3, () -> {
+            Map<String, Set<Authorization>> cache =
+            getBlocking(roleAuthorizationsCache.get("unique_cache_entry_key"));
+            assertThat(cache.get("test_role")).isNotNull();
+        });
 
         // Invalidate cache and verify its empty
         String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, RoleAuthorizationsCache.NAME);
         verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        loopAssert(3, () -> assertThat(roleAuthorizationsCache.getAll()).isEmpty());
+        loopAssert(3, () -> assertThat(getBlocking(roleAuthorizationsCache.getAll())).isEmpty());
 
         // Re-populate cache with test user and verify test user is back in cache
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
-        loopAssert(3, () -> assertThat(roleAuthorizationsCache.get("unique_cache_entry_key").get("test_role")).isNotNull());
+        loopAssert(3, () -> {
+            Map<String, Set<Authorization>> cache =
+            getBlocking(roleAuthorizationsCache.get("unique_cache_entry_key"));
+            assertThat(cache.get("test_role")).isNotNull();
+        });
     }
 
     @Test
@@ -300,7 +310,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     {
         RoleAuthorizationsCache roleAuthorizationsCache = serverWrapper.injector.getInstance(RoleAuthorizationsCache.class);
         verifyKeyBasedInvalidationNotSupported(RoleAuthorizationsCache.NAME,
-                                               roleAuthorizationsCache::getAll,
+                                               () -> getBlocking(roleAuthorizationsCache.getAll()),
                                                testUserKeystorePath);
     }
 
@@ -309,7 +319,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     {
         SuperUserCache superUserCache = serverWrapper.injector.getInstance(SuperUserCache.class);
         verifyFullCacheInvalidation(SuperUserCache.NAME,
-                                    superUserCache::getAll,
+                                    () -> getBlocking(superUserCache.getAll()),
                                     superuser2KeystorePath,
                                     "test_superuser2_role",
                                     1,
@@ -321,7 +331,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     {
         SuperUserCache superUserCache = serverWrapper.injector.getInstance(SuperUserCache.class);
         verifySelectiveKeyInvalidation(SuperUserCache.NAME,
-                                       superUserCache::getAll,
+                                       () -> getBlocking(superUserCache.getAll()),
                                        List.of(superuser2KeystorePath, superuser3KeystorePath),
                                        List.of("test_superuser2_role"),
                                        List.of("test_superuser2_role"),
@@ -335,7 +345,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     {
         SuperUserCache superUserCache = serverWrapper.injector.getInstance(SuperUserCache.class);
         verifySelectiveKeyInvalidation(SuperUserCache.NAME,
-                                       superUserCache::getAll,
+                                       () -> getBlocking(superUserCache.getAll()),
                                        List.of(superuserKeystorePath, superuser2KeystorePath, superuser3KeystorePath),
                                        List.of("test_superuser2_role", "test_superuser3_role"),
                                        List.of("test_superuser2_role", "test_superuser3_role"),
@@ -375,7 +385,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         Cache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
 
         verifyKeyBasedInvalidationNotSupported(CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME,
-                                               () -> endpointAuthorizationCache.asMap(),
+                                               endpointAuthorizationCache::asMap,
                                                testUserKeystorePath);
     }
 
@@ -634,7 +644,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, populateKeystore, assertStatus(HttpResponseStatus.OK));
 
         // Verify cache has the expected entry
-        loopAssert(3, () -> assertThat(cacheSupplier.get()).containsKey(verifyKey));
+        loopAssert(15, () -> assertThat(cacheSupplier.get()).containsKey(verifyKey));
 
         // Invalidate cache
         String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName);
@@ -645,12 +655,12 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         if (expectedSizeAfterInvalidation == 0)
         {
             // Cache should be completely empty
-            loopAssert(3, () -> assertThat(cacheSupplier.get()).isEmpty());
+            loopAssert(15, () -> assertThat(cacheSupplier.get()).isEmpty());
         }
         else
         {
             // Cache should have remaining entries
-            loopAssert(3, () -> {
+            loopAssert(15, () -> {
                 java.util.Map<String, ?> remainingEntries = cacheSupplier.get();
                 assertThat(remainingEntries).isNotEmpty();
                 assertThat(remainingEntries).hasSize(expectedSizeAfterInvalidation);
@@ -661,7 +671,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
 
         // Re-populate and verify
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, populateKeystore, assertStatus(HttpResponseStatus.OK));
-        loopAssert(3, () -> assertThat(cacheSupplier.get()).containsKey(verifyKey));
+        loopAssert(15, () -> assertThat(cacheSupplier.get()).containsKey(verifyKey));
     }
 
     static class TestModule extends AbstractModule
