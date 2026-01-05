@@ -71,7 +71,7 @@ public class ValidateKeyspaceExistenceHandler extends AbstractHandler<Name>
             return;
         }
 
-        ValidationUtils.requireKeyspaceExists(metadataFetcher, executorPools, host, keyspace.name())
+        ValidationUtils.requireKeyspaceExists(metadataFetcher, executorPools, host, keyspace.maybeQuotedName())
         .onComplete(ar -> {
             if (ar.succeeded())
             {

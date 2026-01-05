@@ -75,7 +75,7 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
             return;
         }
 
-        ValidationUtils.requireKeyspaceExists(metadataFetcher, executorPools, host, input.keyspace())
+        ValidationUtils.requireKeyspaceExists(metadataFetcher, executorPools, host, input.maybeQuotedKeyspace())
         .onComplete(ar -> {
             if (ar.failed())
             {
