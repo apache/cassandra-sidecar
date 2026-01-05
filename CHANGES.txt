@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Returning JSON responses for live migration status endpoints in case of errors (CASSSIDECAR-395)
  * Upgrade vertx to 4.5.23 (CASSSIDECAR-391)
  * Fix for deadlock during JMX reconnection (CASSSIDECAR-390)
  * Fix request execution continues on wrong thread (CASSSIDECAR-368)
