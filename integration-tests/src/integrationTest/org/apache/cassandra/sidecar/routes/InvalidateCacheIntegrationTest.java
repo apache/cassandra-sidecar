@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
@@ -36,14 +35,10 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.api.ICluster;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.acl.IdentityToRoleCache;
@@ -76,13 +71,13 @@ import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
 import static org.apache.cassandra.testing.TlsTestUtils.getSSLOptions;
 import static org.apache.cassandra.testing.TlsTestUtils.withAuthenticatedSession;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Integration test for cache invalidation endpoints
  */
-@ExtendWith(VertxExtension.class)
 class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
     protected static final int MIN_VERSION_WITH_MTLS = 5;
@@ -237,7 +232,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     }
 
     @Test
-    void testInvalidateIdentityToRoleCache(VertxTestContext testContext)
+    void testInvalidateIdentityToRoleCache()
     {
         IdentityToRoleCache identityToRoleCache = serverWrapper.injector.getInstance(IdentityToRoleCache.class);
         verifyFullCacheInvalidation(IdentityToRoleCache.NAME,
@@ -245,12 +240,11 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                     testUserKeystorePath,
                                     TEST_USER_IDENTITY,
                                     1,
-                                    TEST_SUPERUSER_IDENTITY,
-                                    testContext);
+                                    TEST_SUPERUSER_IDENTITY);
     }
 
     @Test
-    void testInvalidateIdentityToRoleCacheWithKeys(VertxTestContext testContext)
+    void testInvalidateIdentityToRoleCacheWithKeys()
     {
         IdentityToRoleCache identityToRoleCache = serverWrapper.injector.getInstance(IdentityToRoleCache.class);
         verifySelectiveKeyInvalidation(IdentityToRoleCache.NAME,
@@ -260,12 +254,11 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                        List.of(TEST_USER_IDENTITY),
                                        TEST_USER2_IDENTITY,
                                        testUserKeystorePath,
-                                       TEST_USER_IDENTITY,
-                                       testContext);
+                                       TEST_USER_IDENTITY);
     }
 
     @Test
-    void testInvalidateIdentityToRoleCacheWithMultipleKeys(VertxTestContext testContext)
+    void testInvalidateIdentityToRoleCacheWithMultipleKeys()
     {
         IdentityToRoleCache identityToRoleCache = serverWrapper.injector.getInstance(IdentityToRoleCache.class);
         verifySelectiveKeyInvalidation(IdentityToRoleCache.NAME,
@@ -275,12 +268,11 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                        List.of(TEST_USER_IDENTITY, TEST_USER2_IDENTITY),
                                        TEST_SUPERUSER_IDENTITY,
                                        testUserKeystorePath,
-                                       TEST_USER_IDENTITY,
-                                       testContext);
+                                       TEST_USER_IDENTITY);
     }
 
     @Test
-    void testInvalidateRoleAuthorizationsCache(VertxTestContext testContext)
+    void testInvalidateRoleAuthorizationsCache()
     {
         RoleAuthorizationsCache roleAuthorizationsCache = serverWrapper.injector.getInstance(RoleAuthorizationsCache.class);
 
@@ -291,38 +283,29 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         verifyAccess(HttpMethod.DELETE, endpointCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
 
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
+        loopAssert(3, () -> assertThat(roleAuthorizationsCache.get("unique_cache_entry_key").get("test_role")).isNotNull());
 
-        // Verify cache is populated
-        pollUntil(() -> roleAuthorizationsCache.get("unique_cache_entry_key")
-                                               .map(entry -> entry != null && entry.get("test_role") != null), 3000)
-        .compose(v -> {
-            // Invalidate cache and verify its empty
-            String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, RoleAuthorizationsCache.NAME);
-            verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-            return pollUntil(() -> roleAuthorizationsCache.getAll().map(java.util.Map::isEmpty), 3000);
-        })
-        .compose(v -> {
-            // Re-populate cache with test user and verify test user is back in cache
-            verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
-            return pollUntil(() -> roleAuthorizationsCache.get("unique_cache_entry_key")
-                                                          .map(entry -> entry != null && entry.get("test_role") != null), 3000);
-        })
-        .onSuccess(v -> testContext.completeNow())
-        .onFailure(testContext::failNow);
+        // Invalidate cache and verify its empty
+        String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, RoleAuthorizationsCache.NAME);
+        verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
+        loopAssert(3, () -> assertThat(roleAuthorizationsCache.getAll()).isEmpty());
+
+        // Re-populate cache with test user and verify test user is back in cache
+        verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
+        loopAssert(3, () -> assertThat(roleAuthorizationsCache.get("unique_cache_entry_key").get("test_role")).isNotNull());
     }
 
     @Test
-    void testInvalidateRoleAuthorizationsCacheWithKeys(VertxTestContext testContext)
+    void testInvalidateRoleAuthorizationsCacheWithKeys()
     {
         RoleAuthorizationsCache roleAuthorizationsCache = serverWrapper.injector.getInstance(RoleAuthorizationsCache.class);
         verifyKeyBasedInvalidationNotSupported(RoleAuthorizationsCache.NAME,
                                                roleAuthorizationsCache::getAll,
-                                               testUserKeystorePath,
-                                               testContext);
+                                               testUserKeystorePath);
     }
 
     @Test
-    void testInvalidateSuperUserCache(VertxTestContext testContext)
+    void testInvalidateSuperUserCache()
     {
         SuperUserCache superUserCache = serverWrapper.injector.getInstance(SuperUserCache.class);
         verifyFullCacheInvalidation(SuperUserCache.NAME,
@@ -330,12 +313,11 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                     superuser2KeystorePath,
                                     "test_superuser2_role",
                                     1,
-                                    "test_superuser_role",
-                                    testContext);
+                                    "test_superuser_role");
     }
 
     @Test
-    void testInvalidateSuperUserCacheWithKeys(VertxTestContext testContext)
+    void testInvalidateSuperUserCacheWithKeys()
     {
         SuperUserCache superUserCache = serverWrapper.injector.getInstance(SuperUserCache.class);
         verifySelectiveKeyInvalidation(SuperUserCache.NAME,
@@ -345,12 +327,11 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                        List.of("test_superuser2_role"),
                                        "test_superuser3_role",
                                        superuser2KeystorePath,
-                                       "test_superuser2_role",
-                                       testContext);
+                                       "test_superuser2_role");
     }
 
     @Test
-    void testInvalidateSuperUserCacheWithMultipleKeys(VertxTestContext testContext)
+    void testInvalidateSuperUserCacheWithMultipleKeys()
     {
         SuperUserCache superUserCache = serverWrapper.injector.getInstance(SuperUserCache.class);
         verifySelectiveKeyInvalidation(SuperUserCache.NAME,
@@ -360,12 +341,11 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                                        List.of("test_superuser2_role", "test_superuser3_role"),
                                        "test_superuser_role",
                                        superuser2KeystorePath,
-                                       "test_superuser2_role",
-                                       testContext);
+                                       "test_superuser2_role");
     }
 
     @Test
-    void testInvalidateEndpointAuthorizationCache(VertxTestContext testContext)
+    void testInvalidateEndpointAuthorizationCache()
     {
         CacheFactory cacheFactory = serverWrapper.injector.getInstance(CacheFactory.class);
         Cache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
@@ -373,37 +353,30 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         // Clear the cache first to ensure clean state
         String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
         verifyAccess(HttpMethod.DELETE, clearCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
+        loopAssert(3, () -> assertThat(endpointAuthorizationCache.asMap()).isEmpty());
 
-        pollUntil(() -> Future.succeededFuture(endpointAuthorizationCache.asMap().isEmpty()), 3000)
-        .compose(v -> {
-            verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
-            return pollUntil(() -> Future.succeededFuture(!endpointAuthorizationCache.asMap().isEmpty()), 3000);
-        })
-        .compose(v -> {
-            // Invalidate cache and verify
-            String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
-            verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-            return pollUntil(() -> Future.succeededFuture(endpointAuthorizationCache.asMap().isEmpty()), 3000);
-        })
-        .compose(v -> {
-            // Re-populate cache with test user and verify test user is back in cache
-            verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
-            return pollUntil(() -> Future.succeededFuture(!endpointAuthorizationCache.asMap().isEmpty()), 3000);
-        })
-        .onSuccess(v -> testContext.completeNow())
-        .onFailure(testContext::failNow);
+        verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
+        loopAssert(3, () -> assertThat(endpointAuthorizationCache.asMap()).isNotEmpty());
+
+        // Invalidate cache and verify
+        String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
+        verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
+        loopAssert(3, () -> assertThat(endpointAuthorizationCache.asMap()).isEmpty());
+
+        // Re-populate cache with test user and verify test user is back in cache
+        verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, testUserKeystorePath, assertStatus(HttpResponseStatus.OK));
+        loopAssert(3, () -> assertThat(endpointAuthorizationCache.asMap()).isNotEmpty());
     }
 
     @Test
-    void testInvalidateEndpointAuthorizationCacheWithKeys(VertxTestContext testContext)
+    void testInvalidateEndpointAuthorizationCacheWithKeys()
     {
         CacheFactory cacheFactory = serverWrapper.injector.getInstance(CacheFactory.class);
         Cache<AuthorizationCacheKey, Future<Boolean>> endpointAuthorizationCache = cacheFactory.endpointAuthorizationCache();
 
         verifyKeyBasedInvalidationNotSupported(CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME,
-                                              () -> Future.succeededFuture(endpointAuthorizationCache.asMap()),
-                                              testUserKeystorePath,
-                                              testContext);
+                                               () -> endpointAuthorizationCache.asMap(),
+                                               testUserKeystorePath);
     }
 
     @Test
@@ -434,10 +407,10 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     private void createRolesPermissionsTable(Session session)
     {
         String statement = "CREATE TABLE IF NOT EXISTS sidecar_internal.role_permissions_v1 ("
-                          + "role text,"
-                          + "resource text,"
-                          + "permissions set<text>,"
-                          + "PRIMARY KEY(role, resource))";
+                           + "role text,"
+                           + "resource text,"
+                           + "permissions set<text>,"
+                           + "PRIMARY KEY(role, resource))";
         session.execute(statement);
     }
 
@@ -461,13 +434,13 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
 
         // Insert permissions into role_permissions_v1 to populate RoleAuthorizationsCache
         session.execute("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
-                       "VALUES ('test_role', 'cluster', {'SCHEMA:READ'})");
+                        "VALUES ('test_role', 'cluster', {'SCHEMA:READ'})");
         session.execute("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
-                       "VALUES ('test_role', 'data', {'SNAPSHOT:CREATE'})");
+                        "VALUES ('test_role', 'data', {'SNAPSHOT:CREATE'})");
         session.execute("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
-                       "VALUES ('test_role2', 'cluster', {'SCHEMA:READ'})");
+                        "VALUES ('test_role2', 'cluster', {'SCHEMA:READ'})");
         session.execute("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
-                       "VALUES ('test_role2', 'data', {'SNAPSHOT:CREATE'})");
+                        "VALUES ('test_role2', 'data', {'SNAPSHOT:CREATE'})");
     }
 
     private void configureAdminAndSidecarIdentity(IInstance instance)
@@ -505,7 +478,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         try
         {
             return mtlsTestHelper.issueClientKeyStore(certificateBuilder ->
-                                                     certificateBuilder.addSanUriName(CASSANDRA_IDENTITY));
+                                                      certificateBuilder.addSanUriName(CASSANDRA_IDENTITY));
         }
         catch (Exception e)
         {
@@ -535,14 +508,12 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
      * This is for caches that don't support key-based invalidation.
      *
      * @param cacheName the cache name
-     * @param cacheSupplier supplier that returns a future of the cache map
+     * @param cacheSupplier supplier that returns the cache map
      * @param populateKeystore keystore to use for populating the cache before the test
-     * @param testContext the test context
      */
     private void verifyKeyBasedInvalidationNotSupported(String cacheName,
-                                                       java.util.function.Supplier<? extends Future<? extends java.util.Map<?, ?>>> cacheSupplier,
-                                                       Path populateKeystore,
-                                                       VertxTestContext testContext)
+                                                        java.util.function.Supplier<java.util.Map<?, ?>> cacheSupplier,
+                                                        Path populateKeystore)
     {
         // Clear cache and populate
         String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName);
@@ -550,24 +521,21 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         String endpointCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, CacheFactory.ENDPOINT_AUTHORIZATION_CACHE_NAME);
         verifyAccess(HttpMethod.DELETE, endpointCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, populateKeystore, assertStatus(HttpResponseStatus.OK));
+        loopAssert(3, () -> assertThat(cacheSupplier.get()).isNotEmpty());
 
-        pollUntilValue(() -> cacheSupplier.get(), cache -> !cache.isEmpty(), 3000)
-        .compose(entriesBeforeAttempt -> {
-            // Attempt to invalidate with specific keys - should return BAD_REQUEST
-            String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE + "?keys=someKey", cacheName);
-            verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.BAD_REQUEST));
+        // Record cache contents before attempting invalidation
+        java.util.Map<?, ?> entriesBeforeAttempt = new java.util.HashMap<>(cacheSupplier.get());
 
-            // Verify cache contents are unchanged
-            return cacheSupplier.get().map(entriesAfterAttempt -> {
-                entriesBeforeAttempt.forEach((key, value) -> {
-                    assertThat(entriesAfterAttempt.containsKey(key)).isTrue();
-                    assertThat(entriesAfterAttempt.get(key)).isEqualTo(value);
-                });
-                return null;
-            });
-        })
-        .onSuccess(v -> testContext.completeNow())
-        .onFailure(testContext::failNow);
+        // Attempt to invalidate with specific keys - should return BAD_REQUEST
+        String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE + "?keys=someKey", cacheName);
+        verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.BAD_REQUEST));
+
+        // Verify cache contents are unchanged
+        java.util.Map<?, ?> entriesAfterAttempt = cacheSupplier.get();
+        entriesBeforeAttempt.forEach((key, value) -> {
+            assertThat(entriesAfterAttempt.containsKey(key)).isTrue();
+            assertThat(entriesAfterAttempt.get(key)).isEqualTo(value);
+        });
     }
 
     /**
@@ -575,24 +543,22 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
      * Clears cache, populates with multiple entries, invalidates specific keys, verifies selective removal, and re-populates.
      *
      * @param cacheName the cache name to invalidate
-     * @param cacheSupplier supplier that returns a future of the cache map
+     * @param cacheSupplier supplier that returns the cache map
      * @param populateKeystores keystores to use for populating the cache
      * @param keysToInvalidate the keys to pass to the invalidation API (one or more)
      * @param verifyRemovedKeys the keys that should be removed from cache
      * @param verifyRemainingKey at least one key that should remain in cache
      * @param repopulateKeystore keystore to use for re-populating after invalidation
      * @param expectedRepopulatedKey the key expected to be back in cache after re-population
-     * @param testContext the test context
      */
     private void verifySelectiveKeyInvalidation(String cacheName,
-                                               java.util.function.Supplier<? extends Future<? extends java.util.Map<String, ?>>> cacheSupplier,
-                                               List<Path> populateKeystores,
-                                               List<String> keysToInvalidate,
-                                               List<String> verifyRemovedKeys,
-                                               String verifyRemainingKey,
-                                               Path repopulateKeystore,
-                                               String expectedRepopulatedKey,
-                                               VertxTestContext testContext)
+                                                java.util.function.Supplier<java.util.Map<String, ?>> cacheSupplier,
+                                                List<Path> populateKeystores,
+                                                List<String> keysToInvalidate,
+                                                List<String> verifyRemovedKeys,
+                                                String verifyRemainingKey,
+                                                Path repopulateKeystore,
+                                                String expectedRepopulatedKey)
     {
         // Clear cache and populate
         String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName);
@@ -604,49 +570,42 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
             verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, keystore, assertStatus(HttpResponseStatus.OK));
         }
 
-        // Verify cache has multiple entries and get initial size
-        pollUntilValue(() -> cacheSupplier.get(), cache -> cache.size() >= populateKeystores.size(), 3000)
-        .compose(cache -> {
-            // Verify removed keys are present before invalidation
-            Future<Void> checksFuture = Future.succeededFuture();
+        // Verify cache has multiple entries
+        loopAssert(3, () -> assertThat(cacheSupplier.get()).hasSizeGreaterThanOrEqualTo(populateKeystores.size()));
+        for (String removedKey : verifyRemovedKeys)
+        {
+            loopAssert(3, () -> assertThat(cacheSupplier.get()).containsKey(removedKey));
+        }
+
+        // Record initial size
+        int initialSize = cacheSupplier.get().size();
+
+        // Build invalidation route with multiple keys
+        StringBuilder routeBuilder = new StringBuilder(String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName));
+        for (int i = 0; i < keysToInvalidate.size(); i++)
+        {
+            routeBuilder.append(i == 0 ? "?keys=" : "&keys=").append(encode(keysToInvalidate.get(i), StandardCharsets.UTF_8));
+        }
+        String invalidateCacheRoute = routeBuilder.toString();
+
+        verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
+        // We skip clearing endpoint_authorization_cache here to avoid repopulating the cache we just invalidated
+
+        // Verify selective invalidation
+        loopAssert(3, () -> {
+            java.util.Map<String, ?> remainingEntries = cacheSupplier.get();
+            assertThat(remainingEntries).isNotEmpty();
+            assertThat(remainingEntries).hasSize(initialSize - keysToInvalidate.size());
             for (String removedKey : verifyRemovedKeys)
             {
-                checksFuture = checksFuture.compose(unused ->
-                    pollUntil(() -> cacheSupplier.get().map(c -> c.containsKey(removedKey)), 3000));
+                assertThat(remainingEntries).doesNotContainKey(removedKey);
             }
-            return checksFuture.map(cache);
-        })
-        .compose(cache -> {
-            int initialSize = cache.size();
+            assertThat(remainingEntries).containsKey(verifyRemainingKey);
+        });
 
-            // Build invalidation route with multiple keys
-            StringBuilder routeBuilder = new StringBuilder(String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName));
-            for (int i = 0; i < keysToInvalidate.size(); i++)
-            {
-                routeBuilder.append(i == 0 ? "?keys=" : "&keys=").append(encode(keysToInvalidate.get(i), StandardCharsets.UTF_8));
-            }
-            String invalidateCacheRoute = routeBuilder.toString();
-
-            verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-
-            // Verify selective invalidation
-            return pollUntil(() -> cacheSupplier.get().map(c -> {
-                if (c.isEmpty()) return false;
-                if (c.size() != initialSize - keysToInvalidate.size()) return false;
-                for (String removedKey : verifyRemovedKeys)
-                {
-                    if (c.containsKey(removedKey)) return false;
-                }
-                return c.containsKey(verifyRemainingKey);
-            }), 3000);
-        })
-        .compose(v -> {
-            // Re-populate and verify
-            verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, repopulateKeystore, assertStatus(HttpResponseStatus.OK));
-            return pollUntil(() -> cacheSupplier.get().map(cache -> cache.containsKey(expectedRepopulatedKey)), 3000);
-        })
-        .onSuccess(v -> testContext.completeNow())
-        .onFailure(testContext::failNow);
+        // Re-populate and verify
+        verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, repopulateKeystore, assertStatus(HttpResponseStatus.OK));
+        loopAssert(3, () -> assertThat(cacheSupplier.get()).containsKey(expectedRepopulatedKey));
     }
 
     /**
@@ -654,20 +613,18 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
      * Clears cache, populates it, verifies population, invalidates it, verifies expected state, and re-populates.
      *
      * @param cacheName the cache name to invalidate
-     * @param cacheSupplier supplier that returns a future of the cache map
+     * @param cacheSupplier supplier that returns the cache map
      * @param populateKeystore keystore to use for populating the cache
      * @param verifyKey key to verify exists in cache after population
      * @param expectedSizeAfterInvalidation expected cache size after invalidation (0 for empty, or typically 1 for superuser entry)
      * @param verifyRemainingKey key expected to remain after invalidation (can be null if expectedSizeAfterInvalidation is 0)
-     * @param testContext the test context
      */
     private void verifyFullCacheInvalidation(String cacheName,
-                                            java.util.function.Supplier<? extends Future<? extends java.util.Map<String, ?>>> cacheSupplier,
-                                            Path populateKeystore,
-                                            String verifyKey,
-                                            int expectedSizeAfterInvalidation,
-                                            String verifyRemainingKey,
-                                            VertxTestContext testContext)
+                                             java.util.function.Supplier<java.util.Map<String, ?>> cacheSupplier,
+                                             Path populateKeystore,
+                                             String verifyKey,
+                                             int expectedSizeAfterInvalidation,
+                                             String verifyRemainingKey)
     {
         // Clear cache and populate
         String clearCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName);
@@ -677,92 +634,34 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, populateKeystore, assertStatus(HttpResponseStatus.OK));
 
         // Verify cache has the expected entry
-        pollUntil(() -> cacheSupplier.get().map(cache -> cache.containsKey(verifyKey)), 3000)
-        .compose(v -> {
-            // Invalidate cache
-            String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName);
-            verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
-            verifyAccess(HttpMethod.DELETE, endpointCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
+        loopAssert(3, () -> assertThat(cacheSupplier.get()).containsKey(verifyKey));
 
-            // Verify expected state after invalidation
-            if (expectedSizeAfterInvalidation == 0)
-            {
-                // Cache should be completely empty
-                return pollUntil(() -> cacheSupplier.get().map(java.util.Map::isEmpty), 3000);
-            }
-            else
-            {
-                // Cache should have remaining entries
-                return pollUntil(() -> cacheSupplier.get().map(cache ->
-                    cache.size() == expectedSizeAfterInvalidation &&
-                    !cache.containsKey(verifyKey) &&
-                    cache.containsKey(verifyRemainingKey)
-                ), 3000);
-            }
-        })
-        .compose(v -> {
-            // Re-populate and verify
-            verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, populateKeystore, assertStatus(HttpResponseStatus.OK));
-            return pollUntil(() -> cacheSupplier.get().map(cache -> cache.containsKey(verifyKey)), 3000);
-        })
-        .onSuccess(v -> testContext.completeNow())
-        .onFailure(testContext::failNow);
-    }
+        // Invalidate cache
+        String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName);
+        verifyAccess(HttpMethod.DELETE, invalidateCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
+        verifyAccess(HttpMethod.DELETE, endpointCacheRoute, superuserKeystorePath, assertStatus(HttpResponseStatus.OK));
 
-    /**
-     * Poll until a condition is met or timeout
-     */
-    private Future<Void> pollUntil(java.util.function.Supplier<Future<Boolean>> condition, long timeoutMs)
-    {
-        Promise<Void> promise = Promise.promise();
-        long startTime = System.currentTimeMillis();
-        Vertx vertx = serverWrapper.injector.getInstance(Vertx.class);
-
-        vertx.setPeriodic(100, timerId -> {
-            condition.get().onComplete(ar -> {
-                if (ar.succeeded() && ar.result())
-                {
-                    vertx.cancelTimer(timerId);
-                    promise.complete();
-                }
-                else if (System.currentTimeMillis() - startTime > timeoutMs)
-                {
-                    vertx.cancelTimer(timerId);
-                    promise.fail("Timeout waiting for condition");
-                }
+        // Verify expected state after invalidation
+        if (expectedSizeAfterInvalidation == 0)
+        {
+            // Cache should be completely empty
+            loopAssert(3, () -> assertThat(cacheSupplier.get()).isEmpty());
+        }
+        else
+        {
+            // Cache should have remaining entries
+            loopAssert(3, () -> {
+                java.util.Map<String, ?> remainingEntries = cacheSupplier.get();
+                assertThat(remainingEntries).isNotEmpty();
+                assertThat(remainingEntries).hasSize(expectedSizeAfterInvalidation);
+                assertThat(remainingEntries).doesNotContainKey(verifyKey);
+                assertThat(remainingEntries).containsKey(verifyRemainingKey);
             });
-        });
+        }
 
-        return promise.future();
-    }
-
-    /**
-     * Poll until a future result meets a condition, and return the result
-     */
-    private <T> Future<T> pollUntilValue(java.util.function.Supplier<Future<T>> futureSupplier,
-                                         java.util.function.Predicate<T> condition,
-                                         long timeoutMs)
-    {
-        Promise<T> promise = Promise.promise();
-        long startTime = System.currentTimeMillis();
-        Vertx vertx = serverWrapper.injector.getInstance(Vertx.class);
-
-        vertx.setPeriodic(100, timerId -> {
-            futureSupplier.get().onComplete(ar -> {
-                if (ar.succeeded() && condition.test(ar.result()))
-                {
-                    vertx.cancelTimer(timerId);
-                    promise.complete(ar.result());
-                }
-                else if (System.currentTimeMillis() - startTime > timeoutMs)
-                {
-                    vertx.cancelTimer(timerId);
-                    promise.fail("Timeout waiting for condition");
-                }
-            });
-        });
-
-        return promise.future();
+        // Re-populate and verify
+        verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, populateKeystore, assertStatus(HttpResponseStatus.OK));
+        loopAssert(3, () -> assertThat(cacheSupplier.get()).containsKey(verifyKey));
     }
 
     static class TestModule extends AbstractModule
