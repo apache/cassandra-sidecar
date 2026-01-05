@@ -36,7 +36,7 @@ import org.jetbrains.annotations.NotNull;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
- * Validate the request keyspace should exist in Cassandra, when the endpoint
+ * Validates that the requested keyspace exists in Cassandra, when the endpoint
  * contains keyspace name.
  * On successful validation, it stores the fetched {@link KeyspaceMetadata}
  * in the {@link RoutingContext}

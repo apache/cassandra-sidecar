@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.job;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -139,8 +138,9 @@ public class RepairJob extends OperationalJob
                 return Future.succeededFuture();
             }
 
-            // Create promise only when we need it for periodic status checking
-            final Promise<Void> repairJobPromise = Promise.promise();
+            // Create promise for job submission response - this completes when we have a definitive
+            // status to return to the client (either repair is running, completed, or failed)
+            final Promise<Void> jobSubmissionPromise = Promise.promise();
             int maxAttempts = config.repairStatusMaxAttempts();
             final AtomicInteger attemptCounter = new AtomicInteger(0);
 
@@ -157,7 +157,7 @@ public class RepairJob extends OperationalJob
                         LOGGER.warn(msg);
                         // Set status to RUNNING and complete the promise to ensure the job is properly handled
                         currentStatus = OperationalJobStatus.RUNNING;
-                        repairJobPromise.tryComplete();
+                        jobSubmissionPromise.tryComplete();
                         return;
                     }
 
@@ -184,18 +184,18 @@ public class RepairJob extends OperationalJob
                     }
 
                     internalPool.cancelTimer(id);
-                    updateRepairJobStatus(repairJobPromise, status);
+                    updateRepairJobStatus(jobSubmissionPromise, status);
                 }
                 catch (Exception e)
                 {
                     LOGGER.error("Unexpected error in repair status check", e);
                     internalPool.cancelTimer(id);
                     currentStatus = OperationalJobStatus.FAILED;
-                    repairJobPromise.tryFail(e);
+                    jobSubmissionPromise.tryFail(e);
                 }
             });
 
-            return repairJobPromise.future();
+            return jobSubmissionPromise.future();
         }
         catch (Exception e)
         {
@@ -259,10 +259,10 @@ public class RepairJob extends OperationalJob
      * This approach ensures that resources are properly managed while still providing
      * accurate status reporting through the {@link #status()} method.
      *
-     * @param repairJobPromise the promise to complete
+     * @param jobSubmissionPromise the promise to complete
      * @param status the parent repair status from Cassandra
      */
-    private void updateRepairJobStatus(Promise<Void> repairJobPromise, List<String> status)
+    private void updateRepairJobStatus(Promise<Void> jobSubmissionPromise, List<String> status)
     {
         ParentRepairStatus parentRepairStatus = ParentRepairStatus.valueOf(status.get(0));
         List<String> messages = status.subList(1, status.size());
@@ -275,24 +275,24 @@ public class RepairJob extends OperationalJob
         {
             case COMPLETED:
                 currentStatus = OperationalJobStatus.SUCCEEDED;
-                repairJobPromise.tryComplete();
+                jobSubmissionPromise.tryComplete();
                 break;
             case FAILED:
                 currentStatus = OperationalJobStatus.FAILED;
                 String reason = !messages.isEmpty() ? messages.get(0) :
                                 "Repair failed with no error message";
-                repairJobPromise.tryFail(new IOException(reason));
+                jobSubmissionPromise.tryFail(new IOException(reason));
                 break;
             case IN_PROGRESS:
                 currentStatus = OperationalJobStatus.RUNNING;
-                repairJobPromise.tryComplete();
+                jobSubmissionPromise.tryComplete();
                 break;
             default:
                 String message = String.format("Encountered unexpected repair status: %s Messages: %s",
                                                parentRepairStatus, String.join("\n", messages));
                 LOGGER.error(message);
                 currentStatus = OperationalJobStatus.FAILED;
-                repairJobPromise.tryFail(message);
+                jobSubmissionPromise.tryFail(message);
                 break;
         }
     }
@@ -337,28 +337,8 @@ public class RepairJob extends OperationalJob
 
         if (repairPayload.startToken() != null && repairPayload.endToken() != null)
         {
-            try
-            {
-                String startTokenStr = repairPayload.startToken();
-                String endTokenStr = repairPayload.endToken();
-                
-                // Validate tokens using BigInteger for proper numeric comparison
-                BigInteger startToken = new BigInteger(startTokenStr);
-                BigInteger endToken = new BigInteger(endTokenStr);
-                
-                if (startToken.compareTo(endToken) >= 0)
-                {
-                    throw new IllegalArgumentException("Start token must be less than end token. " +
-                                                      "Got start: " + startTokenStr + ", end: " + endTokenStr);
-                }
-                
-                // Use original string values for range construction
-                options.put(RepairOptions.RANGES.optionName(), startTokenStr + ":" + endTokenStr);
-            }
-            catch (NumberFormatException e)
-            {
-                throw new IllegalArgumentException("Invalid token format. Tokens must be numeric values.", e);
-            }
+            // Use original string values for range construction
+            options.put(RepairOptions.RANGES.optionName(), repairPayload.startToken() + ":" + repairPayload.endToken());
         }
 
         if (repairPayload.repairType() == RepairPayload.RepairType.INCREMENTAL)

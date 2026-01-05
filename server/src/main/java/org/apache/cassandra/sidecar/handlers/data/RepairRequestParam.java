@@ -29,18 +29,18 @@ import org.apache.cassandra.sidecar.common.server.data.Name;
 public class RepairRequestParam
 {
     private final Name keyspace;
-    private final RepairPayload repairRequestPayload;
+    private final RepairPayload requestPayload;
 
-    private RepairRequestParam(Name keyspace, RepairPayload requestpayload)
+    private RepairRequestParam(Name keyspace, RepairPayload requestPayload)
     {
 
         this.keyspace = keyspace;
-        this.repairRequestPayload = requestpayload;
+        this.requestPayload = requestPayload;
     }
 
-    public static RepairRequestParam from(Name keyspace, RepairPayload payload)
+    public static RepairRequestParam from(Name keyspace, RepairPayload requestPayload)
     {
-        return new RepairRequestParam(keyspace, payload);
+        return new RepairRequestParam(keyspace, requestPayload);
     }
 
     /**
@@ -56,6 +56,6 @@ public class RepairRequestParam
      */
     public RepairPayload requestPayload()
     {
-        return repairRequestPayload;
+        return requestPayload;
     }
 }

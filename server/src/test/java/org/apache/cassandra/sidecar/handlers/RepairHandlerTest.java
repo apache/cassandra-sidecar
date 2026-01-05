@@ -303,4 +303,162 @@ public class RepairHandlerTest
                   context.completeNow();
               }));
     }
+
+    @Test
+    void testRepairHandlerInvalidTokenRange_StartGreaterThanEnd(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        RepairPayload payload = RepairPayload.builder()
+                                             .startToken("100")
+                                             .endToken("50")  // End token less than start token
+                                             .tables(List.of("test_table"))
+                                             .build();
+
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
+              .putHeader("Content-Type", "application/json")
+              .sendJson(payload, context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
+                  assertThat(response.bodyAsString()).contains("Start token must be less than end token");
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testRepairHandlerInvalidTokenRange_StartEqualToEnd(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        RepairPayload payload = RepairPayload.builder()
+                                             .startToken("100")
+                                             .endToken("100")  // End token equal to start token
+                                             .tables(List.of("test_table"))
+                                             .build();
+
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
+              .putHeader("Content-Type", "application/json")
+              .sendJson(payload, context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
+                  assertThat(response.bodyAsString()).contains("Start token must be less than end token");
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testRepairHandlerInvalidTokenFormat_NonNumericStartToken(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        RepairPayload payload = RepairPayload.builder()
+                                             .startToken("invalid_token")
+                                             .endToken("100")
+                                             .tables(List.of("test_table"))
+                                             .build();
+
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
+              .putHeader("Content-Type", "application/json")
+              .sendJson(payload, context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
+                  assertThat(response.bodyAsString()).contains("Invalid token format");
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testRepairHandlerInvalidTokenFormat_NonNumericEndToken(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        RepairPayload payload = RepairPayload.builder()
+                                             .startToken("50")
+                                             .endToken("invalid_token")
+                                             .tables(List.of("test_table"))
+                                             .build();
+
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
+              .putHeader("Content-Type", "application/json")
+              .sendJson(payload, context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(BAD_REQUEST.code());
+                  assertThat(response.bodyAsString()).contains("Invalid token format");
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testRepairHandlerValidLargeTokenRange(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        ArgumentCaptor<Map<String, String>> jobCapture = ArgumentCaptor.forClass(Map.class);
+        // Test with very large token values (BigInteger range)
+        String startToken = "123456789012345678901234567890";
+        String endToken = "987654321098765432109876543210";
+        RepairPayload payload = RepairPayload.builder()
+                                             .startToken(startToken)
+                                             .endToken(endToken)
+                                             .tables(List.of("test_table"))
+                                             .build();
+
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
+              .putHeader("Content-Type", "application/json")
+              .sendJson(payload, context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  OperationalJobResponse repairResponse = response.bodyAsJson(OperationalJobResponse.class);
+                  assertThat(repairResponse).isNotNull();
+                  assertThat(repairResponse.status()).isEqualTo(SUCCEEDED);
+                  verify(mockStorageOperations).repair(anyString(), jobCapture.capture());
+                  assertThat(jobCapture.getValue()).containsKey("ranges");
+                  assertThat(jobCapture.getValue().get("ranges")).isEqualTo(startToken + ":" + endToken);
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testRepairHandlerValidNegativeTokenRange(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        ArgumentCaptor<Map<String, String>> jobCapture = ArgumentCaptor.forClass(Map.class);
+        // Test with negative token values
+        String startToken = "-1000";
+        String endToken = "1000";
+        RepairPayload payload = RepairPayload.builder()
+                                             .startToken(startToken)
+                                             .endToken(endToken)
+                                             .tables(List.of("test_table"))
+                                             .build();
+
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
+              .putHeader("Content-Type", "application/json")
+              .sendJson(payload, context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  OperationalJobResponse repairResponse = response.bodyAsJson(OperationalJobResponse.class);
+                  assertThat(repairResponse).isNotNull();
+                  assertThat(repairResponse.status()).isEqualTo(SUCCEEDED);
+                  verify(mockStorageOperations).repair(anyString(), jobCapture.capture());
+                  assertThat(jobCapture.getValue()).containsKey("ranges");
+                  assertThat(jobCapture.getValue().get("ranges")).isEqualTo(startToken + ":" + endToken);
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testRepairHandlerOnlyStartTokenProvided(VertxTestContext context)
+    {
+        WebClient client = WebClient.create(vertx);
+        ArgumentCaptor<Map<String, String>> jobCapture = ArgumentCaptor.forClass(Map.class);
+        // Test with only start token (should not add ranges option)
+        RepairPayload payload = RepairPayload.builder()
+                                             .startToken("100")
+                                             // No end token
+                                             .tables(List.of("test_table"))
+                                             .build();
+
+        client.put(server.actualPort(), "127.0.0.1", REPAIR_ROUTE)
+              .putHeader("Content-Type", "application/json")
+              .sendJson(payload, context.succeeding(response -> {
+                  assertThat(response.statusCode()).isEqualTo(OK.code());
+                  OperationalJobResponse repairResponse = response.bodyAsJson(OperationalJobResponse.class);
+                  assertThat(repairResponse).isNotNull();
+                  assertThat(repairResponse.status()).isEqualTo(SUCCEEDED);
+                  verify(mockStorageOperations).repair(anyString(), jobCapture.capture());
+                  // Should not contain ranges since only start token was provided
+                  assertThat(jobCapture.getValue()).doesNotContainKey("ranges");
+                  context.completeNow();
+              }));
+    }
 }

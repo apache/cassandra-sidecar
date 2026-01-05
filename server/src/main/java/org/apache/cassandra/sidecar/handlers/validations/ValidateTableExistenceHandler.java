@@ -95,7 +95,7 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
             KeyspaceMetadata keyspaceMetadata = ar.result();
             RoutingContextUtils.put(context, RoutingContextUtils.SC_KEYSPACE_METADATA, keyspaceMetadata);
 
-            String table = input.tableName();
+            String table = input.maybeQuotedTableName();
             if (table == null)
             {
                 context.next();

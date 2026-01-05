@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
+import java.math.BigInteger;
 import java.util.Collections;
 import java.util.Set;
 
@@ -107,6 +108,9 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
                                     decodeException);
         }
 
+        // Validate token range if provided
+        validateTokenRange(payload);
+
         return RepairRequestParam.from(keyspace, payload);
     }
 
@@ -125,6 +129,40 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
                                      OperationalJobUtils.sendStatusBasedResponse(context, completedJob, exception),
                                      executorPools.service(),
                                      config.operationalJobExecutionMaxWaitTime());
+    }
+
+    /**
+     * Validates the token range in the repair payload if both start and end tokens are provided.
+     * 
+     * @param payload the repair payload to validate
+     * @throws HttpException if the token range is invalid
+     */
+    private void validateTokenRange(RepairPayload payload)
+    {
+        if (payload.startToken() != null && payload.endToken() != null)
+        {
+            try
+            {
+                String startTokenStr = payload.startToken();
+                String endTokenStr = payload.endToken();
+                
+                // Validate tokens using BigInteger for proper numeric comparison
+                BigInteger startToken = new BigInteger(startTokenStr);
+                BigInteger endToken = new BigInteger(endTokenStr);
+                
+                if (startToken.compareTo(endToken) >= 0)
+                {
+                    throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                        "Start token must be less than end token. Got start: " + 
+                        startTokenStr + ", end: " + endTokenStr);
+                }
+            }
+            catch (NumberFormatException e)
+            {
+                throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                    "Invalid token format. Tokens must be numeric values.", e);
+            }
+        }
     }
 
     /**
