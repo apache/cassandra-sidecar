@@ -27,6 +27,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.SystemAuthDatabaseAccessor;
+import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 
 /**
@@ -62,6 +63,12 @@ public class IdentityToRoleCache extends AuthCache<String, String>
         }
         return get(identity)
                .map(Objects::nonNull)
-               .recover(cause -> Future.succeededFuture(false));
+               .recover(cause -> {
+                   if (cause instanceof SchemaUnavailableException)
+                   {
+                       return Future.succeededFuture(false);
+                   }
+                   return Future.failedFuture(cause);
+               });
     }
 }

@@ -59,19 +59,18 @@ public class CassandraIdentityExtractor extends SpiffeIdentityExtractor
                             Future<Boolean> isValidFuture
                             = Future.all(isAdminFuture, inCacheFuture)
                                     .map(compositeFuture -> {
-                                        boolean isAdmin = compositeFuture.resultAt(0);
-                                        boolean inCache = compositeFuture.resultAt(1);
+                                        Boolean isAdmin = compositeFuture.resultAt(0);
+                                        Boolean inCache = compositeFuture.resultAt(1);
                                         return isAdmin || inCache;
                                     });
                             validityCheckFutures.add(isValidFuture);
                         }
                         return Future.all(validityCheckFutures)
                                      .map(compositeFuture -> {
-                                         List<Boolean> validityResults = compositeFuture.list();
-                                         List<String> allowedIdentities = new ArrayList<>();
+                                         List<String> allowedIdentities = new ArrayList<>(identities.size());
                                          for (int i = 0; i < identities.size(); i++)
                                          {
-                                             if (validityResults.get(i))
+                                             if (compositeFuture.<Boolean>resultAt(i))
                                              {
                                                  allowedIdentities.add(identities.get(i));
                                              }

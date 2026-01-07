@@ -644,7 +644,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, populateKeystore, assertStatus(HttpResponseStatus.OK));
 
         // Verify cache has the expected entry
-        loopAssert(15, () -> assertThat(cacheSupplier.get()).containsKey(verifyKey));
+        loopAssert(3, () -> assertThat(cacheSupplier.get()).containsKey(verifyKey));
 
         // Invalidate cache
         String invalidateCacheRoute = String.format(CACHE_INVALIDATE_ROUTE_TEMPLATE, cacheName);
@@ -655,12 +655,12 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         if (expectedSizeAfterInvalidation == 0)
         {
             // Cache should be completely empty
-            loopAssert(15, () -> assertThat(cacheSupplier.get()).isEmpty());
+            loopAssert(3, () -> assertThat(cacheSupplier.get()).isEmpty());
         }
         else
         {
             // Cache should have remaining entries
-            loopAssert(15, () -> {
+            loopAssert(3, () -> {
                 java.util.Map<String, ?> remainingEntries = cacheSupplier.get();
                 assertThat(remainingEntries).isNotEmpty();
                 assertThat(remainingEntries).hasSize(expectedSizeAfterInvalidation);
@@ -671,7 +671,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
 
         // Re-populate and verify
         verifyAccess(HttpMethod.GET, SCHEMA_ROUTE, populateKeystore, assertStatus(HttpResponseStatus.OK));
-        loopAssert(15, () -> assertThat(cacheSupplier.get()).containsKey(verifyKey));
+        loopAssert(3, () -> assertThat(cacheSupplier.get()).containsKey(verifyKey));
     }
 
     static class TestModule extends AbstractModule

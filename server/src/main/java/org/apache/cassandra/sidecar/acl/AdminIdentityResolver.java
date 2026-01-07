@@ -51,7 +51,8 @@ public class AdminIdentityResolver
         {
             return Future.succeededFuture(true);
         }
-        return identityToRoleCache.get(identity)
+        return identityToRoleCache
+               .get(identity)
                .compose(role -> {
                    if (role == null)
                    {

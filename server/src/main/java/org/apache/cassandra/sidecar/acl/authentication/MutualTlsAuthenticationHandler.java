@@ -105,7 +105,7 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
 
     private Future<List<String>> extractCassandraRoles(List<String> identities)
     {
-        List<Future<String>> roleFutures = new ArrayList<>();
+        List<Future<String>> roleFutures = new ArrayList<>(identities.size());
         for (String identity : identities)
         {
             roleFutures.add(identityToRoleCache.get(identity)
@@ -117,7 +117,7 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
         }
         return Future.all(roleFutures)
                      .map(compositeFuture -> {
-                         List<String> roles = new ArrayList<>();
+                         List<String> roles = new ArrayList<>(identities.size());
                          for (int i = 0; i < compositeFuture.size(); i++)
                          {
                              String role = compositeFuture.resultAt(i);

@@ -56,6 +56,6 @@ public class SuperUserCache extends AuthCache<String, Boolean>
 
     public Future<Boolean> isSuperUser(String role)
     {
-        return get(role);
+        return get(role).map(status -> status != null && status);
     }
 }

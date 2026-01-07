@@ -166,23 +166,20 @@ extends AuthenticationHandlerImpl<ReloadingJwtAuthenticationHandler.NoOpAuthenti
             }
 
             extractCassandraRoles(decodedToken)
-                    .onSuccess(roles -> {
-                        String roleIntended = context.request().getHeader(AUTH_ROLE);
+            .map(roles -> {
+                String roleIntended = context.request().getHeader(AUTH_ROLE);
 
-                        if (isNotEmpty(roleIntended) && !roles.contains(roleIntended))
-                        {
-                            String errMsg = String.format("User not authorized for role %s", roleIntended);
-                            handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, errMsg)));
-                            return;
-                        }
+                if (isNotEmpty(roleIntended) && !roles.contains(roleIntended))
+                {
+                    String errMsg = String.format("User not authorized for role %s", roleIntended);
+                    throw wrapHttpException(UNAUTHORIZED, errMsg);
+                }
 
-                        List<String> rolesToAdd = isNotEmpty(roleIntended) ? List.of(roleIntended) : roles;
-                        user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
-                        handler.handle(Future.succeededFuture(user));
-                    })
-                    .onFailure(cause -> {
-                        handler.handle(Future.failedFuture(wrapHttpException(UNAUTHORIZED, cause)));
-                    });
+                List<String> rolesToAdd = isNotEmpty(roleIntended) ? List.of(roleIntended) : roles;
+                user.attributes().put(CASSANDRA_ROLES_ATTRIBUTE_NAME, rolesToAdd);
+                return user;
+            })
+            .onComplete(handler);
         });
     }
 

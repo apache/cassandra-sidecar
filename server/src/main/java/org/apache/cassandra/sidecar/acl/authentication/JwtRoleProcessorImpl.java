@@ -63,7 +63,7 @@ public class JwtRoleProcessorImpl implements JwtRoleProcessor
         }
         return Future.all(roleFutures)
                      .map(compositeFuture -> {
-                         List<String> roles = new ArrayList<>();
+                         List<String> roles = new ArrayList<>(identityKeyArray.size());
                          for (int i = 0; i < compositeFuture.size(); i++)
                          {
                              String roleFromIdentity = compositeFuture.resultAt(i);
