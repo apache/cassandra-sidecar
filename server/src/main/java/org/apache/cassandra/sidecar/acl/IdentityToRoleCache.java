@@ -63,12 +63,6 @@ public class IdentityToRoleCache extends AuthCache<String, String>
         }
         return get(identity)
                .map(Objects::nonNull)
-               .recover(cause -> {
-                   if (cause instanceof SchemaUnavailableException)
-                   {
-                       return Future.succeededFuture(false);
-                   }
-                   return Future.failedFuture(cause);
-               });
+               .recover(cause -> Future.succeededFuture(false));
     }
 }
