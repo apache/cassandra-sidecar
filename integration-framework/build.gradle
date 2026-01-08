@@ -31,6 +31,7 @@ test {
 dependencies {
     implementation(project(":adapters:adapters-base"))
     implementation(project(":adapters:adapters-cassandra41"))
+    implementation(project(":adapters:adapters-cassandra50"))
 
     // Needed by the Cassandra dtest framework
     // JUnit
