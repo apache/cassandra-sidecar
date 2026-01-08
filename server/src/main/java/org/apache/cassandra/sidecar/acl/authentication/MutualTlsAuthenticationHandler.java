@@ -105,6 +105,10 @@ public class MutualTlsAuthenticationHandler extends AuthenticationHandlerImpl<Mu
 
     private Future<List<String>> extractCassandraRoles(List<String> identities)
     {
+        if (identities.isEmpty())
+        {
+            return Future.succeededFuture(List.of());
+        }
         List<Future<String>> roleFutures = new ArrayList<>(identities.size());
         for (String identity : identities)
         {
