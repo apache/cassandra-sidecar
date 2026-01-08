@@ -56,6 +56,7 @@ import static io.vertx.core.buffer.Buffer.buffer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -200,14 +201,18 @@ public class CompactionStopHandlerTest
     @Test
     void testInvalidCompactionType(VertxTestContext ctx)
     {
+        // Configure mock to throw exception for invalid compaction type
+        doThrow(new IllegalArgumentException("compaction type INVALID_TYPE is not supported"))
+            .when(mockCompactionManagerOperations).stopCompaction("INVALID_TYPE");
+
         WebClient client = WebClient.create(vertx);
         String payload = "{\"compactionType\":\"INVALID_TYPE\"}";
         client.put(server.actualPort(), "127.0.0.1", TEST_ROUTE)
               .sendBuffer(buffer(payload), ctx.succeeding(resp -> {
                   ctx.verify(() -> {
                       assertThat(resp.statusCode()).isEqualTo(BAD_REQUEST.code());
-                      verify(mockCompactionManagerOperations, times(0))
-                      .stopCompaction(anyString());
+                      verify(mockCompactionManagerOperations, times(1))
+                      .stopCompaction(eq("INVALID_TYPE"));
                   });
                   ctx.completeNow();
               }));

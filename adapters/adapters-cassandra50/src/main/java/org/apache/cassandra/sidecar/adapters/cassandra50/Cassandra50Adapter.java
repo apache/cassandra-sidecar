@@ -32,7 +32,7 @@ import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A {@link ICassandraAdapter} implementation for Cassandra 4.x
+ * A {@link ICassandraAdapter} implementation for Cassandra 5.0
  */
 public class Cassandra50Adapter extends CassandraAdapter
 {

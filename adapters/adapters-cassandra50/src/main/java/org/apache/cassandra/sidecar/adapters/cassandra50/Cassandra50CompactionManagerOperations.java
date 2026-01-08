@@ -31,6 +31,10 @@ import org.apache.cassandra.sidecar.common.server.JmxClient;
  */
 public class Cassandra50CompactionManagerOperations extends CassandraCompactionManagerOperations
 {
+    private static final List<String> SUPPORTED_COMPACTION_TYPES =
+            Arrays.stream(org.apache.cassandra.sidecar.adapters.base.CompactionType.values())
+                    .map(org.apache.cassandra.sidecar.adapters.base.CompactionType::name)
+                    .collect(Collectors.toList());
     /**
      * Creates a new instance with the provided {@link JmxClient}
      *
@@ -49,8 +53,6 @@ public class Cassandra50CompactionManagerOperations extends CassandraCompactionM
     @Override
     public List<String> supportedCompactionTypes()
     {
-        return Arrays.stream(CompactionType.values())
-                .map(CompactionType::name)
-                .collect(Collectors.toList());
+        return SUPPORTED_COMPACTION_TYPES;
     }
 }

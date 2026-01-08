@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.adapters.cassandra41;
 
 import java.net.InetSocketAddress;
-import java.util.Objects;
 
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
@@ -31,9 +30,9 @@ import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 
 /**
- * Factory to produce the Cassandra 4.x adapter
+ * Factory to produce the 4.1 adapter
  */
-@MinimumVersion("4.0.0")
+@MinimumVersion("4.1.0")
 public class Cassandra41Factory implements ICassandraFactory
 {
     private final DnsResolver dnsResolver;
@@ -42,18 +41,18 @@ public class Cassandra41Factory implements ICassandraFactory
 
     public Cassandra41Factory(DnsResolver dnsResolver, DriverUtils driverUtils, TableSchemaFetcher tableSchemaFetcher)
     {
-        this.dnsResolver = Objects.requireNonNull(dnsResolver, "dnsResolver is required");
-        this.driverUtils = Objects.requireNonNull(driverUtils, "driverUtils is required");
-        this.tableSchemaFetcher = Objects.requireNonNull(tableSchemaFetcher, "tableSchemaFetcher is required");
+        this.dnsResolver = dnsResolver;
+        this.driverUtils = driverUtils;
+        this.tableSchemaFetcher = tableSchemaFetcher;
     }
 
     /**
-     * Returns a new adapter for Cassandra 4.x clusters.
+     * Returns a new adapter for Cassandra 4.0 clusters.
      *
      * @param session                     the session to the Cassandra database
      * @param jmxClient                   the JMX client to connect to the Cassandra database
      * @param localNativeTransportAddress the native transport address and port of the instance
-     * @return a new adapter for the 4.x clusters
+     * @return a new adapter for the 4.0 clusters
      */
     @Override
     public ICassandraAdapter create(CQLSessionProvider session, JmxClient jmxClient,

@@ -24,11 +24,13 @@ import org.junit.jupiter.api.Test;
 import org.apache.cassandra.sidecar.adapters.base.jmx.CompactionManagerJmxOperations;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.CompactionManagerJmxOperations.COMPACTION_MANAGER_OBJ_NAME;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 
 /**
  * Tests for {@link CassandraCompactionManagerOperations} class
@@ -101,6 +103,14 @@ class CassandraCompactionManagerOperationsTest
             compactionManagerOperations.stopCompaction(type);
             verify(mockJmxOperations, times(1)).stopCompaction(type);
         }
+    }
+
+    @Test
+    void testStopCompactionCatchesUnsupportedType()
+    {
+        String compactionType = "MAJOR_COMPACTION";
+        assertThrows(IllegalArgumentException.class,
+                     () -> compactionManagerOperations.stopCompaction(compactionType));
     }
 
     @Test

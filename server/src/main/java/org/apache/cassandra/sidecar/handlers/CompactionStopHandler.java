@@ -86,9 +86,9 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
         CompactionManagerOperations compactionManagerOps = metadataFetcher.delegate(host).compactionManagerOperations();
 
         executorPools.service()
-                .executeBlocking(() -> stopCompaction(compactionManagerOps, request))
-                .onSuccess(context::json)
-                .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
+                     .executeBlocking(() -> stopCompaction(compactionManagerOps, request))
+                     .onSuccess(context::json)
+                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, request));
     }
 
     /**
@@ -103,16 +103,6 @@ public class CompactionStopHandler extends AbstractHandler<CompactionStopRequest
     {
         String compactionType = request.compactionType();
         String compactionId = request.compactionId();
-
-        // Validate compaction type supported by this Cassandra version
-        if (compactionType != null && !operations.supportedCompactionTypes().contains(compactionType))
-        {
-            throw new IllegalArgumentException(
-                String.format("Compaction type '%s' not supported in this Cassandra version. " +
-                             "Supported types: %s",
-                             compactionType,
-                             String.join(", ", operations.supportedCompactionTypes())));
-        }
 
         // Attempt to stop compaction
         // If compactionId  provided, use it (takes precedence over type)

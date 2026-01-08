@@ -36,6 +36,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CompactionStopRequestPayload
 {
+    public static final String COMPACTION_TYPE_KEY = "compactionType";
+    public static final String COMPACTION_ID_KEY = "compactionId";
+
     private final String compactionType;
     private final String compactionId;
 
@@ -46,8 +49,8 @@ public class CompactionStopRequestPayload
      * @param compactionId   optional ID of a specific compaction to stop
      */
     @JsonCreator
-    public CompactionStopRequestPayload(@JsonProperty(value = "compactionType") String compactionType,
-                                        @JsonProperty(value = "compactionId") String compactionId)
+    public CompactionStopRequestPayload(@JsonProperty(value = COMPACTION_TYPE_KEY) String compactionType,
+                                        @JsonProperty(value = COMPACTION_ID_KEY) String compactionId)
     {
         // Normalize compactionType: trim whitespace and convert to uppercase
         this.compactionType = normalizeCompactionType(compactionType);
@@ -73,7 +76,7 @@ public class CompactionStopRequestPayload
     /**
      * @return the type of compaction to stop
      */
-    @JsonProperty("compactionType")
+    @JsonProperty(COMPACTION_TYPE_KEY)
     public String compactionType()
     {
         return this.compactionType;
@@ -82,7 +85,7 @@ public class CompactionStopRequestPayload
     /**
      * @return the ID of a specific compaction to stop, or null to stop all specified type
      */
-    @JsonProperty("compactionId")
+    @JsonProperty(COMPACTION_ID_KEY)
     public String compactionId()
     {
         return this.compactionId != null ? this.compactionId.trim() : null;

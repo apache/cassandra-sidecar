@@ -17,7 +17,10 @@
  */
 package org.apache.cassandra.sidecar.adapters.base;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
@@ -43,6 +46,11 @@ public enum CompactionType
     COUNTER_CACHE_SAVE,
     INDEX_SUMMARY;
 
+    private static final List<String> SUPPORTED_COMPACTION_TYPES =
+            Arrays.stream(org.apache.cassandra.sidecar.adapters.base.CompactionType.values())
+                    .map(org.apache.cassandra.sidecar.adapters.base.CompactionType::name)
+                    .collect(Collectors.toList());
+
     @Override
     public String toString()
     {
@@ -66,13 +74,9 @@ public enum CompactionType
         }
         catch (IllegalArgumentException unknownEnum)
         {
-            String validTypes = String.join(", ",
-                    java.util.Arrays.stream(CompactionType.values())
-                            .map(CompactionType::name)
-                            .toArray(String[]::new));
             throw new IllegalArgumentException(
                     String.format("Unsupported compactionType: '%s'. Valid types are: %s",
-                            name, validTypes));
+                            name, SUPPORTED_COMPACTION_TYPES));
         }
     }
 }

@@ -22,7 +22,6 @@ import java.net.InetSocketAddress;
 
 import org.apache.cassandra.sidecar.adapters.base.CassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
-import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
@@ -32,7 +31,7 @@ import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A {@link ICassandraAdapter} implementation for Cassandra 4.x
+ * A {@link ICassandraAdapter} implementation for Cassandra 4.1 and later
  */
 public class Cassandra41Adapter extends CassandraAdapter
 {
@@ -51,20 +50,8 @@ public class Cassandra41Adapter extends CassandraAdapter
      */
     @Override
     @NotNull
-    protected StorageOperations createStorageOperations(DnsResolver dnsResolver, JmxClient jmxClient)
+    public StorageOperations storageOperations()
     {
         return new Cassandra41StorageOperations(jmxClient, dnsResolver);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Returns Cassandra 4.x-specific CompactionManagerOperations that excludes unsupported types
-     */
-    @Override
-    @NotNull
-    protected CompactionManagerOperations createCompactionManagerOperations(JmxClient jmxClient)
-    {
-        return new Cassandra41CompactionManagerOperations(jmxClient);
     }
 }

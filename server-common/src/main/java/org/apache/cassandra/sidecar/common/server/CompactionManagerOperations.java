@@ -44,7 +44,8 @@ public interface CompactionManagerOperations
 
     /**
      * Stops compaction based on type if no compaction ID is provided.
-     *
+     * Checks for unupported compaction type across Cassandra versions, as set of compactions type varies slightly
+     * between Cassandra.4x and Cassandra.5x
      * @param compactionType   the compaction ID to stop (nullable)
      * @throws IllegalArgumentException if both parameters are null or empty, or of the provided compactionType is unsupported
      */

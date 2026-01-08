@@ -34,6 +34,11 @@ import static org.apache.cassandra.sidecar.adapters.base.jmx.CompactionManagerJm
  */
 public class CassandraCompactionManagerOperations implements CompactionManagerOperations
 {
+    private static final List<String> SUPPORTED_COMPACTION_TYPES =
+            Arrays.stream(CompactionType.values())
+                  .map(CompactionType::name)
+                  .collect(Collectors.toList());
+
     protected final JmxClient jmxClient;
 
     /**
@@ -103,8 +108,6 @@ public class CassandraCompactionManagerOperations implements CompactionManagerOp
     @Override
     public List<String> supportedCompactionTypes()
     {
-        return Arrays.stream(CompactionType.values())
-                .map(CompactionType::name)
-                .collect(Collectors.toList());
+        return SUPPORTED_COMPACTION_TYPES;
     }
 }
