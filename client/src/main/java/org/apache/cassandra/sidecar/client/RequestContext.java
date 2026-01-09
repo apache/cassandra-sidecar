@@ -618,7 +618,7 @@ public class RequestContext
          * @param newToken the new token for the node to move to
          * @return a reference to this Builder
          */
-        public Builder nodeMoveRequest(String newToken)
+        public Builder nodeMoveRequest(@NotNull String newToken)
         {
             return request(new NodeMoveRequest(newToken));
         }

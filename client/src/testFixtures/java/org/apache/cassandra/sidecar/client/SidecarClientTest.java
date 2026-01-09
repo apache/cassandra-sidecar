@@ -1473,7 +1473,7 @@ abstract class SidecarClientTest
     {
         UUID jobId = UUID.randomUUID();
         String newToken = "123456789";
-        String nodeMoveString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"SUCCEEDED\",\"instance\":\"127.0.0.1\"}";
+        String nodeMoveString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"SUCCEEDED\"}";
 
         MockResponse response = new MockResponse()
                                 .setResponseCode(OK.code())

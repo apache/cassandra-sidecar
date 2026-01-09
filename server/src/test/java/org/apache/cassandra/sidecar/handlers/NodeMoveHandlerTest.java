@@ -56,6 +56,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONFLICT;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -172,6 +173,11 @@ public class NodeMoveHandlerTest
               .putHeader("content-type", "application/json")
               .sendBuffer(io.vertx.core.buffer.Buffer.buffer(requestBody), context.succeeding(response -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
+                  OperationalJobResponse moveResponse = response.bodyAsJson(OperationalJobResponse.class);
+                  assertThat(moveResponse).isNotNull();
+                  assertThat(moveResponse.status()).isEqualTo(FAILED);
+                  assertThat(moveResponse.operation()).isEqualTo("move");
+                  assertThat(moveResponse.reason()).isEqualTo("Simulated failure");
                   context.completeNow();
               }));
     }
