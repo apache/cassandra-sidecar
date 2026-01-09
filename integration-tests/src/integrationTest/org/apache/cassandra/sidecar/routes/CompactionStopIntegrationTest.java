@@ -27,10 +27,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 
-import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
-import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
-import org.apache.cassandra.sidecar.common.response.data.CompactionInfo;
-import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import org.junit.jupiter.api.Test;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -38,9 +34,14 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
+
+import org.apache.cassandra.sidecar.common.data.CompactionStopStatus;
+import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
+import org.apache.cassandra.sidecar.common.response.data.CompactionInfo;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
+import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 
 import static io.vertx.core.buffer.Buffer.buffer;
 import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
@@ -49,6 +50,7 @@ import static org.apache.cassandra.testing.TestUtils.TEST_TABLE_PREFIX;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
+
 
 /**
  * Integration tests for the Compaction Stop API endpoint
@@ -102,7 +104,8 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
         // Disable auto-compaction for ALL keyspaces at the beginning
         cluster.stream().forEach(instance -> {
-            try {
+            try
+            {
                 // First set compaction throughput to a high value to prevent any initial compactions from taking too long
                 instance.nodetool("setcompactionthroughput", "100");
 
@@ -141,7 +144,8 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
     }
 
     @Test
-    void testStopCompactionMissingBothParameters() {
+    void testStopCompactionMissingBothParameters()
+    {
         String payload = "{}";
         HttpResponse<Buffer> response
         = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
@@ -153,7 +157,8 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
     }
 
     @Test
-    void testStopCompactionInvalidType() {
+    void testStopCompactionInvalidType()
+    {
         String payload = "{\"compactionType\":\"INVALID_TYPE\"}";
         HttpResponse<Buffer> response
         = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
@@ -163,7 +168,8 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
     }
 
     @Test
-    void testStopCompactionMalformedJson() {
+    void testStopCompactionMalformedJson()
+    {
         String payload = "{invalid json";
         HttpResponse<Buffer> response
         = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
@@ -173,7 +179,8 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
     }
 
     @Test
-    void testStopCompactionAllSupportedTypes() {
+    void testStopCompactionAllSupportedTypes()
+    {
         String[] supportedTypes = {
                 "COMPACTION", "VALIDATION", "KEY_CACHE_SAVE", "ROW_CACHE_SAVE",
                 "COUNTER_CACHE_SAVE", "CLEANUP", "SCRUB", "UPGRADE_SSTABLES",
@@ -194,7 +201,8 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
             {
                 assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
 
-            } else
+            }
+            else
             {
                 assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
                 CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
@@ -243,7 +251,8 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
         }
     }
 
-    private void generateSSTables(QualifiedName tableName, int ssTableCount) {
+    private void generateSSTables(QualifiedName tableName, int ssTableCount)
+    {
         String largeData = "x".repeat(1000); // 1KB of data per row
 
         // Double-check auto-compaction is disabled before generating data
@@ -264,7 +273,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
 
         for (int batch = 0; batch < ssTableCount; batch++)
         {
-            logger.info("Generating batch {} of {} for table {}", batch+1, ssTableCount, tableName.table());
+            logger.info("Generating batch {} of {} for table {}", batch + 1, ssTableCount, tableName.table());
 
             for (int i = batch * rowsPerBatch; i < (batch + 1) * rowsPerBatch; i++)
             {
@@ -317,10 +326,12 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
     }
 
     @Test
-    void testCompactionStopByTypeActuallyStopped()  {
+    void testCompactionStopByTypeActuallyStopped()
+    {
         long startTime = System.currentTimeMillis();
 
-        try {
+        try
+        {
             logger.info("Testing that compaction stop by type actually stops compactions");
 
             // 2. THEN set compaction throughput to slow value
