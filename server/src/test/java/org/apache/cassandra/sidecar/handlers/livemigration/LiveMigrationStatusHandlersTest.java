@@ -164,6 +164,7 @@ class LiveMigrationStatusHandlersTest
                                   .send()
                                   .compose(response -> {
                                       assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
+                                      assertThat(response.bodyAsJsonObject()).isNotNull();
                                       return Future.succeededFuture();
                                   }))
               .onSuccess(r -> context.completeNow())
@@ -251,6 +252,7 @@ class LiveMigrationStatusHandlersTest
               .send()
               .compose(response -> {
                   assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.SERVICE_UNAVAILABLE.code());
+                  assertThat(response.bodyAsJsonObject()).isNotNull();
                   return Future.succeededFuture();
               })
               .onSuccess(r -> context.completeNow())

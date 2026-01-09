@@ -22,7 +22,6 @@ import java.util.Set;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
@@ -36,6 +35,9 @@ import org.apache.cassandra.sidecar.livemigration.LiveMigrationStatusTracker;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
+
+import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
  * Handler to retrieve the current live migration status for an instance.
@@ -73,9 +75,8 @@ public class LiveMigrationStatusGetHandler extends AbstractHandler<Void> impleme
         InstanceMetadata instance = metadataFetcher.instance(host);
         statusTracker.getMigrationStatus(instance)
                      .compose(routingContext::json)
-                     .onFailure(e -> routingContext.response()
-                                                   .setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code())
-                                                   .end(e.getMessage()));
+                     .onFailure(e -> routingContext.fail(wrapHttpException(SERVICE_UNAVAILABLE,
+                                                                           e.getMessage())));
     }
 
     @Override

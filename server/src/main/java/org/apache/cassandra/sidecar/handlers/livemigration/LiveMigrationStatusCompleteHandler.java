@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.Json;
@@ -42,6 +41,10 @@ import org.apache.cassandra.sidecar.livemigration.LiveMigrationStatusTracker;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
+
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
+import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
 /**
  * Handler to safely mark a live migration as COMPLETED for an instance.
@@ -113,15 +116,13 @@ public class LiveMigrationStatusCompleteHandler extends AbstractHandler<Void> im
                                       instanceMetadata.host(), e);
                          if (e instanceof IllegalStateException)
                          {
-                             routingContext.response()
-                                           .setStatusCode(HttpResponseStatus.BAD_REQUEST.code())
-                                           .end("Live migration marked as COMPLETED earlier.");
+                             routingContext.fail(wrapHttpException(BAD_REQUEST,
+                                                                   "Live migration marked as COMPLETED earlier."));
                          }
                          else
                          {
-                             routingContext.response()
-                                           .setStatusCode(HttpResponseStatus.SERVICE_UNAVAILABLE.code())
-                                           .end("Could not update Live Migration as complete.");
+                             routingContext.fail(wrapHttpException(SERVICE_UNAVAILABLE,
+                                                                   "Could not update Live Migration as complete."));
                          }
                      });
     }
