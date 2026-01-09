@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
+import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
@@ -50,7 +51,8 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
     {
         return super.testClusterConfiguration()
                     .dcCount(1)
-                    .nodesPerDc(3);
+                    .nodesPerDc(3)
+                    .requestFeature(Feature.NETWORK);
     }
 
     @Override
@@ -127,7 +129,6 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
         assertThat(responseBody).isNotNull();
         assertThat(responseBody.getString("jobId")).isNotNull();
         assertThat(responseBody.getString("operation")).isEqualTo("move");
-        logger.error("jobStatus for testNodeMoveOperationSuccess:{}", responseBody.getString("jobStatus"));
         assertThat(responseBody.getString("jobStatus")).isIn(
         OperationalJobStatus.CREATED.name(),
         OperationalJobStatus.RUNNING.name(),
@@ -209,7 +210,6 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
 
             JsonObject streamStats = streamStatsResponse.bodyAsJsonObject();
             assertThat(streamStats).isNotNull();
-            logger.error("operationMode for testNodeMoveOperationFailure:{}", streamStats.getString("operationMode"));
             // The operationMode should be either NORMAL (completed) or MOVING (in progress)
             assertThat(streamStats.getString("operationMode")).isIn("NORMAL", "MOVING");
         });
