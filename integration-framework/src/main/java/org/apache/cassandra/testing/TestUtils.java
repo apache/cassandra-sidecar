@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.adapters.cassandra41.Cassandra41Factory;
+import org.apache.cassandra.sidecar.adapters.cassandra50.Cassandra50Factory;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
@@ -116,6 +117,7 @@ public final class TestUtils
         return new CassandraVersionProvider.Builder()
                .add(new CassandraFactory(dnsResolver, driverUtils, tableSchemaFetcher))
                .add(new Cassandra41Factory(dnsResolver, driverUtils, tableSchemaFetcher))
+               .add(new Cassandra50Factory(dnsResolver, driverUtils, tableSchemaFetcher))
                .build();
     }
 
