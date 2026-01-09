@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Sidecar API Endpoint for Nodetool Compaction Stop (CASSSIDECAR-360)
  * Implementation of CDCPublisher (CASSSIDECAR-243)
  * Sidecar endpoint for moving a node to a new token (CASSSIDECAR-344)
  * Returning JSON responses for live migration status endpoints in case of errors (CASSSIDECAR-395)
