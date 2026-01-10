@@ -102,7 +102,8 @@ public abstract class OperationalJob implements Task<Void>
     }
 
     /**
-     * The concrete-job-specific implementation to determine if the job has conflict with other operations on the same node.
+     * Validates if the job has conflict either leveraging either other same operation jobs on the same node and/or a
+     * custom job-specific implementation for conflict determination.
      *
      * @param sameOperationJobs list of jobs being tracked by the tracker that have the same operation
      * @return true if the job is has a conflict.

@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.job;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -76,7 +77,7 @@ class NodeMoveJobTest
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_MOVING);
         NodeMoveJob job = new NodeMoveJob(jobId, newToken, mockStorageOperations);
-        assertThat(job.isRunningOnCassandra()).isTrue();
+        assertThat(job.hasConflict(Collections.emptyList())).isTrue();
     }
 
     @Test
@@ -84,7 +85,7 @@ class NodeMoveJobTest
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
         NodeMoveJob job = new NodeMoveJob(jobId, newToken, mockStorageOperations);
-        assertThat(job.isRunningOnCassandra()).isFalse();
+        assertThat(job.hasConflict(Collections.emptyList())).isFalse();
     }
 
     @Test
@@ -92,7 +93,7 @@ class NodeMoveJobTest
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_JOINING);
         NodeMoveJob job = new NodeMoveJob(jobId, newToken, mockStorageOperations);
-        assertThat(job.isRunningOnCassandra()).isFalse();
+        assertThat(job.hasConflict(Collections.emptyList())).isFalse();
     }
 
     @Test

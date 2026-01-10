@@ -35,7 +35,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -151,16 +150,6 @@ class NodeDrainJobTest
         nodeDrainJob.executeInternal();
 
         verify(mockStorageOperations).drain();
-    }
-
-    @Test
-    void testExecuteInternal_WhenAlreadyDraining() throws IOException, ExecutionException, InterruptedException
-    {
-        when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_DRAINING);
-
-        nodeDrainJob.executeInternal();
-
-        verify(mockStorageOperations, never()).drain();
     }
 
     @Test

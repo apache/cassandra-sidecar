@@ -270,7 +270,8 @@ public class CassandraStorageOperations implements StorageOperations
     /**
      * {@inheritDoc}
      */
-    public int repair(String keyspace, Map<String, String> repairOptions)
+    @Override
+    public int repairAsync(String keyspace, Map<String, String> repairOptions)
     {
         StorageJmxOperations ssProxy = jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME);
         return ssProxy.repairAsync(keyspace, repairOptions);

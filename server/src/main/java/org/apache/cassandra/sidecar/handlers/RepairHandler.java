@@ -27,10 +27,10 @@ import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.Json;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
@@ -40,6 +40,7 @@ import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.handlers.data.RepairRequestParam;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.job.RepairJob;
+import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.OperationalJobUtils;
@@ -54,6 +55,7 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
 {
     private final ServiceConfiguration config;
     private final OperationalJobManager jobManager;
+    private final PeriodicTaskExecutor periodicTaskExecutor;
 
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
@@ -63,17 +65,20 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
      * @param serviceConfiguration configuration object holding config details of Sidecar
      * @param validator            a validator instance to validate Cassandra-specific input
      * @param jobManager           manager for long-running operational jobs
+     * @param periodicTaskExecutor executor for periodic tasks
      */
     @Inject
     protected RepairHandler(InstanceMetadataFetcher metadataFetcher,
                             ExecutorPools executorPools,
                             ServiceConfiguration serviceConfiguration,
                             CassandraInputValidator validator,
-                            OperationalJobManager jobManager)
+                            OperationalJobManager jobManager,
+                            PeriodicTaskExecutor periodicTaskExecutor)
     {
         super(metadataFetcher, executorPools, validator);
         this.jobManager = jobManager;
         this.config = serviceConfiguration;
+        this.periodicTaskExecutor = periodicTaskExecutor;
     }
 
     /**
@@ -88,17 +93,10 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "'keyspace' is required but not supplied");
         }
 
-        String bodyString = context.body().asString();
-        if (bodyString == null || bodyString.equalsIgnoreCase("null")) // json encoder writes null as "null"
-        {
-            logger.warn("Bad request to create repair job. Received null payload.");
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Unexpected null payload for request");
-        }
-
         RepairPayload payload;
         try
         {
-            payload = Json.decodeValue(bodyString, RepairPayload.class);
+            payload = context.body().asPojo(RepairPayload.class);
         }
         catch (DecodeException decodeException)
         {
@@ -106,6 +104,11 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
                                     "Invalid request payload",
                                     decodeException);
+        }
+        if (payload == null)
+        {
+            logger.warn("Bad request to create repair job. Received null payload.");
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Unexpected null payload for request");
         }
 
         // Validate token range if provided
@@ -122,7 +125,7 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
                                   RepairRequestParam repairRequestParam)
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
-        RepairJob job = new RepairJob(executorPools.internal(), config.repairConfiguration(), UUIDs.timeBased(), operations, repairRequestParam);
+        RepairJob job = new RepairJob(executorPools.internal(), periodicTaskExecutor, config.repairConfiguration(), UUIDs.timeBased(), operations, repairRequestParam);
 
         this.jobManager.trySubmitJob(job,
                                      (completedJob, exception) ->
@@ -153,14 +156,14 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
                 if (startToken.compareTo(endToken) >= 0)
                 {
                     throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                        "Start token must be less than end token. Got start: " + 
-                        startTokenStr + ", end: " + endTokenStr);
+                                            "Start token must be less than end token. Got start: " +
+                                            startTokenStr + ", end: " + endTokenStr);
                 }
             }
             catch (NumberFormatException e)
             {
                 throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
-                    "Invalid token format. Tokens must be numeric values.", e);
+                                        "Invalid token format. Tokens must be numeric values.", e);
             }
         }
     }

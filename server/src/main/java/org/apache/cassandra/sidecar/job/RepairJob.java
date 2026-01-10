@@ -34,9 +34,14 @@ import org.apache.cassandra.sidecar.adapters.base.RepairOptions;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.RepairJobsConfiguration;
 import org.apache.cassandra.sidecar.handlers.data.RepairRequestParam;
+import org.apache.cassandra.sidecar.tasks.PeriodicTask;
+import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
+import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -59,7 +64,7 @@ public class RepairJob extends OperationalJob
 
     private final RepairRequestParam repairParams;
     private final RepairJobsConfiguration config;
-    private final TaskExecutorPool internalPool;
+    private final PeriodicTaskExecutor periodicTaskExecutor;
     protected StorageOperations storageOperations;
     private volatile OperationalJobStatus currentStatus;
     private volatile int commandId = -1; // Store the command ID for status checks
@@ -73,26 +78,137 @@ public class RepairJob extends OperationalJob
     }
 
     /**
+     * Container for status parsing results
+     */
+    private static class StatusResult
+    {
+        final OperationalJobStatus operationalStatus;
+        final List<String> messages;
+
+        StatusResult(OperationalJobStatus operationalStatus, List<String> messages)
+        {
+            this.operationalStatus = operationalStatus;
+            this.messages = messages;
+        }
+    }
+
+    /**
      * Constructor for creation of RepairJob
      *
-     * @param taskExecutorPool    TaskExecutorPool instance (for testing)
-     * @param config              Repair job configuration
-     * @param jobId               UUID representing the Job to be created
-     * @param storageOps          Reference to the storage operations interface
-     * @param repairParams        Repair request parameters
+     * @param taskExecutorPool       TaskExecutorPool instance (for testing)
+     * @param periodicTaskExecutor   PeriodicTaskExecutor for status checking
+     * @param config                 Repair job configuration
+     * @param jobId                  UUID representing the Job to be created
+     * @param storageOps             Reference to the storage operations interface
+     * @param repairParams           Repair request parameters
      */
     public RepairJob(TaskExecutorPool taskExecutorPool,
+                     PeriodicTaskExecutor periodicTaskExecutor,
                      RepairJobsConfiguration config,
                      UUID jobId,
                      StorageOperations storageOps,
                      RepairRequestParam repairParams)
     {
         super(jobId);
-        this.internalPool = taskExecutorPool;
+        this.periodicTaskExecutor = periodicTaskExecutor;
         this.config = config;
         this.storageOperations = storageOps;
         this.repairParams = repairParams;
         this.currentStatus = OperationalJobStatus.CREATED;
+    }
+
+    /**
+     * PeriodicTask implementation for checking repair status with proper scheduling.
+     * This task ensures delay between executions and prevents overlapping status checks.
+     */
+    private class RepairStatusCheckTask implements PeriodicTask
+    {
+        private final Promise<Void> jobSubmissionPromise;
+        private final AtomicInteger attemptCounter;
+        private final int maxAttempts;
+        private volatile boolean completed = false;
+
+        RepairStatusCheckTask(Promise<Void> jobSubmissionPromise, AtomicInteger attemptCounter, int maxAttempts)
+        {
+            this.jobSubmissionPromise = jobSubmissionPromise;
+            this.attemptCounter = attemptCounter;
+            this.maxAttempts = maxAttempts;
+        }
+
+        @Override
+        public void execute(Promise<Void> promise)
+        {
+            try
+            {
+                int currentAttempt = attemptCounter.incrementAndGet();
+                if (currentAttempt > maxAttempts)
+                {
+                    LOGGER.warn("Failed to obtain repair status after {} attempts.", maxAttempts);
+                    // Set status to RUNNING and complete the promise to ensure the job is properly handled
+                    currentStatus = OperationalJobStatus.RUNNING;
+                    jobSubmissionPromise.tryComplete();
+                    completed = true;
+                    promise.complete(); // Stop the periodic task
+                    return;
+                }
+
+                StatusResult statusResult = refreshStatusFromCassandra();
+                
+                // If no status available yet, continue polling
+                if (statusResult == null)
+                {
+                    LOGGER.debug("No parent repair session status found for cmd: {} - repair may be initializing (attempt {}/{})",
+                                 commandId, currentAttempt, maxAttempts);
+                    promise.complete(); // Continue to next execution
+                    return;
+                }
+                
+                // We have a definitive status, handle the promise and stop the task
+                handleJobSubmissionPromise(jobSubmissionPromise, statusResult);
+                completed = true;
+                promise.complete(); // Stop the periodic task
+            }
+            catch (Exception e)
+            {
+                LOGGER.error("Unexpected error in repair status check", e);
+                currentStatus = OperationalJobStatus.FAILED;
+                jobSubmissionPromise.tryFail(e);
+                completed = true;
+                promise.fail(e); // Stop the periodic task
+            }
+        }
+
+        @Override
+        public DurationSpec delay()
+        {
+            return config.repairPollInterval();
+        }
+
+        @Override
+        public DurationSpec initialDelay()
+        {
+            // Start immediately for the first check
+            return MillisecondBoundConfiguration.ZERO;
+        }
+
+        @Override
+        public ScheduleDecision scheduleDecision()
+        {
+            // Stop scheduling if we've completed
+            return completed ? ScheduleDecision.SKIP : ScheduleDecision.EXECUTE;
+        }
+
+        @Override
+        public String identifier()
+        {
+            return "repair-status-check-" + jobId();
+        }
+
+        @Override
+        public String name()
+        {
+            return "RepairStatusCheck";
+        }
     }
 
     /**
@@ -103,9 +219,8 @@ public class RepairJob extends OperationalJob
     @Override
     public boolean hasConflict(@NotNull List<OperationalJob> sameOperationJobs)
     {
-        // For now, we simply allow all repair jobs to run in parallel
-        // A more sophisticated implementation could check the repair parameters
-        // against currently running repairs to detect potential conflicts
+        // Let Cassandra handle conflict detection - no pre-emptive conflict checking
+        // Conflicts will be handled through exception handling during repair execution
         return false;
     }
 
@@ -121,7 +236,7 @@ public class RepairJob extends OperationalJob
 
             try
             {
-                commandId = storageOperations.repair(keyspace, options);
+                commandId = storageOperations.repairAsync(keyspace, options);
             }
             catch (Exception e)
             {
@@ -133,67 +248,18 @@ public class RepairJob extends OperationalJob
             if (commandId <= 0)
             {
                 // When there are no relevant token ranges for the keyspace or RF is 1, the repair is inapplicable
-                LOGGER.info("Repair is not applicable for the provided options and keyspace '{}' jobId '{}'", keyspace, this.jobId());
+                LOGGER.info("Replication factor is 1. No repair is needed for keyspace '{}' jobId '{}'", keyspace, this.jobId());
                 currentStatus = OperationalJobStatus.SUCCEEDED;
                 return Future.succeededFuture();
             }
 
-            // Create promise for job submission response - this completes when we have a definitive
-            // status to return to the client (either repair is running, completed, or failed)
-            final Promise<Void> jobSubmissionPromise = Promise.promise();
+            Promise<Void> jobSubmissionPromise = Promise.promise();
             int maxAttempts = config.repairStatusMaxAttempts();
-            final AtomicInteger attemptCounter = new AtomicInteger(0);
+            AtomicInteger attemptCounter = new AtomicInteger(0);
 
-            // Periodic timer that checks for a valid repair status for a specified no. attempts to make a best-effort attempt
-            // to validate that the repair has been kicked-off before returning.
-            internalPool.setPeriodic(0, config.repairPollInterval().toIntMillis(), id -> {
-                try
-                {
-                    int currentAttempt = attemptCounter.incrementAndGet();
-                    if (currentAttempt > maxAttempts)
-                    {
-                        internalPool.cancelTimer(id);
-                        String msg = String.format("Failed to obtain repair status after %d attempts.", maxAttempts);
-                        LOGGER.warn(msg);
-                        // Set status to RUNNING and complete the promise to ensure the job is properly handled
-                        currentStatus = OperationalJobStatus.RUNNING;
-                        jobSubmissionPromise.tryComplete();
-                        return;
-                    }
-
-                    // Check the repair status
-                    List<String> status;
-                    try
-                    {
-                        status = storageOperations.getParentRepairStatus(commandId);
-                    }
-                    catch (Exception e)
-                    {
-                        LOGGER.warn("Failed to get repair status for cmd: {} (attempt {}/{})",
-                                    commandId, currentAttempt, maxAttempts, e);
-                        // Continue polling on exception
-                        return;
-                    }
-
-                    // If status is empty, continue polling
-                    if (status == null || status.isEmpty())
-                    {
-                        LOGGER.debug("No parent repair session status found for cmd: {} - repair may be initializing (attempt {}/{})",
-                                     commandId, currentAttempt, maxAttempts);
-                        return;
-                    }
-
-                    internalPool.cancelTimer(id);
-                    updateRepairJobStatus(jobSubmissionPromise, status);
-                }
-                catch (Exception e)
-                {
-                    LOGGER.error("Unexpected error in repair status check", e);
-                    internalPool.cancelTimer(id);
-                    currentStatus = OperationalJobStatus.FAILED;
-                    jobSubmissionPromise.tryFail(e);
-                }
-            });
+            // Use PeriodicTaskExecutor for proper scheduling with delay between executions
+            RepairStatusCheckTask statusCheckTask = new RepairStatusCheckTask(jobSubmissionPromise, attemptCounter, maxAttempts);
+            periodicTaskExecutor.schedule(statusCheckTask);
 
             return jobSubmissionPromise.future();
         }
@@ -206,93 +272,103 @@ public class RepairJob extends OperationalJob
         }
     }
 
-
     @Override
     public OperationalJobStatus status()
     {
-        // If we have a valid command ID, check the actual repair status
-        if (commandId > 0)
-        {
-            List<String> status = storageOperations.getParentRepairStatus(commandId);
-            if (status != null && !status.isEmpty())
-            {
-                try
-                {
-                    ParentRepairStatus parentRepairStatus = ParentRepairStatus.valueOf(status.get(0));
-                    switch (parentRepairStatus)
-                    {
-                        case COMPLETED:
-                            return OperationalJobStatus.SUCCEEDED;
-                        case FAILED:
-                            return OperationalJobStatus.FAILED;
-                        case IN_PROGRESS:
-                            return OperationalJobStatus.RUNNING;
-                        default:
-                            LOGGER.warn("Encountered unexpected repair status: {}", parentRepairStatus);
-                            // Don't update currentStatus here, fall back to parent implementation
-                    }
-                }
-                catch (IllegalArgumentException e)
-                {
-                    LOGGER.warn("Invalid parent repair status: {}", status.get(0), e);
-                    // Don't update currentStatus here, fall back to parent implementation
-                }
-            }
-        }
-        
-        // If we have a current status, return it
-        if (currentStatus != null)
-        {
-            return currentStatus;
-        }
-        
-        // Otherwise, fall back to the parent implementation
-        return super.status();
+        refreshStatusFromCassandra();
+        return currentStatus != null ? currentStatus : super.status();
     }
 
     /**
-     * Updates the repair job status based on the parent repair status from Cassandra.
-     * <p>
-     * When the parent repair status is IN_PROGRESS, this method sets the currentStatus
-     * to RUNNING and completes the promise
-     * <p>
-     * This approach ensures that resources are properly managed while still providing
-     * accurate status reporting through the {@link #status()} method.
-     *
-     * @param jobSubmissionPromise the promise to complete
-     * @param status the parent repair status from Cassandra
+     * Refreshes the repair status from Cassandra and updates the internal currentStatus.
+     * 
+     * @return StatusResult containing the operational status and messages, or null if no status is available yet
      */
-    private void updateRepairJobStatus(Promise<Void> jobSubmissionPromise, List<String> status)
+    private StatusResult refreshStatusFromCassandra()
     {
-        ParentRepairStatus parentRepairStatus = ParentRepairStatus.valueOf(status.get(0));
-        List<String> messages = status.subList(1, status.size());
-
-        LOGGER.info("Parent repair session {} has {} status. Messages: {}",
-                    parentRepairStatus.name().toLowerCase(),
-                    parentRepairStatus,
-                    String.join("\n", messages));
-        switch (parentRepairStatus)
+        // If we don't have a valid command ID, return current status
+        if (commandId <= 0)
         {
-            case COMPLETED:
-                currentStatus = OperationalJobStatus.SUCCEEDED;
+            return null;
+        }
+
+        List<String> status;
+        try
+        {
+            status = storageOperations.getParentRepairStatus(commandId);
+        }
+        catch (Exception e)
+        {
+            LOGGER.warn("Failed to get repair status for cmd: {}", commandId, e);
+            return null;
+        }
+        
+        // If no status available yet, return null
+        if (status == null || status.isEmpty())
+        {
+            return null;
+        }
+        
+        try
+        {
+            ParentRepairStatus parentRepairStatus = ParentRepairStatus.valueOf(status.get(0));
+
+            switch (parentRepairStatus)
+            {
+                case COMPLETED:
+                    currentStatus = OperationalJobStatus.SUCCEEDED;
+                    break;
+                case FAILED:
+                    currentStatus = OperationalJobStatus.FAILED;
+                    break;
+                case IN_PROGRESS:
+                    currentStatus = OperationalJobStatus.RUNNING;
+                    break;
+                default:
+                    LOGGER.warn("Encountered unexpected repair status: {}", parentRepairStatus);
+                    return null;
+            }
+            
+
+            // Extract messages (everything after the first element)
+            List<String> messages = status.subList(1, status.size());
+            
+            return new StatusResult(currentStatus, messages);
+        }
+        catch (IllegalArgumentException e)
+        {
+            LOGGER.warn("Invalid parent repair status: {}", status.get(0), e);
+            return null;
+        }
+    }
+
+    /**
+     * Handles the job submission promise based on the repair status result.
+     * 
+     * @param jobSubmissionPromise the promise to complete or fail
+     * @param statusResult the status result containing operational status and messages
+     */
+    private void handleJobSubmissionPromise(Promise<Void> jobSubmissionPromise, StatusResult statusResult)
+    {
+        LOGGER.info("Parent repair session has {} status. Messages: {}",
+                    statusResult.operationalStatus, String.join("\n", statusResult.messages));
+        
+        switch (statusResult.operationalStatus)
+        {
+            case SUCCEEDED:
+            case RUNNING:
                 jobSubmissionPromise.tryComplete();
                 break;
             case FAILED:
-                currentStatus = OperationalJobStatus.FAILED;
-                String reason = !messages.isEmpty() ? messages.get(0) :
+                String reason = !statusResult.messages.isEmpty() ? statusResult.messages.get(0) :
                                 "Repair failed with no error message";
                 jobSubmissionPromise.tryFail(new IOException(reason));
                 break;
-            case IN_PROGRESS:
-                currentStatus = OperationalJobStatus.RUNNING;
-                jobSubmissionPromise.tryComplete();
-                break;
             default:
                 String message = String.format("Encountered unexpected repair status: %s Messages: %s",
-                                               parentRepairStatus, String.join("\n", messages));
+                                               statusResult.operationalStatus, String.join("\n", statusResult.messages));
                 LOGGER.error(message);
-                currentStatus = OperationalJobStatus.FAILED;
-                jobSubmissionPromise.tryFail(message);
+                jobSubmissionPromise.tryFail(new IOException(message));
                 break;
         }
     }
@@ -321,7 +397,6 @@ public class RepairJob extends OperationalJob
         {
             options.put(RepairOptions.PRIMARY_RANGE.optionName(), String.valueOf(isPrimaryRange));
         }
-        // TODO: Verify use-cases involving multiple DCs
 
         String dc = repairPayload.datacenter();
         if (dc != null)
@@ -346,12 +421,12 @@ public class RepairJob extends OperationalJob
             options.put(RepairOptions.INCREMENTAL.optionName(), Boolean.TRUE.toString());
         }
 
-        if (repairPayload.force() != null)
+        if (Boolean.TRUE.equals(repairPayload.force()))
         {
-            options.put(RepairOptions.FORCE_REPAIR.optionName(), String.valueOf(repairPayload.force()));
+            options.put(RepairOptions.FORCE_REPAIR.optionName(), Boolean.TRUE.toString());
         }
 
-        if (repairPayload.shouldValidate() != null)
+        if (Boolean.TRUE.equals(repairPayload.shouldValidate()))
         {
             options.put(RepairOptions.PREVIEW.optionName(), PREVIEW_KIND_REPAIRED);
         }

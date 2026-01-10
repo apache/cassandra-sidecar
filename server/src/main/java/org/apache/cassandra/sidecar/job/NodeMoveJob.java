@@ -18,12 +18,17 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Implementation of {@link OperationalJob} to perform node move operation.
@@ -44,7 +49,7 @@ public class NodeMoveJob extends OperationalJob
     }
 
     @Override
-    public boolean isRunningOnCassandra()
+    public boolean hasConflict(@NotNull List<OperationalJob> sameOperationJobs)
     {
         String operationMode = storageOperations.operationMode();
         return OPERATION_MODE_MOVING.equals(operationMode);
@@ -52,12 +57,24 @@ public class NodeMoveJob extends OperationalJob
 
     /**
      * {@inheritDoc}
+     *
+     * @return
      */
     @Override
-    protected void executeInternal() throws Exception
+    protected Future<Void> executeInternal() throws Exception
     {
-        LOGGER.info("Executing move operation. jobId={} newToken={}", this.jobId(), newToken);
-        storageOperations.move(newToken);
+        try
+        {
+            LOGGER.info("Executing move operation. jobId={} newToken={}", this.jobId(), newToken);
+            storageOperations.move(newToken);
+        }
+        catch (IOException ex)
+        {
+            LOGGER.error("Job execution failed. jobId={} reason='{}'", this.jobId(), ex.getMessage(), ex);
+            throw OperationalJobException.wraps(ex);
+        }
+
+        return Future.succeededFuture();
     }
 
     /**

@@ -179,7 +179,7 @@ public class RepairHandlerTest
                   OperationalJobResponse repairResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(repairResponse).isNotNull();
                   assertThat(repairResponse.status()).isEqualTo(SUCCEEDED);
-                  verify(mockStorageOperations).repair(anyString(), jobCapture.capture());
+                  verify(mockStorageOperations).repairAsync(anyString(), jobCapture.capture());
                   assertThat(jobCapture.getValue()).containsKey("incremental");
                   assertThat(jobCapture.getValue().get("incremental")).isEqualTo("true");
                   context.completeNow();
@@ -207,7 +207,7 @@ public class RepairHandlerTest
                   OperationalJobResponse repairResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(repairResponse).isNotNull();
                   assertThat(repairResponse.status()).isEqualTo(SUCCEEDED);
-                  verify(mockStorageOperations).repair(anyString(), jobCapture.capture());
+                  verify(mockStorageOperations).repairAsync(anyString(), jobCapture.capture());
                   assertThat(jobCapture.getValue()).containsKey("ranges");
                   assertThat(jobCapture.getValue().get("ranges")).isEqualTo(expectedRanges);
                   context.completeNow();
@@ -233,7 +233,7 @@ public class RepairHandlerTest
                   OperationalJobResponse repairResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(repairResponse).isNotNull();
                   assertThat(repairResponse.status()).isEqualTo(SUCCEEDED);
-                  verify(mockStorageOperations).repair(anyString(), jobCapture.capture());
+                  verify(mockStorageOperations).repairAsync(anyString(), jobCapture.capture());
                   assertThat(jobCapture.getValue()).containsKey("hosts");
                   assertThat(jobCapture.getValue().get("hosts")).isEqualTo("127.0.0.1");
                   context.completeNow();
@@ -245,7 +245,7 @@ public class RepairHandlerTest
     {
         // Simulate repair invocation taking 6s
         doAnswer(AdditionalAnswers.answersWithDelay(6000, invocation -> null))
-        .when(mockStorageOperations).repair(anyString(), any());
+        .when(mockStorageOperations).repairAsync(anyString(), any());
 
         WebClient client = WebClient.create(vertx);
         RepairPayload payload = RepairPayload.builder()
@@ -283,7 +283,7 @@ public class RepairHandlerTest
     @Test
     void testRepairHandlerFailed(VertxTestContext context)
     {
-        doThrow(new RuntimeException("Simulated failure")).when(mockStorageOperations).repair(anyString(), any());
+        doThrow(new RuntimeException("Simulated failure")).when(mockStorageOperations).repairAsync(anyString(), any());
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/cassandra/keyspaces/testkeyspace/repair";
         RepairPayload payload = RepairPayload.builder()
@@ -401,7 +401,7 @@ public class RepairHandlerTest
                   OperationalJobResponse repairResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(repairResponse).isNotNull();
                   assertThat(repairResponse.status()).isEqualTo(SUCCEEDED);
-                  verify(mockStorageOperations).repair(anyString(), jobCapture.capture());
+                  verify(mockStorageOperations).repairAsync(anyString(), jobCapture.capture());
                   assertThat(jobCapture.getValue()).containsKey("ranges");
                   assertThat(jobCapture.getValue().get("ranges")).isEqualTo(startToken + ":" + endToken);
                   context.completeNow();
@@ -429,7 +429,7 @@ public class RepairHandlerTest
                   OperationalJobResponse repairResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(repairResponse).isNotNull();
                   assertThat(repairResponse.status()).isEqualTo(SUCCEEDED);
-                  verify(mockStorageOperations).repair(anyString(), jobCapture.capture());
+                  verify(mockStorageOperations).repairAsync(anyString(), jobCapture.capture());
                   assertThat(jobCapture.getValue()).containsKey("ranges");
                   assertThat(jobCapture.getValue().get("ranges")).isEqualTo(startToken + ":" + endToken);
                   context.completeNow();
@@ -455,7 +455,7 @@ public class RepairHandlerTest
                   OperationalJobResponse repairResponse = response.bodyAsJson(OperationalJobResponse.class);
                   assertThat(repairResponse).isNotNull();
                   assertThat(repairResponse.status()).isEqualTo(SUCCEEDED);
-                  verify(mockStorageOperations).repair(anyString(), jobCapture.capture());
+                  verify(mockStorageOperations).repairAsync(anyString(), jobCapture.capture());
                   // Should not contain ranges since only start token was provided
                   assertThat(jobCapture.getValue()).doesNotContainKey("ranges");
                   context.completeNow();

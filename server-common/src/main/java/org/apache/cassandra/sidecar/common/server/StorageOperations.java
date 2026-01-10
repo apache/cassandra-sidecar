@@ -140,10 +140,10 @@ public interface StorageOperations
      *
      * @param keyspace keyspace for the repair operation
      * @param options  repair options
-     * @return an integer value representing the status of the repair operation
+     * @return an integer value representing the status of the repair operation; Only returns 0 for replication factor 1
      * which can be used as a reference to check for the status of the repair session via  {@link #getParentRepairStatus(int)}.
      */
-    int repair(String keyspace, Map<String, String> options);
+    int repairAsync(String keyspace, Map<String, String> options);
 
     /**
      * Get the status of a given parent repair session.

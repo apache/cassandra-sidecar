@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.job;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -56,6 +55,11 @@ public class NodeDecommissionJob extends OperationalJob
     @Override
     public boolean hasConflict(@NotNull List<OperationalJob> sameOperationJobs)
     {
+        if (!sameOperationJobs.isEmpty())
+        {
+            return true;
+        }
+
         String operationMode = storageOperations.operationMode();
         return "LEAVING".equals(operationMode) || "DECOMMISSIONED".equals(operationMode);
     }
@@ -88,12 +92,6 @@ public class NodeDecommissionJob extends OperationalJob
     @Override
     protected Future<Void> executeInternal()
     {
-        if (hasConflict(Collections.emptyList()))
-        {
-            LOGGER.info("Not executing job as an ongoing or completed decommission operation was found jobId={}", this.jobId());
-            return Future.succeededFuture();
-        }
-
         LOGGER.info("Executing decommission operation. jobId={}", this.jobId());
         storageOperations.decommission(isForce);
         return Future.succeededFuture();

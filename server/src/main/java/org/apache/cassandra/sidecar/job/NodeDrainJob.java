@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.job;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -117,12 +116,6 @@ public class NodeDrainJob extends OperationalJob
     @Override
     protected Future<Void> executeInternal()
     {
-        if (hasConflict(Collections.emptyList()))
-        {
-            LOGGER.info("Not executing job as an ongoing drain operation was found jobId={}", this.jobId());
-            return Future.succeededFuture();
-        }
-
         LOGGER.info("Executing drain operation. jobId={}", this.jobId());
         try
         {
