@@ -188,6 +188,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
                 "VERIFY", "VIEW_BUILD", "INDEX_SUMMARY", "RELOCATE",
                 "GARBAGE_COLLECT", "MAJOR_COMPACTION"
         };
+        String cassandraVersion = testVersion.version();
 
         for (String compactionType : supportedTypes)
         {
@@ -197,7 +198,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
                     trustedClient().put(serverWrapper.serverPort, "localhost", COMPACTION_STOP_ROUTE)
                             .sendBuffer(buffer(payload))
             );
-            if (compactionType.equals("MAJOR_COMPACTION"))
+            if (compactionType.equals("MAJOR_COMPACTION") && cassandraVersion.startsWith("4."))
             {
                 assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
 
