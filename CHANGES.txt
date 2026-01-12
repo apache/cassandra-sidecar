@@ -32,6 +32,7 @@
  * Sidecar endpoint for vending statistics related to compaction (CASSSIDECAR-329)
  * Update logging dependencies (CASSSIDECAR-337)
 
+
 0.2.0
 -----
  * Create API for Creating Live Migration Tasks & fetch the status (CASSSIDECAR-225)
