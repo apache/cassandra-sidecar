@@ -128,7 +128,7 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Download dtest jars
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: dtest-jars
           path: dtest-jars/
@@ -217,7 +217,7 @@ jobs:
           done
 
       - name: Download dtest jars
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: dtest-jars
           path: dtest-jars/
@@ -308,13 +308,13 @@ jobs:
           cat /etc/hosts
 
       - name: Download dtest jars
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: dtest-jars
           path: dtest-jars/
 
       - name: Download cassandra tarballs
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: cassandra-tarballs
           path: cassandra-tarballs/
