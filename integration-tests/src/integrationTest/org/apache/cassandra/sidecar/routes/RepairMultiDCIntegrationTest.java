@@ -150,7 +150,8 @@ public class RepairMultiDCIntegrationTest extends SharedClusterSidecarIntegratio
         QualifiedName table = createUniqueTestTable(TEST_TABLE_PREFIX, CREATE_STMT);
         
         // Debug: Print datacenter information for each node
-        for (int i = 1; i <= 4; i++) {
+        for (int i = 1; i <= 4; i++)
+        {
             IInstance node = cluster.get(i);
             String datacenter = node.config().localDatacenter();
             logger.info("Node {} is in datacenter: {}", i, datacenter);
@@ -190,7 +191,8 @@ public class RepairMultiDCIntegrationTest extends SharedClusterSidecarIntegratio
         pollStatusForState(response.jobId().toString(), SUCCEEDED, null);
         
         // Debug: Check data on all nodes after repair
-        for (int i = 1; i <= 4; i++) {
+        for (int i = 1; i <= 4; i++)
+        {
             IInstance node = cluster.get(i);
             SimpleQueryResult rows = node.executeInternalWithResult(String.format(SELECT_STMT, table));
             long rowCount = StreamSupport.stream(rows.spliterator(), false).count();
