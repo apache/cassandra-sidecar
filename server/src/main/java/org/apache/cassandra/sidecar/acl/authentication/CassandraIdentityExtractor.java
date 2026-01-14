@@ -52,17 +52,20 @@ public class CassandraIdentityExtractor extends SpiffeIdentityExtractor
                         List<Future<Boolean>> validityCheckFutures = new ArrayList<>();
                         for (String identity : identities)
                         {
-                            Future<Boolean> isAdminFuture = adminIdentityResolver.isAdmin(identity);
+                            Future<Boolean> isAdminFuture
+                            = adminIdentityResolver.isAdmin(identity).compose(adminValue -> adminValue
+                                                                                            ? Future.succeededFuture()
+                                                                                            : Future.failedFuture("not admin"));
                             // Sidecar recognizes identities in identity_to_role table as authenticated
-                            Future<Boolean> inCacheFuture = identityToRoleCache.containsKey(identity);
+                            Future<Boolean> inCacheFuture
+                            = identityToRoleCache.containsKey(identity).compose(hasRole -> hasRole
+                                                                                           ? Future.succeededFuture()
+                                                                                           : Future.failedFuture("no role mapped"));;
 
                             Future<Boolean> isValidFuture
-                            = Future.all(isAdminFuture, inCacheFuture)
-                                    .map(compositeFuture -> {
-                                        Boolean isAdmin = compositeFuture.resultAt(0);
-                                        Boolean inCache = compositeFuture.resultAt(1);
-                                        return isAdmin || inCache;
-                                    });
+                            = Future.any(isAdminFuture, inCacheFuture)
+                                    .compose(success -> Future.succeededFuture(true),
+                                             failure -> Future.succeededFuture(false));
                             validityCheckFutures.add(isValidFuture);
                         }
                         return Future.all(validityCheckFutures)

@@ -95,9 +95,11 @@ public abstract class AuthCache<K, V>
     }
 
     /**
-     * Retrieves a value from the cache asynchronously. Will call {@link LoadingCache#get(Object)} which will
-     * "load" the value if it's not present, thus populating the key. When the cache is disabled, data is fetched
-     * with loadFunction. The cache retrieval is offloaded to a worker thread to avoid blocking the event loop.
+     * Retrieves a value from the cache asynchronously. The method first attempts to return an existing value using
+     * getIfPresent(). If the value is missing, it schedules getCached, which delegates to
+     * {@link LoadingCache#get(Object)} to load and populate the cache, if cache is disabled the value is fetched using
+     * load function. This design permits concurrent calls for a small time window. It is a good balance between code
+     * simplicity and performance. The cache retrieval is offloaded to a worker thread to avoid blocking the event loop.
      *
      * @param k key
      * @return A {@link Future} containing the current value of {@code K} if cached or loaded.
@@ -106,6 +108,11 @@ public abstract class AuthCache<K, V>
      */
     public Future<V> get(K k)
     {
+        V value = cache.getIfPresent(k);
+        if (value != null)
+        {
+            return Future.succeededFuture(value);
+        }
         return servicePool.executeBlocking(() -> getCached(k), false);
     }
 
@@ -114,7 +121,7 @@ public abstract class AuthCache<K, V>
      * this to a worker thread.
      *
      * @param k key
-     * @return The current value of {@code K} if cached or loaded
+     * @return current value of {@code K} if cached or loaded
      */
     private V getCached(K k)
     {
@@ -126,14 +133,17 @@ public abstract class AuthCache<K, V>
     }
 
     /**
-     * Retrieves all cached entries asynchronously. Will call {@link LoadingCache#asMap()} which does not trigger "load".
-     * When cache is disabled, data is fetched with bulkLoadFunction. The operation is offloaded to a worker thread
-     * to avoid blocking the event loop.
+     * Retrieves all cached entries asynchronously. The method first attempts to return an existing value using
+     * getIfPresent(). If the value is missing, it schedules getCached, which delegates to
+     * {@link LoadingCache#get(Object)} to load and populate the cache, if cache is disabled the value is fetched using
+     * load function. This design permits concurrent calls for a small time window. It is a good balance between code
+     * simplicity and performance. The cache retrieval is offloaded to a worker thread to avoid blocking the event loop.
      *
      * @return A {@link Future} containing a map of cached key-value pairs
      */
     public Future<Map<K, V>> getAll()
     {
+        cache.get
         return servicePool.executeBlocking(this::getAllCached, false);
     }
 

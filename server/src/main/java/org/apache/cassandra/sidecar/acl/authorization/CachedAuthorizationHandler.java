@@ -275,18 +275,14 @@ public class CachedAuthorizationHandler implements AuthorizationHandler
         List<Future<Boolean>> adminFutures = new ArrayList<>(identities.size());
         for (String identity : identities)
         {
-            adminFutures.add(adminIdentityResolver.isAdmin(identity));
+            Future<Boolean> adminFuture
+            = adminIdentityResolver.isAdmin(identity)
+                                   .compose(adminValue -> adminValue
+                                                          ? Future.succeededFuture() : Future.failedFuture("Not admin"));
+            adminFutures.add(adminFuture);
         }
-        return Future.all(adminFutures)
-                     .map(cf -> {
-                         for (int i = 0; i < cf.size(); i++)
-                         {
-                             if (Boolean.TRUE.equals(cf.resultAt(i)))
-                             {
-                                 return true;
-                             }
-                         }
-                         return false;
-                     });
+        return Future.any(adminFutures)
+                     .compose(success -> Future.succeededFuture(true),
+                              failure -> Future.succeededFuture(false));
     }
 }
