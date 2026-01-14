@@ -133,33 +133,19 @@ public abstract class AuthCache<K, V>
     }
 
     /**
-     * Retrieves all cached entries asynchronously. The method first attempts to return an existing value using
-     * getIfPresent(). If the value is missing, it schedules getCached, which delegates to
-     * {@link LoadingCache#get(Object)} to load and populate the cache, if cache is disabled the value is fetched using
-     * load function. This design permits concurrent calls for a small time window. It is a good balance between code
-     * simplicity and performance. The cache retrieval is offloaded to a worker thread to avoid blocking the event loop.
+     * Retrieves all cached entries asynchronously. If cache is enabled, returns early with map view. If not bulk loads
+     * with bulkLoadFunction. The bulkLoadFunction retrieval is offloaded to a worker thread to avoid blocking the
+     * event loop.
      *
      * @return A {@link Future} containing a map of cached key-value pairs
      */
     public Future<Map<K, V>> getAll()
     {
-        cache.get
-        return servicePool.executeBlocking(this::getAllCached, false);
-    }
-
-    /**
-     * Helper method to retrieve all entries from cache synchronously. Used by {@link #getAll()} which offloads
-     * this to a worker thread.
-     *
-     * @return A map of all cached key-value pairs
-     */
-    private Map<K, V> getAllCached()
-    {
-        if (!config.enabled())
+        if (config.enabled())
         {
-            return bulkLoadFunction.get();
+            return Future.succeededFuture(Collections.unmodifiableMap(cache.asMap()));
         }
-        return Collections.unmodifiableMap(cache.asMap());
+        return servicePool.executeBlocking(bulkLoadFunction::get, false);
     }
 
     /**
