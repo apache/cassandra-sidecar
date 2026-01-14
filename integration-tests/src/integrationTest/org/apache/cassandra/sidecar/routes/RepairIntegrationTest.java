@@ -38,6 +38,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.SimpleQueryResult;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
@@ -82,7 +83,7 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
     @Override
     protected ClusterBuilderConfiguration testClusterConfiguration()
     {
-        return super.testClusterConfiguration().nodesPerDc(3);
+        return super.testClusterConfiguration().nodesPerDc(3).requestFeature(Feature.NETWORK);
     }
 
     @Override

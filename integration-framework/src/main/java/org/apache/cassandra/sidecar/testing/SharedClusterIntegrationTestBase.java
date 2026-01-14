@@ -85,7 +85,6 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
-import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
@@ -792,8 +791,6 @@ public abstract class SharedClusterIntegrationTestBase
             ServiceConfiguration conf = ServiceConfigurationImpl.builder()
                                                                 .host("0.0.0.0") // binds to all interfaces, potential security issue if left running for long
                                                                 .port(0) // let the test find an available port
-                                                                // Increase timeout for tests, especially for Cassandra 5.1 compatibility
-                                                                .operationalJobExecutionMaxWaitTime(MillisecondBoundConfiguration.parse("30s"))
                                                                 .schemaKeyspaceConfiguration(SchemaKeyspaceConfigurationImpl.builder()
                                                                                                                             .isEnabled(true)
                                                                                                                             .build())

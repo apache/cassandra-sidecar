@@ -38,6 +38,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.SimpleQueryResult;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
@@ -84,7 +85,8 @@ public class RepairMultiDCIntegrationTest extends SharedClusterSidecarIntegratio
     {
         return super.testClusterConfiguration()
                     .nodesPerDc(2)    // 2 nodes per datacenter
-                    .dcCount(2);      // 2 datacenters (datacenter1 and datacenter2)
+                    .dcCount(2)      // 2 datacenters (datacenter1 and datacenter2)
+                    .requestFeature(Feature.NETWORK);
     }
 
     @Override
