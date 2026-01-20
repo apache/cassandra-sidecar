@@ -96,13 +96,16 @@ public class RoleAuthorizationsCache extends AuthCache<String, Map<String, Set<A
      * Provides authorizations given user's role.
      *
      * @param role a role a user holds
-     * @return a {@link Future} containing a {@code Set} of {@link Authorization} a role holds.
+     * @return a {@link Future} containing a {@code Set} of {@link Authorization} a role holds. When role is not present
+     * in cache, a {@link Future} completed with empty set is returned.
      */
     public Future<Set<Authorization>> getAuthorizations(String role)
     {
         return get(UNIQUE_CACHE_ENTRY)
-               .map(roleAuthorizations ->
-                    roleAuthorizations != null ? roleAuthorizations.get(role) : Collections.emptySet());
+               .map(roleAuthorizations -> {
+                   boolean rolePresent = roleAuthorizations != null && roleAuthorizations.containsKey(role);
+                   return rolePresent ? roleAuthorizations.get(role) : Collections.emptySet();
+               });
     }
 
     private static Map<String, Set<Authorization>> loadAuthorizations(SystemAuthDatabaseAccessor systemAuthDatabaseAccessor,

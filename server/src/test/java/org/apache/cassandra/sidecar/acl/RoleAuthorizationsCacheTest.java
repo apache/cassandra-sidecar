@@ -113,21 +113,18 @@ class RoleAuthorizationsCacheTest
                                                                     mockDbAccessor,
                                                                     mockSidecarPermissionsAccessor,
                                                                     sidecarMetrics);
-        final CacheStats[] beforeCacheLoadStats = new CacheStats[1];
         cache.getAll()
              .compose(allEntries -> {
                  testContext.verify(() -> assertThat(allEntries.size()).isZero());
-                 beforeCacheLoadStats[0]
-                 = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
                  return cache.getAuthorizations("test_role1");
              })
              .compose(authorizations -> {
                  testContext.verify(() -> {
-                     assertThat(authorizations.size()).isEqualTo(2);
                      CacheStats initialCallStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
+                     assertThat(authorizations.size()).isEqualTo(2);
                      // Cache load records 2 misses: one from getIfPresent, one from cache.get
-                     assertThat(initialCallStats.hitCount() - beforeCacheLoadStats[0].hitCount()).isZero();
-                     assertThat(initialCallStats.missCount() - beforeCacheLoadStats[0].missCount()).isEqualTo(2);
+                     assertThat(initialCallStats.hitCount()).isZero();
+                     assertThat(initialCallStats.missCount()).isEqualTo(2);
                  });
                  return cache.getAll();
              })
@@ -141,36 +138,28 @@ class RoleAuthorizationsCacheTest
                  when(mockSidecarPermissionsAccessor.rolesToAuthorizations()).thenReturn(sidecarAuthorizations);
                  return vertx.timer(3000);
              })
-             .compose(timerId -> {
-                 beforeCacheLoadStats[0] = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-                 return cache.getAuthorizations("test_role2");
-             })
+             .compose(timerId -> cache.getAuthorizations("test_role2"))
              .compose(authorizations -> {
                  testContext.verify(() -> {
                      assertThat(authorizations.size()).isOne();
                      CacheStats afterRefreshStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-                     // Cache load records 2 misses: one from getIfPresent, one from cache.get
-                     assertThat(afterRefreshStats.hitCount() - beforeCacheLoadStats[0].hitCount()).isZero();
-                     assertThat(afterRefreshStats.missCount() - beforeCacheLoadStats[0].missCount()).isEqualTo(2);
-                     assertThat(afterRefreshStats.evictionCount() - beforeCacheLoadStats[0].evictionCount()).isOne();
+                     assertThat(afterRefreshStats.hitCount()).isZero();
+                     assertThat(afterRefreshStats.missCount()).isEqualTo(2);
+                     assertThat(afterRefreshStats.evictionCount()).isOne();
                  });
-                 beforeCacheLoadStats[0] = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-                 return Future.all(cache.getAll(),
-                                   cache.getAuthorizations("test_role2"),
+                 return Future.all(cache.getAuthorizations("test_role2"),
                                    cache.getAuthorizations("non_existing_role"));
              })
              .onSuccess(cf -> {
-                 Map<?, ?> cacheAsMap = cf.resultAt(0);
-                 Set<Authorization> testRole2Authorizations = cf.resultAt(1);
-                 Set<Authorization> nonExistingRoleAuthorizations = cf.resultAt(2);
+                 Set<Authorization> testRole2Authorizations = cf.resultAt(0);
+                 Set<Authorization> nonExistingRoleAuthorizations = cf.resultAt(1);
                  testContext.verify(() -> {
-                     assertThat(cacheAsMap.size()).isOne();
                      assertThat(testRole2Authorizations.size()).isOne();
-//                     assertThat(nonExistingRoleAuthorizations).isZero();
+                     assertThat(nonExistingRoleAuthorizations.size()).isZero();
                      CacheStats validEntryStats = sidecarMetrics.server().cache().roleAuthorizationsCacheMetrics.snapshot();
-                     // It is a hit, since we load entire role_permissions table during each refresh
-                     assertThat(validEntryStats.hitCount() - beforeCacheLoadStats[0].hitCount()).isEqualTo(2);
-                     assertThat(validEntryStats.missCount() - beforeCacheLoadStats[0].missCount()).isZero();
+                     // Fetch for non_existing_role is a hit, since we load entire role_permissions table during each refresh
+                     assertThat(validEntryStats.hitCount()).isEqualTo(2);
+                     assertThat(validEntryStats.missCount()).isZero();
                  });
                  testContext.completeNow();
              })
@@ -205,7 +194,7 @@ class RoleAuthorizationsCacheTest
                  return cache.getAuthorizations("not_found_user");
              })
              .onSuccess(result -> {
-                 testContext.verify(() -> assertThat(result).isNull());
+                 testContext.verify(() -> assertThat(result).isEmpty());
                  testContext.completeNow();
              })
              .onFailure(testContext::failNow);

@@ -76,12 +76,7 @@ public class RoleBasedAuthorizationProvider implements AuthorizationProvider
             authorizationFutures.add(roleAuthorizationsCache
                                      .getAuthorizations(role)
                                      .compose(authorizations -> {
-                                         // when entries in cache are not found, null is returned. We can not add null
-                                         // in user.authorizations()
-                                         if (authorizations != null)
-                                         {
-                                             user.authorizations().add(authorizationId, authorizations);
-                                         }
+                                         user.authorizations().add(authorizationId, authorizations);
                                          return Future.succeededFuture();
                                      }));
         }
