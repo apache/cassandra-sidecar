@@ -108,7 +108,7 @@ public abstract class AuthCache<K, V>
      */
     public Future<V> get(K k)
     {
-        V value = cache.getIfPresent(k);
+        V value = config.enabled() ? cache.getIfPresent(k) : null;
         if (value != null)
         {
             return Future.succeededFuture(value);
