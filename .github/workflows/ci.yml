@@ -129,8 +129,7 @@ jobs:
           path: dtest-jars/
 
       - name: Run checkstyle
-        run: |
-          ./gradlew checkstyleMain checkstyleTest checkstyleTestFixtures checkstyleIntegrationTest --stacktrace
+        run: ./gradlew checkstyleMain checkstyleTest checkstyleTestFixtures checkstyleIntegrationTest --stacktrace
         env:
           CASSANDRA_DEP_DIR: ${{ github.workspace }}/dtest-jars
 
@@ -139,8 +138,7 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: checkstyle-reports
-          path: |
-            **/build/reports/checkstyle/
+          path: "**/build/reports/checkstyle/"
           retention-days: 30
 
   # Run unit tests with static analysis on all Java versions
@@ -417,14 +415,8 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
-      - name: Install prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ant
-
       - name: Run build
-        run: |
-          ./gradlew build --stacktrace
+        run: ./gradlew build --stacktrace
 
       - name: Upload test results
         if: always()
@@ -461,13 +453,11 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Build Debian package
-        run: |
-          ./gradlew --info clean buildDeb
+        run: ./gradlew --info clean buildDeb
 
       - name: Install Debian package
         run: |
-          sudo apt-get update
-          sudo apt --fix-broken install
+          sudo apt-get update && sudo apt --fix-broken install
           DEBIAN_FRONTEND=noninteractive sudo apt install -y ./build/distributions/apache-cassandra-sidecar*.deb
 
       - name: Verify installation
@@ -503,17 +493,13 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Install dnf
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y dnf
+        run: sudo apt-get update && sudo apt-get install -y dnf
 
       - name: Build RPM package
-        run: |
-          ./gradlew -i buildRpm
+        run: ./gradlew -i buildRpm
 
       - name: Install RPM package
-        run: |
-          sudo dnf install -y ./build/distributions/apache-cassandra-sidecar*.rpm
+        run: sudo dnf install -y ./build/distributions/apache-cassandra-sidecar*.rpm
 
       - name: Verify installation
         run: |
@@ -548,8 +534,7 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Build Docker image with Jib
-        run: |
-          ./gradlew --info clean :server:jibDockerBuild
+        run: ./gradlew --info clean :server:jibDockerBuild
 
   # Build documentation
   docs-build:
@@ -575,16 +560,8 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
-      - name: Install prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ant
-
       - name: Build documentation
-        run: |
-          ./gradlew docs:asciidoctor
+        run: ./gradlew docs:asciidoctor
 
       - name: Verify documentation
-        run: |
-          test -f docs/build/user.html
-          test -f docs/build/development.html
+        run: test -f docs/build/user.html && test -f docs/build/development.html
