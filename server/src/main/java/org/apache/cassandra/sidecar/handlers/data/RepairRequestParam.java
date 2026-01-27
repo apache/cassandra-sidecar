@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers.data;
 
-
 import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 
@@ -33,7 +32,6 @@ public class RepairRequestParam
 
     private RepairRequestParam(Name keyspace, RepairPayload requestPayload)
     {
-
         this.keyspace = keyspace;
         this.requestPayload = requestPayload;
     }

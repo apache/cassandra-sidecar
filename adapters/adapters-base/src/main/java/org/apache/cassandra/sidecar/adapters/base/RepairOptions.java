@@ -42,7 +42,7 @@ public enum RepairOptions
     /**
      * List of column families (tables) to repair (comma-separated)
      */
-    COLUMNFAMILIES("columnFamilies"),
+    COLUMN_FAMILIES("columnFamilies"),
     /**
      * Restrict repair to specific data centers (comma-separated)
      */

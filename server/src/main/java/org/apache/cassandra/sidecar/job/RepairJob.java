@@ -36,7 +36,6 @@ import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.RepairJobsConfiguration;
 import org.apache.cassandra.sidecar.handlers.data.RepairRequestParam;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
@@ -95,15 +94,13 @@ public class RepairJob extends OperationalJob
     /**
      * Constructor for creation of RepairJob
      *
-     * @param taskExecutorPool       TaskExecutorPool instance (for testing)
-     * @param periodicTaskExecutor   PeriodicTaskExecutor for status checking
-     * @param config                 Repair job configuration
-     * @param jobId                  UUID representing the Job to be created
-     * @param storageOps             Reference to the storage operations interface
-     * @param repairParams           Repair request parameters
+     * @param periodicTaskExecutor PeriodicTaskExecutor for status checking
+     * @param config               Repair job configuration
+     * @param jobId                UUID representing the Job to be created
+     * @param storageOps           Reference to the storage operations interface
+     * @param repairParams         Repair request parameters
      */
-    public RepairJob(TaskExecutorPool taskExecutorPool,
-                     PeriodicTaskExecutor periodicTaskExecutor,
+    public RepairJob(PeriodicTaskExecutor periodicTaskExecutor,
                      RepairJobsConfiguration config,
                      UUID jobId,
                      StorageOperations storageOps,
@@ -115,100 +112,6 @@ public class RepairJob extends OperationalJob
         this.storageOperations = storageOps;
         this.repairParams = repairParams;
         this.currentStatus = OperationalJobStatus.CREATED;
-    }
-
-    /**
-     * PeriodicTask implementation for checking repair status with proper scheduling.
-     * This task ensures delay between executions and prevents overlapping status checks.
-     */
-    private class RepairStatusCheckTask implements PeriodicTask
-    {
-        private final Promise<Void> jobSubmissionPromise;
-        private final AtomicInteger attemptCounter;
-        private final int maxAttempts;
-        private volatile boolean completed = false;
-
-        RepairStatusCheckTask(Promise<Void> jobSubmissionPromise, AtomicInteger attemptCounter, int maxAttempts)
-        {
-            this.jobSubmissionPromise = jobSubmissionPromise;
-            this.attemptCounter = attemptCounter;
-            this.maxAttempts = maxAttempts;
-        }
-
-        @Override
-        public void execute(Promise<Void> promise)
-        {
-            try
-            {
-                int currentAttempt = attemptCounter.incrementAndGet();
-                if (currentAttempt > maxAttempts)
-                {
-                    LOGGER.warn("Failed to obtain repair status after {} attempts.", maxAttempts);
-                    // Set status to RUNNING and complete the promise to ensure the job is properly handled
-                    currentStatus = OperationalJobStatus.RUNNING;
-                    jobSubmissionPromise.tryComplete();
-                    completed = true;
-                    promise.complete(); // Stop the periodic task
-                    return;
-                }
-
-                StatusResult statusResult = refreshStatusFromCassandra();
-                
-                // If no status available yet, continue polling
-                if (statusResult == null)
-                {
-                    LOGGER.debug("No parent repair session status found for cmd: {} - repair may be initializing (attempt {}/{})",
-                                 commandId, currentAttempt, maxAttempts);
-                    promise.complete(); // Continue to next execution
-                    return;
-                }
-                
-                // We have a definitive status, handle the promise and stop the task
-                handleJobSubmissionPromise(jobSubmissionPromise, statusResult);
-                completed = true;
-                promise.complete(); // Stop the periodic task
-            }
-            catch (Exception e)
-            {
-                LOGGER.error("Unexpected error in repair status check", e);
-                currentStatus = OperationalJobStatus.FAILED;
-                jobSubmissionPromise.tryFail(e);
-                completed = true;
-                promise.fail(e); // Stop the periodic task
-            }
-        }
-
-        @Override
-        public DurationSpec delay()
-        {
-            return config.repairPollInterval();
-        }
-
-        @Override
-        public DurationSpec initialDelay()
-        {
-            // Start immediately for the first check
-            return MillisecondBoundConfiguration.ZERO;
-        }
-
-        @Override
-        public ScheduleDecision scheduleDecision()
-        {
-            // Stop scheduling if we've completed
-            return completed ? ScheduleDecision.SKIP : ScheduleDecision.EXECUTE;
-        }
-
-        @Override
-        public String identifier()
-        {
-            return "repair-status-check-" + jobId();
-        }
-
-        @Override
-        public String name()
-        {
-            return "RepairStatusCheck";
-        }
     }
 
     /**
@@ -230,9 +133,9 @@ public class RepairJob extends OperationalJob
         try
         {
             Map<String, String> options = generateRepairOptions(repairParams.requestPayload());
-            String keyspace = repairParams.keyspace().name();
+            String keyspace = repairParams.keyspace().maybeQuotedName();
 
-            LOGGER.info("Executing repair operation for keyspace {} jobId={}", keyspace, this.jobId());
+            LOGGER.info("Executing repair operation for keyspace='{}' jobId={}", keyspace, this.jobId());
 
             try
             {
@@ -240,7 +143,7 @@ public class RepairJob extends OperationalJob
             }
             catch (Exception e)
             {
-                LOGGER.error("Failed to initiate repair for keyspace {} jobId={}", keyspace, this.jobId(), e);
+                LOGGER.error("Failed to initiate repair for keyspace='{}' jobId={}", keyspace, this.jobId(), e);
                 currentStatus = OperationalJobStatus.FAILED;
                 return Future.failedFuture(e);
             }
@@ -248,7 +151,7 @@ public class RepairJob extends OperationalJob
             if (commandId <= 0)
             {
                 // When there are no relevant token ranges for the keyspace or RF is 1, the repair is inapplicable
-                LOGGER.info("Replication factor is 1. No repair is needed for keyspace '{}' jobId '{}'", keyspace, this.jobId());
+                LOGGER.info("Replication factor is 1. No repair is needed for keyspace='{}' jobId={}", keyspace, this.jobId());
                 currentStatus = OperationalJobStatus.SUCCEEDED;
                 return Future.succeededFuture();
             }
@@ -258,15 +161,17 @@ public class RepairJob extends OperationalJob
             AtomicInteger attemptCounter = new AtomicInteger(0);
 
             // Use PeriodicTaskExecutor for proper scheduling with delay between executions
-            RepairStatusCheckTask statusCheckTask = new RepairStatusCheckTask(jobSubmissionPromise, attemptCounter, maxAttempts);
+            RepairStatusCheckTask statusCheckTask = new RepairStatusCheckTask(keyspace, jobSubmissionPromise, attemptCounter, maxAttempts);
             periodicTaskExecutor.schedule(statusCheckTask);
 
-            return jobSubmissionPromise.future();
+            Future<Void> jobSubmissionFuture = jobSubmissionPromise.future();
+            jobSubmissionFuture.onComplete(ignore -> periodicTaskExecutor.unschedule(statusCheckTask));
+            return jobSubmissionFuture;
         }
         catch (Exception e)
         {
             // Catch any exceptions in the overall method
-            LOGGER.error("Failed to execute repair job", e);
+            LOGGER.error("Failed to execute repair job jobId={}", this.jobId(), e);
             currentStatus = OperationalJobStatus.FAILED;
             return Future.failedFuture(e);
         }
@@ -280,8 +185,17 @@ public class RepairJob extends OperationalJob
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String name()
+    {
+        return OPERATION;
+    }
+
+    /**
      * Refreshes the repair status from Cassandra and updates the internal currentStatus.
-     * 
+     *
      * @return StatusResult containing the operational status and messages, or null if no status is available yet
      */
     private StatusResult refreshStatusFromCassandra()
@@ -302,13 +216,13 @@ public class RepairJob extends OperationalJob
             LOGGER.warn("Failed to get repair status for cmd: {}", commandId, e);
             return null;
         }
-        
+
         // If no status available yet, return null
         if (status == null || status.isEmpty())
         {
             return null;
         }
-        
+
         try
         {
             ParentRepairStatus parentRepairStatus = ParentRepairStatus.valueOf(status.get(0));
@@ -328,31 +242,31 @@ public class RepairJob extends OperationalJob
                     LOGGER.warn("Encountered unexpected repair status: {}", parentRepairStatus);
                     return null;
             }
-            
+
 
             // Extract messages (everything after the first element)
             List<String> messages = status.subList(1, status.size());
-            
+
             return new StatusResult(currentStatus, messages);
         }
         catch (IllegalArgumentException e)
         {
-            LOGGER.warn("Invalid parent repair status: {}", status.get(0), e);
+            LOGGER.warn("Invalid parent repair status={}", status.get(0), e);
             return null;
         }
     }
 
     /**
      * Handles the job submission promise based on the repair status result.
-     * 
+     *
      * @param jobSubmissionPromise the promise to complete or fail
-     * @param statusResult the status result containing operational status and messages
+     * @param statusResult         the status result containing operational status and messages
      */
     private void handleJobSubmissionPromise(Promise<Void> jobSubmissionPromise, StatusResult statusResult)
     {
         LOGGER.info("Parent repair session has {} status. Messages: {}",
                     statusResult.operationalStatus, String.join("\n", statusResult.messages));
-        
+
         switch (statusResult.operationalStatus)
         {
             case SUCCEEDED:
@@ -373,15 +287,6 @@ public class RepairJob extends OperationalJob
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String name()
-    {
-        return OPERATION;
-    }
-
     private Map<String, String> generateRepairOptions(RepairPayload repairPayload)
     {
         Map<String, String> options = new HashMap<>();
@@ -389,7 +294,7 @@ public class RepairJob extends OperationalJob
         List<String> tables = repairPayload.tables();
         if (tables != null && !tables.isEmpty())
         {
-            options.put(RepairOptions.COLUMNFAMILIES.optionName(), String.join(",", tables));
+            options.put(RepairOptions.COLUMN_FAMILIES.optionName(), String.join(",", tables));
         }
 
         Boolean isPrimaryRange = repairPayload.isPrimaryRange();
@@ -431,5 +336,102 @@ public class RepairJob extends OperationalJob
             options.put(RepairOptions.PREVIEW.optionName(), PREVIEW_KIND_REPAIRED);
         }
         return options;
+    }
+
+    /**
+     * PeriodicTask implementation for checking repair status with proper scheduling.
+     * This task ensures delay between executions and prevents overlapping status checks.
+     */
+    private class RepairStatusCheckTask implements PeriodicTask
+    {
+        private final String keyspace;
+        private final Promise<Void> jobSubmissionPromise;
+        private final AtomicInteger attemptCounter;
+        private final int maxAttempts;
+        private volatile boolean completed = false;
+
+        RepairStatusCheckTask(String keyspace, Promise<Void> jobSubmissionPromise, AtomicInteger attemptCounter, int maxAttempts)
+        {
+            this.keyspace = keyspace;
+            this.jobSubmissionPromise = jobSubmissionPromise;
+            this.attemptCounter = attemptCounter;
+            this.maxAttempts = maxAttempts;
+        }
+
+        @Override
+        public void execute(Promise<Void> promise)
+        {
+            try
+            {
+                int currentAttempt = attemptCounter.incrementAndGet();
+                if (currentAttempt > maxAttempts)
+                {
+                    LOGGER.warn("Failed to obtain repair status after {} attempts for keyspace='{}' jobId={}",
+                                maxAttempts, keyspace, jobId());
+                    // Set status to RUNNING and complete the promise to ensure the job is properly handled
+                    currentStatus = OperationalJobStatus.RUNNING;
+                    jobSubmissionPromise.tryComplete();
+                    completed = true;
+                    promise.complete();
+                    return;
+                }
+
+                StatusResult statusResult = refreshStatusFromCassandra();
+
+                // If no status available yet, continue polling
+                if (statusResult == null)
+                {
+                    LOGGER.debug("No parent repair session status found for cmd: {} - repair may be initializing (attempt {}/{})" +
+                                 " for keyspace='{}' jobId={}", commandId, currentAttempt, maxAttempts, keyspace, jobId());
+                    promise.complete(); // Continue to next execution
+                    return;
+                }
+
+                // We have a definitive status, handle the promise and stop the task
+                handleJobSubmissionPromise(jobSubmissionPromise, statusResult);
+                completed = true;
+                promise.complete();
+            }
+            catch (Exception e)
+            {
+                LOGGER.error("Unexpected error in repair status check for keyspace='{}' jobId={}", keyspace, jobId(), e);
+                currentStatus = OperationalJobStatus.FAILED;
+                jobSubmissionPromise.tryFail(e);
+                completed = true;
+                promise.fail(e);
+            }
+        }
+
+        @Override
+        public DurationSpec delay()
+        {
+            return config.repairPollInterval();
+        }
+
+        @Override
+        public DurationSpec initialDelay()
+        {
+            // Start immediately for the first check
+            return MillisecondBoundConfiguration.ZERO;
+        }
+
+        @Override
+        public ScheduleDecision scheduleDecision()
+        {
+            // Stop scheduling if we've completed
+            return completed ? ScheduleDecision.SKIP : ScheduleDecision.EXECUTE;
+        }
+
+        @Override
+        public String identifier()
+        {
+            return "repair-status-check-" + jobId();
+        }
+
+        @Override
+        public String name()
+        {
+            return "RepairStatusCheck for job=" + jobId();
+        }
     }
 }

@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.job;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -38,9 +37,9 @@ import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.RepairJobsConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.RepairJobsConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
@@ -60,7 +59,7 @@ import static org.mockito.Mockito.when;
 /**
  * Tests to validate job to run repairs
  */
-public class RepairJobTest
+class RepairJobTest
 {
     private static final int MAX_ATTEMPTS = 5;
     protected Vertx vertx;
@@ -91,7 +90,7 @@ public class RepairJobTest
     void testRepairJob() throws Exception
     {
         StorageOperations storageOperations = mock(StorageOperations.class);
-        when(storageOperations.getParentRepairStatus(anyInt())).thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.COMPLETED.name()));
+        when(storageOperations.getParentRepairStatus(anyInt())).thenReturn(List.of(RepairJob.ParentRepairStatus.COMPLETED.name()));
         when(storageOperations.repairAsync(any(), any())).thenReturn(1);
 
         RepairPayload payload = RepairPayload.builder()
@@ -100,19 +99,18 @@ public class RepairJobTest
                                              .build();
         RepairRequestParam repairParams = RepairRequestParam.from(new Name("testkeyspace"), payload);
 
-        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, 100); // Use a shorter poll interval for testing
-        TaskExecutorPool internalPool = executorPool.internal();
-        RepairJob testJob = new RepairJob(internalPool, periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
-        
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, MillisecondBoundConfiguration.parse("100ms")); // Use a shorter poll interval for testing
+        RepairJob testJob = new RepairJob(periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
+
         Promise<Void> promise = Promise.promise();
         testJob.execute(promise);
-        
+
         // Wait for the job to complete (with timeout)
         if (!promise.future().isComplete())
         {
             promise.future().toCompletionStage().toCompletableFuture().get(1, TimeUnit.SECONDS);
         }
-        
+
         assertThat(testJob.asyncResult().isComplete()).isTrue();
         assertThat(testJob.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
     }
@@ -130,8 +128,8 @@ public class RepairJobTest
                                              .build();
         RepairRequestParam repairParams = RepairRequestParam.from(new Name("testkeyspace"), payload);
 
-        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, 100); // Shorter poll interval for testing
-        RepairJob testJob = new RepairJob(executorPool.internal(), periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, MillisecondBoundConfiguration.parse("100ms")); // Shorter poll interval for testing
+        RepairJob testJob = new RepairJob(periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
 
         Promise<Void> promise = Promise.promise();
         testJob.execute(promise);
@@ -151,7 +149,7 @@ public class RepairJobTest
         for (int i = 0; i < MAX_ATTEMPTS; i++)
         {
             when(storageOperations.getParentRepairStatus(anyInt()))
-                .thenReturn(null);
+            .thenReturn(null);
         }
         when(storageOperations.repairAsync(any(), any())).thenReturn(1);
 
@@ -161,8 +159,8 @@ public class RepairJobTest
                                              .build();
         RepairRequestParam repairParams = RepairRequestParam.from(new Name("testkeyspace"), payload);
 
-        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, 100); // Shorter poll interval for testing
-        RepairJob testJob = new RepairJob(executorPool.internal(), periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, MillisecondBoundConfiguration.parse("100ms")); // Shorter poll interval for testing
+        RepairJob testJob = new RepairJob(periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
 
         Promise<Void> promise = Promise.promise();
         testJob.execute(promise);
@@ -177,17 +175,17 @@ public class RepairJobTest
     {
         StorageOperations storageOperations = mock(StorageOperations.class);
         when(storageOperations.getParentRepairStatus(anyInt()))
-            .thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.COMPLETED.name(), "Repair completed successfully"));
+        .thenReturn(List.of(RepairJob.ParentRepairStatus.COMPLETED.name(), "Repair completed successfully"));
         when(storageOperations.repairAsync(any(), any())).thenReturn(1);
 
-        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, 100); // Short poll interval for quick test
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, MillisecondBoundConfiguration.parse("100ms")); // Short poll interval for quick test
         RepairPayload payload = RepairPayload.builder()
-                                           .isPrimaryRange(true)
-                                           .tables(List.of("testtable"))
-                                           .build();
+                                             .isPrimaryRange(true)
+                                             .tables(List.of("testtable"))
+                                             .build();
         RepairRequestParam repairParams = RepairRequestParam.from(new Name("testkeyspace"), payload);
 
-        RepairJob testJob = new RepairJob(executorPool.internal(), periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
+        RepairJob testJob = new RepairJob(periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
 
         Promise<Void> promise = Promise.promise();
         testJob.execute(promise);
@@ -205,16 +203,16 @@ public class RepairJobTest
     {
         StorageOperations storageOperations = mock(StorageOperations.class);
         when(storageOperations.getParentRepairStatus(anyInt()))
-            .thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.FAILED.name(), "Repair failed with error"));
+        .thenReturn(List.of(RepairJob.ParentRepairStatus.FAILED.name(), "Repair failed with error"));
         when(storageOperations.repairAsync(any(), any())).thenReturn(1);
 
-        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, 100); // Short poll interval for quick test
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, MillisecondBoundConfiguration.parse("100ms")); // Short poll interval for quick test
         RepairPayload payload = RepairPayload.builder()
-                                           .isPrimaryRange(true)
-                                           .tables(List.of("testtable"))
-                                           .build();
+                                             .isPrimaryRange(true)
+                                             .tables(List.of("testtable"))
+                                             .build();
         RepairRequestParam repairParams = RepairRequestParam.from(new Name("testkeyspace"), payload);
-        RepairJob testJob = new RepairJob(executorPool.internal(), periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
+        RepairJob testJob = new RepairJob(periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
 
         Promise<Void> promise = Promise.promise();
         testJob.execute(promise);
@@ -240,20 +238,18 @@ public class RepairJobTest
 
         // Mock the storage operations
         StorageOperations storageOperations = mock(StorageOperations.class);
-        when(storageOperations.getParentRepairStatus(anyInt())).thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.COMPLETED.name()));
+        when(storageOperations.getParentRepairStatus(anyInt())).thenReturn(List.of(RepairJob.ParentRepairStatus.COMPLETED.name()));
         when(storageOperations.repairAsync(any(), any())).thenReturn(1);
 
         // Create configuration for repair jobs with shorter poll interval for testing
-        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, 100);
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, MillisecondBoundConfiguration.parse("100ms"));
 
         // Create multiple repair jobs with different parameters
         RepairJob job1 = createRepairJob(config, storageOperations, "keyspace1", "table1");
         RepairJob job2 = createRepairJob(config, storageOperations, "keyspace1", "table2");
         RepairJob job3 = createRepairJob(config, storageOperations, "keyspace2", "table1");
 
-//        UUID jobId = UUIDs.timeBased();
         CountDownLatch latch = new CountDownLatch(1);
-//        OperationalJob testJob = OperationalJobTest.createOperationalJob(jobId, SecondBoundConfiguration.parse("2s"));
         BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (job, exception) -> {
             assertThat(exception).isNull();
             latch.countDown();
@@ -263,7 +259,7 @@ public class RepairJobTest
         Promise<Void> promise1 = Promise.promise();
         Promise<Void> promise2 = Promise.promise();
         Promise<Void> promise3 = Promise.promise();
-        
+
         job1.execute(promise1);
         job2.execute(promise2);
         job3.execute(promise3);
@@ -285,7 +281,7 @@ public class RepairJobTest
         {
             promise3.future().toCompletionStage().toCompletableFuture().get(2, TimeUnit.SECONDS);
         }
-        
+
         // Verify all jobs completed successfully
         assertThat(job1.asyncResult().isComplete()).isTrue();
         assertThat(job1.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
@@ -302,7 +298,7 @@ public class RepairJobTest
         // Verify that all jobs were tracked
         assertThat(tracker.jobsView().size()).isEqualTo(3);
     }
-    
+
     @Test
     void testEmptyRepairStatusHandling() throws Exception
     {
@@ -310,20 +306,20 @@ public class RepairJobTest
 
         // Return empty status (repair not started), then return IN_PROGRESS, then COMPLETED
         when(storageOperations.getParentRepairStatus(anyInt()))
-            .thenReturn(Collections.emptyList())
-            .thenReturn(Collections.emptyList())
-            .thenReturn(Arrays.asList(RepairJob.ParentRepairStatus.COMPLETED.name()));
+        .thenReturn(Collections.emptyList())
+        .thenReturn(Collections.emptyList())
+        .thenReturn(List.of(RepairJob.ParentRepairStatus.COMPLETED.name()));
 
         when(storageOperations.repairAsync(any(), any())).thenReturn(1);
 
-        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, 100);
+        RepairJobsConfiguration config = new RepairJobsConfigurationImpl(MAX_ATTEMPTS, MillisecondBoundConfiguration.parse("100ms"));
         RepairPayload payload = RepairPayload.builder()
-                                           .isPrimaryRange(true)
-                                           .tables(List.of("testtable"))
-                                           .build();
+                                             .isPrimaryRange(true)
+                                             .tables(List.of("testtable"))
+                                             .build();
         RepairRequestParam repairParams = RepairRequestParam.from(new Name("testkeyspace"), payload);
 
-        RepairJob testJob = new RepairJob(executorPool.internal(), periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
+        RepairJob testJob = new RepairJob(periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
         Promise<Void> promise = Promise.promise();
         testJob.execute(promise);
 
@@ -340,14 +336,14 @@ public class RepairJobTest
     /**
      * Helper method to create a repair job with specific parameters
      */
-    private RepairJob createRepairJob(RepairJobsConfiguration config, StorageOperations storageOperations, 
-                                     String keyspace, String table)
+    private RepairJob createRepairJob(RepairJobsConfiguration config, StorageOperations storageOperations,
+                                      String keyspace, String table)
     {
         RepairPayload payload = RepairPayload.builder()
-                                            .isPrimaryRange(true)
-                                            .tables(List.of(table))
-                                            .build();
+                                             .isPrimaryRange(true)
+                                             .tables(List.of(table))
+                                             .build();
         RepairRequestParam repairParams = RepairRequestParam.from(new Name(keyspace), payload);
-        return new RepairJob(executorPool.internal(), periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
+        return new RepairJob(periodicTaskExecutor, config, UUIDs.timeBased(), storageOperations, repairParams);
     }
 }

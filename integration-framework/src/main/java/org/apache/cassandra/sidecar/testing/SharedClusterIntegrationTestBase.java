@@ -36,7 +36,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -119,7 +118,6 @@ import org.apache.cassandra.testing.TestVersionSupplier;
 import static org.apache.cassandra.sidecar.config.yaml.S3ClientConfigurationImpl.DEFAULT_API_CALL_TIMEOUT;
 import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS;
 import static org.apache.cassandra.testing.DriverTestUtils.buildContactPoints;
-import static org.apache.cassandra.testing.TestUtils.TEST_KEYSPACE;
 import static org.apache.cassandra.testing.utils.IInstanceUtils.tryGetIntConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -164,7 +162,6 @@ public abstract class SharedClusterIntegrationTestBase
 {
     protected final Logger logger = LoggerFactory.getLogger(SharedClusterIntegrationTestBase.class);
     private static final int MAX_CLUSTER_PROVISION_RETRIES = 5;
-    private static final AtomicInteger TEST_TABLE_ID = new AtomicInteger(0);
     @TempDir
     static Path secretsPath;
 
@@ -364,14 +361,6 @@ public abstract class SharedClusterIntegrationTestBase
     protected void createTestTable(Consumer<String> queryExecution, QualifiedName name, String createTableStatement)
     {
         queryExecution.accept(String.format(createTableStatement, name));
-    }
-
-    protected QualifiedName createUniqueTestTable(String tablePrefix, String createTableStatement)
-    {
-        String uniqueTableName = tablePrefix + TEST_TABLE_ID.getAndIncrement();
-        QualifiedName table = new QualifiedName(TEST_KEYSPACE, uniqueTableName);
-        cluster.schemaChangeIgnoringStoppedInstances(String.format(createTableStatement, table));
-        return table;
     }
 
     /**

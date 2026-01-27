@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -52,7 +52,7 @@ import static org.mockito.Mockito.when;
  */
 public class CommonTest
 {
-    static final Logger LOGGER = LoggerFactory.getLogger(CommonTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CommonTest.class);
     Vertx vertx;
     Server server;
     CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
@@ -93,23 +93,13 @@ public class CommonTest
         protected static final int DEFAULT_INSTANCE_ID = 100;
         protected static final String DEFAULT_HOST = "127.0.0.1";
         protected static final int DEFAULT_PORT = 9042;
-        
+
         protected CassandraAdapterDelegate delegate;
         protected StorageOperations storageOperations;
-        
-        /**
-         * Basic test module with default mocks
-         */
-        public CommonTestModule()
-        {
-            this.delegate = mock(CassandraAdapterDelegate.class);
-            this.storageOperations = mock(StorageOperations.class);
-            when(delegate.storageOperations()).thenReturn(storageOperations);
-        }
-        
+
         /**
          * Test module with custom delegate
-         * 
+         *
          * @param delegate the CassandraAdapterDelegate mock to use
          */
         public CommonTestModule(CassandraAdapterDelegate delegate)
@@ -117,10 +107,10 @@ public class CommonTest
             this.delegate = delegate;
             this.storageOperations = delegate.storageOperations();
         }
-        
+
         /**
          * Test module with custom StorageOperations
-         * 
+         *
          * @param storageOperations the StorageOperations mock to use
          */
         public CommonTestModule(StorageOperations storageOperations)
@@ -129,7 +119,7 @@ public class CommonTest
             this.storageOperations = storageOperations;
             when(delegate.storageOperations()).thenReturn(storageOperations);
         }
-        
+
         @Provides
         @Singleton
         public InstancesMetadata instanceConfig()
@@ -142,7 +132,7 @@ public class CommonTest
             when(instanceMetadata.delegate()).thenReturn(delegate);
 
             InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
-            when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
+            when(mockInstancesMetadata.instances()).thenReturn(List.of(instanceMetadata));
             when(mockInstancesMetadata.instanceFromId(DEFAULT_INSTANCE_ID)).thenReturn(instanceMetadata);
             when(mockInstancesMetadata.instanceFromHost(DEFAULT_HOST)).thenReturn(instanceMetadata);
 

@@ -86,6 +86,10 @@ sidecar:
   # values are 'default' and 'resolve_to_ip'. Default will resolve hostnames to addresses and addresses to
   # hostnames whereas resolve_to_ip will only resolve hostnames to addresses.
   dns_resolver: default
+  # The maximum wait time for operational job to run internally before returning the HTTP response;
+  # if the job finishes before the max wait time, it returns immediately on completion;
+  # otherwise, a response indicating the job is still running is returned after the maximum wait time.
+  operations_job_execution_max_wait_time: 5s
   throttle:
     stream_requests_per_sec: 5000
     timeout: 10s
@@ -134,6 +138,12 @@ sidecar:
     replication_factor: 1
     # The TTL in seconds used to insert entries into the sidecar_lease schema
     lease_schema_ttl: 5m
+  # Captures configuration parameters for repair jobs
+  repair:
+    # The maximum retry attempts for the repair job status to be valid
+    status_attempts: 5
+    # The polling interval for repair job status
+    status_polling_interval: 2s
   coordination:
     # Captures configuration parameters for the task that performs the cluster lease claim process
     cluster_lease_claim:

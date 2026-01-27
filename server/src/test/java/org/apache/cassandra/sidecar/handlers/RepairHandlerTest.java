@@ -27,7 +27,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,7 +72,7 @@ import static org.mockito.Mockito.when;
  * Tests for the {@link RepairHandler}
  */
 @ExtendWith(VertxExtension.class)
-public class RepairHandlerTest
+class RepairHandlerTest
 {
     static final Logger LOGGER = LoggerFactory.getLogger(RepairHandlerTest.class);
     private static final String REPAIR_ROUTE = "/api/v1/cassandra/keyspaces/testkeyspace/repair";
@@ -91,7 +90,7 @@ public class RepairHandlerTest
         Metadata mockMetadata = mock(Metadata.class);
         KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
         TableMetadata mockTableMetadata = mock(TableMetadata.class);
-        
+
         // Configure the mock chain
         when(mockMetadataFetcher.instance(anyString())).thenReturn(mockInstanceMetadata);
         when(mockMetadataFetcher.delegate(anyString())).thenReturn(mockDelegate); // Add this line to fix the NPE
@@ -100,7 +99,7 @@ public class RepairHandlerTest
         when(mockDelegate.storageOperations()).thenReturn(mockStorageOperations);
         when(mockMetadata.getKeyspace(anyString())).thenReturn(mockKeyspaceMetadata);
         when(mockKeyspaceMetadata.getTable(anyString())).thenReturn(mockTableMetadata);
-        
+
         AbstractModule repairTestModule = new AbstractModule()
         {
             @Override
@@ -111,12 +110,12 @@ public class RepairHandlerTest
                 bind(InstanceMetadataFetcher.class).toInstance(mockMetadataFetcher);
             }
         };
-        
+
         // Create the injector with the proper module overrides
         Injector injector = Guice.createInjector(
-            Modules.override(SidecarModules.all())
-                  .with(Modules.override(new TestModule())
-                              .with(new CommonTest.CommonTestModule(mockStorageOperations), repairTestModule))
+        Modules.override(SidecarModules.all())
+               .with(Modules.override(new TestModule())
+                            .with(new CommonTest.CommonTestModule(mockStorageOperations), repairTestModule))
         );
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);

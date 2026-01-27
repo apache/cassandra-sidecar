@@ -19,8 +19,8 @@
 
 package org.apache.cassandra.sidecar.routes;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
@@ -123,14 +123,7 @@ class ClearSnapshotIntegrationTest extends SharedClusterSidecarIntegrationTestBa
 
     private String urlEncode(String value)
     {
-        try
-        {
-            return URLEncoder.encode(value, "UTF-8");
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new RuntimeException("UTF-8 encoding not supported", e);
-        }
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     @Override

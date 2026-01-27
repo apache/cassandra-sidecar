@@ -125,18 +125,27 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
                                   RepairRequestParam repairRequestParam)
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
-        RepairJob job = new RepairJob(executorPools.internal(), periodicTaskExecutor, config.repairConfiguration(), UUIDs.timeBased(), operations, repairRequestParam);
+        RepairJob job = new RepairJob(periodicTaskExecutor, config.repairConfiguration(), UUIDs.timeBased(), operations, repairRequestParam);
 
-        this.jobManager.trySubmitJob(job,
-                                     (completedJob, exception) ->
-                                     OperationalJobUtils.sendStatusBasedResponse(context, completedJob, exception),
-                                     executorPools.service(),
-                                     config.operationalJobExecutionMaxWaitTime());
+        jobManager.trySubmitJob(job,
+                                (completedJob, exception) ->
+                                OperationalJobUtils.sendStatusBasedResponse(context, completedJob, exception),
+                                executorPools.service(),
+                                config.operationalJobExecutionMaxWaitTime());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Set<Authorization> requiredAuthorizations()
+    {
+        return Collections.singleton(BasicPermissions.REPAIR.toAuthorization());
     }
 
     /**
      * Validates the token range in the repair payload if both start and end tokens are provided.
-     * 
+     *
      * @param payload the repair payload to validate
      * @throws HttpException if the token range is invalid
      */
@@ -148,11 +157,11 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
             {
                 String startTokenStr = payload.startToken();
                 String endTokenStr = payload.endToken();
-                
+
                 // Validate tokens using BigInteger for proper numeric comparison
                 BigInteger startToken = new BigInteger(startTokenStr);
                 BigInteger endToken = new BigInteger(endTokenStr);
-                
+
                 if (startToken.compareTo(endToken) >= 0)
                 {
                     throw wrapHttpException(HttpResponseStatus.BAD_REQUEST,
@@ -166,14 +175,5 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
                                         "Invalid token format. Tokens must be numeric values.", e);
             }
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Set<Authorization> requiredAuthorizations()
-    {
-        return Collections.singleton(BasicPermissions.REPAIR.toAuthorization());
     }
 }

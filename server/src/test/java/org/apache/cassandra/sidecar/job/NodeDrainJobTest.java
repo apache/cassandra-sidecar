@@ -87,7 +87,8 @@ class NodeDrainJobTest
     void testIsRunningOnCassandra_WhenNormal()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
-        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isFalse();    }
+        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isFalse();
+    }
 
     @Test
     void testIsRunningOnCassandra_WhenUnknownState()
@@ -100,7 +101,8 @@ class NodeDrainJobTest
     void testIsRunningOnCassandra_WhenNull()
     {
         when(mockStorageOperations.operationMode()).thenReturn(null);
-        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isFalse();    }
+        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isFalse();
+    }
 
     @Test
     void testStatus_WhenDraining()

@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
-import java.util.concurrent.TimeUnit;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
@@ -31,37 +29,34 @@ import org.apache.cassandra.sidecar.config.RepairJobsConfiguration;
 public class RepairJobsConfigurationImpl implements RepairJobsConfiguration
 {
     public static final int DEFAULT_VALID_REPAIR_STATUS_ATTEMPTS = 5;
-    public static final long DEFAULT_REPAIR_STATUS_POLLING_INTERVAL_MILLIS = 2_000L;
+    public static final MillisecondBoundConfiguration DEFAULT_REPAIR_STATUS_POLLING_INTERVAL = MillisecondBoundConfiguration.parse("2s");
 
-    @JsonProperty(value = "repair_status_attempts", defaultValue = DEFAULT_VALID_REPAIR_STATUS_ATTEMPTS + "")
+    @JsonProperty(value = "status_attempts")
     protected final int validRepairStatusAttempts;
 
-    @JsonProperty(value = "repair_status_polling_interval", defaultValue = DEFAULT_REPAIR_STATUS_POLLING_INTERVAL_MILLIS + "")
-    protected final long repairStatusPollIntervalMillis;
+    @JsonProperty(value = "status_polling_interval")
+    protected final MillisecondBoundConfiguration repairStatusPollInterval;
 
     /**
      * Default constructor that sets default values
      */
     public RepairJobsConfigurationImpl()
     {
-        this(DEFAULT_VALID_REPAIR_STATUS_ATTEMPTS, DEFAULT_REPAIR_STATUS_POLLING_INTERVAL_MILLIS);
+        this(DEFAULT_VALID_REPAIR_STATUS_ATTEMPTS, DEFAULT_REPAIR_STATUS_POLLING_INTERVAL);
     }
 
     /**
      * Constructor with parameters for JSON deserialization
      *
      * @param validRepairStatusAttempts the max retry attempts for the repair job status to be valid
-     * @param repairStatusPollIntervalMillis the polling interval for repair job status in milliseconds
+     * @param repairStatusPollInterval  the polling interval for repair job status
      */
     @JsonCreator
-    public RepairJobsConfigurationImpl(
-        @JsonProperty(value = "repair_status_attempts", defaultValue = DEFAULT_VALID_REPAIR_STATUS_ATTEMPTS + "")
-        int validRepairStatusAttempts,
-        @JsonProperty(value = "repair_status_polling_interval", defaultValue = DEFAULT_REPAIR_STATUS_POLLING_INTERVAL_MILLIS + "")
-        long repairStatusPollIntervalMillis)
+    public RepairJobsConfigurationImpl(@JsonProperty(value = "status_attempts") int validRepairStatusAttempts,
+                                       @JsonProperty(value = "status_polling_interval") MillisecondBoundConfiguration repairStatusPollInterval)
     {
         this.validRepairStatusAttempts = validRepairStatusAttempts;
-        this.repairStatusPollIntervalMillis = repairStatusPollIntervalMillis;
+        this.repairStatusPollInterval = repairStatusPollInterval;
     }
 
     @Override
@@ -73,8 +68,6 @@ public class RepairJobsConfigurationImpl implements RepairJobsConfiguration
     @Override
     public MillisecondBoundConfiguration repairPollInterval()
     {
-        return new MillisecondBoundConfiguration(repairStatusPollIntervalMillis, TimeUnit.MILLISECONDS);
+        return repairStatusPollInterval;
     }
-
-    
 }

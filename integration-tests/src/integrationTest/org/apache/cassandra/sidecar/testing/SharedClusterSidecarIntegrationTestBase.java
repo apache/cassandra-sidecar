@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.testing;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
@@ -115,11 +114,7 @@ public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClus
                                          .setTrustStoreOptions(new JksOptions()
                                                                .setPath(trustStorePath)
                                                                .setPassword(trustStorePassword))
-                                         .setSsl(true)
-                                         .setIdleTimeout(180000)
-                                         .setIdleTimeoutUnit(TimeUnit.MILLISECONDS)
-                                         .setConnectTimeout(30000)
-                                         .setKeepAlive(true);
+                                         .setSsl(true);
         return WebClient.create(vertx(), clientOptions);
     }
 
@@ -137,11 +132,7 @@ public abstract class SharedClusterSidecarIntegrationTestBase extends SharedClus
                                          .setTrustStoreOptions(new JksOptions()
                                                                .setPath(mtlsTestHelper.trustStorePath())
                                                                .setPassword(mtlsTestHelper.trustStorePassword()))
-                                         .setSsl(true)
-                                         .setIdleTimeout(180000)
-                                         .setIdleTimeoutUnit(TimeUnit.MILLISECONDS)
-                                         .setConnectTimeout(30000)
-                                         .setKeepAlive(true);
+                                         .setSsl(true);
         noAuthClient = WebClient.create(vertx(), clientOptions);
         return noAuthClient;
     }

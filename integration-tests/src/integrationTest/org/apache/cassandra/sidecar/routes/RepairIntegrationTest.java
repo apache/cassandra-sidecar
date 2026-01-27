@@ -21,14 +21,9 @@ package org.apache.cassandra.sidecar.routes;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
-import com.google.common.util.concurrent.Uninterruptibles;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -37,7 +32,6 @@ import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.codec.BodyCodec;
-import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.SimpleQueryResult;
@@ -47,28 +41,26 @@ import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
+import org.apache.cassandra.testing.TestUtils;
 
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
-import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
 import static org.apache.cassandra.testing.TestUtils.DC1_RF3;
 import static org.apache.cassandra.testing.TestUtils.TEST_KEYSPACE;
 import static org.apache.cassandra.testing.TestUtils.TEST_TABLE_PREFIX;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 /**
  * Integration tests for repair operations
  */
-@Tag("heavy")
-public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBase
+class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBase
 {
-
     private static final String INSERT_STMT = "INSERT INTO %s (race_year, race_name, rank, cyclist_name) " +
-                                              "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', %d, 'Benjamin PRADES');";
+                                              "VALUES (2015, 'Tour of Japan - Stage 4 - Minami > Shinshu', %d, 'Benjamin PRADES')";
 
-    private static final String SELECT_STMT = "SELECT * FROM %s;";
+    private static final String SELECT_STMT = "SELECT * FROM %s";
 
     private static final String CREATE_STMT = "CREATE TABLE %s ( \n" +
                                               "  race_year int, \n" +
@@ -80,26 +72,66 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
 
     private static final int NUM_ROWS = 300;
 
+    static final QualifiedName REPAIR_TEST_TABLE = TestUtils.uniqueTestTableFullName(TEST_KEYSPACE, TEST_TABLE_PREFIX);
+    static final QualifiedName REPAIR_REPLICAS_WITH_DATA_TABLE = TestUtils.uniqueTestTableFullName(TEST_KEYSPACE, TEST_TABLE_PREFIX);
+    static final QualifiedName REPAIR_REPLICAS_IR_WITH_DATA_TABLE = TestUtils.uniqueTestTableFullName(TEST_KEYSPACE, TEST_TABLE_PREFIX);
+    static final QualifiedName REPAIR_REPLICAS_TIMEOUT_TABLE = TestUtils.uniqueTestTableFullName(TEST_KEYSPACE, TEST_TABLE_PREFIX);
+
+    static final List<QualifiedName> ALL_TABLES = List.of(REPAIR_TEST_TABLE,
+                                                          REPAIR_REPLICAS_WITH_DATA_TABLE,
+                                                          REPAIR_REPLICAS_IR_WITH_DATA_TABLE,
+                                                          REPAIR_REPLICAS_TIMEOUT_TABLE);
+
     @Override
     protected ClusterBuilderConfiguration testClusterConfiguration()
     {
-        return super.testClusterConfiguration().nodesPerDc(3).requestFeature(Feature.NETWORK);
+        return super.testClusterConfiguration()
+                    .nodesPerDc(3)
+                    .requestFeature(Feature.NETWORK);
     }
 
     @Override
     protected void initializeSchemaForTest()
     {
         createTestKeyspace(TEST_KEYSPACE, DC1_RF3);
+        for (QualifiedName table : ALL_TABLES)
+        {
+            createTestTable(table, CREATE_STMT);
+        }
+        populateData(REPAIR_TEST_TABLE, 10);
+
+        cluster.stream().forEach(node -> node.nodetoolResult("disableautocompaction",
+                                                             REPAIR_REPLICAS_WITH_DATA_TABLE.keyspace(),
+                                                             REPAIR_REPLICAS_WITH_DATA_TABLE.table())
+                                             .asserts().success());
+        populateDataSingleNode(REPAIR_REPLICAS_WITH_DATA_TABLE, 2, NUM_ROWS);
+        validateDataConsistency(REPAIR_REPLICAS_WITH_DATA_TABLE, List.of(2), NUM_ROWS);
+        validateDataConsistency(REPAIR_REPLICAS_WITH_DATA_TABLE, List.of(3, 1), 0);
+
+
+        cluster.stream().forEach(node -> node.nodetoolResult("disableautocompaction",
+                                                             REPAIR_REPLICAS_IR_WITH_DATA_TABLE.keyspace(),
+                                                             REPAIR_REPLICAS_IR_WITH_DATA_TABLE.table())
+                                             .asserts().success());
+        populateDataSingleNode(REPAIR_REPLICAS_IR_WITH_DATA_TABLE, 2, NUM_ROWS);
+        validateDataConsistency(REPAIR_REPLICAS_IR_WITH_DATA_TABLE, List.of(2), NUM_ROWS);
+        validateDataConsistency(REPAIR_REPLICAS_IR_WITH_DATA_TABLE, List.of(3, 1), 0);
+
+        cluster.stream().forEach(node -> node.nodetoolResult("disableautocompaction",
+                                                             REPAIR_REPLICAS_TIMEOUT_TABLE.keyspace(),
+                                                             REPAIR_REPLICAS_TIMEOUT_TABLE.table())
+                                             .asserts().success());
+        populateDataSingleNode(REPAIR_REPLICAS_TIMEOUT_TABLE, 2, NUM_ROWS);
+        validateDataConsistency(REPAIR_REPLICAS_TIMEOUT_TABLE, List.of(2), NUM_ROWS);
+        validateDataConsistency(REPAIR_REPLICAS_TIMEOUT_TABLE, List.of(3, 1), 0);
     }
 
     @Test
-    void repairTest(VertxTestContext context)
+    void repairTest()
     {
-        QualifiedName table = createUniqueTestTable(TEST_TABLE_PREFIX, CREATE_STMT);
-        populateData(table, 10);
         RepairPayload payload = RepairPayload.builder()
                                              .isPrimaryRange(true)
-                                             .tables(List.of(table.table()))
+                                             .tables(List.of(REPAIR_TEST_TABLE.table()))
                                              .build();
         String testRoute = "/api/v1/cassandra/keyspaces/" + TEST_KEYSPACE + "/repair";
         OperationalJobResponse response = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", testRoute)
@@ -108,26 +140,17 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
                                                                      .expecting(HttpResponseExpectation.SC_ACCEPTED))
                                           .body();
 
-        Uninterruptibles.sleepUninterruptibly(5, TimeUnit.SECONDS);
         assertThat(response).isNotNull();
         assertThat(response.jobId()).isNotNull();
-        pollStatusForState(response.jobId().toString(), SUCCEEDED, null);
-        context.completeNow();
+        pollStatusForState(response.jobId().toString());
     }
 
     @Test
-    void repairReplicasWithData(VertxTestContext context)
+    void repairReplicasWithData()
     {
-        QualifiedName table = createUniqueTestTable(TEST_TABLE_PREFIX, CREATE_STMT);
-        cluster.stream().forEach(node -> node.nodetoolResult("disableautocompaction", table.keyspace(), table.table())
-                                             .asserts().success());
-        populateDataSingleNode(table, 2, NUM_ROWS);
-        validateDataConsistency(table, List.of(2), NUM_ROWS);
-        validateDataConsistency(table, List.of(3, 1), 0);
-
         RepairPayload payload = RepairPayload.builder()
                                              .isPrimaryRange(true)
-                                             .tables(List.of(table.table()))
+                                             .tables(List.of(REPAIR_REPLICAS_WITH_DATA_TABLE.table()))
                                              .build();
         String testRoute = "/api/v1/cassandra/keyspaces/" + TEST_KEYSPACE + "/repair";
         OperationalJobResponse response = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", testRoute)
@@ -140,24 +163,15 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
         assertThat(response.jobId()).isNotNull();
         assertThat(response.status()).isEqualTo(RUNNING);
 
-        Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
-        pollStatusForState(response.jobId().toString(), SUCCEEDED, null);
-        validateDataConsistency(table, List.of(2, 3, 1), NUM_ROWS);
-        context.completeNow();
+        pollStatusForState(response.jobId().toString());
+        validateDataConsistency(REPAIR_REPLICAS_WITH_DATA_TABLE, List.of(2, 3, 1), NUM_ROWS);
     }
 
     @Test
-    void repairReplicasIRWithData(VertxTestContext context)
+    void repairReplicasIRWithData()
     {
-        QualifiedName table = createUniqueTestTable(TEST_TABLE_PREFIX, CREATE_STMT);
-        cluster.stream().forEach(node -> node.nodetoolResult("disableautocompaction", table.keyspace(), table.table())
-                                             .asserts().success());
-        populateDataSingleNode(table, 2, NUM_ROWS);
-        validateDataConsistency(table, List.of(2), NUM_ROWS);
-        validateDataConsistency(table, List.of(3, 1), 0);
-
         RepairPayload payload = RepairPayload.builder()
-                                             .tables(List.of(table.table()))
+                                             .tables(List.of(REPAIR_REPLICAS_IR_WITH_DATA_TABLE.table()))
                                              .repairType(RepairPayload.RepairType.INCREMENTAL)
                                              .build();
         String testRoute = "/api/v1/cassandra/keyspaces/" + TEST_KEYSPACE + "/repair";
@@ -171,25 +185,16 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
         assertThat(response.jobId()).isNotNull();
         assertThat(response.status()).isEqualTo(RUNNING);
 
-        Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
-        pollStatusForState(response.jobId().toString(), SUCCEEDED, null);
-        validateDataConsistency(table, List.of(2, 3, 1), NUM_ROWS);
-        context.completeNow();
+        pollStatusForState(response.jobId().toString());
+        validateDataConsistency(REPAIR_REPLICAS_IR_WITH_DATA_TABLE, List.of(2, 3, 1), NUM_ROWS);
     }
 
     @Test
-    void repairReplicasTimeout(VertxTestContext context)
+    void repairReplicasTimeout()
     {
-        QualifiedName table = createUniqueTestTable(TEST_TABLE_PREFIX, CREATE_STMT);
-        cluster.stream().forEach(node -> node.nodetoolResult("disableautocompaction", table.keyspace(), table.table())
-                                             .asserts().success());
-        populateDataSingleNode(table, 2, NUM_ROWS);
-        validateDataConsistency(table, List.of(2), NUM_ROWS);
-        validateDataConsistency(table, List.of(3, 1), 0);
-
         RepairPayload payload = RepairPayload.builder()
                                              .isPrimaryRange(true)
-                                             .tables(List.of(table.table()))
+                                             .tables(List.of(REPAIR_REPLICAS_TIMEOUT_TABLE.table()))
                                              .build();
         String testRoute = "/api/v1/cassandra/keyspaces/" + TEST_KEYSPACE + "/repair";
         OperationalJobResponse response = getBlocking(trustedClient().put(serverWrapper.serverPort, "localhost", testRoute)
@@ -202,33 +207,23 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
         assertThat(response.jobId()).isNotNull();
         assertThat(response.status()).isEqualTo(RUNNING);
 
-        Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
-        pollStatusForState(response.jobId().toString(), SUCCEEDED, null);
-        validateDataConsistency(table, List.of(2, 3, 1), NUM_ROWS);
-        context.completeNow();
+        pollStatusForState(response.jobId().toString());
+        validateDataConsistency(REPAIR_REPLICAS_TIMEOUT_TABLE, List.of(2, 3, 1), NUM_ROWS);
     }
 
-    private void pollStatusForState(String uuid,
-                                    OperationalJobStatus expectedStatus,
-                                    String expectedReason)
+    private void pollStatusForState(String uuid)
     {
         String status = "/api/v1/cassandra/operational-jobs/" + uuid;
-        AtomicBoolean stateReached = new AtomicBoolean(false);
-        AtomicInteger counter = new AtomicInteger(0);
-        loopAssert(30, () -> {
-            counter.incrementAndGet();
-            HttpResponse<Buffer> resp;
-            resp = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", status)
-                                              .send());
+        loopAssert(30, 500, () -> {
+            HttpResponse<Buffer> resp = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", status)
+                                                                   .send());
             logger.info("Success Status Response code: {}", resp.statusCode());
             logger.info("Status Response: {}", resp.bodyAsString());
             if (resp.statusCode() == HttpResponseStatus.OK.code())
             {
-                stateReached.set(true);
                 OperationalJobResponse jobStatusResp = resp.bodyAsJson(OperationalJobResponse.class);
                 assertThat(jobStatusResp.jobId()).isEqualTo(UUID.fromString(uuid));
-                assertThat(jobStatusResp.status()).isEqualTo(expectedStatus);
-                assertThat(jobStatusResp.reason()).isEqualTo(expectedReason);
+                assertThat(jobStatusResp.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
                 assertThat(jobStatusResp.operation()).isEqualTo("repair");
             }
             else
@@ -236,15 +231,13 @@ public class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBa
                 assertThat(resp.statusCode()).isEqualTo(HttpResponseStatus.ACCEPTED.code());
                 OperationalJobResponse jobStatusResp = resp.bodyAsJson(OperationalJobResponse.class);
                 assertThat(jobStatusResp.jobId()).isEqualTo(UUID.fromString(uuid));
+                fail("Repair is still in progress");
             }
-            logger.info("Request completed");
-            assertThat(stateReached.get()).isTrue();
         });
     }
 
     private void validateDataConsistency(QualifiedName tableName, List<Integer> nodes, long expectedNumRows)
     {
-
         nodes.forEach(nodeNumber -> {
             IInstance node = cluster.get(nodeNumber);
             SimpleQueryResult rows = node.executeInternalWithResult(String.format(SELECT_STMT, tableName));

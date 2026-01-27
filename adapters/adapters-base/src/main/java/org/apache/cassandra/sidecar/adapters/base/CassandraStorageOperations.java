@@ -264,7 +264,7 @@ public class CassandraStorageOperations implements StorageOperations
     public List<String> getParentRepairStatus(int cmd)
     {
         return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
-               .getParentRepairStatus(cmd);
+                        .getParentRepairStatus(cmd);
     }
 
     /**

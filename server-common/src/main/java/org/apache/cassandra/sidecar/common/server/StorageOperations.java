@@ -148,7 +148,7 @@ public interface StorageOperations
     /**
      * Get the status of a given parent repair session.
      *
-     * @param cmd the integer value representing a reference to a repair session`
+     * @param cmd the integer value representing a reference to a repair session
      * @return status of parent repair
      */
     List<String> getParentRepairStatus(int cmd);
