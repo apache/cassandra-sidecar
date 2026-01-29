@@ -565,4 +565,6 @@ jobs:
         run: ./gradlew docs:asciidoctor
 
       - name: Verify documentation
-        run: test -f docs/build/user.html && test -f docs/build/development.html
+        run: |
+          test -f docs/build/user.html
+          test -f docs/build/development.html
