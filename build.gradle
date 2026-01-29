@@ -114,7 +114,7 @@ def codeCheckTasks = task("codeCheckTasks")
 tasks.register('checkstyle') {
     description = 'Runs all checkstyle tasks'
     group = 'verification'
-    dependsOn tasks.withType(Checkstyle)
+    dependsOn(allprojects.collect { it.tasks.withType(Checkstyle) })
 }
 
 allprojects {
