@@ -111,6 +111,12 @@ ext {
 // Force checkstyle, rat, and spotBugs to run before test tasks for faster feedback
 def codeCheckTasks = task("codeCheckTasks")
 
+tasks.register('checkstyle') {
+    description = 'Runs all checkstyle tasks'
+    group = 'verification'
+    dependsOn tasks.withType(Checkstyle)
+}
+
 allprojects {
     apply plugin: 'jacoco'
     apply plugin: 'checkstyle'

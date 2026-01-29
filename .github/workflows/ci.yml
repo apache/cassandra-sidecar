@@ -129,7 +129,8 @@ jobs:
           path: dtest-jars/
 
       - name: Run checkstyle
-        run: ./gradlew checkstyleMain checkstyleTest checkstyleTestFixtures checkstyleIntegrationTest --stacktrace
+        run: |
+          ./gradlew checkstyle --stacktrace
         env:
           CASSANDRA_DEP_DIR: ${{ github.workspace }}/dtest-jars
 
