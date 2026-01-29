@@ -27,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
-
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -126,9 +125,8 @@ public class OperationalJobManager
      */
     private void checkConflict(OperationalJob job) throws OperationalJobConflictException
     {
-        // If there are no tracked running jobs for same operation, then we confirm downstream
-        // Downstream check is done in most cases - by design
-        if (!jobTracker.inflightJobsByOperation(job.name()).isEmpty() || job.isRunningOnCassandra())
+        List<OperationalJob> sameOperationJobs = jobTracker.inflightJobsByOperation(job.name());
+        if (job.hasConflict(sameOperationJobs))
         {
             throw new OperationalJobConflictException("The same operational job is already running on Cassandra. operationName='" + job.name() + '\'');
         }

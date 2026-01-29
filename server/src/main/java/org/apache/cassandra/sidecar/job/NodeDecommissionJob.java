@@ -18,13 +18,16 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Implementation of {@link OperationalJob} to perform node decommission operation.
@@ -43,9 +46,20 @@ public class NodeDecommissionJob extends OperationalJob
         this.isForce = isForce;
     }
 
+    /**
+     * Node Decommission job determines conflict based on the current operation mode of the cluster.
+     * If the cluster is in the middle of a decommission or leaving operation, the job will be rejected.
+     * @param sameOperationJobs jobs tracked by the tracker are not relevant for this conflict check
+     * @return true if the job has a conflict, false otherwise
+     */
     @Override
-    public boolean isRunningOnCassandra()
+    public boolean hasConflict(@NotNull List<OperationalJob> sameOperationJobs)
     {
+        if (!sameOperationJobs.isEmpty())
+        {
+            return true;
+        }
+
         String operationMode = storageOperations.operationMode();
         return "LEAVING".equals(operationMode) || "DECOMMISSIONED".equals(operationMode);
     }
@@ -76,16 +90,11 @@ public class NodeDecommissionJob extends OperationalJob
      * {@inheritDoc}
      */
     @Override
-    protected void executeInternal()
+    protected Future<Void> executeInternal()
     {
-        if (isRunningOnCassandra())
-        {
-            LOGGER.info("Not executing job as an ongoing or completed decommission operation was found jobId={}", this.jobId());
-            return;
-        }
-
         LOGGER.info("Executing decommission operation. jobId={}", this.jobId());
         storageOperations.decommission(isForce);
+        return Future.succeededFuture();
     }
 
     /**

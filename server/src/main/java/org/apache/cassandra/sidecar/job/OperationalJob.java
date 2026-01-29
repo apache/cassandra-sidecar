@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -32,6 +33,7 @@ import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.tasks.Task;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * An abstract class representing operational jobs that run on Cassandra
@@ -100,11 +102,13 @@ public abstract class OperationalJob implements Task<Void>
     }
 
     /**
-     * The concrete-job-specific implementation to determine if the job is running on the Cassandra node.
-     * @return true if the job is running on the Cassandra node. For example, node decommission is tracked by the
-     * operationMode exposed from Cassandra.
+     * Validates if the job has conflict either leveraging either other same operation jobs on the same node and/or a
+     * custom job-specific implementation for conflict determination.
+     *
+     * @param sameOperationJobs list of jobs being tracked by the tracker that have the same operation
+     * @return true if the job is has a conflict.
      */
-    public abstract boolean isRunningOnCassandra();
+    public abstract boolean hasConflict(@NotNull List<OperationalJob> sameOperationJobs);
 
     /**
      * Determines the status of the job. OperationalJob subclasses could choose to override the method.
@@ -187,9 +191,9 @@ public abstract class OperationalJob implements Task<Void>
     }
 
     /**
-     * OperationalJob body. The implementation is executed in a blocking manner.
+     * OperationalJob body. The implementation returns a Future representing the job execution.
      */
-    protected abstract void executeInternal() throws Exception;
+    protected abstract Future<Void> executeInternal() throws Exception;
 
     /**
      * Execute the job behavior as specified in the internal execution {@link #executeInternal()},
@@ -203,18 +207,24 @@ public abstract class OperationalJob implements Task<Void>
         promise.future().onComplete(executionPromise);
         try
         {
-            // Blocking call to perform concrete job-specific execution, returning the status
-            executeInternal();
-            promise.tryComplete();
-            if (LOGGER.isDebugEnabled())
-            {
-                LOGGER.debug("Complete job execution. jobId={} status={}", jobId, status());
-            }
+            Future<Void> internalFuture = executeInternal();
+            internalFuture.onComplete(ar -> {
+                if (ar.succeeded())
+                {
+                    promise.tryComplete();
+                    LOGGER.info("Complete job execution. jobId={} status={}", jobId, status());
+                }
+                else
+                {
+                    promise.tryFail(ar.cause());
+                    LOGGER.error("Job execution failed. jobId={} reason={}", jobId, ar.cause().getMessage());
+                }
+            });
         }
         catch (Throwable e)
         {
             OperationalJobException oje = OperationalJobException.wraps(e);
-            LOGGER.error("Job execution failed. jobId={} reason='{}'", jobId, oje.getMessage(), oje);
+            LOGGER.error("Job execution failed. jobId={} reason={}", jobId, oje.getMessage(), oje);
             promise.tryFail(oje);
         }
     }

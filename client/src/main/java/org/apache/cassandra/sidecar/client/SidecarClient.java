@@ -46,6 +46,7 @@ import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.ListCdcSegmentsRequest;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationListInstanceFilesRequest;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationStatusRequest;
+import org.apache.cassandra.sidecar.common.request.RepairRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobProgressRequest;
 import org.apache.cassandra.sidecar.common.request.RestoreJobSummaryRequest;
 import org.apache.cassandra.sidecar.common.request.Service;
@@ -60,6 +61,7 @@ import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestP
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.Digest;
 import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
+import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
 import org.apache.cassandra.sidecar.common.request.data.RestoreJobProgressRequestParams;
 import org.apache.cassandra.sidecar.common.request.data.UpdateCdcServiceConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
@@ -856,6 +858,23 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
         return executor.executeRequestAsync(requestBuilder()
                                             .singleInstanceSelectionPolicy(instance)
                                             .nodeDecommissionRequest()
+                                            .build());
+    }
+
+    /**
+     * Executes a repair operation on the provided instance, keyspace and options
+     * @param instance the instance where the request will be executed
+     * @param keyspace keyspace for which the repair is being performed
+     * @param payload the repair request options as payload
+     * @return a completable future of the repair operation job response
+     */
+    public CompletableFuture<OperationalJobResponse> repair(SidecarInstance instance,
+                                                            String keyspace,
+                                                            RepairPayload payload)
+    {
+        return executor.executeRequestAsync(requestBuilder()
+                                            .singleInstanceSelectionPolicy(instance)
+                                            .request(new RepairRequest(keyspace, payload))
                                             .build());
     }
 

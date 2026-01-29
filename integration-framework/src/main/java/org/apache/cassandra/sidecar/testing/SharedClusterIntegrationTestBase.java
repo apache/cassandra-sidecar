@@ -162,7 +162,6 @@ public abstract class SharedClusterIntegrationTestBase
 {
     protected final Logger logger = LoggerFactory.getLogger(SharedClusterIntegrationTestBase.class);
     private static final int MAX_CLUSTER_PROVISION_RETRIES = 5;
-
     @TempDir
     static Path secretsPath;
 

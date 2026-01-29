@@ -77,6 +77,7 @@ import org.apache.cassandra.sidecar.common.request.data.CompactionStopRequestPay
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
 import org.apache.cassandra.sidecar.common.request.data.NodeCommandRequestPayload;
+import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
 import org.apache.cassandra.sidecar.common.request.data.UpdateCdcServiceConfigPayload;
 import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
@@ -1494,6 +1495,29 @@ abstract class SidecarClientTest
             assertThat(requestBody).contains("\"newToken\":\"" + newToken + "\"");
             assertThat(request.getHeader("Content-Type")).isEqualTo("application/json");
         });
+    }
+
+    @Test
+    public void testRepair() throws Exception
+    {
+        UUID jobId = UUID.randomUUID();
+        String repairResponseString = "{\"jobId\":\"" + jobId + "\",\"jobStatus\":\"SUCCEEDED\",\"instance\":\"127.0.0.1\"}";
+
+        MockResponse response = new MockResponse()
+                                .setResponseCode(OK.code())
+                                .setHeader("content-type", "application/json")
+                                .setBody(repairResponseString);
+        enqueue(response);
+        RepairPayload payload = RepairPayload.builder()
+                                             .tables(Collections.singletonList("test_table"))
+                                             .isPrimaryRange(true)
+                                             .build();
+
+        SidecarInstanceImpl sidecarInstance = RequestExecutorTest.newSidecarInstance(servers.get(0));
+        OperationalJobResponse result = client.repair(sidecarInstance, "testkeyspace", payload).get(30, TimeUnit.SECONDS);
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
+        validateResponseServed(ApiEndpointsV1.REPAIR_ROUTE.replaceAll(KEYSPACE_PATH_PARAM, "testkeyspace"));
     }
 
     @Test

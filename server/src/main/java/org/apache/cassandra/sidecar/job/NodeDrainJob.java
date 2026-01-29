@@ -19,15 +19,18 @@
 package org.apache.cassandra.sidecar.job;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Implementation of {@link OperationalJob} to perform node drain operation.
@@ -84,7 +87,7 @@ public class NodeDrainJob extends OperationalJob
      * {@inheritDoc}
      */
     @Override
-    public boolean isRunningOnCassandra()
+    public boolean hasConflict(@NotNull List<OperationalJob> sameOperationJobs)
     {
         String operationMode = storageOperations.operationMode();
         NodeDrainStateEnum nodeDrainStateEnum = NodeDrainStateEnum.fromOperationMode(operationMode);
@@ -111,14 +114,8 @@ public class NodeDrainJob extends OperationalJob
      * {@inheritDoc}
      */
     @Override
-    protected void executeInternal()
+    protected Future<Void> executeInternal()
     {
-        if (isRunningOnCassandra())
-        {
-            LOGGER.info("Not executing job as an ongoing drain operation was found jobId={}", this.jobId());
-            return;
-        }
-
         LOGGER.info("Executing drain operation. jobId={}", this.jobId());
         try
         {
@@ -129,6 +126,8 @@ public class NodeDrainJob extends OperationalJob
             LOGGER.error("Job execution failed. jobId={} reason='{}'", this.jobId(), ex.getMessage(), ex);
             throw OperationalJobException.wraps(ex);
         }
+
+        return Future.succeededFuture();
     }
 
     /**

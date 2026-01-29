@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.job;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -34,7 +35,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -73,39 +73,35 @@ class NodeDrainJobTest
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_DRAINING);
 
-        assertThat(nodeDrainJob.isRunningOnCassandra()).isTrue();
+        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isTrue();
     }
 
     @Test
     void testIsRunningOnCassandra_WhenDrained()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_DRAINED);
-
-        assertThat(nodeDrainJob.isRunningOnCassandra()).isFalse();
+        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isFalse();
     }
 
     @Test
     void testIsRunningOnCassandra_WhenNormal()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_NORMAL);
-
-        assertThat(nodeDrainJob.isRunningOnCassandra()).isFalse();
+        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isFalse();
     }
 
     @Test
     void testIsRunningOnCassandra_WhenUnknownState()
     {
         when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_UNKNOWN);
-
-        assertThat(nodeDrainJob.isRunningOnCassandra()).isFalse();
+        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isFalse();
     }
 
     @Test
     void testIsRunningOnCassandra_WhenNull()
     {
         when(mockStorageOperations.operationMode()).thenReturn(null);
-
-        assertThat(nodeDrainJob.isRunningOnCassandra()).isFalse();
+        assertThat(nodeDrainJob.hasConflict(Collections.emptyList())).isFalse();
     }
 
     @Test
@@ -156,16 +152,6 @@ class NodeDrainJobTest
         nodeDrainJob.executeInternal();
 
         verify(mockStorageOperations).drain();
-    }
-
-    @Test
-    void testExecuteInternal_WhenAlreadyDraining() throws IOException, ExecutionException, InterruptedException
-    {
-        when(mockStorageOperations.operationMode()).thenReturn(OPERATION_MODE_DRAINING);
-
-        nodeDrainJob.executeInternal();
-
-        verify(mockStorageOperations, never()).drain();
     }
 
     @Test

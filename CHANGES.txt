@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Sidecar endpoint to support on-demand repair operation (CASSSIDECAR-268)
  * Database access during auth flow is blocking event-loop thread (CASSSIDECAR-369)
  * Add default process-based lifecycle provider (CASSSIDECAR-340)
  * Sidecar API Endpoint for Nodetool Compaction Stop (CASSSIDECAR-360)

@@ -261,6 +261,26 @@ public class CassandraStorageOperations implements StorageOperations
      * {@inheritDoc}
      */
     @Override
+    public List<String> getParentRepairStatus(int cmd)
+    {
+        return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)
+                        .getParentRepairStatus(cmd);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int repairAsync(String keyspace, Map<String, String> repairOptions)
+    {
+        StorageJmxOperations ssProxy = jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME);
+        return ssProxy.repairAsync(keyspace, repairOptions);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean isGossipRunning()
     {
         return jmxClient.proxy(StorageJmxOperations.class, STORAGE_SERVICE_OBJ_NAME)

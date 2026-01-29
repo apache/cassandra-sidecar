@@ -19,6 +19,8 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
@@ -86,8 +88,8 @@ class ClearSnapshotIntegrationTest extends SharedClusterSidecarIntegrationTestBa
     {
         String snapshotName = "my-snapshot-" + UUID.randomUUID();
         String testRoute = String.format(SNAPSHOT_ROUTE_TEMPLATE,
-                                         tableName.maybeQuotedKeyspace(),
-                                         tableName.maybeQuotedTable(),
+                                         urlEncode(tableName.maybeQuotedKeyspace()),
+                                         urlEncode(tableName.maybeQuotedTable()),
                                          snapshotName);
 
         // Create the snapshot
@@ -117,6 +119,11 @@ class ClearSnapshotIntegrationTest extends SharedClusterSidecarIntegrationTestBa
                                                                    .send()
                                                                    .expecting(HttpResponseExpectation.SC_NOT_FOUND));
         assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
+    }
+
+    private String urlEncode(String value)
+    {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     @Override

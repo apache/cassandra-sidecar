@@ -52,6 +52,7 @@ import org.apache.cassandra.sidecar.handlers.NodeDecommissionHandler;
 import org.apache.cassandra.sidecar.handlers.NodeDrainHandler;
 import org.apache.cassandra.sidecar.handlers.NodeMoveHandler;
 import org.apache.cassandra.sidecar.handlers.OperationalJobHandler;
+import org.apache.cassandra.sidecar.handlers.RepairHandler;
 import org.apache.cassandra.sidecar.handlers.RingHandler;
 import org.apache.cassandra.sidecar.handlers.SchemaHandler;
 import org.apache.cassandra.sidecar.handlers.StreamStatsHandler;
@@ -232,13 +233,36 @@ public class CassandraOperationsModule extends AbstractModule
     }
 
     @GET
-    @Path(ApiEndpointsV1.STREAM_STATS_ROUTE)
-    @Operation(summary = "Get stream statistics",
-               description = "Returns streaming statistics for the Cassandra node")
-    @APIResponse(description = "Stream statistics retrieved successfully",
+    @Path(ApiEndpointsV1.REPAIR_ROUTE)
+    @Operation(summary = "Trigger a repair operation",
+               description = "Returns the status of the repair operation on the Cassandra node")
+    @APIResponse(description = "Repair operation status retrieved successfully",
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = StreamStatsResponse.class)))
+                 schema = @Schema(implementation = OperationalJobResponse.class)))
+    @ProvidesIntoMap
+    @KeyClassMapKey(VertxRouteMapKeys.CassandraRepairRouteKey.class)
+    VertxRoute cassandraRepairRoute(RouteBuilder.Factory factory,
+                                    ValidateTableExistenceHandler validateKeyspaceExistence,
+                                    RepairHandler repairhandler)
+    {
+        return factory.builderForRoute()
+                      .setBodyHandler(true)
+                      // We only require validation of keyspace here. It is guaranteed that the URI will provide a
+                      // keyspace to validate
+                      .handler(validateKeyspaceExistence)
+                      .handler(repairhandler)
+                      .build();
+    }
+
+    @GET
+    @Path(ApiEndpointsV1.STREAM_STATS_ROUTE)
+    @Operation(summary = "Get stream statistics",
+    description = "Returns streaming statistics for the Cassandra node")
+    @APIResponse(description = "Stream statistics retrieved successfully",
+    responseCode = "200",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(implementation = StreamStatsResponse.class)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.CassandraStreamStatsRouteKey.class)
     VertxRoute cassandraStreamStatsRoute(RouteBuilder.Factory factory,

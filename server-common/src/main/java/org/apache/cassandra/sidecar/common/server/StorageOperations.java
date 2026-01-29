@@ -136,6 +136,24 @@ public interface StorageOperations
     String clusterName();
 
     /**
+     * Triggers a repair operation for the given keyspace and options
+     *
+     * @param keyspace keyspace for the repair operation
+     * @param options  repair options
+     * @return an integer value representing the status of the repair operation; Only returns 0 for replication factor 1
+     * which can be used as a reference to check for the status of the repair session via  {@link #getParentRepairStatus(int)}.
+     */
+    int repairAsync(String keyspace, Map<String, String> options);
+
+    /**
+     * Get the status of a given parent repair session.
+     *
+     * @param cmd the integer value representing a reference to a repair session
+     * @return status of parent repair
+     */
+    List<String> getParentRepairStatus(int cmd);
+
+    /**
      * Triggers stop native transport of the Cassandra node
      */
     void stopNativeTransport();

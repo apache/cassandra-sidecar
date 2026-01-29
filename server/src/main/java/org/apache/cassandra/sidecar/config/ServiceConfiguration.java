@@ -121,6 +121,11 @@ public interface ServiceConfiguration
     ThrottleConfiguration throttleConfiguration();
 
     /**
+     * @return the configuration for repair
+     */
+    RepairJobsConfiguration repairConfiguration();
+
+    /**
      * @return the configuration for SSTable component uploads on this service
      */
     SSTableUploadConfiguration sstableUploadConfiguration();

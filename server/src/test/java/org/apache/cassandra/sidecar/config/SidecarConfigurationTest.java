@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.assertj.core.api.Condition;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
@@ -558,6 +559,33 @@ class SidecarConfigurationTest
         assertThat(liveMigrationConfiguration.migrationMap()).isNotNull()
                                                              .hasSize(1)
                                                              .containsEntry("localhost1", "localhost4");
+    }
+
+    @Test
+    void testInvalidOperationalJobExecutionMaxWaitTime()
+    {
+        String yaml = "sidecar:\n" +
+                      "  operations_job_execution_max_wait_time: 2m";
+        assertThatExceptionOfType(JsonMappingException.class)
+        .isThrownBy(() -> SidecarConfigurationImpl.fromYamlString(yaml))
+        .withRootCauseInstanceOf(ConfigurationException.class)
+        .withMessageContaining("Invalid operations_job_execution_max_wait_time value (2m). The maximum allowed value is 1m.");
+    }
+
+    @Test
+    void testRepairConfiguration() throws IOException
+    {
+        String yaml = "sidecar:\n" +
+                      "  repair:\n" +
+                      "    status_attempts: 2\n" +
+                      "    status_polling_interval: 500ms";
+        SidecarConfigurationImpl sidecarConfiguration = SidecarConfigurationImpl.fromYamlString(yaml);
+        ServiceConfiguration serviceConfiguration = sidecarConfiguration.serviceConfiguration();
+        assertThat(serviceConfiguration).isNotNull();
+        RepairJobsConfiguration repairConfig = serviceConfiguration.repairConfiguration();
+        assertThat(repairConfig).isNotNull();
+        assertThat(repairConfig.repairStatusMaxAttempts()).isEqualTo(2);
+        assertThat(repairConfig.repairPollInterval()).isEqualTo(MillisecondBoundConfiguration.parse("500ms"));
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)

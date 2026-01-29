@@ -69,7 +69,11 @@ public class OperationalJobUtils
             context.response().setStatusCode(HttpResponseStatus.ACCEPTED.code());
         }
 
-        String reason = status == FAILED ? job.asyncResult().cause().getMessage() : null;
+        String reason = null;
+        if (status == FAILED && job.asyncResult() != null && job.asyncResult().cause() != null)
+        {
+            reason = job.asyncResult().cause().getMessage();
+        }
         context.json(new OperationalJobResponse(job.jobId(), status, job.name(), reason));
     }
 }

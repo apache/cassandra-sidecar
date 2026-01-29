@@ -40,6 +40,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
@@ -150,14 +151,15 @@ class ListOperationalJobsHandlerTest
         }
 
         @Override
-        public boolean isRunningOnCassandra()
+        public boolean hasConflict(List<OperationalJob> jobs)
         {
             return false;
         }
 
         @Override
-        protected void executeInternal() throws OperationalJobException
+        protected Future<Void> executeInternal() throws OperationalJobException
         {
+            return Future.succeededFuture();
         }
     }
 }

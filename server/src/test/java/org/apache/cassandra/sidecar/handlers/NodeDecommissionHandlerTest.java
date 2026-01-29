@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -29,12 +28,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
@@ -42,9 +38,6 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
-import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
-import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
@@ -78,7 +71,7 @@ public class NodeDecommissionHandlerTest
     {
         Injector injector;
         Module testOverride = Modules.override(new TestModule())
-                                     .with(new NodeDecommissionHandlerTest.NodeDecommissionTestModule());
+                                     .with(new CommonTest.CommonTestModule(mockStorageOperations));
         injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
@@ -172,36 +165,4 @@ public class NodeDecommissionHandlerTest
                   context.completeNow();
               }));
     }
-
-    /**
-     * Test guice module for Node Decommission handler tests
-     */
-    class NodeDecommissionTestModule extends AbstractModule
-    {
-        @Provides
-        @Singleton
-        public InstancesMetadata instanceMetadata()
-        {
-            final int instanceId = 100;
-            final String host = "127.0.0.1";
-            final InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
-            when(instanceMetadata.host()).thenReturn(host);
-            when(instanceMetadata.port()).thenReturn(9042);
-            when(instanceMetadata.id()).thenReturn(instanceId);
-            when(instanceMetadata.stagingDir()).thenReturn("");
-
-            CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
-
-            when(delegate.storageOperations()).thenReturn(mockStorageOperations);
-            when(instanceMetadata.delegate()).thenReturn(delegate);
-
-            InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
-            when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
-            when(mockInstancesMetadata.instanceFromId(instanceId)).thenReturn(instanceMetadata);
-            when(mockInstancesMetadata.instanceFromHost(host)).thenReturn(instanceMetadata);
-
-            return mockInstancesMetadata;
-        }
-    }
-
 }

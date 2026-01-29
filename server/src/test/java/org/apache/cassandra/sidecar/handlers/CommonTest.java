@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.handlers;
 
-import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -40,6 +40,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
@@ -51,7 +52,7 @@ import static org.mockito.Mockito.when;
  */
 public class CommonTest
 {
-    static final Logger LOGGER = LoggerFactory.getLogger(CommonTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CommonTest.class);
     Vertx vertx;
     Server server;
     CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
@@ -61,7 +62,7 @@ public class CommonTest
     {
         Injector injector;
         Module testOverride = Modules.override(new TestModule())
-                                     .with(new CommonTestModule());
+                                     .with(new CommonTestModule(delegate));
         injector = Guice.createInjector(Modules.override(SidecarModules.all())
                                                .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
@@ -84,25 +85,56 @@ public class CommonTest
             LOGGER.error("Close event timed out.");
     }
 
-    class CommonTestModule extends AbstractModule
+    /**
+     * Common test module to provide default mocks for testing
+     */
+    public static class CommonTestModule extends AbstractModule
     {
+        protected static final int DEFAULT_INSTANCE_ID = 100;
+        protected static final String DEFAULT_HOST = "127.0.0.1";
+        protected static final int DEFAULT_PORT = 9042;
+
+        protected CassandraAdapterDelegate delegate;
+        protected StorageOperations storageOperations;
+
+        /**
+         * Test module with custom delegate
+         *
+         * @param delegate the CassandraAdapterDelegate mock to use
+         */
+        public CommonTestModule(CassandraAdapterDelegate delegate)
+        {
+            this.delegate = delegate;
+            this.storageOperations = delegate.storageOperations();
+        }
+
+        /**
+         * Test module with custom StorageOperations
+         *
+         * @param storageOperations the StorageOperations mock to use
+         */
+        public CommonTestModule(StorageOperations storageOperations)
+        {
+            this.delegate = mock(CassandraAdapterDelegate.class);
+            this.storageOperations = storageOperations;
+            when(delegate.storageOperations()).thenReturn(storageOperations);
+        }
+
         @Provides
         @Singleton
         public InstancesMetadata instanceConfig()
         {
-            int instanceId = 100;
-            String host = "127.0.0.1";
             InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
-            when(instanceMetadata.host()).thenReturn(host);
-            when(instanceMetadata.port()).thenReturn(9042);
-            when(instanceMetadata.id()).thenReturn(instanceId);
+            when(instanceMetadata.host()).thenReturn(DEFAULT_HOST);
+            when(instanceMetadata.port()).thenReturn(DEFAULT_PORT);
+            when(instanceMetadata.id()).thenReturn(DEFAULT_INSTANCE_ID);
             when(instanceMetadata.stagingDir()).thenReturn("");
             when(instanceMetadata.delegate()).thenReturn(delegate);
 
             InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
-            when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
-            when(mockInstancesMetadata.instanceFromId(instanceId)).thenReturn(instanceMetadata);
-            when(mockInstancesMetadata.instanceFromHost(host)).thenReturn(instanceMetadata);
+            when(mockInstancesMetadata.instances()).thenReturn(List.of(instanceMetadata));
+            when(mockInstancesMetadata.instanceFromId(DEFAULT_INSTANCE_ID)).thenReturn(instanceMetadata);
+            when(mockInstancesMetadata.instanceFromHost(DEFAULT_HOST)).thenReturn(instanceMetadata);
 
             return mockInstancesMetadata;
         }

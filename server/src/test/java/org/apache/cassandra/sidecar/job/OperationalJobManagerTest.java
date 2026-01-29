@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.utils.UUIDs;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
@@ -123,7 +125,7 @@ class OperationalJobManagerTest
         // Job should be running initially
         assertThat(testJob.asyncResult().isComplete()).isFalse();
         assertThat(tracker.get(jobId)).isNotNull();
-        
+
         // Wait for completion
         assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
         assertThat(testJob.asyncResult().isComplete()).isTrue();
@@ -141,13 +143,13 @@ class OperationalJobManagerTest
         OperationalJob failingJob = new OperationalJob(jobId)
         {
             @Override
-            public boolean isRunningOnCassandra()
+            public boolean hasConflict(List<OperationalJob> jobs)
             {
                 return false;
             }
 
             @Override
-            protected void executeInternal() throws OperationalJobException
+            protected Future<Void> executeInternal() throws OperationalJobException
             {
                 throw new OperationalJobException(msg);
             }

@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.util.List;
 import java.util.UUID;
 
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -60,12 +61,13 @@ class OperationalJobTest
         return new OperationalJob(jobId)
         {
             @Override
-            protected void executeInternal() throws OperationalJobException
+            protected Future<Void> executeInternal() throws OperationalJobException
             {
+                return Future.succeededFuture();
             }
 
             @Override
-            public boolean isRunningOnCassandra()
+            public boolean hasConflict(List<OperationalJob> jobs)
             {
                 return jobStatus == OperationalJobStatus.RUNNING;
             }
@@ -94,13 +96,13 @@ class OperationalJobTest
         return new OperationalJob(jobId)
         {
             @Override
-            public boolean isRunningOnCassandra()
+            public boolean hasConflict(List<OperationalJob> jobs)
             {
                 return false;
             }
 
             @Override
-            protected void executeInternal() throws OperationalJobException
+            protected Future<Void> executeInternal() throws OperationalJobException
             {
                 if (jobDuration != null)
                 {
@@ -111,6 +113,7 @@ class OperationalJobTest
                 {
                     throw jobFailure;
                 }
+                return Future.succeededFuture();
             }
 
             @Override
@@ -146,13 +149,13 @@ class OperationalJobTest
         OperationalJob failingJob = new OperationalJob(UUIDs.timeBased())
         {
             @Override
-            public boolean isRunningOnCassandra()
+            public boolean hasConflict(List<OperationalJob> jobs)
             {
                 return false;
             }
 
             @Override
-            protected void executeInternal() throws OperationalJobException
+            protected Future<Void> executeInternal() throws OperationalJobException
             {
                 throw new OperationalJobException(msg);
             }

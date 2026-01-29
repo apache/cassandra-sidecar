@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.common.server.utils.MinuteBoundConfiguration
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
+import org.apache.cassandra.sidecar.config.RepairJobsConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableSnapshotConfiguration;
 import org.apache.cassandra.sidecar.config.SSTableUploadConfiguration;
@@ -68,11 +69,13 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public static final MinuteBoundConfiguration DEFAULT_ALLOWABLE_TIME_SKEW = MinuteBoundConfiguration.parse("1h");
     private static final String SERVER_VERTICLE_INSTANCES_PROPERTY = "server_verticle_instances";
     private static final String OPERATIONAL_JOB_TRACKER_SIZE_PROPERTY = "operations_job_tracker_size";
-    private static final String OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY = "operations_job_sync_response_timeout";
+    public static final String OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY = "operations_job_execution_max_wait_time";
     private static final int DEFAULT_SERVER_VERTICLE_INSTANCES = 1;
     private static final int DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE = 64;
     private static final MillisecondBoundConfiguration DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME =
     MillisecondBoundConfiguration.parse("5s");
+    private static final MillisecondBoundConfiguration MAX_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME =
+    MillisecondBoundConfiguration.parse("1m");
     public static final String THROTTLE_PROPERTY = "throttle";
     public static final String SSTABLE_UPLOAD_PROPERTY = "sstable_upload";
     public static final String SSTABLE_IMPORT_PROPERTY = "sstable_import";
@@ -80,6 +83,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     public static final String WORKER_POOLS_PROPERTY = "worker_pools";
     private static final String JMX_PROPERTY = "jmx";
     private static final String TRAFFIC_SHAPING_PROPERTY = "traffic_shaping";
+    private static final String REPAIR_PROPERTY = "repair";
     private static final String SCHEMA = "schema";
     private static final String CDC = "cdc";
     private static final String COORDINATION = "coordination";
@@ -119,8 +123,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
     @JsonProperty(value = OPERATIONAL_JOB_TRACKER_SIZE_PROPERTY, defaultValue = DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE + "")
     protected final int operationalJobTrackerSize;
 
-    @JsonProperty(value = OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY)
-    protected final MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime;
+    protected MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime;
 
     @JsonProperty(value = THROTTLE_PROPERTY)
     protected final ThrottleConfiguration throttleConfiguration;
@@ -142,6 +145,9 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
 
     @JsonProperty(value = TRAFFIC_SHAPING_PROPERTY)
     protected final TrafficShapingConfiguration trafficShapingConfiguration;
+
+    @JsonProperty(value = REPAIR_PROPERTY)
+    protected final RepairJobsConfiguration repairJobsConfiguration;
 
     @JsonProperty(value = SCHEMA)
     protected final SchemaKeyspaceConfiguration schemaKeyspaceConfiguration;
@@ -180,6 +186,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         serverVerticleInstances = builder.serverVerticleInstances;
         operationalJobTrackerSize = builder.operationalJobTrackerSize;
         operationalJobExecutionMaxWaitTime = builder.operationalJobExecutionMaxWaitTime;
+        repairJobsConfiguration = builder.repairJobsConfiguration;
         throttleConfiguration = builder.throttleConfiguration;
         sstableUploadConfiguration = builder.sstableUploadConfiguration;
         sstableImportConfiguration = builder.sstableImportConfiguration;
@@ -352,10 +359,22 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
-    @JsonProperty(value = OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY)
     public MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime()
     {
         return operationalJobExecutionMaxWaitTime;
+    }
+
+    @JsonProperty(value = OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY)
+    public void setOperationalJobExecutionMaxWaitTime(MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime)
+    {
+        if (operationalJobExecutionMaxWaitTime.compareTo(MAX_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME) > 0)
+        {
+            throw new ConfigurationException(String.format("Invalid %s value (%s). The maximum allowed value is %s.",
+                                                           OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME_PROPERTY,
+                                                           operationalJobExecutionMaxWaitTime,
+                                                           MAX_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME));
+        }
+        this.operationalJobExecutionMaxWaitTime = operationalJobExecutionMaxWaitTime;
     }
 
     /**
@@ -432,6 +451,16 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
      * {@inheritDoc}
      */
     @Override
+    @JsonProperty(value = REPAIR_PROPERTY)
+    public RepairJobsConfiguration repairConfiguration()
+    {
+        return repairJobsConfiguration;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     @JsonProperty(value = SCHEMA)
     public SchemaKeyspaceConfiguration schemaKeyspaceConfiguration()
     {
@@ -483,6 +512,7 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         protected int serverVerticleInstances = DEFAULT_SERVER_VERTICLE_INSTANCES;
         protected int operationalJobTrackerSize = DEFAULT_OPERATIONAL_JOB_TRACKER_SIZE;
         protected MillisecondBoundConfiguration operationalJobExecutionMaxWaitTime = DEFAULT_OPERATIONAL_JOB_EXECUTION_MAX_WAIT_TIME;
+        protected RepairJobsConfiguration repairJobsConfiguration = new RepairJobsConfigurationImpl();
         protected ThrottleConfiguration throttleConfiguration = new ThrottleConfigurationImpl();
         protected SSTableUploadConfiguration sstableUploadConfiguration = new SSTableUploadConfigurationImpl();
         protected SSTableImportConfiguration sstableImportConfiguration = new SSTableImportConfigurationImpl();
@@ -706,6 +736,18 @@ public class ServiceConfigurationImpl implements ServiceConfiguration
         public Builder schemaKeyspaceConfiguration(SchemaKeyspaceConfiguration schemaKeyspaceConfiguration)
         {
             return update(b -> b.schemaKeyspaceConfiguration = schemaKeyspaceConfiguration);
+        }
+
+        /**
+         * Sets the {@code repairConfiguration} and returns a reference to this Builder enabling method
+         * chaining.
+         *
+         * @param repairJobsConfiguration the {@code repairConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder repairConfiguration(RepairJobsConfiguration repairJobsConfiguration)
+        {
+            return update(b -> b.repairJobsConfiguration = repairJobsConfiguration);
         }
 
         /**

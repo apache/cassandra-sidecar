@@ -91,6 +91,7 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
             String table = input.maybeQuotedTableName();
             if (table == null)
             {
+                // Table is not required, so skip table validation
                 context.next();
                 return;
             }
