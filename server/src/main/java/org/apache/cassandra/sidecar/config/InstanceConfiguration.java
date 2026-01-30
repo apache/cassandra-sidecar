@@ -21,6 +21,8 @@ package org.apache.cassandra.sidecar.config;
 import java.util.List;
 import java.util.Map;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
  * Encapsulates the basic configuration needed to connect to a single Cassandra instance
  */
@@ -40,6 +42,13 @@ public interface InstanceConfiguration
      * @return the port number for the Cassandra instance
      */
     int port();
+
+    /**
+     * @return the storage port number used for inter-node communication of the Cassandra instance,
+     *         or null if not configured.
+     */
+    @Nullable
+    Integer storagePort();
 
     /**
      * @return storage directory of Cassandra instance

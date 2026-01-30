@@ -48,6 +48,11 @@ import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableExcept
  */
 public class InstanceMetadataImpl implements InstanceMetadata
 {
+    /**
+     * Default storage port for Cassandra inter-node communication.
+     */
+    public static final int DEFAULT_STORAGE_PORT = 7000;
+
     private static final String DEFAULT_CDC_RAW_DIR = "cdc_raw";
     private static final String DEFAULT_COMMITLOG_DIR = "commitlog";
     private static final String DEFAULT_HINTS_DIR = "hints";
@@ -56,6 +61,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
     private final int id;
     private final String host;
     private final int port;
+    private final int storagePort;
     private final List<String> dataDirs;
     private final String stagingDir;
     @Nullable
@@ -80,6 +86,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         dnsResolver = builder.dnsResolver;
         ipAddress = builder.ipAddress;
         port = builder.port;
+        storagePort = builder.storagePort;
         delegate = builder.delegate;
         metrics = builder.metrics;
 
@@ -129,6 +136,15 @@ public class InstanceMetadataImpl implements InstanceMetadata
     public int port()
     {
         return port;
+    }
+
+    /**
+     * @return the storage port configured for Cassandra instance (default: 7000)
+     */
+    @Override
+    public int storagePort()
+    {
+        return storagePort;
     }
 
     @Override
@@ -224,6 +240,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
                "id=" + id +
                ", host='" + host + '\'' +
                ", port=" + port +
+               ", storagePort=" + storagePort +
                '}';
     }
 
@@ -237,6 +254,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         protected String host;
         protected String ipAddress;
         protected int port;
+        protected int storagePort = DEFAULT_STORAGE_PORT;
         protected String storageDir;
         protected List<String> dataDirs;
         protected String stagingDir;
@@ -260,6 +278,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
             host = instanceMetadata.host;
             ipAddress = instanceMetadata.ipAddress;
             port = instanceMetadata.port;
+            storagePort = instanceMetadata.storagePort;
             dataDirs = new ArrayList<>(instanceMetadata.dataDirs);
             stagingDir = instanceMetadata.stagingDir;
             cdcDir = instanceMetadata.cdcDir;
@@ -325,6 +344,17 @@ public class InstanceMetadataImpl implements InstanceMetadata
         public Builder port(int port)
         {
             return update(b -> b.port = port);
+        }
+
+        /**
+         * Sets the {@code storagePort} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param storagePort the {@code storagePort} to set
+         * @return a reference to this Builder
+         */
+        public Builder storagePort(int storagePort)
+        {
+            return update(b -> b.storagePort = storagePort);
         }
 
         /**
@@ -470,6 +500,11 @@ public class InstanceMetadataImpl implements InstanceMetadata
             // else the required folders can be resolved from the storageDir configuration
 
             metrics = new InstanceMetricsImpl(metricRegistry);
+
+            if (storagePort < 1 || storagePort > 65535)
+            {
+                throw new IllegalArgumentException("storage_port must be between 1 and 65535, but got: " + storagePort);
+            }
 
             return new InstanceMetadataImpl(this);
         }

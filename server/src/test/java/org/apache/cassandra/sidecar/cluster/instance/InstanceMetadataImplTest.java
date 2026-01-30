@@ -201,6 +201,56 @@ class InstanceMetadataImplTest
     }
 
     @Test
+    void testDefaultStoragePort()
+    {
+        String rootDir = tempDir.toString();
+        InstanceMetadata metadata = InstanceMetadataImpl.builder()
+                                                        .id(ID)
+                                                        .host(HOST)
+                                                        .port(PORT)
+                                                        .metricRegistry(METRIC_REGISTRY)
+                                                        .storageDir(rootDir)
+                                                        .build();
+        assertThat(metadata.storagePort()).isEqualTo(7000);
+    }
+
+    @Test
+    void testCustomStoragePort()
+    {
+        String rootDir = tempDir.toString();
+        for (int customStoragePort : new int[]{ 1, 65535, 7005 })
+        {
+            InstanceMetadata metadata = InstanceMetadataImpl.builder()
+                                                            .id(ID)
+                                                            .host(HOST)
+                                                            .port(PORT)
+                                                            .storagePort(customStoragePort)
+                                                            .metricRegistry(METRIC_REGISTRY)
+                                                            .storageDir(rootDir)
+                                                            .build();
+            assertThat(metadata.storagePort()).isEqualTo(customStoragePort);
+        }
+    }
+
+    @Test
+    void testInvalidStoragePort()
+    {
+        String rootDir = tempDir.toString();
+        for (int storagePort : new int[]{ 0, -1, 65536 })
+        {
+            assertThatThrownBy(() -> InstanceMetadataImpl.builder()
+                                                         .id(ID)
+                                                         .host(HOST)
+                                                         .port(PORT)
+                                                         .storagePort(storagePort)
+                                                         .metricRegistry(METRIC_REGISTRY)
+                                                         .storageDir(rootDir)
+                                                         .build())
+            .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Test
     void testCustomDirectories()
     {
         String rootDir = tempDir.toString();

@@ -240,21 +240,29 @@ public class ConfigurationModule extends AbstractModule
                                                                          host,
                                                                          port,
                                                                          new InstanceHealthMetrics(instanceSpecificRegistry));
-        return InstanceMetadataImpl.builder()
-                                   .id(cassandraInstance.id())
-                                   .host(host, dnsResolver)
-                                   .port(port)
-                                   .storageDir(cassandraInstance.storageDir())
-                                   .dataDirs(cassandraInstance.dataDirs())
-                                   .stagingDir(cassandraInstance.stagingDir())
-                                   .cdcDir(cassandraInstance.cdcDir())
-                                   .commitlogDir(cassandraInstance.commitlogDir())
-                                   .hintsDir(cassandraInstance.hintsDir())
-                                   .savedCachesDir(cassandraInstance.savedCachesDir())
-                                   .localSystemDataFileDir(cassandraInstance.localSystemDataFileDir())
-                                   .lifecycleOptions(cassandraInstance.lifecycleOptions())
-                                   .delegate(delegate)
-                                   .metricRegistry(instanceSpecificRegistry)
-                                   .build();
+        InstanceMetadataImpl.Builder builder = InstanceMetadataImpl.builder()
+                                                                    .id(cassandraInstance.id())
+                                                                    .host(host, dnsResolver)
+                                                                    .port(port);
+
+        // Only set storagePort if explicitly configured, otherwise use builder default
+        Integer configuredStoragePort = cassandraInstance.storagePort();
+        if (configuredStoragePort != null)
+        {
+            builder.storagePort(configuredStoragePort);
+        }
+
+        return builder.storageDir(cassandraInstance.storageDir())
+                      .dataDirs(cassandraInstance.dataDirs())
+                      .stagingDir(cassandraInstance.stagingDir())
+                      .cdcDir(cassandraInstance.cdcDir())
+                      .commitlogDir(cassandraInstance.commitlogDir())
+                      .hintsDir(cassandraInstance.hintsDir())
+                      .savedCachesDir(cassandraInstance.savedCachesDir())
+                      .localSystemDataFileDir(cassandraInstance.localSystemDataFileDir())
+                      .lifecycleOptions(cassandraInstance.lifecycleOptions())
+                      .delegate(delegate)
+                      .metricRegistry(instanceSpecificRegistry)
+                      .build();
     }
 }

@@ -588,6 +588,41 @@ class SidecarConfigurationTest
         assertThat(repairConfig.repairPollInterval()).isEqualTo(MillisecondBoundConfiguration.parse("500ms"));
     }
 
+    @Test
+    void testStoragePortConfiguration() throws IOException
+    {
+        // Test with explicit storage_port
+        String yamlWithStoragePort = "cassandra_instances:\n" +
+                                     "  - id: 1\n" +
+                                     "    host: localhost1\n" +
+                                     "    port: 9042\n" +
+                                     "    storage_port: 7001\n" +
+                                     "    storage_dir: /var/lib/cassandra\n" +
+                                     "    staging_dir: /var/lib/cassandra/staging\n" +
+                                     "    jmx_host: 127.0.0.1\n" +
+                                     "    jmx_port: 7199\n" +
+                                     "    jmx_ssl_enabled: false";
+        SidecarConfigurationImpl configWithStoragePort = SidecarConfigurationImpl.fromYamlString(yamlWithStoragePort);
+        assertThat(configWithStoragePort.cassandraInstances()).isNotNull().hasSize(1);
+        InstanceConfiguration instance1 = configWithStoragePort.cassandraInstances().get(0);
+        assertThat(instance1.storagePort()).isEqualTo(7001);
+
+        // Test without storage_port (should return null)
+        String yamlWithoutStoragePort = "cassandra_instances:\n" +
+                                        "  - id: 2\n" +
+                                        "    host: localhost2\n" +
+                                        "    port: 9042\n" +
+                                        "    storage_dir: /var/lib/cassandra\n" +
+                                        "    staging_dir: /var/lib/cassandra/staging\n" +
+                                        "    jmx_host: 127.0.0.1\n" +
+                                        "    jmx_port: 7199\n" +
+                                        "    jmx_ssl_enabled: false";
+        SidecarConfigurationImpl configWithoutStoragePort = SidecarConfigurationImpl.fromYamlString(yamlWithoutStoragePort);
+        assertThat(configWithoutStoragePort.cassandraInstances()).isNotNull().hasSize(1);
+        InstanceConfiguration instance2 = configWithoutStoragePort.cassandraInstances().get(0);
+        assertThat(instance2.storagePort()).isNull();
+    }
+
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
     {
         assertThat(config.cassandraInstances()).isNotNull().hasSize(1);

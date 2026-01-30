@@ -65,6 +65,11 @@ public interface InstanceMetadata
     int port();
 
     /**
+     * @return the storage port number used for inter-node communication of the Cassandra instance
+     */
+    int storagePort();
+
+    /**
      * @return a list of data directories of cassandra instance
      */
     @NotNull

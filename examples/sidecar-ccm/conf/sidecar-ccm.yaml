@@ -23,6 +23,12 @@ cassandra_instances:
   - id: 1
     host: localhost1
     port: 9042
+
+    # The storage port used for inter-node communication between Cassandra nodes in a cluster.
+    # This port is used for internal gossip protocol, data replication, and repair operations.
+    # Default: 7000
+    #storage_port: 7000
+
     # The instance's storage directory as defined per the cassandra.storagedir property
     # which defaults to the $CASSANDRA_HOME/data directory, but can be configured to any
     # directory. By default, storage directory is the parent directory of data dirs,
@@ -70,6 +76,11 @@ cassandra_instances:
     host: localhost2
     port: 9042
 
+    # The storage port used for inter-node communication between Cassandra nodes in a cluster.
+    # This port is used for internal gossip protocol, data replication, and repair operations.
+    # Default: 7000
+    #storage_port: 7000
+
     # The instance's storage directory as defined per the cassandra.storagedir property
     # which defaults to the $CASSANDRA_HOME/data directory, but can be configured to any
     # directory. By default, storage directory is the parent directory of data dirs,
@@ -116,6 +127,11 @@ cassandra_instances:
   - id: 3
     host: localhost3
     port: 9042
+
+    # The storage port used for inter-node communication between Cassandra nodes in a cluster.
+    # This port is used for internal gossip protocol, data replication, and repair operations.
+    # Default: 7000
+    #storage_port: 7000
 
     # The instance's storage directory as defined per the cassandra.storagedir property
     # which defaults to the $CASSANDRA_HOME/data directory, but can be configured to any
