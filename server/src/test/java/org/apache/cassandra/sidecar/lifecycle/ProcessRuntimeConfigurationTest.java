@@ -239,12 +239,13 @@ class ProcessRuntimeConfigurationTest
 
         // Verify command
         List<String> command = pb.command();
-        assertThat(command).hasSize(5);
+        assertThat(command).hasSize(6);
         assertThat(command.get(0)).isEqualTo(cassandraBin.toString());
         assertThat(command.get(1)).isEqualTo("-p");
         assertThat(command.get(2)).isEqualTo(pidFile);
-        assertThat(command.get(3)).isEqualTo("-D");
-        assertThat(command.get(4)).isEqualTo("cassandra.storagedir=/custom/storage/dir");
+        assertThat(command.get(3)).isEqualTo("-R");
+        assertThat(command.get(4)).isEqualTo("-D");
+        assertThat(command.get(5)).isEqualTo("cassandra.storagedir=/custom/storage/dir");
 
         // Verify environment variables
         Map<String, String> env = pb.environment();
@@ -277,10 +278,11 @@ class ProcessRuntimeConfigurationTest
 
         // Verify command - should not include storage dir parameters
         List<String> command = pb.command();
-        assertThat(command).hasSize(3);
+        assertThat(command).hasSize(4);
         assertThat(command.get(0)).isEqualTo(cassandraBin.toString());
         assertThat(command.get(1)).isEqualTo("-p");
         assertThat(command.get(2)).isEqualTo(pidFile);
+        assertThat(command.get(3)).isEqualTo("-R");
 
         // Verify environment variables
         Map<String, String> env = pb.environment();
