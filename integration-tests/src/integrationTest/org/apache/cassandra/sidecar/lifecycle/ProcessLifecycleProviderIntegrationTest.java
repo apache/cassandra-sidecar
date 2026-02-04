@@ -24,6 +24,8 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -82,6 +84,28 @@ class ProcessLifecycleProviderIntegrationTest
     private static Server server;
     private static Vertx vertx;
     private static WebClient client;
+
+    /**
+     * Test-only subclass of ProcessRuntimeConfiguration that adds the -R flag required for Cassandra 5.0+ when running as root
+     */
+    static class TestProcessRuntimeConfiguration extends ProcessRuntimeConfiguration
+    {
+        public TestProcessRuntimeConfiguration(Builder builder)
+        {
+            super(builder);
+        }
+
+        @Override
+        public ProcessBuilder buildStartCommand(String pidFileLocation, Path stdoutFileLocation, Path stderrFileLocation)
+        {
+            ProcessBuilder pb = super.buildStartCommand(pidFileLocation, stdoutFileLocation, stderrFileLocation);
+            List<String> command = new ArrayList<>(pb.command());
+            // Insert -R at position 3 (after cassandraBin, "-p" and pidFileLocation)
+            command.add(3, "-R");
+            pb.command(command);
+            return pb;
+        }
+    }
 
     @BeforeAll
     public static void setup() throws Exception
@@ -188,13 +212,14 @@ class ProcessLifecycleProviderIntegrationTest
         copyDirectoryRecursively(originalCassandraConfDir, confDir);
         Path cassandraStorageDir = Files.createDirectories(tmpDir.resolve("var/lib/cassandra"));
         Path cassandraLogDir = Files.createDirectories(tmpDir.resolve("var/log"));
-        return ProcessRuntimeConfiguration.builder()
+
+        ProcessRuntimeConfiguration.Builder builder = ProcessRuntimeConfiguration.builder()
                                           .instance(instanceMetadata())
                                           .cassandraHome(cassandraHome.toString())
                                           .cassandraConfDir(confDir.toString())
                                           .cassandraLogDir(cassandraLogDir.toString())
-                                          .storageDir(cassandraStorageDir.toString())
-                                          .build();
+                                          .storageDir(cassandraStorageDir.toString());
+        return new TestProcessRuntimeConfiguration(builder);
     }
 
     static InstanceMetadata instanceMetadata()

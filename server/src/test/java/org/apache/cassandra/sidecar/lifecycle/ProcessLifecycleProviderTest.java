@@ -254,8 +254,7 @@ public class ProcessLifecycleProviderTest
         assertThat(command).containsExactly(
         cassandraBin.toString(),
         "-p",
-        pidFileLocation,
-        "-R"
+        pidFileLocation
         );
 
         // Verify environment variables
@@ -312,7 +311,6 @@ public class ProcessLifecycleProviderTest
         assertThat(command).contains(cassandraBin.toString());
         assertThat(command).contains("-p");
         assertThat(command).contains(pidFileLocation);
-        assertThat(command).contains("-R");
         assertThat(command).contains("-Dcassandra.max_queued_native_transport_requests=1024");
 
         // Verify environment variables include both standard and extra vars

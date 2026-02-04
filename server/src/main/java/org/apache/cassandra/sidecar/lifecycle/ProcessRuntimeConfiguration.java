@@ -53,7 +53,7 @@ public class ProcessRuntimeConfiguration
     private final Map<String, String> extraJvmOptions;
     private final Map<String, String> extraEnvironmentVariables;
 
-    private ProcessRuntimeConfiguration(Builder builder)
+    protected ProcessRuntimeConfiguration(Builder builder)
     {
         instance = builder.instance;
         cassandraHome = Path.of(builder.cassandraHome);
@@ -128,7 +128,6 @@ public class ProcessRuntimeConfiguration
         startCassandraCmd.add(cassandraBin().toString());
         startCassandraCmd.add("-p");
         startCassandraCmd.add(pidFileLocation);
-        startCassandraCmd.add("-R"); // Allow running as root (required for Cassandra 5.0+ when running as root)
         for (Map.Entry<String, String> jvmOpt : extraJvmOptions.entrySet())
         {
             startCassandraCmd.add("-D" + jvmOpt.getKey() + "=" + jvmOpt.getValue());
