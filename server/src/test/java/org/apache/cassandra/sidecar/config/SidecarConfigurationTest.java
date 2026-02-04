@@ -589,7 +589,7 @@ class SidecarConfigurationTest
     }
 
     @Test
-    void testStoragePortConfiguration() throws IOException
+    void testConfigWithStoragePort() throws IOException
     {
         // Test with explicit storage_port
         String yamlWithStoragePort = "cassandra_instances:\n" +
@@ -606,7 +606,11 @@ class SidecarConfigurationTest
         assertThat(configWithStoragePort.cassandraInstances()).isNotNull().hasSize(1);
         InstanceConfiguration instance1 = configWithStoragePort.cassandraInstances().get(0);
         assertThat(instance1.storagePort()).isEqualTo(7001);
+    }
 
+    @Test
+    void testConfigWithoutStoragePort() throws IOException
+    {
         // Test without storage_port (should return null)
         String yamlWithoutStoragePort = "cassandra_instances:\n" +
                                         "  - id: 2\n" +

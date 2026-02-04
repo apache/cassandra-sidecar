@@ -27,6 +27,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.codahale.metrics.MetricRegistry;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
@@ -214,40 +216,36 @@ class InstanceMetadataImplTest
         assertThat(metadata.storagePort()).isEqualTo(7000);
     }
 
-    @Test
-    void testCustomStoragePort()
+    @ParameterizedTest(name = "{index} => valid storagePort={0}")
+    @ValueSource(ints = { 1, 65535, 7005})
+    void testCustomStoragePort(int storagePort)
     {
         String rootDir = tempDir.toString();
-        for (int customStoragePort : new int[]{ 1, 65535, 7005 })
-        {
-            InstanceMetadata metadata = InstanceMetadataImpl.builder()
-                                                            .id(ID)
-                                                            .host(HOST)
-                                                            .port(PORT)
-                                                            .storagePort(customStoragePort)
-                                                            .metricRegistry(METRIC_REGISTRY)
-                                                            .storageDir(rootDir)
-                                                            .build();
-            assertThat(metadata.storagePort()).isEqualTo(customStoragePort);
-        }
+        InstanceMetadata metadata = InstanceMetadataImpl.builder()
+                                                        .id(ID)
+                                                        .host(HOST)
+                                                        .port(PORT)
+                                                        .storagePort(storagePort)
+                                                        .metricRegistry(METRIC_REGISTRY)
+                                                        .storageDir(rootDir)
+                                                        .build();
+        assertThat(metadata.storagePort()).isEqualTo(storagePort);
     }
 
-    @Test
-    void testInvalidStoragePort()
+    @ParameterizedTest(name = "{index} => invalid storagePort={0}")
+    @ValueSource(ints = { 0, -1, 65536 })
+    void testInvalidStoragePort(int storagePort)
     {
         String rootDir = tempDir.toString();
-        for (int storagePort : new int[]{ 0, -1, 65536 })
-        {
-            assertThatThrownBy(() -> InstanceMetadataImpl.builder()
-                                                         .id(ID)
-                                                         .host(HOST)
-                                                         .port(PORT)
-                                                         .storagePort(storagePort)
-                                                         .metricRegistry(METRIC_REGISTRY)
-                                                         .storageDir(rootDir)
-                                                         .build())
-            .isInstanceOf(IllegalArgumentException.class);
-        }
+        assertThatThrownBy(() -> InstanceMetadataImpl.builder()
+                                                     .id(ID)
+                                                     .host(HOST)
+                                                     .port(PORT)
+                                                     .storagePort(storagePort)
+                                                     .metricRegistry(METRIC_REGISTRY)
+                                                     .storageDir(rootDir)
+                                                     .build())
+        .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
