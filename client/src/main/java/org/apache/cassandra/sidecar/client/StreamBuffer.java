@@ -27,11 +27,15 @@ import java.nio.ByteBuffer;
 public interface StreamBuffer
 {
     /**
-     * Copies bytes from this {@link StreamBuffer} into the {@link ByteBuffer destination}
+     * Copies bytes from this {@link StreamBuffer} into the {@link ByteBuffer destination}.
+     * <p>
+     * This method writes {@code length} bytes starting at the destination buffer's current position
+     * and advances the position by {@code length}. The caller is responsible for calling
+     * {@link ByteBuffer#flip()} on the destination buffer before reading from it.
      *
      * @param sourceOffset the offset within the {@link StreamBuffer} to be read; must be non-negative and
      *                     larger than the buffer length
-     * @param destination  a {@link ByteBuffer} where the data will be copied
+     * @param destination  a {@link ByteBuffer} where the data will be copied at its current position
      * @param length       the number of bytes to be copied from the {@link StreamBuffer}; must be non-negative and
      *                     larger than the {@code buffer.length - sourceOffset}
      */
@@ -94,7 +98,6 @@ public interface StreamBuffer
         public void copyBytes(int sourceOffset, ByteBuffer destination, int length)
         {
             destination.put(bytes, sourceOffset, length);
-            destination.flip();
         }
 
         @Override

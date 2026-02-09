@@ -46,7 +46,6 @@ public class VertxStreamBuffer implements StreamBuffer
     public void copyBytes(int sourceOffset, ByteBuffer destination, int length)
     {
         destination.put(buffer.getBytes(sourceOffset, sourceOffset + length));
-        destination.flip();
     }
 
     /**
