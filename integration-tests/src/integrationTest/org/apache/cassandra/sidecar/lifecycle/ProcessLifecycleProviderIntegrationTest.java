@@ -226,6 +226,7 @@ class ProcessLifecycleProviderIntegrationTest
     {
         return InstanceMetadataImpl.builder()
                                    .id(TEST_NODE_ID)
+                                   .storagePort(7000)
                                    .metricRegistry(METRIC_REGISTRY)
                                    .storageDir("/tmp/storage_dir")
                                    .build();

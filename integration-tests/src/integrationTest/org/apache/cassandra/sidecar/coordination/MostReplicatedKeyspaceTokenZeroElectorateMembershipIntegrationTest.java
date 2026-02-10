@@ -208,6 +208,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
         MetricRegistry instanceSpecificRegistry = metricRegistryProvider.getOrCreate(config.num());
         String hostName = JMXUtil.getJmxHost(config);
         int nativeTransportPort = tryGetIntConfig(config, "native_transport_port", 9042);
+        int storagePort = tryGetIntConfig(config, "storage_port", 7000);
         String[] dataDirectories = (String[]) config.get("data_file_directories");
 
         JmxClient jmxClient = JmxClient.builder()
@@ -238,6 +239,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
                                                       .id(config.num())
                                                       .host(config.broadcastAddress().getAddress().getHostAddress())
                                                       .port(nativeTransportPort)
+                                                      .storagePort(storagePort)
                                                       .dataDirs(Arrays.asList(dataDirectories))
                                                       .cdcDir(config.getString("cdc_raw_directory"))
                                                       .commitlogDir(config.getString("commitlog_directory"))

@@ -264,6 +264,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
             IInstanceConfig config = configs.get(i);
             String hostName = JMXUtil.getJmxHost(config);
             int nativeTransportPort = tryGetIntConfig(config, "native_transport_port", 9042);
+            int storagePort = tryGetIntConfig(config, "storage_port", 7000);
             // The in-jvm dtest framework sometimes returns a cluster before all the jmx infrastructure is initialized.
             // In these cases, we want to wait longer than the default retry/delay settings to connect.
             JmxClient jmxClient = JmxClient.builder()
@@ -297,6 +298,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
                                              .id(i + 1)
                                              .host(config.broadcastAddress().getAddress().getHostAddress())
                                              .port(nativeTransportPort)
+                                             .storagePort(storagePort)
                                              .dataDirs(Arrays.asList(dataDirectories))
                                              .cdcDir(config.getString("cdc_raw_directory"))
                                              .commitlogDir(config.getString("commitlog_directory"))
