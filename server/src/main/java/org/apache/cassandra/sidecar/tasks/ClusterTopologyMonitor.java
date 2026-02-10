@@ -37,7 +37,8 @@ import org.apache.cassandra.sidecar.codecs.DcLocalTopologyChangeEventCodec;
 
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
-import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.TokenRingProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -65,6 +66,7 @@ public class ClusterTopologyMonitor implements PeriodicTask
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ClusterTopologyMonitor.class);
+    private final PeriodicTaskConfiguration configuration;
     private final Vertx vertx;
     private final TokenRingProvider tokenRingProvider;
 
@@ -137,9 +139,12 @@ public class ClusterTopologyMonitor implements PeriodicTask
      * Creates a cluster topology monitor with periodic task scheduling.
      */
     @Inject
-    public ClusterTopologyMonitor(Vertx vertx, TokenRingProvider tokenRingProvider, PeriodicTaskExecutor periodicTaskExecutor)
+    public ClusterTopologyMonitor(Vertx vertx,
+                                  TokenRingProvider tokenRingProvider,
+                                  PeriodicTaskExecutor periodicTaskExecutor,
+                                  SidecarConfiguration configuration)
     {
-        this(vertx, tokenRingProvider);
+        this(vertx, tokenRingProvider, configuration);
         LOGGER.info("Starting Cluster Topology Monitor");
         periodicTaskExecutor.schedule(this);
         LOGGER.info("Cluster Topology Monitor started");
@@ -148,8 +153,9 @@ public class ClusterTopologyMonitor implements PeriodicTask
     /**
      * Creates a cluster topology monitor without scheduling.
      */
-    public ClusterTopologyMonitor(Vertx vertx, TokenRingProvider tokenRingProvider)
+    public ClusterTopologyMonitor(Vertx vertx, TokenRingProvider tokenRingProvider, SidecarConfiguration configuration)
     {
+        this.configuration = configuration.clusterTopologyMonitorConfiguration();
         this.vertx = vertx;
         this.tokenRingProvider = tokenRingProvider;
         try
@@ -166,12 +172,21 @@ public class ClusterTopologyMonitor implements PeriodicTask
     }
 
     /**
+     * Returns the initial delay before the first execution.
+     */
+    @Override
+    public DurationSpec initialDelay()
+    {
+        return configuration.initialDelay();
+    }
+
+    /**
      * Returns the delay between topology refresh cycles.
      */
     @Override
     public DurationSpec delay()
     {
-        return MillisecondBoundConfiguration.parse("1000");
+        return configuration.executeInterval();
     }
 
     /**

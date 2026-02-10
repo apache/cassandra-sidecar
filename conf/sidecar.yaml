@@ -344,6 +344,13 @@ healthcheck:
   initial_delay: 0ms
   execute_interval: 30s
 
+# Cluster Topology Monitor settings
+# Monitors Cassandra cluster topology changes and publishes events when detected
+cluster_topology_monitor:
+  enabled: true
+  initial_delay: 0s
+  execute_interval: 1000ms  # Interval between topology refresh cycles
+
 # Sidecar Peer Health Monitor settings
 # Enables a periodic task checking for the health of adjacent Sidecar peers in the token ring
 sidecar_peer_health:

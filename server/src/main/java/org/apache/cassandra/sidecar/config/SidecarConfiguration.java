@@ -71,6 +71,11 @@ public interface SidecarConfiguration
     PeriodicTaskConfiguration healthCheckConfiguration();
 
     /**
+     * @return the configuration for the cluster topology monitor
+     */
+    PeriodicTaskConfiguration clusterTopologyMonitorConfiguration();
+
+    /**
      * @return configuration needed for metrics capture
      */
     MetricsConfiguration metricsConfiguration();

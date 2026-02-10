@@ -93,6 +93,9 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     @JsonProperty("healthcheck")
     protected final PeriodicTaskConfiguration healthCheckConfiguration;
 
+    @JsonProperty("cluster_topology_monitor")
+    protected final PeriodicTaskConfiguration clusterTopologyMonitorConfiguration;
+
     @JsonProperty("metrics")
     protected final MetricsConfiguration metricsConfiguration;
 
@@ -132,6 +135,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         sslConfiguration = builder.sslConfiguration;
         accessControlConfiguration = builder.accessControlConfiguration;
         healthCheckConfiguration = builder.healthCheckConfiguration;
+        clusterTopologyMonitorConfiguration = builder.clusterTopologyMonitorConfiguration;
         sidecarPeerHealthConfiguration = builder.sidecarPeerHealthConfiguration;
         sidecarClientConfiguration = builder.sidecarClientConfiguration;
         metricsConfiguration = builder.metricsConfiguration;
@@ -219,6 +223,16 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     public PeriodicTaskConfiguration healthCheckConfiguration()
     {
         return healthCheckConfiguration;
+    }
+
+    /**
+     * @return the configuration for the cluster topology monitor
+     */
+    @Override
+    @JsonProperty("cluster_topology_monitor")
+    public PeriodicTaskConfiguration clusterTopologyMonitorConfiguration()
+    {
+        return clusterTopologyMonitorConfiguration;
     }
 
     /**
@@ -415,6 +429,10 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         = new PeriodicTaskConfigurationImpl(true,
                                             MillisecondBoundConfiguration.ZERO,
                                             MillisecondBoundConfiguration.parse("30s"));
+        private PeriodicTaskConfiguration clusterTopologyMonitorConfiguration
+        = new PeriodicTaskConfigurationImpl(true,
+                                            MillisecondBoundConfiguration.ZERO,
+                                            MillisecondBoundConfiguration.parse("1000ms"));
         private SidecarPeerHealthConfiguration sidecarPeerHealthConfiguration = new SidecarPeerHealthConfigurationImpl();
         private SidecarClientConfiguration sidecarClientConfiguration = new SidecarClientConfigurationImpl();
         private MetricsConfiguration metricsConfiguration = new MetricsConfigurationImpl();
@@ -501,6 +519,17 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         public Builder healthCheckConfiguration(PeriodicTaskConfiguration healthCheckConfiguration)
         {
             return update(b -> b.healthCheckConfiguration = healthCheckConfiguration);
+        }
+
+        /**
+         * Sets the {@code clusterTopologyMonitorConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param clusterTopologyMonitorConfiguration the {@code clusterTopologyMonitorConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder clusterTopologyMonitorConfiguration(PeriodicTaskConfiguration clusterTopologyMonitorConfiguration)
+        {
+            return update(b -> b.clusterTopologyMonitorConfiguration = clusterTopologyMonitorConfiguration);
         }
 
         /**
