@@ -336,6 +336,7 @@ class ProcessRuntimeConfigurationTest
     {
         return InstanceMetadataImpl.builder()
                                    .id(1)
+                                   .storagePort(7000)
                                    .metricRegistry(METRIC_REGISTRY)
                                    .storageDir("/tmp/storage_dir")
                                    .build();

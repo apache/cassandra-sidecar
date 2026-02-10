@@ -76,6 +76,7 @@ class InstanceFetcherTestModule extends AbstractModule
         return InstanceMetadataImpl.builder()
                                    .id(id)
                                    .host(host)
+                                   .storagePort(7000)
                                    .storageDir(storageDir.toString())
                                    .stagingDir(storageDir.resolve("staging").toString())
                                    .metricRegistry(new MetricRegistry())

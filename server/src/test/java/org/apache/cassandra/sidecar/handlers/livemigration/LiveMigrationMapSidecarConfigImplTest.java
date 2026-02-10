@@ -116,6 +116,7 @@ class LiveMigrationMapSidecarConfigImplTest
     InstanceMetadata instanceMetadata(String host, int id)
     {
         return InstanceMetadataImpl.builder().host(host).id(id).port(9042)
+                                   .storagePort(7000)
                                    .storageDir(tempDirPath.toAbsolutePath() + "/" + host)
                                    .metricRegistry(new MetricRegistry()).build();
     }

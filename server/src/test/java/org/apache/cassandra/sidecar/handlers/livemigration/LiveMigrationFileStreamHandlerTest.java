@@ -127,6 +127,7 @@ class LiveMigrationFileStreamHandlerTest
                                    .id(instanceId)
                                    .host(instanceIp)
                                    .port(9042)
+                                   .storagePort(7000)
                                    .dataDirs(dataDirs)
                                    .hintsDir(root + "/hints")
                                    .commitlogDir(root + "/commitlog")

@@ -154,6 +154,7 @@ class InstancesMetadataImplTest
                                    .id(id)
                                    .host(hostNameOrIp, localhostResolver)
                                    .port(9042)
+                                   .storagePort(7000)
                                    .storageDir(root)
                                    .metricRegistry(METRIC_REGISTRY)
                                    .build();

@@ -223,6 +223,7 @@ public class TestModule extends AbstractModule
                                    .id(id)
                                    .host(host)
                                    .port(6475)
+                                   .storagePort(6476)
                                    .stagingDir(stagingDir)
                                    .storageDir(storageDir)
                                    .dataDirs(List.of(dataDir))

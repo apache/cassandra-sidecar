@@ -712,6 +712,7 @@ public class ProcessLifecycleProviderTest
     {
         return InstanceMetadataImpl.builder()
                                    .id(instanceId)
+                                   .storagePort(7000)
                                    .metricRegistry(METRIC_REGISTRY)
                                    .storageDir("/custom/storage/dir")
                                    .lifecycleOptions(lifecycleOptions)

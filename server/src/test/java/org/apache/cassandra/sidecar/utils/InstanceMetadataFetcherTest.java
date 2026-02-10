@@ -75,6 +75,7 @@ class InstanceMetadataFetcherTest
                                                                    .id(id)
                                                                    .host(host, DnsResolvers.DEFAULT)
                                                                    .port(9042)
+                                                                   .storagePort(7000)
                                                                    .storageDir(tempDir.toString())
                                                                    .metricRegistry(new MetricRegistry());
         if (isAvailable)

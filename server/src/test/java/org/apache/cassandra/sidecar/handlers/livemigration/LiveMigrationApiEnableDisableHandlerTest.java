@@ -70,6 +70,7 @@ class LiveMigrationApiEnableDisableHandlerTest
                                    .id(id)
                                    .host(host)
                                    .port(9042)
+                                   .storagePort(7000)
                                    .dataDirs(List.of(rootDir + "/data0", rootDir + "/data1"))
                                    .hintsDir(rootDir + "/hints")
                                    .commitlogDir(rootDir + "/commitlog")

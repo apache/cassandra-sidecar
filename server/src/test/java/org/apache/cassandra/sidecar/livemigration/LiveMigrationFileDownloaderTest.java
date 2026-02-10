@@ -1366,6 +1366,7 @@ class LiveMigrationFileDownloaderTest
                                                                                 .storageDir(storageDir)
                                                                                 .metricRegistry(new MetricRegistry())
                                                                                 .id(1)
+                                                                                .storagePort(7000)
                                                                                 .build())
                                           .liveMigrationConfiguration(liveMigrationConfig)
                                           .source(SOURCE)
