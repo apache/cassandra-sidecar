@@ -41,7 +41,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
     protected final int id;
     protected final String host;
     protected final int port;
-    protected final Integer storagePort;
+    protected final int storagePort;
     protected final String storageDir;
     protected final List<String> dataDirs;
     protected final String stagingDir;
@@ -132,8 +132,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
      */
     @Override
     @JsonProperty("storage_port")
-    @Nullable
-    public Integer storagePort()
+    public int storagePort()
     {
         return storagePort;
     }
