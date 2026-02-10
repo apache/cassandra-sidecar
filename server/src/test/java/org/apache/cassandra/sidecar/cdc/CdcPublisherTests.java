@@ -36,6 +36,7 @@ import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
 import org.apache.cassandra.cdc.stats.ICdcStats;
 import org.apache.cassandra.secrets.SecretsProvider;
+import org.apache.cassandra.secrets.SslConfigSecretsProvider;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
@@ -187,11 +188,15 @@ public class CdcPublisherTests
         SecretsProvider result = cdcPublisher.secretsProvider();
 
         assertThat(result).isNotNull();
+        assertThat(result.keyStoreType()).isEqualTo("JKS");
+        assertThat(result.keyStorePassword()).isEqualTo("keystorePassword".toCharArray());
     }
 
     @Test
     void testSecretsProviderWithTruststoreOnly()
     {
+        // SslConfig validation requires keystore password to always be provided
+        // This test validates that truststore-only configuration is rejected
         KeyStoreConfiguration truststoreConfig = mockKeystoreConfiguration(
             "/path/to/truststore.jks",
             "truststorePassword",
@@ -212,9 +217,13 @@ public class CdcPublisherTests
         when(sslConfig.truststore()).thenReturn(truststoreConfig);
         when(sidecarConfiguration.sidecarClientConfiguration().sslConfiguration()).thenReturn(sslConfig);
 
-        SecretsProvider result = cdcPublisher.secretsProvider();
+        // SslConfig.create() validates and requires keystore password when any SSL config is provided
+        IllegalArgumentException exception = org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> cdcPublisher.secretsProvider()
+        );
 
-        assertThat(result).isNotNull();
+        assertThat(exception.getMessage()).contains("KEYSTORE_PASSWORD");
     }
 
     @Test
@@ -250,6 +259,56 @@ public class CdcPublisherTests
         SecretsProvider result = cdcPublisher.secretsProvider();
 
         assertThat(result).isNotNull();
+        assertThat(result.keyStoreType()).isEqualTo("PKCS12");
+        assertThat(result.keyStorePassword()).isEqualTo("keystorePass123".toCharArray());
+        assertThat(result.trustStoreType()).isEqualTo("PKCS12");
+        assertThat(result.trustStorePassword()).isEqualTo("truststorePass456".toCharArray());
+    }
+
+    @Test
+    void testSecretsProviderUsesCorrectSslConfigKeys()
+    {
+        // This test validates that CdcPublisher uses SslConfig constants with MapUtils.lowerCaseKey()
+        KeyStoreConfiguration keystoreConfig = mockKeystoreConfiguration(
+            "/path/to/keystore.jks",
+            "keystorePassword",
+            "JKS"
+        );
+
+        KeyStoreConfiguration truststoreConfig = mockKeystoreConfiguration(
+            "/path/to/truststore.jks",
+            "truststorePassword",
+            "PKCS12"
+        );
+
+        SslConfiguration sslConfig = mockSslConfiguration(
+            true,
+            false,
+            "REQUIRED",
+            Collections.emptyList(),
+            Arrays.asList("TLSv1.2"),
+            "10s",
+            true,
+            true
+        );
+
+        when(sslConfig.keystore()).thenReturn(keystoreConfig);
+        when(sslConfig.truststore()).thenReturn(truststoreConfig);
+        when(sidecarConfiguration.sidecarClientConfiguration().sslConfiguration()).thenReturn(sslConfig);
+
+        SecretsProvider result = cdcPublisher.secretsProvider();
+
+        // Validate that the SecretsProvider was created successfully using the correct keys
+        assertThat(result).isNotNull();
+        assertThat(result).isInstanceOf(SslConfigSecretsProvider.class);
+
+        // Verify keystore configuration is accessible
+        assertThat(result.keyStoreType()).isEqualTo("JKS");
+        assertThat(result.keyStorePassword()).isEqualTo("keystorePassword".toCharArray());
+
+        // Verify truststore configuration is accessible
+        assertThat(result.trustStoreType()).isEqualTo("PKCS12");
+        assertThat(result.trustStorePassword()).isEqualTo("truststorePassword".toCharArray());
     }
 
     @Test
