@@ -48,11 +48,6 @@ import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableExcept
  */
 public class InstanceMetadataImpl implements InstanceMetadata
 {
-    /**
-     * Default storage port for Cassandra inter-node communication.
-     */
-    public static final int DEFAULT_STORAGE_PORT = 7000;
-
     private static final String DEFAULT_CDC_RAW_DIR = "cdc_raw";
     private static final String DEFAULT_COMMITLOG_DIR = "commitlog";
     private static final String DEFAULT_HINTS_DIR = "hints";
@@ -254,7 +249,7 @@ public class InstanceMetadataImpl implements InstanceMetadata
         protected String host;
         protected String ipAddress;
         protected int port;
-        protected int storagePort = DEFAULT_STORAGE_PORT;
+        protected int storagePort;
         protected String storageDir;
         protected List<String> dataDirs;
         protected String stagingDir;

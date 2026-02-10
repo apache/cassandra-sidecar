@@ -43,6 +43,7 @@ class InstanceMetadataImplTest
     private static final int ID = 123;
     private static final String HOST = "localhost";
     private static final int PORT = 12345;
+    private static final int STORAGE_PORT = 17986;
     private static final String DATA_DIR_1 = "test/data/data1";
     private static final String DATA_DIR_2 = "test/data/data2";
     private static final String CDC_DIR = "cdc_dir";
@@ -66,6 +67,7 @@ class InstanceMetadataImplTest
         assertThat(metadata.id()).isEqualTo(ID);
         assertThat(metadata.host()).isEqualTo(HOST);
         assertThat(metadata.port()).isEqualTo(PORT);
+        assertThat(metadata.storagePort()).isEqualTo(STORAGE_PORT);
         assertThat(metadata.dataDirs()).contains(rootDir + "/" + DATA_DIR_1, rootDir + "/" + DATA_DIR_2);
         assertThat(metadata.cdcDir()).isEqualTo(rootDir + "/" + CDC_DIR);
         assertThat(metadata.stagingDir()).isEqualTo(rootDir + "/" + STAGING_DIR);
@@ -101,6 +103,7 @@ class InstanceMetadataImplTest
                                                             .id(ID)
                                                             .host(HOST)
                                                             .port(PORT)
+                                                            .storagePort(STORAGE_PORT)
                                                             .metricRegistry(METRIC_REGISTRY)
                                                             .dataDirs(Collections.singletonList(rootDir + "/" + DATA_DIR_1))
                                                             .storageDir(rootDir)
@@ -193,6 +196,7 @@ class InstanceMetadataImplTest
                                                         .host(HOST)
                                                         .port(PORT)
                                                         .metricRegistry(METRIC_REGISTRY)
+                                                        .storagePort(STORAGE_PORT)
                                                         .storageDir(rootDir)
                                                         .build();
         assertThat(metadata.dataDirs()).containsExactly(rootDir + "/data");
@@ -200,20 +204,6 @@ class InstanceMetadataImplTest
         assertThat(metadata.commitlogDir()).isEqualTo(rootDir + "/commitlog");
         assertThat(metadata.hintsDir()).isEqualTo(rootDir + "/hints");
         assertThat(metadata.savedCachesDir()).isEqualTo(rootDir + "/saved_caches");
-    }
-
-    @Test
-    void testDefaultStoragePort()
-    {
-        String rootDir = tempDir.toString();
-        InstanceMetadata metadata = InstanceMetadataImpl.builder()
-                                                        .id(ID)
-                                                        .host(HOST)
-                                                        .port(PORT)
-                                                        .metricRegistry(METRIC_REGISTRY)
-                                                        .storageDir(rootDir)
-                                                        .build();
-        assertThat(metadata.storagePort()).isEqualTo(7000);
     }
 
     @ParameterizedTest(name = "{index} => valid storagePort={0}")
@@ -256,6 +246,7 @@ class InstanceMetadataImplTest
                                                         .id(ID)
                                                         .host(HOST)
                                                         .port(PORT)
+                                                        .storagePort(STORAGE_PORT)
                                                         .metricRegistry(METRIC_REGISTRY)
                                                         .storageDir(rootDir)
                                                         .cdcDir(rootDir + "/customcdcdir")
@@ -270,6 +261,7 @@ class InstanceMetadataImplTest
                                        .id(ID)
                                        .host(HOST)
                                        .port(PORT)
+                                       .storagePort(STORAGE_PORT)
                                        .metricRegistry(METRIC_REGISTRY)
                                        .storageDir(rootDir)
                                        .hintsDir(rootDir + "/customhints")
@@ -284,6 +276,7 @@ class InstanceMetadataImplTest
                                        .id(ID)
                                        .host(HOST)
                                        .port(PORT)
+                                       .storagePort(STORAGE_PORT)
                                        .metricRegistry(METRIC_REGISTRY)
                                        .storageDir(rootDir)
                                        .commitlogDir(rootDir + "/customcommitlog")
@@ -298,6 +291,7 @@ class InstanceMetadataImplTest
                                        .id(ID)
                                        .host(HOST)
                                        .port(PORT)
+                                       .storagePort(STORAGE_PORT)
                                        .metricRegistry(METRIC_REGISTRY)
                                        .storageDir(rootDir)
                                        .savedCachesDir(rootDir + "/customsaved")
@@ -312,6 +306,7 @@ class InstanceMetadataImplTest
                                        .id(ID)
                                        .host(HOST)
                                        .port(PORT)
+                                       .storagePort(STORAGE_PORT)
                                        .metricRegistry(METRIC_REGISTRY)
                                        .storageDir(rootDir)
                                        .dataDirs(Arrays.asList("/tmp/data/dir_1", "/tmp/data/dir_3"))
@@ -359,6 +354,7 @@ class InstanceMetadataImplTest
                                    .id(ID)
                                    .host(HOST)
                                    .port(PORT)
+                                   .storagePort(STORAGE_PORT)
                                    .dataDirs(dataDirs)
                                    .cdcDir(rootDir + "/" + CDC_DIR)
                                    .stagingDir(rootDir + "/" + STAGING_DIR)

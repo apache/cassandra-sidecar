@@ -33,6 +33,11 @@ import org.jetbrains.annotations.Nullable;
  */
 public class InstanceConfigurationImpl implements InstanceConfiguration
 {
+    /**
+     * Default storage port for Cassandra inter-node communication.
+     */
+    public static final int DEFAULT_STORAGE_PORT = 7000;
+
     protected final int id;
     protected final String host;
     protected final int port;
@@ -75,7 +80,7 @@ public class InstanceConfigurationImpl implements InstanceConfiguration
         this.id = id;
         this.host = host;
         this.port = port;
-        this.storagePort = storagePort;
+        this.storagePort = storagePort != null ? storagePort : DEFAULT_STORAGE_PORT;
         this.storageDir = storageDir;
         this.dataDirs = dataDirs != null ? Collections.unmodifiableList(dataDirs) : null;
         this.stagingDir = stagingDir;

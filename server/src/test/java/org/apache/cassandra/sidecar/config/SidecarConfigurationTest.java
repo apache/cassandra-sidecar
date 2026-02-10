@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.assertj.core.api.Condition;
 
 import static org.apache.cassandra.sidecar.common.ResourceUtils.writeResourceToPath;
+import static org.apache.cassandra.sidecar.config.yaml.InstanceConfigurationImpl.DEFAULT_STORAGE_PORT;
 import static org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl.EQUALS_TYPE;
 import static org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl.REGEX_TYPE;
 import static org.apache.cassandra.sidecar.config.yaml.VertxMetricsConfigurationImpl.DEFAULT_JMX_DOMAIN_NAME;
@@ -624,7 +625,7 @@ class SidecarConfigurationTest
         SidecarConfigurationImpl configWithoutStoragePort = SidecarConfigurationImpl.fromYamlString(yamlWithoutStoragePort);
         assertThat(configWithoutStoragePort.cassandraInstances()).isNotNull().hasSize(1);
         InstanceConfiguration instance2 = configWithoutStoragePort.cassandraInstances().get(0);
-        assertThat(instance2.storagePort()).isNull();
+        assertThat(instance2.storagePort()).isEqualTo(DEFAULT_STORAGE_PORT);
     }
 
     void validateSingleInstanceSidecarConfiguration(SidecarConfiguration config)
