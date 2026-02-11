@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Fix ClusterTopologyMonitor delay parsing error due to missing time unit suffix (CASSSIDECAR-406)
  * Adding storage_port to instance configuration and metadata (CASSSIDECAR-399)
  * Sidecar endpoint to support on-demand repair operation (CASSSIDECAR-268)
  * Database access during auth flow is blocking event-loop thread (CASSSIDECAR-369)
