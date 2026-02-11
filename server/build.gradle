@@ -215,6 +215,7 @@ test {
     systemProperty "vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.SLF4JLogDelegateFactory"
     // There is no native lib (JNR) for getting time for testing
     systemProperty "com.datastax.driver.USE_NATIVE_CLOCK", "false"
+    systemProperty "project.root", rootProject.rootDir.absolutePath
 
     // ordinarily we don't need integration tests
     // see the integrationTest task

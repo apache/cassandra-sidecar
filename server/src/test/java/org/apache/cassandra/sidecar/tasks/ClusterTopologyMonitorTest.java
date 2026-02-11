@@ -97,9 +97,9 @@ class ClusterTopologyMonitorTest
     @Test
     void testConfigurationFromYaml() throws IOException
     {
-        // When running tests from the server module, working directory is the server directory
-        // So we need to go up one level to find conf/sidecar.yaml at project root
-        Path configPath = Paths.get("../conf/sidecar.yaml");
+        // Get project root from system property set by Gradle
+        Path projectRoot = Paths.get(System.getProperty("project.root"));
+        Path configPath = projectRoot.resolve("conf/sidecar.yaml");
         assertThat(configPath).exists();
 
         SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(configPath);
