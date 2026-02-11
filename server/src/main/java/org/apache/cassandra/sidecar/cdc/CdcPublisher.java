@@ -18,9 +18,9 @@
 
 package org.apache.cassandra.sidecar.cdc;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,7 +60,6 @@ import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-import org.apache.cassandra.spark.utils.MapUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.common.serialization.Serializer;
 
@@ -151,22 +150,22 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
             return null;
         }
 
-        Map<String, String> sslConfigMap = new HashMap<>();
+        Map<String, String> sslConfigMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
         if (sslConfiguration.isKeystoreConfigured())
         {
             KeyStoreConfiguration keystore = sslConfiguration.keystore();
-            sslConfigMap.put(MapUtils.lowerCaseKey(SslConfig.KEYSTORE_PATH), keystore.path());
-            sslConfigMap.put(MapUtils.lowerCaseKey(SslConfig.KEYSTORE_PASSWORD), keystore.password());
-            sslConfigMap.put(MapUtils.lowerCaseKey(SslConfig.KEYSTORE_TYPE), keystore.type());
+            sslConfigMap.put(SslConfig.KEYSTORE_PATH, keystore.path());
+            sslConfigMap.put(SslConfig.KEYSTORE_PASSWORD, keystore.password());
+            sslConfigMap.put(SslConfig.KEYSTORE_TYPE, keystore.type());
         }
 
         if (sslConfiguration.isTrustStoreConfigured())
         {
             KeyStoreConfiguration truststore = sslConfiguration.truststore();
-            sslConfigMap.put(MapUtils.lowerCaseKey(SslConfig.TRUSTSTORE_PATH), truststore.path());
-            sslConfigMap.put(MapUtils.lowerCaseKey(SslConfig.TRUSTSTORE_PASSWORD), truststore.password());
-            sslConfigMap.put(MapUtils.lowerCaseKey(SslConfig.TRUSTSTORE_TYPE), truststore.type());
+            sslConfigMap.put(SslConfig.TRUSTSTORE_PATH, truststore.path());
+            sslConfigMap.put(SslConfig.TRUSTSTORE_PASSWORD, truststore.password());
+            sslConfigMap.put(SslConfig.TRUSTSTORE_TYPE, truststore.type());
         }
 
         SslConfig sslConfig = SslConfig.create(sslConfigMap);
