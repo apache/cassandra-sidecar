@@ -103,7 +103,7 @@ public class LiveMigrationCreateDataCopyTaskHandler extends AbstractHandler<Live
         .onFailure(throwable -> {
             if (throwable instanceof LiveMigrationInvalidRequestException)
             {
-                LOGGER.error("Input payload is not valid.", throwable);
+                LOGGER.error("Invalid live migration request.", throwable);
                 context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, throwable.getMessage(), throwable));
             }
             else if (throwable instanceof LiveMigrationDataCopyInProgressException)

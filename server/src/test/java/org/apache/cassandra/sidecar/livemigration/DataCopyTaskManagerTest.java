@@ -33,13 +33,17 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.WorkerPoolConfigurationImpl;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationDataCopyInProgressException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationTaskNotFoundException;
@@ -47,11 +51,13 @@ import org.apache.cassandra.sidecar.handlers.livemigration.FakeLiveMigrationTask
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationMap;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -98,7 +104,7 @@ public class DataCopyTaskManagerTest
     {
         Injector injector = getInjector();
         DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
 
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
@@ -113,7 +119,7 @@ public class DataCopyTaskManagerTest
     {
         Injector injector = getInjector();
         DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 10); // exceeds max concurrency of 5
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 10, null, null, null); // exceeds max concurrency of 5
 
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
@@ -133,7 +139,7 @@ public class DataCopyTaskManagerTest
         LiveMigrationTask inProgressTask = getInProgressTask("existing-task");
         dataCopyTaskManager.currentTasks.put(dest1Id, inProgressTask);
 
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
 
@@ -152,13 +158,55 @@ public class DataCopyTaskManagerTest
         LiveMigrationTask completedTask = getSucceededTask("completed-task", source1Name);
         dataCopyTaskManager.currentTasks.put(dest1Id, completedTask);
 
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
 
         assertThat(future.succeeded()).isTrue();
         assertThat(future.result()).isNotNull();
         assertThat(future.result().id()).isNotEqualTo("completed-task");
+    }
+
+    @Test
+    public void testCreateTaskShouldFailWhenCassandraInstanceJMXIsUp() throws InterruptedException
+    {
+        Injector injector = getInjector();
+        DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
+        InstancesMetadata instancesMetadata = injector.getInstance(InstancesMetadata.class);
+        InstanceMetadata destinationMetadata = instancesMetadata.instanceFromHost(dest1Name);
+
+        // Mocking JMX as up
+        when(destinationMetadata.delegate().isJmxUp()).thenReturn(true);
+
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
+        Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
+        awaitForFuture(future);
+
+        assertThat(future.succeeded()).isFalse();
+        assertThat(future.failed()).isTrue();
+        assertThat(future.result()).isNull();
+        assertThat(future.cause()).isNotNull();
+    }
+
+    @Test
+    public void testCreateTaskShouldSucceedWhenCassandraAdapterIsNotAvailable() throws InterruptedException
+    {
+        Injector injector = getInjector();
+        DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
+        InstancesMetadata instancesMetadata = injector.getInstance(InstancesMetadata.class);
+        InstanceMetadata destinationMetadata = instancesMetadata.instanceFromHost(dest1Name);
+        when(destinationMetadata.delegate())
+        .thenThrow(new CassandraUnavailableException(CQL_AND_JMX, "CassandraAdapterDelegate is not available"));
+
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
+        Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
+        awaitForFuture(future);
+
+        assertThat(future.succeeded()).isTrue();
+        assertThat(future.failed()).isFalse();
+        assertThat(future.result()).isNotNull();
+        assertThat(future.result().id()).isNotNull();
+        assertThat(future.cause()).isNull();
     }
 
     @Test
@@ -263,7 +311,7 @@ public class DataCopyTaskManagerTest
                         startLatch.await();
 
                         LiveMigrationDataCopyRequest request
-                        = new LiveMigrationDataCopyRequest(1, 1.0, 2);
+                        = new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
                         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
                         results.add(future);
 
@@ -324,7 +372,7 @@ public class DataCopyTaskManagerTest
         CountDownLatch latch = new CountDownLatch(1);
         future.onComplete(res -> latch.countDown());
 
-        latch.await(100, TimeUnit.MILLISECONDS);
+        latch.await(2, TimeUnit.SECONDS);
     }
 
     private DataCopyTaskManager getDataCopyTaskManager(Injector injector)
@@ -333,8 +381,10 @@ public class DataCopyTaskManagerTest
         SidecarConfiguration sidecarConfiguration = injector.getInstance(SidecarConfiguration.class);
         LiveMigrationMap liveMigrationMap = injector.getInstance(LiveMigrationMap.class);
         LiveMigrationTaskFactory liveMigrationTaskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
+        Vertx vertx = injector.getInstance(Vertx.class);
+        ExecutorPools executorPools = new ExecutorPools(vertx, sidecarConfiguration.serviceConfiguration());
 
-        return new DataCopyTaskManager(instancesMetadata, sidecarConfiguration, liveMigrationMap,
+        return new DataCopyTaskManager(executorPools, instancesMetadata, sidecarConfiguration, liveMigrationMap,
                                        liveMigrationTaskFactory);
     }
 
@@ -342,7 +392,7 @@ public class DataCopyTaskManagerTest
     {
         List<LiveMigrationTaskResponse.Status> statusList =
         List.of(new LiveMigrationTaskResponse.Status(0, "PREPARING", 500L, 1, 1, 1, 0, 0, 500L));
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 1);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 1, null, null, null);
         LiveMigrationTaskResponse response = new LiveMigrationTaskResponse(taskId, source1Name, 9043, request, statusList);
         return new FakeLiveMigrationTask(response);
     }
@@ -351,7 +401,7 @@ public class DataCopyTaskManagerTest
     {
         List<LiveMigrationTaskResponse.Status> statusList =
         List.of(new LiveMigrationTaskResponse.Status(0, "SUCCESS", 1000L, 1, 1, 1, 1, 0, 1000L));
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 1);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 1, null, null, null);
         LiveMigrationTaskResponse response = new LiveMigrationTaskResponse(taskId, sourceHost, 9043, request, statusList);
         return new FakeLiveMigrationTask(response);
     }
@@ -360,7 +410,7 @@ public class DataCopyTaskManagerTest
     {
         private final LiveMigrationTaskFactory mockLiveMigrationTaskFactory = mock(LiveMigrationTaskFactory.class);
         private final SidecarConfiguration mockSidecarConfiguration = mock(SidecarConfiguration.class);
-        private final ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class);
+        private final ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
         private final LiveMigrationConfiguration mockLiveMigrationConfiguration = mock(LiveMigrationConfiguration.class);
         private final LiveMigrationMap mockLiveMigrationmap = mock(LiveMigrationMap.class);
         private final InstanceMetadata mockDest1InstanceMeta = mock(InstanceMetadata.class);
@@ -381,6 +431,8 @@ public class DataCopyTaskManagerTest
             // Configure SidecarConfiguration mocks
             when(mockSidecarConfiguration.serviceConfiguration()).thenReturn(mockServiceConfiguration);
             when(mockServiceConfiguration.port()).thenReturn(9043);
+            when(mockServiceConfiguration.serverWorkerPoolConfiguration()).thenReturn(new WorkerPoolConfigurationImpl());
+            when(mockServiceConfiguration.serverInternalWorkerPoolConfiguration()).thenReturn(new WorkerPoolConfigurationImpl());
             when(mockSidecarConfiguration.liveMigrationConfiguration()).thenReturn(mockLiveMigrationConfiguration);
             when(mockLiveMigrationConfiguration.maxConcurrentDownloads()).thenReturn(5);
 
@@ -388,17 +440,21 @@ public class DataCopyTaskManagerTest
             when(mockInstancesMetadata.instanceFromHost(dest1Name)).thenReturn(mockDest1InstanceMeta);
             when(mockDest1InstanceMeta.id()).thenReturn(dest1Id);
             when(mockDest1InstanceMeta.dataDirs()).thenReturn(List.of("/data1", "/data2"));
+            when(mockDest1InstanceMeta.delegate()).thenReturn(mock(CassandraAdapterDelegate.class));
 
             when(mockInstancesMetadata.instanceFromHost(dest2Name)).thenReturn(mockDest2InstanceMeta);
             when(mockDest2InstanceMeta.id()).thenReturn(dest2Id);
             when(mockDest2InstanceMeta.dataDirs()).thenReturn(List.of("/data1", "/data2"));
+            when(mockDest2InstanceMeta.delegate()).thenReturn(mock(CassandraAdapterDelegate.class));
 
             when(mockInstancesMetadata.instanceFromHost(dest3Name)).thenReturn(mockDest3InstanceMeta);
             when(mockDest3InstanceMeta.id()).thenReturn(dest3Id);
             when(mockDest3InstanceMeta.dataDirs()).thenReturn(List.of("/data1", "/data2"));
+            when(mockDest3InstanceMeta.delegate()).thenReturn(mock(CassandraAdapterDelegate.class));
 
             when(mockInstancesMetadata.instanceFromHost(source1Name)).thenReturn(mockSourceInstanceMeta);
             when(mockSourceInstanceMeta.dataDirs()).thenReturn(List.of("/data1"));
+            when(mockSourceInstanceMeta.delegate()).thenReturn(mock(CassandraAdapterDelegate.class));
 
             // Configure LiveMigrationTaskFactory to return fake tasks
             when(mockLiveMigrationTaskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class))).thenAnswer(invocation -> {

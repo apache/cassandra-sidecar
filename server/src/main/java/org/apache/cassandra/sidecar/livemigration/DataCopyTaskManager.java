@@ -31,10 +31,13 @@ import com.datastax.driver.core.utils.UUIDs;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationDataCopyInProgressException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationTaskNotFoundException;
@@ -52,17 +55,20 @@ public class DataCopyTaskManager
 
     @VisibleForTesting
     final ConcurrentHashMap<Integer, LiveMigrationTask> currentTasks = new ConcurrentHashMap<>();
+    private final ExecutorPools executorPools;
     private final InstancesMetadata instancesMetadata;
     private final SidecarConfiguration sidecarConfiguration;
     private final LiveMigrationMap liveMigrationMap;
     private final LiveMigrationTaskFactory liveMigrationTaskFactory;
 
     @Inject
-    public DataCopyTaskManager(InstancesMetadata instancesMetadata,
+    public DataCopyTaskManager(ExecutorPools executorPools,
+                               InstancesMetadata instancesMetadata,
                                SidecarConfiguration sidecarConfiguration,
                                LiveMigrationMap liveMigrationMap,
                                LiveMigrationTaskFactory liveMigrationTaskFactory)
     {
+        this.executorPools = executorPools;
         this.instancesMetadata = instancesMetadata;
         this.sidecarConfiguration = sidecarConfiguration;
         this.liveMigrationMap = liveMigrationMap;
@@ -101,39 +107,85 @@ public class DataCopyTaskManager
                                                  String source,
                                                  InstanceMetadata localInstanceMetadata)
     {
-        LiveMigrationTask newTask = createTask(request,
-                                               source,
-                                               sidecarConfiguration.serviceConfiguration().port(),
-                                               localInstanceMetadata);
+        // Fast local JMX check before creating task - prevents task creation if Cassandra is running
+        return verifyCassandraNotRunning(localInstanceMetadata)
+               .compose(v -> {
+                   LiveMigrationTask newTask = createTask(request,
+                                                          source,
+                                                          sidecarConfiguration.serviceConfiguration().port(),
+                                                          localInstanceMetadata);
 
-        // It is possible to serve only one live migration data copy request per instance at a time.
-        // Checking if there is another migration is in progress before accepting new one.
-        boolean accepted = currentTasks.compute(localInstanceMetadata.id(), (integer, taskInMap) -> {
-            if (taskInMap == null)
-            {
-                return newTask;
-            }
+                   // It is possible to serve only one live migration data copy request per instance at a time.
+                   // Checking if there is another migration is in progress before accepting new one.
+                   boolean accepted = currentTasks.compute(localInstanceMetadata.id(), (integer, taskInMap) -> {
+                       if (taskInMap == null)
+                       {
+                           return newTask;
+                       }
 
-            if (!taskInMap.isCompleted())
-            {
-                // Accept new task if and only if the existing task has completed.
-                return taskInMap;
-            }
-            else
-            {
-                return newTask;
-            }
-        }) == newTask;
+                       if (!taskInMap.isCompleted())
+                       {
+                           // Accept new task if and only if the existing task has completed.
+                           return taskInMap;
+                       }
+                       else
+                       {
+                           return newTask;
+                       }
+                   }) == newTask;
 
-        if (!accepted)
-        {
-            return Future.failedFuture(
-            new LiveMigrationDataCopyInProgressException("Another task is already under progress. Cannot accept new task."));
-        }
-        LOGGER.info("Starting data copy task with id={}, source={}, destination={}",
-                    newTask.id(), source, localInstanceMetadata.host());
-        newTask.start();
-        return Future.succeededFuture(newTask);
+                   if (!accepted)
+                   {
+                       return Future.failedFuture(
+                       new LiveMigrationDataCopyInProgressException("Another task is already under progress. Cannot accept new task."));
+                   }
+                   LOGGER.info("Starting data copy task with id={}, source={}, destination={}",
+                               newTask.id(), source, localInstanceMetadata.host());
+                   newTask.start();
+                   return Future.succeededFuture(newTask);
+               });
+    }
+
+    /**
+     * Initiating data copy once a Cassandra instance starts is not acceptable. This method checks whether
+     * Cassandra is running or not at the moment on the destination instance by checking if Sidecar
+     * was able to connect to the Cassandra instance's JMX port. It returns a failed future if Sidecar
+     * is able to connect to the JMX port of Cassandra.
+     *
+     * @param localInstance metadata for the local Cassandra instance
+     * @return Future that succeeds if Cassandra is not running, fails if it is running
+     */
+    private Future<Void> verifyCassandraNotRunning(InstanceMetadata localInstance)
+    {
+        return executorPools.internal().executeBlocking(() -> {
+            try
+            {
+                CassandraAdapterDelegate delegate = localInstance.delegate();
+
+                if (delegate.isJmxUp())
+                {
+                    throw new LiveMigrationInvalidRequestException(
+                    "Cannot start data copy: Cassandra is currently running on this instance " +
+                    "(JMX connectivity established). Data copy cannot proceed while Cassandra is active.");
+                }
+
+                // JMX is down - Cassandra is not running (or at least wasn't during last health check)
+                LOGGER.debug("Local JMX check passed: Cassandra not detected as running on {}", localInstance.host());
+                return null;
+            }
+            catch (CassandraUnavailableException e)
+            {
+                // No delegate available - Cassandra is not running
+                LOGGER.debug("No Cassandra delegate available for {} (Cassandra not running)", localInstance.host());
+                return null;
+            }
+            catch (Exception e)
+            {
+                // Unexpected error - be conservative and reject for safety
+                LOGGER.warn("Unable to verify Cassandra status on {}, rejecting for safety", localInstance.host(), e);
+                throw e;
+            }
+        });
     }
 
     LiveMigrationTask createTask(LiveMigrationDataCopyRequest request,

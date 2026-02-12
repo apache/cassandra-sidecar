@@ -560,6 +560,10 @@ class SidecarConfigurationTest
         assertThat(liveMigrationConfiguration.migrationMap()).isNotNull()
                                                              .hasSize(1)
                                                              .containsEntry("localhost1", "localhost4");
+
+        assertThat(liveMigrationConfiguration.maxConcurrentDownloads()).isEqualTo(20);
+        assertThat(liveMigrationConfiguration.gossipFetchBatchSize()).isEqualTo(5);
+        assertThat(liveMigrationConfiguration.gossipFetchMaxRetries()).isEqualTo(2);
     }
 
     @Test

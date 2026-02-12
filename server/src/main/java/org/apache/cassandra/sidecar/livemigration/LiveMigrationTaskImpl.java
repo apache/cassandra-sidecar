@@ -29,6 +29,7 @@ import com.google.common.annotations.VisibleForTesting;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
@@ -52,6 +53,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
     private final ExecutorPools executorPools;
     private final SidecarClientProvider sidecarClientProvider;
     private final LiveMigrationConfiguration liveMigrationConfiguration;
+    private final InstancesMetadata instancesMetadata;
 
     // Indicates overall status of the operation (succeeded or failed).
     // Future returned by downloader changes on next iteration. Using a separate future to track overall operation.
@@ -65,6 +67,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
                                  ExecutorPools executorPools,
                                  SidecarClientProvider sidecarClientProvider,
                                  LiveMigrationConfiguration liveMigrationConfiguration,
+                                 InstancesMetadata instancesMetadata,
                                  String id,
                                  LiveMigrationDataCopyRequest request,
                                  String source,
@@ -80,6 +83,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
         this.instanceMetadata = instanceMetadata;
         this.source = source;
         this.port = port;
+        this.instancesMetadata = instancesMetadata;
     }
 
     /**
@@ -125,6 +129,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
                                                 .request(request)
                                                 .iteration(iteration)
                                                 .statusUpdater(this.statusUpdater(iteration))
+                                                .instancesMetadata(instancesMetadata)
                                                 .instanceMetadata(instanceMetadata)
                                                 .liveMigrationConfiguration(liveMigrationConfiguration)
                                                 .source(source)

@@ -33,22 +33,29 @@ public class LiveMigrationConfigurationImpl implements LiveMigrationConfiguratio
 {
 
     public static final int DEFAULT_MAX_CONCURRENT_DOWNLOADS = 20;
+    public static final int DEFAULT_GOSSIP_FETCH_BATCH_SIZE = 3;
+    public static final int DEFAULT_GOSSIP_FETCH_MAX_RETRIES = 3;
 
     private final Set<String> filesToExclude;
     private final Set<String> directoriesToExclude;
     private final Map<String, String> migrationMap;
     private final int maxConcurrentDownloads;
+    private final int gossipFetchBatchSize;
+    private final int gossipFetchMaxRetries;
 
     public LiveMigrationConfigurationImpl()
     {
-        this(Collections.emptySet(), Collections.emptySet(), Collections.emptyMap(), DEFAULT_MAX_CONCURRENT_DOWNLOADS);
+        this(Collections.emptySet(), Collections.emptySet(), Collections.emptyMap(),
+             DEFAULT_MAX_CONCURRENT_DOWNLOADS, DEFAULT_GOSSIP_FETCH_BATCH_SIZE, DEFAULT_GOSSIP_FETCH_MAX_RETRIES);
     }
 
     @JsonCreator
     public LiveMigrationConfigurationImpl(@JsonProperty("files_to_exclude") Set<String> filesToExclude,
                                           @JsonProperty("dirs_to_exclude") Set<String> directoriesToExclude,
                                           @JsonProperty("migration_map") Map<String, String> migrationMap,
-                                          @JsonProperty("max_concurrent_downloads") int maxConcurrentDownloads)
+                                          @JsonProperty("max_concurrent_downloads") int maxConcurrentDownloads,
+                                          @JsonProperty("gossip_fetch_batch_size") Integer gossipFetchBatchSize,
+                                          @JsonProperty("gossip_fetch_max_retries") Integer gossipFetchMaxRetries)
     {
         this.filesToExclude = filesToExclude;
         this.directoriesToExclude = directoriesToExclude;
@@ -60,6 +67,24 @@ public class LiveMigrationConfigurationImpl implements LiveMigrationConfiguratio
                                                ". It must be >= 1");
         }
         this.maxConcurrentDownloads = maxConcurrentDownloads;
+
+        if (gossipFetchBatchSize != null && gossipFetchBatchSize < 1)
+        {
+            throw new IllegalArgumentException("Invalid gossip_fetch_batch_size " + gossipFetchBatchSize +
+                                               ". It must be >= 1");
+        }
+        this.gossipFetchBatchSize = gossipFetchBatchSize == null
+                                    ? DEFAULT_GOSSIP_FETCH_BATCH_SIZE
+                                    : gossipFetchBatchSize;
+
+        if (gossipFetchMaxRetries != null && gossipFetchMaxRetries < 1)
+        {
+            throw new IllegalArgumentException("Invalid gossip_fetch_max_retries " + gossipFetchMaxRetries +
+                                               ". It must be >= 1");
+        }
+        this.gossipFetchMaxRetries = gossipFetchMaxRetries == null
+                                     ? DEFAULT_GOSSIP_FETCH_MAX_RETRIES
+                                     : gossipFetchMaxRetries;
     }
 
     @Override
@@ -88,5 +113,19 @@ public class LiveMigrationConfigurationImpl implements LiveMigrationConfiguratio
     public int maxConcurrentDownloads()
     {
         return maxConcurrentDownloads;
+    }
+
+    @Override
+    @JsonProperty("gossip_fetch_batch_size")
+    public int gossipFetchBatchSize()
+    {
+        return gossipFetchBatchSize;
+    }
+
+    @Override
+    @JsonProperty("gossip_fetch_max_retries")
+    public int gossipFetchMaxRetries()
+    {
+        return gossipFetchMaxRetries;
     }
 }

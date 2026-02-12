@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.livemigration;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -57,13 +58,16 @@ import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.client.SidecarClient;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
+import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
+import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo.FileType;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType;
@@ -98,13 +102,19 @@ class LiveMigrationFileDownloaderTest
 {
     private static final int MAX_ITERATIONS = 3;
     private static final String SOURCE = "source";
+    private static final String SOURCE_IP_ADDRESS = "127.0.0.1";
+    private static final String DESTINATION = "destination";
+    private static final String DESTINATION_IP_ADDRESS = "127.0.0.2";
     private static final int FILE_DOWNLOAD_MAX_CONCURRENCY = 10;
     private static final int PORT = 9043;
     private static final LiveMigrationDataCopyRequest dummyRequest100pThreshold =
-    new LiveMigrationDataCopyRequest(MAX_ITERATIONS, 1.0, FILE_DOWNLOAD_MAX_CONCURRENCY);
+    new LiveMigrationDataCopyRequest(MAX_ITERATIONS, 1.0, FILE_DOWNLOAD_MAX_CONCURRENCY, null, null, null);
     final Vertx vertx = Vertx.vertx();
 
     private final List<String> dataDirsOne = Collections.singletonList("/tmp/data0");
+
+    @TempDir
+    Path sourceStorageDir;
 
     @Test
     void testDownloadListingFilesFailed() throws InterruptedException
@@ -378,6 +388,124 @@ class LiveMigrationFileDownloaderTest
     }
 
     @Test
+    void testDownloadFilesWhenSourceNotFoundInGossip(@TempDir Path tmpDir) throws InterruptedException
+    {
+        String storageDir = tmpDir.resolve("testDownloadFilesWhenSourceNotFoundInGossip")
+                                  .toAbsolutePath().toString();
+        List<String> dataDirs = getDataDirList(storageDir);
+        final Consumer<OperationStatus> statusUpdater = mock(Consumer.class);
+
+        Injector injector = getInjector();
+        SidecarClient sidecarClient = injector.getInstance(SidecarClient.class);
+        when(sidecarClient.gossipInfo(any(SidecarInstance.class)))
+        .thenReturn(CompletableFuture.completedFuture(new GossipInfoResponse())); // Empty gossip - source not available
+
+        LiveMigrationFileDownloader downloaderSpy =
+        getDownloaderSpy(injector, dummyRequest100pThreshold, 0, statusUpdater, storageDir, dataDirs);
+
+        Future<OperationStatus> statusFuture = downloaderSpy.downloadFiles();
+        awaitForFuture(statusFuture);
+
+        assertThat(statusFuture.isComplete()).isTrue();
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.FAILED);
+
+        verify(statusUpdater, times(1)).accept(any(OperationStatus.class));
+        verify(sidecarClient, times(0)).liveMigrationListInstanceFilesAsync(any());
+    }
+
+    @Test
+    void testDownloadFilesWhenDestinationFoundInGossip(@TempDir Path tmpDir) throws InterruptedException
+    {
+        String storageDir = tmpDir.resolve("testDownloadFilesWhenDestinationFoundInGossip")
+                                  .toAbsolutePath().toString();
+        List<String> dataDirs = getDataDirList(storageDir);
+        final Consumer<OperationStatus> statusUpdater = mock(Consumer.class);
+
+        Injector injector = getInjector();
+        SidecarClient sidecarClient = injector.getInstance(SidecarClient.class);
+
+        // Create gossipInfo that includes both source and destination
+        // Test should fail since destination is in gossip
+        GossipInfoResponse gossipInfoResponse = new GossipInfoResponse();
+        gossipInfoResponse.put("/" + SOURCE_IP_ADDRESS + ":7000", new GossipInfoResponse.GossipInfo());
+        gossipInfoResponse.put("/" + DESTINATION_IP_ADDRESS + ":7000", new GossipInfoResponse.GossipInfo());
+
+        when(sidecarClient.gossipInfo(any(SidecarInstance.class)))
+        .thenReturn(CompletableFuture.completedFuture(gossipInfoResponse));
+
+        LiveMigrationFileDownloader downloaderSpy =
+        getDownloaderSpy(injector, dummyRequest100pThreshold, 0, statusUpdater, storageDir, dataDirs);
+
+        Future<OperationStatus> statusFuture = downloaderSpy.downloadFiles();
+        awaitForFuture(statusFuture);
+
+        assertThat(statusFuture.isComplete()).isTrue();
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.FAILED);
+
+        verify(statusUpdater, times(1)).accept(any(OperationStatus.class));
+        verify(sidecarClient, times(0)).liveMigrationListInstanceFilesAsync(any());
+    }
+
+    @Test
+    void testDownloadFilesWithSkipGossipCheckEnabled(@TempDir Path tmpDir) throws InterruptedException, IOException
+    {
+        String storageDir = tmpDir.resolve("testDownloadFilesWithSkipGossipCheckEnabled")
+                                  .toAbsolutePath().toString();
+        List<String> dataDirs = getDataDirList(storageDir);
+        final Consumer<OperationStatus> statusUpdater = mock(Consumer.class);
+        int fileSize = 64;
+        long lastModifiedTime = System.currentTimeMillis();
+        List<TestFile> filesToDownload = List.of(
+        new TestFile(DATA_FILE_DIR, 0, "ks1/t1/data.db", fileSize, lastModifiedTime),
+        new TestFile(DATA_FILE_DIR, 0, "ks1/t2/data.db", fileSize, lastModifiedTime)
+        );
+
+        Injector injector = getInjector();
+        SidecarClient sidecarClient = injector.getInstance(SidecarClient.class);
+
+        // Create gossipInfo that includes both source and destination - normally this would fail
+        GossipInfoResponse gossipInfoResponse = new GossipInfoResponse();
+        gossipInfoResponse.put("/" + SOURCE_IP_ADDRESS + ":7000", new GossipInfoResponse.GossipInfo());
+        gossipInfoResponse.put("/" + DESTINATION_IP_ADDRESS + ":7000", new GossipInfoResponse.GossipInfo());
+
+        when(sidecarClient.gossipInfo(any(SidecarInstance.class)))
+        .thenReturn(CompletableFuture.completedFuture(gossipInfoResponse));
+
+        when(sidecarClient.liveMigrationListInstanceFilesAsync(eq(new SidecarInstanceImpl(SOURCE, PORT))))
+        .thenReturn(CompletableFuture.completedFuture(getInstanceFilesListResponse(filesToDownload)));
+
+        // Create request with skipGossipCheck set to true
+        boolean skipGossipCheck = true;
+        LiveMigrationDataCopyRequest requestWithSkipGossipCheck =
+        new LiveMigrationDataCopyRequest(MAX_ITERATIONS, 1.0, FILE_DOWNLOAD_MAX_CONCURRENCY, null, null, skipGossipCheck);
+
+        LiveMigrationFileDownloader downloaderSpy =
+        getDownloaderSpy(injector, requestWithSkipGossipCheck, 0, statusUpdater, storageDir, dataDirs);
+
+        doAnswer(invocation -> invocation.getArguments()[0])
+        .when(downloaderSpy).deleteUnnecessaryFilesAndDirectories(any(InstanceFilesListResponse.class));
+
+        doReturn(Future.succeededFuture(getInstanceFileInfo(filesToDownload)))
+        .when(downloaderSpy).shortlistDownloadFiles(any(InstanceFilesListResponse.class), anyDouble());
+
+        doReturn(Future.succeededFuture())
+        .when(downloaderSpy).updateFileTimestampAsync(any(Path.class), anyLong());
+
+        when(sidecarClient.liveMigrationStreamFileAsync(any(SidecarInstance.class), anyString(), anyString()))
+        .thenReturn(CompletableFuture.completedFuture(null));
+
+        Future<OperationStatus> statusFuture = downloaderSpy.downloadFiles();
+        awaitForFuture(statusFuture);
+
+        assertThat(statusFuture.isComplete()).isTrue();
+        // Should succeed because gossip check was skipped even though destination was found in gossip
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.DOWNLOAD_COMPLETE);
+        verify(statusUpdater, times(4)).accept(any(OperationStatus.class));
+        // Verify that file listing was actually called, proving gossip check was skipped
+        verify(sidecarClient, times(1)).liveMigrationListInstanceFilesAsync(any());
+    }
+
+    @Test
     void testDownloadZeroSizedFiles(@TempDir Path tmpDir) throws InterruptedException
     {
         String storageDir = tmpDir.resolve("testDownloadZeroSizedFiles")
@@ -624,7 +752,7 @@ class LiveMigrationFileDownloaderTest
         final Consumer<OperationStatus> statusUpdater = mock(Consumer.class);
         Injector injector = getInjector();
         LiveMigrationDataCopyRequest maxConcurrency1Request =
-        new LiveMigrationDataCopyRequest(1, 1.0, 2);
+        new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
         LiveMigrationFileDownloader downloaderSpy =
         spy(getDownloader(injector, maxConcurrency1Request, 0, statusUpdater, storageDir, dataDirs));
 
@@ -1354,6 +1482,35 @@ class LiveMigrationFileDownloaderTest
         SidecarClientProvider sidecarClientProvider = injector.getInstance(SidecarClientProvider.class);
         LiveMigrationConfiguration liveMigrationConfig = injector.getInstance(SidecarConfiguration.class)
                                                                  .liveMigrationConfiguration();
+
+        DnsResolver mockDnsResolver = injector.getInstance(DnsResolver.class);
+
+        InstancesMetadata instancesMetadata = mock(InstancesMetadata.class);
+        InstanceMetadata sourceInstanceMetadata =
+        InstanceMetadataImpl.builder()
+                            .id(2)
+                            .host(SOURCE, mockDnsResolver)
+                            .port(9042)
+                            .storagePort(7000)
+                            .metricRegistry(new MetricRegistry())
+                            .storageDir(sourceStorageDir.toAbsolutePath().toString())
+                            .build();
+        InstanceMetadata destinationInstanceMetadata =
+        InstanceMetadataImpl.builder()
+                            .host(DESTINATION, mockDnsResolver)
+                            .port(9042)
+                            .storagePort(7000)
+                            .dataDirs(dataDirs)
+                            .storageDir(storageDir)
+                            .metricRegistry(new MetricRegistry())
+                            .id(1)
+                            .build();
+        when(instancesMetadata.instanceFromHost(eq(SOURCE)))
+        .thenReturn(sourceInstanceMetadata);
+        when(instancesMetadata.instanceFromHost(eq(DESTINATION)))
+        .thenReturn(destinationInstanceMetadata);
+        when(instancesMetadata.instances())
+        .thenReturn(List.of(sourceInstanceMetadata, destinationInstanceMetadata));
         return LiveMigrationFileDownloader.builder()
                                           .id(UUID.randomUUID().toString())
                                           .vertx(vertx)
@@ -1361,14 +1518,9 @@ class LiveMigrationFileDownloaderTest
                                           .request(request)
                                           .iteration(currentIteration)
                                           .statusUpdater(mockStatusUpdater)
-                                          .instanceMetadata(InstanceMetadataImpl.builder()
-                                                                                .dataDirs(dataDirs)
-                                                                                .storageDir(storageDir)
-                                                                                .metricRegistry(new MetricRegistry())
-                                                                                .id(1)
-                                                                                .storagePort(7000)
-                                                                                .build())
+                                          .instanceMetadata(destinationInstanceMetadata)
                                           .liveMigrationConfiguration(liveMigrationConfig)
+                                          .instancesMetadata(instancesMetadata)
                                           .source(SOURCE)
                                           .port(PORT)
                                           .executorPools(ExecutorPoolsHelper.createdSharedTestPool(vertx))
@@ -1451,6 +1603,7 @@ class LiveMigrationFileDownloaderTest
         SidecarClientProvider sidecarClientProvider = mock(SidecarClientProvider.class);
         SidecarConfiguration mockSidecarConfiguration = mock(SidecarConfiguration.class);
         LiveMigrationConfiguration mockLiveMigrationConfig = mock(LiveMigrationConfiguration.class);
+        DnsResolver mockDnsResolver = mock(DnsResolver.class);
 
         @Override
         protected void configure()
@@ -1458,13 +1611,29 @@ class LiveMigrationFileDownloaderTest
             bind(SidecarClient.class).toInstance(sidecarClient);
             bind(SidecarConfiguration.class).toInstance(mockSidecarConfiguration);
             bind(SidecarClientProvider.class).toInstance(sidecarClientProvider);
+            bind(DnsResolver.class).toInstance(mockDnsResolver);
+            try
+            {
+                when(mockDnsResolver.resolve(eq(SOURCE))).thenReturn(SOURCE_IP_ADDRESS);
+                when(mockDnsResolver.resolve(eq(DESTINATION))).thenReturn(DESTINATION_IP_ADDRESS);
+            }
+            catch (UnknownHostException e)
+            {
+                throw new RuntimeException(e);
+            }
 
             when(sidecarClient.liveMigrationStatus(any(SidecarInstance.class)))
             .thenReturn(CompletableFuture.completedFuture(new LiveMigrationStatus(NOT_COMPLETED, 1L)));
             when(sidecarClientProvider.get()).thenReturn(sidecarClient);
+            GossipInfoResponse mockGossipInfoResponse = new GossipInfoResponse();
+            mockGossipInfoResponse.put("/" + SOURCE_IP_ADDRESS + ":7000", new GossipInfoResponse.GossipInfo());
+            when(sidecarClient.gossipInfo(any(SidecarInstance.class)))
+            .thenReturn(CompletableFuture.completedFuture(mockGossipInfoResponse));
             when(mockSidecarConfiguration.liveMigrationConfiguration()).thenReturn(mockLiveMigrationConfig);
             when(mockLiveMigrationConfig.filesToExclude()).thenReturn(Set.of());
             when(mockLiveMigrationConfig.directoriesToExclude()).thenReturn(Set.of());
+            when(mockLiveMigrationConfig.gossipFetchMaxRetries()).thenReturn(2);
+            when(mockLiveMigrationConfig.gossipFetchBatchSize()).thenReturn(5);
         }
     }
 }

@@ -484,6 +484,8 @@ live_migration:
   migration_map:                          # Map of source and destination Cassandra instances
 #    localhost1: localhost4               # This entry says that localhost1 will be migrated to localhost4
   max_concurrent_downloads: 20            # Maximum number of concurrent downloads allowed
+  gossip_fetch_batch_size: 3              # Batch size for fetching gossip information from cluster instances during safety checks
+  gossip_fetch_max_retries: 3             # Maximum number of batch retry attempts when fetching gossip information
 
 # Configuration to allow sidecar start and stop Cassandra instances via the lifecycle API (disabled by default)
 lifecycle:

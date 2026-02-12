@@ -26,6 +26,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.client.SidecarClient;
+import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
@@ -34,6 +35,7 @@ import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -46,7 +48,7 @@ class LiveMigrationTaskImplTest
 
     private LiveMigrationTaskImpl createTask()
     {
-        return createTask("test-task-id", new LiveMigrationDataCopyRequest(5, 0.8, 10));
+        return createTask("test-task-id", new LiveMigrationDataCopyRequest(5, 0.8, 10, null, null, null));
     }
 
     private LiveMigrationTaskImpl createTask(String id, LiveMigrationDataCopyRequest request)
@@ -56,13 +58,16 @@ class LiveMigrationTaskImplTest
         SidecarClient sidecarClient = mock(SidecarClient.class);
         LiveMigrationConfiguration liveMigrationConfiguration = mock(LiveMigrationConfiguration.class);
         InstanceMetadata instanceMetadata = mock(InstanceMetadata.class);
+        InstanceMetadata sourceMetadata = mock(InstanceMetadata.class);
+        InstancesMetadata instancesMetadata = mock(InstancesMetadata.class);
+        when(instancesMetadata.instanceFromHost(eq(SOURCE))).thenReturn(sourceMetadata);
 
         when(sidecarClientProvider.get()).thenReturn(sidecarClient);
 
         ExecutorPools executorPools = ExecutorPoolsHelper.createdSharedTestPool(vertx);
 
         return new LiveMigrationTaskImpl(vertx, executorPools, sidecarClientProvider, liveMigrationConfiguration,
-                                         id, request, SOURCE, PORT, instanceMetadata);
+                                         instancesMetadata, id, request, SOURCE, PORT, instanceMetadata);
     }
 
     @Test
