@@ -377,28 +377,21 @@ public class CdcModule extends AbstractModule
 
     @Provides
     @Singleton
-    public TableSchema virtualTablesDatabaseAccessor(ServiceConfiguration configuration)
-    {
-        return new CdcStatesSchema(configuration);
-    }
-
-    @ProvidesIntoMap
-    @KeyClassMapKey(PeriodicTaskMapKeys.CdcPublisherTaskKey.class)
-    PeriodicTask cdcPublisherTask(Vertx vertx,
-                                  SidecarConfiguration sidecarConfiguration,
-                                  ExecutorPools executorPools,
-                                  ClusterConfigProvider clusterConfigProvider,
-                                  SchemaSupplier schemaSupplier,
-                                  CdcSidecarInstancesProvider sidecarInstancesProvider,
-                                  SidecarCdcClient.ClientConfig clientConfig,
-                                  InstanceMetadataFetcher instanceMetadataFetcher,
-                                  CdcConfig conf,
-                                  CdcDatabaseAccessor databaseAccessor,
-                                  TokenRingProvider tokenRingProvider,
-                                  ICdcStats cdcStats,
-                                  VirtualTablesDatabaseAccessor virtualTables,
-                                  SidecarCdcStats sidecarCdcStats,
-                                  Serializer<CdcEvent> avroSerializer)
+    CdcPublisher cdcPublisher(Vertx vertx,
+                              SidecarConfiguration sidecarConfiguration,
+                              ExecutorPools executorPools,
+                              ClusterConfigProvider clusterConfigProvider,
+                              SchemaSupplier schemaSupplier,
+                              CdcSidecarInstancesProvider sidecarInstancesProvider,
+                              SidecarCdcClient.ClientConfig clientConfig,
+                              InstanceMetadataFetcher instanceMetadataFetcher,
+                              CdcConfig conf,
+                              CdcDatabaseAccessor databaseAccessor,
+                              TokenRingProvider tokenRingProvider,
+                              ICdcStats cdcStats,
+                              VirtualTablesDatabaseAccessor virtualTables,
+                              SidecarCdcStats sidecarCdcStats,
+                              Serializer<CdcEvent> avroSerializer)
     {
         return new CdcPublisher(vertx,
                                 sidecarConfiguration,
@@ -415,6 +408,20 @@ public class CdcModule extends AbstractModule
                                 sidecarCdcStats,
                                 avroSerializer,
                                 () -> new ContentionFreeRangeManager(vertx, tokenRingProvider));
+    }
+
+    @Provides
+    @Singleton
+    public TableSchema virtualTablesDatabaseAccessor(ServiceConfiguration configuration)
+    {
+        return new CdcStatesSchema(configuration);
+    }
+
+    @ProvidesIntoMap
+    @KeyClassMapKey(PeriodicTaskMapKeys.CdcPublisherTaskKey.class)
+    PeriodicTask cdcPublisherTask(CdcPublisher cdcPublisher)
+    {
+        return cdcPublisher;
     }
 
     @Singleton

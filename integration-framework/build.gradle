@@ -65,9 +65,16 @@ dependencies {
     api("io.vertx:vertx-junit5:${project.vertxVersion}")
     // The server itself
     api(project(path: ":server"))
+    api(testFixtures(project(path: ":server")))
     api(project(path: ":server-common"))
+
+    // CDC dependencies
+    api(group: "org.apache.cassandra", name: "cassandra-analytics-cdc_spark3_2.12", version: "${project.analyticsVersion}")
+    api(group: "org.apache.cassandra", name: "cassandra-analytics-cdc-sidecar_spark3_2.12", version: "${project.analyticsVersion}")
+    api "org.apache.kafka:kafka-clients:${project.kafkaClientVersion}"
 }
 
 compileJava.onlyIf { !skipIntegrationTest }
 compileTestJava.onlyIf { !skipIntegrationTest }
 javadoc.onlyIf { !skipIntegrationTest }
+

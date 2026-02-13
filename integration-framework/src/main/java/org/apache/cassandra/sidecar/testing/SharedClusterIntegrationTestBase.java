@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -88,18 +89,15 @@ import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
-import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
 import org.apache.cassandra.sidecar.config.S3ProxyConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.S3ClientConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.lifecycle.InJvmDTestLifecycleProvider;
 import org.apache.cassandra.sidecar.lifecycle.LifecycleProvider;
@@ -116,7 +114,6 @@ import org.apache.cassandra.testing.TestVersion;
 import org.apache.cassandra.testing.TestVersionSupplier;
 
 import static org.apache.cassandra.sidecar.config.yaml.S3ClientConfigurationImpl.DEFAULT_API_CALL_TIMEOUT;
-import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS;
 import static org.apache.cassandra.testing.DriverTestUtils.buildContactPoints;
 import static org.apache.cassandra.testing.utils.IInstanceUtils.tryGetIntConfig;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -438,6 +435,30 @@ public abstract class SharedClusterIntegrationTestBase
         assertThat(Uninterruptibles.awaitUninterruptibly(serverWrapper.sidecarSchemaReadyLatch, timeout, timeUnit))
         .describedAs("Sidecar schema is not initialized after " + timeout + ' ' + timeUnit)
         .isTrue();
+    }
+
+    /**
+     * Polls a condition until it returns true or timeout is reached.
+     * Uses System.nanoTime() for accurate timing and Uninterruptibles for consistent sleep behavior.
+     *
+     * @param condition the condition to check
+     * @param timeoutSeconds maximum time to wait in seconds
+     * @param pollIntervalMillis interval between checks in milliseconds
+     * @throws AssertionError if timeout is reached before condition is met
+     */
+    protected void waitUntil(BooleanSupplier condition, long timeoutSeconds, long pollIntervalMillis)
+    {
+        long startTime = System.nanoTime();
+        long timeoutNanos = TimeUnit.SECONDS.toNanos(timeoutSeconds);
+
+        while (!condition.getAsBoolean())
+        {
+            if (System.nanoTime() - startTime > timeoutNanos)
+            {
+                throw new AssertionError("Condition not met within " + timeoutSeconds + " seconds");
+            }
+            Uninterruptibles.sleepUninterruptibly(pollIntervalMillis, TimeUnit.MILLISECONDS);
+        }
     }
 
     /**
@@ -775,48 +796,23 @@ public abstract class SharedClusterIntegrationTestBase
         }
 
         public static SidecarConfigurationImpl.Builder defaultConfigurationBuilder(
-        MtlsTestHelper mtlsTestHelper, Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configurationOverrides)
+        MtlsTestHelper mtlsTestHelper,
+        Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configurationOverrides)
         {
-            ServiceConfiguration conf = ServiceConfigurationImpl.builder()
-                                                                .host("0.0.0.0") // binds to all interfaces, potential security issue if left running for long
-                                                                .port(0) // let the test find an available port
+            ServiceConfiguration conf = TestServiceConfiguration.builder()
                                                                 .schemaKeyspaceConfiguration(SchemaKeyspaceConfigurationImpl.builder()
                                                                                                                             .isEnabled(true)
                                                                                                                             .build())
                                                                 .build();
 
-
-            SslConfiguration sslConfiguration = null;
-            if (mtlsTestHelper.isEnabled())
-            {
-                LOGGER.info("Enabling test mTLS certificate/keystore.");
-
-                KeyStoreConfiguration truststoreConfiguration =
-                new KeyStoreConfigurationImpl(mtlsTestHelper.trustStorePath(),
-                                              mtlsTestHelper.trustStorePassword(),
-                                              mtlsTestHelper.trustStoreType(),
-                                              SecondBoundConfiguration.parse("60s"));
-
-                KeyStoreConfiguration keyStoreConfiguration =
-                new KeyStoreConfigurationImpl(mtlsTestHelper.serverKeyStorePath(),
-                                              mtlsTestHelper.serverKeyStorePassword(),
-                                              mtlsTestHelper.serverKeyStoreType(),
-                                              SecondBoundConfiguration.parse("60s"));
-
-                sslConfiguration = SslConfigurationImpl.builder()
-                                                       .enabled(true)
-                                                       .keystore(keyStoreConfiguration)
-                                                       .truststore(truststoreConfiguration)
-                                                       .build();
-            }
-            else
-            {
-                LOGGER.info("Not enabling mTLS for testing purposes. Set '{}' to 'true' if you would " +
-                            "like mTLS enabled.", CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS);
-            }
-            S3ClientConfiguration s3ClientConfig = new S3ClientConfigurationImpl("s3-client", 4, SecondBoundConfiguration.parse("60s"),
-                                                                                 5242880, DEFAULT_API_CALL_TIMEOUT,
-                                                                                 buildTestS3ProxyConfig());
+            SslConfiguration sslConfiguration = mtlsTestHelper.createServerSslConfiguration();
+            S3ClientConfiguration s3ClientConfig =
+            new S3ClientConfigurationImpl("s3-client",
+                                          4,
+                                          SecondBoundConfiguration.parse("60s"),
+                                          5242880,
+                                          DEFAULT_API_CALL_TIMEOUT,
+                                          buildTestS3ProxyConfig());
 
             SidecarConfigurationImpl.Builder builder = SidecarConfigurationImpl.builder()
                                                                                .serviceConfiguration(conf)

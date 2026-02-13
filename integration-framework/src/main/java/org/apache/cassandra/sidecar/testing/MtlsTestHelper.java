@@ -22,14 +22,24 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
+import org.apache.cassandra.sidecar.config.SslConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SidecarClientConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
 import org.apache.cassandra.testing.utils.tls.CertificateBundle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A class that encapsulates testing with Mutual TLS.
  */
 public class MtlsTestHelper
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MtlsTestHelper.class);
     public static final String PASSWORD_STRING = "cassandra";
     public static final char[] PASSWORD = PASSWORD_STRING.toCharArray();
     /**
@@ -141,5 +151,79 @@ public class MtlsTestHelper
     public String serverKeyStoreType()
     {
         return "PKCS12";
+    }
+
+    /**
+     * Creates SSL configuration with the specified keystore and shared truststore.
+     *
+     * @param keyStorePath the path to the keystore
+     * @param keyStorePassword the keystore password
+     * @param keyStoreType the keystore type
+     * @return SslConfiguration with the provided keystore and shared truststore
+     */
+    private SslConfiguration createSslConfiguration(String keyStorePath,
+                                                    String keyStorePassword,
+                                                    String keyStoreType)
+    {
+        KeyStoreConfiguration truststoreConfiguration =
+        new KeyStoreConfigurationImpl(trustStorePath(),
+                                      trustStorePassword(),
+                                      trustStoreType(),
+                                      SecondBoundConfiguration.parse("60s"));
+
+        KeyStoreConfiguration keyStoreConfiguration =
+        new KeyStoreConfigurationImpl(keyStorePath,
+                                      keyStorePassword,
+                                      keyStoreType,
+                                      SecondBoundConfiguration.parse("60s"));
+
+        return SslConfigurationImpl.builder()
+                                   .enabled(true)
+                                   .keystore(keyStoreConfiguration)
+                                   .truststore(truststoreConfiguration)
+                                   .build();
+    }
+
+    /**
+     * Creates SSL configuration for the Sidecar server with mTLS settings if enabled.
+     *
+     * @return SslConfiguration with server keystore/truststore, or null if mTLS is not enabled
+     */
+    public SslConfiguration createServerSslConfiguration()
+    {
+        if (!isEnabled())
+        {
+            LOGGER.info("Not enabling mTLS for testing. Set '{}' to 'true' if you would like mTLS enabled.",
+                        CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS);
+            return null;
+        }
+
+        LOGGER.info("Enabling test mTLS certificate/keystore for server.");
+        return createSslConfiguration(serverKeyStorePath(),
+                                      serverKeyStorePassword(),
+                                      serverKeyStoreType());
+    }
+
+    /**
+     * Creates a SidecarClientConfiguration with mTLS settings if mTLS is enabled.
+     *
+     * @return a SidecarClientConfiguration with mTLS settings, or null if mTLS is not enabled
+     */
+    public SidecarClientConfiguration createSidecarClientConfiguration()
+    {
+        if (!isEnabled())
+        {
+            LOGGER.info("Not enabling mTLS for testing. Set '{}' to 'true' if you would like mTLS enabled.",
+                        CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS);
+            return new SidecarClientConfigurationImpl(null);
+        }
+
+        LOGGER.info("Enabling test mTLS certificate/keystore for client.");
+        SslConfiguration clientSslConfiguration =
+        createSslConfiguration(clientKeyStorePath(),
+                              clientKeyStorePassword(),
+                              serverKeyStoreType());
+
+        return new SidecarClientConfigurationImpl(clientSslConfiguration);
     }
 }

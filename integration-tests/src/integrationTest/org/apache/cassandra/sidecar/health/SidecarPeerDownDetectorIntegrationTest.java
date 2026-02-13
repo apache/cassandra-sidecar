@@ -38,20 +38,14 @@ import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
-import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
-import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.config.SslConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.SidecarClientConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarPeerHealthConfigurationImpl;
-import org.apache.cassandra.sidecar.config.yaml.SslConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
 import org.apache.cassandra.sidecar.coordination.InnerDcTokenAdjacentPeerProvider;
 import org.apache.cassandra.sidecar.coordination.SidecarPeerHealthMonitorTask;
@@ -63,8 +57,6 @@ import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestB
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 
-import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS;
-import static org.apache.cassandra.sidecar.testing.MtlsTestHelper.PASSWORD_STRING;
 import static org.apache.cassandra.sidecar.testing.SharedClusterIntegrationTestBase.IntegrationTestModule.cassandraInstanceHostname;
 import static org.apache.cassandra.sidecar.testing.SharedClusterIntegrationTestBase.IntegrationTestModule.defaultConfigurationBuilder;
 import static org.apache.cassandra.testing.TestUtils.DC1_RF3;
@@ -230,38 +222,7 @@ class SidecarPeerDownDetectorIntegrationTest extends SharedClusterSidecarIntegra
                                                                     .schemaKeyspaceConfiguration(SCHEMA_KEYSPACE_CONFIG)
                                                                     .build();
 
-                // We need to provide mTLS configuration for the Sidecar client so it can talk to
-                // other sidecars using mTLS
-                SslConfiguration clientSslConfiguration = null;
-                if (mtlsTestHelper.isEnabled())
-                {
-                    LOGGER.info("Enabling test mTLS certificate/keystore.");
-
-                    KeyStoreConfiguration truststoreConfiguration =
-                    new KeyStoreConfigurationImpl(mtlsTestHelper.trustStorePath(),
-                                                  mtlsTestHelper.trustStorePassword(),
-                                                  mtlsTestHelper.trustStoreType(),
-                                                  SecondBoundConfiguration.parse("60s"));
-
-                    KeyStoreConfiguration keyStoreConfiguration =
-                    new KeyStoreConfigurationImpl(mtlsTestHelper.clientKeyStorePath(),
-                                                  PASSWORD_STRING,
-                                                  mtlsTestHelper.serverKeyStoreType(), // server and client keystore types are the same
-                                                  SecondBoundConfiguration.parse("60s"));
-
-                    clientSslConfiguration = SslConfigurationImpl.builder()
-                                                                 .enabled(true)
-                                                                 .keystore(keyStoreConfiguration)
-                                                                 .truststore(truststoreConfiguration)
-                                                                 .build();
-                }
-                else
-                {
-                    LOGGER.info("Not enabling mTLS for testing purposes. Set '{}' to 'true' if you would " +
-                                "like mTLS enabled.", CASSANDRA_INTEGRATION_TEST_ENABLE_MTLS);
-                }
-
-                SidecarClientConfiguration sidecarClientConfiguration = new SidecarClientConfigurationImpl(clientSslConfiguration);
+                SidecarClientConfiguration sidecarClientConfiguration = mtlsTestHelper.createSidecarClientConfiguration();
 
                 // Let's run this very frequently for testing purposes
                 SidecarPeerHealthConfigurationImpl sidecarPeerHealthConfiguration
