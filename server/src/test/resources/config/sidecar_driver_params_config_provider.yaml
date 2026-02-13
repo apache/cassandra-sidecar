@@ -1,0 +1,23 @@
+driver_parameters:
+  contact_points:
+    - "127.0.0.1:9042"
+  auth_provider:
+    class_name: org.apache.cassandra.sidecar.cluster.auth.ConfigProvider
+    parameters:
+      username: cassandra
+      password: cassandra
+  ssl:
+    enabled: true
+    accepted_protocols:
+      - TLSv1.2
+      - TLSv1.3
+    keystore:
+      type: PKCS12
+      path: path/to/keystore.p12
+      password: password
+    truststore:
+      type: PKCS12
+      path: path/to/keystore.p12
+      password: password
+  num_connections: 6
+  local_dc: dc1

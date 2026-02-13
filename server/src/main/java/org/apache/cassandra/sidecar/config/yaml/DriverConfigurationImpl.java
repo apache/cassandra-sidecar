@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.DriverConfiguration;
+import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 
 /**
@@ -51,6 +52,9 @@ public class DriverConfigurationImpl implements DriverConfiguration
     @JsonProperty("password")
     private final String password;
 
+    @JsonProperty("auth_provider")
+    private final ParameterizedClassConfiguration authProvider;
+
     @JsonProperty("ssl")
     private final SslConfiguration sslConfiguration;
 
@@ -59,7 +63,7 @@ public class DriverConfigurationImpl implements DriverConfiguration
 
     public DriverConfigurationImpl()
     {
-        this(Collections.emptyList(), null, DEFAULT_NUM_CONNECTIONS, null, null, null, DEFAULT_UNSUPPORTED_TABLE_SCHEMA_REFRESH_TIME);
+        this(Collections.emptyList(), null, DEFAULT_NUM_CONNECTIONS, null, null, null, DEFAULT_UNSUPPORTED_TABLE_SCHEMA_REFRESH_TIME, null);
     }
 
     public DriverConfigurationImpl(List<InetSocketAddress> contactPoints,
@@ -68,13 +72,15 @@ public class DriverConfigurationImpl implements DriverConfiguration
                                    String username,
                                    String password,
                                    SslConfiguration sslConfiguration,
-                                   SecondBoundConfiguration unsupportedTableSchemaRefreshTime)
+                                   SecondBoundConfiguration unsupportedTableSchemaRefreshTime,
+                                   ParameterizedClassConfiguration authProvider)
     {
         this.contactPoints = contactPoints;
         this.localDc = localDc;
         this.numConnections = numConnections;
         this.username = username;
         this.password = password;
+        this.authProvider = authProvider;
         this.sslConfiguration = sslConfiguration;
         this.unsupportedTableSchemaRefreshTime = unsupportedTableSchemaRefreshTime;
     }
@@ -112,6 +118,7 @@ public class DriverConfigurationImpl implements DriverConfiguration
     /**
      * {@inheritDoc}
      */
+    @Deprecated
     @Override
     @JsonProperty("username")
     public String username()
@@ -122,11 +129,22 @@ public class DriverConfigurationImpl implements DriverConfiguration
     /**
      * {@inheritDoc}
      */
+    @Deprecated
     @Override
     @JsonProperty("password")
     public String password()
     {
         return password;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty("auth_provider")
+    public ParameterizedClassConfiguration authProvider()
+    {
+        return authProvider;
     }
 
     /**

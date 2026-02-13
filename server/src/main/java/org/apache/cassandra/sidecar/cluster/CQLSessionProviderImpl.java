@@ -28,6 +28,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -51,6 +52,8 @@ import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.ReconnectionPolicy;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import org.apache.cassandra.sidecar.cluster.auth.ConfigProvider;
+import org.apache.cassandra.sidecar.cluster.auth.CqlAuthProvider;
 import org.apache.cassandra.sidecar.cluster.driver.SidecarLoadBalancingPolicy;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
@@ -80,8 +83,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
     private final NettyOptions nettyOptions;
     private final ReconnectionPolicy reconnectionPolicy;
     private final List<InetSocketAddress> localInstances;
-    private final String username;
-    private final String password;
+    private final CqlAuthProvider authProvider;
     private final DriverUtils driverUtils;
     private volatile Session session;
 
@@ -119,8 +121,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
         this.localInstances = localInstances;
         this.localDc = localDc;
         this.numAdditionalConnections = numAdditionalConnections;
-        this.username = username;
-        this.password = password;
+        this.authProvider = new ConfigProvider(Map.of("username", username, "password", password));
         this.sslConfiguration = sslConfiguration;
         this.nettyOptions = options;
         this.reconnectionPolicy = new ExponentialReconnectionPolicy(500, healthCheckFrequencyMillis);
@@ -129,6 +130,7 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
 
     public CQLSessionProviderImpl(SidecarConfiguration configuration,
                                   NettyOptions options,
+                                  CqlAuthProvider authProvider,
                                   DriverUtils driverUtils)
     {
         this.driverUtils = driverUtils;
@@ -139,11 +141,10 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
                                            .map(i -> new InetSocketAddress(i.host(), i.port()))
                                            .collect(Collectors.toList());
         this.localDc = driverConfiguration.localDc();
-        this.username = driverConfiguration.username();
-        this.password = driverConfiguration.password();
         this.sslConfiguration = driverConfiguration.sslConfiguration();
         this.numAdditionalConnections = driverConfiguration.numConnections();
         this.nettyOptions = options;
+        this.authProvider = authProvider;
         long maxDelayMs = configuration.healthCheckConfiguration().executeInterval().toMillis();
         this.reconnectionPolicy = new ExponentialReconnectionPolicy(500, maxDelayMs);
     }
@@ -208,9 +209,9 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
                 builder.withSSL(sslOptions);
             }
 
-            if (username != null && password != null)
+            if (authProvider != null)
             {
-                builder.withCredentials(username, password);
+                builder.withCredentials(authProvider.username(), authProvider.password());
             }
             // During mTLS connections, when client sends in keystore, we should have an AuthProvider passed along.
             // hence we pass empty username and password in PlainTextAuthProvider here, in case user hasn't already
