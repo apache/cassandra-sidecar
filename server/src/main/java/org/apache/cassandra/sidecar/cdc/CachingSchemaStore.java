@@ -72,6 +72,7 @@ public class CachingSchemaStore implements SchemaStore
     @Nullable private volatile TableSchemaPublisher publisher;
     private final CqlToAvroSchemaConverter cqlToAvroSchemaConverter;
     private final SidecarCdcStats sidecarCdcStats;
+    private final SchemaStorePublisherFactory schemaStorePublisherFactory;
 
     private static final String METADATA_NAME_KEY = "name";
     private static final String METADATA_NAMESPACE_KEY = "namespace";
@@ -83,7 +84,8 @@ public class CachingSchemaStore implements SchemaStore
                        CdcConfigImpl cdcConfig,
                        SidecarCdcStats sidecarCdcStats,
                        SidecarSchema sidecarSchema,
-                       CqlToAvroSchemaConverter cqlToAvroSchemaConverter)
+                       CqlToAvroSchemaConverter cqlToAvroSchemaConverter,
+                       SchemaStorePublisherFactory schemaStorePublisherFactory)
     {
         this.cassandraClusterSchemaMonitor = cassandraClusterSchemaMonitor;
         this.tableHistoryDatabaseAccessor = tableHistoryDatabaseAccessor;
@@ -95,6 +97,7 @@ public class CachingSchemaStore implements SchemaStore
         this.vertx = vertx;
         this.cdcConfig = cdcConfig;
         this.sidecarCdcStats = sidecarCdcStats;
+        this.schemaStorePublisherFactory = schemaStorePublisherFactory;
 
         if (cdcConfig.cdcEnabled())
         {
@@ -109,7 +112,7 @@ public class CachingSchemaStore implements SchemaStore
         {
             this.publisher.close();
         }
-        this.publisher = SchemaStorePublisherFactory.DEFAULT.buildPublisher(kafkaOptions);
+        this.publisher = schemaStorePublisherFactory.buildPublisher(kafkaOptions);
     }
 
     private void configureSidecarServerEventListeners()

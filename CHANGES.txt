@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * SchemaStorePublisherFactory should be Injectable in CachingSchemaStore (CASSSIDECAR-408)
  * Fix StorageClientTest Docker API compatibility and improve CI test reporting (CASSSIDECAR-410)
  * Incorrect SSL Configuration Keys in CdcPublisher.secretsProvider() (CASSSIDECAR-401)
  * Fix ClusterTopologyMonitor delay parsing error due to missing time unit suffix (CASSSIDECAR-406)

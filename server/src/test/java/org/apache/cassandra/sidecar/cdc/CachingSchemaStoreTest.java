@@ -40,6 +40,7 @@ import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.cdc.api.TableIdLookup;
 import org.apache.cassandra.cdc.avro.AvroSchemas;
 import org.apache.cassandra.cdc.avro.CqlToAvroSchemaConverter;
+import org.apache.cassandra.cdc.schemastore.SchemaStorePublisherFactory;
 import org.apache.cassandra.sidecar.db.TableHistoryDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.tasks.CassandraClusterSchemaMonitor;
@@ -280,7 +281,8 @@ public class CachingSchemaStoreTest
     {
         return new CachingSchemaStore(vertx, clusterSchema, spyTableHistoryDatabaseAccessor,
                                       mockCdcConfig, mockSidecarCdcStats,
-                                      mockSidecarSchema, cqlToAvroSchemaConverter);
+                                      mockSidecarSchema, cqlToAvroSchemaConverter,
+                                      SchemaStorePublisherFactory.DEFAULT);
     }
 
     private CassandraClusterSchemaMonitor createMockClusterSchema(Set<CqlTable> tables)

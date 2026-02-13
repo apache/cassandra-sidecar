@@ -31,6 +31,7 @@ import org.apache.cassandra.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.cdc.avro.CqlToAvroSchemaConverter;
 import org.apache.cassandra.cdc.msg.CdcEvent;
+import org.apache.cassandra.cdc.schemastore.SchemaStorePublisherFactory;
 import org.apache.cassandra.cdc.sidecar.CdcSidecarInstancesProvider;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
@@ -161,6 +162,13 @@ public class CdcModule extends AbstractModule
     CassandraBridgeFactory cassandraBridgeFactory()
     {
         return new CassandraBridgeFactory();
+    }
+
+    @Provides
+    @Singleton
+    SchemaStorePublisherFactory schemaStorePublisherFactory()
+    {
+        return SchemaStorePublisherFactory.DEFAULT;
     }
 
     @Provides
