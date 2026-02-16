@@ -190,6 +190,7 @@ jobs:
           name: unit-test-results-java-${{ matrix.java }}
           path: |
             **/build/test-results/test/**
+            **/build/test-results/containerTest/**
             **/build/reports/tests/
           retention-days: 30
 

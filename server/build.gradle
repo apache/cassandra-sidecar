@@ -202,7 +202,12 @@ dependencies {
     // Needed for snapshot manifest validation
     integrationTestImplementation(group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: "${project.jacksonVersion}")
 
-    containerTestImplementation('com.adobe.testing:s3mock-testcontainers:2.17.0') // 3.x version do not support java 11
+    containerTestImplementation('com.adobe.testing:s3mock-testcontainers:2.17.0') { // 3.x version do not support java 11
+        // Exclude old testcontainers to force upgrade to 1.21.4 which supports Docker API 1.44+
+        exclude group: 'org.testcontainers'
+    }
+    containerTestImplementation 'org.testcontainers:testcontainers:1.21.4'
+    containerTestImplementation 'org.testcontainers:junit-jupiter:1.21.4'
 }
 
 test {
