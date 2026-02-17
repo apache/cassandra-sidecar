@@ -81,14 +81,11 @@ public abstract class SharedClusterCdcSidecarIntegrationTestBase extends SharedC
     @Override
     protected void beforeClusterProvisioning()
     {
-        // CDC integration test is only compatible with Cassandra 4.1 due to cassandra-analytics library version
+        // The current CDC implementation cannot read 5.x commitlogs, so verify Cassandra version is 4.x
         SimpleCassandraVersion version = SimpleCassandraVersion.create(testVersion.version());
         assumeThat(version.major)
-                .as("CDC test requires Cassandra 4.x")
+                .as("Current CDC implementation cannot read 5.x commitlogs, requires Cassandra 4.x")
                 .isEqualTo(4);
-        assumeThat(version.minor)
-                .as("CDC test requires Cassandra 4.1")
-                .isEqualTo(1);
     }
 
     @Override

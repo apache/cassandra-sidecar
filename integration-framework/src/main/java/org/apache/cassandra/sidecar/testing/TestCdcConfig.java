@@ -89,7 +89,7 @@ public class TestCdcConfig implements CdcConfig
     @Override
     public SecondBoundConfiguration watermarkWindow()
     {
-        return new SecondBoundConfiguration(259200, TimeUnit.SECONDS);
+        return new SecondBoundConfiguration(3, TimeUnit.DAYS);
     }
 
     @Override

@@ -796,8 +796,8 @@ public abstract class SharedClusterIntegrationTestBase
         }
 
         public static SidecarConfigurationImpl.Builder defaultConfigurationBuilder(
-        MtlsTestHelper mtlsTestHelper,
-        Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configurationOverrides)
+                MtlsTestHelper mtlsTestHelper,
+                Function<SidecarConfigurationImpl.Builder, SidecarConfigurationImpl.Builder> configurationOverrides)
         {
             ServiceConfiguration conf = TestServiceConfiguration.builder()
                                                                 .schemaKeyspaceConfiguration(SchemaKeyspaceConfigurationImpl.builder()
