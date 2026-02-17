@@ -24,12 +24,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Test;
+
 import org.apache.cassandra.cdc.msg.CdcEvent;
 import org.apache.cassandra.distributed.api.ConsistencyLevel;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterCdcSidecarIntegrationTestBase;
 import org.apache.cassandra.sidecar.testing.TestCdcEventConsumer;
-import org.junit.jupiter.api.Test;
 
 import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
 import static org.assertj.core.api.Assertions.assertThat;

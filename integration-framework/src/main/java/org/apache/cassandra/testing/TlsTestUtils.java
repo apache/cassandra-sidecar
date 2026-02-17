@@ -87,7 +87,8 @@ public class TlsTestUtils
         InetAddress address = nativeInetSocketAddress.getAddress();
 
         com.datastax.driver.core.Cluster.Builder builder = com.datastax.driver.core.Cluster.builder()
-                                                                                           .withLoadBalancingPolicy(new DCAwareRoundRobinPolicy.Builder().build())
+                                                                                           .withLoadBalancingPolicy(
+                                                                                           new DCAwareRoundRobinPolicy.Builder().build())
                                                                                            .withSSL(sslOptions)
                                                                                            .withoutJMXReporting()
                                                                                            .withAuthProvider(new PlainTextAuthProvider(username, password))

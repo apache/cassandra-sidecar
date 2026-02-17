@@ -21,6 +21,8 @@ package org.apache.cassandra.sidecar.testing;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.junit.jupiter.api.AfterEach;
+
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -37,9 +39,9 @@ import org.apache.cassandra.sidecar.cdc.CdcConfig;
 import org.apache.cassandra.sidecar.cdc.CdcPublisher;
 import org.apache.cassandra.sidecar.cdc.SidecarCdcStats;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ContentionFreeRangeManager;
@@ -50,7 +52,6 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import org.apache.kafka.common.serialization.Serializer;
-import org.junit.jupiter.api.AfterEach;
 
 import static org.assertj.core.api.Assumptions.assumeThat;
 
