@@ -202,8 +202,11 @@ dependencies {
     // Needed for snapshot manifest validation
     integrationTestImplementation(group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: "${project.jacksonVersion}")
 
-    containerTestImplementation('com.adobe.testing:s3mock-testcontainers:2.17.0') { // 3.x version do not support java 11
-        // Exclude old testcontainers to force upgrade to 1.21.4 which supports Docker API 1.44+
+
+    // GitHub-hosted runners require Docker API 1.44+ after Docker Engine 29.x upgrade (Feb 2026).
+    // s3mock-testcontainers 2.17.0 is needed for JDK 11 compatibility (3.x requires Java 17+), but it
+    // bundles an old testcontainers version. Excluding it and explicitly adding 1.21.4 for Docker API 1.44+ support.
+    containerTestImplementation('com.adobe.testing:s3mock-testcontainers:2.17.0') {
         exclude group: 'org.testcontainers'
     }
     containerTestImplementation 'org.testcontainers:testcontainers:1.21.4'
