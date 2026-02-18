@@ -6,6 +6,16 @@ New features
     - ProcessLifecycleProvider for managing Cassandra process lifecycle (start/stop) via sidecar APIs with configurable
       startup and shutdown commands, state tracking, and support for custom environment configurations. Usage example
       available on examples/lifecycle.
+    - CDC (Change Data Capture) support with CDC Publisher implementation, CDC/Kafka configuration APIs, and automatic
+      cleanup of commit log segments in the cdc_raw directory.
+    - Node management operations including on-demand repair, compaction management (stop/statistics), node drain,
+      and move node to new token.
+    - Stateless JWT authentication using public keys with authentication and authorization caching for improved
+      performance, and endpoint to invalidate auth caches.
+    - Schema monitoring with CassandraClusterSchemaMonitor implementation for tracking schema changes across the cluster.
+    - Live Migration enhancements including status persistence endpoint for migration safety and tracking.
+    - Additional operational endpoints for system disk information, Cassandra settings (from system_views.settings),
+      and compaction statistics.
 
 0.2
 ===
