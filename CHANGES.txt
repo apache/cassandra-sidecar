@@ -4,6 +4,7 @@
 
 0.3.0
 -----
+ * Adding gossip based safety check to Live Migration data copy task endpoint (CASSSIDECAR-409)
  * RangeManager should be singleton in CDCModule (CASSSIDECAR-411)
  * CDC: Add end-to-end CDC integration tests (CASSSIDECAR-308)
  * SchemaStorePublisherFactory should be Injectable in CachingSchemaStore (CASSSIDECAR-408)
