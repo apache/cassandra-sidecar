@@ -36,6 +36,7 @@ import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
+import org.apache.cassandra.sidecar.cluster.CassandraClientTokenRingProviderTest;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadataImpl;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -199,7 +200,7 @@ public class TestModule extends AbstractModule
     {
         StorageOperations mockStorageOperations = mock(StorageOperations.class);
         when(mockStorageOperations.dataFileLocations()).thenReturn(List.of(dataDir));
-        Metadata metadata = mock(Metadata.class);
+        Metadata metadata = CassandraClientTokenRingProviderTest.getMetadata();
         KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
         when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
         TableMetadata tableMetadata = mock(TableMetadata.class);

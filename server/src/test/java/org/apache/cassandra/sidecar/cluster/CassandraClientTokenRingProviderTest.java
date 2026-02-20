@@ -92,46 +92,46 @@ public class CassandraClientTokenRingProviderTest
             }
         };
         Set<Host> allHosts = Set.of(
-        mockHost("local1", "127.0.0.1", "-9223372036854775808", "DC1"),
-        mockHost("local2", "127.0.0.2", "-8301034833169298228", "DC1"),
-        mockHost("local3", "127.0.0.3", "-7378697629483820647", "DC1"),
-        mockHost("local4", "127.0.0.4", "-6456360425798343066", "DC1"),
-        mockHost("local5", "127.0.0.5", "-5534023222112865485", "DC1"),
-        mockHost("local6", "127.0.0.6", "-4611686018427387904", "DC1"),
-        mockHost("local7", "127.0.0.7", "-3689348814741910324", "DC1"),
-        mockHost("local8", "127.0.0.8", "-2767011611056432743", "DC1"),
-        mockHost("local9", "127.0.0.9", "-1844674407370955162", "DC1"),
-        mockHost("local10", "127.0.0.10", "-922337203685477581", "DC1"),
-        mockHost("local11", "127.0.0.11", "0", "DC1"),
-        mockHost("local12", "127.0.0.12", "922337203685477580", "DC1"),
-        mockHost("local13", "127.0.0.13", "1844674407370955161", "DC1"),
-        mockHost("local14", "127.0.0.14", "2767011611056432742", "DC1"),
-        mockHost("local15", "127.0.0.15", "3689348814741910323", "DC1"),
-        mockHost("local16", "127.0.0.16", "4611686018427387904", "DC1"),
-        mockHost("local17", "127.0.0.17", "5534023222112865484", "DC1"),
-        mockHost("local18", "127.0.0.18", "6456360425798343065", "DC1"),
-        mockHost("local19", "127.0.0.19", "7378697629483820646", "DC1"),
-        mockHost("local20", "127.0.0.20", "8301034833169298227", "DC1"),
-        mockHost("local21", "127.0.0.21", "-9223372036854775807", "DC2"),
-        mockHost("local22", "127.0.0.22", "-8301034833169298227", "DC2"),
-        mockHost("local23", "127.0.0.23", "-7378697629483820646", "DC2"),
-        mockHost("local24", "127.0.0.24", "-6456360425798343065", "DC2"),
-        mockHost("local25", "127.0.0.25", "-5534023222112865484", "DC2"),
-        mockHost("local26", "127.0.0.26", "-4611686018427387903", "DC2"),
-        mockHost("local27", "127.0.0.27", "-3689348814741910323", "DC2"),
-        mockHost("local28", "127.0.0.28", "-2767011611056432742", "DC2"),
-        mockHost("local29", "127.0.0.29", "-1844674407370955161", "DC2"),
-        mockHost("local30", "127.0.0.30", "-922337203685477580", "DC2"),
-        mockHost("local31", "127.0.0.31", "1", "DC2"),
-        mockHost("local32", "127.0.0.32", "922337203685477581", "DC2"),
-        mockHost("local33", "127.0.0.33", "1844674407370955162", "DC2"),
-        mockHost("local34", "127.0.0.34", "2767011611056432743", "DC2"),
-        mockHost("local35", "127.0.0.35", "3689348814741910324", "DC2"),
-        mockHost("local36", "127.0.0.36", "4611686018427387905", "DC2"),
-        mockHost("local37", "127.0.0.37", "5534023222112865485", "DC2"),
-        mockHost("local38", "127.0.0.38", "6456360425798343066", "DC2"),
-        mockHost("local39", "127.0.0.39", "7378697629483820647", "DC2"),
-        mockHost("local40", "127.0.0.40", "8301034833169298228", "DC2")
+        mockHost("localhost1", "127.0.0.1", "-9223372036854775808", "DC1"),
+        mockHost("localhost2", "127.0.0.2", "-8301034833169298228", "DC1"),
+        mockHost("localhost3", "127.0.0.3", "-7378697629483820647", "DC1"),
+        mockHost("localhost4", "127.0.0.4", "-6456360425798343066", "DC1"),
+        mockHost("localhost5", "127.0.0.5", "-5534023222112865485", "DC1"),
+        mockHost("localhost6", "127.0.0.6", "-4611686018427387904", "DC1"),
+        mockHost("localhost7", "127.0.0.7", "-3689348814741910324", "DC1"),
+        mockHost("localhost8", "127.0.0.8", "-2767011611056432743", "DC1"),
+        mockHost("localhost9", "127.0.0.9", "-1844674407370955162", "DC1"),
+        mockHost("localhost10", "127.0.0.10", "-922337203685477581", "DC1"),
+        mockHost("localhost11", "127.0.0.11", "0", "DC1"),
+        mockHost("localhost12", "127.0.0.12", "922337203685477580", "DC1"),
+        mockHost("localhost13", "127.0.0.13", "1844674407370955161", "DC1"),
+        mockHost("localhost14", "127.0.0.14", "2767011611056432742", "DC1"),
+        mockHost("localhost15", "127.0.0.15", "3689348814741910323", "DC1"),
+        mockHost("localhost16", "127.0.0.16", "4611686018427387904", "DC1"),
+        mockHost("localhost17", "127.0.0.17", "5534023222112865484", "DC1"),
+        mockHost("localhost18", "127.0.0.18", "6456360425798343065", "DC1"),
+        mockHost("localhost19", "127.0.0.19", "7378697629483820646", "DC1"),
+        mockHost("localhost20", "127.0.0.20", "8301034833169298227", "DC1"),
+        mockHost("localhost21", "127.0.0.21", "-9223372036854775807", "DC2"),
+        mockHost("localhost22", "127.0.0.22", "-8301034833169298227", "DC2"),
+        mockHost("localhost23", "127.0.0.23", "-7378697629483820646", "DC2"),
+        mockHost("localhost24", "127.0.0.24", "-6456360425798343065", "DC2"),
+        mockHost("localhost25", "127.0.0.25", "-5534023222112865484", "DC2"),
+        mockHost("localhost26", "127.0.0.26", "-4611686018427387903", "DC2"),
+        mockHost("localhost27", "127.0.0.27", "-3689348814741910323", "DC2"),
+        mockHost("localhost28", "127.0.0.28", "-2767011611056432742", "DC2"),
+        mockHost("localhost29", "127.0.0.29", "-1844674407370955161", "DC2"),
+        mockHost("localhost30", "127.0.0.30", "-922337203685477580", "DC2"),
+        mockHost("localhost31", "127.0.0.31", "1", "DC2"),
+        mockHost("localhost32", "127.0.0.32", "922337203685477581", "DC2"),
+        mockHost("localhost33", "127.0.0.33", "1844674407370955162", "DC2"),
+        mockHost("localhost34", "127.0.0.34", "2767011611056432743", "DC2"),
+        mockHost("localhost35", "127.0.0.35", "3689348814741910324", "DC2"),
+        mockHost("localhost36", "127.0.0.36", "4611686018427387905", "DC2"),
+        mockHost("localhost37", "127.0.0.37", "5534023222112865485", "DC2"),
+        mockHost("localhost38", "127.0.0.38", "6456360425798343066", "DC2"),
+        mockHost("localhost39", "127.0.0.39", "7378697629483820647", "DC2"),
+        mockHost("localhost40", "127.0.0.40", "8301034833169298228", "DC2")
         );
         when(metadata.getAllHosts()).thenReturn(allHosts);
 
@@ -208,7 +208,7 @@ public class CassandraClientTokenRingProviderTest
                                                     .compareTo(BigInteger.ONE) > 0));
     }
 
-    private static Host mockHost(String node, String ip, String token, String dc)
+    public static Host mockHost(String node, String ip, String token, String dc)
     {
         Host host = mock(Host.class, RETURNS_DEEP_STUBS);
         when(host.getTokens()).thenAnswer(invocation -> Set.of(new MockToken(token)));
@@ -285,9 +285,9 @@ public class CassandraClientTokenRingProviderTest
     protected DnsResolver mockDnsResolver()
     {
 
-        Map<String, String> dnsMap = Map.of("local1", "127.0.0.1",
-                                            "local2", "127.0.0.2",
-                                            "local13", "127.0.0.3"
+        Map<String, String> dnsMap = Map.of("localhost", "127.0.0.1",
+                                            "localhost2", "127.0.0.2",
+                                            "localhost3", "127.0.0.3"
                                             );
         DnsResolver dnsResolver = mock(DnsResolver.class);
         try
@@ -308,21 +308,21 @@ public class CassandraClientTokenRingProviderTest
     {
         InstancesMetadata instancesMetadata = mock(InstancesMetadata.class);
 
-        InstanceMetadata instance1 = getMockInstanceMetaData(101000101, "local1", getMetadata());
-        InstanceMetadata instance2 = getMockInstanceMetaData(101000201, "local2", getMetadata());
-        InstanceMetadata instance3 = getMockInstanceMetaData(101000301, "local3", getMetadata());
+        InstanceMetadata instance1 = getMockInstanceMetaData(101000101, "localhost", getMetadata());
+        InstanceMetadata instance2 = getMockInstanceMetaData(101000201, "localhost2", getMetadata());
+        InstanceMetadata instance3 = getMockInstanceMetaData(101000301, "localhost3", getMetadata());
         when(instancesMetadata.instances()).thenReturn(List.of(instance1, instance2, instance3));
         return instancesMetadata;
     }
 
-    private Metadata getMetadata()
+    public static Metadata getMetadata()
     {
         Metadata metadata = mock(Metadata.class);
         when(metadata.getPartitioner()).thenReturn(Partitioners.MURMUR3.getClass().getSimpleName().toLowerCase());
         Set<Host> allHosts = Set.of(
-        mockHost("local1", "127.0.0.1", "-9223372036854775808", "DC1"),
-        mockHost("local2", "127.0.0.2", "-8301034833169298228", "DC1"),
-        mockHost("local3", "127.0.0.3", "-7378697629483820647", "DC1")
+        mockHost("localhost", "127.0.0.1", "-9223372036854775808", "DC1"),
+        mockHost("localhost2", "127.0.0.2", "-8301034833169298228", "DC1"),
+        mockHost("localhost3", "127.0.0.3", "-7378697629483820647", "DC1")
         );
         when(metadata.getAllHosts()).thenReturn(allHosts);
         return metadata;
