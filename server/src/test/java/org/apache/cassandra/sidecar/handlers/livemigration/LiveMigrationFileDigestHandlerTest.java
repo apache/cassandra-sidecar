@@ -170,11 +170,9 @@ public class LiveMigrationFileDigestHandlerTest
         String filePath = "/commit-1.db";
         String dummyText = getDummyData(RANDOM.nextInt(128));
         createFile(dummyText, firstInstanceMeta.commitlogDir() + filePath);
-        int seed = 31;
 
-        String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/commitlog/0" + filePath
-                           + "?digestAlgorithm=xxhash32&seed=" + seed;
-        shouldSucceed(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, xxhash32(dummyText, seed));
+        String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/commitlog/0" + filePath + "?digestAlgorithm=xxhash32";
+        shouldSucceed(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, xxhash32(dummyText));
     }
 
     @Test
@@ -183,10 +181,8 @@ public class LiveMigrationFileDigestHandlerTest
         String filePath = "/commit-1.db";
         String dummyText = getDummyData(RANDOM.nextInt(128));
         createFile(dummyText, firstInstanceMeta.commitlogDir() + filePath);
-        int seed = 31;
 
-        String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/commitlog/1" + filePath
-                           + "?digestAlgorithm=xxhash32&seed=" + seed;
+        String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/commitlog/1" + filePath + "?digestAlgorithm=xxhash32";
         shouldFail(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
     }
 
@@ -196,11 +192,9 @@ public class LiveMigrationFileDigestHandlerTest
         String filePath = "/hints-1.db";
         String dummyText = getDummyData(RANDOM.nextInt(128));
         createFile(dummyText, firstInstanceMeta.hintsDir() + filePath);
-        int seed = 11;
 
-        String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/hints/0" + filePath
-                           + "?digestAlgorithm=xxhash32&seed=" + seed;
-        shouldSucceed(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, xxhash32(dummyText, seed));
+        String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/hints/0" + filePath + "?digestAlgorithm=xxhash32";
+        shouldSucceed(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, xxhash32(dummyText));
     }
 
     @Test
@@ -275,39 +269,6 @@ public class LiveMigrationFileDigestHandlerTest
     }
 
     @Test
-    public void testRequestWithNonNumericSeedShouldFail(VertxTestContext context) throws IOException
-    {
-        String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
-        String dummyText = getDummyData(RANDOM.nextInt(128));
-        createFile(dummyText, firstInstanceDataDirs.get(0) + filePath);
-
-        String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/data/0" + filePath + "?digestAlgorithm=xxhash32&seed=abc";
-        shouldFail(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
-    }
-
-    @Test
-    public void testRequestWithFloatSeedShouldFail(VertxTestContext context) throws IOException
-    {
-        String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
-        String dummyText = getDummyData(RANDOM.nextInt(128));
-        createFile(dummyText, firstInstanceDataDirs.get(0) + filePath);
-
-        String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/data/0" + filePath + "?digestAlgorithm=xxhash32&seed=1.5";
-        shouldFail(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
-    }
-
-    @Test
-    public void testRequestWithOverflowSeedShouldFail(VertxTestContext context) throws IOException
-    {
-        String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
-        String dummyText = getDummyData(RANDOM.nextInt(128));
-        createFile(dummyText, firstInstanceDataDirs.get(0) + filePath);
-
-        String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/data/0" + filePath + "?digestAlgorithm=xxhash32&seed=999999999999";
-        shouldFail(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
-    }
-
-    @Test
     public void testRouteFailsForNonExistentFile(VertxTestContext context)
     {
         String filePath = "/ks/tb-1234/ks-tb-1234-NonExistent.db";
@@ -357,18 +318,6 @@ public class LiveMigrationFileDigestHandlerTest
 
         String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/data/0" + filePath + "?digestAlgorithm=XxHash32";
         shouldSucceed(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, xxhash32(dummyText));
-    }
-
-    @Test
-    public void testRequestWithSeedForMd5Algorithm(VertxTestContext context) throws IOException
-    {
-        String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
-        String dummyText = getDummyData(RANDOM.nextInt(128));
-        createFile(dummyText, firstInstanceDataDirs.get(0) + filePath);
-
-        // MD5 doesn't use seeds - seed should be ignored
-        String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/data/0" + filePath + "?digestAlgorithm=md5&seed=42";
-        shouldSucceed(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, md5Sum(dummyText));
     }
 
     @Test
@@ -507,13 +456,8 @@ public class LiveMigrationFileDigestHandlerTest
 
     String xxhash32(String data)
     {
-        return xxhash32(data, 0);
-    }
-
-    String xxhash32(String data, int seed)
-    {
         byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
-        DigestAlgorithm digestAlgorithm = new XXHash32Provider().get(seed);
+        DigestAlgorithm digestAlgorithm = new XXHash32Provider().get(0);
         digestAlgorithm.update(bytes, 0, bytes.length);
         return digestAlgorithm.digest();
     }

@@ -2206,15 +2206,14 @@ abstract class SidecarClientTest
         response.setHeader("content-type", "application/json");
         String digest = "0123456789abcdef";
         String digestAlgorithm = "md5";
-        Integer seed = null;
 
-        response.setBody("{\"digest\":\"" + digest + "\",\"digestAlgorithm\":\"md5\",\"seed\":" + seed + "}");
+        response.setBody("{\"digest\":\"" + digest + "\",\"digestAlgorithm\":\"md5\"}");
         enqueue(response);
 
         SidecarInstance instance = instances.get(0);
         String url = LIVE_MIGRATION_FILES_ROUTE + "/data/0/test_file.text";
 
-        DigestResponse digestResponse = client.liveMigrationFileDigestAsync(instance, url, digestAlgorithm, seed).get();
+        DigestResponse digestResponse = client.liveMigrationFileDigestAsync(instance, url, digestAlgorithm).get();
 
         assertThat(digestResponse).isNotNull();
         assertThat(digestResponse.digest).isEqualTo(digest);

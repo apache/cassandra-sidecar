@@ -73,7 +73,6 @@ import static org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationD
 import static org.apache.cassandra.sidecar.livemigration.TestFile.getInstanceFilesListResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -184,28 +183,21 @@ class LiveMigrationFilesVerificationTaskTest
     @Test
     public void testVerifyFilesUsingMD5(@TempDir Path tempDir) throws IOException, InterruptedException
     {
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5");
         verifyCompletesSuccessfully(tempDir, request);
     }
 
     @Test
     public void testVerifyFilesUsingXXHash(@TempDir Path tempDir) throws IOException, InterruptedException
     {
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "XXHash32", 11);
-        verifyCompletesSuccessfully(tempDir, request);
-    }
-
-    @Test
-    public void testVerifyFilesUsingXXHashWithoutSeed(@TempDir Path tempDir) throws IOException, InterruptedException
-    {
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "XXHash32", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "XXHash32");
         verifyCompletesSuccessfully(tempDir, request);
     }
 
     @Test
     public void testCancelCompletedTask(@TempDir Path tempDir) throws IOException, InterruptedException
     {
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "XXHash32", 11);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "XXHash32");
         LiveMigrationFilesVerificationTask task = verifyCompletesSuccessfully(tempDir, request);
 
         assertThat(task.isCompleted()).isTrue();
@@ -253,7 +245,7 @@ class LiveMigrationFilesVerificationTaskTest
     @Test
     public void testFilesListingAtSourceFailed(@TempDir Path tempDir) throws IOException, InterruptedException
     {
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "XXHash32", 11);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "XXHash32");
         Injector injector = getInjector();
         InstanceMetadata instanceMetadata = InstanceMetadataTestUtil.getInstanceMetadata(DESTINATION, 2, tempDir);
 
@@ -289,7 +281,7 @@ class LiveMigrationFilesVerificationTaskTest
     @Test
     public void testFileDigestCallToSourceFailed(@TempDir Path tempDir) throws IOException, InterruptedException
     {
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "XXHash32", 11);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "XXHash32");
         Injector injector = getInjector();
         InstanceMetadata instanceMetadata = InstanceMetadataTestUtil.getInstanceMetadata(DESTINATION, 2, tempDir);
 
@@ -304,8 +296,7 @@ class LiveMigrationFilesVerificationTaskTest
         TestFile randomFile = getRandomFile(filesToDownload);
         when(sidecarClient.liveMigrationFileDigestAsync(any(SidecarInstance.class),
                                                         eq(randomFile.getFileUrl()),
-                                                        anyString(),
-                                                        anyInt()))
+                                                        anyString()))
         .thenReturn(CompletableFuture.failedFuture(new IOException("File digest call failed")));
 
         LiveMigrationFilesVerificationTask digestVerificationTask =
@@ -329,8 +320,7 @@ class LiveMigrationFilesVerificationTaskTest
     public void testFailedToCalculateDigestForFilesInLocal(@TempDir Path tempDir) throws IOException, InterruptedException
     {
         String digestAlgorithm = "XXHash32";
-        int seed = 11;
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, digestAlgorithm, seed);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, digestAlgorithm);
         Injector injector = getInjector();
         InstanceMetadata instanceMetadata = InstanceMetadataTestUtil.getInstanceMetadata(DESTINATION, 2, tempDir);
 
@@ -373,7 +363,7 @@ class LiveMigrationFilesVerificationTaskTest
     {
         // Verification task should fail when file's last modified timestamps are not matching
         Injector injector = getInjector();
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5");
         InstanceMetadata instanceMetadata = InstanceMetadataTestUtil.getInstanceMetadata(DESTINATION, 2, tempDir);
 
         long lastModifiedTime = System.currentTimeMillis();
@@ -420,7 +410,7 @@ class LiveMigrationFilesVerificationTaskTest
     {
         // Verification task should fail when files sizes are not matching
         Injector injector = getInjector();
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5");
         InstanceMetadata instanceMetadata = InstanceMetadataTestUtil.getInstanceMetadata(DESTINATION, 2, tempDir);
 
         long lastModifiedTime = System.currentTimeMillis();
@@ -465,7 +455,7 @@ class LiveMigrationFilesVerificationTaskTest
     {
         // Verification task should fail when file digests do not match
         Injector injector = getInjector();
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5");
         InstanceMetadata instanceMetadata = InstanceMetadataTestUtil.getInstanceMetadata(DESTINATION, 2, tempDir);
 
         long lastModifiedTime = System.currentTimeMillis();
@@ -510,7 +500,7 @@ class LiveMigrationFilesVerificationTaskTest
     {
         // Test the scenario where few files are missing at both source and destination
         Injector injector = getInjector();
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5");
         InstanceMetadata instanceMetadata = InstanceMetadataTestUtil.getInstanceMetadata(DESTINATION, 2, tempDir);
 
         long lastModifiedTime = System.currentTimeMillis();
@@ -547,7 +537,7 @@ class LiveMigrationFilesVerificationTaskTest
     {
         // Test the scenario where few directories are missing at source and destination
         Injector injector = getInjector();
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5");
         InstanceMetadata instanceMetadata = InstanceMetadataTestUtil.getInstanceMetadata(DESTINATION, 2, tempDir);
 
         long lastModifiedTime = System.currentTimeMillis();
@@ -589,7 +579,7 @@ class LiveMigrationFilesVerificationTaskTest
         // Test the scenario where fileType is not matching between source and destination
         // i.e. an entry is expected to be a file, but it is a directory at source and vice versa.
         Injector injector = getInjector();
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5");
         InstanceMetadata instanceMetadata = InstanceMetadataTestUtil.getInstanceMetadata(DESTINATION, 2, tempDir);
 
         long lastModifiedTime = System.currentTimeMillis();
@@ -740,7 +730,7 @@ class LiveMigrationFilesVerificationTaskTest
         // Test that cancel() racing with validation completion doesn't cause IllegalStateException
         // This tests the thread-safety of using tryComplete/tryFail
         Injector injector = getInjector();
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5");
         InstanceMetadata instanceMetadata = InstanceMetadataTestUtil.getInstanceMetadata(DESTINATION, 2, tempDir);
 
         long lastModifiedTime = System.currentTimeMillis();
@@ -783,7 +773,7 @@ class LiveMigrationFilesVerificationTaskTest
         assertThat(State.valueOf(verificationTask.getResponse().state())).isEqualTo(State.CANCELLED);
 
         verify(sidecarClient, times(0))
-        .liveMigrationFileDigestAsync(any(SidecarInstance.class), anyString(), anyString(), anyInt());
+        .liveMigrationFileDigestAsync(any(SidecarInstance.class), anyString(), anyString());
     }
 
     @Test
@@ -791,7 +781,7 @@ class LiveMigrationFilesVerificationTaskTest
     {
         // Cancels the verification task when the task is comparing files digests.
         Injector injector = getInjector();
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5");
         InstanceMetadata instanceMetadata = InstanceMetadataTestUtil.getInstanceMetadata(DESTINATION, 2, tempDir);
 
         long lastModifiedTime = System.currentTimeMillis();
@@ -806,7 +796,7 @@ class LiveMigrationFilesVerificationTaskTest
         // Create a Promise that we control
         Promise<DigestResponse> filesDigestsPromise = Promise.promise();
         SidecarClient sidecarClient = injector.getInstance(SidecarClient.class);
-        when(sidecarClient.liveMigrationFileDigestAsync(any(SidecarInstanceImpl.class), anyString(), anyString(), any()))
+        when(sidecarClient.liveMigrationFileDigestAsync(any(SidecarInstanceImpl.class), anyString(), anyString()))
         .thenReturn(filesDigestsPromise.future().toCompletionStage().toCompletableFuture());
 
         LiveMigrationFilesVerificationTask verificationTask =
@@ -837,7 +827,7 @@ class LiveMigrationFilesVerificationTaskTest
     {
         // Verification task should fail when an unknown digest algorithm is provided
         String unknownAlgorithm = "UnknownDigestAlgo";
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, unknownAlgorithm, null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, unknownAlgorithm);
         Injector injector = getInjector();
         InstanceMetadata instanceMetadata = InstanceMetadataTestUtil.getInstanceMetadata(DESTINATION, 2, tempDir);
 
@@ -856,12 +846,10 @@ class LiveMigrationFilesVerificationTaskTest
         SidecarClient sidecarClient = injector.getInstance(SidecarClient.class);
         when(sidecarClient.liveMigrationFileDigestAsync(eq(new SidecarInstanceImpl(SOURCE, 9043)),
                                                         anyString(),
-                                                        eq(unknownAlgorithm),
-                                                        any()))
+                                                        eq(unknownAlgorithm)))
         .thenAnswer(invocationOnMock -> {
-            String fileUrl = invocationOnMock.getArgument(1);
             // Return a digest response with the unknown algorithm
-            return Future.succeededFuture(new DigestResponse("dummy-digest", unknownAlgorithm, null))
+            return Future.succeededFuture(new DigestResponse("dummy-digest", unknownAlgorithm))
                          .toCompletionStage().toCompletableFuture();
         });
 
@@ -905,7 +893,7 @@ class LiveMigrationFilesVerificationTaskTest
     private LiveMigrationFilesVerificationTask createVerificationTask(Injector injector,
                                                                       InstanceMetadata instanceMetadata)
     {
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(20, "md5");
         return createVerificationTask(injector, request, instanceMetadata);
     }
 
@@ -960,13 +948,12 @@ class LiveMigrationFilesVerificationTaskTest
         SidecarClient sidecarClient = injector.getInstance(SidecarClient.class);
         when(sidecarClient.liveMigrationFileDigestAsync(eq(new SidecarInstanceImpl(SOURCE, 9043)),
                                                         anyString(),
-                                                        eq(request.digestAlgorithm()),
-                                                        eq(request.seed())))
+                                                        eq(request.digestAlgorithm())))
         .thenAnswer(invocationOnMock -> {
             String fileUrl = invocationOnMock.getArgument(1);
             String digest = digestsByFileUrl.get(fileUrl);
 
-            return Future.succeededFuture(new DigestResponse(digest, request.digestAlgorithm(), request.seed()))
+            return Future.succeededFuture(new DigestResponse(digest, request.digestAlgorithm()))
                          .toCompletionStage().toCompletableFuture();
         });
     }
@@ -975,7 +962,7 @@ class LiveMigrationFilesVerificationTaskTest
                                        LiveMigrationFilesVerificationRequest request)
     {
         DigestAlgorithmFactory digestAlgorithmFactory = injector.getInstance(DigestAlgorithmFactory.class);
-        return digestAlgorithmFactory.getDigestAlgorithm(request.digestAlgorithm(), request.seed());
+        return digestAlgorithmFactory.getDigestAlgorithm(request.digestAlgorithm(), 0);
     }
 
     TestFile updateLastModifiedTime(TestFile file, long lastModifiedTime)

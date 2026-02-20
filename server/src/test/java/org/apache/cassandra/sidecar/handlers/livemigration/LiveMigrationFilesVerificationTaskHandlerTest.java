@@ -646,7 +646,6 @@ class LiveMigrationFilesVerificationTaskHandlerTest
         return (Answer<Object>) invocation -> new FakeFilesVerificationTask(
         new LiveMigrationFilesVerificationResponse(invocation.getArgument(0),
                                                    "MD5",
-                                                   null,
                                                    state.name(),
                                                    invocation.getArgument(1),
                                                    invocation.getArgument(2),

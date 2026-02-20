@@ -22,13 +22,14 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Response object for live migration file verification operations, containing statistics about
  * files not found at source/target and digest mismatches during verification.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class LiveMigrationFilesVerificationResponse
 {
     private final String id;
@@ -43,11 +44,10 @@ public class LiveMigrationFilesVerificationResponse
     private final int digestVerificationFailures;
     private final int filesMatched;
     private final String digestAlgorithm;
-    private final Integer seed;
+
     @JsonCreator
     public LiveMigrationFilesVerificationResponse(@JsonProperty("id") String id,
                                                   @JsonProperty("digestAlgorithm") String digestAlgorithm,
-                                                  @JsonProperty("seed") @Nullable Integer seed,
                                                   @JsonProperty("state") String state,
                                                   @JsonProperty("source") String source,
                                                   @JsonProperty("port") int port,
@@ -63,7 +63,6 @@ public class LiveMigrationFilesVerificationResponse
         Objects.requireNonNull(state, "state of files verification task must be specified");
         this.id = id;
         this.digestAlgorithm = digestAlgorithm;
-        this.seed = seed;
         this.state = state;
         this.source = source;
         this.port = port;
@@ -92,13 +91,6 @@ public class LiveMigrationFilesVerificationResponse
     public String digestAlgorithm()
     {
         return digestAlgorithm;
-    }
-
-    @JsonProperty("seed")
-    @Nullable
-    public Integer seed()
-    {
-        return seed;
     }
 
     @JsonProperty("source")
@@ -179,7 +171,6 @@ public class LiveMigrationFilesVerificationResponse
         return "LiveMigrationFilesVerificationResponse{" +
                "id='" + id + '\'' +
                ", digestAlgorithm='" + digestAlgorithm + '\'' +
-               ", seed=" + seed +
                ", state=" + state +
                ", source='" + source + '\'' +
                ", port=" + port +

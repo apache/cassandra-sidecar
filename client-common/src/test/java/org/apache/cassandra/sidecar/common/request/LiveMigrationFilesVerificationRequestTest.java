@@ -18,7 +18,12 @@
 
 package org.apache.cassandra.sidecar.common.request;
 
-import org.junit.jupiter.api.Test;
+import java.util.stream.Stream;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -29,33 +34,27 @@ class LiveMigrationFilesVerificationRequestTest
 {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Test
-    void testValidConstruction()
+    static Stream<Arguments> concurrencyAndAlgorithm()
     {
-        LiveMigrationFilesVerificationRequest request =
-        new LiveMigrationFilesVerificationRequest(10, "XXHash32", 42);
-
-        assertThat(request.maxConcurrency()).isEqualTo(10);
-        assertThat(request.digestAlgorithm()).isEqualTo("XXHash32");
-        assertThat(request.seed()).isEqualTo(42);
+        return Stream.of(
+        Arguments.of(1, "MD5"),
+        Arguments.of(8, "XXHash32"),
+        Arguments.of(10, "MD5"),
+        Arguments.of(Integer.MAX_VALUE, "XXHash32")
+        );
     }
 
-    @Test
-    void testValidConstructionWithNullSeed()
+    static Stream<String> invalidDigestAlgorithms()
     {
-        LiveMigrationFilesVerificationRequest request =
-        new LiveMigrationFilesVerificationRequest(5, "MD5", null);
-
-        assertThat(request.maxConcurrency()).isEqualTo(5);
-        assertThat(request.digestAlgorithm()).isEqualTo("MD5");
-        assertThat(request.seed()).isNull();
+        return Stream.of(null, "", "   ");
     }
 
-    @Test
-    void testSerializationDeserializationRoundTrip() throws Exception
+    @ParameterizedTest
+    @MethodSource("concurrencyAndAlgorithm")
+    void testSerializationDeserializationRoundTrip(int maxConcurrency, String digestAlgorithm) throws Exception
     {
         LiveMigrationFilesVerificationRequest original =
-        new LiveMigrationFilesVerificationRequest(8, "XXHash32", 12345);
+        new LiveMigrationFilesVerificationRequest(maxConcurrency, digestAlgorithm);
 
         String json = objectMapper.writeValueAsString(original);
         LiveMigrationFilesVerificationRequest deserialized =
@@ -63,46 +62,23 @@ class LiveMigrationFilesVerificationRequestTest
 
         assertThat(deserialized.maxConcurrency()).isEqualTo(original.maxConcurrency());
         assertThat(deserialized.digestAlgorithm()).isEqualTo(original.digestAlgorithm());
-        assertThat(deserialized.seed()).isEqualTo(original.seed());
     }
 
-    @Test
-    void testValidationFailures()
+    @ParameterizedTest
+    @ValueSource(ints = { 0, -1, Integer.MIN_VALUE })
+    void testInvalidMaxConcurrency(int maxConcurrency)
     {
-        // Invalid maxConcurrency values
-        assertThatThrownBy(() -> new LiveMigrationFilesVerificationRequest(0, "MD5", null))
+        assertThatThrownBy(() -> new LiveMigrationFilesVerificationRequest(maxConcurrency, "MD5"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("maxConcurrency must be >= 1");
-
-        assertThatThrownBy(() -> new LiveMigrationFilesVerificationRequest(-5, "XXHash32", null))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("maxConcurrency must be >= 1");
-
-        // Invalid digestAlgorithm values
-        assertThatThrownBy(() -> new LiveMigrationFilesVerificationRequest(10, null, null))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("digestAlgorithm cannot be null or empty");
-
-        assertThatThrownBy(() -> new LiveMigrationFilesVerificationRequest(10, "", null))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("digestAlgorithm cannot be null or empty");
-
-        assertThatThrownBy(() -> new LiveMigrationFilesVerificationRequest(10, "   ", null))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("digestAlgorithm cannot be null or empty");
     }
 
-    @Test
-    void testBoundaryValues()
+    @ParameterizedTest
+    @MethodSource("invalidDigestAlgorithms")
+    void testInvalidDigestAlgorithm(String digestAlgorithm)
     {
-        LiveMigrationFilesVerificationRequest minRequest =
-        new LiveMigrationFilesVerificationRequest(1, "MD5", Integer.MIN_VALUE);
-        assertThat(minRequest.maxConcurrency()).isEqualTo(1);
-        assertThat(minRequest.seed()).isEqualTo(Integer.MIN_VALUE);
-
-        LiveMigrationFilesVerificationRequest maxRequest =
-        new LiveMigrationFilesVerificationRequest(Integer.MAX_VALUE, "XXHash32", Integer.MAX_VALUE);
-        assertThat(maxRequest.maxConcurrency()).isEqualTo(Integer.MAX_VALUE);
-        assertThat(maxRequest.seed()).isEqualTo(Integer.MAX_VALUE);
+        assertThatThrownBy(() -> new LiveMigrationFilesVerificationRequest(10, digestAlgorithm))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("digestAlgorithm cannot be null or empty");
     }
 }

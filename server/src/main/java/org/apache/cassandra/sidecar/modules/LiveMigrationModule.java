@@ -200,10 +200,6 @@ public class LiveMigrationModule extends AbstractModule
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(implementation = DigestResponse.class)))
-    @APIResponse(responseCode = "400",
-                 description = "Invalid digest algorithm or seed parameter",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "403",
                  description = "Live migration not enabled or file access denied",
                  content = @Content(mediaType = "application/json",

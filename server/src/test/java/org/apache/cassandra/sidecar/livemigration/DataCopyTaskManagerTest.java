@@ -124,11 +124,11 @@ public class DataCopyTaskManagerTest
             int port = invocation.getArgument(2);
 
             return new FakeFilesVerificationTask(
-            new LiveMigrationFilesVerificationResponse(id, "MD5", null, "IN_PROGRESS", source, port, 0, 0, 0, 0, 0, 0, 0));
+            new LiveMigrationFilesVerificationResponse(id, "MD5", "IN_PROGRESS", source, port, 0, 0, 0, 0, 0, 0, 0));
         });
 
         InstanceMetadata mockDest1InstanceMeta = injector.getInstance(InstancesMetadata.class).instanceFromHost(DESTINATION_1);
-        filesVerificationTaskManager.createTask(new LiveMigrationFilesVerificationRequest(1, "md5", null),
+        filesVerificationTaskManager.createTask(new LiveMigrationFilesVerificationRequest(1, "md5"),
                                                 SOURCE_1, mockDest1InstanceMeta);
 
         Future<LiveMigrationTask<LiveMigrationDataCopyResponse>> future = dataCopyTaskManager.createTask(

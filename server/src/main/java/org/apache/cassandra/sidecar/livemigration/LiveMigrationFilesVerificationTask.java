@@ -72,7 +72,6 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMe
  *
  * <p>The task supports cancellation, and tracks detailed metrics including
  * metadata matches/mismatches, digest verification results, and failure counts.
- * For XXHash32 digests, seed values are validated to ensure compatibility between source and destination.
  */
 public class LiveMigrationFilesVerificationTask implements LiveMigrationTask<LiveMigrationFilesVerificationResponse>
 {
@@ -322,8 +321,7 @@ public class LiveMigrationFilesVerificationTask implements LiveMigrationTask<Liv
     {
         return Future.fromCompletionStage(sidecarClient.liveMigrationFileDigestAsync(new SidecarInstanceImpl(source, port),
                                                                                      fileInfo.fileUrl,
-                                                                                     request.digestAlgorithm(),
-                                                                                     request.seed()))
+                                                                                     request.digestAlgorithm()))
                      .compose(this::toDigest);
     }
 
@@ -336,11 +334,7 @@ public class LiveMigrationFilesVerificationTask implements LiveMigrationTask<Liv
         }
         else if (digestAlgorithm.equalsIgnoreCase(XXHash32Digest.XXHASH_32_ALGORITHM))
         {
-            if (digestResponse.seed == null)
-            {
-                return Future.succeededFuture(new XXHash32Digest(digestResponse.digest));
-            }
-            return Future.succeededFuture(new XXHash32Digest(digestResponse.digest, digestResponse.seed));
+            return Future.succeededFuture(new XXHash32Digest(digestResponse.digest));
         }
 
         return Future.failedFuture("Digest algorithm " + digestResponse.digestAlgorithm + " is unknown");
@@ -433,7 +427,6 @@ public class LiveMigrationFilesVerificationTask implements LiveMigrationTask<Liv
     {
         return new LiveMigrationFilesVerificationResponse(id,
                                                           request.digestAlgorithm(),
-                                                          request.seed(),
                                                           this.state.get().name(),
                                                           source,
                                                           port,

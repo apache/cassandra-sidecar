@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.common.request;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Request to verify file integrity during live migration by computing and comparing digests.
@@ -32,12 +31,10 @@ public class LiveMigrationFilesVerificationRequest
 {
     private final int maxConcurrency;
     private final String digestAlgorithm;
-    private final Integer seed;
 
     @JsonCreator
     public LiveMigrationFilesVerificationRequest(@JsonProperty("maxConcurrency") int maxConcurrency,
-                                                 @JsonProperty("digestAlgorithm") String digestAlgorithm,
-                                                 @JsonProperty("seed") @Nullable Integer seed)
+                                                 @JsonProperty("digestAlgorithm") String digestAlgorithm)
     {
         if (maxConcurrency <= 0)
         {
@@ -50,7 +47,6 @@ public class LiveMigrationFilesVerificationRequest
 
         this.maxConcurrency = maxConcurrency;
         this.digestAlgorithm = digestAlgorithm;
-        this.seed = seed;
     }
 
     @JsonProperty("maxConcurrency")
@@ -65,20 +61,12 @@ public class LiveMigrationFilesVerificationRequest
         return digestAlgorithm;
     }
 
-    @JsonProperty("seed")
-    @Nullable
-    public Integer seed()
-    {
-        return seed;
-    }
-
     @Override
     public String toString()
     {
         return "LiveMigrationFilesVerificationRequest{" +
                "maxConcurrency=" + maxConcurrency +
                ", digestAlgorithm='" + digestAlgorithm + '\'' +
-               ", seed=" + seed +
                '}';
     }
 }

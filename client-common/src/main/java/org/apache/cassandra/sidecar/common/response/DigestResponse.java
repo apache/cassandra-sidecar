@@ -22,7 +22,6 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Response object containing a cryptographic digest value for file verification purposes.
@@ -33,19 +32,15 @@ public class DigestResponse
     public final String digest;
     @JsonProperty("digestAlgorithm")
     public final String digestAlgorithm;
-    @JsonProperty("seed")
-    @Nullable public final Integer seed;
 
     @JsonCreator
     public DigestResponse(@JsonProperty("digest") String digest,
-                          @JsonProperty("digestAlgorithm") String digestAlgorithm,
-                          @JsonProperty("seed") @Nullable Integer seed)
+                          @JsonProperty("digestAlgorithm") String digestAlgorithm)
     {
         Objects.requireNonNull(digest, "digest is required");
         Objects.requireNonNull(digestAlgorithm, "digestAlgorithm is required");
         this.digest = digest;
         this.digestAlgorithm = digestAlgorithm;
-        this.seed = seed;
     }
 
     @Override
@@ -54,7 +49,6 @@ public class DigestResponse
         return "DigestResponse{" +
                "digest='" + digest + '\'' +
                ", digestAlgorithm='" + digestAlgorithm + '\'' +
-               ", seed=" + seed +
                '}';
     }
 }

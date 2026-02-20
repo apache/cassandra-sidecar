@@ -35,7 +35,6 @@ class LiveMigrationFilesVerificationResponseTest
         LiveMigrationFilesVerificationResponse original = new LiveMigrationFilesVerificationResponse(
         "test-id-123",
         "MD5",
-        null,
         "COMPLETED",
         "192.168.1.100",
         9042,
@@ -58,7 +57,6 @@ class LiveMigrationFilesVerificationResponseTest
         // Verify all fields match
         assertThat(deserialized.id()).isEqualTo(original.id());
         assertThat(deserialized.digestAlgorithm()).isEqualTo(original.digestAlgorithm());
-        assertThat(deserialized.seed()).isEqualTo(original.seed());
         assertThat(deserialized.state()).isEqualTo(original.state());
         assertThat(deserialized.source()).isEqualTo(original.source());
         assertThat(deserialized.port()).isEqualTo(original.port());
@@ -78,7 +76,6 @@ class LiveMigrationFilesVerificationResponseTest
         LiveMigrationFilesVerificationResponse original = new LiveMigrationFilesVerificationResponse(
         "test-id-456",
         "XXHash32",
-        123456,
         "IN_PROGRESS",
         "192.168.1.200",
         7000,
@@ -101,7 +98,6 @@ class LiveMigrationFilesVerificationResponseTest
         // Verify all fields match
         assertThat(deserialized.id()).isEqualTo(original.id());
         assertThat(deserialized.digestAlgorithm()).isEqualTo(original.digestAlgorithm());
-        assertThat(deserialized.seed()).isEqualTo(original.seed());
         assertThat(deserialized.state()).isEqualTo(original.state());
         assertThat(deserialized.source()).isEqualTo(original.source());
         assertThat(deserialized.port()).isEqualTo(original.port());
@@ -121,7 +117,6 @@ class LiveMigrationFilesVerificationResponseTest
         LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
         "test-id",
         "MD5",
-        null,
         "COMPLETED",
         "192.168.1.1",
         9042,
@@ -143,7 +138,6 @@ class LiveMigrationFilesVerificationResponseTest
         LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
         "test-id",
         "MD5",
-        null,
         "IN_PROGRESS",
         "192.168.1.1",
         9042,
@@ -165,7 +159,6 @@ class LiveMigrationFilesVerificationResponseTest
         LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
         "test-id",
         "MD5",
-        null,
         "COMPLETED",
         "192.168.1.1",
         9042,
@@ -187,7 +180,6 @@ class LiveMigrationFilesVerificationResponseTest
         LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
         "test-id",
         "MD5",
-        null,
         "COMPLETED",
         "192.168.1.1",
         9042,
@@ -209,7 +201,6 @@ class LiveMigrationFilesVerificationResponseTest
         LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
         "test-id",
         "MD5",
-        null,
         "COMPLETED",
         "192.168.1.1",
         9042,
@@ -231,7 +222,6 @@ class LiveMigrationFilesVerificationResponseTest
         LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
         "test-id",
         "MD5",
-        null,
         "COMPLETED",
         "192.168.1.1",
         9042,
@@ -253,7 +243,6 @@ class LiveMigrationFilesVerificationResponseTest
         LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
         "test-id",
         "MD5",
-        null,
         "COMPLETED",
         "192.168.1.1",
         9042,
@@ -275,7 +264,6 @@ class LiveMigrationFilesVerificationResponseTest
         LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
         "test-id",
         "MD5",
-        null,
         "COMPLETED",
         "192.168.1.1",
         9042,
@@ -297,7 +285,6 @@ class LiveMigrationFilesVerificationResponseTest
         assertThatThrownBy(() -> new LiveMigrationFilesVerificationResponse(
         null,  // null id
         "MD5",
-        null,
         "COMPLETED",
         "192.168.1.1",
         9042,
@@ -318,7 +305,6 @@ class LiveMigrationFilesVerificationResponseTest
         LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
         "test-id",
         "MD5",
-        null,
         "FAILED",  // FAILED state
         "192.168.1.1",
         9042,

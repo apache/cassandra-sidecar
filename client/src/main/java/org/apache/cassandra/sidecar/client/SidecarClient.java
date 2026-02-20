@@ -1069,21 +1069,18 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
 
     /**
      * Retrieves the digest of a file calculated using the specified algorithm during live migration.
-     * Optionally applies a seed value for deterministic digest verification across instances.
      *
      * @param instance the instance where the request will be executed
      * @param fileUrl the file url for which digest should be calculated
      * @param digestAlgorithm the digest algorithm to use (e.g., "md5", "xxhash32")
-     * @param seed optional seed value for deterministic digest calculation
      * @return a completable future of the digest response
      */
     public CompletableFuture<DigestResponse> liveMigrationFileDigestAsync(SidecarInstance instance,
                                                                           String fileUrl,
-                                                                          String digestAlgorithm,
-                                                                          Integer seed)
+                                                                          String digestAlgorithm)
     {
         return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
-                                            .request(LiveMigrationFileDigestRequest.create(fileUrl, digestAlgorithm, seed))
+                                            .request(LiveMigrationFileDigestRequest.create(fileUrl, digestAlgorithm))
                                             .build());
     }
 

@@ -101,7 +101,7 @@ class FilesVerificationTaskManagerTest
         Injector injector = getInjector();
         FilesVerificationTaskManager verificationTaskManager = injector.getInstance(FilesVerificationTaskManager.class);
         InstanceMetadata mockDest1InstanceMeta = injector.getInstance(InstancesMetadata.class).instanceFromHost(DESTINATION_1);
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(2, "MD5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(2, "MD5");
 
         Future<LiveMigrationTask<LiveMigrationFilesVerificationResponse>> future =
         verificationTaskManager.createTask(request, SOURCE_1, mockDest1InstanceMeta);
@@ -133,7 +133,7 @@ class FilesVerificationTaskManagerTest
         awaitForFuture(dataCopyTaskManager.createTask(new LiveMigrationDataCopyRequest(1, 1, 1), DESTINATION_1));
 
         // Try to create verification task now
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(2, "MD5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(2, "MD5");
         FilesVerificationTaskManager verificationTaskManager = injector.getInstance(FilesVerificationTaskManager.class);
         Future<LiveMigrationTask<LiveMigrationFilesVerificationResponse>> future =
         verificationTaskManager.createTask(request, SOURCE_1, mockDest1InstanceMeta);
@@ -167,7 +167,7 @@ class FilesVerificationTaskManagerTest
         LiveMigrationTask<LiveMigrationFilesVerificationResponse> inProgressTask = getInProgressTask("existing-task");
         liveMigrationTaskManager.currentTasks.put(DEST_1_ID, inProgressTask);
 
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(2, "MD5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(2, "MD5");
         Future<LiveMigrationTask<LiveMigrationFilesVerificationResponse>> future = verificationTaskManager.createTask(request, SOURCE_1, mockDest1InstanceMeta);
         awaitForFuture(future);
 
@@ -189,7 +189,7 @@ class FilesVerificationTaskManagerTest
         getSucceededTask("completed-task", SOURCE_1);
         liveMigrationTaskManager.currentTasks.put(DEST_1_ID, completedTask);
 
-        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(2, "MD5", null);
+        LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(2, "MD5");
         Future<LiveMigrationTask<LiveMigrationFilesVerificationResponse>> future =
         verificationTaskManager.createTask(request, SOURCE_1, mockDest1InstanceMeta);
         awaitForFuture(future);
@@ -225,7 +225,7 @@ class FilesVerificationTaskManagerTest
 
         for (int i = 0; i < numberOfSequentialTasks; i++)
         {
-            LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(2, "MD5", null);
+            LiveMigrationFilesVerificationRequest request = new LiveMigrationFilesVerificationRequest(2, "MD5");
             Future<LiveMigrationTask<LiveMigrationFilesVerificationResponse>> future =
             verificationTaskManager.createTask(request, SOURCE_1, mockDest1InstanceMeta);
             awaitForFuture(future);
@@ -367,7 +367,7 @@ class FilesVerificationTaskManagerTest
                         startLatch.await();
 
                         LiveMigrationFilesVerificationRequest request
-                        = new LiveMigrationFilesVerificationRequest(2, "MD5", null);
+                        = new LiveMigrationFilesVerificationRequest(2, "MD5");
                         Future<LiveMigrationTask<LiveMigrationFilesVerificationResponse>> future = verificationTaskManager.createTask(request, SOURCE_1, mockDest1InstanceMeta);
                         results.add(future);
 
@@ -434,7 +434,7 @@ class FilesVerificationTaskManagerTest
     private LiveMigrationTask<LiveMigrationFilesVerificationResponse> getInProgressTask(@NotNull String taskId)
     {
         LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
-        taskId, "MD5", null, "IN_PROGRESS", SOURCE_1, PORT, 0, 0, 0, 0, 0, 0, 0
+        taskId, "MD5", "IN_PROGRESS", SOURCE_1, PORT, 0, 0, 0, 0, 0, 0, 0
         );
         return new FakeFilesVerificationTask(response);
     }
@@ -442,7 +442,7 @@ class FilesVerificationTaskManagerTest
     private LiveMigrationTask<LiveMigrationFilesVerificationResponse> getSucceededTask(@NotNull String taskId, @NotNull String sourceHost)
     {
         LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
-        taskId, "MD5", null, "COMPLETED", sourceHost, PORT, 0, 0, 10, 0, 0, 0, 10
+        taskId, "MD5", "COMPLETED", sourceHost, PORT, 0, 0, 10, 0, 0, 0, 10
         );
         return new FakeFilesVerificationTask(response);
     }

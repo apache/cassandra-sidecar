@@ -145,7 +145,7 @@ class LiveMigrationTaskManagerTestModule extends AbstractModule
             int port = invocation.getArgument(2);
 
             LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
-            id, "MD5", null, "COMPLETED", source, port, 0, 0, CONCURRENT_FILE_REQUESTS, 0, 0, CONCURRENT_FILE_REQUESTS, 0
+            id, "MD5", "COMPLETED", source, port, 0, 0, CONCURRENT_FILE_REQUESTS, 0, 0, CONCURRENT_FILE_REQUESTS, 0
             );
             return new FakeFilesVerificationTask(response);
         });

@@ -42,11 +42,9 @@ import org.apache.cassandra.sidecar.utils.DigestAlgorithm;
 import org.apache.cassandra.sidecar.utils.DigestAlgorithmFactory;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static org.apache.cassandra.sidecar.common.request.LiveMigrationFileDigestRequest.DIGEST_ALGORITHM_PARAM;
-import static org.apache.cassandra.sidecar.common.request.LiveMigrationFileDigestRequest.SEED_PARAM;
 import static org.apache.cassandra.sidecar.utils.AsyncFileDigestCalculator.calculateDigest;
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
 
@@ -54,8 +52,6 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * Handler for calculating and returning file digests during live migration.
  * Supported digest algorithms are determined by {@link DigestAlgorithmFactory} and specified
  * via the {@link LiveMigrationFileDigestRequest#DIGEST_ALGORITHM_PARAM} query parameter.
- * An optional {@link LiveMigrationFileDigestRequest#SEED_PARAM} parameter
- * can be provided for algorithms that support seeding.
  */
 public class LiveMigrationFileDigestHandler extends AbstractHandler<DigestAlgorithm> implements AccessProtected
 {
@@ -80,17 +76,9 @@ public class LiveMigrationFileDigestHandler extends AbstractHandler<DigestAlgori
     protected DigestAlgorithm extractParamsOrThrow(RoutingContext context)
     {
         String digestAlgorithmParam = getDigestAlgorithmParam(context);
-        Integer seed = null;
         try
         {
-            seed = getSeed(context);
-            return digestAlgorithmFactory.getDigestAlgorithm(digestAlgorithmParam, seed);
-        }
-        catch (NumberFormatException e)
-        {
-            String message = "Invalid seed " + seed;
-            LOGGER.error(message, e);
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, message);
+            return digestAlgorithmFactory.getDigestAlgorithm(digestAlgorithmParam, 0);
         }
         catch (IllegalArgumentException e)
         {
@@ -119,8 +107,7 @@ public class LiveMigrationFileDigestHandler extends AbstractHandler<DigestAlgori
             if (ar.succeeded())
             {
                 String digestAlgorithmParam = getDigestAlgorithmParam(context);
-                Integer seed = getSeed(context);
-                DigestResponse digestResponse = new DigestResponse(ar.result(), digestAlgorithmParam, seed);
+                DigestResponse digestResponse = new DigestResponse(ar.result(), digestAlgorithmParam);
                 context.json(digestResponse);
             }
             else
@@ -134,13 +121,6 @@ public class LiveMigrationFileDigestHandler extends AbstractHandler<DigestAlgori
     private String getDigestAlgorithmParam(RoutingContext context)
     {
         return context.request().getParam(DIGEST_ALGORITHM_PARAM);
-    }
-
-    @Nullable
-    private Integer getSeed(RoutingContext context)
-    {
-        String seedParam = context.request().getParam(SEED_PARAM);
-        return seedParam == null ? null : Integer.parseInt(seedParam);
     }
 
     @Override

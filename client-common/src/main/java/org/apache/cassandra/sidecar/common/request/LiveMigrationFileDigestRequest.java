@@ -25,12 +25,11 @@ import org.apache.cassandra.sidecar.common.response.DigestResponse;
 
 /**
  * Represents a request to retrieve file digest for validation during live migration.
- * Supports configurable digest algorithms and optional seed values for verification.
+ * Supports configurable digest algorithms for verification.
  */
 public class LiveMigrationFileDigestRequest extends JsonRequest<DigestResponse>
 {
     public static final String DIGEST_ALGORITHM_PARAM = "digestAlgorithm";
-    public static final String SEED_PARAM = "seed";
 
     /**
      * Private constructor for internal use by the factory method
@@ -46,13 +45,12 @@ public class LiveMigrationFileDigestRequest extends JsonRequest<DigestResponse>
      * Creates a live migration file digest request with validation
      *
      * @param requestURI the base URI of the request
-     * @param digestAlgorithm the digest algorithm to use (e.g., "MD5", "SHA-256")
-     * @param seed       optional seed value for digest verification, may be null
+     * @param digestAlgorithm the digest algorithm to use (e.g., "MD5", "XXHash32")
      * @return a new LiveMigrationFileDigestRequest instance
      * @throws NullPointerException     if requestURI or digestAlgorithm is null
      * @throws IllegalArgumentException if digestAlgorithm is empty
      */
-    public static LiveMigrationFileDigestRequest create(String requestURI, String digestAlgorithm, Integer seed)
+    public static LiveMigrationFileDigestRequest create(String requestURI, String digestAlgorithm)
     {
         Objects.requireNonNull(requestURI, "requestURI cannot be null");
         Objects.requireNonNull(digestAlgorithm, "digestAlgorithm cannot be null");
@@ -61,9 +59,7 @@ public class LiveMigrationFileDigestRequest extends JsonRequest<DigestResponse>
             throw new IllegalArgumentException("digestAlgorithm cannot be empty");
         }
 
-        String fullURI = seed != null
-                         ? String.format("%s?%s=%s&%s=%d", requestURI, DIGEST_ALGORITHM_PARAM, digestAlgorithm, SEED_PARAM, seed)
-                         : String.format("%s?%s=%s", requestURI, DIGEST_ALGORITHM_PARAM, digestAlgorithm);
+        String fullURI = String.format("%s?%s=%s", requestURI, DIGEST_ALGORITHM_PARAM, digestAlgorithm);
 
         return new LiveMigrationFileDigestRequest(fullURI);
     }
