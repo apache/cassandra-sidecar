@@ -59,6 +59,7 @@ import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
 import org.apache.cassandra.sidecar.coordination.ContentionFreeRangeManager;
+import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.coordination.DynamicSidecarInstancesProvider;
 import org.apache.cassandra.sidecar.coordination.InnerDcTokenAdjacentPeerProvider;
 import org.apache.cassandra.sidecar.coordination.SidecarHttpHealthProvider;
@@ -377,6 +378,13 @@ public class CdcModule extends AbstractModule
 
     @Provides
     @Singleton
+    RangeManager rangeManager(Vertx vertx, TokenRingProvider tokenRingProvider)
+    {
+        return new ContentionFreeRangeManager(vertx, tokenRingProvider);
+    }
+
+    @Provides
+    @Singleton
     CdcPublisher cdcPublisher(Vertx vertx,
                               SidecarConfiguration sidecarConfiguration,
                               ExecutorPools executorPools,
@@ -387,11 +395,11 @@ public class CdcModule extends AbstractModule
                               InstanceMetadataFetcher instanceMetadataFetcher,
                               CdcConfig conf,
                               CdcDatabaseAccessor databaseAccessor,
-                              TokenRingProvider tokenRingProvider,
                               ICdcStats cdcStats,
                               VirtualTablesDatabaseAccessor virtualTables,
                               SidecarCdcStats sidecarCdcStats,
-                              Serializer<CdcEvent> avroSerializer)
+                              Serializer<CdcEvent> avroSerializer,
+                              RangeManager rangeManager)
     {
         return new CdcPublisher(vertx,
                                 sidecarConfiguration,
@@ -407,7 +415,7 @@ public class CdcModule extends AbstractModule
                                 virtualTables,
                                 sidecarCdcStats,
                                 avroSerializer,
-                                () -> new ContentionFreeRangeManager(vertx, tokenRingProvider));
+                                () -> rangeManager);
     }
 
     @Provides

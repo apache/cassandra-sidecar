@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.testing;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.junit.jupiter.api.AfterEach;
 
 import com.google.inject.AbstractModule;
@@ -168,6 +169,7 @@ public abstract class SharedClusterCdcSidecarIntegrationTestBase extends SharedC
                                   Serializer<CdcEvent> avroSerializer,
                                   TokenRingProvider tokenRingProvider)
         {
+            RangeManager rangeManager = new ContentionFreeRangeManager(vertx, tokenRingProvider);
             return new TestCdcPublisher(vertx,
                                        sidecarConfiguration,
                                        executorPools,
@@ -182,7 +184,7 @@ public abstract class SharedClusterCdcSidecarIntegrationTestBase extends SharedC
                                        virtualTables,
                                        sidecarCdcStats,
                                        avroSerializer,
-                                       () -> new ContentionFreeRangeManager(vertx, tokenRingProvider));
+                                       () -> rangeManager);
         }
 
         @Provides
