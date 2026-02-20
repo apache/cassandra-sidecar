@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.testing;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.junit.jupiter.api.AfterEach;
 
 import com.google.inject.AbstractModule;
@@ -46,6 +45,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ContentionFreeRangeManager;
+import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.coordination.TokenRingProvider;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
