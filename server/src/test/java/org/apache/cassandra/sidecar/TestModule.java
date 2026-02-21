@@ -246,4 +246,11 @@ public class TestModule extends AbstractModule
         builder.add(new MockCassandraFactory());
         return builder.build();
     }
+
+    @Provides
+    @Singleton
+    public DnsResolver dnsResolver()
+    {
+        return CassandraClientTokenRingProviderTest.mockDnsResolver();
+    }
 }

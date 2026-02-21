@@ -282,7 +282,7 @@ public class CassandraClientTokenRingProviderTest
         }
     }
 
-    protected DnsResolver mockDnsResolver()
+    public static DnsResolver mockDnsResolver()
     {
 
         Map<String, String> dnsMap = Map.of("localhost", "127.0.0.1",
