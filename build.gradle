@@ -443,3 +443,54 @@ signing {
     sign buildDeb
     sign buildRpm
 }
+
+// Generate SHA-256 and SHA-512 checksums for distribution artifacts
+// Required for Apache releases
+tasks.register('generateDistributionChecksums') {
+    description = 'Generates SHA-256 and SHA-512 checksums for distribution artifacts'
+    group = 'distribution'
+
+    dependsOn distTar, distZip, sourcesDistTar, sourcesDistZip
+
+    doLast {
+        println "Generating checksums for distribution archives..."
+        [distTar, distZip, sourcesDistTar, sourcesDistZip].each { task ->
+            def archive = task.archiveFile.get().asFile
+
+            if (archive.exists()) {
+                // Generate SHA-256 checksum
+                def sha256File = new File("${archive}.sha256")
+                def sha256 = java.security.MessageDigest.getInstance("SHA-256")
+                archive.withInputStream { is ->
+                    def buffer = new byte[8192]
+                    int read
+                    while ((read = is.read(buffer)) != -1) {
+                        sha256.update(buffer, 0, read)
+                    }
+                }
+                sha256File.text = sha256.digest().encodeHex().toString() + "  " + archive.name
+
+                // Generate SHA-512 checksum
+                def sha512File = new File("${archive}.sha512")
+                def sha512 = java.security.MessageDigest.getInstance("SHA-512")
+                archive.withInputStream { is ->
+                    def buffer = new byte[8192]
+                    int read
+                    while ((read = is.read(buffer)) != -1) {
+                        sha512.update(buffer, 0, read)
+                    }
+                }
+                sha512File.text = sha512.digest().encodeHex().toString() + "  " + archive.name
+            } else {
+                println "  ✗ Archive not found: ${archive.absolutePath}"
+            }
+        }
+    }
+}
+
+distTar.finalizedBy generateDistributionChecksums
+distZip.finalizedBy generateDistributionChecksums
+sourcesDistTar.finalizedBy generateDistributionChecksums
+sourcesDistZip.finalizedBy generateDistributionChecksums
+assembleDist.finalizedBy generateDistributionChecksums
+assembleSourcesDist.finalizedBy generateDistributionChecksums
