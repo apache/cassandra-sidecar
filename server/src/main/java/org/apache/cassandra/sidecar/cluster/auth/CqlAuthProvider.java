@@ -23,6 +23,13 @@ package org.apache.cassandra.sidecar.cluster.auth;
  */
 public interface CqlAuthProvider
 {
+    /**
+     * @return username for the CQL connection
+     */
     String username();
+
+    /**
+     * @return password for the CQL connection
+     */
     String password();
 }

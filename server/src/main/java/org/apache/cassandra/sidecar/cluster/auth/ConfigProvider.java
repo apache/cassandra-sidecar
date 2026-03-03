@@ -53,12 +53,12 @@ public class ConfigProvider implements CqlAuthProvider
   @Override
   public String username()
   {
-      return username;
+        return username;
   }
 
   @Override
   public String password()
   {
-      return password;
+        return password;
   }
 }

@@ -211,7 +211,12 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
 
             if (authProvider != null)
             {
-                builder.withCredentials(authProvider.username(), authProvider.password());
+                String username = authProvider.username();
+                String password = authProvider.password();
+                if (username != null && password != null)
+                {
+                    builder.withCredentials(username, password);
+                }
             }
             // During mTLS connections, when client sends in keystore, we should have an AuthProvider passed along.
             // hence we pass empty username and password in PlainTextAuthProvider here, in case user hasn't already

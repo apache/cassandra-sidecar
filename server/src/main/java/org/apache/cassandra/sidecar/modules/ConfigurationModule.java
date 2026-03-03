@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.modules;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -131,16 +132,19 @@ public class ConfigurationModule extends AbstractModule
     @Singleton
     CQLSessionProvider cqlSessionProvider(Vertx vertx,
                                           SidecarConfiguration sidecarConfiguration,
+                                          CqlAuthProvider cqlAuthProvider,
                                           DriverUtils driverUtils)
     {
         CQLSessionProviderImpl cqlSessionProvider = new CQLSessionProviderImpl(sidecarConfiguration,
                                                                                NettyOptions.DEFAULT_INSTANCE,
-                                                                               cqlAuthProvider(sidecarConfiguration),
+                                                                               cqlAuthProvider,
                                                                                driverUtils);
         vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
         return cqlSessionProvider;
     }
 
+    @Provides
+    @Singleton
     CqlAuthProvider cqlAuthProvider(SidecarConfiguration sidecarConfiguration)
     {
         DriverConfiguration driverConfiguration = sidecarConfiguration.driverConfiguration();
@@ -148,12 +152,11 @@ public class ConfigurationModule extends AbstractModule
         ParameterizedClassConfiguration config = driverConfiguration.authProvider();
         if (config == null)
         {
-          // Fallback to the old one
-          String username = driverConfiguration.username() != null ? driverConfiguration.username() : "";
-          String password = driverConfiguration.password() != null ? driverConfiguration.password() : "";
-
-          return new ConfigProvider(
-                Map.of("username", username, "password", password));
+            // Fallback to the old one
+            Map<String, String> namedParameters = new HashMap<>();
+            namedParameters.put("username", driverConfiguration.username());
+            namedParameters.put("password", driverConfiguration.password());
+            return new ConfigProvider(namedParameters);
         }
 
         if (config.namedParameters() == null)

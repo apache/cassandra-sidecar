@@ -83,12 +83,12 @@ public class FileProvider implements CqlAuthProvider
   @Override
   public String username()
   {
-      return readSecret(usernamePath, USERNAME_PATH_PARAM);
+        return readSecret(usernamePath, USERNAME_PATH_PARAM);
   }
 
   @Override
   public String password()
   {
-      return readSecret(passwordPath, PASSWORD_PATH_PARAM);
+        return readSecret(passwordPath, PASSWORD_PATH_PARAM);
   }
 }
