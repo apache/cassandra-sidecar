@@ -35,20 +35,19 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationFilesVerificationRequest;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskCreationResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
-import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationTaskInProgressException;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 import org.apache.cassandra.sidecar.handlers.AccessProtected;
 import org.apache.cassandra.sidecar.livemigration.FilesVerificationTaskManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
-import org.apache.cassandra.sidecar.utils.DigestAlgorithmFactory;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.jetbrains.annotations.NotNull;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.ACCEPTED;
-import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.CONFLICT;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
 import static org.apache.cassandra.sidecar.acl.authorization.BasicPermissions.DATA_COPY;
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_FILES_VERIFICATION_TASKS_ROUTE;
@@ -64,7 +63,6 @@ public class LiveMigrationCreateFilesVerificationTaskHandler extends AbstractHan
 
     private final FilesVerificationTaskManager filesVerificationTaskManager;
     private final LiveMigrationMap liveMigrationMap;
-    private final LiveMigrationConfiguration liveMigrationConfiguration;
 
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
@@ -78,13 +76,11 @@ public class LiveMigrationCreateFilesVerificationTaskHandler extends AbstractHan
                                                               ExecutorPools executorPools,
                                                               CassandraInputValidator validator,
                                                               LiveMigrationMap liveMigrationMap,
-                                                              FilesVerificationTaskManager filesVerificationTaskManager,
-                                                              SidecarConfiguration sidecarConfiguration)
+                                                              FilesVerificationTaskManager filesVerificationTaskManager)
     {
         super(metadataFetcher, executorPools, validator);
         this.liveMigrationMap = liveMigrationMap;
         this.filesVerificationTaskManager = filesVerificationTaskManager;
-        this.liveMigrationConfiguration = sidecarConfiguration.liveMigrationConfiguration();
     }
 
     @Override
@@ -92,20 +88,7 @@ public class LiveMigrationCreateFilesVerificationTaskHandler extends AbstractHan
     {
         try
         {
-            LiveMigrationFilesVerificationRequest request =
-            Json.decodeValue(context.body().buffer(), LiveMigrationFilesVerificationRequest.class);
-
-            if (request.maxConcurrency() > liveMigrationConfiguration.maxConcurrentFileRequests())
-            {
-                throw new IllegalArgumentException("Invalid maxConcurrency " + request.maxConcurrency() +
-                                                   ". It cannot be greater than " +
-                                                   liveMigrationConfiguration.maxConcurrentFileRequests());
-            }
-
-            // Validate digest algorithm without creating an instance
-            DigestAlgorithmFactory.validateAlgorithmName(request.digestAlgorithm());
-
-            return request;
+            return Json.decodeValue(context.body().buffer(), LiveMigrationFilesVerificationRequest.class);
         }
         catch (DecodeException decodeException)
         {
@@ -155,7 +138,13 @@ public class LiveMigrationCreateFilesVerificationTaskHandler extends AbstractHan
                             {
                                 LOGGER.error("Cannot start a new files verification task for host {} " +
                                              "while another live migration task is in progress.", host);
-                                context.fail(wrapHttpException(FORBIDDEN, throwable.getMessage(), throwable));
+                                context.fail(wrapHttpException(CONFLICT, throwable.getMessage(), throwable));
+                                return;
+                            }
+                            else if (throwable instanceof LiveMigrationInvalidRequestException)
+                            {
+                                LOGGER.error("Invalid request {}", request, throwable);
+                                context.fail(wrapHttpException(BAD_REQUEST, throwable.getMessage(), throwable));
                                 return;
                             }
                             LOGGER.error("Failed to create files verification task for host {}.", host, throwable);

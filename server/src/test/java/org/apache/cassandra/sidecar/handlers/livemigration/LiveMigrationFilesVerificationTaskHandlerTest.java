@@ -197,7 +197,7 @@ class LiveMigrationFilesVerificationTaskHandlerTest
                                          .as(BodyCodec.jsonObject())
                                          .sendJsonObject(filesVerificationTaskPayload))
               .onSuccess(result -> context.verify(() -> {
-                  assertThat(result.statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
+                  assertThat(result.statusCode()).isEqualTo(HttpResponseStatus.CONFLICT.code());
                   JsonObject task = result.body();
                   assertThat(task).isNotNull();
                   assertThat(task.getString("message")).isNotNull();

@@ -96,11 +96,9 @@ public class LiveMigrationTaskManager
         {
             throw new IllegalStateException("No instance found for host: " + currentHost);
         }
-        if (!currentTasks.containsKey(localInstance.id()))
-        {
-            return Collections.emptyList();
-        }
-        return Collections.singletonList(currentTasks.get(localInstance.id()));
+
+        LiveMigrationTask<?> task = currentTasks.get(localInstance.id());
+        return task == null ? Collections.emptyList() : Collections.singletonList(task);
     }
 
     /**

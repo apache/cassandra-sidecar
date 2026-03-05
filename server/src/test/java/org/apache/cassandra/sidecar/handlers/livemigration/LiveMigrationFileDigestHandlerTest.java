@@ -359,7 +359,7 @@ public class LiveMigrationFileDigestHandlerTest
                           {
                               okCount.incrementAndGet();
                           }
-                          else if (statusCode == HttpResponseStatus.TOO_MANY_REQUESTS.code())
+                          else if (statusCode == HttpResponseStatus.SERVICE_UNAVAILABLE.code())
                           {
                               tooManyRequestsCount.incrementAndGet();
                           }

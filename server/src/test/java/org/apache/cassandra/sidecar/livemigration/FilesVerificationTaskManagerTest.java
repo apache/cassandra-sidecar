@@ -173,7 +173,7 @@ class FilesVerificationTaskManagerTest
 
         assertThat(future.failed()).isTrue();
         assertThat(future.cause()).isInstanceOf(LiveMigrationTaskInProgressException.class);
-        assertThat(future.cause().getMessage()).contains("Another files digests verification is in progress");
+        assertThat(future.cause().getMessage()).contains("Another files digest verification is in progress");
     }
 
     @Test

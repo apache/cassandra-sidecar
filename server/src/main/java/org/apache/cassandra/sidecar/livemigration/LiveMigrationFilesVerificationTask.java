@@ -41,8 +41,6 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationFilesVerificationRequest;
 import org.apache.cassandra.sidecar.common.request.data.Digest;
-import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
-import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.response.DigestResponse;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
@@ -66,7 +64,7 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMe
  * <p>The verification process consists of three stages:
  * <ol>
  *   <li>Fetch file lists from both source and destination instances concurrently</li>
- *   <li>Compare file metadata (size, type, modification time) - fails fast on mismatches</li>
+ *   <li>Compare file metadata (size, type, modification time) - fails when there are mismatches</li>
  *   <li>Verify cryptographic digests (MD5 or XXHash32) with configurable concurrency</li>
  * </ol>
  *
@@ -131,7 +129,7 @@ public class LiveMigrationFilesVerificationTask implements LiveMigrationTask<Liv
 
                // Compare the files information before calculating digests
                .compose(this::abortIfCancelled)
-               .compose(cf -> compareFilesMeta(cf.resultAt(0), cf.resultAt(1)))
+               .compose(cf -> compareFilesMetadata(cf.resultAt(0), cf.resultAt(1)))
 
                // Create digest comparison tasks
                .compose(this::abortIfCancelled)
@@ -183,8 +181,8 @@ public class LiveMigrationFilesVerificationTask implements LiveMigrationTask<Liv
                                                       logPrefix, source, port, cause));
     }
 
-    private @NotNull Future<List<InstanceFileInfo>> compareFilesMeta(List<InstanceFileInfo> localFiles,
-                                                                     InstanceFilesListResponse sourceFiles)
+    private @NotNull Future<List<InstanceFileInfo>> compareFilesMetadata(List<InstanceFileInfo> localFiles,
+                                                                         InstanceFilesListResponse sourceFiles)
     {
         Map<String, InstanceFileInfo> filesAtLocal =
         localFiles.stream()
@@ -236,9 +234,9 @@ public class LiveMigrationFilesVerificationTask implements LiveMigrationTask<Liv
             filesNotFoundAtDestination.incrementAndGet();
         }
 
-        if (filesNotFoundAtDestination.get() > 0
-            || filesNotFoundAtSource.get() > 0
-            || metadataMismatches.get() > 0)
+        if (filesNotFoundAtDestination.get() > 0 ||
+            filesNotFoundAtSource.get() > 0 ||
+            metadataMismatches.get() > 0)
         {
             FileVerificationFailureException exception =
             new FileVerificationFailureException("Files list did not match between source and destination");
@@ -325,19 +323,16 @@ public class LiveMigrationFilesVerificationTask implements LiveMigrationTask<Liv
                      .compose(this::toDigest);
     }
 
-    private Future<Digest> toDigest(DigestResponse digestResponse)
+    Future<Digest> toDigest(DigestResponse digestResponse)
     {
-        String digestAlgorithm = digestResponse.digestAlgorithm;
-        if (digestAlgorithm.equalsIgnoreCase(MD5Digest.MD5_ALGORITHM))
+        try
         {
-            return Future.succeededFuture(new MD5Digest(digestResponse.digest));
+            return Future.succeededFuture(digestResponse.toDigest());
         }
-        else if (digestAlgorithm.equalsIgnoreCase(XXHash32Digest.XXHASH_32_ALGORITHM))
+        catch (Exception e)
         {
-            return Future.succeededFuture(new XXHash32Digest(digestResponse.digest));
+            return Future.failedFuture(e);
         }
-
-        return Future.failedFuture("Digest algorithm " + digestResponse.digestAlgorithm + " is unknown");
     }
 
     @Override

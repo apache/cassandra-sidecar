@@ -92,8 +92,12 @@ public class LiveMigrationModule extends AbstractModule
                  responseCode = "202",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
-    @APIResponse(responseCode = "403",
+    @APIResponse(responseCode = "404",
                  description = "Live migration not enabled or node not configured as destination",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(type = SchemaType.OBJECT)))
+    @APIResponse(responseCode = "409",
+                 description = "Cannot accept data copy task as another task is in progress",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
@@ -117,12 +121,8 @@ public class LiveMigrationModule extends AbstractModule
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(implementation = LiveMigrationDataCopyResponse.class)))
-    @APIResponse(responseCode = "403",
-                 description = "Live migration not enabled or node not configured as destination",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "404",
-                 description = "Data copy task not found",
+                 description = "Live migration not enabled, node not configured as destination, or data copy task not found",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
@@ -144,12 +144,8 @@ public class LiveMigrationModule extends AbstractModule
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(implementation = LiveMigrationDataCopyResponse.class)))
-    @APIResponse(responseCode = "403",
-                 description = "Live migration not enabled or node not configured as destination",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "404",
-                 description = "Data copy task not found",
+                 description = "Live migration not enabled, node not configured as destination, or data copy task not found",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
@@ -171,7 +167,7 @@ public class LiveMigrationModule extends AbstractModule
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.ARRAY)))
-    @APIResponse(responseCode = "403",
+    @APIResponse(responseCode = "404",
                  description = "Live migration not enabled or node not configured as destination",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
@@ -200,12 +196,12 @@ public class LiveMigrationModule extends AbstractModule
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(implementation = DigestResponse.class)))
-    @APIResponse(responseCode = "403",
-                 description = "Live migration not enabled or file access denied",
+    @APIResponse(responseCode = "404",
+                 description = "Live migration not enabled or node not configured as source",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
-    @APIResponse(responseCode = "429",
-                 description = "Concurrency limit reached for digest calculations",
+    @APIResponse(responseCode = "503",
+                 description = "Concurrency limit reached for file requests",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "500",
@@ -239,7 +235,7 @@ public class LiveMigrationModule extends AbstractModule
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(implementation = InstanceFilesListResponse.class)))
-    @APIResponse(responseCode = "403",
+    @APIResponse(responseCode = "404",
                  description = "Live migration not enabled or node not configured for migration",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
@@ -344,8 +340,12 @@ public class LiveMigrationModule extends AbstractModule
                  responseCode = "202",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(implementation = LiveMigrationTaskCreationResponse.class)))
-    @APIResponse(responseCode = "403",
+    @APIResponse(responseCode = "404",
                  description = "Live migration not enabled or node not configured as destination",
+                 content = @Content(mediaType = "application/json",
+                 schema = @Schema(type = SchemaType.OBJECT)))
+    @APIResponse(responseCode = "409",
+                 description = "Cannot accept files verification task as another task is in progress",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
@@ -370,12 +370,8 @@ public class LiveMigrationModule extends AbstractModule
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(implementation = LiveMigrationFilesVerificationResponse.class)))
-    @APIResponse(responseCode = "403",
-                 description = "Live migration not enabled or node not configured as destination",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "404",
-                 description = "Files verification task not found",
+                 description = "Live migration not enabled, node not configured as destination, or files verification task not found",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
@@ -398,7 +394,7 @@ public class LiveMigrationModule extends AbstractModule
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.ARRAY, implementation = LiveMigrationFilesVerificationResponse.class)))
-    @APIResponse(responseCode = "403",
+    @APIResponse(responseCode = "404",
                  description = "Live migration not enabled or node not configured as destination",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
@@ -422,12 +418,8 @@ public class LiveMigrationModule extends AbstractModule
                  responseCode = "200",
     content = @Content(mediaType = "application/json",
     schema = @Schema(implementation = LiveMigrationFilesVerificationResponse.class)))
-    @APIResponse(responseCode = "403",
-                 description = "Live migration not enabled or node not configured as destination",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "404",
-                 description = "Files verification task not found",
+                 description = "Live migration not enabled, node not configured as destination, or files verification task not found",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap

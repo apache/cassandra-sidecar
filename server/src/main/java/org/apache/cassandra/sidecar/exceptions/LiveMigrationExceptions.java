@@ -54,6 +54,11 @@ public class LiveMigrationExceptions
         {
             super(message);
         }
+
+        public LiveMigrationInvalidRequestException(String message, Throwable cause)
+        {
+            super(message, cause);
+        }
     }
 
     /**

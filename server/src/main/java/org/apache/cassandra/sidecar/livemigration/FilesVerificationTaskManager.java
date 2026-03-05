@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.livemigration;
 
 import java.util.List;
-import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +34,7 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationTaskInProgressException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationTaskNotFoundException;
+import org.apache.cassandra.sidecar.utils.DigestAlgorithmFactory;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationFilesVerificationTask.FILES_VERIFICATION_TASK_TYPE;
@@ -80,43 +80,40 @@ public class FilesVerificationTaskManager
                                                                                         String source,
                                                                                         InstanceMetadata localInstanceMetadata)
     {
-        int maxPossibleConcurrency = Objects.requireNonNull(sidecarConfiguration.liveMigrationConfiguration())
-                                            .maxConcurrentFileRequests();
+        int maxPossibleConcurrency = sidecarConfiguration.liveMigrationConfiguration().maxConcurrentFileRequests();
         if (request.maxConcurrency() > maxPossibleConcurrency)
         {
             return Future.failedFuture(
             new LiveMigrationInvalidRequestException("max concurrency can not be more than " + maxPossibleConcurrency));
         }
+        try
+        {
+            DigestAlgorithmFactory.validateAlgorithmName(request.digestAlgorithm());
+        }
+        catch (IllegalArgumentException iae)
+        {
+            return Future.failedFuture(new LiveMigrationInvalidRequestException(iae.getMessage(), iae));
+        }
 
-        return createVerifier(request, source, localInstanceMetadata)
-               .compose(newTask -> {
-                   boolean accepted = taskManager.submitTask(localInstanceMetadata.id(), newTask);
-
-                   if (accepted)
-                   {
-                       newTask.start();
-                       LOGGER.info("Accepted new files digest verification task for instance={} taskId={}",
-                                   localInstanceMetadata.id(), newTask.id());
-                       return Future.succeededFuture(newTask);
-                   }
-                   else
-                   {
-                       return Future.failedFuture(new LiveMigrationTaskInProgressException(
-                       "Another files digests verification is in progress for instance=" + localInstanceMetadata.id()));
-                   }
-               });
-    }
-
-    private Future<LiveMigrationTask<LiveMigrationFilesVerificationResponse>> createVerifier(LiveMigrationFilesVerificationRequest request,
-                                                                                             String source,
-                                                                                             InstanceMetadata localInstanceMetadata)
-    {
         String timeUuid = UUIDs.timeBased().toString();
-        return Future.succeededFuture(taskFactory.create(timeUuid,
-                                                         source,
-                                                         sidecarConfiguration.serviceConfiguration().port(),
-                                                         request,
-                                                         localInstanceMetadata));
+        int sidecarPort = sidecarConfiguration.serviceConfiguration().port();
+        LiveMigrationTask<LiveMigrationFilesVerificationResponse> newTask =
+        taskFactory.create(timeUuid, source, sidecarPort, request, localInstanceMetadata);
+
+        boolean accepted = taskManager.submitTask(localInstanceMetadata.id(), newTask);
+
+        if (accepted)
+        {
+            newTask.start();
+            LOGGER.info("Accepted new files digest verification task for instance={} taskId={}",
+                        localInstanceMetadata.id(), newTask.id());
+            return Future.succeededFuture(newTask);
+        }
+        else
+        {
+            return Future.failedFuture(new LiveMigrationTaskInProgressException(
+            "Another files digest verification is in progress for instance=" + localInstanceMetadata.id()));
+        }
     }
 
     /**

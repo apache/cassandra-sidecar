@@ -33,7 +33,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 
 /**
  * Handler that enforces concurrency limits for live migration file operations.
- * Returns HTTP 429 (TOO_MANY_REQUESTS) when the maximum concurrent downloads limit is exceeded.
+ * Returns HTTP 503 (SERVICE_UNAVAILABLE) when the maximum concurrent file requests limit is exceeded.
  */
 @Singleton
 public class LiveMigrationConcurrencyLimitHandler implements Handler<RoutingContext>
@@ -55,7 +55,7 @@ public class LiveMigrationConcurrencyLimitHandler implements Handler<RoutingCont
         if (!concurrencyLimiter.tryAcquire())
         {
             LOGGER.warn("Too many concurrent live migration file requests. Path={}", rc.request().path());
-            rc.fail(wrapHttpException(HttpResponseStatus.TOO_MANY_REQUESTS,
+            rc.fail(wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE,
                                       "Server is busy processing live migration file requests, " +
                                       "please try again later"));
             return;

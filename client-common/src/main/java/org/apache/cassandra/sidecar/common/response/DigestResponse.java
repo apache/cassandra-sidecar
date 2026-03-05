@@ -21,7 +21,11 @@ package org.apache.cassandra.sidecar.common.response;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.common.request.data.Digest;
+import org.apache.cassandra.sidecar.common.request.data.MD5Digest;
+import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 
 /**
  * Response object containing a cryptographic digest value for file verification purposes.
@@ -50,5 +54,20 @@ public class DigestResponse
                "digest='" + digest + '\'' +
                ", digestAlgorithm='" + digestAlgorithm + '\'' +
                '}';
+    }
+
+    @JsonIgnore
+    public Digest toDigest()
+    {
+        if (digestAlgorithm.equalsIgnoreCase(MD5Digest.MD5_ALGORITHM))
+        {
+            return new MD5Digest(digest);
+        }
+        else if (digestAlgorithm.equalsIgnoreCase(XXHash32Digest.XXHASH_32_ALGORITHM))
+        {
+            return new XXHash32Digest(digest);
+        }
+
+        throw new IllegalArgumentException("Digest algorithm " + digestAlgorithm + " is unknown");
     }
 }

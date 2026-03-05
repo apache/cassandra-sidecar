@@ -110,7 +110,7 @@ public class LiveMigrationCreateDataCopyTaskHandler extends AbstractHandler<Live
             else if (throwable instanceof LiveMigrationTaskInProgressException)
             {
                 LOGGER.error("Cannot start a new data copy task while another one is in progress.");
-                context.fail(wrapHttpException(HttpResponseStatus.FORBIDDEN, throwable.getMessage(), throwable));
+                context.fail(wrapHttpException(HttpResponseStatus.CONFLICT, throwable.getMessage(), throwable));
             }
             else
             {
