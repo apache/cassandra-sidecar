@@ -61,6 +61,8 @@ import org.apache.cassandra.sidecar.handlers.TokenRangeReplicaMapHandler;
 import org.apache.cassandra.sidecar.handlers.cassandra.NodeSettingsHandler;
 import org.apache.cassandra.sidecar.handlers.v2.cassandra.V2NodeSettingsHandler;
 import org.apache.cassandra.sidecar.handlers.validations.ValidateTableExistenceHandler;
+import org.apache.cassandra.sidecar.job.InMemoryOperationalJobTracker;
+import org.apache.cassandra.sidecar.job.OperationalJobTracker;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
@@ -77,6 +79,12 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 @Path("/")
 public class CassandraOperationsModule extends AbstractModule
 {
+    @Override
+    protected void configure()
+    {
+        bind(OperationalJobTracker.class).to(InMemoryOperationalJobTracker.class);
+    }
+
     @ProvidesIntoMap
     @KeyClassMapKey(TableSchemaMapKeys.SystemViewsClientsSchemaKey.class)
     TableSchema systemViewsClientsSchema()

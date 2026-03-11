@@ -32,17 +32,19 @@ import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.utils.UUIDs;
 
+import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.CREATED;
+import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
 import static org.apache.cassandra.sidecar.job.OperationalJobTest.createOperationalJob;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Tests to validate job tracking
+ * Tests to validate InMemoryOperationalJobTracker implementation
  */
-class OperationalJobTrackerTest
+class InMemoryOperationalJobTrackerTest
 {
-    private OperationalJobTracker jobTracker;
+    private InMemoryOperationalJobTracker jobTracker;
     private static final int trackerSize = 3;
 
     OperationalJob job1 = createOperationalJob(SUCCEEDED);
@@ -56,7 +58,7 @@ class OperationalJobTrackerTest
     @BeforeEach
     void setUp()
     {
-        jobTracker = new OperationalJobTracker(trackerSize);
+        jobTracker = new InMemoryOperationalJobTracker(trackerSize);
     }
 
     @Test
@@ -127,8 +129,8 @@ class OperationalJobTrackerTest
     void testConcurrentAccess() throws Exception
     {
         int one = 1;
-        long pastTimestamp = System.currentTimeMillis() - OperationalJobTracker.ONE_DAY_TTL - 1000L;
-        OperationalJobTracker tracker = new OperationalJobTracker(one);
+        long pastTimestamp = System.currentTimeMillis() - InMemoryOperationalJobTracker.ONE_DAY_TTL - 1000L;
+        InMemoryOperationalJobTracker tracker = new InMemoryOperationalJobTracker(one);
         ExecutorService executorService = Executors.newFixedThreadPool(trackerSize);
         List<OperationalJob> sortedJobs = IntStream.range(0, trackerSize + 10)
                                                    .boxed()
@@ -141,5 +143,90 @@ class OperationalJobTrackerTest
         assertThat(tracker.jobsView().values().iterator().next())
         .describedAs("Only the last job is kept")
         .isSameAs(sortedJobs.get(sortedJobs.size() - 1));
+    }
+
+    @Test
+    void testInflightJobsByOperationIncludesCreatedJobs()
+    {
+        OperationalJob createdJob = createOperationalJob(CREATED);
+        jobTracker.put(createdJob);
+
+        List<OperationalJob> inflightJobs = jobTracker.inflightJobsByOperation(createdJob.name());
+
+        assertThat(inflightJobs)
+            .hasSize(1)
+            .containsExactly(createdJob);
+    }
+
+    @Test
+    void testInflightJobsByOperationIncludesRunningJobs()
+    {
+        OperationalJob runningJob = createOperationalJob(RUNNING);
+        jobTracker.put(runningJob);
+
+        List<OperationalJob> inflightJobs = jobTracker.inflightJobsByOperation(runningJob.name());
+
+        assertThat(inflightJobs)
+            .hasSize(1)
+            .containsExactly(runningJob);
+    }
+
+    @Test
+    void testInflightJobsByOperationExcludesCompletedJobs()
+    {
+        jobTracker.put(job1); // SUCCEEDED -- should be filtered out
+
+        List<OperationalJob> inflightJobs = jobTracker.inflightJobsByOperation(job1.name());
+
+        assertThat(inflightJobs)
+            .describedAs("SUCCEEDED jobs should not be considered inflight")
+            .isEmpty();
+    }
+
+    @Test
+    void testInflightJobsByOperationFiltersByOperationName()
+    {
+        OperationalJob decommissionJob = createOperationalJob("decommission", RUNNING);
+        OperationalJob drainJob = createOperationalJob("drain", RUNNING);
+
+        jobTracker.put(decommissionJob);
+        jobTracker.put(drainJob);
+
+        List<OperationalJob> decommissionJobs = jobTracker.inflightJobsByOperation(decommissionJob.name());
+        List<OperationalJob> drainJobs = jobTracker.inflightJobsByOperation(drainJob.name());
+
+        assertThat(decommissionJobs)
+            .hasSize(1)
+            .containsExactly(decommissionJob);
+        assertThat(drainJobs)
+            .hasSize(1)
+            .containsExactly(drainJob);
+    }
+
+    @Test
+    void testInflightJobsByOperationReturnsMultipleJobsOfSameType()
+    {
+        OperationalJob runningJob = createOperationalJob(RUNNING);
+        OperationalJob createdJob = createOperationalJob(CREATED);
+
+        jobTracker.put(runningJob);
+        jobTracker.put(createdJob);
+
+        List<OperationalJob> inflightJobs = jobTracker.inflightJobsByOperation(runningJob.name());
+
+        assertThat(inflightJobs)
+            .describedAs("Multiple jobs of same operation type should be allowed")
+            .hasSize(2)
+            .containsExactlyInAnyOrder(runningJob, createdJob);
+    }
+
+    @Test
+    void testInflightJobsByOperationReturnsEmptyListForUnknownOperation()
+    {
+        jobTracker.put(job1);
+
+        List<OperationalJob> inflightJobs = jobTracker.inflightJobsByOperation("unknown-operation");
+
+        assertThat(inflightJobs).isEmpty();
     }
 }

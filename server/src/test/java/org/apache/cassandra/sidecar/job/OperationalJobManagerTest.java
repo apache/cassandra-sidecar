@@ -72,7 +72,7 @@ class OperationalJobManagerTest
     @Test
     void testWithNoDownstreamJob() throws InterruptedException
     {
-        OperationalJobTracker tracker = new OperationalJobTracker(4);
+        OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -93,7 +93,7 @@ class OperationalJobManagerTest
     void testWithRunningDownstreamJob() throws InterruptedException
     {
         OperationalJob runningJob = OperationalJobTest.createOperationalJob(RUNNING);
-        OperationalJobTracker tracker = new OperationalJobTracker(4);
+        OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -111,7 +111,7 @@ class OperationalJobManagerTest
     void testWithLongRunningJob() throws InterruptedException
     {
         UUID jobId = UUIDs.timeBased();
-        OperationalJobTracker tracker = new OperationalJobTracker(4);
+        OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -135,7 +135,7 @@ class OperationalJobManagerTest
     void testWithFailingJob() throws InterruptedException
     {
         UUID jobId = UUIDs.timeBased();
-        OperationalJobTracker tracker = new OperationalJobTracker(4);
+        OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 

@@ -233,7 +233,7 @@ class RepairJobTest
     void testMultipleRepairJobsRunningInParallel() throws Exception
     {
         // Create a job tracker and manager
-        OperationalJobTracker tracker = new OperationalJobTracker(10);
+        OperationalJobTracker tracker = new InMemoryOperationalJobTracker(10);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
 
         // Mock the storage operations

@@ -56,6 +56,36 @@ class OperationalJobTest
         return createOperationalJob(UUIDs.timeBased(), jobStatus);
     }
 
+    public static OperationalJob createOperationalJob(String name, OperationalJobStatus jobStatus)
+    {
+        return new OperationalJob(UUIDs.timeBased())
+        {
+            @Override
+            protected Future<Void> executeInternal() throws OperationalJobException
+            {
+                return Future.succeededFuture();
+            }
+
+            @Override
+            public boolean hasConflict(List<OperationalJob> jobs)
+            {
+                return jobStatus == OperationalJobStatus.RUNNING;
+            }
+
+            @Override
+            public OperationalJobStatus status()
+            {
+                return jobStatus;
+            }
+
+            @Override
+            public String name()
+            {
+                return name;
+            }
+        };
+    }
+
     public static OperationalJob createOperationalJob(UUID jobId, OperationalJobStatus jobStatus)
     {
         return new OperationalJob(jobId)
