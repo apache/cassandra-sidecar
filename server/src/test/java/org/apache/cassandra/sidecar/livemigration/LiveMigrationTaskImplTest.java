@@ -30,6 +30,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
@@ -64,10 +65,12 @@ class LiveMigrationTaskImplTest
 
         when(sidecarClientProvider.get()).thenReturn(sidecarClient);
 
+        DnsResolver dnsResolver = mock(DnsResolver.class);
+
         ExecutorPools executorPools = ExecutorPoolsHelper.createdSharedTestPool(vertx);
 
         return new LiveMigrationTaskImpl(vertx, executorPools, sidecarClientProvider, liveMigrationConfiguration,
-                                         instancesMetadata, id, request, SOURCE, PORT, instanceMetadata);
+                                         instancesMetadata, id, request, SOURCE, PORT, instanceMetadata, dnsResolver);
     }
 
     @Test

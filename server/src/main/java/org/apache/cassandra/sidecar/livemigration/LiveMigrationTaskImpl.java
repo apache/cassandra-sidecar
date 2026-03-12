@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
@@ -54,6 +55,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
     private final SidecarClientProvider sidecarClientProvider;
     private final LiveMigrationConfiguration liveMigrationConfiguration;
     private final InstancesMetadata instancesMetadata;
+    private final DnsResolver dnsResolver;
 
     // Indicates overall status of the operation (succeeded or failed).
     // Future returned by downloader changes on next iteration. Using a separate future to track overall operation.
@@ -72,7 +74,8 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
                                  LiveMigrationDataCopyRequest request,
                                  String source,
                                  int port,
-                                 InstanceMetadata instanceMetadata)
+                                 InstanceMetadata instanceMetadata,
+                                 DnsResolver dnsResolver)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
@@ -84,6 +87,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
         this.source = source;
         this.port = port;
         this.instancesMetadata = instancesMetadata;
+        this.dnsResolver = dnsResolver;
     }
 
     /**
@@ -135,6 +139,7 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
                                                 .source(source)
                                                 .port(port)
                                                 .executorPools(executorPools)
+                                                .dnsResolver(dnsResolver)
                                                 .build();
         return downloader.downloadFiles();
     }

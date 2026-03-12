@@ -55,6 +55,7 @@ import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo.FileType;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.MigrationState;
+import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.concurrent.AsyncConcurrentTaskExecutor;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
@@ -85,6 +86,7 @@ class LiveMigrationFileDownloader
     private final int port;
     private final String logPrefix;
     private final ExecutorPools executorPools;
+    private final DnsResolver dnsResolver;
     private OperationStatus operationStatus;
     private AsyncConcurrentTaskExecutor<Void> concurrentTaskExecutor;
 
@@ -102,6 +104,7 @@ class LiveMigrationFileDownloader
         this.source = builder.source;
         this.port = builder.port;
         this.executorPools = builder.executorPools;
+        this.dnsResolver = builder.dnsResolver;
 
         this.operationStatus = OperationStatus.startingState();
         this.logPrefix = String.format("liveMigrationRequest=%s iteration=%s ", id, iteration);
@@ -236,19 +239,19 @@ class LiveMigrationFileDownloader
     private GossipInfoResponse.GossipInfo findGossipInfo(GossipInfoResponse gossipResponse,
                                                          String instance) throws UnknownHostException
     {
-        InstanceMetadata metadata = instancesMetadata.instanceFromHost(instance);
-        try
-        {
-            // InstanceMetadata may not have ip address populated. Calling 'refreshIpAddress' to ensure
-            // ip address is available.
-            metadata.refreshIpAddress();
-        }
-        catch (UnknownHostException e)
-        {
-            LOGGER.error("{} Failed to resolve ipAddress for instance {}", logPrefix, instance, e);
-            throw e;
-        }
-        String ipAddress = metadata.ipAddress();
+//        InstanceMetadata metadata = instancesMetadata.instanceFromHost(instance);
+//        try
+//        {
+//            // InstanceMetadata may not have ip address populated. Calling 'refreshIpAddress' to ensure
+//            // ip address is available.
+//            metadata.refreshIpAddress();
+//        }
+//        catch (UnknownHostException e)
+//        {
+//            LOGGER.error("{} Failed to resolve ipAddress for instance {}", logPrefix, instance, e);
+//            throw e;
+//        }
+        String ipAddress = dnsResolver.resolve(instance);
         // Composed Gossip info key based on javadoc from:
         // org.apache.cassandra.sidecar.common.response.GossipInfoResponse.get
         String gossipInfoKey = "/" + ipAddress + ":" + metadata.storagePort();
@@ -692,6 +695,7 @@ class LiveMigrationFileDownloader
     static class Builder implements DataObjectBuilder<Builder, LiveMigrationFileDownloader>
     {
         public ExecutorPools executorPools;
+        public DnsResolver dnsResolver;
         private Vertx vertx;
         private SidecarClient sidecarClient;
         private LiveMigrationDataCopyRequest request;
@@ -844,6 +848,11 @@ class LiveMigrationFileDownloader
         public Builder executorPools(ExecutorPools executorPools)
         {
             return update(b -> b.executorPools = executorPools);
+        }
+
+        public Builder dnsResolver(DnsResolver dnsResolver)
+        {
+            return update(b -> b.dnsResolver = dnsResolver);
         }
 
         /**

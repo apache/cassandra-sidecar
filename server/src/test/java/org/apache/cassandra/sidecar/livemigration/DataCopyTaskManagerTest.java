@@ -38,7 +38,6 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
-import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -381,10 +380,8 @@ public class DataCopyTaskManagerTest
         SidecarConfiguration sidecarConfiguration = injector.getInstance(SidecarConfiguration.class);
         LiveMigrationMap liveMigrationMap = injector.getInstance(LiveMigrationMap.class);
         LiveMigrationTaskFactory liveMigrationTaskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
-        Vertx vertx = injector.getInstance(Vertx.class);
-        ExecutorPools executorPools = new ExecutorPools(vertx, sidecarConfiguration.serviceConfiguration());
 
-        return new DataCopyTaskManager(executorPools, instancesMetadata, sidecarConfiguration, liveMigrationMap,
+        return new DataCopyTaskManager(instancesMetadata, sidecarConfiguration, liveMigrationMap,
                                        liveMigrationTaskFactory);
     }
 

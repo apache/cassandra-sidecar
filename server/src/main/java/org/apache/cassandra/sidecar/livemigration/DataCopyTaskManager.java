@@ -35,7 +35,6 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
-import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationDataCopyInProgressException;
@@ -55,20 +54,17 @@ public class DataCopyTaskManager
 
     @VisibleForTesting
     final ConcurrentHashMap<Integer, LiveMigrationTask> currentTasks = new ConcurrentHashMap<>();
-    private final ExecutorPools executorPools;
     private final InstancesMetadata instancesMetadata;
     private final SidecarConfiguration sidecarConfiguration;
     private final LiveMigrationMap liveMigrationMap;
     private final LiveMigrationTaskFactory liveMigrationTaskFactory;
 
     @Inject
-    public DataCopyTaskManager(ExecutorPools executorPools,
-                               InstancesMetadata instancesMetadata,
+    public DataCopyTaskManager(InstancesMetadata instancesMetadata,
                                SidecarConfiguration sidecarConfiguration,
                                LiveMigrationMap liveMigrationMap,
                                LiveMigrationTaskFactory liveMigrationTaskFactory)
     {
-        this.executorPools = executorPools;
         this.instancesMetadata = instancesMetadata;
         this.sidecarConfiguration = sidecarConfiguration;
         this.liveMigrationMap = liveMigrationMap;
@@ -157,35 +153,33 @@ public class DataCopyTaskManager
      */
     private Future<Void> verifyCassandraNotRunning(InstanceMetadata localInstance)
     {
-        return executorPools.internal().executeBlocking(() -> {
-            try
-            {
-                CassandraAdapterDelegate delegate = localInstance.delegate();
+        try
+        {
+            CassandraAdapterDelegate delegate = localInstance.delegate();
 
-                if (delegate.isJmxUp())
-                {
-                    throw new LiveMigrationInvalidRequestException(
-                    "Cannot start data copy: Cassandra is currently running on this instance " +
-                    "(JMX connectivity established). Data copy cannot proceed while Cassandra is active.");
-                }
+            if (delegate.isJmxUp())
+            {
+                return Future.failedFuture(new LiveMigrationInvalidRequestException(
+                "Cannot start data copy: Cassandra is currently running on this instance " +
+                "(JMX connectivity established). Data copy cannot proceed while Cassandra is active."));
+            }
 
-                // JMX is down - Cassandra is not running (or at least wasn't during last health check)
-                LOGGER.debug("Local JMX check passed: Cassandra not detected as running on {}", localInstance.host());
-                return null;
-            }
-            catch (CassandraUnavailableException e)
-            {
-                // No delegate available - Cassandra is not running
-                LOGGER.debug("No Cassandra delegate available for {} (Cassandra not running)", localInstance.host());
-                return null;
-            }
-            catch (Exception e)
-            {
-                // Unexpected error - be conservative and reject for safety
-                LOGGER.warn("Unable to verify Cassandra status on {}, rejecting for safety", localInstance.host(), e);
-                throw e;
-            }
-        });
+            // JMX is down - Cassandra is not running (or at least wasn't during last health check)
+            LOGGER.debug("Local JMX check passed: Cassandra not detected as running on {}", localInstance.host());
+            return Future.succeededFuture();
+        }
+        catch (CassandraUnavailableException e)
+        {
+            // No delegate available - Cassandra is not running
+            LOGGER.debug("No Cassandra delegate available for {} (Cassandra not running)", localInstance.host());
+            return Future.succeededFuture();
+        }
+        catch (Exception e)
+        {
+            // Unexpected error - be conservative and reject for safety
+            LOGGER.warn("Unable to verify Cassandra status on {}, rejecting for safety", localInstance.host(), e);
+            return Future.failedFuture(e);
+        }
     }
 
     LiveMigrationTask createTask(LiveMigrationDataCopyRequest request,
