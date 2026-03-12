@@ -400,7 +400,8 @@ public class CdcModule extends AbstractModule
                               VirtualTablesDatabaseAccessor virtualTables,
                               SidecarCdcStats sidecarCdcStats,
                               Serializer<CdcEvent> avroSerializer,
-                              RangeManager rangeManager)
+                              RangeManager rangeManager,
+                              CassandraBridgeFactory cassandraBridgeFactory)
     {
         return new CdcPublisher(vertx,
                                 sidecarConfiguration,
@@ -416,7 +417,8 @@ public class CdcModule extends AbstractModule
                                 virtualTables,
                                 sidecarCdcStats,
                                 avroSerializer,
-                                () -> rangeManager);
+                                () -> rangeManager,
+                                cassandraBridgeFactory);
     }
 
     @Provides

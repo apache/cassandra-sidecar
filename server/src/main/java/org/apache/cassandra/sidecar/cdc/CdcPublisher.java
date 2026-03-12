@@ -33,6 +33,8 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
+import org.apache.cassandra.bridge.CassandraBridgeFactory;
+import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.cdc.CdcLogMode;
 import org.apache.cassandra.cdc.api.EventConsumer;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
@@ -94,6 +96,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
     private CdcManager cdcManager;
     private final Serializer<CdcEvent> avroSerializer;
     private final Provider<RangeManager> rangeManagerProvider;
+    private final CassandraBridgeFactory cassandraBridgeFactory;
     KafkaProducer<String, byte[]> producer;
     KafkaPublisher kafkaPublisher;
 
@@ -112,7 +115,8 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
                         VirtualTablesDatabaseAccessor virtualTables,
                         SidecarCdcStats sidecarCdcStats,
                         Serializer<CdcEvent> avroSerializer,
-                        Provider<RangeManager> rangeManagerProvider)
+                        Provider<RangeManager> rangeManagerProvider,
+                        CassandraBridgeFactory cassandraBridgeFactory)
     {
         this.sidecarCdcStats = sidecarCdcStats;
         this.executorPools = executorPools.internal();
@@ -129,6 +133,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         this.sidecarConfiguration = sidecarConfiguration;
         this.avroSerializer = avroSerializer;
         this.rangeManagerProvider = rangeManagerProvider;
+        this.cassandraBridgeFactory = cassandraBridgeFactory;
 
         if (conf.cdcEnabled())
         {
@@ -184,13 +189,18 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
             this.kafkaPublisher.close();
         }
         this.producer = new KafkaProducer<>(conf.kafkaConfigs());
-        this.kafkaPublisher = new KafkaPublisher(TopicSupplier.staticTopicSupplier(conf.kafkaTopic()),
-                                                           producer,
-                                                           avroSerializer,
-                                                           conf.maxRecordSizeBytes(),
-                                                           conf.failOnRecordTooLargeError(),
-                                                           conf.failOnKafkaError(),
-                                                           CdcLogMode.FULL);
+        CassandraVersion version = cassandraBridgeFactory.get(
+            instanceMetadataFetcher.callOnFirstAvailableInstance(instance ->
+                instance.delegate().nodeSettings()).releaseVersion()
+        ).getVersion();
+        this.kafkaPublisher = new KafkaPublisher(version,
+                                                 TopicSupplier.staticTopicSupplier(conf.kafkaTopic()),
+                                                 producer,
+                                                 avroSerializer,
+                                                 conf.maxRecordSizeBytes(),
+                                                 conf.failOnRecordTooLargeError(),
+                                                 conf.failOnKafkaError(),
+                                                 CdcLogMode.FULL);
         return new CdcEventConsumer(kafkaPublisher);
     }
 

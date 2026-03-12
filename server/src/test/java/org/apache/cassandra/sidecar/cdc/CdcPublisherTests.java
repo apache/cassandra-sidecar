@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 
 import com.google.inject.Provider;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.cdc.api.EventConsumer;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.cdc.msg.CdcEvent;
@@ -89,6 +90,8 @@ public class CdcPublisherTests
     private Serializer<CdcEvent> avroSerializer;
     @Mock
     private Provider<RangeManager> rangeManager;
+    @Mock
+    private CassandraBridgeFactory cassandraBridgeFactory;
 
     private SidecarConfiguration sidecarConfiguration;
     private CdcConfig cdcConfig;
@@ -124,7 +127,8 @@ public class CdcPublisherTests
             virtualTables,
             sidecarCdcStats,
             avroSerializer,
-            rangeManager
+            rangeManager,
+            cassandraBridgeFactory
         );
     }
 

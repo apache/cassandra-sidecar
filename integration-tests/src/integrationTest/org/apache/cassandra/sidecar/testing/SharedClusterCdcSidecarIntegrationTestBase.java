@@ -27,6 +27,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.cdc.msg.CdcEvent;
 import org.apache.cassandra.cdc.sidecar.CdcSidecarInstancesProvider;
@@ -78,16 +79,6 @@ public abstract class SharedClusterCdcSidecarIntegrationTestBase extends SharedC
                 consumer.clear();
             }
         }
-    }
-
-    @Override
-    protected void beforeClusterProvisioning()
-    {
-        // The current CDC implementation cannot read 5.x commitlogs, so verify Cassandra version is 4.x
-        SimpleCassandraVersion version = SimpleCassandraVersion.create(testVersion.version());
-        assumeThat(version.major)
-                .as("Current CDC implementation cannot read 5.x commitlogs, requires Cassandra 4.x")
-                .isEqualTo(4);
     }
 
     @Override
@@ -167,7 +158,8 @@ public abstract class SharedClusterCdcSidecarIntegrationTestBase extends SharedC
                                   VirtualTablesDatabaseAccessor virtualTables,
                                   SidecarCdcStats sidecarCdcStats,
                                   Serializer<CdcEvent> avroSerializer,
-                                  TokenRingProvider tokenRingProvider)
+                                  TokenRingProvider tokenRingProvider,
+                                  CassandraBridgeFactory cassandraBridgeFactory)
         {
             RangeManager rangeManager = new ContentionFreeRangeManager(vertx, tokenRingProvider);
             return new TestCdcPublisher(vertx,
@@ -184,7 +176,8 @@ public abstract class SharedClusterCdcSidecarIntegrationTestBase extends SharedC
                                        virtualTables,
                                        sidecarCdcStats,
                                        avroSerializer,
-                                       () -> rangeManager);
+                                       () -> rangeManager,
+                                       cassandraBridgeFactory);
         }
 
         @Provides
