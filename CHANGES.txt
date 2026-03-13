@@ -1,5 +1,6 @@
 0.3.0
 -----
+ * Define common operational job tracking interface and refactor current operational job tracker (CASSSIDECAR-372)
  * RangeManager should be singleton in CDCModule (CASSSIDECAR-411)
  * CDC: Add end-to-end CDC integration tests (CASSSIDECAR-308)
  * SchemaStorePublisherFactory should be Injectable in CachingSchemaStore (CASSSIDECAR-408)
