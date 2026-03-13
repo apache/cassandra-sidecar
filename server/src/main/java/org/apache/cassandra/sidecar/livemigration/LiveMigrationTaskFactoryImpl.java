@@ -39,17 +39,20 @@ public class LiveMigrationTaskFactoryImpl implements LiveMigrationTaskFactory
     private final SidecarClientProvider sidecarClientProvider;
     private final LiveMigrationConfiguration liveMigrationConfiguration;
     private final ExecutorPools executorPools;
+    private final LiveMigrationFileDownloadPreCheck preCheck;
 
     @Inject
     public LiveMigrationTaskFactoryImpl(Vertx vertx,
                                         ExecutorPools executorPools,
                                         SidecarClientProvider sidecarClientProvider,
-                                        SidecarConfiguration sidecarConfiguration)
+                                        SidecarConfiguration sidecarConfiguration,
+                                        LiveMigrationFileDownloadPreCheck preCheck)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
         this.sidecarClientProvider = sidecarClientProvider;
         this.liveMigrationConfiguration = sidecarConfiguration.liveMigrationConfiguration();
+        this.preCheck = preCheck;
     }
 
     /**
@@ -63,6 +66,6 @@ public class LiveMigrationTaskFactoryImpl implements LiveMigrationTaskFactory
                                     InstanceMetadata instanceMetadata)
     {
         return new LiveMigrationTaskImpl(vertx, executorPools, sidecarClientProvider, liveMigrationConfiguration,
-                                         id, request, source, port, instanceMetadata);
+                                         id, request, source, port, instanceMetadata, preCheck);
     }
 }

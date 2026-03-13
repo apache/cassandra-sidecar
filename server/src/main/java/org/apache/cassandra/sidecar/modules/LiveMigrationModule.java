@@ -42,6 +42,7 @@ import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationMapSidec
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationStatusClearHandler;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationStatusCompleteHandler;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationStatusGetHandler;
+import org.apache.cassandra.sidecar.livemigration.LiveMigrationFileDownloadPreCheck;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationStatusTracker;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationStatusTrackerImpl;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationTaskFactory;
@@ -69,6 +70,7 @@ public class LiveMigrationModule extends AbstractModule
         bind(LiveMigrationMap.class).to(LiveMigrationMapSidecarConfigImpl.class);
         bind(LiveMigrationTaskFactory.class).to(LiveMigrationTaskFactoryImpl.class);
         bind(LiveMigrationStatusTracker.class).to(LiveMigrationStatusTrackerImpl.class);
+        bind(LiveMigrationFileDownloadPreCheck.class).toInstance(LiveMigrationFileDownloadPreCheck.DEFAULT);
     }
 
     @GET

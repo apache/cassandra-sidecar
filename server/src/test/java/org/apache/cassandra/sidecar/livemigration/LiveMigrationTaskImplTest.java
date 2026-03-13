@@ -62,7 +62,7 @@ class LiveMigrationTaskImplTest
         ExecutorPools executorPools = ExecutorPoolsHelper.createdSharedTestPool(vertx);
 
         return new LiveMigrationTaskImpl(vertx, executorPools, sidecarClientProvider, liveMigrationConfiguration,
-                                         id, request, SOURCE, PORT, instanceMetadata);
+                                         id, request, SOURCE, PORT, instanceMetadata, LiveMigrationFileDownloadPreCheck.DEFAULT);
     }
 
     @Test

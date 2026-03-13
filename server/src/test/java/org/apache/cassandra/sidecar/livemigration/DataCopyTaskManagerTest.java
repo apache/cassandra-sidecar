@@ -41,7 +41,6 @@ import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.WorkerPoolConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationDataCopyInProgressException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
@@ -56,7 +55,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -407,7 +405,7 @@ public class DataCopyTaskManagerTest
     {
         private final LiveMigrationTaskFactory mockLiveMigrationTaskFactory = mock(LiveMigrationTaskFactory.class);
         private final SidecarConfiguration mockSidecarConfiguration = mock(SidecarConfiguration.class);
-        private final ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class, RETURNS_DEEP_STUBS);
+        private final ServiceConfiguration mockServiceConfiguration = mock(ServiceConfiguration.class);
         private final LiveMigrationConfiguration mockLiveMigrationConfiguration = mock(LiveMigrationConfiguration.class);
         private final LiveMigrationMap mockLiveMigrationmap = mock(LiveMigrationMap.class);
         private final InstanceMetadata mockDest1InstanceMeta = mock(InstanceMetadata.class);
@@ -428,8 +426,6 @@ public class DataCopyTaskManagerTest
             // Configure SidecarConfiguration mocks
             when(mockSidecarConfiguration.serviceConfiguration()).thenReturn(mockServiceConfiguration);
             when(mockServiceConfiguration.port()).thenReturn(9043);
-            when(mockServiceConfiguration.serverWorkerPoolConfiguration()).thenReturn(new WorkerPoolConfigurationImpl());
-            when(mockServiceConfiguration.serverInternalWorkerPoolConfiguration()).thenReturn(new WorkerPoolConfigurationImpl());
             when(mockSidecarConfiguration.liveMigrationConfiguration()).thenReturn(mockLiveMigrationConfiguration);
             when(mockLiveMigrationConfiguration.maxConcurrentDownloads()).thenReturn(5);
 

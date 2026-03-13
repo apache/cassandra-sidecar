@@ -81,6 +81,7 @@ class LiveMigrationFileDownloader
     private final int port;
     private final String logPrefix;
     private final ExecutorPools executorPools;
+    private final LiveMigrationFileDownloadPreCheck preCheck;
     private OperationStatus operationStatus;
     private AsyncConcurrentTaskExecutor<Void> concurrentTaskExecutor;
 
@@ -97,6 +98,7 @@ class LiveMigrationFileDownloader
         this.source = builder.source;
         this.port = builder.port;
         this.executorPools = builder.executorPools;
+        this.preCheck = builder.preCheck;
 
         this.operationStatus = OperationStatus.startingState();
         this.logPrefix = String.format("liveMigrationRequest=%s iteration=%s ", id, iteration);
@@ -115,7 +117,8 @@ class LiveMigrationFileDownloader
      */
     public Future<OperationStatus> downloadFiles()
     {
-        return checkLiveMigrationStatusOfSource()
+        return runPreCheck()
+               .compose(v -> checkLiveMigrationStatusOfSource())
                .compose(v -> fetchSourceFileList())
                .compose(this::cleanupUnnecessaryFiles)
                .compose(this::prepareDownloadList)
@@ -124,6 +127,14 @@ class LiveMigrationFileDownloader
                .otherwise(this::handleDownloadFailure);
     }
 
+    private Future<Void> runPreCheck()
+    {
+        LiveMigrationFileDownloadPreCheck.PreCheckContext context
+        = new PreCheckContextImpl(source, instanceMetadata, port, request);
+        return preCheck.doCheck(context)
+               .onSuccess( v -> LOGGER.debug("{} Pre-check completed successfully. Proceeding with data copy.", logPrefix))
+               .onFailure(throwable -> LOGGER.error("{} Pre-check failed.", logPrefix, throwable));
+    }
 
     /**
      * Checks whether the live migration status at the source is NOT_COMPLETED or COMPLETED.
@@ -572,6 +583,7 @@ class LiveMigrationFileDownloader
         private String id;
         private String source;
         private int port;
+        private LiveMigrationFileDownloadPreCheck preCheck;
 
         protected Builder()
         {
@@ -705,6 +717,17 @@ class LiveMigrationFileDownloader
         }
 
         /**
+         * Sets the {@code preCheck} instance and return a reference to this Builder enabling method chaining.
+         *
+         * @param preCheck the {@code preCheck} to set
+         * @return a reference to this Builder
+         */
+        public Builder preCheck(LiveMigrationFileDownloadPreCheck preCheck)
+        {
+            return update(b -> b.preCheck = preCheck);
+        }
+
+        /**
          * Returns a {@code LiveMigrationFileDownloader} built from the parameters previously set.
          *
          * @return a {@code LiveMigrationFileDownloader} built with parameters of this
@@ -721,6 +744,7 @@ class LiveMigrationFileDownloader
             Objects.requireNonNull(request);
             Objects.requireNonNull(source);
             Objects.requireNonNull(executorPools);
+            Objects.requireNonNull(preCheck);
 
             return new LiveMigrationFileDownloader(this);
         }
@@ -742,6 +766,53 @@ class LiveMigrationFileDownloader
         {
             this.size = size;
             this.lastModifiedTime = lastModifiedTime;
+        }
+    }
+
+    /**
+     * Implementation of {@link LiveMigrationFileDownloadPreCheck.PreCheckContext} that provides
+     * the downloader's context to pre-check implementations.
+     */
+    static class PreCheckContextImpl implements LiveMigrationFileDownloadPreCheck.PreCheckContext
+    {
+        private final String source;
+        private final InstanceMetadata destinationInstanceMetadata;
+        private final int sidecarPort;
+        private final LiveMigrationDataCopyRequest request;
+
+        PreCheckContextImpl(String source,
+                            InstanceMetadata destinationInstanceMetadata,
+                            int sidecarPort,
+                            LiveMigrationDataCopyRequest request)
+        {
+            this.source = source;
+            this.destinationInstanceMetadata = destinationInstanceMetadata;
+            this.sidecarPort = sidecarPort;
+            this.request = request;
+        }
+
+        @Override
+        public String source()
+        {
+            return source;
+        }
+
+        @Override
+        public InstanceMetadata destinationInstanceMetadata()
+        {
+            return destinationInstanceMetadata;
+        }
+
+        @Override
+        public int sidecarPort()
+        {
+            return sidecarPort;
+        }
+
+        @Override
+        public LiveMigrationDataCopyRequest request()
+        {
+            return request;
         }
     }
 }

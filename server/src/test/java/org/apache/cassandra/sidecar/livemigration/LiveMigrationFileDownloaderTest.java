@@ -1145,6 +1145,68 @@ class LiveMigrationFileDownloaderTest
     }
 
     @Test
+    void testDownloadFailsWhenPreCheckFails(@TempDir Path tmpDir) throws InterruptedException
+    {
+        String storageDir = tmpDir.resolve("testDownloadFailsWhenPreCheckFails").toAbsolutePath().toString();
+        List<String> dataDirs = getDataDirList(storageDir);
+        final Consumer<OperationStatus> statusUpdater = mock(Consumer.class);
+
+        LiveMigrationFileDownloadPreCheck failingPreCheck =
+        context -> Future.failedFuture(new RuntimeException("Pre-check failed: node already joined cluster"));
+
+        Injector injector = getInjector();
+        LiveMigrationFileDownloader downloader =
+        getDownloader(injector, dummyRequest100pThreshold, 0, statusUpdater, storageDir, dataDirs, failingPreCheck);
+
+        Future<OperationStatus> statusFuture = downloader.downloadFiles();
+        awaitForFuture(statusFuture);
+
+        assertThat(statusFuture.isComplete()).isTrue();
+        assertThat(statusFuture.result().state()).isEqualTo(OperationStatus.State.FAILED);
+    }
+
+    @Test
+    void testPreCheckReceivesCorrectContext(@TempDir Path tmpDir) throws InterruptedException
+    {
+        String storageDir = tmpDir.resolve("testPreCheckReceivesCorrectContext").toAbsolutePath().toString();
+        List<String> dataDirs = getDataDirList(storageDir);
+        final Consumer<OperationStatus> statusUpdater = mock(Consumer.class);
+
+        // Pre-check that captures the context and then fails to stop the pipeline early
+        LiveMigrationFileDownloadPreCheck.PreCheckContext[] capturedContext =
+        new LiveMigrationFileDownloadPreCheck.PreCheckContext[1];
+        LiveMigrationFileDownloadPreCheck capturingPreCheck = context -> {
+            capturedContext[0] = context;
+            return Future.failedFuture(new RuntimeException("stop here"));
+        };
+
+        Injector injector = getInjector();
+        LiveMigrationFileDownloader downloader =
+        getDownloader(injector, dummyRequest100pThreshold, 0, statusUpdater, storageDir, dataDirs, capturingPreCheck);
+
+        Future<OperationStatus> statusFuture = downloader.downloadFiles();
+        awaitForFuture(statusFuture);
+
+        assertThat(capturedContext[0]).isNotNull();
+        assertThat(capturedContext[0].source()).isEqualTo(SOURCE);
+        assertThat(capturedContext[0].sidecarPort()).isEqualTo(PORT);
+        assertThat(capturedContext[0].request()).isSameAs(dummyRequest100pThreshold);
+        assertThat(capturedContext[0].destinationInstanceMetadata()).isNotNull();
+    }
+
+    @Test
+    void testDefaultPreCheckAlwaysSucceeds()
+    {
+        LiveMigrationFileDownloadPreCheck defaultPreCheck = LiveMigrationFileDownloadPreCheck.DEFAULT;
+        LiveMigrationFileDownloadPreCheck.PreCheckContext mockContext =
+        mock(LiveMigrationFileDownloadPreCheck.PreCheckContext.class);
+
+        Future<Void> result = defaultPreCheck.doCheck(mockContext);
+
+        assertThat(result.succeeded()).isTrue();
+    }
+
+    @Test
     void testCanDeleteWithIOException(@TempDir Path tempDir) throws IOException
     {
         String storageDir = tempDir.resolve("testCanDeleteIOException").toAbsolutePath().toString();
@@ -1372,6 +1434,40 @@ class LiveMigrationFileDownloaderTest
                                           .source(SOURCE)
                                           .port(PORT)
                                           .executorPools(ExecutorPoolsHelper.createdSharedTestPool(vertx))
+                                          .preCheck(LiveMigrationFileDownloadPreCheck.DEFAULT)
+                                          .build();
+    }
+
+    LiveMigrationFileDownloader getDownloader(Injector injector,
+                                              LiveMigrationDataCopyRequest request,
+                                              int currentIteration,
+                                              Consumer<OperationStatus> mockStatusUpdater,
+                                              String storageDir,
+                                              List<String> dataDirs,
+                                              LiveMigrationFileDownloadPreCheck preCheck)
+    {
+        SidecarClientProvider sidecarClientProvider = injector.getInstance(SidecarClientProvider.class);
+        LiveMigrationConfiguration liveMigrationConfig = injector.getInstance(SidecarConfiguration.class)
+                                                                 .liveMigrationConfiguration();
+        return LiveMigrationFileDownloader.builder()
+                                          .id(UUID.randomUUID().toString())
+                                          .vertx(vertx)
+                                          .sidecarClient(sidecarClientProvider.get())
+                                          .request(request)
+                                          .iteration(currentIteration)
+                                          .statusUpdater(mockStatusUpdater)
+                                          .instanceMetadata(InstanceMetadataImpl.builder()
+                                                                                .dataDirs(dataDirs)
+                                                                                .storageDir(storageDir)
+                                                                                .metricRegistry(new MetricRegistry())
+                                                                                .id(1)
+                                                                                .storagePort(7000)
+                                                                                .build())
+                                          .liveMigrationConfiguration(liveMigrationConfig)
+                                          .source(SOURCE)
+                                          .port(PORT)
+                                          .executorPools(ExecutorPoolsHelper.createdSharedTestPool(vertx))
+                                          .preCheck(preCheck)
                                           .build();
     }
 
