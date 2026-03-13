@@ -257,19 +257,6 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
         return executor.executeRequestAsync(requestBuilder().gossipInfoRequest().build());
     }
 
-    /**
-     * Executes the gossip info request using the default retry policy and provided {@code instance}
-     *
-     * @param instance the instance where the request will be executed
-     * @return a completable future of the gossip info
-     */
-    public CompletableFuture<GossipInfoResponse> gossipInfo(SidecarInstance instance)
-    {
-        return executor.executeRequestAsync(requestBuilder()
-                                            .singleInstanceSelectionPolicy(instance)
-                                            .gossipInfoRequest()
-                                            .build());
-    }
 
     /**
      * Executes the GET gossip health request using the default retry policy and configured selection policy

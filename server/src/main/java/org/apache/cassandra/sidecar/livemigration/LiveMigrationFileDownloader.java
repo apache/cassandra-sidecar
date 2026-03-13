@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.livemigration;
 
 import java.io.IOException;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
@@ -46,16 +45,13 @@ import io.vertx.core.file.FileProps;
 import io.vertx.core.file.FileSystemException;
 import org.apache.cassandra.sidecar.client.SidecarClient;
 import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
-import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
-import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo.FileType;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
 import org.apache.cassandra.sidecar.common.response.LiveMigrationStatus.MigrationState;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.concurrent.AsyncConcurrentTaskExecutor;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
@@ -79,14 +75,12 @@ class LiveMigrationFileDownloader
     private final Consumer<OperationStatus> statusUpdater;
     private final InstanceMetadata instanceMetadata;
     private final LiveMigrationConfiguration liveMigrationConfiguration;
-    private final InstancesMetadata instancesMetadata;
     private final SidecarClient sidecarClient;
     private final String id;
     private final String source;
     private final int port;
     private final String logPrefix;
     private final ExecutorPools executorPools;
-    private final DnsResolver dnsResolver;
     private OperationStatus operationStatus;
     private AsyncConcurrentTaskExecutor<Void> concurrentTaskExecutor;
 
@@ -99,12 +93,10 @@ class LiveMigrationFileDownloader
         this.statusUpdater = builder.statusUpdater;
         this.instanceMetadata = builder.instanceMetadata;
         this.liveMigrationConfiguration = builder.liveMigrationConfiguration;
-        this.instancesMetadata = builder.instancesMetadata;
         this.id = builder.id;
         this.source = builder.source;
         this.port = builder.port;
         this.executorPools = builder.executorPools;
-        this.dnsResolver = builder.dnsResolver;
 
         this.operationStatus = OperationStatus.startingState();
         this.logPrefix = String.format("liveMigrationRequest=%s iteration=%s ", id, iteration);
@@ -123,8 +115,7 @@ class LiveMigrationFileDownloader
      */
     public Future<OperationStatus> downloadFiles()
     {
-        return checkGossip()
-               .compose(v -> checkLiveMigrationStatusOfSource())
+        return checkLiveMigrationStatusOfSource()
                .compose(v -> fetchSourceFileList())
                .compose(this::cleanupUnnecessaryFiles)
                .compose(this::prepareDownloadList)
@@ -133,130 +124,6 @@ class LiveMigrationFileDownloader
                .otherwise(this::handleDownloadFailure);
     }
 
-    /**
-     * Validates via cluster gossip that destination has not been started.
-     * This is a best-effort safety check performed before each file download iteration.
-     * <p>
-     * Fetches gossip info from cluster instances and checks:
-     * <ul>
-     *   <li>Source node is present in gossip</li>
-     *   <li>Destination node is NOT present in gossip</li>
-     * </ul>
-     * <p>
-     * <strong>Note:</strong> This cannot guarantee destination won't start during data copy.
-     * Operators must ensure destination is not started until migration completes.
-     *
-     * @return Future that succeeds if validation passes, fails with
-     *         {@link LiveMigrationInvalidRequestException} if unsafe condition detected
-     */
-    private Future<Void> checkGossip()
-    {
-        // Skip gossip check if explicitly requested
-        if (request.skipGossipCheck != null && request.skipGossipCheck)
-        {
-            LOGGER.warn("{} Skipping gossip safety check as requested. " +
-                        "This bypasses validation that destination has not been started.", logPrefix);
-            return Future.succeededFuture();
-        }
-
-        String destination = instanceMetadata.host();
-        LOGGER.debug("{} Validating gossip state: source={}, destination={}", logPrefix, source, destination);
-
-        // Apply configuration defaults for optional gossip fetch parameters if not specified by client
-        int batchSize = request.gossipFetchBatchSize != null
-                        ? request.gossipFetchBatchSize
-                        : liveMigrationConfiguration.gossipFetchBatchSize();
-        int maxRetries = request.gossipFetchMaxRetries != null
-                         ? request.gossipFetchMaxRetries
-                         : liveMigrationConfiguration.gossipFetchMaxRetries();
-
-        GossipInfoFetcher gossipFetcher = new GossipInfoFetcher(
-        sidecarClient,
-        instancesMetadata,
-        port,
-        batchSize,
-        maxRetries);
-
-        return gossipFetcher.fetchGossipInfo()
-                            .compose(gossipResponse -> {
-                                try
-                                {
-                                    return validateGossipResponse(gossipResponse, source, destination);
-                                }
-                                catch (UnknownHostException e)
-                                {
-                                    return Future.failedFuture(e);
-                                }
-                            })
-                            .onSuccess(v -> LOGGER.debug("{} Gossip validation passed", logPrefix))
-                            .onFailure(err -> LOGGER.error("{} Gossip validation failed: {}", logPrefix, err.getMessage()));
-    }
-
-    /**
-     * Validates the gossip response to ensure source is present in gossip and destination is not present.
-     *
-     * @param gossipResponse the gossip information from a healthy node
-     * @param source         the source instance to check for
-     * @param destination    the destination instance to check for
-     * @return Future that succeeds if source is found and destination not found,
-     * fails if source is not found or destination is found in gossip
-     */
-    private Future<Void> validateGossipResponse(GossipInfoResponse gossipResponse,
-                                                String source,
-                                                String destination) throws UnknownHostException
-    {
-        GossipInfoResponse.GossipInfo srcInfo = findGossipInfo(gossipResponse, source);
-        if (srcInfo == null)
-        {
-            String errorMsg = "SAFETY CHECK FAILED: Source node '" + source + "' not found in cluster gossip. " +
-                              "Cannot proceed with data copy. Please fix the source/cluster " +
-                              "and then re-trigger data copy task if required";
-            LOGGER.error("{} {}", logPrefix, errorMsg);
-            return Future.failedFuture(new LiveMigrationInvalidRequestException(errorMsg));
-        }
-
-        GossipInfoResponse.GossipInfo destInfo = findGossipInfo(gossipResponse, destination);
-        if (destInfo != null)
-        {
-            // Destination found in gossip - it was started!
-            String status = destInfo.statusWithPort();
-            String errorMsg = String.format(
-            "SAFETY CHECK FAILED: Destination node '%s' found in cluster gossip with status '%s'. " +
-            "This indicates Cassandra was previously started on the destination. " +
-            "Data copy would overwrite potentially newer data, causing DATA LOSS. Aborting.",
-            destination, status);
-
-            LOGGER.error("{} {}", logPrefix, errorMsg);
-            return Future.failedFuture(new LiveMigrationInvalidRequestException(errorMsg));
-        }
-
-        // Reached here means, source found and destination not found in gossip - safe to proceed
-        LOGGER.info("{} Gossip validation passed: destination {} not found in cluster gossip",
-                    logPrefix, destination);
-        return Future.succeededFuture();
-    }
-
-    private GossipInfoResponse.GossipInfo findGossipInfo(GossipInfoResponse gossipResponse,
-                                                         String instance) throws UnknownHostException
-    {
-//        InstanceMetadata metadata = instancesMetadata.instanceFromHost(instance);
-//        try
-//        {
-//            // InstanceMetadata may not have ip address populated. Calling 'refreshIpAddress' to ensure
-//            // ip address is available.
-//            metadata.refreshIpAddress();
-//        }
-//        catch (UnknownHostException e)
-//        {
-//            LOGGER.error("{} Failed to resolve ipAddress for instance {}", logPrefix, instance, e);
-//            throw e;
-//        }
-        String ipAddress = dnsResolver.resolve(instance);
-        // Composed Gossip info key based on javadoc from:
-        // org.apache.cassandra.sidecar.common.response.GossipInfoResponse.get
-        String gossipInfoKey = "/" + ipAddress + ":" + metadata.storagePort();
-        return gossipResponse.get(gossipInfoKey);
-    }
 
     /**
      * Checks whether the live migration status at the source is NOT_COMPLETED or COMPLETED.
@@ -695,7 +562,6 @@ class LiveMigrationFileDownloader
     static class Builder implements DataObjectBuilder<Builder, LiveMigrationFileDownloader>
     {
         public ExecutorPools executorPools;
-        public DnsResolver dnsResolver;
         private Vertx vertx;
         private SidecarClient sidecarClient;
         private LiveMigrationDataCopyRequest request;
@@ -703,7 +569,6 @@ class LiveMigrationFileDownloader
         private Consumer<OperationStatus> statusUpdater;
         private InstanceMetadata instanceMetadata;
         private LiveMigrationConfiguration liveMigrationConfiguration;
-        private InstancesMetadata instancesMetadata;
         private String id;
         private String source;
         private int port;
@@ -796,17 +661,6 @@ class LiveMigrationFileDownloader
         }
 
         /**
-         * Sets the {@code instancesMetadata} and returns a reference to this Builder enabling method chaining.
-         *
-         * @param instancesMetadata the {@code instancesMetadata} to set
-         * @return a reference to this Builder
-         */
-        public Builder instancesMetadata(InstancesMetadata instancesMetadata)
-        {
-            return update(b -> b.instancesMetadata = instancesMetadata);
-        }
-
-        /**
          * Sets the {@code id} and returns a reference to this Builder enabling method chaining.
          *
          * @param id the {@code id} to set
@@ -850,11 +704,6 @@ class LiveMigrationFileDownloader
             return update(b -> b.executorPools = executorPools);
         }
 
-        public Builder dnsResolver(DnsResolver dnsResolver)
-        {
-            return update(b -> b.dnsResolver = dnsResolver);
-        }
-
         /**
          * Returns a {@code LiveMigrationFileDownloader} built from the parameters previously set.
          *
@@ -868,7 +717,6 @@ class LiveMigrationFileDownloader
             Objects.requireNonNull(sidecarClient);
             Objects.requireNonNull(statusUpdater);
             Objects.requireNonNull(liveMigrationConfiguration);
-            Objects.requireNonNull(instancesMetadata);
             Objects.requireNonNull(id);
             Objects.requireNonNull(request);
             Objects.requireNonNull(source);

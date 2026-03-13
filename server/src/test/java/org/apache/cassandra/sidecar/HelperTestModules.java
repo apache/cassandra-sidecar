@@ -28,7 +28,6 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -81,6 +80,7 @@ public class HelperTestModules
             this.instanceMetadataList = instanceMetadataList;
         }
 
+        @Override
         protected void configure()
         {
             InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
@@ -99,14 +99,6 @@ public class HelperTestModules
                                                                   "No Cassandra instance exists with given ID")));
 
             bind(InstancesMetadata.class).toInstance(mockInstancesMetadata);
-        }
-    }
-
-    public static class DnsResolverTestModule extends AbstractModule
-    {
-        protected void configure()
-        {
-            bind(DnsResolver.class).toInstance(mock(DnsResolver.class));
         }
     }
 }

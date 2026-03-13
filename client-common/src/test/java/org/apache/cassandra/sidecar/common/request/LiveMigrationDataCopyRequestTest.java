@@ -32,7 +32,7 @@ class LiveMigrationDataCopyRequestTest
     @Test
     void testSerializationDeserializationRoundTrip() throws Exception
     {
-        LiveMigrationDataCopyRequest original = new LiveMigrationDataCopyRequest(5, 0.95, 10, null, null, null);
+        LiveMigrationDataCopyRequest original = new LiveMigrationDataCopyRequest(5, 0.95, 10);
 
         String json = objectMapper.writeValueAsString(original);
         LiveMigrationDataCopyRequest deserialized = objectMapper.readValue(json, LiveMigrationDataCopyRequest.class);
@@ -40,28 +40,12 @@ class LiveMigrationDataCopyRequestTest
         assertThat(deserialized.maxIterations).isEqualTo(original.maxIterations);
         assertThat(deserialized.successThreshold).isEqualTo(original.successThreshold);
         assertThat(deserialized.maxConcurrency).isEqualTo(original.maxConcurrency);
-    }
-
-    @Test
-    void testSerializationDeserializationRoundTripWithOptionalValues() throws Exception
-    {
-        LiveMigrationDataCopyRequest original = new LiveMigrationDataCopyRequest(5, 0.95, 10, 5, 5, true);
-
-        String json = objectMapper.writeValueAsString(original);
-        LiveMigrationDataCopyRequest deserialized = objectMapper.readValue(json, LiveMigrationDataCopyRequest.class);
-
-        assertThat(deserialized.maxIterations).isEqualTo(original.maxIterations);
-        assertThat(deserialized.successThreshold).isEqualTo(original.successThreshold);
-        assertThat(deserialized.maxConcurrency).isEqualTo(original.maxConcurrency);
-        assertThat(deserialized.gossipFetchBatchSize).isEqualTo(original.gossipFetchBatchSize);
-        assertThat(deserialized.gossipFetchMaxRetries).isEqualTo(original.gossipFetchMaxRetries);
-        assertThat(deserialized.skipGossipCheck).isEqualTo(original.skipGossipCheck);
     }
 
     @Test
     void testConstructorWithInvalidMaxIterationsThrowsException()
     {
-        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(0, 0.95, 10, null, null, null))
+        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(0, 0.95, 10))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Invalid maxIterations 0. It cannot be less than or equal to zero.");
     }
@@ -69,7 +53,7 @@ class LiveMigrationDataCopyRequestTest
     @Test
     void testConstructorWithNegativeMaxIterationsThrowsException()
     {
-        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(-5, 0.95, 10, null, null, null))
+        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(-5, 0.95, 10))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Invalid maxIterations -5. It cannot be less than or equal to zero.");
     }
@@ -77,7 +61,7 @@ class LiveMigrationDataCopyRequestTest
     @Test
     void testConstructorWithInvalidSuccessThresholdBelowZeroThrowsException()
     {
-        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(5, -0.1, 10, null, null, null))
+        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(5, -0.1, 10))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Invalid successThreshold -0.1. It cannot be less than zero or greater than one.");
     }
@@ -85,7 +69,7 @@ class LiveMigrationDataCopyRequestTest
     @Test
     void testConstructorWithInvalidSuccessThresholdAboveOneThrowsException()
     {
-        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(5, 1.5, 10, null, null, null))
+        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(5, 1.5, 10))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Invalid successThreshold 1.5. It cannot be less than zero or greater than one.");
     }
@@ -93,7 +77,7 @@ class LiveMigrationDataCopyRequestTest
     @Test
     void testConstructorWithInvalidMaxConcurrencyThrowsException()
     {
-        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(5, 0.95, 0, null, null, null))
+        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(5, 0.95, 0))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Invalid maxConcurrency 0. It cannot be less than or equal to zero.");
     }
@@ -101,7 +85,7 @@ class LiveMigrationDataCopyRequestTest
     @Test
     void testConstructorWithNegativeMaxConcurrencyThrowsException()
     {
-        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(5, 0.95, -3, null, null, null))
+        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(5, 0.95, -3))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Invalid maxConcurrency -3. It cannot be less than or equal to zero.");
     }
@@ -109,7 +93,7 @@ class LiveMigrationDataCopyRequestTest
     @Test
     void testValidBoundaryValues()
     {
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 0.0, 1, null, null, null);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 0.0, 1);
 
         assertThat(request.maxIterations).isEqualTo(1);
         assertThat(request.successThreshold).isEqualTo(0.0);
@@ -121,29 +105,10 @@ class LiveMigrationDataCopyRequestTest
     {
         LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(Integer.MAX_VALUE,
                                                                                 1.0,
-                                                                                Integer.MAX_VALUE,
-                                                                                null,
-                                                                                null,
-                                                                                null);
+                                                                                Integer.MAX_VALUE);
 
         assertThat(request.maxIterations).isEqualTo(Integer.MAX_VALUE);
         assertThat(request.successThreshold).isEqualTo(1.0);
         assertThat(request.maxConcurrency).isEqualTo(Integer.MAX_VALUE);
-    }
-
-    @Test
-    void testConstructorWithInvalidGossipFetchBatchSizeThrowsException()
-    {
-        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(5, 0.95, 10, 0, null, null))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Invalid gossipFetchBatchSize 0. It must be greater than zero when specified.");
-    }
-
-    @Test
-    void testConstructorWithInvalidGossipFetchMaxRetriesThrowsException()
-    {
-        assertThatThrownBy(() -> new LiveMigrationDataCopyRequest(5, 0.95, 10, null, -1, null))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Invalid gossipFetchMaxRetries -1. It must be greater than zero when specified.");
     }
 }

@@ -45,40 +45,12 @@ public class LiveMigrationDataCopyRequest
     public final int maxConcurrency;
 
     /**
-     * Batch size for fetching gossip information from cluster instances.
-     * During live migration safety checks, gossip info is fetched from instances in parallel batches.
-     * This controls how many instances are contacted simultaneously per batch.
-     * It is an optional parameter. Server will apply default if not specified.
-     */
-    public final Integer gossipFetchBatchSize;
-
-    /**
-     * Maximum number of batch retry attempts when fetching gossip information.
-     * If all instances in a batch fail to return gossip info, the next batch is tried.
-     * This limits the total number of batch attempts across all instances.
-     * It is an optional parameter. Server will apply default if not specified.
-     */
-    public final Integer gossipFetchMaxRetries;
-
-    /**
-     * Flag to skip gossip-based safety checks before data copy.
-     * When true, the safety validation that ensures destination is not present in cluster gossip
-     * will be skipped. Use with caution - skipping this check may lead to data loss if the
-     * destination node has been started.
-     * Optional parameter - defaults to false (performs safety checks) if not specified.
-     */
-    public final Boolean skipGossipCheck;
-
-    /**
      * Creates a new live migration data copy request.
      */
     @JsonCreator
     public LiveMigrationDataCopyRequest(@JsonProperty("maxIterations") int maxIterations,
                                         @JsonProperty("successThreshold") double successThreshold,
-                                        @JsonProperty("maxConcurrency") int maxConcurrency,
-                                        @JsonProperty("gossipFetchBatchSize") Integer gossipFetchBatchSize,
-                                        @JsonProperty("gossipFetchMaxRetries") Integer gossipFetchMaxRetries,
-                                        @JsonProperty("skipGossipCheck") Boolean skipGossipCheck)
+                                        @JsonProperty("maxConcurrency") int maxConcurrency)
     {
 
         if (maxIterations <= 0)
@@ -99,24 +71,8 @@ public class LiveMigrationDataCopyRequest
                                                + ". It cannot be less than or equal to zero.");
         }
 
-        // Validate optional gossip fetch parameters if specified
-        if (gossipFetchBatchSize != null && gossipFetchBatchSize <= 0)
-        {
-            throw new IllegalArgumentException("Invalid gossipFetchBatchSize " + gossipFetchBatchSize
-                                               + ". It must be greater than zero when specified.");
-        }
-
-        if (gossipFetchMaxRetries != null && gossipFetchMaxRetries <= 0)
-        {
-            throw new IllegalArgumentException("Invalid gossipFetchMaxRetries " + gossipFetchMaxRetries
-                                               + ". It must be greater than zero when specified.");
-        }
-
         this.maxIterations = maxIterations;
         this.successThreshold = successThreshold;
         this.maxConcurrency = maxConcurrency;
-        this.gossipFetchBatchSize = gossipFetchBatchSize;
-        this.gossipFetchMaxRetries = gossipFetchMaxRetries;
-        this.skipGossipCheck = skipGossipCheck;
     }
 }

@@ -52,20 +52,4 @@ public interface LiveMigrationConfiguration
      * Maximum number of concurrent downloads allowed.
      */
     int maxConcurrentDownloads();
-
-    /**
-     * Batch size for fetching gossip information from cluster instances during safety checks.
-     * Controls how many instances are contacted simultaneously per batch.
-     *
-     * @return the batch size for gossip fetching
-     */
-    int gossipFetchBatchSize();
-
-    /**
-     * Maximum number of batch retry attempts when fetching gossip information.
-     * If all instances in a batch fail to return gossip info, the next batch is tried.
-     *
-     * @return the maximum number of retry attempts
-     */
-    int gossipFetchMaxRetries();
 }

@@ -103,7 +103,7 @@ public class DataCopyTaskManagerTest
     {
         Injector injector = getInjector();
         DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2);
 
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
@@ -118,7 +118,7 @@ public class DataCopyTaskManagerTest
     {
         Injector injector = getInjector();
         DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 10, null, null, null); // exceeds max concurrency of 5
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 10); // exceeds max concurrency of 5
 
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
@@ -138,7 +138,7 @@ public class DataCopyTaskManagerTest
         LiveMigrationTask inProgressTask = getInProgressTask("existing-task");
         dataCopyTaskManager.currentTasks.put(dest1Id, inProgressTask);
 
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2);
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
 
@@ -157,7 +157,7 @@ public class DataCopyTaskManagerTest
         LiveMigrationTask completedTask = getSucceededTask("completed-task", source1Name);
         dataCopyTaskManager.currentTasks.put(dest1Id, completedTask);
 
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2);
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
 
@@ -177,7 +177,7 @@ public class DataCopyTaskManagerTest
         // Mocking JMX as up
         when(destinationMetadata.delegate().isJmxUp()).thenReturn(true);
 
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2);
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
 
@@ -197,7 +197,7 @@ public class DataCopyTaskManagerTest
         when(destinationMetadata.delegate())
         .thenThrow(new CassandraUnavailableException(CQL_AND_JMX, "CassandraAdapterDelegate is not available"));
 
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2);
         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
         awaitForFuture(future);
 
@@ -310,7 +310,7 @@ public class DataCopyTaskManagerTest
                         startLatch.await();
 
                         LiveMigrationDataCopyRequest request
-                        = new LiveMigrationDataCopyRequest(1, 1.0, 2, null, null, null);
+                        = new LiveMigrationDataCopyRequest(1, 1.0, 2);
                         Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
                         results.add(future);
 
@@ -389,7 +389,7 @@ public class DataCopyTaskManagerTest
     {
         List<LiveMigrationTaskResponse.Status> statusList =
         List.of(new LiveMigrationTaskResponse.Status(0, "PREPARING", 500L, 1, 1, 1, 0, 0, 500L));
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 1, null, null, null);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 1);
         LiveMigrationTaskResponse response = new LiveMigrationTaskResponse(taskId, source1Name, 9043, request, statusList);
         return new FakeLiveMigrationTask(response);
     }
@@ -398,7 +398,7 @@ public class DataCopyTaskManagerTest
     {
         List<LiveMigrationTaskResponse.Status> statusList =
         List.of(new LiveMigrationTaskResponse.Status(0, "SUCCESS", 1000L, 1, 1, 1, 1, 0, 1000L));
-        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 1, null, null, null);
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 1);
         LiveMigrationTaskResponse response = new LiveMigrationTaskResponse(taskId, sourceHost, 9043, request, statusList);
         return new FakeLiveMigrationTask(response);
     }

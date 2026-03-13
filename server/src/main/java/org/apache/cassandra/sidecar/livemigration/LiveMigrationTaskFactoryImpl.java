@@ -21,10 +21,8 @@ package org.apache.cassandra.sidecar.livemigration;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
-import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
-import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
@@ -41,22 +39,17 @@ public class LiveMigrationTaskFactoryImpl implements LiveMigrationTaskFactory
     private final SidecarClientProvider sidecarClientProvider;
     private final LiveMigrationConfiguration liveMigrationConfiguration;
     private final ExecutorPools executorPools;
-    private final InstancesMetadata instancesMetadata;
-    private final DnsResolver dnsResolver;
 
     @Inject
     public LiveMigrationTaskFactoryImpl(Vertx vertx,
                                         ExecutorPools executorPools,
                                         SidecarClientProvider sidecarClientProvider,
-                                        SidecarConfiguration sidecarConfiguration,
-                                        InstancesMetadata instancesMetadata, DnsResolver dnsResolver)
+                                        SidecarConfiguration sidecarConfiguration)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
         this.sidecarClientProvider = sidecarClientProvider;
         this.liveMigrationConfiguration = sidecarConfiguration.liveMigrationConfiguration();
-        this.instancesMetadata = instancesMetadata;
-        this.dnsResolver = dnsResolver;
     }
 
     /**
@@ -70,6 +63,6 @@ public class LiveMigrationTaskFactoryImpl implements LiveMigrationTaskFactory
                                     InstanceMetadata instanceMetadata)
     {
         return new LiveMigrationTaskImpl(vertx, executorPools, sidecarClientProvider, liveMigrationConfiguration,
-                                         instancesMetadata, id, request, source, port, instanceMetadata, dnsResolver);
+                                         id, request, source, port, instanceMetadata);
     }
 }

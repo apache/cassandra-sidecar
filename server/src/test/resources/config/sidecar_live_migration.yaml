@@ -212,5 +212,3 @@ live_migration:
   migration_map:
     localhost1: localhost4
   max_concurrent_downloads: 20
-  gossip_fetch_batch_size: 5
-  gossip_fetch_max_retries: 2

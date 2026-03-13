@@ -48,9 +48,7 @@ class LiveMigrationMapSidecarConfigImplTest
         new LiveMigrationConfigurationImpl(Collections.emptySet(),
                                            Collections.emptySet(),
                                            Map.of("localhost1", "localhost4"),
-                                           20,
-                                           5,
-                                           5);
+                                           20);
 
         SidecarConfigurationImpl sidecarConfig =
         SidecarConfigurationImpl.builder()
@@ -91,9 +89,7 @@ class LiveMigrationMapSidecarConfigImplTest
         new LiveMigrationConfigurationImpl(Collections.emptySet(),
                                            Collections.emptySet(),
                                            Map.of(),
-                                           20,
-                                           5,
-                                           5);
+                                           20);
 
         SidecarConfigurationImpl sidecarConfig =
         SidecarConfigurationImpl.builder()
