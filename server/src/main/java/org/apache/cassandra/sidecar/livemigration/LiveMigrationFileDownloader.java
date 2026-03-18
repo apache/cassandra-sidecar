@@ -132,7 +132,7 @@ class LiveMigrationFileDownloader
         LiveMigrationFileDownloadPreCheck.PreCheckContext context
         = new PreCheckContextImpl(source, instanceMetadata, port, request);
         return preCheck.doCheck(context)
-               .onSuccess( v -> LOGGER.debug("{} Pre-check completed successfully. Proceeding with data copy.", logPrefix))
+               .onSuccess(v -> LOGGER.debug("{} Pre-check completed successfully. Proceeding with data copy.", logPrefix))
                .onFailure(throwable -> LOGGER.error("{} Pre-check failed.", logPrefix, throwable));
     }
 

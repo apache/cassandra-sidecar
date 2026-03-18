@@ -183,6 +183,30 @@ public class DataCopyTaskManagerTest
         assertThat(future.failed()).isTrue();
         assertThat(future.result()).isNull();
         assertThat(future.cause()).isNotNull();
+        assertThat(future.cause()).isInstanceOf(LiveMigrationInvalidRequestException.class);
+    }
+
+    @Test
+    public void testCreateTaskShouldFailWhenCassandraInstanceNativeIsUp() throws InterruptedException
+    {
+        Injector injector = getInjector();
+        DataCopyTaskManager dataCopyTaskManager = getDataCopyTaskManager(injector);
+        InstancesMetadata instancesMetadata = injector.getInstance(InstancesMetadata.class);
+        InstanceMetadata destinationMetadata = instancesMetadata.instanceFromHost(dest1Name);
+
+        // Mocking native (CQL) as up but JMX as down
+        when(destinationMetadata.delegate().isJmxUp()).thenReturn(false);
+        when(destinationMetadata.delegate().isNativeUp()).thenReturn(true);
+
+        LiveMigrationDataCopyRequest request = new LiveMigrationDataCopyRequest(1, 1.0, 2);
+        Future<LiveMigrationTask> future = dataCopyTaskManager.createTask(request, dest1Name);
+        awaitForFuture(future);
+
+        assertThat(future.succeeded()).isFalse();
+        assertThat(future.failed()).isTrue();
+        assertThat(future.result()).isNull();
+        assertThat(future.cause()).isNotNull();
+        assertThat(future.cause()).isInstanceOf(LiveMigrationInvalidRequestException.class);
     }
 
     @Test

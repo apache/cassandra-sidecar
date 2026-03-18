@@ -145,8 +145,8 @@ public class DataCopyTaskManager
     /**
      * Initiating data copy once a Cassandra instance starts is not acceptable. This method checks whether
      * Cassandra is running or not at the moment on the destination instance by checking if Sidecar
-     * was able to connect to the Cassandra instance's JMX port. It returns a failed future if Sidecar
-     * is able to connect to the JMX port of Cassandra.
+     * is able to connect to the Cassandra instance's JMX port or native (CQL) port. It returns a failed
+     * future if Sidecar is able to connect to either port of Cassandra.
      *
      * @param localInstance metadata for the local Cassandra instance
      * @return Future that succeeds if Cassandra is not running, fails if it is running
@@ -157,15 +157,15 @@ public class DataCopyTaskManager
         {
             CassandraAdapterDelegate delegate = localInstance.delegate();
 
-            if (delegate.isJmxUp())
+            if (delegate.isJmxUp() || delegate.isNativeUp())
             {
                 return Future.failedFuture(new LiveMigrationInvalidRequestException(
                 "Cannot start data copy: Cassandra is currently running on this instance " +
-                "(JMX connectivity established). Data copy cannot proceed while Cassandra is active."));
+                "(JMX or native connectivity established). Data copy cannot proceed while Cassandra is active."));
             }
 
-            // JMX is down - Cassandra is not running (or at least wasn't during last health check)
-            LOGGER.debug("Local JMX check passed: Cassandra not detected as running on {}", localInstance.host());
+            // JMX and native are down - Cassandra is not running (or at least wasn't during last health check)
+            LOGGER.debug("Local JMX and native check passed: Cassandra not detected as running on {}", localInstance.host());
             return Future.succeededFuture();
         }
         catch (CassandraUnavailableException e)
