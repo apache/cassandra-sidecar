@@ -773,7 +773,7 @@ class LiveMigrationFileDownloader
      * Implementation of {@link LiveMigrationFileDownloadPreCheck.PreCheckContext} that provides
      * the downloader's context to pre-check implementations.
      */
-    static class PreCheckContextImpl implements LiveMigrationFileDownloadPreCheck.PreCheckContext
+    private static class PreCheckContextImpl implements LiveMigrationFileDownloadPreCheck.PreCheckContext
     {
         private final String source;
         private final InstanceMetadata destinationInstanceMetadata;

@@ -113,22 +113,15 @@ public class DataCopyTaskManager
 
                    // It is possible to serve only one live migration data copy request per instance at a time.
                    // Checking if there is another migration is in progress before accepting new one.
-                   boolean accepted = currentTasks.compute(localInstanceMetadata.id(), (integer, taskInMap) -> {
+                   boolean accepted = newTask == currentTasks.compute(localInstanceMetadata.id(), (integer, taskInMap) -> {
                        if (taskInMap == null)
                        {
                            return newTask;
                        }
 
-                       if (!taskInMap.isCompleted())
-                       {
-                           // Accept new task if and only if the existing task has completed.
-                           return taskInMap;
-                       }
-                       else
-                       {
-                           return newTask;
-                       }
-                   }) == newTask;
+                       // Accept new task if and only if the existing task has completed.
+                       return taskInMap.isCompleted() ? newTask : taskInMap;
+                   });
 
                    if (!accepted)
                    {

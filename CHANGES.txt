@@ -1,6 +1,6 @@
 0.4.0
 -----
- * Adding gossip based safety check to Live Migration data copy task endpoint (CASSSIDECAR-409)
+ * Add safety check to Live Migration data copy task endpoint (CASSSIDECAR-409)
  * Define common operational job tracking interface and refactor current operational job tracker (CASSSIDECAR-372)
 
 0.3.0
