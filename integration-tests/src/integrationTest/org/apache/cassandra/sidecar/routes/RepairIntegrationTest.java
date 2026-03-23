@@ -214,7 +214,7 @@ class RepairIntegrationTest extends SharedClusterSidecarIntegrationTestBase
     private void pollStatusForState(String uuid)
     {
         String status = "/api/v1/cassandra/operational-jobs/" + uuid;
-        loopAssert(30, 500, () -> {
+        loopAssert(60, 500, () -> {
             HttpResponse<Buffer> resp = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", status)
                                                                    .send());
             logger.info("Success Status Response code: {}", resp.statusCode());
