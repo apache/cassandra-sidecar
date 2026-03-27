@@ -212,10 +212,23 @@ public class CdcManager
         for (InstanceMetadata instance : instanceFetcher.allLocalInstances())
         {
             String configuredIpAddress = instance.ipAddress();
+            String configuredHost = instance.host();
 
-            // Option 1a: Normalize both to InetAddress and compare
+            LOGGER.info("Matching instanceIp={} against instance id={} host={} ipAddress={}",
+                        instanceIp, instance.id(), configuredHost, configuredIpAddress);
+
+            // Try IP-based comparison first
             if (resolveToSameAddress(instanceIp, configuredIpAddress))
             {
+                LOGGER.info("Matched instance id={} by IP address", instance.id());
+                return instance.id();
+            }
+
+            // Fallback: try comparing against the configured hostname
+            if (resolveToSameAddress(instanceIp, configuredHost))
+            {
+                LOGGER.info("Matched instance id={} by hostname={} (IP comparison failed for cachedIp={})",
+                            instance.id(), configuredHost, configuredIpAddress);
                 return instance.id();
             }
         }
