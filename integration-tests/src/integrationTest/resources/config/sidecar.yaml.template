@@ -278,8 +278,6 @@ driver_parameters:
     parameters:
       username: cassandra
       password: cassandra
-#  username: cassandra
-#  password: cassandra
   ssl:
     enabled:  false
     keystore:

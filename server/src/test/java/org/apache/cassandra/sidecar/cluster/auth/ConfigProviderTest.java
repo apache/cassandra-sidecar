@@ -33,7 +33,7 @@ class ConfigProviderTest
     void testInterfaceGetters()
     {
         CqlAuthProvider provider = new ConfigProvider(Map.of(ConfigProvider.USERNAME_PARAM, "cassandra",
-                                                            ConfigProvider.PASSWORD_PARAM, "cassandra"));
+            ConfigProvider.PASSWORD_PARAM, "cassandra"));
         assertThat(provider.username()).isEqualTo("cassandra");
         assertThat(provider.password()).isEqualTo("cassandra");
     }

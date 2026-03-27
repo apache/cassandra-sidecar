@@ -44,10 +44,8 @@ class FileProviderTest
         Files.writeString(usernamePath, "cassandra-user\n");
         Files.writeString(passwordPath, "cassandra-pass\n");
 
-        CqlAuthProvider provider = new FileProvider(Map.of(FileProvider.USERNAME_PATH_PARAM,
-                                                                       usernamePath.toString(),
-                                                                       FileProvider.PASSWORD_PATH_PARAM,
-                                                                       passwordPath.toString()));
+        CqlAuthProvider provider = new FileProvider(Map.of(FileProvider.USERNAME_PATH_PARAM, usernamePath.toString(),
+            FileProvider.PASSWORD_PATH_PARAM, passwordPath.toString()));
         assertThat(provider.username()).isEqualTo("cassandra-user");
         assertThat(provider.password()).isEqualTo("cassandra-pass");
     }
@@ -68,10 +66,8 @@ class FileProviderTest
         Files.writeString(usernamePath, " \n");
         Files.writeString(passwordPath, "secret");
 
-        FileProvider provider = new FileProvider(Map.of(FileProvider.USERNAME_PATH_PARAM,
-                                                                       usernamePath.toString(),
-                                                                       FileProvider.PASSWORD_PATH_PARAM,
-                                                                       passwordPath.toString()));
+        FileProvider provider = new FileProvider(Map.of(FileProvider.USERNAME_PATH_PARAM, usernamePath.toString(),
+                                                                       FileProvider.PASSWORD_PATH_PARAM, passwordPath.toString()));
         assertThatExceptionOfType(ConfigurationException.class)
         .isThrownBy(provider::username)
         .withMessageContaining("Empty content in auth_provider file for parameter");
