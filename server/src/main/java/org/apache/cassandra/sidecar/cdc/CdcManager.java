@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.jetbrains.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,10 +45,10 @@ import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
 import org.apache.cassandra.cdc.sidecar.SidecarStatePersister;
 import org.apache.cassandra.cdc.stats.ICdcStats;
 import org.apache.cassandra.secrets.SecretsProvider;
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
+import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.utils.AsyncExecutor;
@@ -207,20 +209,18 @@ public class CdcManager
         consumers.forEach(SidecarCdc::stop);
     }
 
-    private Integer getInstanceId(String instanceIp)
+    @VisibleForTesting
+    Integer getInstanceId(String instanceIp)
     {
-        for (InstanceMetadata instance : instanceFetcher.allLocalInstances())
+        try
         {
-            String configuredIpAddress = instance.ipAddress();
-
-            // Option 1a: Normalize both to InetAddress and compare
-            if (resolveToSameAddress(instanceIp, configuredIpAddress))
-            {
-                return instance.id();
-            }
+            return instanceFetcher.instance(instanceIp).id();
         }
-        LOGGER.warn("Requested IP {} does not match with any instances", instanceIp);
-        return -1;
+        catch (NoSuchCassandraInstanceException e)
+        {
+            LOGGER.warn("Requested IP {} does not match with any instances", instanceIp);
+            return -1;
+        }
     }
 
     public static boolean resolveToSameAddress(String address1, String address2)

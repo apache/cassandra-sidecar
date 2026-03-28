@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.cdc;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,6 +43,7 @@ import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
+import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -52,10 +52,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -144,10 +146,9 @@ public class CdcManagerTest
         InstanceMetadata instance = mockInstance(instanceId, instanceIp);
 
         when(rangeManager.ownedTokenRanges()).thenReturn(ownedRanges);
-        when(instanceFetcher.allLocalInstances()).thenReturn(Collections.singletonList(instance));
+        when(instanceFetcher.instance(instanceIp)).thenReturn(instance);
         when(cdcConfig.jobId()).thenReturn("test-job");
 
-        // Spy to mock loadOrBuildCdcConsumer
         CdcManager spyManager = spy(cdcManager);
         SidecarCdc mockConsumer = mock(SidecarCdc.class);
         doReturn(mockConsumer).when(spyManager).loadOrBuildCdcConsumer(
@@ -156,7 +157,6 @@ public class CdcManagerTest
 
         List<SidecarCdc> consumers = spyManager.buildCdcConsumers();
 
-        // Assert
         assertThat(consumers).hasSize(1);
     }
 
@@ -177,10 +177,9 @@ public class CdcManagerTest
         InstanceMetadata instance = mockInstance(instanceId, instanceIp);
 
         when(rangeManager.ownedTokenRanges()).thenReturn(ownedRanges);
-        when(instanceFetcher.allLocalInstances()).thenReturn(Collections.singletonList(instance));
+        when(instanceFetcher.instance(instanceIp)).thenReturn(instance);
         when(cdcConfig.jobId()).thenReturn("test-job");
 
-        // Spy to mock loadOrBuildCdcConsumer
         CdcManager spyManager = spy(cdcManager);
         SidecarCdc mockConsumer1 = mock(SidecarCdc.class);
         SidecarCdc mockConsumer2 = mock(SidecarCdc.class);
@@ -190,7 +189,6 @@ public class CdcManagerTest
 
         List<SidecarCdc> consumers = spyManager.buildCdcConsumers();
 
-        // Assert
         assertThat(consumers).hasSize(2);
     }
 
@@ -212,15 +210,11 @@ public class CdcManagerTest
         InstanceMetadata instance1 = mockInstance(instance1Id, instance1Ip);
         InstanceMetadata instance2 = mockInstance(instance2Id, instance2Ip);
 
-        List<InstanceMetadata> instances = new ArrayList<>();
-        instances.add(instance1);
-        instances.add(instance2);
-
         when(rangeManager.ownedTokenRanges()).thenReturn(ownedRanges);
-        when(instanceFetcher.allLocalInstances()).thenReturn(instances);
+        when(instanceFetcher.instance(instance1Ip)).thenReturn(instance1);
+        when(instanceFetcher.instance(instance2Ip)).thenReturn(instance2);
         when(cdcConfig.jobId()).thenReturn("test-job");
 
-        // Spy to mock loadOrBuildCdcConsumer
         CdcManager spyManager = spy(cdcManager);
         SidecarCdc mockConsumer1 = mock(SidecarCdc.class);
         SidecarCdc mockConsumer2 = mock(SidecarCdc.class);
@@ -230,7 +224,6 @@ public class CdcManagerTest
 
         List<SidecarCdc> consumers = spyManager.buildCdcConsumers();
 
-        // Assert
         assertThat(consumers).hasSize(2);
     }
 
@@ -240,7 +233,6 @@ public class CdcManagerTest
         String instanceIp = "127.0.0.1";
         int instanceId = 1;
 
-        // Create two identical ranges
         TokenRange range1 = mockTokenRange(BigInteger.ZERO, BigInteger.TEN);
         TokenRange range2 = mockTokenRange(BigInteger.ZERO, BigInteger.TEN);
 
@@ -253,10 +245,9 @@ public class CdcManagerTest
         InstanceMetadata instance = mockInstance(instanceId, instanceIp);
 
         when(rangeManager.ownedTokenRanges()).thenReturn(ownedRanges);
-        when(instanceFetcher.allLocalInstances()).thenReturn(Collections.singletonList(instance));
+        when(instanceFetcher.instance(instanceIp)).thenReturn(instance);
         when(cdcConfig.jobId()).thenReturn("test-job");
 
-        // Spy to mock loadOrBuildCdcConsumer
         CdcManager spyManager = spy(cdcManager);
         SidecarCdc mockConsumer = mock(SidecarCdc.class);
         doReturn(mockConsumer).when(spyManager).loadOrBuildCdcConsumer(
@@ -265,7 +256,6 @@ public class CdcManagerTest
 
         List<SidecarCdc> consumers = spyManager.buildCdcConsumers();
 
-        // Assert - Should deduplicate to 1 consumer
         assertThat(consumers).hasSize(1);
     }
 
@@ -277,12 +267,10 @@ public class CdcManagerTest
         TokenRange range = mockTokenRange(BigInteger.ZERO, BigInteger.TEN);
         Map<String, Set<TokenRange>> ownedRanges = Collections.singletonMap(unknownIp, Collections.singleton(range));
 
-        // No matching instances
         when(rangeManager.ownedTokenRanges()).thenReturn(ownedRanges);
-        when(instanceFetcher.allLocalInstances()).thenReturn(Collections.emptyList());
+        when(instanceFetcher.instance(unknownIp)).thenThrow(new NoSuchCassandraInstanceException("Instance not found: " + unknownIp));
         when(cdcConfig.jobId()).thenReturn("test-job");
 
-        // Spy to mock loadOrBuildCdcConsumer - will be called with instanceId = -1
         CdcManager spyManager = spy(cdcManager);
         SidecarCdc mockConsumer = mock(SidecarCdc.class);
         doReturn(mockConsumer).when(spyManager).loadOrBuildCdcConsumer(
@@ -291,24 +279,92 @@ public class CdcManagerTest
 
         List<SidecarCdc> consumers = spyManager.buildCdcConsumers();
 
-        // Assert - Should still create consumer with instanceId = -1
         assertThat(consumers).hasSize(1);
     }
 
     @Test
     void testResolveToSameAddressTrue()
     {
-        String address1 = "127.0.0.1";
-        String address2 = "localhost";
-        assertThat(CdcManager.resolveToSameAddress(address1, address2)).isTrue();
+        assertThat(CdcManager.resolveToSameAddress("127.0.0.1", "localhost")).isTrue();
     }
 
     @Test
     void testResolveToSameAddressFalse()
     {
-        String address1 = "127.0.0.1";
-        String address2 = "127.0.0.2";
-        assertThat(CdcManager.resolveToSameAddress(address1, address2)).isFalse();
+        assertThat(CdcManager.resolveToSameAddress("127.0.0.1", "127.0.0.2")).isFalse();
+    }
+
+    @Test
+    void testGetInstanceIdResolvesCorrectlyWhenIpAddressIsNull() throws IOException
+    {
+        String instanceIp = "172.19.0.5";
+        int instanceId = 1000;
+
+        TokenRange range = mockTokenRange(BigInteger.ZERO, BigInteger.TEN);
+        Map<String, Set<TokenRange>> ownedRanges = Collections.singletonMap(instanceIp, Collections.singleton(range));
+
+        InstanceMetadata instance = mock(InstanceMetadata.class, RETURNS_DEEP_STUBS);
+        when(instance.id()).thenReturn(instanceId);
+        when(instance.ipAddress()).thenReturn(null);
+
+        when(rangeManager.ownedTokenRanges()).thenReturn(ownedRanges);
+        when(instanceFetcher.instance(instanceIp)).thenReturn(instance);
+        when(cdcConfig.jobId()).thenReturn("test-job");
+
+        CdcManager spyManager = spy(cdcManager);
+        SidecarCdc mockConsumer = mock(SidecarCdc.class);
+        doReturn(mockConsumer).when(spyManager).loadOrBuildCdcConsumer(
+            anyInt(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+        );
+
+        List<SidecarCdc> consumers = spyManager.buildCdcConsumers();
+
+        assertThat(consumers).hasSize(1);
+        verify(spyManager).loadOrBuildCdcConsumer(
+            eq(instanceId), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+        );
+    }
+
+    /**
+     * Verifies that getInstanceId returns the correct id even when ipAddress() is null.
+     *
+     * <p>Old code (broken): allLocalInstances() returns the instance; ipAddress()=null;
+     * resolveToSameAddress("172.19.0.5", null) calls InetAddress.getByName(null) which
+     * returns 127.0.0.1 ≠ 172.19.0.5 → returns -1. Test FAILS with old code.
+     *
+     * <p>Fixed code: instanceFetcher.instance(ip) resolves via instanceFromHost refresh
+     * path → returns instance with id=1. Test PASSES with fix.
+     */
+    @Test
+    void testGetInstanceIdReturnsCorrectIdWhenIpAddressIsNull()
+    {
+        String instanceIp = "172.19.0.5";
+        int instanceId = 1;
+
+        InstanceMetadata instance = mock(InstanceMetadata.class);
+        when(instance.id()).thenReturn(instanceId);
+        when(instance.ipAddress()).thenReturn(null); // not yet refreshed — the key precondition
+
+        when(instanceFetcher.allLocalInstances()).thenReturn(Collections.singletonList(instance));
+        when(instanceFetcher.instance(instanceIp)).thenReturn(instance);
+
+        assertThat(cdcManager.getInstanceId(instanceIp)).isEqualTo(instanceId);
+    }
+
+    /**
+     * Verifies that getInstanceId returns -1 when the IP is not known to any local instance.
+     * Both old and new code produce -1 here, but via different mechanisms.
+     */
+    @Test
+    void testGetInstanceIdReturnsMinusOneWhenInstanceNotFound()
+    {
+        String unknownIp = "192.168.1.100";
+
+        when(instanceFetcher.allLocalInstances()).thenReturn(Collections.emptyList());
+        when(instanceFetcher.instance(unknownIp))
+            .thenThrow(new NoSuchCassandraInstanceException("Instance not found: " + unknownIp));
+
+        assertThat(cdcManager.getInstanceId(unknownIp)).isEqualTo(-1);
     }
 
     // Helper methods
