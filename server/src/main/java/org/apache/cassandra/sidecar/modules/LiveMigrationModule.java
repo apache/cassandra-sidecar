@@ -51,8 +51,8 @@ import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationMapSidec
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationStatusClearHandler;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationStatusCompleteHandler;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationStatusGetHandler;
-import org.apache.cassandra.sidecar.livemigration.LiveMigrationFileDownloadPreCheck;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationDataCopyTaskFactoryImpl;
+import org.apache.cassandra.sidecar.livemigration.LiveMigrationFileDownloadPreCheck;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationFilesVerificationTaskFactory;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationStatusTracker;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationStatusTrackerImpl;
@@ -87,19 +87,19 @@ public class LiveMigrationModule extends AbstractModule
     @POST
     @Path(ApiEndpointsV1.LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE)
     @Operation(summary = "Create data copy task",
-               description = "Creates a new data copy task for live migration")
+    description = "Creates a new data copy task for live migration")
     @APIResponse(description = "Data copy task created successfully",
-                 responseCode = "202",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    responseCode = "202",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "404",
-                 description = "Live migration not enabled or node not configured as destination",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Live migration not enabled or node not configured as destination",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "409",
-                 description = "Cannot accept data copy task as another task is in progress",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Cannot accept data copy task as another task is in progress",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationCreateDataCopyTaskRouteKey.class)
     VertxRoute createDataCopyTaskRoute(RouteBuilder.Factory factory,
@@ -118,13 +118,13 @@ public class LiveMigrationModule extends AbstractModule
     @Operation(summary = "Cancel data copy task",
     description = "Cancels an existing data copy task for live migration")
     @APIResponse(description = "Data copy task cancelled successfully",
-                 responseCode = "200",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = LiveMigrationDataCopyResponse.class)))
+    responseCode = "200",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(implementation = LiveMigrationDataCopyResponse.class)))
     @APIResponse(responseCode = "404",
-                 description = "Live migration not enabled, node not configured as destination, or data copy task not found",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Live migration not enabled, node not configured as destination, or data copy task not found",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationCancelDataCopyTaskRouteKey.class)
     VertxRoute cancelDataCopyTaskRoute(RouteBuilder.Factory factory,
@@ -139,15 +139,15 @@ public class LiveMigrationModule extends AbstractModule
 
     @GET
     @Operation(summary = "Get data copy task",
-               description = "Retrieves the status and details of a specific data copy task by task ID")
+    description = "Retrieves the status and details of a specific data copy task by task ID")
     @APIResponse(description = "Data copy task retrieved successfully",
-                 responseCode = "200",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = LiveMigrationDataCopyResponse.class)))
+    responseCode = "200",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(implementation = LiveMigrationDataCopyResponse.class)))
     @APIResponse(responseCode = "404",
-                 description = "Live migration not enabled, node not configured as destination, or data copy task not found",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Live migration not enabled, node not configured as destination, or data copy task not found",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationGetDataCopyTaskRouteKey.class)
     VertxRoute getDataCopyTaskRoute(RouteBuilder.Factory factory,
@@ -164,13 +164,13 @@ public class LiveMigrationModule extends AbstractModule
     @Operation(summary = "Get all data copy tasks",
     description = "Retrieves all data copy tasks for live migration on the current node")
     @APIResponse(description = "Data copy tasks retrieved successfully",
-                 responseCode = "200",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.ARRAY)))
+    responseCode = "200",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.ARRAY)))
     @APIResponse(responseCode = "404",
-                 description = "Live migration not enabled or node not configured as destination",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Live migration not enabled or node not configured as destination",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationGetAllDataCopyTasksRouteKey.class)
     VertxRoute getAllDataCopyTasksRoute(RouteBuilder.Factory factory,
@@ -186,28 +186,28 @@ public class LiveMigrationModule extends AbstractModule
     @GET
     @Path(ApiEndpointsV1.LIVE_MIGRATION_FILE_TRANSFER_ROUTE)
     @Operation(summary = "Stream file for live migration",
-               description = "Streams a file for live migration data transfer. " +
-                             "Optionally returns file digest when digestAlgorithm query parameter is provided")
+    description = "Streams a file for live migration data transfer. " +
+                  "Optionally returns file digest when digestAlgorithm query parameter is provided")
     @APIResponse(description = "File stream for live migration initiated successfully (when digestAlgorithm param is absent)",
-                 responseCode = "200",
-                 content = @Content(mediaType = "application/octet-stream",
-                 schema = @Schema(type = SchemaType.STRING)))
+    responseCode = "200",
+    content = @Content(mediaType = "application/octet-stream",
+    schema = @Schema(type = SchemaType.STRING)))
     @APIResponse(description = "File digest calculated successfully (when digestAlgorithm param is present)",
-                 responseCode = "200",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = DigestResponse.class)))
+    responseCode = "200",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(implementation = DigestResponse.class)))
     @APIResponse(responseCode = "404",
-                 description = "Live migration not enabled or node not configured as source",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Live migration not enabled or node not configured as source",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "503",
-                 description = "Concurrency limit reached for file requests",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Concurrency limit reached for file requests",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "500",
-                 description = "Failed to calculate digest",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Failed to calculate digest",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationFileStreamHandlerRouteKey.class)
     VertxRoute liveMigrationFileRoute(RouteBuilder.Factory factory,
@@ -230,15 +230,15 @@ public class LiveMigrationModule extends AbstractModule
     @GET
     @Path(ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE)
     @Operation(summary = "List instance files",
-               description = "Lists files available on an instance for live migration purposes")
+    description = "Lists files available on an instance for live migration purposes")
     @APIResponse(description = "Instance files listed successfully",
-                 responseCode = "200",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = InstanceFilesListResponse.class)))
+    responseCode = "200",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(implementation = InstanceFilesListResponse.class)))
     @APIResponse(responseCode = "404",
-                 description = "Live migration not enabled or node not configured for migration",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Live migration not enabled or node not configured for migration",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationListInstanceFilesRouteKey.class)
     public VertxRoute listInstanceFiles(RouteBuilder.Factory factory,
@@ -254,19 +254,19 @@ public class LiveMigrationModule extends AbstractModule
     @POST
     @Path(ApiEndpointsV1.LIVE_MIGRATION_STATUS_ROUTE)
     @Operation(summary = "Updates live migration status",
-               description = "Updates live migration status as COMPLETED for requested instance")
+    description = "Updates live migration status as COMPLETED for requested instance")
     @APIResponse(description = "Live migration status updated successfully",
-                 responseCode = "200",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = LiveMigrationStatus.class)))
+    responseCode = "200",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(implementation = LiveMigrationStatus.class)))
     @APIResponse(responseCode = "400",
-                 description = "When tried to update live migration status when it is already marked as COMPLETED",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "When tried to update live migration status when it is already marked as COMPLETED",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "503",
-                 description = "When could not update live migration status as COMPLETED",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "When could not update live migration status as COMPLETED",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationStatusUpdateRouteKey.class)
     VertxRoute getStatusUpdateRoute(RouteBuilder.Factory factory,
@@ -274,19 +274,19 @@ public class LiveMigrationModule extends AbstractModule
                                     LiveMigrationStatusCompleteHandler statusCompleteHandler)
     {
         return factory.builderForRoute()
-               .handler(liveMigrationApiEnableDisableHandler::isSourceOrDestination)
-               .handler(statusCompleteHandler)
-               .build();
+                      .handler(liveMigrationApiEnableDisableHandler::isSourceOrDestination)
+                      .handler(statusCompleteHandler)
+                      .build();
     }
 
     @GET
     @Path(ApiEndpointsV1.LIVE_MIGRATION_STATUS_ROUTE)
     @Operation(summary = "Get live migration status",
-               description = "Get the status of the live migration")
+    description = "Get the status of the live migration")
     @APIResponse(description = "Live migration status retrieved successfully",
-                 responseCode = "200",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = LiveMigrationStatus.class)))
+    responseCode = "200",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(implementation = LiveMigrationStatus.class)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationStatusRouteKey.class)
     VertxRoute getStatusRoute(RouteBuilder.Factory factory,
@@ -294,32 +294,32 @@ public class LiveMigrationModule extends AbstractModule
                               LiveMigrationStatusGetHandler statusHandler)
     {
         return factory.builderForRoute()
-               .handler(liveMigrationApiEnableDisableHandler::isSourceOrDestination)
-               .handler(statusHandler)
-               .build();
+                      .handler(liveMigrationApiEnableDisableHandler::isSourceOrDestination)
+                      .handler(statusHandler)
+                      .build();
     }
 
     @DELETE
     @Path(ApiEndpointsV1.LIVE_MIGRATION_STATUS_ROUTE)
     @Operation(summary = "Deletes live migration status",
-               description = "Deletes live migration status for requested instance. " +
-                             "It should be called after clearing the live migration map configuration only.")
+    description = "Deletes live migration status for requested instance. " +
+                  "It should be called after clearing the live migration map configuration only.")
     @APIResponse(description = "Live migration status deleted successfully",
-                 responseCode = "200",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = LiveMigrationStatus.class)))
+    responseCode = "200",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(implementation = LiveMigrationStatus.class)))
     @APIResponse(responseCode = "403",
-                 description = "When tried to delete live migration status before clearing the live migration map",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "When tried to delete live migration status before clearing the live migration map",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "400",
-                 description = "When tried to delete Live migration status before without updating the status as COMPLETED",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "When tried to delete Live migration status before without updating the status as COMPLETED",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "503",
-                 description = "When faced some issue while deleting the live migration status",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "When faced some issue while deleting the live migration status",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationStatusDeleteRouteKey.class)
     VertxRoute deleteStatusRoute(RouteBuilder.Factory factory,
@@ -327,27 +327,27 @@ public class LiveMigrationModule extends AbstractModule
                                  LiveMigrationStatusClearHandler statusDeleteHandler)
     {
         return factory.builderForRoute()
-               .handler(liveMigrationApiEnableDisableHandler::neitherSourceNorDestination)
-               .handler(statusDeleteHandler)
-               .build();
+                      .handler(liveMigrationApiEnableDisableHandler::neitherSourceNorDestination)
+                      .handler(statusDeleteHandler)
+                      .build();
     }
 
     @POST
     @Path(ApiEndpointsV1.LIVE_MIGRATION_FILES_VERIFICATION_TASKS_ROUTE)
     @Operation(summary = "Create files verification task",
-               description = "Creates a new files verification task")
+    description = "Creates a new files verification task")
     @APIResponse(description = "Files verification task created successfully",
-                 responseCode = "202",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = LiveMigrationTaskCreationResponse.class)))
+    responseCode = "202",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(implementation = LiveMigrationTaskCreationResponse.class)))
     @APIResponse(responseCode = "404",
-                 description = "Live migration not enabled or node not configured as destination",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Live migration not enabled or node not configured as destination",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "409",
-                 description = "Cannot accept files verification task as another task is in progress",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Cannot accept files verification task as another task is in progress",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationCreateFilesDigestVerificationTaskRouteKey.class)
     public VertxRoute createFilesVerificationTask(RouteBuilder.Factory factory,
@@ -365,15 +365,15 @@ public class LiveMigrationModule extends AbstractModule
     @GET
     @Path(value = ApiEndpointsV1.LIVE_MIGRATION_FILES_VERIFICATION_TASK_ROUTE)
     @Operation(summary = "Get files verification task",
-               description = "Retrieves the files verification task by task ID")
+    description = "Retrieves the files verification task by task ID")
     @APIResponse(description = "Files verification task retrieved successfully",
-                 responseCode = "200",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(implementation = LiveMigrationFilesVerificationResponse.class)))
+    responseCode = "200",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(implementation = LiveMigrationFilesVerificationResponse.class)))
     @APIResponse(responseCode = "404",
-                 description = "Live migration not enabled, node not configured as destination, or files verification task not found",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Live migration not enabled, node not configured as destination, or files verification task not found",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationGetFilesVerificationTaskRouteKey.class)
     VertxRoute getFilesVerificationTask(RouteBuilder.Factory factory,
@@ -389,15 +389,15 @@ public class LiveMigrationModule extends AbstractModule
     @GET
     @Path(value = ApiEndpointsV1.LIVE_MIGRATION_FILES_VERIFICATION_TASKS_ROUTE)
     @Operation(summary = "Get all files verification tasks",
-               description = "Retrieves all live migration file verification tasks of the current node")
+    description = "Retrieves all live migration file verification tasks of the current node")
     @APIResponse(description = "File verification tasks retrieved successfully",
-                 responseCode = "200",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.ARRAY, implementation = LiveMigrationFilesVerificationResponse.class)))
+    responseCode = "200",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.ARRAY, implementation = LiveMigrationFilesVerificationResponse.class)))
     @APIResponse(responseCode = "404",
-                 description = "Live migration not enabled or node not configured as destination",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Live migration not enabled or node not configured as destination",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationGetAllFilesVerificationTasksRouteKey.class)
     VertxRoute getAllFilesVerificationTask(RouteBuilder.Factory factory,
@@ -413,15 +413,15 @@ public class LiveMigrationModule extends AbstractModule
     @PATCH
     @Path(value = ApiEndpointsV1.LIVE_MIGRATION_FILES_VERIFICATION_TASK_ROUTE)
     @Operation(summary = "Cancel files verification task",
-               description = "Cancels an existing live migration files verification task")
+    description = "Cancels an existing live migration files verification task")
     @APIResponse(description = "Files verification task cancelled successfully",
-                 responseCode = "200",
+    responseCode = "200",
     content = @Content(mediaType = "application/json",
     schema = @Schema(implementation = LiveMigrationFilesVerificationResponse.class)))
     @APIResponse(responseCode = "404",
-                 description = "Live migration not enabled, node not configured as destination, or files verification task not found",
-                 content = @Content(mediaType = "application/json",
-                 schema = @Schema(type = SchemaType.OBJECT)))
+    description = "Live migration not enabled, node not configured as destination, or files verification task not found",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @ProvidesIntoMap
     @KeyClassMapKey(VertxRouteMapKeys.LiveMigrationCancelFilesVerificationTaskRouteKey.class)
     VertxRoute cancelFilesVerificationTaskRoute(RouteBuilder.Factory factory,

@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigra
 import org.apache.cassandra.sidecar.handlers.livemigration.FakeLiveMigrationTask;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationTaskManagerTestModule.DESTINATION_1;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationTaskManagerTestModule.DESTINATION_2;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationTaskManagerTestModule.DESTINATION_3;
@@ -52,7 +53,6 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationTaskManage
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationTaskManagerTestModule.DEST_2_ID;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationTaskManagerTestModule.SOURCE_1;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationTaskManagerTestModule.SOURCE_2;
-import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -209,7 +209,7 @@ public class DataCopyTaskManagerTest
     public void testCreateTaskShouldFailWhenCassandraInstanceJMXIsUp() throws InterruptedException
     {
         Injector injector = getInjector();
-        DataCopyTaskManager dataCopyTaskManager =injector.getInstance(DataCopyTaskManager.class);
+        DataCopyTaskManager dataCopyTaskManager = injector.getInstance(DataCopyTaskManager.class);
         InstancesMetadata instancesMetadata = injector.getInstance(InstancesMetadata.class);
         InstanceMetadata destinationMetadata = instancesMetadata.instanceFromHost(DESTINATION_1);
 
@@ -231,7 +231,7 @@ public class DataCopyTaskManagerTest
     public void testCreateTaskShouldFailWhenCassandraInstanceNativeIsUp() throws InterruptedException
     {
         Injector injector = getInjector();
-        DataCopyTaskManager dataCopyTaskManager =injector.getInstance(DataCopyTaskManager.class);
+        DataCopyTaskManager dataCopyTaskManager = injector.getInstance(DataCopyTaskManager.class);
         InstancesMetadata instancesMetadata = injector.getInstance(InstancesMetadata.class);
         InstanceMetadata destinationMetadata = instancesMetadata.instanceFromHost(DESTINATION_1);
 
