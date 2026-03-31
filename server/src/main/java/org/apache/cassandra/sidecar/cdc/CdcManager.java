@@ -19,8 +19,6 @@
 package org.apache.cassandra.sidecar.cdc;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +45,6 @@ import org.apache.cassandra.secrets.SecretsProvider;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
-import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.utils.AsyncExecutor;
@@ -216,25 +212,10 @@ public class CdcManager
         {
             return instanceFetcher.instance(instanceIp).id();
         }
-        catch (NoSuchCassandraInstanceException e)
+        catch (Exception e)
         {
             LOGGER.warn("Requested IP {} does not match with any instances", instanceIp);
             return -1;
-        }
-    }
-
-    public static boolean resolveToSameAddress(String address1, String address2)
-    {
-        try
-        {
-            InetAddress addr1 = InetAddress.getByName(address1);
-            InetAddress addr2 = InetAddress.getByName(address2);
-            return addr1.equals(addr2);
-        }
-        catch (UnknownHostException e)
-        {
-            LOGGER.warn("Could not resolve hostname: {}", e.getMessage());
-            return address1.equals(address2); // Fallback to string comparison
         }
     }
 

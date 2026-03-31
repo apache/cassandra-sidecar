@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.cdc;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -285,13 +287,13 @@ public class CdcManagerTest
     @Test
     void testResolveToSameAddressTrue()
     {
-        assertThat(CdcManager.resolveToSameAddress("127.0.0.1", "localhost")).isTrue();
+        assertThat(resolveToSameAddress("127.0.0.1", "localhost")).isTrue();
     }
 
     @Test
     void testResolveToSameAddressFalse()
     {
-        assertThat(CdcManager.resolveToSameAddress("127.0.0.1", "127.0.0.2")).isFalse();
+        assertThat(resolveToSameAddress("127.0.0.1", "127.0.0.2")).isFalse();
     }
 
     @Test
@@ -383,5 +385,19 @@ public class CdcManagerTest
         when(instance.id()).thenReturn(id);
         when(instance.ipAddress()).thenReturn(ipAddress);
         return instance;
+    }
+
+    private static boolean resolveToSameAddress(String address1, String address2)
+    {
+        try
+        {
+            InetAddress addr1 = InetAddress.getByName(address1);
+            InetAddress addr2 = InetAddress.getByName(address2);
+            return addr1.equals(addr2);
+        }
+        catch (UnknownHostException e)
+        {
+            return address1.equals(address2);
+        }
     }
 }
