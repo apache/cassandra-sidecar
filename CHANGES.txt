@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * Fix CDC resource leaks: thread leaks, Kafka resource cleanup, singleton SidecarCdcClient (CASSSIDECAR-456)
  * Fix breaking changes for Analytics 0.4.0 (CASSSIDECAR-455)
  * Support IAM instance profile credentials for S3 restore jobs (CASSSIDECAR-415)
  * Adding endpoint for verifying files post data copy during live migration (CASSSIDECAR-226)
