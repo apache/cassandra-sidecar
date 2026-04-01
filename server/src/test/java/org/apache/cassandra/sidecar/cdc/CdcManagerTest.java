@@ -296,6 +296,12 @@ public class CdcManagerTest
         assertThat(resolveToSameAddress("127.0.0.1", "127.0.0.2")).isFalse();
     }
 
+    /**
+     * Verifies that the correct instanceId is propagated into {@code loadOrBuildCdcConsumer}
+     * during the full {@code buildCdcConsumers()} flow when {@code ipAddress()} is null.
+     * Complements {@code testGetInstanceIdReturnsCorrectIdWhenIpAddressIsNull}, which tests
+     * {@code getInstanceId} in isolation; this test confirms the fix is effective end-to-end.
+     */
     @Test
     void testGetInstanceIdResolvesCorrectlyWhenIpAddressIsNull() throws IOException
     {
@@ -328,14 +334,10 @@ public class CdcManagerTest
     }
 
     /**
-     * Verifies that getInstanceId returns the correct id even when ipAddress() is null.
-     *
-     * <p>Old code (broken): allLocalInstances() returns the instance; ipAddress()=null;
-     * resolveToSameAddress("172.19.0.5", null) calls InetAddress.getByName(null) which
-     * returns 127.0.0.1 ≠ 172.19.0.5 → returns -1. Test FAILS with old code.
-     *
-     * <p>Fixed code: instanceFetcher.instance(ip) resolves via instanceFromHost refresh
-     * path → returns instance with id=1. Test PASSES with fix.
+     * Unit test for the CASSSIDECAR-417 bug fix: {@code getInstanceId} must return the correct id
+     * even when {@code ipAddress()} is null (not yet refreshed). The old code passed {@code null}
+     * to {@code resolveToSameAddress}, which resolved to {@code 127.0.0.1} and returned {@code -1}.
+     * The fix resolves the instance via {@code instanceFetcher.instance(ip)} instead.
      */
     @Test
     void testGetInstanceIdReturnsCorrectIdWhenIpAddressIsNull()
