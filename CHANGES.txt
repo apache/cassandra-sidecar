@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * Add SidecarReplicationFactorSupplier for live replication factor lookups (CASSSIDECAR-458)
  * Fix CDC message loss during Sidecar restarts (CASSSIDECAR-457)
  * Fix CDC resource leaks: thread leaks, Kafka resource cleanup, singleton SidecarCdcClient (CASSSIDECAR-456)
  * Fix breaking changes for Analytics 0.4.0 (CASSSIDECAR-455)

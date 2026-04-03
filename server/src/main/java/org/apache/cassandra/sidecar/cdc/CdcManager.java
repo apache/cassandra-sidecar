@@ -33,6 +33,7 @@ import org.apache.cassandra.cdc.api.EventConsumer;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.cdc.api.TokenRangeSupplier;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
+import org.apache.cassandra.cdc.sidecar.ReplicationFactorSupplier;
 import org.apache.cassandra.cdc.sidecar.SidecarCdc;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
@@ -83,6 +84,7 @@ public class CdcManager
     private final SidecarCdcClient sidecarCdcClient;
     private final ICdcStats cdcStats;
     private List<CdcConsumerEntry> entries = new ArrayList<>();
+    private final ReplicationFactorSupplier rfSupplier;
     private final CdcOptions cdcOptions;
     private final AsyncExecutor asyncExecutor;
     private final StateSidecarCdcCassandraClient cassandraClient;
@@ -111,6 +113,7 @@ public class CdcManager
         this.cdcOptions = cdcOptions;
         this.asyncExecutor = new ExecutorPoolsExecutor(taskExecutorPool);
         this.cassandraClient = new StateSidecarCdcCassandraClient(cdcDatabaseAccessor);
+        this.rfSupplier = new SidecarReplicationFactorSupplier(cdcOptions, schemaSupplier);
     }
 
     List<CdcConsumerEntry> buildCdcConsumers()
@@ -206,6 +209,7 @@ public class CdcManager
                                                   sidecarCdcClient,
                                                   cdcStats)
                                          .withExecutor(asyncExecutor)
+                                         .withReplicationFactorSupplier(rfSupplier)
                                          .withSidecarStatePersister(persister)
                                          .build();
         return new CdcConsumerEntry(consumer, persister);
