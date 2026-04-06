@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.jetbrains.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +48,7 @@ import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.utils.AsyncExecutor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.VisibleForTesting;
 
 
 /**
@@ -76,6 +76,7 @@ import org.jetbrains.annotations.NotNull;
 public class CdcManager
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CdcManager.class);
+    private static final int UNKNOWN_INSTANCE = -1;
     private final CdcConfig conf;
     private final RangeManager rangeManager;
     private final InstanceMetadataFetcher instanceFetcher;
@@ -215,7 +216,7 @@ public class CdcManager
         catch (Exception e)
         {
             LOGGER.warn("Requested IP {} does not match with any instances", instanceIp);
-            return -1;
+            return UNKNOWN_INSTANCE;
         }
     }
 
