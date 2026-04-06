@@ -87,13 +87,20 @@ public class RestoreJobTestUtils
 
     public static UUID createJob(RestoreJobTestUtils.RestoreJobClient testClient, QualifiedTableName tableName)
     {
+        return createJob(testClient, tableName, builder -> { });
+    }
+
+    public static UUID createJob(RestoreJobTestUtils.RestoreJobClient testClient, QualifiedTableName tableName,
+                                 Consumer<CreateRestoreJobRequestPayload.Builder> customizer)
+    {
         UUID jobId = UUIDs.timeBased();
         long expireAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(2);
-        CreateRestoreJobRequestPayload payload = CreateRestoreJobRequestPayload
-                                                 .builder(RestoreJobSecretsGen.genRestoreJobSecrets(), expireAt)
-                                                 .jobId(jobId)
-                                                 .consistencyLevel(ConsistencyLevel.LOCAL_QUORUM, "datacenter1").build();
-        testClient.createRestoreJob(tableName, payload);
+        CreateRestoreJobRequestPayload.Builder builder = CreateRestoreJobRequestPayload
+                                                         .builder(RestoreJobSecretsGen.genRestoreJobSecrets(), expireAt)
+                                                         .jobId(jobId)
+                                                         .consistencyLevel(ConsistencyLevel.LOCAL_QUORUM, "datacenter1");
+        customizer.accept(builder);
+        testClient.createRestoreJob(tableName, builder.build());
         return jobId;
     }
 

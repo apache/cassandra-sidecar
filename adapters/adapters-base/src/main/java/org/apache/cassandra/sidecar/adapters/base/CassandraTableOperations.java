@@ -67,6 +67,30 @@ public class CassandraTableOperations implements TableOperations
 
     /**
      * {@inheritDoc}
+     * <p>
+     * SAI index validation is only supported in Cassandra 5.0+; for older versions these parameters are ignored.
+     */
+    @Override
+    public List<String> importNewSSTables(@NotNull String keyspace,
+                                          @NotNull String tableName,
+                                          @NotNull String directory,
+                                          boolean resetLevel,
+                                          boolean clearRepaired,
+                                          boolean verifySSTables,
+                                          boolean verifyTokens,
+                                          boolean invalidateCaches,
+                                          boolean extendedVerify,
+                                          boolean copyData,
+                                          boolean failOnMissingIndex,
+                                          boolean validateIndexChecksum)
+    {
+        return importNewSSTables(keyspace, tableName, directory, resetLevel,
+                clearRepaired, verifySSTables, verifyTokens,
+                invalidateCaches, extendedVerify, copyData);
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     public List<String> getDataPaths(@NotNull String keyspace, @NotNull String table) throws IOException
@@ -75,7 +99,7 @@ public class CassandraTableOperations implements TableOperations
                         .getDataPaths();
     }
 
-    String tableMBeanName(String keyspace, String tableName)
+    protected String tableMBeanName(String keyspace, String tableName)
     {
         return String.format("org.apache.cassandra.db:type=%s,keyspace=%s,table=%s",
                              tableName.contains(".") ? "IndexTables" : "Tables",

@@ -26,6 +26,7 @@ import org.apache.cassandra.sidecar.common.server.CompactionManagerOperations;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
+import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
@@ -54,6 +55,18 @@ public class Cassandra50Adapter extends CassandraAdapter
     protected StorageOperations createStorageOperations(DnsResolver dnsResolver, JmxClient jmxClient)
     {
         return new Cassandra50StorageOperations(jmxClient, dnsResolver);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Returns Cassandra 5.0-specific TableOperations that supports SAI index validation
+     */
+    @Override
+    @NotNull
+    protected TableOperations createTableOperations(JmxClient jmxClient)
+    {
+        return new Cassandra50TableOperations(jmxClient);
     }
 
     /**

@@ -53,6 +53,7 @@ import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.ResourceUtils;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
+import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -75,6 +76,7 @@ import org.apache.cassandra.sidecar.restore.RestoreSliceManifest.ManifestEntry;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SSTableImporter;
 import org.apache.cassandra.sidecar.utils.XXHash32Provider;
+import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
@@ -356,6 +358,44 @@ class RestoreRangeTaskTest
         assertThat(failure.failed()).isTrue();
         assertThat(failure.cause()).hasMessageContaining("Import failed");
         assertThat(mockRange.hasImported()).isFalse();
+    }
+
+    @Test
+    void testCommitPassesSaiOptionsToImporter(@TempDir Path testFolder)
+    {
+        SSTableImportOptions customOptions = SSTableImportOptions.defaults()
+                                                                 .failOnMissingIndex(true)
+                                                                 .validateIndexChecksum(true);
+        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.IMPORT_READY, ConsistencyLevel.QUORUM)
+                                       .unbuild()
+                                       .sstableImportOptions(customOptions)
+                                       .build();
+        when(mockSSTableImporter.scheduleImport(any())).thenReturn(Future.succeededFuture());
+        RestoreRangeTask task = createTask(mockRange, job);
+        Future<?> result = task.commit(testFolder.toFile());
+        assertThat(result.failed()).isFalse();
+
+        ArgumentCaptor<SSTableImporter.ImportOptions> captor = ArgumentCaptor.forClass(SSTableImporter.ImportOptions.class);
+        verify(mockSSTableImporter).scheduleImport(captor.capture());
+        SSTableImporter.ImportOptions captured = captor.getValue();
+
+        SSTableImporter.ImportOptions expected = new SSTableImporter.ImportOptions.Builder()
+                                                 .host(mockRange.owner().host())
+                                                 .keyspace(mockRange.keyspace())
+                                                 .tableName(mockRange.table())
+                                                 .directory(testFolder.toFile().toString())
+                                                 .resetLevel(customOptions.resetLevel())
+                                                 .clearRepaired(customOptions.clearRepaired())
+                                                 .verifySSTables(customOptions.verifySSTables())
+                                                 .verifyTokens(customOptions.verifyTokens())
+                                                 .invalidateCaches(customOptions.invalidateCaches())
+                                                 .extendedVerify(customOptions.extendedVerify())
+                                                 .copyData(customOptions.copyData())
+                                                 .failOnMissingIndex(customOptions.failOnMissingIndex())
+                                                 .validateIndexChecksum(customOptions.validateIndexChecksum())
+                                                 .uploadId(mockRange.uploadId())
+                                                 .build();
+        assertThat(captured).isEqualTo(expected);
     }
 
     @Test

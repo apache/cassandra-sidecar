@@ -208,6 +208,8 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
                .invalidateCaches(request.invalidateCaches())
                .extendedVerify(request.extendedVerify())
                .copyData(request.copyData())
+               .failOnMissingIndex(request.failOnMissingIndex())
+               .validateIndexChecksum(request.validateIndexChecksum())
                .build();
     }
 }

@@ -53,10 +53,12 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
     public static final String DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME = "[a-zA-Z_0-9]{1,48}";
     public static final String ALLOWED_CHARS_FOR_COMPONENT_NAME_PROPERTY = "allowed_chars_for_component_name";
     public static final String DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME =
-    "[a-zA-Z0-9_-]+(\\.db|\\.cql|\\.json|\\.crc32|TOC\\.txt)";
+        "[a-zA-Z0-9_+\\-]+(\\.db|\\.cql|\\.json|\\.crc32|TOC\\.txt)";
     public static final String ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME_PROPERTY =
     "allowed_chars_for_restricted_component_name";
-    public static final String DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME = "[a-zA-Z0-9_-]+(\\.db|TOC\\.txt)";
+    // '+' is included in the allowed characters to support downloading SAI (Storage Attached Index) files in snapshots
+    public static final String DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME =
+        "[a-zA-Z0-9_+\\-]+(\\.db|TOC\\.txt)";
 
     @JsonProperty(value = VALIDATOR_PROPERTY)
     protected final ParameterizedClassConfiguration validatorConfiguration;

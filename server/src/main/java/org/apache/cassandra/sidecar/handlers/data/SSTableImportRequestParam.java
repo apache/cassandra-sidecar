@@ -22,6 +22,7 @@ import java.util.Objects;
 
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 
 import static org.apache.cassandra.sidecar.utils.RequestUtils.parseBooleanQueryParam;
@@ -39,6 +40,8 @@ public class SSTableImportRequestParam extends SSTableUploads
     private final boolean invalidateCaches;
     private final boolean extendedVerify;
     private final boolean copyData;
+    private final boolean failOnMissingIndex;
+    private final boolean validateIndexChecksum;
 
     /**
      * Constructs an SSTableImportRequest
@@ -53,10 +56,13 @@ public class SSTableImportRequestParam extends SSTableUploads
      * @param invalidateCaches   if row cache should be invalidated for the keys in the new SSTables
      * @param extendedVerify     if we should run an extended verify checking all values in the new SSTables
      * @param copyData           if we should copy data from source paths instead of moving them
+     * @param failOnMissingIndex if SAI indexes should be validated during import
+     * @param validateIndexChecksum   if SAI index checksums should be verified during import
      */
     public SSTableImportRequestParam(QualifiedTableName qualifiedTableName, String uploadId, boolean resetLevel,
                                      boolean clearRepaired, boolean verifySSTables, boolean verifyTokens,
-                                     boolean invalidateCaches, boolean extendedVerify, boolean copyData)
+                                     boolean invalidateCaches, boolean extendedVerify, boolean copyData,
+                                     boolean failOnMissingIndex, boolean validateIndexChecksum)
     {
         super(qualifiedTableName, uploadId);
         this.resetLevel = resetLevel;
@@ -66,6 +72,8 @@ public class SSTableImportRequestParam extends SSTableUploads
         this.invalidateCaches = invalidateCaches;
         this.extendedVerify = extendedVerify;
         this.copyData = copyData;
+        this.failOnMissingIndex = failOnMissingIndex;
+        this.validateIndexChecksum = validateIndexChecksum;
     }
 
     /**
@@ -126,6 +134,22 @@ public class SSTableImportRequestParam extends SSTableUploads
     }
 
     /**
+     * @return true if SAI indexes should be validated during import, false otherwise
+     */
+    public boolean failOnMissingIndex()
+    {
+        return failOnMissingIndex;
+    }
+
+    /**
+     * @return true if SAI index checksums should be verified during import, false otherwise
+     */
+    public boolean validateIndexChecksum()
+    {
+        return validateIndexChecksum;
+    }
+
+    /**
      * {@inheritDoc}
      */
     public boolean equals(Object o)
@@ -140,6 +164,8 @@ public class SSTableImportRequestParam extends SSTableUploads
                && invalidateCaches == that.invalidateCaches
                && extendedVerify == that.extendedVerify
                && copyData == that.copyData
+               && failOnMissingIndex == that.failOnMissingIndex
+               && validateIndexChecksum == that.validateIndexChecksum
                && uploadId().equals(that.uploadId())
                && keyspace().equals(that.keyspace())
                && table().equals(that.table());
@@ -151,7 +177,8 @@ public class SSTableImportRequestParam extends SSTableUploads
     public int hashCode()
     {
         return Objects.hash(uploadId(), keyspace(), table(), resetLevel, clearRepaired, verifySSTables,
-                            verifyTokens, invalidateCaches, extendedVerify, copyData);
+                            verifyTokens, invalidateCaches, extendedVerify, copyData,
+                            failOnMissingIndex, validateIndexChecksum);
     }
 
     /**
@@ -170,6 +197,8 @@ public class SSTableImportRequestParam extends SSTableUploads
                ", invalidateCaches=" + invalidateCaches +
                ", extendedVerify=" + extendedVerify +
                ", copyData=" + copyData +
+               ", failOnMissingIndex=" + failOnMissingIndex +
+               ", validateIndexChecksum=" + validateIndexChecksum +
                '}';
     }
 
@@ -191,6 +220,8 @@ public class SSTableImportRequestParam extends SSTableUploads
                                              parseBooleanQueryParam(request, "verifyTokens", true),
                                              parseBooleanQueryParam(request, "invalidateCaches", true),
                                              parseBooleanQueryParam(request, "extendedVerify", true),
-                                             parseBooleanQueryParam(request, "copyData", false));
+                                             parseBooleanQueryParam(request, "copyData", false),
+                                             parseBooleanQueryParam(request, "failOnMissingIndex", SSTableImportOptions.DEFAULT_FAIL_ON_MISSING_INDEX),
+                                             parseBooleanQueryParam(request, "validateIndexChecksum", SSTableImportOptions.DEFAULT_VALIDATE_INDEX_CHECKSUM));
     }
 }

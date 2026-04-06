@@ -254,7 +254,7 @@ public class FastCassandraInputValidator extends RegexBasedCassandraInputValidat
      */
     protected boolean isValidComponentNameCharacter(char c)
     {
-        return isAlphanumeric(c) || isUnderscore(c) || isDash(c);
+        return isAlphanumeric(c) || isUnderscore(c) || isDash(c) || isPlus(c);
     }
 
     /**
@@ -291,6 +291,15 @@ public class FastCassandraInputValidator extends RegexBasedCassandraInputValidat
     protected boolean isDash(char c)
     {
         return c == '-';
+    }
+
+    /**
+     * @param c the character to test
+     * @return {@code true} if the input {@code c} is a plus sign, {@code false} otherwise
+     */
+    protected boolean isPlus(char c)
+    {
+        return c == '+';
     }
 
     /**

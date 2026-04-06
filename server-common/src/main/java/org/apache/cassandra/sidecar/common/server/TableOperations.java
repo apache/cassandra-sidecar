@@ -56,6 +56,38 @@ public interface TableOperations
                                    boolean copyData);
 
     /**
+     * Load new SSTables from the given {@code directory} with SAI index validation options.
+     * Defaults to ignoring SAI flags for Cassandra versions that do not support them.
+     *
+     * @param keyspace           the keyspace in Cassandra
+     * @param tableName          the table name in Cassandra
+     * @param directory          the directory to the new SSTables
+     * @param resetLevel         if the level should be reset to 0 on the new SSTables
+     * @param clearRepaired      if repaired info should be wiped from the new SSTables
+     * @param verifySSTables     if the new SSTables should be verified that they are not corrupt
+     * @param verifyTokens       if the tokens in the new SSTables should be verified that they are owned by the
+     *                           current node
+     * @param invalidateCaches   if row cache should be invalidated for the keys in the new SSTables
+     * @param extendedVerify     if we should run an extended verify checking all values in the new SSTables
+     * @param copyData           if we should copy data from source paths instead of moving them
+     * @param failOnMissingIndex if SAI indexes should be validated during import
+     * @param validateIndexChecksum   if SAI index checksums should be verified during import
+     * @return list of failed import directories
+     */
+    List<String> importNewSSTables(@NotNull String keyspace,
+                                   @NotNull String tableName,
+                                   @NotNull String directory,
+                                   boolean resetLevel,
+                                   boolean clearRepaired,
+                                   boolean verifySSTables,
+                                   boolean verifyTokens,
+                                   boolean invalidateCaches,
+                                   boolean extendedVerify,
+                                   boolean copyData,
+                                   boolean failOnMissingIndex,
+                                   boolean validateIndexChecksum);
+
+    /**
      * Returns a list of data directories for the given {@code table}.
      *
      * @param keyspace the keyspace in Cassandra

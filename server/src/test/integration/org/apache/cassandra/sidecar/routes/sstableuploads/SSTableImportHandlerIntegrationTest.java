@@ -19,6 +19,8 @@
 package org.apache.cassandra.sidecar.routes.sstableuploads;
 
 import java.io.File;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,6 +30,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -62,6 +65,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
 {
     public static final SimpleCassandraVersion MIN_VERSION_WITH_IMPORT = SimpleCassandraVersion.create("4.0.0");
+    public static final SimpleCassandraVersion MIN_VERSION_WITH_SAI = SimpleCassandraVersion.create("5.0.0");
 
     @CassandraIntegrationTest
     void testSSTableImport(VertxTestContext vertxTestContext)
@@ -200,5 +204,155 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         {
             session.execute(String.format("INSERT INTO %s (id) VALUES ('%s');", tableName, value));
         }
+    }
+
+    @CassandraIntegrationTest
+    void testSSTableImportWithSaiIndexParams(VertxTestContext vertxTestContext)
+    throws Exception
+    {
+        assumeThat(sidecarTestContext.version)
+        .withFailMessage("SAI indexes are only available in Cassandra 5.0 and later.")
+        .isGreaterThanOrEqualTo(MIN_VERSION_WITH_SAI);
+
+        createTestKeyspace();
+        Session session = maybeGetSession();
+
+        // Create table with SAI index and populate initial data
+        QualifiedTableName tableName = createTestTableWithSaiIndex(Arrays.asList(new String[]{ "a", "val_a" },
+                                                                                 new String[]{ "b", "val_b" }));
+
+        // Snapshot the table
+        IClusterExtension<? extends IInstance> cluster = sidecarTestContext.cluster();
+        String snapshotStdout = cluster.get(1).nodetoolResult("snapshot",
+                                                              "--tag", tableName.tableName() + "-snapshot",
+                                                              "--table", tableName.tableName(),
+                                                              "--", tableName.keyspace()).getStdout();
+        assertThat(snapshotStdout).contains("Snapshot directory: " + tableName.tableName() + "-snapshot");
+
+        List<Path> snapshotFiles = findChildFile(sidecarTestContext, "127.0.0.1",
+                                                 tableName.keyspace(), tableName.tableName() + "-snapshot");
+        assertThat(snapshotFiles).isNotEmpty();
+
+        // Upload snapshot files via REST endpoint
+        UUID uploadId = UUID.randomUUID();
+        WebClient client = mTLSClient();
+        List<Path> filesToUpload = snapshotFiles.stream()
+                                                .filter(p -> p.toFile().isFile())
+                                                .collect(Collectors.toList());
+        assertThat(filesToUpload).isNotEmpty();
+
+        // Verify at least one file contains '+' in its name (SAI index files)
+        assertThat(filesToUpload.stream().anyMatch(p -> p.getFileName().toString().contains("+")))
+        .withFailMessage("Expected at least one snapshot file with '+' in its name (SAI index file)")
+        .isTrue();
+
+        uploadSnapshotFiles(client, uploadId, tableName, filesToUpload)
+        .toCompletionStage().toCompletableFuture().get(60, TimeUnit.SECONDS);
+
+        // Truncate table (no new data added before import)
+        truncateAndVerify(tableName);
+
+        // Import with SAI index query params
+        String testRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + tableName.keyspace()
+                           + "/tables/" + tableName.tableName() + "/import";
+        sendRequest(vertxTestContext,
+                    () -> client.put(server.actualPort(), "127.0.0.1", testRoute)
+                                .addQueryParam("failOnMissingIndex", "true")
+                                .addQueryParam("validateIndexChecksum", "true"),
+                    vertxTestContext.succeeding(response -> vertxTestContext.verify(() -> {
+                        assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
+
+                        // Verify SAI index component files exist on the filesystem
+                        // This assertion is meaningful because no new data was written after truncate,
+                        // so any SAI files must have come from the imported snapshot
+                        String dataDir = sidecarTestContext.instancesMetadata()
+                                                           .instanceFromHost("127.0.0.1").dataDirs().get(0);
+                        Path keyspacePath = Paths.get(dataDir, tableName.keyspace());
+                        Path tableDir;
+                        try (Stream<Path> dirs = Files.list(keyspacePath))
+                        {
+                            tableDir = dirs.filter(dir -> dir.getFileName().toString()
+                                                             .startsWith(tableName.tableName()))
+                                           .findFirst()
+                                           .orElseThrow(() -> new AssertionError("Table directory not found"));
+                        }
+
+                        List<Path> saiFiles;
+                        try (Stream<Path> files = Files.list(tableDir))
+                        {
+                            saiFiles = files.filter(f -> f.getFileName().toString().toUpperCase()
+                                                          .contains("SAI"))
+                                            .collect(Collectors.toList());
+                        }
+
+                        assertThat(saiFiles)
+                            .withFailMessage("Expected SAI index component files on the filesystem after import")
+                            .isNotEmpty();
+
+                        // Verify imported data is present
+                        assertThat(queryValues(tableName)).containsExactlyInAnyOrder("a", "b");
+
+                        // Add new data after import and SAI verification
+                        populateTableWithValue(session, tableName, Arrays.asList(new String[]{ "c", "val_c" },
+                                                                                 new String[]{ "d", "val_d" }));
+
+                        // Verify all data (imported + new) is present
+                        assertThat(queryValues(tableName)).containsExactlyInAnyOrder("a", "b", "c", "d");
+
+                        vertxTestContext.completeNow();
+                    })));
+        assertThat(vertxTestContext.awaitCompletion(300, TimeUnit.SECONDS)).isTrue();
+    }
+
+    private QualifiedTableName createTestTableWithSaiIndex(List<String[]> rows)
+    {
+        QualifiedTableName tableName = createTestTable(
+        "CREATE TABLE IF NOT EXISTS %s (id text, value text, PRIMARY KEY(id))" + WITH_COMPACTION_DISABLED + ";");
+        Session session = maybeGetSession();
+        session.execute(String.format("CREATE CUSTOM INDEX IF NOT EXISTS %s_sai_idx ON %s (value) USING " +
+                                      "'org.apache.cassandra.index.sai.StorageAttachedIndex';",
+                                      tableName.tableName(), tableName));
+        populateTableWithValue(session, tableName, rows);
+        return tableName;
+    }
+
+    private void populateTableWithValue(Session session, QualifiedTableName tableName, List<String[]> rows)
+    {
+        for (String[] row : rows)
+        {
+            session.execute(String.format("INSERT INTO %s (id, value) VALUES ('%s', '%s');",
+                                          tableName, row[0], row[1]));
+        }
+    }
+
+    private Future<Void> uploadSnapshotFiles(WebClient client, UUID uploadId,
+                                              QualifiedTableName tableName, List<Path> snapshotFiles)
+    {
+        Future<Void> future = Future.succeededFuture();
+        for (Path path : snapshotFiles)
+        {
+            future = future.compose(v -> {
+                String fileName = path.getFileName().toString();
+                // URLEncoder.encode encodes space as '+', which is correct for query params but not path segments.
+                // For path segments, '+' is a literal character, so we must encode it as %2B.
+                String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8)
+                                                   .replace("+", "%2B");
+                String uploadRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + tableName.keyspace()
+                                     + "/tables/" + tableName.tableName() + "/components/" + encodedFileName;
+                Buffer fileContent = vertx.fileSystem().readFileBlocking(path.toString());
+                return client.put(server.actualPort(), "127.0.0.1", uploadRoute)
+                             .sendBuffer(fileContent)
+                             .compose(response -> {
+                                 if (response.statusCode() != HttpResponseStatus.OK.code())
+                                 {
+                                     return Future.failedFuture("Upload failed for " + fileName
+                                                                + " with status " + response.statusCode()
+                                                                + ": " + response.bodyAsString());
+                                 }
+                                 return Future.succeededFuture();
+                             });
+            });
+        }
+        return future;
     }
 }

@@ -65,13 +65,15 @@ class CreateRestoreJobRequestPayloadTest
                                    "\"jobAgent\":\"agent\"," +
                                    "\"secrets\":" + MAPPER.writeValueAsString(secrets) + "," +
                                    "\"importOptions\":{" +
-                                   "\"verifyTokens\":\"true\"," +
                                    "\"resetLevel\":\"true\"," +
                                    "\"clearRepaired\":\"true\"," +
-                                   "\"extendedVerify\":\"true\"," +
                                    "\"verifySSTables\":\"true\"," +
+                                   "\"verifyTokens\":\"true\"," +
                                    "\"invalidateCaches\":\"true\"," +
-                                   "\"copyData\":\"false\"}," +
+                                   "\"extendedVerify\":\"true\"," +
+                                   "\"copyData\":\"false\"," +
+                                   "\"failOnMissingIndex\":\"false\"," +
+                                   "\"validateIndexChecksum\":\"false\"}," +
                                    "\"expireAt\":" + expireAt + "," +
                                    "\"consistencyLevel\":\"LOCAL_QUORUM\"," +
                                    "\"localDatacenter\":\"DC1\"}");

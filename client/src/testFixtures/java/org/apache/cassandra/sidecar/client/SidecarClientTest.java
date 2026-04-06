@@ -849,6 +849,51 @@ abstract class SidecarClientTest
     }
 
     @Test
+    void testSSTableImportWithSaiOptions() throws Exception
+    {
+        String responseAsString = "{\"success\":true,\"uploadId\":\"0000-0000\",\"keyspace\":\"cycling\"," +
+                                  "\"tableName\":\"cyclist_name\"}";
+        MockResponse response = new MockResponse().setResponseCode(OK.code()).setBody(responseAsString);
+        SidecarInstanceImpl sidecarInstance = instances.get(0);
+        MockWebServer mockWebServer = servers.get(0);
+        mockWebServer.enqueue(response);
+
+        ImportSSTableRequest.ImportOptions options = new ImportSSTableRequest.ImportOptions()
+                                                     .resetLevel(true)
+                                                     .clearRepaired(true)
+                                                     .verifySSTables(true)
+                                                     .verifyTokens(true)
+                                                     .invalidateCaches(true)
+                                                     .extendedVerify(true)
+                                                     .copyData(true)
+                                                     .failOnMissingIndex(true)
+                                                     .validateIndexChecksum(true);
+        SSTableImportResponse result = client.importSSTableRequest(sidecarInstance,
+                                                                   "cycling",
+                                                                   "cyclist_name",
+                                                                   "0000-0000",
+                                                                   options)
+                                             .get(30, TimeUnit.SECONDS);
+
+        assertThat(result).isNotNull();
+        assertThat(result.keyspace()).isEqualTo("cycling");
+        assertThat(result.tableName()).isEqualTo("cyclist_name");
+        assertThat(result.success()).isTrue();
+        assertThat(result.uploadId()).isEqualTo("0000-0000");
+
+        assertThat(mockWebServer.getRequestCount()).isEqualTo(1);
+        RecordedRequest request = mockWebServer.takeRequest();
+        assertThat(request.getPath()).isEqualTo(ApiEndpointsV1.SSTABLE_IMPORT_ROUTE
+                                                .replaceAll(KEYSPACE_PATH_PARAM, "cycling")
+                                                .replaceAll(ApiEndpointsV1.TABLE_PATH_PARAM, "cyclist_name")
+                                                .replaceAll(ApiEndpointsV1.UPLOAD_ID_PATH_PARAM, "0000-0000")
+                                                + "?resetLevel=true&clearRepaired=true&verifySSTables=true&" +
+                                                "verifyTokens=true&invalidateCaches=true&extendedVerify=true&" +
+                                                "copyData=true&failOnMissingIndex=true&validateIndexChecksum=true");
+        assertThat(request.getMethod()).isEqualTo("PUT");
+    }
+
+    @Test
     void testUploadSSTableFailsWhenFileDoesNotExist()
     {
 

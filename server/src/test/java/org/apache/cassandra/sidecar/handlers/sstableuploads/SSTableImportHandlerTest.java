@@ -44,7 +44,9 @@ import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetricsImpl;
 
 import static org.apache.cassandra.sidecar.utils.SSTableImporter.DEFAULT_COPY_DATA;
+import static org.apache.cassandra.sidecar.utils.SSTableImporter.DEFAULT_FAIL_ON_MISSING_INDEX;
 import static org.apache.cassandra.sidecar.utils.SSTableImporter.DEFAULT_INVALIDATE_CACHES;
+import static org.apache.cassandra.sidecar.utils.SSTableImporter.DEFAULT_VALIDATE_INDEX_CHECKSUM;
 import static org.apache.cassandra.sidecar.utils.SSTableImporter.DEFAULT_VERIFY_TOKENS;
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -140,7 +142,8 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
                                                 true, true, true,
                                                 DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES, true,
-                                                DEFAULT_COPY_DATA))
+                                                DEFAULT_COPY_DATA,
+                                                DEFAULT_FAIL_ON_MISSING_INDEX, DEFAULT_VALIDATE_INDEX_CHECKSUM))
         .thenReturn(Collections.singletonList(stageDirectoryAbsolutePath));
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
@@ -158,7 +161,8 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
                                                 false, true, true,
                                                 DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES, true,
-                                                DEFAULT_COPY_DATA))
+                                                DEFAULT_COPY_DATA,
+                                                DEFAULT_FAIL_ON_MISSING_INDEX, DEFAULT_VALIDATE_INDEX_CHECKSUM))
         .thenReturn(Collections.emptyList());
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
@@ -181,7 +185,8 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
                                                 false, true, true,
                                                 DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES, true,
-                                                DEFAULT_COPY_DATA))
+                                                DEFAULT_COPY_DATA,
+                                                DEFAULT_FAIL_ON_MISSING_INDEX, DEFAULT_VALIDATE_INDEX_CHECKSUM))
         .thenReturn(Collections.emptyList());
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
@@ -199,7 +204,9 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
                                                                    DEFAULT_VERIFY_TOKENS,
                                                                    DEFAULT_INVALIDATE_CACHES,
                                                                    true,
-                                                                   DEFAULT_COPY_DATA);
+                                                                   DEFAULT_COPY_DATA,
+                                                                   DEFAULT_FAIL_ON_MISSING_INDEX,
+                                                                   DEFAULT_VALIDATE_INDEX_CHECKSUM);
                         context.completeNow();
                     })));
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
@@ -214,7 +221,8 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
                                                 true, false, true,
                                                 DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES, true,
-                                                DEFAULT_COPY_DATA))
+                                                DEFAULT_COPY_DATA,
+                                                DEFAULT_FAIL_ON_MISSING_INDEX, DEFAULT_VALIDATE_INDEX_CHECKSUM))
         .thenReturn(Collections.emptyList());
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
@@ -232,7 +240,9 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
                                                                    DEFAULT_VERIFY_TOKENS,
                                                                    DEFAULT_INVALIDATE_CACHES,
                                                                    true,
-                                                                   DEFAULT_COPY_DATA);
+                                                                   DEFAULT_COPY_DATA,
+                                                                   DEFAULT_FAIL_ON_MISSING_INDEX,
+                                                                   DEFAULT_VALIDATE_INDEX_CHECKSUM);
                         context.completeNow();
                     })));
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
@@ -247,7 +257,8 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
                                                 true, true, false,
                                                 DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES, true,
-                                                DEFAULT_COPY_DATA))
+                                                DEFAULT_COPY_DATA,
+                                                DEFAULT_FAIL_ON_MISSING_INDEX, DEFAULT_VALIDATE_INDEX_CHECKSUM))
         .thenReturn(Collections.emptyList());
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
@@ -265,7 +276,9 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
                                                                    DEFAULT_VERIFY_TOKENS,
                                                                    DEFAULT_INVALIDATE_CACHES,
                                                                    true,
-                                                                   DEFAULT_COPY_DATA);
+                                                                   DEFAULT_COPY_DATA,
+                                                                   DEFAULT_FAIL_ON_MISSING_INDEX,
+                                                                   DEFAULT_VALIDATE_INDEX_CHECKSUM);
                         context.completeNow();
                     })));
         assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
@@ -280,7 +293,8 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
         when(mockCFOperations.importNewSSTables("ks", "table", stageDirectoryAbsolutePath,
                                                 true, true, true,
                                                 DEFAULT_VERIFY_TOKENS, DEFAULT_INVALIDATE_CACHES, false,
-                                                DEFAULT_COPY_DATA)).thenReturn(Collections.emptyList());
+                                                DEFAULT_COPY_DATA,
+                                                DEFAULT_FAIL_ON_MISSING_INDEX, DEFAULT_VALIDATE_INDEX_CHECKSUM)).thenReturn(Collections.emptyList());
 
         String requestURI = "/api/v1/uploads/" + uploadId + "/keyspaces/ks/tables/table/import";
         sendRequest(context,
@@ -297,7 +311,9 @@ public class SSTableImportHandlerTest extends BaseUploadsHandlerTest
                                                                    DEFAULT_VERIFY_TOKENS,
                                                                    DEFAULT_INVALIDATE_CACHES,
                                                                    false,
-                                                                   DEFAULT_COPY_DATA);
+                                                                   DEFAULT_COPY_DATA,
+                                                                   DEFAULT_FAIL_ON_MISSING_INDEX,
+                                                                   DEFAULT_VALIDATE_INDEX_CHECKSUM);
                         context.completeNow();
                     })));
 

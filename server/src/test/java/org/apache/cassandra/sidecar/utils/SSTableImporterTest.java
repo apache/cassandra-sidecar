@@ -98,14 +98,17 @@ class SSTableImporterTest
         when(mockMetadataFetcher.instance("127.0.0.3")).thenReturn(mockInstanceMetadata3);
         when(mockCassandraAdapterDelegate1.tableOperations()).thenReturn(mockTableOperations1);
         when(mockTableOperations1.importNewSSTables("ks", "tbl", "/dir", true, true,
-                                                    true, true, true, true, false))
+                                                    true, true, true, true, false, false, false))
+        .thenReturn(Collections.emptyList());
+        when(mockTableOperations1.importNewSSTables("ks2", "tbl", "/dir", true, true,
+                                                    true, true, true, true, false, false, false))
         .thenReturn(Collections.emptyList());
         when(mockTableOperations1.importNewSSTables("ks", "tbl", "/failed-dir", true, true,
-                                                    true, true, true, true, false))
+                                                    true, true, true, true, false, false, false))
         .thenReturn(Collections.singletonList("/failed-dir"));
         when(mockCassandraAdapterDelegate2.tableOperations()).thenReturn(mockTableOperations2);
         when(mockTableOperations2.importNewSSTables("ks", "tbl", "/dir", true, true,
-                                                    true, true, true, true, false))
+                                                    true, true, true, true, false, false, false))
         .thenThrow(new RuntimeException("Exception during import"));
         when(mockCassandraAdapterDelegate3.tableOperations()).thenThrow(new CassandraUnavailableException(CQL_AND_JMX, "Cassandra unavailable"));
         executorPools = new ExecutorPools(vertx, serviceConfiguration);
@@ -154,7 +157,7 @@ class SSTableImporterTest
                 assertThat(queue).isEmpty();
             }
             verify(mockTableOperations1, times(1))
-            .importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false);
+            .importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false, false, false);
             vertx.setTimer(100, handle -> {
                 // after successful import, the queue must be drained
                 assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isZero();
@@ -354,9 +357,9 @@ class SSTableImporterTest
                       assertThat(queue).isEmpty();
                   }
                   verify(mockTableOperations1, times(1))
-                  .importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false);
+                  .importNewSSTables("ks", "tbl", "/dir", true, true, true, true, true, true, false, false, false);
                   verify(mockTableOperations1, times(1))
-                  .importNewSSTables("ks2", "tbl", "/dir", true, true, true, true, true, true, false);
+                  .importNewSSTables("ks2", "tbl", "/dir", true, true, true, true, true, true, false, false, false);
                   vertx.setTimer(100, handle -> {
                       // after successful import, the queue must be drained
                       assertThat(instanceMetrics(1).sstableImport().pendingImports.metric.getValue()).isZero();

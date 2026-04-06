@@ -580,6 +580,8 @@ public class RestoreRangeTask implements RestoreRangeHandler
                                                       .invalidateCaches(options.invalidateCaches())
                                                       .extendedVerify(options.extendedVerify())
                                                       .copyData(options.copyData())
+                                                      .failOnMissingIndex(options.failOnMissingIndex())
+                                                      .validateIndexChecksum(options.validateIndexChecksum())
                                                       .uploadId(range.uploadId())
                                                       .build();
         Future<Void> future = importer.scheduleImport(importOptions)
