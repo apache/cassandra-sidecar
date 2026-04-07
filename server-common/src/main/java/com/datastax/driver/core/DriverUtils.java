@@ -20,6 +20,8 @@ package com.datastax.driver.core;
 
 import java.net.InetSocketAddress;
 
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Node;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
@@ -37,25 +39,25 @@ public class DriverUtils
      * @return true if the host has active connections, false otherwise
      */
     @VisibleForTesting
-    public static boolean hasActiveConnections(Host host)
+    public static boolean hasActiveConnections(Node host)
     {
-        return host.convictionPolicy.hasActiveConnections();
+        return host.getOpenConnections() > 0;
     }
 
-    /**
-     * Start attempting to reconnect to the given host, as hosts with `IGNORED` distance aren't attempted
-     * and the SidecarLoadBalancingPolicy marks non-selected nodes as IGNORED until they need to rotate in.
-     *
-     * <p><b>Note:</b> This method should not be used directly, but should be proxied by
-     * an implementation of {@link org.apache.cassandra.sidecar.common.server.utils.DriverUtils}.
-     *
-     * @param cluster The cluster object
-     * @param host    the host to which reconnect attempts will be made
-     */
-    public static void startPeriodicReconnectionAttempt(Cluster cluster, Host host)
-    {
-        cluster.manager.startPeriodicReconnectionAttempt(host, false);
-    }
+//    /**
+//     * Start attempting to reconnect to the given host, as hosts with `IGNORED` distance aren't attempted
+//     * and the SidecarLoadBalancingPolicy marks non-selected nodes as IGNORED until they need to rotate in.
+//     *
+//     * <p><b>Note:</b> This method should not be used directly, but should be proxied by
+//     * an implementation of {@link org.apache.cassandra.sidecar.common.server.utils.DriverUtils}.
+//     *
+//     * @param cluster The cluster object
+//     * @param host    the host to which reconnect attempts will be made
+//     */
+//    public static void startPeriodicReconnectionAttempt(Cluster cluster, Node host)
+//    {
+//        cluster.manager.startPeriodicReconnectionAttempt(host, false);
+//    }
 
     /**
      * Gets a Host instance from metadata based on the native transport address
@@ -65,15 +67,19 @@ public class DriverUtils
      *
      * @param metadata                    the {@link Metadata} instance to search for the host
      * @param localNativeTransportAddress the native transport ip address and port for the host to find
-     * @return the {@link Host}           instance if found, else null
+     * @return the {@link Node}           instance if found, else null
      */
-    public static Host getHost(Metadata metadata, InetSocketAddress localNativeTransportAddress)
+    public static Node getHost(Metadata metadata, InetSocketAddress localNativeTransportAddress)
     {
-        // Because the driver can sometimes mess up the broadcast address, we need to search by endpoint
-        // which is what it actually uses to connect to the cluster. Therefore, create a TranslatedAddressEndpoint
-        // to use for searching. It has to be one of these because that's what the driver is using internally,
-        // and the `.equals` method used when searching checks the type explicitly.
-        TranslatedAddressEndPoint endPoint = new TranslatedAddressEndPoint(localNativeTransportAddress);
-        return metadata.getHost(endPoint);
+//        // Because the driver can sometimes mess up the broadcast address, we need to search by endpoint
+//        // which is what it actually uses to connect to the cluster. Therefore, create a TranslatedAddressEndpoint
+//        // to use for searching. It has to be one of these because that's what the driver is using internally,
+//        // and the `.equals` method used when searching checks the type explicitly.
+//        TranslatedAddressEndPoint endPoint = new TranslatedAddressEndPoint(localNativeTransportAddress);
+//        return metadata.getHost(endPoint);
+        // TODO(lantoniak): Use TranslatedAddressEndPoint?
+        return metadata.getNodes().values().stream()
+                       .filter(n -> n.getEndPoint().resolve().equals(localNativeTransportAddress))
+                       .findFirst().orElse(null);
     }
 }

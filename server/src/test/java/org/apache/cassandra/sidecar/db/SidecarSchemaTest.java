@@ -18,10 +18,14 @@
 
 package org.apache.cassandra.sidecar.db;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -32,12 +36,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.ExecutionInfo;
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.ExecutionInfo;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -50,9 +54,12 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.TestResourceReaper;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
+import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
@@ -269,17 +276,16 @@ public class SidecarSchemaTest
         public CQLSessionProvider cqlSessionProvider()
         {
             CQLSessionProvider cqlSession = mock(CQLSessionProvider.class);
-            Session session = mock(Session.class, RETURNS_DEEP_STUBS);
+            CqlSession session = mock(CqlSession.class, RETURNS_DEEP_STUBS);
             KeyspaceMetadata ks = mock(KeyspaceMetadata.class);
-            when(ks.getTable(anyString())).thenReturn(null);
-            when(session.getCluster()
-                        .getMetadata()
-                        .getKeyspace(anyString())).thenAnswer((Answer<KeyspaceMetadata>) invocation -> {
+            when(ks.getTable(anyString())).thenReturn(Optional.empty());
+            when(session.getMetadata()
+                        .getKeyspace(anyString())).thenAnswer((Answer<Optional<KeyspaceMetadata>>) invocation -> {
                 if (DEFAULT_SIDECAR_SCHEMA_KEYSPACE_NAME.equals(invocation.getArgument(0)))
                 {
-                    return null;
+                    return Optional.empty();
                 }
-                return ks;
+                return Optional.of(ks);
             });
             when(session.execute(any(String.class))).then(invocation -> {
                 if (intercept)
@@ -309,9 +315,14 @@ public class SidecarSchemaTest
 
         @Provides
         @Singleton
-        public InstancesMetadata instancesMetadata()
+        public InstancesMetadata instancesMetadata() throws UnknownHostException
         {
             InstanceMetadata instanceMeta = mock(InstanceMetadata.class);
+            CassandraAdapterDelegate mockCassandraAdapterDelegate = mock(CassandraAdapterDelegate.class);
+            when(mockCassandraAdapterDelegate.localStorageBroadcastAddress()).thenReturn(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 8888));
+            when(mockCassandraAdapterDelegate.storageOperations()).thenReturn(mock(StorageOperations.class));
+            when(mockCassandraAdapterDelegate.nodeSettings()).thenReturn(mock(NodeSettings.class));
+            when(instanceMeta.delegate()).thenReturn(mockCassandraAdapterDelegate);
             when(instanceMeta.stagingDir()).thenReturn("/tmp/staging"); // not an actual file
             InstancesMetadata instancesMetadata = mock(InstancesMetadata.class);
             when(instancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMeta));

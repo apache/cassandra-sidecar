@@ -26,8 +26,7 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpResponseExpectation;
@@ -122,7 +121,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     @Test
     void retrieveClientStatsListConnectionsWithKeyspace()
     {
-        try (Cluster driverCluster = createDriverCluster(cluster.delegate()); Session session = driverCluster.connect())
+        try (CqlSession session = createDriverSession(cluster.delegate()))
         {
             session.execute("USE " + TEST_KEYSPACE);
 
@@ -139,7 +138,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
     void retrieveClientStatsMultipleConnections()
     {
         // Creates an additional connection pair
-        try (Cluster driverCluster = createDriverCluster(cluster.delegate()); Session ignored = driverCluster.connect())
+        try (CqlSession session = createDriverSession(cluster.delegate()))
         {
             Map<String, Boolean> expectedParams = Map.of("summary", false);
             String testRoute = "/api/v1/cassandra/stats/connected-clients?summary=false";
@@ -262,7 +261,7 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
             {
                 assertThat(stat.address()).contains("127.0.0.1");
                 assertThat(stat.sslEnabled()).isEqualTo(false);
-                assertThat(stat.driverName()).isEqualTo("DataStax Java Driver");
+                assertThat(stat.driverName()).isEqualTo("Apache Cassandra Java Driver");
                 assertThat(stat.driverVersion()).isNotNull();
                 assertThat(stat.username()).isEqualTo("anonymous");
                 if (majorVersion.isGreaterThan(fourZero))

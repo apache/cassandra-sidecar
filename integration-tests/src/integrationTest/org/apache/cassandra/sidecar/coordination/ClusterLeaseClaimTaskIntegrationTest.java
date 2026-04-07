@@ -40,7 +40,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.metadata.NodeStateListener;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.distributed.api.ConsistencyLevel;
 import org.apache.cassandra.distributed.api.Feature;
@@ -61,7 +62,6 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.server.CoordinationMetrics;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
-import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
 import org.apache.cassandra.sidecar.utils.TestMetricUtils;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import org.apache.cassandra.testing.IClusterExtension;
@@ -370,18 +370,17 @@ class ClusterLeaseClaimTaskIntegrationTest
     DisconnectableCQLSessionProvider buildCqlSession(List<InetSocketAddress> address)
     {
         CQLSessionProvider sessionProvider =
-        new CQLSessionProviderImpl(address, address, 500, null, 0, SharedExecutorNettyOptions.INSTANCE);
+        new CQLSessionProviderImpl(address, address, 500, "datacenter1", 0);
         sessionProviderList.add(sessionProvider);
         return new DisconnectableCQLSessionProvider(sessionProvider);
     }
 
     SidecarLeaseDatabaseAccessor buildAccessor(CQLSessionProvider sessionProvider)
     {
-        Session session = sessionProvider.get();
+        CqlSession session = sessionProvider.get();
         assertThat(session).isNotNull();
-        assertThat(session.getCluster()).isNotNull();
-        assertThat(session.getCluster().getMetadata()).isNotNull();
-        assertThat(session.getCluster().getMetadata().getKeyspace("sidecar_internal")).isNotNull();
+        assertThat(session.getMetadata()).isNotNull();
+        assertThat(session.getMetadata().getKeyspace("sidecar_internal")).isNotNull();
         SidecarLeaseSchema tableSchema = new SidecarLeaseSchema(mockSchemaConfig);
         tableSchema.prepareStatements(session);
         return new SidecarLeaseDatabaseAccessor(tableSchema, sessionProvider);
@@ -527,7 +526,7 @@ class ClusterLeaseClaimTaskIntegrationTest
 
         @Override
         @NotNull
-        public Session get() throws CassandraUnavailableException
+        public CqlSession get() throws CassandraUnavailableException
         {
             if (isConnected)
             {
@@ -538,9 +537,18 @@ class ClusterLeaseClaimTaskIntegrationTest
         }
 
         @Override
-        public @Nullable Session getIfConnected()
+        public @Nullable CqlSession getIfConnected()
         {
             return isConnected ? delegate.getIfConnected() : null;
+        }
+
+        public void registerNodeStateListener(NodeStateListener nodeStateListener)
+        {
+        }
+
+        @Override
+        public void unregisterNodeStateListener(NodeStateListener nodeStateListener)
+        {
         }
 
         @Override

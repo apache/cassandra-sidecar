@@ -133,8 +133,8 @@ public class CassandraBridgeFactory
                                }
                            }).toArray(URL[]::new);
 
-        return AccessController.doPrivileged((PrivilegedAction<ClassLoader>) () ->
-                                                                             new PostDelegationClassLoader(urls, Thread.currentThread().getContextClassLoader()));
+        return AccessController.doPrivileged(
+        (PrivilegedAction<ClassLoader>) () -> new PostDelegationClassLoader(urls, Thread.currentThread().getContextClassLoader()));
     }
 
 }

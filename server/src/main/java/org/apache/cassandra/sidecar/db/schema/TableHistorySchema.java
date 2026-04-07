@@ -19,10 +19,12 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import java.util.Optional;
+
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
@@ -53,7 +55,7 @@ public class TableHistorySchema extends TableSchema implements ExecuteOnClusterL
     }
 
     @Override
-    protected void prepareStatements(@NotNull Session session)
+    protected void prepareStatements(@NotNull CqlSession session)
     {
         insertTableSchema = prepare(insertTableSchema, session, CqlLiterals.insertTableSchema(keyspaceConfig));
         selectVersionTableSchema = prepare(selectVersionTableSchema, session, CqlLiterals.selectVersionTableSchema(keyspaceConfig));
@@ -74,13 +76,8 @@ public class TableHistorySchema extends TableSchema implements ExecuteOnClusterL
     @Override
     protected boolean exists(@NotNull Metadata metadata)
     {
-        KeyspaceMetadata ksMetadata = metadata.getKeyspace(keyspaceConfig.keyspace());
-        if (ksMetadata == null)
-        {
-            return false;
-        }
-
-        return ksMetadata.getTable(TABLE_SCHEMA_HISTORY) != null;
+        Optional<KeyspaceMetadata> ksMetadata = metadata.getKeyspace(keyspaceConfig.keyspace());
+        return ksMetadata.filter(keyspaceMetadata -> keyspaceMetadata.getTable(TABLE_SCHEMA_HISTORY).isPresent()).isPresent();
     }
 
     @Override

@@ -18,8 +18,8 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
@@ -54,7 +54,7 @@ public class RestoreSlicesSchema extends TableSchema implements ExecuteOnCluster
     }
 
     @Override
-    protected void prepareStatements(@NotNull Session session)
+    protected void prepareStatements(@NotNull CqlSession session)
     {
         insertSlice = prepare(insertSlice, session, CqlLiterals.insertSlice(keyspaceConfig));
         findAllByTokenRange = prepare(findAllByTokenRange, session, CqlLiterals.findAllByTokenRange(keyspaceConfig));

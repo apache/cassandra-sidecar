@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
@@ -47,7 +47,7 @@ class ListSnapshotHandlerIntegrationTest extends IntegrationTestBase
     void testListSnapshot(VertxTestContext context) throws Exception
     {
         createTestKeyspace();
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
         session.execute("CREATE TABLE " + TEST_KEYSPACE + ".rank_by_year_and_name ( \n" +
                         "  race_year int, \n" +
                         "  race_name text, \n" +
@@ -139,7 +139,7 @@ class ListSnapshotHandlerIntegrationTest extends IntegrationTestBase
         .onFailure(context::failNow);
     }
 
-    private void populateTable(Session session, String tableName)
+    private void populateTable(CqlSession session, String tableName)
     {
         for (int i = 0; i < 1000; i++)
         {

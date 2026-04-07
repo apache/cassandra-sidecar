@@ -18,14 +18,16 @@
 
 package org.apache.cassandra.sidecar.handlers.restore;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.datastax.driver.core.LocalDate;
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.client.WebClient;
@@ -53,7 +55,7 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
             UUID id = UUID.fromString(jobId);
             // keyspace name is different
             return RestoreJob.builder()
-                             .createdAt(LocalDate.fromMillisSinceEpoch(UUIDs.unixTimestamp(id)))
+                             .createdAt(LocalDate.ofInstant(Instant.ofEpochMilli(Uuids.unixTimestamp(id)), ZoneOffset.UTC))
                              .jobId(id).jobAgent("job agent")
                              .keyspace("ks").table("table")
                              .jobStatus(RestoreJobStatus.CREATED)
@@ -120,7 +122,7 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
         mockLookupRestoreJob(x -> {
             UUID jobId = UUID.fromString("7cd82ff9-d276-11ed-93e5-7fce0df1306f");
             return RestoreJob.builder()
-                             .createdAt(LocalDate.fromMillisSinceEpoch(UUIDs.unixTimestamp(jobId)))
+                             .createdAt(LocalDate.ofInstant(Instant.ofEpochMilli(Uuids.unixTimestamp(jobId)), ZoneOffset.UTC))
                              .jobId(jobId).jobAgent("job agent")
                              .keyspace("ks").table("table")
                              .jobStatus(RestoreJobStatus.CREATED)

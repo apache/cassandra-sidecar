@@ -60,12 +60,13 @@ class ReplacementMultiDCTest extends ReplacementBaseTest
         BBHelperReplacementsMultiDC.reset();
         TestTokenSupplier tokenSupplier = getTestTokenSupplier();
         Map<String, Map<Range<BigInteger>, List<String>>> expectedRangeMappings = generateExpectedRangeMappingReplacementMultiDC();
-        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperReplacementsMultiDC::install, cassandraTestContext, tokenSupplier,
-                                                                           builder -> builder.additionalInstanceConfig(Map.of("progress_barrier_default_consistency_level", "QUORUM",
-                                                                                                                               "progress_barrier_timeout", "30s",
-                                                                                                                               "cms_await_timeout", "60s",
-                                                                                                                               "accord.enabled", "false",
-                                                                                                                               "write_request_timeout", "10s")));
+        IClusterExtension<? extends IInstance> cluster =
+        getMultiDCCluster(BBHelperReplacementsMultiDC::install, cassandraTestContext, tokenSupplier,
+                          builder -> builder.additionalInstanceConfig(Map.of("progress_barrier_default_consistency_level", "QUORUM",
+                                                                             "progress_barrier_timeout", "30s",
+                                                                             "cms_await_timeout", "60s",
+                                                                             "accord.enabled", "false",
+                                                                             "write_request_timeout", "10s")));
 
         int initialClusterSize = cluster.size();
         List<IInstance> nodesToRemove = Arrays.asList(cluster.get(initialClusterSize - 1), cluster.get(initialClusterSize));

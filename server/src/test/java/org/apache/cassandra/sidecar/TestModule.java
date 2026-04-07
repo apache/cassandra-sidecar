@@ -22,14 +22,16 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.CqlIdentifier;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -202,9 +204,11 @@ public class TestModule extends AbstractModule
         when(mockStorageOperations.dataFileLocations()).thenReturn(List.of(dataDir));
         Metadata metadata = CassandraClientTokenRingProviderTest.getMetadata();
         KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
-        when(metadata.getKeyspace(any())).thenReturn(keyspaceMetadata);
+        when(metadata.getKeyspace(any(String.class))).thenReturn(Optional.of(keyspaceMetadata));
+        when(metadata.getKeyspace(any(CqlIdentifier.class))).thenReturn(Optional.of(keyspaceMetadata));
         TableMetadata tableMetadata = mock(TableMetadata.class);
-        when(keyspaceMetadata.getTable(any())).thenReturn(tableMetadata);
+        when(keyspaceMetadata.getTable(any(String.class))).thenReturn(Optional.of(tableMetadata));
+        when(keyspaceMetadata.getTable(any(CqlIdentifier.class))).thenReturn(Optional.of(tableMetadata));
         delegate.setMetadata(metadata);
         delegate.setStorageOperations(mockStorageOperations);
         if (isUp)

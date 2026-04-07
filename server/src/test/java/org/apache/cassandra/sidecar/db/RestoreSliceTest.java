@@ -23,8 +23,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 
@@ -41,7 +41,7 @@ public class RestoreSliceTest
     @Test
     void testEquals()
     {
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         RestoreSlice slice1 = createTestingSlice(jobId, "slice-id", 0L, 10L);
         RestoreSlice slice2 = createTestingSlice(jobId, "slice-id", 0L, 10L);
         assertThat(slice1).isEqualTo(slice2);
@@ -52,7 +52,7 @@ public class RestoreSliceTest
     @Test
     void testNotEquals()
     {
-        RestoreSlice slice1 = createTestingSlice(UUIDs.timeBased(), "slice-id", 0L, 10L);
+        RestoreSlice slice1 = createTestingSlice(Uuids.timeBased(), "slice-id", 0L, 10L);
         RestoreSlice slice2 = slice1.unbuild().endToken(BigInteger.valueOf(20L)).build();
         assertThat(slice1).isNotEqualTo(slice2);
 
@@ -64,18 +64,18 @@ public class RestoreSliceTest
     @Test
     void testCreateFromRow()
     {
-        RestoreJob restoreJob = RestoreJobTest.createNewTestingJob(UUIDs.timeBased());
+        RestoreJob restoreJob = RestoreJobTest.createNewTestingJob(Uuids.timeBased());
         RestoreSlice slice = createTestingSlice(restoreJob, "slice-id", 0L, 10L);
         Row mockRow = mock(Row.class);
 
-        when(mockRow.getUUID("job_id")).thenReturn(slice.jobId());
+        when(mockRow.getUuid("job_id")).thenReturn(slice.jobId());
         when(mockRow.getString("slice_id")).thenReturn(slice.sliceId());
         when(mockRow.getShort("bucket_id")).thenReturn(slice.bucketId());
         when(mockRow.getString("bucket")).thenReturn(slice.bucket());
         when(mockRow.getString("key")).thenReturn(slice.key());
         when(mockRow.getString("checksum")).thenReturn(slice.checksum());
-        when(mockRow.getVarint("start_token")).thenReturn(slice.startToken());
-        when(mockRow.getVarint("end_token")).thenReturn(slice.endToken());
+        when(mockRow.getBigInteger("start_token")).thenReturn(slice.startToken());
+        when(mockRow.getBigInteger("end_token")).thenReturn(slice.endToken());
         when(mockRow.getLong("compressed_size")).thenReturn(slice.compressedSize());
         when(mockRow.getLong("uncompressed_size")).thenReturn(slice.uncompressedSize());
 
@@ -108,7 +108,7 @@ public class RestoreSliceTest
     @Test
     void testNoSplit()
     {
-        RestoreSlice slice = createTestingSlice(UUIDs.timeBased(), "slice-id", 0L, 10L);
+        RestoreSlice slice = createTestingSlice(Uuids.timeBased(), "slice-id", 0L, 10L);
         RestoreSlice result = slice.trimMaybe(new TokenRange(-10L, 10L));
         assertThat(result)
         .describedAs("No trim is done when fully enclosed by the local token range")
@@ -118,7 +118,7 @@ public class RestoreSliceTest
     @Test
     void testSplitNoIntersection()
     {
-        RestoreSlice slice = createTestingSlice(UUIDs.timeBased(), "slice-id", 0L, 10L);
+        RestoreSlice slice = createTestingSlice(Uuids.timeBased(), "slice-id", 0L, 10L);
         // (0, 10] does not intersect with (100, 110]
         assertThatThrownBy(() -> slice.trimMaybe(new TokenRange(100L, 110L)))
         .isExactlyInstanceOf(IllegalStateException.class)

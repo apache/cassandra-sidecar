@@ -27,7 +27,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.utils.XXHash32Provider;
 
@@ -78,7 +78,7 @@ class RestoreJobUtilTest
     @Test
     void testExtractTimestampFromRestoreJobDirName()
     {
-        assertThat(RestoreJobUtil.timestampFromRestoreJobDir(RestoreJobUtil.prefixedJobId(UUIDs.timeBased())))
+        assertThat(RestoreJobUtil.timestampFromRestoreJobDir(RestoreJobUtil.prefixedJobId(Uuids.timeBased())))
         .isPositive();
 
         // all below are -1

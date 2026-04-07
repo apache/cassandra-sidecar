@@ -23,7 +23,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -87,7 +87,7 @@ public class RestoreJobTestUtils
 
     public static UUID createJob(RestoreJobTestUtils.RestoreJobClient testClient, QualifiedTableName tableName)
     {
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         long expireAt = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(2);
         CreateRestoreJobRequestPayload payload = CreateRestoreJobRequestPayload
                                                  .builder(RestoreJobSecretsGen.genRestoreJobSecrets(), expireAt)

@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.datahub;
 
 import java.net.URISyntaxException;
 
-import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import com.linkedin.common.DataPlatformInstance;
 import com.linkedin.common.urn.Urn;
 import datahub.event.MetadataChangeProposalWrapper;

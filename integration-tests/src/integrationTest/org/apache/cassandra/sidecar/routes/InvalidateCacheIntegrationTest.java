@@ -26,10 +26,11 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import javax.net.ssl.SSLContext;
+
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.SSLOptions;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -70,7 +71,7 @@ import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import static java.net.URLEncoder.encode;
 import static org.apache.cassandra.testing.DriverTestUtils.buildContactPoints;
 import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
-import static org.apache.cassandra.testing.TlsTestUtils.getSSLOptions;
+import static org.apache.cassandra.testing.TlsTestUtils.getSSLContext;
 import static org.apache.cassandra.testing.TlsTestUtils.withAuthenticatedSession;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
@@ -222,7 +223,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
     {
         Path clientKeystorePath = cassandraIdentityClientKeyStore();
 
-        SSLOptions sslOptions = getSSLOptions(clientKeystorePath.toString(),
+        SSLContext sslOptions = getSSLContext(clientKeystorePath.toString(),
                                               mtlsTestHelper.clientKeyStorePassword(),
                                               mtlsTestHelper.trustStorePath(),
                                               mtlsTestHelper.trustStorePassword());
@@ -414,7 +415,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         verifyAccess(HttpMethod.DELETE, endpointAuthCacheRoute, testUserKeystorePath, assertStatus(HttpResponseStatus.FORBIDDEN));
     }
 
-    private void createRolesPermissionsTable(Session session)
+    private void createRolesPermissionsTable(CqlSession session)
     {
         String statement = "CREATE TABLE IF NOT EXISTS sidecar_internal.role_permissions_v1 ("
                            + "role text,"
@@ -424,7 +425,7 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
         session.execute(statement);
     }
 
-    private void createTestRole(Session session)
+    private void createTestRole(CqlSession session)
     {
         session.execute("CREATE ROLE IF NOT EXISTS \"test_role\" WITH SUPERUSER = false AND LOGIN = true");
         session.execute(String.format("ADD IDENTITY IF NOT EXISTS '%s' TO ROLE 'test_role'", TEST_USER_IDENTITY));
@@ -700,12 +701,12 @@ class InvalidateCacheIntegrationTest extends SharedClusterSidecarIntegrationTest
                 throw new RuntimeException(e);
             }
 
-            SSLOptions sslOptions = getSSLOptions(clientKeystoreForSidecarToCassandraConnections.toString(),
+            SSLContext sslOptions = getSSLContext(clientKeystoreForSidecarToCassandraConnections.toString(),
                                                   mtlsTestHelper.clientKeyStorePassword(),
                                                   mtlsTestHelper.trustStorePath(),
                                                   mtlsTestHelper.trustStorePassword());
             return new TemporaryCqlSessionProvider(buildContactPoints(cluster),
-                                                   org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions.INSTANCE,
+                                                   "datacenter1",
                                                    sslOptions);
         }
     }

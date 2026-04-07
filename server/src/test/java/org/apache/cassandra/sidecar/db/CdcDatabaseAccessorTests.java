@@ -27,21 +27,19 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.concurrent.Executor;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.ResultSetFuture;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.AsyncResultSet;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.Row;
 import com.google.inject.Provider;
 import org.apache.cassandra.bridge.TokenRange;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -51,7 +49,6 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.TokenSplitUtil;
 import org.apache.cassandra.spark.data.partitioner.Partitioner;
-import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.db.CdcDatabaseAccessor.await;
 import static org.apache.cassandra.sidecar.utils.TokenSplitUtil.overlaps;
@@ -123,7 +120,8 @@ class CdcDatabaseAccessorTests
             TokenRange range = TokenRange.openClosed(lower, upper);
             int[] splits = tokenSplitUtil.findOverlappingSplitIds(partitioner, range);
             ByteBuffer expected = buffers[i];
-            Arrays.stream(splits).forEach(split -> assertByteBufferEquals(expected, datastore.selectBuffers(jobId, split).stream().findFirst().orElseThrow()));
+            Arrays.stream(splits).forEach(split -> assertByteBufferEquals(expected, datastore.selectBuffers(jobId, split)
+                                                                                             .stream().findFirst().orElseThrow()));
         }
     }
 
@@ -233,15 +231,21 @@ class CdcDatabaseAccessorTests
         assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN), TokenRange.openClosed(BigInteger.ZERO, BigInteger.ZERO))).isFalse();
         assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN), TokenRange.openClosed(BigInteger.TEN, BigInteger.TEN))).isFalse();
         assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN), TokenRange.openClosed(BigInteger.ONE, BigInteger.TWO))).isTrue();
-        assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN), TokenRange.openClosed(BigInteger.valueOf(3), BigInteger.valueOf(8)))).isTrue();
-        assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN), TokenRange.openClosed(BigInteger.valueOf(-5), BigInteger.valueOf(5)))).isTrue();
+        assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN),
+                            TokenRange.openClosed(BigInteger.valueOf(3), BigInteger.valueOf(8)))).isTrue();
+        assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN),
+                            TokenRange.openClosed(BigInteger.valueOf(-5), BigInteger.valueOf(5)))).isTrue();
         assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN), TokenRange.openClosed(BigInteger.valueOf(-5), BigInteger.TEN))).isTrue();
-        assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN), TokenRange.openClosed(BigInteger.valueOf(-5), BigInteger.valueOf(15)))).isTrue();
-        assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN), TokenRange.openClosed(BigInteger.valueOf(5), BigInteger.valueOf(15)))).isTrue();
+        assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN),
+                            TokenRange.openClosed(BigInteger.valueOf(-5), BigInteger.valueOf(15)))).isTrue();
+        assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN),
+                            TokenRange.openClosed(BigInteger.valueOf(5), BigInteger.valueOf(15)))).isTrue();
         assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN), TokenRange.openClosed(BigInteger.valueOf(5), BigInteger.TEN))).isTrue();
 
-        assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN), TokenRange.openClosed(BigInteger.valueOf(-5), BigInteger.valueOf(-1)))).isFalse();
-        assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN), TokenRange.openClosed(BigInteger.valueOf(11), BigInteger.valueOf(15)))).isFalse();
+        assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN),
+                            TokenRange.openClosed(BigInteger.valueOf(-5), BigInteger.valueOf(-1)))).isFalse();
+        assertThat(overlaps(TokenRange.openClosed(BigInteger.ZERO, BigInteger.TEN),
+                            TokenRange.openClosed(BigInteger.valueOf(11), BigInteger.valueOf(15)))).isFalse();
     }
 
     // test utils
@@ -424,9 +428,9 @@ class CdcDatabaseAccessorTests
         });
         when(mockCdcStatesSchema.select()).thenReturn(selectStmt);
 
-        Session session = mock(Session.class, RETURNS_DEEP_STUBS);
+        CqlSession session = mock(CqlSession.class, RETURNS_DEEP_STUBS);
 
-        when(session.getCluster().getMetadata().getPartitioner()).thenReturn("org.apache.cassandra.dht.Murmur3Partitioner");
+        when(session.getMetadata().getTokenMap().get().getPartitionerName()).thenReturn("Murmur3Partitioner");
 
         // store inserts in mocked Datastore
         when(session.executeAsync(insertBound)).then(invocation -> {
@@ -437,82 +441,32 @@ class CdcDatabaseAccessorTests
             ByteBuffer buf = insertArgs.getArgument(4);
 //            long timestamp = invocation.getArgument(5);
             datastore.insert(jobId, split, lower, upper, buf);
-            return new TestResultSetFuture(mock(ResultSet.class));
+            return CompletableFuture.completedFuture(mock(AsyncResultSet.class));
         });
 
         when(session.executeAsync(selectBound)).then(invocation -> {
             String jobId = selectArgs.getArgument(0);
             short split = selectArgs.getArgument(1);
             List<Value> values = datastore.select(jobId, split);
-            ResultSet resultSet = mock(ResultSet.class);
+            AsyncResultSet resultSet = mock(AsyncResultSet.class);
             List<Row> rows = values.stream().map(value -> {
                 Row row = mock(Row.class);
                 when(row.isNull(eq(0))).thenReturn(false);
                 when(row.isNull(eq(1))).thenReturn(false);
                 when(row.isNull(eq(2))).thenReturn(false);
 
-                when(row.getVarint(eq(0))).thenReturn(value.range.lowerEndpoint());
-                when(row.getVarint(eq(1))).thenReturn(value.range.upperEndpoint());
-                when(row.getBytes(eq(2))).thenReturn(value.buf());
+                when(row.getBigInteger(eq(0))).thenReturn(value.range.lowerEndpoint());
+                when(row.getBigInteger(eq(1))).thenReturn(value.range.upperEndpoint());
+                when(row.getByteBuffer(eq(2))).thenReturn(value.buf());
                 return row;
             }).collect(Collectors.toList());
-            when(resultSet.all()).thenReturn(rows);
-            return new TestResultSetFuture(resultSet);
+            when(resultSet.currentPage()).thenReturn(rows);
+            return CompletableFuture.completedFuture(resultSet);
         });
 
         CQLSessionProvider cqlSession = mock(CQLSessionProvider.class);
         when(cqlSession.get()).thenReturn(session);
         when(cqlSession.getIfConnected()).thenReturn(session);
         return cqlSession;
-    }
-
-    private static class TestResultSetFuture implements ResultSetFuture
-    {
-        final ResultSet resultSet;
-
-        public TestResultSetFuture(ResultSet resultSet)
-        {
-            this.resultSet = resultSet;
-        }
-
-        public ResultSet getUninterruptibly()
-        {
-            return resultSet;
-        }
-
-        public ResultSet getUninterruptibly(long timeout, TimeUnit unit)
-        {
-            return resultSet;
-        }
-
-        public boolean cancel(boolean mayInterruptIfRunning)
-        {
-            return false;
-        }
-
-        public boolean isCancelled()
-        {
-            return false;
-        }
-
-        public boolean isDone()
-        {
-            return true;
-        }
-
-        public ResultSet get()
-        {
-            return resultSet;
-        }
-
-        public ResultSet get(long timeout, @NotNull TimeUnit unit)
-        {
-            return resultSet;
-        }
-
-        public void addListener(Runnable listener, Executor executor)
-        {
-
-        }
     }
 }

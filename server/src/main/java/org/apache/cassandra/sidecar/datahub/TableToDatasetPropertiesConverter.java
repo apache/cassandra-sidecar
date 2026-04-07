@@ -20,7 +20,9 @@ package org.apache.cassandra.sidecar.datahub;
 
 import java.time.Instant;
 
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.CqlIdentifier;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.linkedin.common.TimeStamp;
 import com.linkedin.data.template.SetMode;
 import com.linkedin.dataset.DatasetProperties;
@@ -32,6 +34,8 @@ import org.jetbrains.annotations.NotNull;
  */
 public class TableToDatasetPropertiesConverter extends TableToAspectConverter<DatasetProperties>
 {
+    private static final CqlIdentifier COMMENT = CqlIdentifier.fromCql("comment");
+
     public TableToDatasetPropertiesConverter(@NotNull IdentifiersProvider identifiers)
     {
         super(identifiers);
@@ -39,15 +43,16 @@ public class TableToDatasetPropertiesConverter extends TableToAspectConverter<Da
 
     @Override
     @NotNull
-    public MetadataChangeProposalWrapper<DatasetProperties> convert(@NotNull TableMetadata table)
+    public MetadataChangeProposalWrapper<DatasetProperties> convert(@NotNull KeyspaceMetadata keyspace,
+                                                                    @NotNull TableMetadata table)
     {
         String urn = identifiers.urnDataset(table);
 
         DatasetProperties aspect = new DatasetProperties()
-                .setName(table.getName())
-                .setQualifiedName(table.getKeyspace().getName() + DELIMITER + table.getName());
+                .setName(table.getName().asInternal())
+                .setQualifiedName(keyspace.getName().asInternal() + DELIMITER + table.getName());
 
-        String comment = table.getOptions().getComment();
+        String comment = (String) table.getOptions().get(COMMENT);
         if (comment != null)
         {
             aspect = aspect

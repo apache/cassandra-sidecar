@@ -32,7 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -69,8 +69,8 @@ class ListOperationalJobsHandlerTest
     Vertx vertx;
     Server server;
 
-    static UUID runningUuid = UUIDs.timeBased();
-    static UUID runningUuid2 = UUIDs.timeBased();
+    static UUID runningUuid = Uuids.timeBased();
+    static UUID runningUuid2 = Uuids.timeBased();
 
     static SampleOperationalJob running = new SampleOperationalJob(runningUuid);
     static SampleOperationalJob running2 = new SampleOperationalJob(runningUuid2);

@@ -89,7 +89,8 @@ public class LifecycleUpdateHandler extends NodeCommandHandler implements Access
                                             response.setStatusCode(HttpResponseStatus.ACCEPTED.code());
                                             break;
                                         default:
-                                            logger.warn("{} request failed with unexpected result. request={}, remoteAddress={}, instance={}, operationStatus={}",
+                                            logger.warn("{} request failed with unexpected result. " +
+                                                        "request={}, remoteAddress={}, instance={}, operationStatus={}",
                                                         this.getClass().getSimpleName(), request, remoteAddress, host, info.status());
                                             response.setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
                                     }
@@ -99,7 +100,8 @@ public class LifecycleUpdateHandler extends NodeCommandHandler implements Access
     }
 
     @Override
-    protected void processFailure(Throwable cause, RoutingContext context, String host, SocketAddress remoteAddress, NodeCommandRequestPayload request)
+    protected void processFailure(Throwable cause, RoutingContext context, String host, SocketAddress remoteAddress,
+                                  NodeCommandRequestPayload request)
     {
         if (cause instanceof LifecycleTaskConflictException)
         {

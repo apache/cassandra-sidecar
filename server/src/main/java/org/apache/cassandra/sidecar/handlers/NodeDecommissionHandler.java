@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.handlers;
 import java.util.Collections;
 import java.util.Set;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import com.google.inject.Inject;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -84,7 +84,7 @@ public class NodeDecommissionHandler extends AbstractHandler<Boolean> implements
                                Boolean isForce)
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
-        NodeDecommissionJob job = new NodeDecommissionJob(UUIDs.timeBased(), operations, isForce);
+        NodeDecommissionJob job = new NodeDecommissionJob(Uuids.timeBased(), operations, isForce);
         this.jobManager.trySubmitJob(job,
                                      (completedJob, exception) ->
                                      OperationalJobUtils.sendStatusBasedResponse(context, completedJob, exception),

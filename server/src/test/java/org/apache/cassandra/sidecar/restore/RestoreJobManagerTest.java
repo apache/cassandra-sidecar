@@ -34,7 +34,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
@@ -192,17 +192,17 @@ class RestoreJobManagerTest
     @Test
     void testCheckDirectoryIsObsolete() throws IOException
     {
-        Path jobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(System.currentTimeMillis())));
+        Path jobDir = newDir(RestoreJobUtil.prefixedJobId(Uuids.startOf(System.currentTimeMillis())));
         // not old enough
         assertThat(manager.isObsoleteRestoreJobDir(jobDir)).isFalse();
         // still not old enough (not 1 day yet)
-        jobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(System.currentTimeMillis()
+        jobDir = newDir(RestoreJobUtil.prefixedJobId(Uuids.startOf(System.currentTimeMillis()
                                                                    - TimeUnit.DAYS.toMillis(jobRecencyDays)
                                                                    + 9000)));
         assertThat(manager.isObsoleteRestoreJobDir(jobDir)).isFalse();
 
         // invalid format: missing 'restore-' prefix
-        jobDir = newDir(UUIDs.startOf(System.currentTimeMillis()
+        jobDir = newDir(Uuids.startOf(System.currentTimeMillis()
                                       - TimeUnit.DAYS.toMillis(jobRecencyDays + 1)).toString());
         assertThat(manager.isObsoleteRestoreJobDir(jobDir)).isFalse();
         // invalid format
@@ -221,7 +221,7 @@ class RestoreJobManagerTest
 
 
         // format is good; directory is older than jobRecencyDays
-        jobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(System.currentTimeMillis()
+        jobDir = newDir(RestoreJobUtil.prefixedJobId(Uuids.startOf(System.currentTimeMillis()
                                                                    - TimeUnit.DAYS.toMillis(jobRecencyDays)
                                                                    - 1)));
         assertThat(manager.isObsoleteRestoreJobDir(jobDir)).isTrue();
@@ -231,17 +231,17 @@ class RestoreJobManagerTest
     void testDeleteObsoleteData() throws IOException
     {
         long nowMillis = System.currentTimeMillis();
-        Path oldJobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(nowMillis
+        Path oldJobDir = newDir(RestoreJobUtil.prefixedJobId(Uuids.startOf(nowMillis
                                                                            - TimeUnit.DAYS.toMillis(jobRecencyDays)
                                                                            - 1)));
         createFileInDirectory(oldJobDir, 5);
 
         Path olderJobDir
-        = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(nowMillis
+        = newDir(RestoreJobUtil.prefixedJobId(Uuids.startOf(nowMillis
                                                             - TimeUnit.DAYS.toMillis(jobRecencyDays + 1))));
         createFileInDirectory(olderJobDir, 5);
 
-        Path newJobDir = newDir(RestoreJobUtil.prefixedJobId(UUIDs.startOf(nowMillis)));
+        Path newJobDir = newDir(RestoreJobUtil.prefixedJobId(Uuids.startOf(nowMillis)));
         createFileInDirectory(newJobDir, 5);
 
         manager.deleteObsoleteDataAsync();
@@ -303,7 +303,7 @@ class RestoreJobManagerTest
 
     private RestoreRange getTestRange()
     {
-        return getTestRange(RestoreJobTest.createNewTestingJob(UUIDs.timeBased()));
+        return getTestRange(RestoreJobTest.createNewTestingJob(Uuids.timeBased()));
     }
 
     private RestoreRange getTestRange(RestoreJob job)

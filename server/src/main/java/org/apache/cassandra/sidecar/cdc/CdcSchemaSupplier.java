@@ -36,6 +36,7 @@ import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import org.apache.cassandra.spark.data.CqlTable;
 import org.apache.cassandra.spark.data.ReplicationFactor;
 import org.apache.cassandra.spark.data.partitioner.Partitioner;
@@ -79,7 +80,9 @@ public class CdcSchemaSupplier implements SchemaSupplier
     private final CdcDatabaseAccessor cdcDatabaseAccessor;
     private final ConcurrentHashMap<TableIdentifier, UUID> tableIdCache = new ConcurrentHashMap<>();
 
-    public CdcSchemaSupplier(InstanceMetadataFetcher instanceMetadataFetcher, CassandraBridgeFactory cassandraBridgeFactory, CdcDatabaseAccessor cdcDatabaseAccessor)
+    public CdcSchemaSupplier(InstanceMetadataFetcher instanceMetadataFetcher,
+                             CassandraBridgeFactory cassandraBridgeFactory,
+                             CdcDatabaseAccessor cdcDatabaseAccessor)
     {
         this.instanceMetadataFetcher = instanceMetadataFetcher;
         this.cassandraBridgeFactory = cassandraBridgeFactory;
@@ -88,8 +91,8 @@ public class CdcSchemaSupplier implements SchemaSupplier
 
     public CompletableFuture<Set<CqlTable>> getCdcEnabledTables()
     {
-        String schema = instanceMetadataFetcher.callOnFirstAvailableInstance(instance-> instance.delegate().metadata().exportSchemaAsString());
-        NodeSettings nodeSettings = instanceMetadataFetcher.callOnFirstAvailableInstance(instance-> instance.delegate().nodeSettings());
+        String schema = instanceMetadataFetcher.callOnFirstAvailableInstance(instance -> MetadataUtils.describe(instance.delegate().metadata()));
+        NodeSettings nodeSettings = instanceMetadataFetcher.callOnFirstAvailableInstance(instance -> instance.delegate().nodeSettings());
         CassandraBridge cassandraBridge = cassandraBridgeFactory.get(nodeSettings.releaseVersion());
         CdcBridge cdcBridge = CdcBridgeFactory.getCdcBridge(cassandraBridge);
 

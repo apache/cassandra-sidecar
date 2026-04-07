@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.coordination;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,11 +41,12 @@ import com.google.common.collect.Multimap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.Host;
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.Token;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Node;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.token.Token;
+import com.datastax.oss.driver.internal.core.metadata.token.Murmur3Token;
+import com.datastax.oss.driver.internal.core.metadata.token.RandomToken;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
@@ -69,9 +71,9 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
     @GuardedBy("this")
     private volatile Map<String, Map<String, List<TokenRange>>> assignedRangesOfAllInstancesByDcCache = null;
     @GuardedBy("this")
-    private volatile Map<Host, Integer> localHostsCache = null;
+    private volatile Map<Node, Integer> localHostsCache = null;
     @GuardedBy("this")
-    private volatile Set<Host> allInstancesCache = null;
+    private volatile Set<Node> allInstancesCache = null;
 
     @Inject
     public CassandraClientTokenRingProvider(InstancesMetadata instancesMetadata, InstanceMetadataFetcher instanceMetadataFetcher, DnsResolver dnsResolver)
@@ -85,7 +87,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
     {
         checkAndReloadReloadCaches();
         Metadata metadata = instancesMetadata.instances().get(0).delegate().metadata();
-        if (keyspace == null || metadata.getKeyspace(keyspace) == null)
+        if (keyspace == null || metadata.getKeyspace(keyspace).isEmpty())
         {
             throw new NoSuchElementException("Keyspace does not exist. keyspace: " + keyspace);
         }
@@ -96,13 +98,13 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
                                                              .collect(Collectors.toMap(entry -> localHostsCache.get(entry.getKey()), Map.Entry::getValue));
     }
 
-    public Set<Host> localInstances()
+    public Set<Node> localInstances()
     {
         checkAndReloadReloadCaches();
         return localHostsCache.keySet();
     }
 
-    public Set<Host> allInstances()
+    public Set<Node> allInstances()
     {
         checkAndReloadReloadCaches();
         return allInstancesCache;
@@ -138,7 +140,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
     {
         List<InstanceMetadata> localInstances = instancesMetadata.instances();
         Metadata metadata = validatedMetadata(localInstances);
-        return metadata.getAllHosts().stream().map(Host::getDatacenter).collect(Collectors.toSet());
+        return metadata.getNodes().values().stream().map(Node::getDatacenter).collect(Collectors.toSet());
     }
 
     @Override
@@ -149,7 +151,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
 
     public static Partitioner extractPartitioner(Metadata metadata)
     {
-        String[] tokens = metadata.getPartitioner().split("\\.");
+        String[] tokens = metadata.getTokenMap().get().getPartitionerName().split("\\.");
         return Partitioners.from(tokens[tokens.length - 1]);
     }
 
@@ -162,13 +164,13 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
         if (localHostsCache == null
             || !new HashSet<>(localHostsCache.values()).equals(localInstanceIds)
             || allInstancesCache == null
-            || !allInstancesCache.equals(metadata.getAllHosts()))
+            || !allInstancesCache.equals(metadata.getNodes().values()))
         {
             synchronized (this)
             {
                 // If cluster configuration changes.
                 localHostsCache = localInstanceIds();
-                allInstancesCache = metadata.getAllHosts();
+                allInstancesCache = new HashSet<>(metadata.getNodes().values());
                 assignedRangesOfAllInstancesByDcCache = assignedRangesOfAllInstancesByDc(metadata);
             }
         }
@@ -189,9 +191,10 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
     {
         Partitioner partitioner = extractPartitioner(metadata);
         Map<String, List<CassandraInstance>> perDcHosts = new HashMap<>(4);
-        for (Host host : metadata.getAllHosts())
+        for (Node host : metadata.getNodes().values())
         {
-            Token minToken = host.getTokens().stream().min(Comparable::compareTo).orElseThrow(() -> new RuntimeException("No token found for host: " + host));
+            Token minToken = metadata.getTokenMap().get().getTokens(host).stream().min(Comparable::compareTo)
+                                     .orElseThrow(() -> new RuntimeException("No token found for host: " + host));
             perDcHosts.computeIfAbsent(host.getDatacenter(), (dc) -> new ArrayList<>())
                       .add(new CassandraInstance(tokenToString(minToken), getIpFromHost(dnsResolver, host)));
         }
@@ -201,17 +204,19 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
                          .collect(Collectors.toMap(Map.Entry::getKey, e -> calculateTokenRanges(partitioner, e.getValue())));
     }
 
-    protected static String tokenToString(Token token)
+    public static String tokenToString(Token token)
     {
-        if (token.getType() == DataType.bigint())
+        if (token instanceof Murmur3Token)
         {
-            return Long.toString((long) token.getValue());
+            Murmur3Token t = (Murmur3Token) token;
+            return Long.toString(t.getValue());
         }
-        else if (token.getType() == DataType.varint())
+        else if (token instanceof RandomToken)
         {
-            return token.getValue().toString();
+            RandomToken t = (RandomToken) token;
+            return t.getValue().toString();
         }
-        throw new UnsupportedOperationException("Unsupported token type: " + token.getType());
+        throw new UnsupportedOperationException("Unsupported token type: " + token.getClass().getName());
     }
 
     protected static Map<String, List<TokenRange>> calculateTokenRanges(Partitioner partitioner, List<CassandraInstance> sortedPerDcHosts)
@@ -222,13 +227,13 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
                .collect(Collectors.groupingBy(e -> e.getKey().node, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
     }
 
-    private Map<Host, Integer> localInstanceIds()
+    private Map<Node, Integer> localInstanceIds()
     {
         List<InstanceMetadata> localInstances = instancesMetadata.instances();
-        Set<Host> hosts = localInstances.get(0).delegate().metadata().getAllHosts();
+        Collection<Node> hosts = localInstances.get(0).delegate().metadata().getNodes().values();
         Map<String, Integer> localIps = localInstances.stream()
                                                       .collect(Collectors.toMap(instanceMetadata -> getIp(instanceMetadata.host()), InstanceMetadata::id));
-        Map<String, Host> ipToHost = hosts.stream()
+        Map<String, Node> ipToHost = hosts.stream()
                                           .collect(Collectors.toMap(this::getIpFromHost, Function.identity()));
 
         return localIps.entrySet()
@@ -246,21 +251,21 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
         return fetcher.callOnFirstAvailableInstance(instanceMetadata -> instanceMetadata.delegate().metadata());
     }
 
-    private static Map<String, Map<Host, Set<TokenRange>>> perKeySpaceTokenRangesOfAllInstances(Metadata metadata)
+    private static Map<String, Map<Node, Set<TokenRange>>> perKeySpaceTokenRangesOfAllInstances(Metadata metadata)
     {
-        Map<String, Map<Host, Set<TokenRange>>> perKeyspaceTokenRanges = new HashMap<>();
-        for (KeyspaceMetadata ks : metadata.getKeyspaces())
+        Map<String, Map<Node, Set<TokenRange>>> perKeyspaceTokenRanges = new HashMap<>();
+        for (KeyspaceMetadata ks : metadata.getKeyspaces().values())
         {
-            Map<Host, Set<TokenRange>> perHostTokenRanges = new HashMap<>();
-            for (Host host : metadata.getAllHosts())
+            Map<Node, Set<TokenRange>> perHostTokenRanges = new HashMap<>();
+            for (Node host : metadata.getNodes().values())
             {
-                Set<TokenRange> tokenRanges = metadata.getTokenRanges(ks.getName(), host)
+                Set<TokenRange> tokenRanges = metadata.getTokenMap().get().getTokenRanges(ks.getName(), host)
                                                       .stream()
                                                       .flatMap(range -> TokenRange.from(range).stream())
                                                       .collect(Collectors.toSet());
                 perHostTokenRanges.put(host, tokenRanges);
             }
-            perKeyspaceTokenRanges.put(ks.getName(), perHostTokenRanges);
+            perKeyspaceTokenRanges.put(ks.getName().asInternal(), perHostTokenRanges);
         }
         return perKeyspaceTokenRanges;
     }

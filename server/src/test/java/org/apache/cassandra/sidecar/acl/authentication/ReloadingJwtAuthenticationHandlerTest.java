@@ -134,9 +134,10 @@ class ReloadingJwtAuthenticationHandlerTest
 
             // Configure for stateless authentication
             String site = String.format("http://localhost:%d/jwks", mockServer.actualPort());
-            JwtParameterExtractor parameterExtractor = new JwtParameterExtractor(Map.of("enabled", "true",
-                                                                                        "site", site,
-                                                                                        "jwt_auth_type", JwtParameters.AuthType.STATELESS.toString().toLowerCase()));
+            JwtParameterExtractor parameterExtractor =
+            new JwtParameterExtractor(Map.of("enabled", "true",
+                                             "site", site,
+                                             "jwt_auth_type", JwtParameters.AuthType.STATELESS.toString().toLowerCase()));
             JwtRoleProcessor mockRoleProcessor = mock(JwtRoleProcessor.class);
             when(mockRoleProcessor.processRoles(any())).thenReturn(Future.succeededFuture(List.of("test_role")));
             ReloadingJwtAuthenticationHandler handler = getReloadingJwtAuthenticationHandler(vertx, parameterExtractor, mockRoleProcessor);
@@ -179,7 +180,9 @@ class ReloadingJwtAuthenticationHandlerTest
         }
     }
 
-    private static @NotNull ReloadingJwtAuthenticationHandler getReloadingJwtAuthenticationHandler(Vertx vertx, JwtParameterExtractor parameterExtractor, JwtRoleProcessor mockRoleProcessor)
+    private static @NotNull ReloadingJwtAuthenticationHandler getReloadingJwtAuthenticationHandler(Vertx vertx,
+                                                                                                   JwtParameterExtractor parameterExtractor,
+                                                                                                   JwtRoleProcessor mockRoleProcessor)
     {
         ExecutorPools executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         ClusterLease clusterLease = new ClusterLease();

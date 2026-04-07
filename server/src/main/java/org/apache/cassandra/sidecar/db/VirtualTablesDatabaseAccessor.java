@@ -18,15 +18,14 @@
 
 package org.apache.cassandra.sidecar.db;
 
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
-import com.datastax.driver.core.querybuilder.Select;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.querybuilder.QueryBuilder;
+import com.datastax.oss.driver.api.querybuilder.relation.Relation;
+import com.datastax.oss.driver.api.querybuilder.select.Select;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
-
-import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 /**
  * Database accessor for querying Cassandra virtual tables in the system_views keyspace.
@@ -52,10 +51,10 @@ public class VirtualTablesDatabaseAccessor extends DatabaseAccessor<TableSchema>
      */
     public boolean isCdcOnRepairEnabled()
     {
-        Select.Where query = QueryBuilder.select("value")
-                                         .from(SYSTEM_VIEWS_KS, SYSTEM_VIEWS_SETTINGS_TBL)
-                                         .where(eq("name", CDC_ON_REPAIR_ENABLED_FLAG));
-        Row row = session().execute(query).one();
+        Select query = QueryBuilder.selectFrom(SYSTEM_VIEWS_KS, SYSTEM_VIEWS_SETTINGS_TBL)
+                                   .column("value")
+                                   .where(Relation.column("name").isEqualTo(QueryBuilder.literal(CDC_ON_REPAIR_ENABLED_FLAG)));
+        Row row = session().execute(query.build()).one();
         return row != null && !row.isNull(0) && "true".equalsIgnoreCase(row.getString(0));
     }
 }

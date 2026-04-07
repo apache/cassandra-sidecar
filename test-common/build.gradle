@@ -34,7 +34,7 @@ dependencies {
     testFixturesCompileOnly(group: 'io.vertx', name: 'vertx-core', version: "${project.vertxVersion}")
     testFixturesCompileOnly(group: 'com.google.guava', name: 'guava', version: "${project.guavaVersion}")
 
-    testFixturesCompileOnly('com.datastax.cassandra:cassandra-driver-core:3.11.3')
+    testFixturesCompileOnly('org.apache.cassandra:java-driver-core:4.19.1')
     testFixturesCompileOnly(group: 'com.intellij', name: 'annotations', version: '12.0')
     testFixturesApi("org.assertj:assertj-core:${assertjCoreVersion}")
 

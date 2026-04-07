@@ -25,9 +25,9 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -87,6 +87,7 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
     }
 
     // todo: change to stream api and paginate
+    // TODO(lantoniak): Maybe implement above?
     public List<RestoreRange> findAll(UUID jobId, short bucketId)
     {
         sidecarSchema.ensureInitialized();

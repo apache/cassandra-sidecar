@@ -19,13 +19,18 @@
 
 package org.apache.cassandra.sidecar.cdc;
 
+import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.datastax.driver.core.Host;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Node;
+import com.datastax.oss.driver.api.core.metadata.TokenMap;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
+import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import org.apache.cassandra.spark.data.partitioner.CassandraInstance;
 import org.apache.cassandra.spark.data.partitioner.Partitioner;
 
@@ -56,14 +61,15 @@ public class SidecarClusterConfigProvider implements ClusterConfigProvider
 
     public Set<CassandraInstance> getCluster()
     {
-        Set<Host> hosts = instanceMetadataFetcher.callOnFirstAvailableInstance(instance ->
-                                                                               instance.delegate().metadata().getAllHosts());
+        Metadata metadata = instanceMetadataFetcher.callOnFirstAvailableInstance(instance -> instance.delegate().metadata());
+        TokenMap tokenMap = metadata.getTokenMap().get();
+        Collection<Node> hosts = metadata.getNodes().values();
         return hosts.stream()
-                    .filter(host -> host.getListenAddress() != null)
-                    .flatMap(host -> host.getTokens().stream()
+                    .filter(host -> host.getListenAddress().isPresent())
+                    .flatMap(host -> tokenMap.getTokens(host).stream()
                                          .map(token -> new CassandraInstance(
-                                         token.toString(),
-                                         host.getEndPoint().resolve().getHostName(),
+                                         CassandraClientTokenRingProvider.tokenToString(token),
+                                         MetadataUtils.resolveEndpoint(host).getHostName(),
                                          host.getDatacenter()
                                          ))
                     ).collect(Collectors.toSet());

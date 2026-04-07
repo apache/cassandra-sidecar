@@ -18,9 +18,9 @@
 
 package org.apache.cassandra.sidecar.db;
 
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Statement;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 
@@ -40,13 +40,13 @@ public abstract class LocalDatabaseAccessor<T extends TableSchema> extends Datab
     }
 
     @Override
-    public Session session()
+    public CqlSession session()
     {
         throw new UnsupportedOperationException("LocalDatabaseAccessor does not expose Session object");
     }
 
     @Override
-    protected ResultSet execute(Statement statement)
+    protected ResultSet execute(Statement<?> statement)
     {
         return cassandraAdapter.executeLocal(statement);
     }

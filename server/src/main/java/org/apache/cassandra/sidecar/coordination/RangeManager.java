@@ -48,8 +48,9 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
 import static org.apache.cassandra.sidecar.tasks.ClusterTopologyMonitor.ClusterTopologyEventType.ON_DC_TOPOLOGY_CHANGE;
 
 /**
- * This class manages the token ranges owned by this Sidecar instance and listens on the DownDetector for other Sidecar instances going up/down.
- * The underlying implementation can implement a consensus algorithm to provide strong guarantees around gaining/releasing token range ownership.
+ * This class manages the token ranges owned by this Sidecar instance and listens on the DownDetector for other
+ * Sidecar instances going up/down. The underlying implementation can implement a consensus algorithm to provide
+ * strong guarantees around gaining/releasing token range ownership.
  */
 public abstract class RangeManager implements Handler<Message<Object>>
 {
@@ -167,7 +168,8 @@ public abstract class RangeManager implements Handler<Message<Object>>
     /**
      * @param primaryOwner SidecarInstance that is the primary owner for the token ranges.
      * @param ranges       token ranges this SidecarInstance wishes to gain ownership.
-     * @return a future that completes when propose request completes, returning the ranges that were successfully gained as part of the request.
+     * @return a future that completes when propose request completes, returning the ranges that were successfully
+     *         gained as part of the request.
      */
     /**
      * Proposes to gain ownership of the specified token ranges.
@@ -177,7 +179,8 @@ public abstract class RangeManager implements Handler<Message<Object>>
     /**
      * @param primaryOwner SidecarInstance that is the primary owner for the token ranges.
      * @param ranges       token ranges this SidecarInstance wishes to release.
-     * @return a future that completes when release request completes, returning the ranges that were released as part of the request.
+     * @return a future that completes when release request completes, returning the ranges
+     *         that were released as part of the request.
      */
     /**
      * Proposes to release ownership of the specified token ranges.
@@ -253,7 +256,8 @@ public abstract class RangeManager implements Handler<Message<Object>>
             }
             else
             {
-                LOGGER.warn("Failed to release ownership of instance primary range host={} port={} ranges='{}'", instance.hostname(), instance.port(), primaryRanges);
+                LOGGER.warn("Failed to release ownership of instance primary range host={} port={} ranges='{}'",
+                            instance.hostname(), instance.port(), primaryRanges);
             }
         })
         .onFailure(throwable -> LOGGER.warn("Error attempting to release range ownership", throwable));
@@ -286,7 +290,8 @@ public abstract class RangeManager implements Handler<Message<Object>>
             }
             else
             {
-                LOGGER.warn("Failed to gain ownership of instance primary range host={} port={} ranges='{}'", instance.hostname(), instance.port(), primaryRanges);
+                LOGGER.warn("Failed to gain ownership of instance primary range host={} port={} ranges='{}'",
+                            instance.hostname(), instance.port(), primaryRanges);
             }
         })
         .onFailure(throwable -> LOGGER.warn("Error attempting to gain range ownership", throwable));
@@ -336,7 +341,8 @@ public abstract class RangeManager implements Handler<Message<Object>>
 
     // utils
 
-    protected static Map<String, Set<TokenRange>> unionRangeMap(@NotNull Map<String, Set<TokenRange>> currRanges, Map<String, Set<TokenRange>> newRanges)
+    protected static Map<String, Set<TokenRange>> unionRangeMap(@NotNull Map<String, Set<TokenRange>> currRanges,
+                                                                Map<String, Set<TokenRange>> newRanges)
     {
         if (newRanges == null || newRanges.isEmpty())
         {
@@ -378,7 +384,8 @@ public abstract class RangeManager implements Handler<Message<Object>>
         return Sets.difference(current, lost).immutableCopy();
     }
 
-    protected static Map<String, Set<TokenRange>> differenceRangeMap(@NotNull Map<String, Set<TokenRange>> curr, Map<String, Set<TokenRange>> lost)
+    protected static Map<String, Set<TokenRange>> differenceRangeMap(@NotNull Map<String, Set<TokenRange>> curr,
+                                                                     Map<String, Set<TokenRange>> lost)
     {
         return curr.entrySet().stream()
                    .map(e -> Pair.of(e.getKey(), differenceRangeMap(e.getValue(), lost.get(e.getKey()))))

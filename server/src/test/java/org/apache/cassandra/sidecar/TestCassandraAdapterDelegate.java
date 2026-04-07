@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar;
 
-import com.datastax.driver.core.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;

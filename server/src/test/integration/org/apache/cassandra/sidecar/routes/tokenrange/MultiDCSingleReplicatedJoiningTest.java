@@ -64,12 +64,13 @@ public class MultiDCSingleReplicatedJoiningTest extends JoiningBaseTest
         // We'll manually swap around tokens, so use 0 as number of new DCs
         TestTokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(6, 0, 2, 1);
         tokenSupplier.swap(5, 10);
-        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperMultiDC::install, cassandraTestContext, tokenSupplier,
-                                                                           builder -> builder.additionalInstanceConfig(Map.of("progress_barrier_default_consistency_level", "QUORUM",
-                                                                                                                              "progress_barrier_timeout", "30s",
-                                                                                                                              "cms_await_timeout", "60s",
-                                                                                                                              "accord.enabled", "false",
-                                                                                                                              "write_request_timeout", "10s")));
+        IClusterExtension<? extends IInstance> cluster =
+        getMultiDCCluster(BBHelperMultiDC::install, cassandraTestContext, tokenSupplier,
+                          builder -> builder.additionalInstanceConfig(Map.of("progress_barrier_default_consistency_level", "QUORUM",
+                                                                             "progress_barrier_timeout", "30s",
+                                                                             "cms_await_timeout", "60s",
+                                                                             "accord.enabled", "false",
+                                                                             "write_request_timeout", "10s")));
         CassandraIntegrationTest annotation = sidecarTestContext.cassandraTestContext().annotation;
         runJoiningTestScenario(context,
                                BBHelperMultiDC.transientStateStart,
@@ -98,7 +99,8 @@ public class MultiDCSingleReplicatedJoiningTest extends JoiningBaseTest
      * Range 2 - B, C, D (with E being the joining node)
      * Expected Range 2 - B, C, D, E
      */
-    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingOneOf2DCs(TokenSupplier tokenSupplier, CassandraIntegrationTest annotation)
+    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingOneOf2DCs(TokenSupplier tokenSupplier,
+                                                                                                    CassandraIntegrationTest annotation)
     {
         List<Range<BigInteger>> expectedRanges = generateExpectedRanges(false, tokenSupplier, annotation);
         Map<Range<BigInteger>, List<String>> dc1Mapping = new HashMap<>();

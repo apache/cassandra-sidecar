@@ -30,12 +30,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.net.ssl.SSLContext;
+
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.SSLOptions;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.inject.AbstractModule;
@@ -81,7 +82,6 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.testing.MtlsTestHelper;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
-import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
 import org.apache.cassandra.sidecar.testing.TemporaryCqlSessionProvider;
 import org.apache.cassandra.sidecar.utils.CacheFactory;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
@@ -90,7 +90,7 @@ import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import static org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema.ROLE_PERMISSIONS_TABLE;
 import static org.apache.cassandra.testing.DriverTestUtils.buildContactPoints;
 import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
-import static org.apache.cassandra.testing.TlsTestUtils.getSSLOptions;
+import static org.apache.cassandra.testing.TlsTestUtils.getSSLContext;
 import static org.apache.cassandra.testing.TlsTestUtils.waitForExistingRoles;
 import static org.apache.cassandra.testing.TlsTestUtils.withAuthenticatedSession;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
@@ -465,7 +465,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
         String[] componentDownloadUrl = new String[1];
         Path clientKeystorePath = cassandraIdentityClientKeyStore();
-        SSLOptions sslOptions = getSSLOptions(clientKeystorePath.toString(),
+        SSLContext sslOptions = getSSLContext(clientKeystorePath.toString(),
                                               mtlsTestHelper.clientKeyStorePassword(),
                                               mtlsTestHelper.trustStorePath(),
                                               mtlsTestHelper.trustStorePassword());
@@ -715,7 +715,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
 
         // Revoke permission
         Path clientKeystorePath = cassandraIdentityClientKeyStore();
-        SSLOptions sslOptions = getSSLOptions(clientKeystorePath.toString(),
+        SSLContext sslOptions = getSSLContext(clientKeystorePath.toString(),
                                               mtlsTestHelper.clientKeyStorePassword(),
                                               mtlsTestHelper.trustStorePath(),
                                               mtlsTestHelper.trustStorePassword());
@@ -826,7 +826,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         Path clientKeystorePath = cassandraIdentityClientKeyStore();
 
         createRequiredKeystores();
-        SSLOptions sslOptions = getSSLOptions(clientKeystorePath.toString(),
+        SSLContext sslOptions = getSSLContext(clientKeystorePath.toString(),
                                               mtlsTestHelper.clientKeyStorePassword(),
                                               mtlsTestHelper.trustStorePath(),
                                               mtlsTestHelper.trustStorePassword());
@@ -839,7 +839,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         }, sslOptions);
     }
 
-    private void createSidecarRolesPermissionsTable(Session session)
+    private void createSidecarRolesPermissionsTable(CqlSession session)
     {
         String statement = String.format("CREATE TABLE IF NOT EXISTS sidecar_internal.%s ("
                                          + "role text,"
@@ -850,7 +850,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         session.execute(statement);
     }
 
-    private void createRequiredKeyspaceTables(Session session)
+    private void createRequiredKeyspaceTables(CqlSession session)
     {
         for (RoleWithIdentityTestScenario scenario : ROLE_WITH_IDENTITY_TEST_SCENARIOS)
         {
@@ -864,7 +864,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         }
     }
 
-    private void createRequiredRoles(Session session)
+    private void createRequiredRoles(CqlSession session)
     {
         for (RoleWithIdentityTestScenario mapping : ROLE_WITH_IDENTITY_TEST_SCENARIOS)
         {
@@ -897,12 +897,12 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
         }
     }
 
-    private void grantTablePermission(Session session, String keyspace, String table, String role)
+    private void grantTablePermission(CqlSession session, String keyspace, String table, String role)
     {
         session.execute("GRANT ALL PERMISSIONS ON " + keyspace + "." + table + " TO " + role);
     }
 
-    private void updateSidecarPermission(Session session, String role, String resource, String permission)
+    private void updateSidecarPermission(CqlSession session, String role, String resource, String permission)
     {
         session.execute(String.format("UPDATE sidecar_internal.role_permissions_v1 SET permissions = permissions + {'%s'} " +
                                       "where role = '%s' and resource = '%s'", permission, role, resource));
@@ -1073,12 +1073,12 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                 throw new RuntimeException(e);
             }
 
-            SSLOptions sslOptions = getSSLOptions(clientKeystoreForSidecarToCassandraConnections.toString(),
+            SSLContext sslOptions = getSSLContext(clientKeystoreForSidecarToCassandraConnections.toString(),
                                                   mtlsTestHelper.clientKeyStorePassword(),
                                                   mtlsTestHelper.trustStorePath(),
                                                   mtlsTestHelper.trustStorePassword());
             return new TemporaryCqlSessionProvider(contactPoints,
-                                                   SharedExecutorNettyOptions.INSTANCE,
+                                                   "datacenter1",
                                                    sslOptions);
         }
 

@@ -21,8 +21,8 @@ package org.apache.cassandra.sidecar.routes;
 import java.util.Objects;
 import java.util.Optional;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import io.vertx.core.Future;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;

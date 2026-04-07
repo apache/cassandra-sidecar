@@ -18,12 +18,13 @@
 
 package org.apache.cassandra.sidecar.db;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 
@@ -39,14 +40,12 @@ class SystemAuthSchemaTest
     @Test
     void testSchemaNotPreparedWhenTableNotFound()
     {
-        Session mockSession = mock(Session.class);
-        Cluster mockCluster = mock(Cluster.class);
+        CqlSession mockSession = mock(CqlSession.class);
         Metadata mockMetadata = mock(Metadata.class);
         KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
-        when(mockMetadata.getKeyspace("system_auth")).thenReturn(mockKeyspaceMetadata);
+        when(mockMetadata.getKeyspace("system_auth")).thenReturn(Optional.of(mockKeyspaceMetadata));
         when(mockKeyspaceMetadata.getTable("identity_to_role")).thenReturn(null);
-        when(mockCluster.getMetadata()).thenReturn(mockMetadata);
-        when(mockSession.getCluster()).thenReturn(mockCluster);
+        when(mockSession.getMetadata()).thenReturn(mockMetadata);
 
         SystemAuthSchema systemAuthSchema = new SystemAuthSchema();
         assertThatThrownBy(systemAuthSchema::roleFromIdentity)

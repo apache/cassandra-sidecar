@@ -23,11 +23,13 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
 import com.codahale.metrics.SharedMetricRegistries;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import com.linkedin.data.DataList;
 import com.linkedin.data.codec.JacksonDataCodec;
 import org.apache.cassandra.sidecar.common.server.utils.IOUtils;
@@ -120,9 +122,9 @@ final class SchemaReporterIntegrationTest extends IntegrationTestBase
         // First, ensure the returned schema matches the reference one
         // (while ignoring name suffixes and whitespace characters)
         JsonEmitter emitter = new JsonEmitter();
-        try (Session session = maybeGetSession())
+        try (CqlSession session = maybeGetSession())
         {
-            new SchemaReporter(IDENTIFIERS, () -> emitter, metrics).processScheduled(session.getCluster());
+            new SchemaReporter(IDENTIFIERS, () -> emitter, metrics).processScheduled(session);
         }
         String actualJson = normalizeNames(emitter.content());
         String expectedJson = IOUtils.readFully("/datahub/integration_test.json");
@@ -130,8 +132,8 @@ final class SchemaReporterIntegrationTest extends IntegrationTestBase
 
         // Second, make sure the returned schema produces the same tree of
         // DataHub objects after having been normalized and deserialized
-        DataList actualData = CODEC.readList(new StringReader(actualJson));
-        DataList expectedData = CODEC.readList(new StringReader(expectedJson));
+        DataList actualData = CODEC.readList(new StringReader(StringUtils.normalizeSpace(actualJson)));
+        DataList expectedData = CODEC.readList(new StringReader(StringUtils.normalizeSpace(expectedJson)));
         assertThat(actualData).isEqualTo(expectedData);
         
         // Third, validate the captured metrics: one execution triggered by the schedule and

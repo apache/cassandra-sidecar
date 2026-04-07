@@ -18,7 +18,8 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.linkedin.common.SubTypes;
 import com.linkedin.data.template.StringArray;
 import datahub.event.MetadataChangeProposalWrapper;
@@ -38,7 +39,8 @@ public class TableToSubTypesConverter extends TableToAspectConverter<SubTypes>
 
     @Override
     @NotNull
-    public MetadataChangeProposalWrapper<SubTypes> convert(@NotNull TableMetadata table)
+    public MetadataChangeProposalWrapper<SubTypes> convert(@NotNull KeyspaceMetadata keyspace,
+                                                           @NotNull TableMetadata table)
     {
         String urn = identifiers.urnDataset(table);
 

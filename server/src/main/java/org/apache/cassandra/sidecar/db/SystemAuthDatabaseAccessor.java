@@ -25,11 +25,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.Statement;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.cql.SimpleStatement;
+import com.datastax.oss.driver.api.core.cql.Statement;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.ext.auth.authorization.Authorization;
@@ -139,7 +139,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public boolean isSuperUser(String role)
     {
-        Statement statement = new SimpleStatement(String.format(tableSchema.unpreparedListRoles(), role));
+        Statement statement = SimpleStatement.newInstance(String.format(tableSchema.unpreparedListRoles(), role));
         ResultSet result = execute(statement);
         for (Row row : result)
         {

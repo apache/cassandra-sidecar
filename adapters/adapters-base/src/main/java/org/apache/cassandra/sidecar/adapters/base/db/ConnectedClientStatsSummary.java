@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import com.datastax.driver.core.ResultSet;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
 import org.apache.cassandra.sidecar.db.DataObjectMappingException;
 import org.jetbrains.annotations.NotNull;
 

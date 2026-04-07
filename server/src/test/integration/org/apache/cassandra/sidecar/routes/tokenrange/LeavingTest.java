@@ -167,7 +167,8 @@ class LeavingTest extends LeavingBaseTest
      * Expected Range 2 - B, C, D, A (With A taking over the range of the leaving node)
      */
 
-    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingMultipleLeavingNodes(TokenSupplier tokenSupplier, CassandraIntegrationTest annotation)
+    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingMultipleLeavingNodes(TokenSupplier tokenSupplier,
+                                                                                                               CassandraIntegrationTest annotation)
     {
         List<Range<BigInteger>> expectedRanges = generateExpectedRanges(false, tokenSupplier, annotation);
         Map<Range<BigInteger>, List<String>> mapping = new HashMap<>();

@@ -26,8 +26,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -192,7 +192,7 @@ public abstract class IdentifiersProvider
                 DATASET,
                 urnDataPlatform(),
                 identifier(),
-                table.getKeyspace().getName(),
+                table.getKeyspace(),
                 table.getName(),
                 PROD);
     }

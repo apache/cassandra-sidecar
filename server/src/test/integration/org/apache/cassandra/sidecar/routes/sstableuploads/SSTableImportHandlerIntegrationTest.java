@@ -31,8 +31,8 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -78,7 +78,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         // Test the import SSTable endpoint by importing data that was originally truncated.
         // Verify by querying the table contains all the results before truncation and after truncation.
         createTestKeyspace();
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
         QualifiedTableName tableName = createTestTableAndPopulate(sidecarTestContext, Arrays.asList("a", "b"));
 
         // create a snapshot called <tableName>-snapshot for tbl1
@@ -162,7 +162,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
     private void truncateAndVerify(QualifiedTableName qualifiedTableName)
     throws InterruptedException
     {
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
         session.execute("TRUNCATE TABLE " + qualifiedTableName);
 
         while (true)
@@ -176,7 +176,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
 
     private List<String> queryValues(QualifiedTableName tableName)
     {
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
         return session.execute("SELECT id FROM " + tableName)
                       .all()
                       .stream()
@@ -189,12 +189,12 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
     {
         QualifiedTableName tableName = createTestTable(
         "CREATE TABLE IF NOT EXISTS %s (id text, PRIMARY KEY(id))" + WITH_COMPACTION_DISABLED + ";");
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
         populateTable(session, tableName, values);
         return tableName;
     }
 
-    private void populateTable(Session session, QualifiedTableName tableName, List<String> values)
+    private void populateTable(CqlSession session, QualifiedTableName tableName, List<String> values)
     {
         for (String value : values)
         {

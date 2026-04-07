@@ -27,7 +27,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.Future;
@@ -181,7 +181,7 @@ public class DataCopyTaskManager
                                  InstanceMetadata localInstanceMetadata)
     {
 
-        return liveMigrationTaskFactory.create(UUIDs.timeBased().toString(), request, source, port, localInstanceMetadata);
+        return liveMigrationTaskFactory.create(Uuids.timeBased().toString(), request, source, port, localInstanceMetadata);
     }
 
     /**

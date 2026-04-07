@@ -17,10 +17,12 @@
  */
 package org.apache.cassandra.sidecar.db.schema;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import java.util.Optional;
+
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.coordination.ExecuteOnClusterLeaseholderOnly;
@@ -53,7 +55,7 @@ public class ConfigsSchema extends TableSchema implements ExecuteOnClusterLeaseh
     }
 
     @Override
-    protected void prepareStatements(@NotNull Session session)
+    protected void prepareStatements(@NotNull CqlSession session)
     {
         selectConfig = prepare(selectConfig, session, CqlLiterals.selectConfig(keyspaceConfig));
         insertConfig = prepare(insertConfig, session, CqlLiterals.insertConfig(keyspaceConfig));
@@ -70,10 +72,8 @@ public class ConfigsSchema extends TableSchema implements ExecuteOnClusterLeaseh
     @Override
     protected boolean exists(@NotNull Metadata metadata)
     {
-        KeyspaceMetadata ksMetadata = metadata.getKeyspace(keyspaceConfig.keyspace());
-        if (ksMetadata == null)
-            return false;
-        return ksMetadata.getTable(CONFIGS_TABLE_NAME) != null;
+        Optional<KeyspaceMetadata> ksMetadata = metadata.getKeyspace(keyspaceConfig.keyspace());
+        return ksMetadata.filter(keyspaceMetadata -> keyspaceMetadata.getTable(CONFIGS_TABLE_NAME).isPresent()).isPresent();
     }
 
     @Override

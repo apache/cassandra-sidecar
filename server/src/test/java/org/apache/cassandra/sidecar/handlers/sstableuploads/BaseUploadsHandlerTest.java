@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -35,9 +36,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.SharedMetricRegistries;
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -147,8 +148,8 @@ class BaseUploadsHandlerTest
         Metadata mockMetadata = mock(Metadata.class);
         KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
         TableMetadata mockTableMetadata = mock(TableMetadata.class);
-        when(mockMetadata.getKeyspace("ks")).thenReturn(mockKeyspaceMetadata);
-        when(mockMetadata.getKeyspace("ks").getTable("tbl")).thenReturn(mockTableMetadata);
+        when(mockMetadata.getKeyspace("ks")).thenReturn(Optional.of(mockKeyspaceMetadata));
+        when(mockMetadata.getKeyspace("ks").get().getTable("tbl")).thenReturn(Optional.of(mockTableMetadata));
         testDelegate.setMetadata(mockMetadata);
 
         mockCFOperations = mock(CassandraTableOperations.class);

@@ -18,8 +18,8 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
@@ -65,7 +65,7 @@ public class SidecarLeaseSchema extends TableSchema
      */
     @Override
     @VisibleForTesting
-    public void prepareStatements(@NotNull Session session)
+    public void prepareStatements(@NotNull CqlSession session)
     {
         // TODO: revisit decision to make TTL a bind parameter instead of burning into the prepared statement
         //       which means it cannot be changed dynamically during the lifetime of the Sidecar process.

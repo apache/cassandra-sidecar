@@ -28,7 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.datastax.driver.core.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -95,7 +95,7 @@ final class ReportSchemaHandlerTest
         public InstancesMetadata instancesMetadata()
         {
             Metadata metadata = mock(Metadata.class);
-            when(metadata.getKeyspaces()).thenReturn(Collections.emptyList());
+            when(metadata.getKeyspaces()).thenReturn(Collections.emptyMap());
 
             StorageOperations operations = mock(StorageOperations.class);
             when(operations.clusterName()).thenReturn(CLUSTER);

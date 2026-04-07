@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.handlers;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -30,9 +31,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -97,8 +98,8 @@ class RepairHandlerTest
         when(mockInstanceMetadata.delegate()).thenReturn(mockDelegate);
         when(mockDelegate.metadata()).thenReturn(mockMetadata);
         when(mockDelegate.storageOperations()).thenReturn(mockStorageOperations);
-        when(mockMetadata.getKeyspace(anyString())).thenReturn(mockKeyspaceMetadata);
-        when(mockKeyspaceMetadata.getTable(anyString())).thenReturn(mockTableMetadata);
+        when(mockMetadata.getKeyspace(anyString())).thenReturn(Optional.of(mockKeyspaceMetadata));
+        when(mockKeyspaceMetadata.getTable(anyString())).thenReturn(Optional.of(mockTableMetadata));
 
         AbstractModule repairTestModule = new AbstractModule()
         {

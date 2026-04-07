@@ -21,9 +21,9 @@ package org.apache.cassandra.sidecar.db;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Statement;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.jetbrains.annotations.NotNull;
@@ -48,7 +48,7 @@ public abstract class DatabaseAccessor<T extends TableSchema>
     }
 
     @NotNull
-    public Session session()
+    public CqlSession session()
     {
         return cqlSessionProvider.get();
     }
@@ -61,7 +61,7 @@ public abstract class DatabaseAccessor<T extends TableSchema>
         return tableSchema.isInitialized();
     }
 
-    protected ResultSet execute(Statement statement)
+    protected ResultSet execute(Statement<?> statement)
     {
         return session().execute(statement);
     }

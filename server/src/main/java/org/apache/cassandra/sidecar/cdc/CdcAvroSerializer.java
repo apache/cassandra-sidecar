@@ -35,8 +35,8 @@ public class CdcAvroSerializer extends AvroGenericRecordSerializer
     {
         super(schemaStore, key ->
                            TypeCache.get(cassandraBridgeFactory
-                                         .get(instanceMetadataFetcher.callOnFirstAvailableInstance(instance->
-                                                                                                   instance.delegate().nodeSettings()).releaseVersion()).getVersion())
+                                         .get(instanceMetadataFetcher.callOnFirstAvailableInstance(
+                                         instance-> instance.delegate().nodeSettings()).releaseVersion()).getVersion())
                                     .getType(key.keyspace, key.type), "org.apache.cassandra");
     }
 }

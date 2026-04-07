@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
@@ -141,7 +141,7 @@ class StreamSSTableComponentHandlerIntegrationTest extends IntegrationTestBase
         "  rank int, \n" +
         "  PRIMARY KEY ((race_year, race_name), rank) \n" +
         ");");
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
 
         session.execute("CREATE INDEX ryear ON " + tableName + " (race_year);");
         session.execute("INSERT INTO " + tableName + " (race_year, race_name, rank, cyclist_name) " +

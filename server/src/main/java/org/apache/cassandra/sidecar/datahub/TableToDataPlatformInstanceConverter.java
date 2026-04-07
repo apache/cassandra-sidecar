@@ -20,7 +20,8 @@ package org.apache.cassandra.sidecar.datahub;
 
 import java.net.URISyntaxException;
 
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.linkedin.common.DataPlatformInstance;
 import com.linkedin.common.urn.Urn;
 import datahub.event.MetadataChangeProposalWrapper;
@@ -38,7 +39,8 @@ public class TableToDataPlatformInstanceConverter extends TableToAspectConverter
 
     @Override
     @NotNull
-    public MetadataChangeProposalWrapper<DataPlatformInstance> convert(@NotNull TableMetadata table) throws URISyntaxException
+    public MetadataChangeProposalWrapper<DataPlatformInstance> convert(@NotNull KeyspaceMetadata keyspace,
+                                                                       @NotNull TableMetadata table) throws URISyntaxException
     {
         String urn = identifiers.urnDataset(table);
 

@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.restore;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -28,12 +29,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import com.google.common.primitives.Ints;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.LocalDate;
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -131,7 +132,7 @@ class RestoreJobDiscovererTest
         // when there is no active restore job. The delay is idle loop delay
         assertThat(loop.delay()).isEqualTo(idleLoopDelay);
         // when there is active restore job (status: CREATED)
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
         .thenReturn(Collections.singletonList(RestoreJob.builder()
                                                         .createdAt(RestoreJob.toLocalDate(jobId))
@@ -171,9 +172,9 @@ class RestoreJobDiscovererTest
         when(sidecarSchema.isInitialized()).thenReturn(true);
         // setup, cassandra should return 3 jobs, a new job, a failed and a succeeded
         List<RestoreJob> mockResult = new ArrayList<>(3);
-        UUID newJobId = UUIDs.timeBased();
-        UUID failedJobId = UUIDs.timeBased();
-        UUID succeededJobId = UUIDs.timeBased();
+        UUID newJobId = Uuids.timeBased();
+        UUID failedJobId = Uuids.timeBased();
+        UUID succeededJobId = Uuids.timeBased();
         mockResult.add(createNewTestingJob(newJobId));
         mockResult.add(createUpdatedJob(failedJobId, "agent", RestoreJobStatus.ABORTED, null,
                                         new Date(System.currentTimeMillis() + 10000L)));
@@ -220,7 +221,7 @@ class RestoreJobDiscovererTest
         assertThat(loop.scheduleDecision()).isEqualTo(ScheduleDecision.EXECUTE);
 
         // Execution 4
-        UUID newJobId2 = UUIDs.timeBased();
+        UUID newJobId2 = Uuids.timeBased();
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
         .thenReturn(Collections.singletonList(createNewTestingJob(newJobId2)));
 
@@ -260,7 +261,7 @@ class RestoreJobDiscovererTest
         when(sidecarSchema.isInitialized()).thenReturn(true);
         List<RestoreJob> mockResult = IntStream.range(0, 3)
                                                .boxed()
-                                               .map(x -> createUpdatedJob(UUIDs.timeBased(), "agent",
+                                               .map(x -> createUpdatedJob(Uuids.timeBased(), "agent",
                                                                           RestoreJobStatus.CREATED, null,
                                                                           new Date(System.currentTimeMillis() - 1000L)))
                                                .collect(Collectors.toList());
@@ -295,7 +296,7 @@ class RestoreJobDiscovererTest
     private UUID discoverSidecarManagedJob(boolean isJobFailed) throws Exception
     {
         when(sidecarSchema.isInitialized()).thenReturn(true);
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         RestoreJob sidecarManagedJob = createTestingJob(jobId, RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM);
         assertThat(sidecarManagedJob.isManagedBySidecar()).isTrue();
 
@@ -326,7 +327,7 @@ class RestoreJobDiscovererTest
     void testWhenJobShouldBeLogged()
     {
         RestoreJobDiscoverer.JobIdsByDay jobIdsByDay = new RestoreJobDiscoverer.JobIdsByDay();
-        RestoreJob job = createNewTestingJob(UUIDs.timeBased());
+        RestoreJob job = createNewTestingJob(Uuids.timeBased());
         assertThat(jobIdsByDay.shouldLogJob(job))
         .describedAs("should return true for the new job")
         .isTrue();
@@ -346,17 +347,17 @@ class RestoreJobDiscovererTest
     void testCleanupJobIdsByDay()
     {
         RestoreJobDiscoverer.JobIdsByDay jobIdsByDay = new RestoreJobDiscoverer.JobIdsByDay();
-        RestoreJob job = createNewTestingJob(UUIDs.timeBased());
+        RestoreJob job = createNewTestingJob(Uuids.timeBased());
         jobIdsByDay.shouldLogJob(job); // insert the job
         jobIdsByDay.cleanupMaybe(); // issue a cleanup. but it should not remove anything
         assertThat(jobIdsByDay.jobsByDay()).hasSize(1)
-                                           .containsKey(job.createdAt.getDaysSinceEpoch());
-        RestoreJob jobOfNextDay = job.unbuild().createdAt(LocalDate.fromDaysSinceEpoch(job.createdAt.getDaysSinceEpoch() + 1)).build();
+                                           .containsKey(Ints.checkedCast(job.createdAt.toEpochDay()));
+        RestoreJob jobOfNextDay = job.unbuild().createdAt(LocalDate.ofEpochDay(job.createdAt.toEpochDay() + 1)).build();
         jobIdsByDay.shouldLogJob(jobOfNextDay);
         jobIdsByDay.cleanupMaybe(); // issue a new cleanup. it should remove the job that is not reported in the new round
         assertThat(jobIdsByDay.jobsByDay()).hasSize(1)
-                                           .containsKey(jobOfNextDay.createdAt.getDaysSinceEpoch())
-                                           .doesNotContainKey(job.createdAt.getDaysSinceEpoch());
+                                           .containsKey(Ints.checkedCast(jobOfNextDay.createdAt.toEpochDay()))
+                                           .doesNotContainKey(Ints.checkedCast(job.createdAt.toEpochDay()));
     }
 
     @Test
@@ -374,7 +375,7 @@ class RestoreJobDiscovererTest
         // set up an old job that is created 10 days ago
         long now = System.currentTimeMillis();
         long tenDaysAgo = now - TimeUnit.DAYS.toMillis(10);
-        UUID newJobId = UUIDs.startOf(tenDaysAgo);
+        UUID newJobId = Uuids.startOf(tenDaysAgo);
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
         .thenReturn(Collections.singletonList(createNewTestingJob(newJobId)));
 
@@ -389,7 +390,7 @@ class RestoreJobDiscovererTest
     void testSkipNotOwnedRestoreToLocalDatacenterOnlyJob()
     {
         // Create a restore job that restores to dc2 only. Meanwhile, discoverer runs in dc1.
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
         .thenReturn(Collections.singletonList(RestoreJob.builder()
                                                         .createdAt(RestoreJob.toLocalDate(jobId))
@@ -411,7 +412,7 @@ class RestoreJobDiscovererTest
         // local datacenter is undetermined and the restore job is configured to restore to local datacenter only.
         // the job is on hold until local datacenter is resolved in discoverer.
         when(instanceMetadataFetcher.callOnFirstAvailableInstance(any())).thenThrow(new CassandraUnavailableException(JMX, "NodeSettings unavailable"));
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt()))
         .thenReturn(Collections.singletonList(RestoreJob.builder()
                                                         .createdAt(RestoreJob.toLocalDate(jobId))

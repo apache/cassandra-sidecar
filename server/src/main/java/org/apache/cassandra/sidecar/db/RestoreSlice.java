@@ -22,7 +22,7 @@ import java.math.BigInteger;
 import java.util.Objects;
 import java.util.UUID;
 
-import com.datastax.driver.core.Row;
+import com.datastax.oss.driver.api.core.cql.Row;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.request.data.CreateSliceRequestPayload;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
@@ -215,7 +215,7 @@ public class RestoreSlice
     public static RestoreSlice from(Row row, RestoreJob restoreJob)
     {
         Builder builder = new Builder();
-        builder.jobId(row.getUUID("job_id"));
+        builder.jobId(row.getUuid("job_id"));
         builder.keyspace(restoreJob.keyspaceName);
         builder.table(restoreJob.tableName);
         builder.sliceId(row.getString("slice_id"));
@@ -223,8 +223,8 @@ public class RestoreSlice
         builder.storageBucket(row.getString("bucket"));
         builder.storageKey(row.getString("key"));
         builder.checksum(row.getString("checksum"));
-        builder.startToken(row.getVarint("start_token"));
-        builder.endToken(row.getVarint("end_token"));
+        builder.startToken(row.getBigInteger("start_token"));
+        builder.endToken(row.getBigInteger("end_token"));
         builder.compressedSize(row.getLong("compressed_size"));
         builder.uncompressedSize(row.getLong("uncompressed_size"));
         return builder.build();

@@ -26,7 +26,7 @@ import javax.net.ssl.SSLHandshakeException;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpRequest;
@@ -166,7 +166,7 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
         assertThat(authorized.await(30, TimeUnit.SECONDS)).isTrue();
 
         // drop superuser role, during cache refresh nonsuperuser role will lose superuser status
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
         session.execute("DROP role superuser");
 
         // wait for cache refreshes
@@ -264,7 +264,7 @@ class MutualTLSAuthenticationIntegrationTest extends IntegrationTestBase
 
     private void grantSidecarPermission(String role, String resource, String permission)
     {
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
         session.execute(String.format("INSERT INTO sidecar_internal.role_permissions_v1 (role, resource, permissions) " +
                                       "VALUES ('%s', '%s', {'%s'})", role, resource, permission));
     }

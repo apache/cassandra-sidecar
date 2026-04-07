@@ -16,25 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.sidecar.datahub;
+package org.apache.cassandra.sidecar.cluster.driver;
 
-import com.datastax.oss.driver.api.core.metadata.Metadata;
-import com.linkedin.data.template.RecordTemplate;
-import datahub.event.MetadataChangeProposalWrapper;
-import org.jetbrains.annotations.NotNull;
+import com.datastax.oss.driver.api.core.config.DriverOption;
+import org.jspecify.annotations.NonNull;
 
 /**
- * Base abstract class for convertors that handle Cassandra clusters (DataHub instances)
- *
- * @param <T> type of the aspect produced by this converter
+ * Custom driver options required by {@code SidecarLoadBalancingPolicy}.
  */
-public abstract class ClusterToAspectConverter<T extends RecordTemplate> extends MetadataToAspectConverter<T>
+public enum CustomDriverOption implements DriverOption
 {
-    protected ClusterToAspectConverter(@NotNull IdentifiersProvider identifiers)
+    NUM_CONNECTIONS("basic.load-balancing-policy.num-connections"),
+    LOCAL_INSTANCES("basic.load-balancing-policy.local-instances");
+
+    private final String path;
+
+    CustomDriverOption(String path)
     {
-        super(identifiers);
+        this.path = path;
     }
 
-    @NotNull
-    public abstract MetadataChangeProposalWrapper<T> convert(@NotNull Metadata cluster) throws Exception;
+    @Override
+    @NonNull
+    public String getPath()
+    {
+        return path;
+    }
 }

@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
-import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import com.linkedin.common.SubTypes;
 import com.linkedin.data.template.StringArray;
 import datahub.event.MetadataChangeProposalWrapper;

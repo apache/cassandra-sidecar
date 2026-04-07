@@ -24,7 +24,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
@@ -117,7 +117,7 @@ class CreateRestoreJobHandlerTest extends BaseRestoreJobTests
     {
         JsonObject payload = getRequestPayload("8e5799a4-d277-11ed-8d85-6916bb9b8056");
         CQLSessionProvider sessionProviderWithNonWorkingSession = mock(CQLSessionProvider.class);
-        Session nonWorkingSession = mock(Session.class);
+        CqlSession nonWorkingSession = mock(CqlSession.class);
         when(nonWorkingSession.execute(anyString())).thenAnswer(invocation -> {
             throw new RuntimeException("unexpected exception");
         });

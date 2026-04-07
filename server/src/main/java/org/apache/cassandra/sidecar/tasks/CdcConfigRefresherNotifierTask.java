@@ -93,7 +93,8 @@ public class CdcConfigRefresherNotifierTask implements PeriodicTask
     @Override
     public ScheduleDecision scheduleDecision()
     {
-        if (!sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration().isEnabled() || !sidecarConfiguration.serviceConfiguration().cdcConfiguration().isEnabled())
+        if (!sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration().isEnabled()
+            || !sidecarConfiguration.serviceConfiguration().cdcConfiguration().isEnabled())
         {
             LOGGER.trace("Skipping config refreshing");
             return ScheduleDecision.SKIP;

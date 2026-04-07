@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.datahub;
 
 import com.google.common.collect.ImmutableMap;
 
-import com.datastax.driver.core.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
 import com.linkedin.data.template.SetMode;
 import com.linkedin.data.template.StringMap;
 import com.linkedin.dataplatforminstance.DataPlatformInstanceProperties;

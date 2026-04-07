@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -34,8 +36,9 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
+import com.datastax.oss.driver.api.core.CqlIdentifier;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -59,6 +62,7 @@ import org.apache.cassandra.sidecar.server.Server;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -117,7 +121,7 @@ class SchemaHandlerTest
                   JsonObject jsonObject = response.bodyAsJsonObject();
                   assertThat(jsonObject.getString("keyspace")).isNull();
                   assertThat(jsonObject.getString("schema"))
-                  .isEqualTo("FULL SCHEMA");
+                  .isEqualTo(testKeyspaceSchema + "\n"); // one additional new line will be present
                   context.completeNow();
               })));
     }
@@ -173,9 +177,9 @@ class SchemaHandlerTest
             when(instanceMetadata.delegate()).thenReturn(mockCassandraAdapterDelegate);
             Metadata mockMetadata = mock(Metadata.class);
             KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
-            when(mockMetadata.exportSchemaAsString()).thenReturn("FULL SCHEMA");
-            when(mockMetadata.getKeyspace("testKeyspace")).thenReturn(mockKeyspaceMetadata);
-            when(mockKeyspaceMetadata.exportAsString()).thenReturn(testKeyspaceSchema);
+            when(mockKeyspaceMetadata.describeWithChildren(anyBoolean())).thenReturn(testKeyspaceSchema);
+            when(mockMetadata.getKeyspace("testKeyspace")).thenReturn(Optional.of(mockKeyspaceMetadata));
+            when(mockMetadata.getKeyspaces()).thenReturn(Map.of(CqlIdentifier.fromCql("testKeyspace"), mockKeyspaceMetadata));
 
             when(mockCassandraAdapterDelegate.metadata()).thenReturn(mockMetadata);
 

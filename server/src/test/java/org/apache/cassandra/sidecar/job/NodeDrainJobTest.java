@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
@@ -57,7 +57,7 @@ class NodeDrainJobTest
     void setup()
     {
         mockStorageOperations = mock(StorageOperations.class);
-        jobId = UUIDs.timeBased();
+        jobId = Uuids.timeBased();
         nodeDrainJob = new NodeDrainJob(jobId, mockStorageOperations);
     }
 

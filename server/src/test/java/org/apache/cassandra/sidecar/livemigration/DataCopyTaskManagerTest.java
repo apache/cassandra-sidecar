@@ -474,7 +474,8 @@ public class DataCopyTaskManagerTest
             when(mockSourceInstanceMeta.delegate()).thenReturn(mock(CassandraAdapterDelegate.class));
 
             // Configure LiveMigrationTaskFactory to return fake tasks
-            when(mockLiveMigrationTaskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class))).thenAnswer(invocation -> {
+            when(mockLiveMigrationTaskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(),
+                                                     anyInt(), any(InstanceMetadata.class))).thenAnswer(invocation -> {
                 String id = invocation.getArgument(0);
                 LiveMigrationDataCopyRequest request = invocation.getArgument(1);
                 String source = invocation.getArgument(2);

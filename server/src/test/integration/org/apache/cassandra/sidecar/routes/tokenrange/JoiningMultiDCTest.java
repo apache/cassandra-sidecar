@@ -64,14 +64,16 @@ class JoiningMultiDCTest extends JoiningBaseTest
         TestTokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(6, 0, 2, 1);
 
         tokenSupplier.swap(5, 10);
-        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperDoubleClusterMultiDC::install, cassandraTestContext, tokenSupplier, null);
+        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperDoubleClusterMultiDC::install,
+                                                                           cassandraTestContext, tokenSupplier, null);
 
         runJoiningTestScenario(context,
                                BBHelperDoubleClusterMultiDC.transientStateStart,
                                BBHelperDoubleClusterMultiDC.transientStateEnd,
                                cluster,
                                generateExpectedRanges(tokenSupplier),
-                               generateExpectedRangeDoubleClusterSizeMultiDC(tokenSupplier, sidecarTestContext.cassandraTestContext().annotation),
+                               generateExpectedRangeDoubleClusterSizeMultiDC(tokenSupplier,
+                                                                             sidecarTestContext.cassandraTestContext().annotation),
                                true,
                                tokenSupplier);
     }
@@ -98,7 +100,8 @@ class JoiningMultiDCTest extends JoiningBaseTest
      * Expected Range 2 - B, C, D, A (With A remaining as a replica during the join)
      * <p>
      */
-    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeDoubleClusterSizeMultiDC(TokenSupplier tokenSupplier, CassandraIntegrationTest annotation)
+    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeDoubleClusterSizeMultiDC(TokenSupplier tokenSupplier,
+                                                                                                            CassandraIntegrationTest annotation)
     {
 
         List<Range<BigInteger>> expectedRanges = generateExpectedRanges(true, tokenSupplier, annotation);

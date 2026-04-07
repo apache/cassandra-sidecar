@@ -33,8 +33,6 @@
             <AppenderRef ref="Console"/>
         </Root>
         <Logger name="org.apache.cassandra.sidecar" level="debug"/>
-        <Logger name="com.datastax.driver.core" level="error"/>
-        <Logger name="com.datastax.driver.core.ControlConnection" level="off"/>
-
+        <Logger name="com.datastax.oss.driver" level="error"/>
     </Loggers>
 </Configuration>

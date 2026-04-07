@@ -29,7 +29,8 @@ import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 
 /**
- * Stub implementation of the RangeManager that provides contention-free failover for token ranges without coordinating with other Sidecar instances, at the cost of consistency.
+ * Stub implementation of the RangeManager that provides contention-free failover for token ranges without
+ * coordinating with other Sidecar instances, at the cost of consistency.
  */
 @Singleton
 public class ContentionFreeRangeManager extends RangeManager

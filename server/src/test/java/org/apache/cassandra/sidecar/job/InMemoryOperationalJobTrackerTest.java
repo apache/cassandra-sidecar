@@ -30,7 +30,7 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.CREATED;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
@@ -53,7 +53,7 @@ class InMemoryOperationalJobTrackerTest
     OperationalJob job4 = createOperationalJob(SUCCEEDED);
 
     long twoDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2);
-    OperationalJob jobWithStaleCreationTime = createOperationalJob(UUIDs.startOf(twoDaysAgo), SUCCEEDED);
+    OperationalJob jobWithStaleCreationTime = createOperationalJob(Uuids.startOf(twoDaysAgo), SUCCEEDED);
 
     @BeforeEach
     void setUp()
@@ -134,7 +134,7 @@ class InMemoryOperationalJobTrackerTest
         ExecutorService executorService = Executors.newFixedThreadPool(trackerSize);
         List<OperationalJob> sortedJobs = IntStream.range(0, trackerSize + 10)
                                                    .boxed()
-                                                   .map(i -> createOperationalJob(UUIDs.startOf(pastTimestamp + i), SUCCEEDED))
+                                                   .map(i -> createOperationalJob(Uuids.startOf(pastTimestamp + i), SUCCEEDED))
                                                    .collect(Collectors.toList());
         sortedJobs.forEach(tracker::put);
         executorService.shutdown();

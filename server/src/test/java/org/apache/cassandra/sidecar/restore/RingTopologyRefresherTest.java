@@ -25,7 +25,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
@@ -50,8 +50,8 @@ class RingTopologyRefresherTest
         assertThat(replicaByTokenRangePerKeyspace.isEmpty()).isTrue();
 
         // job1 and job2 belongs to the same keyspace
-        RestoreJob job1 = RestoreJobTest.createNewTestingJob(UUIDs.timeBased());
-        RestoreJob job2 = RestoreJobTest.createNewTestingJob(UUIDs.timeBased());
+        RestoreJob job1 = RestoreJobTest.createNewTestingJob(Uuids.timeBased());
+        RestoreJob job2 = RestoreJobTest.createNewTestingJob(Uuids.timeBased());
         replicaByTokenRangePerKeyspace.register(job1);
         assertThat(replicaByTokenRangePerKeyspace.isEmpty()).isFalse();
         assertThat(replicaByTokenRangePerKeyspace.allJobsUnsafe()).containsExactlyInAnyOrder(job1.jobId);
@@ -68,7 +68,7 @@ class RingTopologyRefresherTest
         assertThat(replicaByTokenRangePerKeyspace.mappingUnsafe()).isEmpty();
 
         // job3 belongs to a different keyspace
-        RestoreJob job3 = RestoreJobTest.createTestingJob(UUIDs.timeBased(), "job3ks", RestoreJobStatus.CREATED, null);
+        RestoreJob job3 = RestoreJobTest.createTestingJob(Uuids.timeBased(), "job3ks", RestoreJobStatus.CREATED, null);
         replicaByTokenRangePerKeyspace.register(job3);
         assertThat(replicaByTokenRangePerKeyspace.isEmpty()).isFalse();
         assertThat(replicaByTokenRangePerKeyspace.allJobsUnsafe()).containsExactlyInAnyOrder(job1.jobId, job2.jobId, job3.jobId);
@@ -85,8 +85,8 @@ class RingTopologyRefresherTest
         assertThat(replicaByTokenRangePerKeyspace.isEmpty()).isTrue();
 
         // register 2 jobs of the same keyspace and set up the promise and mapping
-        RestoreJob job1 = RestoreJobTest.createNewTestingJob(UUIDs.timeBased());
-        RestoreJob job2 = RestoreJobTest.createNewTestingJob(UUIDs.timeBased());
+        RestoreJob job1 = RestoreJobTest.createNewTestingJob(Uuids.timeBased());
+        RestoreJob job2 = RestoreJobTest.createNewTestingJob(Uuids.timeBased());
         TokenRangeReplicasResponse mockTopology = mock(TokenRangeReplicasResponse.class);
         Future<TokenRangeReplicasResponse> future1 = replicaByTokenRangePerKeyspace.futureOf(job1);
         Future<TokenRangeReplicasResponse> future2 = replicaByTokenRangePerKeyspace.futureOf(job2);
@@ -126,7 +126,7 @@ class RingTopologyRefresherTest
     @Test
     void testUnregisterPendingRefreshShouldFailPromise()
     {
-        RestoreJob job = RestoreJobTest.createNewTestingJob(UUIDs.timeBased());
+        RestoreJob job = RestoreJobTest.createNewTestingJob(Uuids.timeBased());
         Future<TokenRangeReplicasResponse> future = replicaByTokenRangePerKeyspace.futureOf(job);
         assertThat(future.isComplete()).isFalse();
         replicaByTokenRangePerKeyspace.unregister(job);
@@ -138,7 +138,7 @@ class RingTopologyRefresherTest
     @Test
     void testIgnoreFailedLoad()
     {
-        replicaByTokenRangePerKeyspace.register(RestoreJobTest.createNewTestingJob(UUIDs.timeBased()));
+        replicaByTokenRangePerKeyspace.register(RestoreJobTest.createNewTestingJob(Uuids.timeBased()));
         assertThat(replicaByTokenRangePerKeyspace.mappingUnsafe()).isEmpty();
         replicaByTokenRangePerKeyspace.load(ks -> {
             throw new RuntimeException("Load topology failed");
@@ -150,7 +150,7 @@ class RingTopologyRefresherTest
     @Test
     void testLoadAndGetMapping()
     {
-        RestoreJob job = RestoreJobTest.createNewTestingJob(UUIDs.timeBased());
+        RestoreJob job = RestoreJobTest.createNewTestingJob(Uuids.timeBased());
         Future<TokenRangeReplicasResponse> future = replicaByTokenRangePerKeyspace.futureOf(job);
         assertThat(future.isComplete()).isFalse();
         assertThat(replicaByTokenRangePerKeyspace.forRestoreJob(job)).isNull();
@@ -168,7 +168,7 @@ class RingTopologyRefresherTest
     void testTopologyChanged()
     {
         assertThat(listenerValueCaptor).isEmpty();
-        RestoreJob job = RestoreJobTest.createNewTestingJob(UUIDs.timeBased());
+        RestoreJob job = RestoreJobTest.createNewTestingJob(Uuids.timeBased());
         replicaByTokenRangePerKeyspace.futureOf(job);
         TokenRangeReplicasResponse mockTopologyEpoch1 = mock(TokenRangeReplicasResponse.class);
         when(mockTopologyEpoch1.writeReplicas())

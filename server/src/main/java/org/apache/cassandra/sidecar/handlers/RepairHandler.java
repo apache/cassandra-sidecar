@@ -22,7 +22,7 @@ import java.math.BigInteger;
 import java.util.Collections;
 import java.util.Set;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
@@ -125,7 +125,7 @@ public class RepairHandler extends AbstractHandler<RepairRequestParam> implement
                                   RepairRequestParam repairRequestParam)
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
-        RepairJob job = new RepairJob(periodicTaskExecutor, config.repairConfiguration(), UUIDs.timeBased(), operations, repairRequestParam);
+        RepairJob job = new RepairJob(periodicTaskExecutor, config.repairConfiguration(), Uuids.timeBased(), operations, repairRequestParam);
 
         jobManager.trySubmitJob(job,
                                 (completedJob, exception) ->

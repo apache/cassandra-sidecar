@@ -19,12 +19,13 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
@@ -63,7 +64,7 @@ public class CdcStatesSchema extends TableSchema implements ExecuteOnClusterLeas
     }
 
     @Override
-    protected void prepareStatements(@NotNull Session session)
+    protected void prepareStatements(@NotNull CqlSession session)
     {
         this.insertState = prepare(insertState, session, CqlLiterals.insertState(keyspaceConfig));
         this.selectState = prepare(selectState, session, CqlLiterals.select(keyspaceConfig));
@@ -78,10 +79,9 @@ public class CdcStatesSchema extends TableSchema implements ExecuteOnClusterLeas
     @Override
     protected boolean exists(@NotNull Metadata metadata)
     {
-        KeyspaceMetadata ksMetadata = metadata.getKeyspace(keyspaceConfig.keyspace());
-        if (ksMetadata == null)
-            return false;
-        return ksMetadata.getTable(CDC_STATE_TABLE_NAME) != null;
+        Optional<KeyspaceMetadata> ksMetadata = metadata.getKeyspace(keyspaceConfig.keyspace());
+        return ksMetadata.map(keyspaceMetadata -> keyspaceMetadata.getTable(CDC_STATE_TABLE_NAME).isPresent())
+                         .orElse(false);
     }
 
     @Override

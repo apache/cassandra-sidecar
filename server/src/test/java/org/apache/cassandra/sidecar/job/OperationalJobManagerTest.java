@@ -28,7 +28,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
@@ -110,7 +110,7 @@ class OperationalJobManagerTest
     @Test
     void testWithLongRunningJob() throws InterruptedException
     {
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
         CountDownLatch latch = new CountDownLatch(1);
@@ -134,7 +134,7 @@ class OperationalJobManagerTest
     @Test
     void testWithFailingJob() throws InterruptedException
     {
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
         OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
         CountDownLatch latch = new CountDownLatch(1);

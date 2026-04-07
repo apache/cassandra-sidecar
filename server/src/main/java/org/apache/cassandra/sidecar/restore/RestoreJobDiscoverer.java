@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,10 +33,10 @@ import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.LocalDate;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Singleton;
@@ -66,6 +67,8 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+
+import static org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor.ONE_DAY_MILLISECONDS;
 
 /**
  * {@link RestoreJobDiscoverer} handles background restore job discovery and handling it according to job status
@@ -547,7 +550,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
     // get the number of days delta between 2 dates. Always return non-negative values
     private int delta(LocalDate date1, LocalDate date2)
     {
-        return Math.abs(date1.getDaysSinceEpoch() - date2.getDaysSinceEpoch());
+        return Ints.checkedCast(Math.abs(date1.toEpochDay() - date2.toEpochDay()));
     }
 
     static class JobIdsByDay
@@ -616,7 +619,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
 
         private int populateDiscoveredDay(RestoreJob job)
         {
-            int day = job.createdAt.getDaysSinceEpoch();
+            int day = Ints.checkedCast(job.createdAt.toEpochDay());
             discoveredDays.add(day);
             return day;
         }
@@ -643,7 +646,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
     static class RunContext
     {
         long nowMillis = System.currentTimeMillis();
-        LocalDate today = LocalDate.fromMillisSinceEpoch(nowMillis);
+        LocalDate today = LocalDate.ofEpochDay(nowMillis / ONE_DAY_MILLISECONDS);
         int earliestInDays = 0;
         int abortedJobs = 0;
         int expiredJobs = 0;

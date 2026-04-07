@@ -29,6 +29,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import com.datastax.oss.driver.internal.core.metadata.token.Murmur3Token;
+import com.datastax.oss.driver.internal.core.metadata.token.Murmur3TokenRange;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -52,13 +55,13 @@ class TokenRangeTest
     {
         assertThatThrownBy(() -> new TokenRange(1, -1))
         .isExactlyInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Invalid range: (Token(1)‥Token(-1)]");
+        .hasMessageContaining("Invalid range: (Token(1)..Token(-1)]");
     }
 
     @Test
     void testCreateFromJavaDriverTokenRange()
     {
-        com.datastax.driver.core.TokenRange ordinaryRange = mockRange(1L, 100L);
+        com.datastax.oss.driver.api.core.metadata.token.TokenRange ordinaryRange = mockRange(1L, 100L);
         when(ordinaryRange.isWrappedAround()).thenReturn(false);
         when(ordinaryRange.unwrap()).thenCallRealMethod();
         List<TokenRange> ranges = TokenRange.from(ordinaryRange);
@@ -69,9 +72,8 @@ class TokenRangeTest
     @Test
     void testCreateFromWraparoundJavaDriverTokenRange()
     {
-        com.datastax.driver.core.TokenRange range = mockRange(10L, -10L);
-        List<com.datastax.driver.core.TokenRange> unwrapped = Arrays.asList(mockRange(10L, Long.MAX_VALUE),
-                                                                            mockRange(Long.MIN_VALUE, -10L));
+        com.datastax.oss.driver.api.core.metadata.token.TokenRange range = mockRange(10L, -10L);
+        List<com.datastax.oss.driver.api.core.metadata.token.TokenRange> unwrapped = Arrays.asList(mockRange(10L, Long.MAX_VALUE), mockRange(Long.MIN_VALUE, -10L));
         when(range.unwrap()).thenReturn(unwrapped);
         List<TokenRange> ranges = TokenRange.from(range);
         assertThat(ranges).hasSize(2)
@@ -82,7 +84,7 @@ class TokenRangeTest
     @Test
     void testCreateFromWraparoundJavaDriverTokenRangeEndingInMinToken()
     {
-        com.datastax.driver.core.TokenRange range = mockRange(10L, Long.MIN_VALUE);
+        com.datastax.oss.driver.api.core.metadata.token.TokenRange range = mockRange(10L, Long.MIN_VALUE);
         // Java driver's token range considers the range is no a wraparound, if the end is the minimum token
         when(range.unwrap()).thenReturn(Collections.singletonList(range));
         List<TokenRange> ranges = TokenRange.from(range);
@@ -212,21 +214,13 @@ class TokenRangeTest
         return Arguments.arguments(args);
     }
 
-    private com.datastax.driver.core.TokenRange mockRange(long start, long end)
+    private com.datastax.oss.driver.api.core.metadata.token.TokenRange mockRange(long start, long end)
     {
-        com.datastax.driver.core.TokenRange range = mock(com.datastax.driver.core.TokenRange.class);
-        com.datastax.driver.core.Token startToken = mockToken(start);
+        com.datastax.oss.driver.api.core.metadata.token.TokenRange range = mock(Murmur3TokenRange.class);
+        com.datastax.oss.driver.api.core.metadata.token.Token startToken = new Murmur3Token(start);
         when(range.getStart()).thenReturn(startToken);
-        com.datastax.driver.core.Token endToken = mockToken(end);
+        com.datastax.oss.driver.api.core.metadata.token.Token endToken = new Murmur3Token(end);
         when(range.getEnd()).thenReturn(endToken);
         return range;
-    }
-
-    private com.datastax.driver.core.Token mockToken(long value)
-    {
-        com.datastax.driver.core.Token token = mock(com.datastax.driver.core.Token.class);
-        when(token.getType()).thenReturn(com.datastax.driver.core.DataType.bigint());
-        when(token.getValue()).thenReturn(value);
-        return token;
     }
 }

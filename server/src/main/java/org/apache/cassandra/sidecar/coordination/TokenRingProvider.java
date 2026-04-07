@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Host;
+import com.datastax.oss.driver.api.core.metadata.Node;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -40,6 +40,7 @@ import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -110,7 +111,7 @@ public abstract class TokenRingProvider
     @Nullable
     public String localDc()
     {
-        NodeSettings nodeSettings = fetcher.callOnFirstAvailableInstance(instance-> instance.delegate().nodeSettings());
+        NodeSettings nodeSettings = fetcher.callOnFirstAvailableInstance(instance -> instance.delegate().nodeSettings());
         return nodeSettings.datacenter();
     }
 
@@ -128,18 +129,18 @@ public abstract class TokenRingProvider
 
     // Helpers
 
-    protected String getIpFromHost(Host host)
+    protected String getIpFromHost(Node host)
     {
         return getIpFromHost(dnsResolver, host);
     }
 
-    protected static String getIpFromHost(DnsResolver dnsResolver, Host host)
+    protected static String getIpFromHost(DnsResolver dnsResolver, Node host)
     {
         // if the IP address is already resolved for the host (it generally should be), use it.
         // this also avoids the case where the driver connects to the local node with an IPv6 or IPv4 address and is
         // able to resolve its host name, we want to avoid attempting to resolve by host name here in the event
         // that the configured DNS resolver resolves the wrong IP class for the configured node.
-        @SuppressWarnings("deprecation") InetAddress address = host.getAddress();
+        @SuppressWarnings("deprecation") InetAddress address = MetadataUtils.resolveEndpoint(host).getAddress();
         String hostAddress = address.getHostAddress();
         if (hostAddress != null)
         {

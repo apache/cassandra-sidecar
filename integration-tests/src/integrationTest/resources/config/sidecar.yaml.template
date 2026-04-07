@@ -280,7 +280,7 @@ driver_parameters:
       path: path/to/keystore.p12
       password: password
   num_connections: 6
-#  local_dc: datacenter1
+  local_dc: datacenter1
 
 healthcheck:
   initial_delay: 0ms

@@ -242,9 +242,13 @@ public abstract class AuthCache<K, V>
         try
         {
             long startTimeNanos = System.nanoTime();
-            cache.putAll(bulkLoadFunction.get());
-            logger.info("Cache={} warmup completed successfully in {} nanoseconds",
-                        name, System.nanoTime() - startTimeNanos);
+            Map<K, V> values = bulkLoadFunction.get();
+            if (values != null)
+            {
+                cache.putAll(values);
+                logger.info("Cache={} warmup completed successfully in {} nanoseconds",
+                            name, System.nanoTime() - startTimeNanos);
+            }
         }
         catch (SchemaUnavailableException sue)
         {

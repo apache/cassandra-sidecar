@@ -26,17 +26,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.codahale.metrics.MetricRegistry;
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Host;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.exceptions.NoHostAvailableException;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.NoNodeAvailableException;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.cql.SimpleStatement;
+import com.datastax.oss.driver.api.core.cql.Statement;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Node;
+import com.datastax.oss.driver.internal.core.context.InternalDriverContext;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -90,7 +90,7 @@ public class CassandraAdapterDelegateTest
     private static @NotNull DriverUtils getMockDriverUtils(String host, int port, Metadata metadata)
     {
         DriverUtils driverUtils = Mockito.mock(DriverUtils.class);
-        Host mockHost = Mockito.mock(Host.class);
+        Node mockHost = Mockito.mock(Node.class);
         InetSocketAddress mockAddress = new InetSocketAddress(host, port);
         when(driverUtils.getHost(metadata, mockAddress)).thenReturn(mockHost);
         return driverUtils;
@@ -98,14 +98,17 @@ public class CassandraAdapterDelegateTest
 
     private static @NotNull CQLSessionProvider getMockCqlSessionProvider(Metadata metadata)
     {
-        Session session = Mockito.mock(Session.class);
-        Cluster cluster = Mockito.mock(Cluster.class);
-        when(cluster.isClosed()).thenReturn(false);
-        when(cluster.getMetadata()).thenReturn(metadata);
-        when(session.getCluster()).thenReturn(cluster);
+        CqlSession session = Mockito.mock(CqlSession.class);
+        InternalDriverContext driverContext = Mockito.mock(InternalDriverContext.class);
+        com.datastax.oss.driver.internal.core.context.EventBus eventBus =
+        Mockito.mock(com.datastax.oss.driver.internal.core.context.EventBus.class);
+        when(session.isClosed()).thenReturn(false);
+        when(session.getMetadata()).thenReturn(metadata);
         PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
         when(preparedStatement.bind()).thenReturn(Mockito.mock(BoundStatement.class));
         when(session.prepare(any(String.class))).thenReturn(preparedStatement);
+        when(driverContext.getEventBus()).thenReturn(eventBus);
+        when(session.getContext()).thenReturn(driverContext);
 
         Row row = Mockito.mock(Row.class);
         when(row.getString("name")).thenReturn("concurrent_reads");
@@ -113,13 +116,13 @@ public class CassandraAdapterDelegateTest
         ResultSet resultSet = Mockito.mock(ResultSet.class);
         when(resultSet.all()).thenReturn(List.of(row));
         when(resultSet.one()).thenReturn(row);
-        when(session.execute(argThat((Statement s) ->
-                (s instanceof SimpleStatement) && "SELECT name, value FROM system_views.settings".equals(
-                        ((SimpleStatement) s).getQueryString()
+        when(session.execute(argThat((Statement<?> s) ->
+                                     (s instanceof SimpleStatement) && "SELECT name, value FROM system_views.settings".equals(
+                                     ((SimpleStatement) s).getQuery()
                 )
         )))
         .thenReturn(resultSet)
-        .thenThrow(NoHostAvailableException.class);
+        .thenThrow(NoNodeAvailableException.class);
 
         CQLSessionProvider cqlSessionProvider = Mockito.mock(CQLSessionProvider.class);
         when(cqlSessionProvider.get()).thenReturn(session);

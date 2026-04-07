@@ -44,9 +44,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -72,6 +71,7 @@ import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.apache.cassandra.sidecar.server.SidecarServerEvents;
+import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import org.apache.cassandra.testing.AbstractCassandraTestContext;
 import org.apache.cassandra.testing.AuthMode;
 import org.apache.cassandra.testing.utils.tls.CertificateBuilder;
@@ -305,7 +305,7 @@ public abstract class IntegrationTestBase
         {
             try
             {
-                Session session = maybeGetSession();
+                CqlSession session = maybeGetSession();
 
                 ResultSet rs = session.execute("CREATE KEYSPACE " + IF_NOT_EXISTS + " " + keyspaceName
                                                + " WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', " + generateRfString(rf) + " };");
@@ -340,7 +340,7 @@ public abstract class IntegrationTestBase
 
     protected QualifiedTableName createTestTable(String tablePrefix, String createTableStatement)
     {
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
         QualifiedTableName tableName = uniqueTestTableFullName(tablePrefix);
         session.execute(String.format(createTableStatement, tableName));
         return tableName;
@@ -384,7 +384,7 @@ public abstract class IntegrationTestBase
         statement.append(schema);
         statement.append(");");
 
-        Session session = maybeGetSession();  // Leave session open to enable its subsequent use by the test
+        CqlSession session = maybeGetSession();  // Leave session open to enable its subsequent use by the test
         session.execute(statement.toString());
 
         return udt;
@@ -397,13 +397,13 @@ public abstract class IntegrationTestBase
 
     protected void createRole(String role, String password, boolean superUser)
     {
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
         session.execute("CREATE ROLE \"" + role + "\" WITH PASSWORD ='" + password + "' AND SUPERUSER = " + superUser + " AND LOGIN = true;");
     }
 
     protected void grantRole(String role, String roleToAssign)
     {
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
         session.execute("GRANT " + roleToAssign + " TO " + role + ";");
     }
 
@@ -434,9 +434,9 @@ public abstract class IntegrationTestBase
         awaitLatchOrTimeout(latch, duration, timeUnit, null);
     }
 
-    protected Session maybeGetSession()
+    protected CqlSession maybeGetSession()
     {
-        Session session = sidecarTestContext.session();
+        CqlSession session = sidecarTestContext.session();
         assertThat(session).isNotNull();
         return session;
     }
@@ -483,8 +483,8 @@ public abstract class IntegrationTestBase
     private static QualifiedTableName uniqueTestTableFullName(String tablePrefix)
     {
         String uniqueTableName = tablePrefix + TEST_TABLE_ID.getAndIncrement();
-        return new QualifiedTableName(new Name(Metadata.quoteIfNecessary(TEST_KEYSPACE)),
-                                      new Name(Metadata.quoteIfNecessary(uniqueTableName)));
+        return new QualifiedTableName(new Name(MetadataUtils.quoteIfNecessary(TEST_KEYSPACE)),
+                                      new Name(MetadataUtils.quoteIfNecessary(uniqueTableName)));
     }
 
     /**

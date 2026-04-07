@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.db.schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -106,7 +106,7 @@ public class SidecarSchemaInitializer implements PeriodicTask
     {
         try
         {
-            Session session = cqlSessionProvider.get();
+            CqlSession session = cqlSessionProvider.get();
             boolean isInitialized = sidecarInternalKeyspace.initialize(session, this::shouldCreateSchema);
 
             if (isInitialized)

@@ -136,10 +136,9 @@ allprojects {
     }
 
     repositories {
-        mavenCentral()
-
         // for dtest jar
         mavenLocal()
+        mavenCentral()
     }
 
     checkstyle {

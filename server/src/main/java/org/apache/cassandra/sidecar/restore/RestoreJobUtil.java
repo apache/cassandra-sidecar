@@ -33,7 +33,7 @@ import java.util.zip.ZipInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
@@ -125,7 +125,7 @@ public class RestoreJobUtil
         try
         {
             UUID id = UUID.fromString(fileName.substring(RESTORE_JOB_PREFIX_LEN));
-            return UUIDs.unixTimestamp(id);
+            return Uuids.unixTimestamp(id);
         }
         catch (IllegalArgumentException e)
         {

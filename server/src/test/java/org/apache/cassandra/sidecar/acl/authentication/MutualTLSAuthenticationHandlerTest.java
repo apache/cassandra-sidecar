@@ -387,13 +387,14 @@ class MutualTLSAuthenticationHandlerTest
                                                                                         .expireAfterAccess(MillisecondBoundConfiguration.parse("30s"))
                                                                                         .maximumSize(100)
                                                                                         .build();
-            AccessControlConfiguration accessControlConfiguration = AccessControlConfigurationImpl.builder()
-                                                                                                  .enabled(true)
-                                                                                                  .authenticatorsConfiguration(authenticatorsConfiguration())
-                                                                                                  .authorizerConfiguration(new ParameterizedClassConfigurationImpl(className, Collections.emptyMap()))
-                                                                                                  .adminIdentities(Set.of(ADMIN_IDENTITY))
-                                                                                                  .permissionCacheConfiguration(permissionCacheConfiguration)
-                                                                                                  .build();
+            AccessControlConfiguration accessControlConfiguration =
+            AccessControlConfigurationImpl.builder()
+                                          .enabled(true)
+                                          .authenticatorsConfiguration(authenticatorsConfiguration())
+                                          .authorizerConfiguration(new ParameterizedClassConfigurationImpl(className, Collections.emptyMap()))
+                                          .adminIdentities(Set.of(ADMIN_IDENTITY))
+                                          .permissionCacheConfiguration(permissionCacheConfiguration)
+                                          .build();
 
             return super.abstractConfig(sslConfiguration, builder -> builder.accessControlConfiguration(accessControlConfiguration));
         }

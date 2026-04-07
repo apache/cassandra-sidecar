@@ -19,23 +19,27 @@
 package org.apache.cassandra.sidecar.testing;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import javax.net.ssl.SSLContext;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.NettyOptions;
-import com.datastax.driver.core.PlainTextAuthProvider;
-import com.datastax.driver.core.SSLOptions;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.exceptions.DriverException;
-import com.datastax.driver.core.exceptions.DriverInternalError;
-import com.datastax.driver.core.policies.ExponentialReconnectionPolicy;
-import com.datastax.driver.core.policies.ReconnectionPolicy;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.CqlSessionBuilder;
+import com.datastax.oss.driver.api.core.DriverException;
+import com.datastax.oss.driver.api.core.DriverExecutionException;
+import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
+import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
+import com.datastax.oss.driver.api.core.metadata.NodeStateListener;
+import com.datastax.oss.driver.internal.core.connection.ExponentialReconnectionPolicy;
+import org.apache.cassandra.sidecar.cluster.driver.MultiplexingNodeStateListener;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.jetbrains.annotations.NotNull;
@@ -51,80 +55,84 @@ public class TemporaryCqlSessionProvider implements CQLSessionProvider
 {
     private static final Logger logger = LoggerFactory.getLogger(TemporaryCqlSessionProvider.class);
     private final List<InetSocketAddress> contactPoints;
-    private Session localSession;
-    private final SSLOptions sslOptions;
-    private final NettyOptions nettyOptions;
-    private final ReconnectionPolicy reconnectionPolicy;
+    private final String localDc;
+    private CqlSession localSession;
+    private final MultiplexingNodeStateListener multiplexingNodeStateListener;
+    private final SSLContext sslContext;
 
-    public TemporaryCqlSessionProvider(List<InetSocketAddress> contactPoints, NettyOptions options)
+    public TemporaryCqlSessionProvider(List<InetSocketAddress> contactPoints, String localDc)
     {
-        this(contactPoints, options, null);
+        this(contactPoints, localDc, null);
     }
 
-    public TemporaryCqlSessionProvider(List<InetSocketAddress> contactPoints, NettyOptions options, SSLOptions sslOptions)
+    public TemporaryCqlSessionProvider(List<InetSocketAddress> contactPoints, String localDc, SSLContext sslContext)
     {
-        nettyOptions = options;
-        reconnectionPolicy = new ExponentialReconnectionPolicy(100, 1000);
+        this.multiplexingNodeStateListener = new MultiplexingNodeStateListener();
         this.contactPoints = contactPoints;
-        this.sslOptions = sslOptions;
+        this.localDc = localDc;
+        this.sslContext = sslContext;
     }
 
     @NotNull
     @Override
-    public synchronized Session get()
+    public synchronized CqlSession get()
     {
         if (localSession != null)
         {
             return localSession;
         }
 
-        Cluster cluster = null;
         try
         {
             logger.info("Connecting to {}", contactPoints);
-            cluster = Cluster.builder()
-                             .addContactPointsWithPorts(contactPoints)
-                             .withReconnectionPolicy(reconnectionPolicy)
-                             .withoutMetrics()
-                             .withSSL(sslOptions)
-                             .withAuthProvider(new PlainTextAuthProvider("cassandra", "cassandra"))
-                             // tests can create a lot of these Cluster objects, to avoid creating HWTs and
-                             // event thread pools for each we have the override
-                             .withNettyOptions(nettyOptions)
-                             .build();
-            localSession = cluster.connect();
+            DriverConfigLoader configLoader = DriverConfigLoader.programmaticBuilder()
+                                                                .withString(DefaultDriverOption.LOAD_BALANCING_LOCAL_DATACENTER, "datacenter1")
+                                                                .withClass(DefaultDriverOption.RECONNECTION_POLICY_CLASS, ExponentialReconnectionPolicy.class)
+                                                                .withDuration(DefaultDriverOption.RECONNECTION_BASE_DELAY, Duration.ofMillis(100))
+                                                                .withDuration(DefaultDriverOption.RECONNECTION_MAX_DELAY, Duration.ofMillis(1000))
+                                                                .withStringList(DefaultDriverOption.METADATA_SCHEMA_REFRESHED_KEYSPACES,
+                                                                                Collections.emptyList())
+                                                                .build();
+            CqlSessionBuilder builder = CqlSession.builder()
+                                                  .addContactPoints(contactPoints)
+                                                  .withLocalDatacenter(localDc)
+                                                  .withNodeStateListener(multiplexingNodeStateListener)
+                                                  .withAuthCredentials("cassandra", "cassandra")
+                                                  .withSslContext(sslContext)
+                                                  .withConfigLoader(configLoader);
+            localSession = builder.build();
             logger.info("Successfully connected to Cassandra instance!");
         }
         catch (Exception connectionException)
         {
             logger.error("Failed to reach Cassandra", connectionException);
-            if (cluster != null)
-            {
-                try
-                {
-                    cluster.close();
-                }
-                catch (Exception closeException)
-                {
-                    logger.error("Failed to close cluster in cleanup", closeException);
-                    connectionException.addSuppressed(closeException);
-                }
-            }
             throw new CassandraUnavailableException(CQL, connectionException);
         }
         return localSession;
     }
 
     @Override
-    public Session getIfConnected()
+    public CqlSession getIfConnected()
     {
         return this.localSession;
     }
 
     @Override
+    public void registerNodeStateListener(NodeStateListener nodeStateListener)
+    {
+        multiplexingNodeStateListener.register(nodeStateListener);
+    }
+
+    @Override
+    public void unregisterNodeStateListener(NodeStateListener nodeStateListener)
+    {
+        multiplexingNodeStateListener.unregister(nodeStateListener);
+    }
+
+    @Override
     public void close()
     {
-        Session localSession;
+        CqlSession localSession;
         synchronized (this)
         {
             localSession = this.localSession;
@@ -135,8 +143,7 @@ public class TemporaryCqlSessionProvider implements CQLSessionProvider
         {
             try
             {
-                localSession.getCluster().closeAsync().get(1, TimeUnit.MINUTES);
-                localSession.closeAsync().get(1, TimeUnit.MINUTES);
+                localSession.closeAsync().toCompletableFuture().get(1, TimeUnit.MINUTES);
             }
             catch (InterruptedException e)
             {
@@ -166,7 +173,7 @@ public class TemporaryCqlSessionProvider implements CQLSessionProvider
         }
         else
         {
-            throw new DriverInternalError("Unexpected exception thrown", cause);
+            throw new DriverExecutionException(cause);
         }
     }
 }

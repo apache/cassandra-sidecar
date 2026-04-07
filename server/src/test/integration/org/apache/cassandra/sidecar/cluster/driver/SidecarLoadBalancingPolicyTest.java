@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.cluster.driver;
 
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -30,7 +31,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Assertions;
 
 import com.datastax.driver.core.DriverUtils;
-import com.datastax.driver.core.Host;
+import com.datastax.oss.driver.api.core.metadata.Node;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
@@ -47,7 +48,7 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
 
     public static final int SIDECAR_MANAGED_INSTANCES = 2;
 
-    private static List<Host> getConnectedHosts(Set<Host> hosts)
+    private static List<Node> getConnectedHosts(Collection<Node> hosts)
     {
         return hosts.stream()
                     .filter(DriverUtils::hasActiveConnections)
@@ -63,8 +64,8 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
     @CassandraIntegrationTest(nodesPerDc = 6)
     public void shouldMaintainMinimumConnections() throws ExecutionException, InterruptedException
     {
-        Set<Host> hosts = sidecarTestContext.session().getCluster().getMetadata().getAllHosts();
-        List<Host> connectedHosts = getConnectedHosts(hosts);
+        Collection<Node> hosts = sidecarTestContext.session().getMetadata().getNodes().values();
+        List<Node> connectedHosts = getConnectedHosts(hosts);
         // We manage 2 hosts, and ask for an additional 2 (the default) for connections.
         // Therefore, we expect 4 hosts to have connections at startup.
         int expectedConnections = SIDECAR_MANAGED_INSTANCES + SidecarLoadBalancingPolicy.MIN_NON_LOCAL_CONNECTIONS;
@@ -81,12 +82,12 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
 
     private void assertConnectionsWithRetry(InetSocketAddress downInstanceAddress, int expectedConnections)
     {
-        List<Host> connectedHosts = Collections.emptyList();
+        List<Node> connectedHosts = Collections.emptyList();
         int attempts = 0;
         // Retry for up to 2 minutes, but passes much more quickly most of the time, so this should be safe.
         while (attempts <= 24)
         {
-            Set<Host> hosts = sidecarTestContext.session().getCluster().getMetadata().getAllHosts();
+            Collection<Node> hosts = sidecarTestContext.session().getMetadata().getNodes().values();
             connectedHosts = getConnectedHosts(hosts);
             List<InetSocketAddress> connectedAddresses = getAddresses(connectedHosts);
             if (connectedHosts.size() == expectedConnections && !connectedAddresses.contains(downInstanceAddress))
@@ -108,10 +109,10 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
         Assertions.fail(message);
     }
 
-    private List<InetSocketAddress> getAddresses(List<Host> connectedHosts)
+    private List<InetSocketAddress> getAddresses(List<Node> connectedHosts)
     {
         return connectedHosts.stream()
-                             .map(h -> h.getEndPoint().resolve())
+                             .map(h -> (InetSocketAddress) h.getEndPoint().resolve())
                              .collect(Collectors.toList());
     }
 
