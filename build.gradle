@@ -191,10 +191,11 @@ startScripts {
         // Replacing the placeholder after the script has been generated will preserve the semantics from Gradle < 7.2.
         // See this Gradle issue for more context: https://github.com/gradle/gradle/issues/18170.
 
-        def defaultJvmOpts = ["-Dsidecar.logdir=" + logDir,
-                              "-Dsidecar.config=" + confFile,
-                              "-Dlogback.configurationFile=" + logbackConfFile,
-                              "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory"]
+        def defaultJvmOpts = project.ext.JDK11_OPTIONS +
+                ["-Dsidecar.logdir=" + logDir,
+                 "-Dsidecar.config=" + confFile,
+                 "-Dlogback.configurationFile=" + logbackConfFile,
+                 "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory"]
         unixScript.text = unixScript.text.replace("DEFAULT_JVM_OPTS='\"PLACEHOLDER\"'",
                 "DEFAULT_JVM_OPTS=\"${defaultJvmOpts.join(" ")}\"")
         windowsScript.delete()
