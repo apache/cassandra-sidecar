@@ -26,6 +26,8 @@ import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableMap;
 
+import org.junit.jupiter.api.Tag;
+
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.TokenSupplier;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
@@ -54,6 +56,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests verifying that SAI import options (failOnMissingIndex, validateIndexChecksum) are
  * correctly persisted and propagated through the restore job pipeline: create job -> persist -> discover -> create ranges.
  */
+@Tag("heavy")
 class RestoreJobDiscovererSaiImportOptionsIntTest extends IntegrationTestBase
 {
     @Override

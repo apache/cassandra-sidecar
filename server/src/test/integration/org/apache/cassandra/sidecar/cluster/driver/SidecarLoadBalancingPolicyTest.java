@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 
 import com.datastax.driver.core.DriverUtils;
 import com.datastax.driver.core.Host;
@@ -42,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * A test for the SidecarLoadBalancingPolicy
  */
+@Tag("heavy")
 public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
 {
 

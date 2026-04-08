@@ -221,7 +221,9 @@ public class SSTableImportRequestParam extends SSTableUploads
                                              parseBooleanQueryParam(request, "invalidateCaches", true),
                                              parseBooleanQueryParam(request, "extendedVerify", true),
                                              parseBooleanQueryParam(request, "copyData", false),
-                                             parseBooleanQueryParam(request, "failOnMissingIndex", SSTableImportOptions.DEFAULT_FAIL_ON_MISSING_INDEX),
-                                             parseBooleanQueryParam(request, "validateIndexChecksum", SSTableImportOptions.DEFAULT_VALIDATE_INDEX_CHECKSUM));
+                                             parseBooleanQueryParam(request, "failOnMissingIndex",
+                                                                    SSTableImportOptions.DEFAULT_FAIL_ON_MISSING_INDEX),
+                                             parseBooleanQueryParam(request, "validateIndexChecksum",
+                                                                    SSTableImportOptions.DEFAULT_VALIDATE_INDEX_CHECKSUM));
     }
 }

@@ -246,6 +246,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
         .withFailMessage("Expected at least one snapshot file with '+' in its name (SAI index file)")
         .isTrue();
 
+        // Upload files using upload endpoint to verify SAI files are not rejected
         uploadSnapshotFiles(client, uploadId, tableName, filesToUpload)
         .toCompletionStage().toCompletableFuture().get(60, TimeUnit.SECONDS);
 
@@ -326,7 +327,7 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
     }
 
     private Future<Void> uploadSnapshotFiles(WebClient client, UUID uploadId,
-                                              QualifiedTableName tableName, List<Path> snapshotFiles)
+                                             QualifiedTableName tableName, List<Path> snapshotFiles)
     {
         Future<Void> future = Future.succeededFuture();
         for (Path path : snapshotFiles)
@@ -337,6 +338,8 @@ public class SSTableImportHandlerIntegrationTest extends IntegrationTestBase
                 // For path segments, '+' is a literal character, so we must encode it as %2B.
                 String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8)
                                                    .replace("+", "%2B");
+
+                // invoke upload endpoint
                 String uploadRoute = "/api/v1/uploads/" + uploadId + "/keyspaces/" + tableName.keyspace()
                                      + "/tables/" + tableName.tableName() + "/components/" + encodedFileName;
                 Buffer fileContent = vertx.fileSystem().readFileBlocking(path.toString());
