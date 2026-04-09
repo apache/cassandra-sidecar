@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 import com.google.common.collect.Range;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
@@ -46,6 +47,7 @@ import org.apache.cassandra.testing.IClusterExtension;
 /**
  * Host replacement scenario integration tests for token range replica mapping endpoint with the in-jvm dtest framework.
  */
+@Tag("heavy")
 @ExtendWith(VertxExtension.class)
 class ReplacementTest extends ReplacementBaseTest
 {

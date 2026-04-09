@@ -119,8 +119,8 @@ jobs:
     docker:
       - image: cimg/openjdk:11.0
     environment:
-      INTEGRATION_MAX_PARALLEL_FORKS: 3
-      INTEGRATION_MAX_HEAP_SIZE: "2500M"
+      INTEGRATION_MAX_PARALLEL_FORKS: 2
+      INTEGRATION_MAX_HEAP_SIZE: "2000M"
     resource_class: large
     steps:
       - install_common
@@ -128,7 +128,7 @@ jobs:
       - attach_workspace:
           at: dtest-jars
       - run: ./scripts/install-shaded-dtest-jar-local.sh
-      - run: ./gradlew --no-daemon -PdtestVersion=4.0.16 -Dcassandra.sidecar.versions_to_test="4.0" checkstyleIntegrationTest integrationTestLightWeight --stacktrace
+      - run: ./gradlew --no-daemon --max-workers=2 -PdtestVersion=4.0.16 -Dcassandra.sidecar.versions_to_test="4.0" checkstyleIntegrationTest integrationTestLightWeight --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -174,8 +174,8 @@ jobs:
     docker:
       - image: cimg/openjdk:11.0
     environment:
-      INTEGRATION_MAX_PARALLEL_FORKS: 3
-      INTEGRATION_MAX_HEAP_SIZE: "2500M"
+      INTEGRATION_MAX_PARALLEL_FORKS: 2
+      INTEGRATION_MAX_HEAP_SIZE: "2000M"
     resource_class: large
     steps:
       - install_common
@@ -183,7 +183,7 @@ jobs:
       - attach_workspace:
           at: dtest-jars
       - run: ./scripts/install-shaded-dtest-jar-local.sh
-      - run: ./gradlew --no-daemon -PdtestVersion=5.0.3 -Dcassandra.sidecar.versions_to_test="5.0" checkstyleIntegrationTest integrationTestLightWeight --stacktrace
+      - run: ./gradlew --no-daemon --max-workers=2 -PdtestVersion=5.0.3 -Dcassandra.sidecar.versions_to_test="5.0" checkstyleIntegrationTest integrationTestLightWeight --stacktrace
 
       - store_artifacts:
           path: build/reports
@@ -229,8 +229,8 @@ jobs:
     docker:
       - image: cimg/openjdk:11.0
     environment:
-      INTEGRATION_MAX_PARALLEL_FORKS: 3
-      INTEGRATION_MAX_HEAP_SIZE: "2500M"
+      INTEGRATION_MAX_PARALLEL_FORKS: 2
+      INTEGRATION_MAX_HEAP_SIZE: "2000M"
     resource_class: large
     steps:
       - install_common
@@ -238,7 +238,7 @@ jobs:
       - attach_workspace:
           at: dtest-jars
       - run: ./scripts/install-shaded-dtest-jar-local.sh
-      - run: ./gradlew --no-daemon -PdtestVersion=5.1 -Dcassandra.sidecar.versions_to_test="5.1" checkstyleIntegrationTest integrationTestLightWeight --stacktrace
+      - run: ./gradlew --no-daemon --max-workers=2 -PdtestVersion=5.1 -Dcassandra.sidecar.versions_to_test="5.1" checkstyleIntegrationTest integrationTestLightWeight --stacktrace
 
       - store_artifacts:
           path: build/reports

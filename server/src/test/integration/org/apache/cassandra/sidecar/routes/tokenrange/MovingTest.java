@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.Range;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
@@ -40,6 +41,7 @@ import org.apache.cassandra.testing.IClusterExtension;
 /**
  * Node movement scenarios integration tests for token range replica mapping endpoint with the in-jvm dtest framework.
  */
+@Tag("heavy")
 @ExtendWith(VertxExtension.class)
 public class MovingTest extends MovingBaseTest
 {

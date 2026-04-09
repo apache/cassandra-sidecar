@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.Range;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.junit5.VertxExtension;
@@ -40,6 +41,7 @@ import org.apache.cassandra.testing.ConfigurableCassandraTestContext;
  * Note: Some related test classes are broken down to have a single test case to parallelize test execution and
  * therefore limit the instance size required to run the tests from CircleCI as the in-jvm-dtests tests are memory bound
  */
+@Tag("heavy")
 @ExtendWith(VertxExtension.class)
 public class JoiningTestSingleNode extends JoiningBaseTest
 {
