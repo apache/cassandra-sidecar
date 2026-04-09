@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * Fix circle CI pipelines OOM (CASSSIDECAR-423)
  * Add JDK11_OPTIONS to the startup script (CASSSIDECAR-416)
  * Add safety check to Live Migration data copy task endpoint (CASSSIDECAR-409)
  * Define common operational job tracking interface and refactor current operational job tracker (CASSSIDECAR-372)
