@@ -130,8 +130,7 @@ public class TlsTestUtils
         SSLContext sslContext;
         try
         {
-            // TODO(lantoniak): Multiple protocols are not supported.
-            sslContext = SSLContext.getInstance("TLSv1.3");
+            sslContext = SSLContext.getInstance("TLS");
 
             KeyManagerFactory kmf = null;
             if (keystorePath != null && keystorePassword != null)

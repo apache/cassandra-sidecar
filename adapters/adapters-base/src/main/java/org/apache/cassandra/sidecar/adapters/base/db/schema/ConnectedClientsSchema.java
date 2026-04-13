@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.adapters.base.db.schema;
 
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import org.apache.cassandra.sidecar.db.schema.CassandraSystemTableSchema;
@@ -46,6 +47,12 @@ public class ConnectedClientsSchema extends CassandraSystemTableSchema
     {
         statsStatement = prepare(statsStatement, session, statsStatement());
         connectionsByUserStatement = prepare(connectionsByUserStatement, session, selectConnectionsByUserStatement());
+    }
+
+    @Override
+    public ConsistencyLevel getConsistencyLevel()
+    {
+        return ConsistencyLevel.LOCAL_QUORUM;
     }
 
     @Override

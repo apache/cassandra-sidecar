@@ -62,7 +62,8 @@ public class RestoreSliceDatabaseAccessor extends DatabaseAccessor<RestoreSlices
                                                     slice.startToken(),
                                                     slice.endToken(),
                                                     slice.compressedSize(),
-                                                    slice.uncompressedSize());
+                                                    slice.uncompressedSize())
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         execute(statement);
         return slice;
     }
@@ -81,7 +82,8 @@ public class RestoreSliceDatabaseAccessor extends DatabaseAccessor<RestoreSlices
                                               .bind(restoreJob.jobId,
                                                     bucketId,
                                                     range.start().toBigInteger(),
-                                                    range.end().toBigInteger());
+                                                    range.end().toBigInteger())
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet result = execute(statement);
         List<RestoreSlice> slices = new ArrayList<>();
         for (Row row : result)

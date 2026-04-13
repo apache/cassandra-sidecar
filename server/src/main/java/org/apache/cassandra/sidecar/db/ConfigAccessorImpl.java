@@ -55,7 +55,8 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
     {
         sidecarSchema.ensureInitialized();
         BoundStatement statement = tableSchema.selectConfig()
-                                              .bind(serviceName);
+                                              .bind(serviceName)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         Row row = execute(statement).one();
         if (row == null || row.isNull(0))
         {
@@ -70,7 +71,8 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
     {
         sidecarSchema.ensureInitialized();
         BoundStatement statement = tableSchema.insertConfig()
-                                              .bind(serviceName, config);
+                                              .bind(serviceName, config)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         execute(statement);
         return new ServiceConfig(config);
     }
@@ -80,7 +82,8 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
     {
         sidecarSchema.ensureInitialized();
         BoundStatement statement = tableSchema.insertConfigIfNotExists()
-                                              .bind(serviceName, config);
+                                              .bind(serviceName, config)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet resultSet = execute(statement);
         if (resultSet.wasApplied())
         {
@@ -94,7 +97,8 @@ public abstract class ConfigAccessorImpl extends DatabaseAccessor<ConfigsSchema>
     {
         sidecarSchema.ensureInitialized();
         BoundStatement deleteStatement = tableSchema.deleteConfig()
-                                                    .bind(serviceName);
+                                                    .bind(serviceName)
+                                                    .setConsistencyLevel(tableSchema.getConsistencyLevel());
         execute(deleteStatement);
     }
 

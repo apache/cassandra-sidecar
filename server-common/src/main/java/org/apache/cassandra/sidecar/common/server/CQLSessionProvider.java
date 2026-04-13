@@ -57,6 +57,13 @@ public interface CQLSessionProvider
      */
     void close();
 
+    /**
+     * Register new node state listener.
+     */
     void registerNodeStateListener(NodeStateListener nodeStateListener);
+
+    /**
+     * Unregister node state listener.
+     */
     void unregisterNodeStateListener(NodeStateListener nodeStateListener);
 }

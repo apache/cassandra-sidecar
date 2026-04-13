@@ -102,7 +102,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
                                                     job.consistencyLevelText(),
                                                     job.localDatacenter,
                                                     job.shouldRestoreToLocalDatacenterOnly,
-                                                    job.expireAt.toInstant());
+                                                    job.expireAt.toInstant())
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
 
         execute(statement);
         return job;
@@ -141,7 +142,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
                 byte[] secretBytes = MAPPER.writeValueAsBytes(secrets);
                 wrappedSecrets = ByteBuffer.wrap(secretBytes);
                 batchStatement = batchStatement.add(tableSchema.updateBlobSecrets()
-                                                               .bind(createdAt, jobId, wrappedSecrets));
+                                                               .bind(createdAt, jobId, wrappedSecrets)
+                                                               .setConsistencyLevel(tableSchema.getConsistencyLevel()));
             }
             catch (JsonProcessingException e)
             {
@@ -151,22 +153,26 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         }
         if (status != null)
         {
-            batchStatement = batchStatement.add(tableSchema.updateStatus().bind(createdAt, jobId, status.name()));
+            batchStatement = batchStatement.add(tableSchema.updateStatus().bind(createdAt, jobId, status.name())
+                                                           .setConsistencyLevel(tableSchema.getConsistencyLevel()));
             updateBuilder.jobStatus(status);
         }
         if (jobAgent != null)
         {
-            batchStatement = batchStatement.add(tableSchema.updateJobAgent().bind(createdAt, jobId, jobAgent));
+            batchStatement = batchStatement.add(tableSchema.updateJobAgent().bind(createdAt, jobId, jobAgent)
+                                                           .setConsistencyLevel(tableSchema.getConsistencyLevel()));
             updateBuilder.jobAgent(jobAgent);
         }
         if (expireAt != null)
         {
-            batchStatement = batchStatement.add(tableSchema.updateExpireAt().bind(createdAt, jobId, expireAt.toInstant()));
+            batchStatement = batchStatement.add(tableSchema.updateExpireAt().bind(createdAt, jobId, expireAt.toInstant())
+                                                           .setConsistencyLevel(tableSchema.getConsistencyLevel()));
             updateBuilder.expireAt(expireAt);
         }
         if (sliceCount != null)
         {
-            batchStatement = batchStatement.add(tableSchema.updateSliceCount().bind(createdAt, jobId, sliceCount));
+            batchStatement = batchStatement.add(tableSchema.updateSliceCount().bind(createdAt, jobId, sliceCount)
+                                                           .setConsistencyLevel(tableSchema.getConsistencyLevel()));
             updateBuilder.sliceCount(sliceCount);
         }
 
@@ -185,7 +191,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
             status = status + ": " + reason;
         }
         BoundStatement statement = tableSchema.updateStatus()
-                                              .bind(createdAt, jobId, status);
+                                              .bind(createdAt, jobId, status)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         execute(statement);
     }
 
@@ -193,7 +200,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     {
         sidecarSchema.ensureInitialized();
 
-        BoundStatement statement = tableSchema.selectJob().bind(RestoreJob.toLocalDate(jobId), jobId);
+        BoundStatement statement = tableSchema.selectJob().bind(RestoreJob.toLocalDate(jobId), jobId)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet resultSet = execute(statement);
         Row row = resultSet.one();
         if (row == null)
@@ -218,18 +226,12 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     {
         sidecarSchema.ensureInitialized();
 
-        BoundStatement statement = tableSchema.findAllByCreatedAt().bind(date);
+        BoundStatement statement = tableSchema.findAllByCreatedAt().bind(date)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet resultSet = execute(statement);
         List<RestoreJob> result = new ArrayList<>();
         for (Row row : resultSet)
         {
-            // TODO(lantoniak): Feature not supported in new driver.
-//            if (resultSet.getAvailableWithoutFetching() == 100 && !resultSet.isFullyFetched())
-//            {
-//                // trigger an async fetch sooner when there are more to fetch,
-//                // and it still has around 100 available to consume from the resultSet
-//                resultSet.fetchMoreResults();
-//            }
             result.add(RestoreJob.from(row));
         }
         return result;

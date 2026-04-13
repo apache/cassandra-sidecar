@@ -580,8 +580,8 @@ public abstract class SharedClusterIntegrationTestBase
     protected ResultSet queryAllDataWithDriver(QualifiedName table, ConsistencyLevel consistency)
     {
         CqlSession session = createDriverSession(cluster.delegate());
-        SimpleStatement statement = SimpleStatement.newInstance(String.format("SELECT * FROM %s;", table));
-        statement = statement.setConsistencyLevel(DefaultConsistencyLevel.valueOf(consistency.name()));
+        SimpleStatement statement = SimpleStatement.newInstance(String.format("SELECT * FROM %s;", table))
+                                                   .setConsistencyLevel(DefaultConsistencyLevel.valueOf(consistency.name()));
         return session.execute(statement);
     }
 

@@ -65,7 +65,8 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
                                                     range.jobId(),
                                                     range.bucketId(),
                                                     range.startToken(),
-                                                    range.endToken());
+                                                    range.endToken())
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         execute(statement);
         LOGGER.debug("Created range={}", range);
         return range;
@@ -80,21 +81,22 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
                                                     range.jobId(),
                                                     range.bucketId(),
                                                     range.startToken(),
-                                                    range.endToken());
+                                                    range.endToken())
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         execute(statement);
         LOGGER.debug("Updated range={}", range);
         return range;
     }
 
     // todo: change to stream api and paginate
-    // TODO(lantoniak): Maybe implement above?
     public List<RestoreRange> findAll(UUID jobId, short bucketId)
     {
         sidecarSchema.ensureInitialized();
 
         BoundStatement statement = tableSchema.findAll()
                                               .bind(jobId,
-                                                    bucketId);
+                                                    bucketId)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet result = execute(statement);
         List<RestoreRange> ranges = new ArrayList<>();
         for (Row row : result)

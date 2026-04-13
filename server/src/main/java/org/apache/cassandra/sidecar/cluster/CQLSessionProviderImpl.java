@@ -286,8 +286,9 @@ public class CQLSessionProviderImpl implements CQLSessionProvider
 
         try
         {
-            // TODO(lantoniak): Multiple protocols are not supported.
-            SSLContext sslContext = SSLContext.getInstance(sslConfiguration.secureTransportProtocols().get(0));
+            // TODO: If we wish to explicitly limit allowed SSL protocols,
+            //  we need to implement custom DefaultSslEngineFactory and use SSLEngine.setEnabledProtocols().
+            SSLContext sslContext = SSLContext.getInstance("TLS");
 
             KeyManagerFactory kmf = null;
             if (sslConfiguration.isKeystoreConfigured())

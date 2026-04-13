@@ -115,7 +115,7 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
 
         // Use {@code CREATE TABLE} CQL statement with all associated indexes and views but without
         // UDTs as the native schema; using {@code asCQLQuery()} does not allow formatting produced CQL
-        String cql = table.describeWithChildren(true); // TODO(lantoniak): Test true or false.
+        String cql = table.describeWithChildren(true);
         SchemaMetadata.PlatformSchema schema = new SchemaMetadata.PlatformSchema();
         schema.setOtherSchema(new OtherSchema().setRawSchema(cql));
         String hash = DigestUtils.sha1Hex(cql);

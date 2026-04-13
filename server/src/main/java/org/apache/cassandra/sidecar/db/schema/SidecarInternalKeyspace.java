@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.metadata.Metadata;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
@@ -101,5 +102,11 @@ public class SidecarInternalKeyspace extends AbstractSchema
     {
         return String.format("CREATE KEYSPACE IF NOT EXISTS %s WITH REPLICATION = %s",
                              keyspaceName(), keyspaceConfig.createReplicationStrategyString());
+    }
+
+    @Override
+    public ConsistencyLevel getConsistencyLevel()
+    {
+        return ConsistencyLevel.ONE;
     }
 }

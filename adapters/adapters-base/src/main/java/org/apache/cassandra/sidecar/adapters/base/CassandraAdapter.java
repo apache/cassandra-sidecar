@@ -139,7 +139,7 @@ public class CassandraAdapter implements ICassandraAdapter
     public InetSocketAddress localStorageBroadcastAddress()
     {
         Metadata metadata = metadata();
-        return getHost(metadata).getBroadcastAddress().get(); // Maybe return null?
+        return getHost(metadata).getBroadcastAddress().get();
     }
 
     /**

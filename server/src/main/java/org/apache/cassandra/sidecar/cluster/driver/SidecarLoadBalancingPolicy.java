@@ -83,7 +83,7 @@ public class SidecarLoadBalancingPolicy extends DefaultLoadBalancingPolicy
     public void init(Map<UUID, Node> nodes, @NotNull DistanceReporter distanceReporter)
     {
         this.allHosts.addAll(nodes.values());
-        recalculateSelectedHosts(true);
+        recalculateSelectedHosts();
         super.init(nodes, distanceReporter);
     }
 
@@ -111,7 +111,7 @@ public class SidecarLoadBalancingPolicy extends DefaultLoadBalancingPolicy
         this.allHosts.add(node); // replace existing reference if there is one
         if (selectedHosts.size() < totalRequestedConnections)
         {
-            recalculateSelectedHosts(false);
+            recalculateSelectedHosts();
         }
         super.onUp(node);
     }
@@ -125,7 +125,8 @@ public class SidecarLoadBalancingPolicy extends DefaultLoadBalancingPolicy
             LOGGER.debug("Local Node {} has been marked down.", node);
             return;
         }
-        recalculateSelectedHosts(false);
+        selectedHosts.remove(node);
+        recalculateSelectedHosts();
         super.onDown(node);
     }
 
@@ -137,7 +138,7 @@ public class SidecarLoadBalancingPolicy extends DefaultLoadBalancingPolicy
         super.onRemove(node);
     }
 
-    private synchronized void recalculateSelectedHosts(boolean initiation)
+    private synchronized void recalculateSelectedHosts()
     {
         Map<Boolean, List<Node>> partitionedHosts = allHosts.stream()
                                                             .collect(Collectors.partitioningBy(this::isLocalHost));
@@ -170,7 +171,7 @@ public class SidecarLoadBalancingPolicy extends DefaultLoadBalancingPolicy
             nonLocalHosts = nonLocalHosts.stream()
                                          .filter(h -> !selectedHosts.contains(h)
                                                       && (NodeState.UP.equals(h.getState())
-                                                          || (initiation && NodeState.UNKNOWN.equals(h.getState()))))
+                                                          || NodeState.UNKNOWN.equals(h.getState())))
                                          .collect(Collectors.toList());
 
             if (nonLocalHosts.size() < requiredNonLocalHosts)

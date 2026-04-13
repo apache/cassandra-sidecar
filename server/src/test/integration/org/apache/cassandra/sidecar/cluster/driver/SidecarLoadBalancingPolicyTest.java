@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Assertions;
 
-import com.datastax.driver.core.DriverUtils;
 import com.datastax.oss.driver.api.core.metadata.Node;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -51,7 +50,7 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
     private static List<Node> getConnectedHosts(Collection<Node> hosts)
     {
         return hosts.stream()
-                    .filter(DriverUtils::hasActiveConnections)
+                    .filter(n -> n.getOpenConnections() > 0)
                     .collect(Collectors.toList());
     }
 

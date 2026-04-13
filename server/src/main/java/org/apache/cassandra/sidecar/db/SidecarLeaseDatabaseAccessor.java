@@ -54,7 +54,8 @@ public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseS
      */
     public LeaseClaimResult claimLease(String leaseClaimer)
     {
-        BoundStatement statement = tableSchema.claimLeaseStatement().bind(leaseClaimer);
+        BoundStatement statement = tableSchema.claimLeaseStatement().bind(leaseClaimer)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet resultSet = execute(statement);
         return LeaseClaimResult.from(resultSet, leaseClaimer);
     }
@@ -68,7 +69,8 @@ public class SidecarLeaseDatabaseAccessor extends DatabaseAccessor<SidecarLeaseS
      */
     public LeaseClaimResult extendLease(String currentOwner)
     {
-        BoundStatement statement = tableSchema.extendLeaseStatement().bind(currentOwner, currentOwner);
+        BoundStatement statement = tableSchema.extendLeaseStatement().bind(currentOwner, currentOwner)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet resultSet = execute(statement);
         return LeaseClaimResult.from(resultSet, currentOwner);
     }

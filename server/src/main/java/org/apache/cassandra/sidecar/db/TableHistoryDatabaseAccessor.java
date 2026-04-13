@@ -44,12 +44,12 @@ public class TableHistoryDatabaseAccessor extends DatabaseAccessor<TableHistoryS
         super(sidecarSchema.tableSchema(TableHistorySchema.class), sessionProvider);
     }
 
-    // TODO(lantoniak): Callers do not wait for future to complete.
     public CompletableFuture<AsyncResultSet> insertTableSchemaHistory(String keyspace, String tableName, String schema)
     {
         UUID schemaUuid = UUID.nameUUIDFromBytes(schema.getBytes(StandardCharsets.UTF_8));
         return session().executeAsync(tableSchema
                                       .insertTableSchema()
-                                      .bind(keyspace, tableName, schemaUuid, schema)).toCompletableFuture();
+                                      .bind(keyspace, tableName, schemaUuid, schema)
+                                      .setConsistencyLevel(tableSchema.getConsistencyLevel())).toCompletableFuture();
     }
 }

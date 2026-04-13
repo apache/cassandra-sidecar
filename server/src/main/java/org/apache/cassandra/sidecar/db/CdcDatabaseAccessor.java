@@ -129,7 +129,7 @@ public class CdcDatabaseAccessor extends DatabaseAccessor<CdcStatesSchema>
                      range.upperEndpoint(),
                      buf,
                      timestamp
-                     )).toCompletableFuture())
+                     ).setConsistencyLevel(tableSchema.getConsistencyLevel())).toCompletableFuture())
                      .collect(Collectors.toList());
     }
 
@@ -167,7 +167,6 @@ public class CdcDatabaseAccessor extends DatabaseAccessor<CdcStatesSchema>
         return futures.flatMap(f -> {
             try
             {
-                // TODO(lantoniak): Fid a better implementation of loading Stream?
                 List<Row> rows = new ArrayList<>();
                 do
                 {
@@ -198,6 +197,8 @@ public class CdcDatabaseAccessor extends DatabaseAccessor<CdcStatesSchema>
 
     CompletableFuture<AsyncResultSet> selectCdcRange(String jobId, int split)
     {
-        return session().executeAsync(tableSchema.select().bind(jobId, (short) split)).toCompletableFuture();
+        return session().executeAsync(tableSchema.select().bind(jobId, (short) split)
+                                                 .setConsistencyLevel(tableSchema.getConsistencyLevel()))
+                        .toCompletableFuture();
     }
 }

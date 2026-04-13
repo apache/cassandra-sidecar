@@ -69,7 +69,7 @@ public class SidecarPermissionsDatabaseAccessor extends DatabaseAccessor<Sidecar
      */
     public Map<String, Set<Authorization>> rolesToAuthorizations()
     {
-        BoundStatement statement = tableSchema.allRolesPermissions().bind();
+        BoundStatement statement = tableSchema.allRolesPermissions().bind().setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet result = execute(statement);
         Map<String, Set<Authorization>> roleAuthorizations = new HashMap<>();
         for (Row row : result)

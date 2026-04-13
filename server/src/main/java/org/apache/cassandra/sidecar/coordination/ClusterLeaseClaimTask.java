@@ -26,7 +26,7 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.oss.driver.api.core.NoNodeAvailableException;
+import com.datastax.oss.driver.api.core.AllNodesFailedException;
 import com.datastax.oss.driver.api.core.servererrors.QueryConsistencyException;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -217,7 +217,7 @@ public class ClusterLeaseClaimTask implements PeriodicTask
             LOGGER.debug("Attempting to {} lease for sidecarHostId={}", actionName, sidecarHostId);
             return actionFn.apply(sidecarHostId).currentOwner;
         }
-        catch (QueryConsistencyException | NoNodeAvailableException | IllegalArgumentException e)
+        catch (QueryConsistencyException | AllNodesFailedException | IllegalArgumentException e)
         {
             LOGGER.debug("Unable to {} lease for sidecarHostId={}", actionName, sidecarHostId, e);
         }

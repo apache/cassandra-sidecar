@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.cql.BoundStatement;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
@@ -107,11 +108,14 @@ class ConfigAccessorImplTest
     {
         ConfigsSchema mockConfigsSchema = mock(ConfigsSchema.class);
         PreparedStatement preparedStatement = mock(PreparedStatement.class);
-        when(preparedStatement.bind()).thenReturn(mock(BoundStatement.class));
-        when(preparedStatement.bind(any())).thenReturn(mock(BoundStatement.class));
+        BoundStatement boundStatement = mock(BoundStatement.class);
+        when(boundStatement.setConsistencyLevel(any())).thenReturn(boundStatement);
+        when(preparedStatement.bind()).thenReturn(boundStatement);
+        when(preparedStatement.bind(any())).thenReturn(boundStatement);
         when(mockConfigsSchema.selectConfig()).thenReturn(preparedStatement);
         when(mockConfigsSchema.insertConfig()).thenReturn(preparedStatement);
         when(mockConfigsSchema.deleteConfig()).thenReturn(preparedStatement);
+        when(mockConfigsSchema.getConsistencyLevel()).thenReturn(ConsistencyLevel.LOCAL_QUORUM);
         return mockConfigsSchema;
     }
 
