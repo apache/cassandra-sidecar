@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.cluster.driver;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +41,6 @@ import com.datastax.oss.driver.api.core.metadata.NodeState;
 import com.datastax.oss.driver.api.core.session.Request;
 import com.datastax.oss.driver.api.core.session.Session;
 import com.datastax.oss.driver.internal.core.loadbalancing.DefaultLoadBalancingPolicy;
-import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -120,7 +121,7 @@ public class SidecarLoadBalancingPolicy extends DefaultLoadBalancingPolicy
     public synchronized void onDown(@NotNull Node node)
     {
         // Don't remove local addresses from the selected host list
-        if (localHostAddresses.contains(MetadataUtils.resolveEndpoint(node)))
+        if (localHostAddresses.contains(resolveEndpoint(node)))
         {
             LOGGER.debug("Local Node {} has been marked down.", node);
             return;
@@ -198,6 +199,13 @@ public class SidecarLoadBalancingPolicy extends DefaultLoadBalancingPolicy
 
     private boolean isLocalHost(Node host)
     {
-        return localHostAddresses.contains(MetadataUtils.resolveEndpoint(host));
+        return localHostAddresses.contains(resolveEndpoint(host));
+    }
+
+    private static InetSocketAddress resolveEndpoint(Node node)
+    {
+        SocketAddress socketAddress = node.getEndPoint().resolve();
+        Preconditions.checkState(socketAddress instanceof InetSocketAddress, "Unsupported endpoint type: " + node.getEndPoint());
+        return (InetSocketAddress) socketAddress;
     }
 }

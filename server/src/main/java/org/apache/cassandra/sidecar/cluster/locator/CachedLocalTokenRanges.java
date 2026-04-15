@@ -46,8 +46,8 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
-import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -59,6 +59,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
     private static final Logger LOGGER = LoggerFactory.getLogger(CachedLocalTokenRanges.class);
     private final InstancesMetadata instancesMetadata;
     private final DnsResolver dnsResolver;
+    private final DriverUtils driverUtils;
 
     @GuardedBy("this")
     private Set<Integer> localInstanceIdsCache;
@@ -69,10 +70,11 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
     @GuardedBy("this")
     private ImmutableMap<String, Map<Integer, Set<TokenRange>>> localTokenRangesCache;
 
-    public CachedLocalTokenRanges(InstancesMetadata instancesMetadata, DnsResolver dnsResolver)
+    public CachedLocalTokenRanges(InstancesMetadata instancesMetadata, DnsResolver dnsResolver, DriverUtils driverUtils)
     {
         this.instancesMetadata = instancesMetadata;
         this.dnsResolver = dnsResolver;
+        this.driverUtils = driverUtils;
         this.localTokenRangesCache = null;
         this.localInstanceIdsCache = null;
         this.allInstancesCache = null;
@@ -190,7 +192,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
         };
         for (Node host : allInstancesCache)
         {
-            putNullSafe.accept(MetadataUtils.resolveEndpoint(host), host);
+            putNullSafe.accept(driverUtils.getSocketAddress(host), host);
             putNullSafe.accept(host.getListenAddress().orElse(null), host);
             putNullSafe.accept(host.getBroadcastAddress().orElse(null), host);
         }

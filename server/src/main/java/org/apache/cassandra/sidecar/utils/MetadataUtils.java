@@ -17,13 +17,7 @@
  */
 package org.apache.cassandra.sidecar.utils;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-
-import com.google.common.base.Preconditions;
-
 import com.datastax.oss.driver.api.core.metadata.Metadata;
-import com.datastax.oss.driver.api.core.metadata.Node;
 import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.datastax.oss.driver.internal.core.util.Strings;
@@ -72,13 +66,5 @@ public class MetadataUtils
             builder.append(ks.describeWithChildren(true)).append("\n");
         });
         return builder.toString();
-    }
-
-    // TODO(lantoniak): Move to driver utils?
-    public static InetSocketAddress resolveEndpoint(Node node)
-    {
-        SocketAddress socketAddress = node.getEndPoint().resolve();
-        Preconditions.checkState(socketAddress instanceof InetSocketAddress, "Unsupported endpoint type: " + node.getEndPoint());
-        return (InetSocketAddress) socketAddress;
     }
 }

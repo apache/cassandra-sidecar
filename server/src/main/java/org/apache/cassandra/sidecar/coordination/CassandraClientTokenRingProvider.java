@@ -57,6 +57,7 @@ import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioner;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 
@@ -68,6 +69,7 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 public class CassandraClientTokenRingProvider extends TokenRingProvider implements LocalTokenRangesProvider
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraClientTokenRingProvider.class);
+    private final DriverUtils driverUtils;
     @GuardedBy("this")
     private volatile Map<String, Map<String, List<TokenRange>>> assignedRangesOfAllInstancesByDcCache = null;
     @GuardedBy("this")
@@ -76,9 +78,13 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
     private volatile Set<Node> allInstancesCache = null;
 
     @Inject
-    public CassandraClientTokenRingProvider(InstancesMetadata instancesMetadata, InstanceMetadataFetcher instanceMetadataFetcher, DnsResolver dnsResolver)
+    public CassandraClientTokenRingProvider(InstancesMetadata instancesMetadata,
+                                            InstanceMetadataFetcher instanceMetadataFetcher,
+                                            DnsResolver dnsResolver,
+                                            DriverUtils driverUtils)
     {
-        super(instancesMetadata, instanceMetadataFetcher, dnsResolver);
+        super(instancesMetadata, instanceMetadataFetcher, dnsResolver, driverUtils);
+        this.driverUtils = driverUtils;
     }
 
     @Override
@@ -183,11 +189,13 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
 
     public Map<String, Map<String, List<TokenRange>>> assignedRangesOfAllInstancesByDc(Metadata metadata)
     {
-        return assignedRangesOfAllInstancesByDc(dnsResolver, metadata);
+        return assignedRangesOfAllInstancesByDc(dnsResolver, driverUtils, metadata);
     }
 
     @VisibleForTesting
-    public static Map<String, Map<String, List<TokenRange>>> assignedRangesOfAllInstancesByDc(DnsResolver dnsResolver, Metadata metadata)
+    public static Map<String, Map<String, List<TokenRange>>> assignedRangesOfAllInstancesByDc(DnsResolver dnsResolver,
+                                                                                              DriverUtils driverUtils,
+                                                                                              Metadata metadata)
     {
         Partitioner partitioner = extractPartitioner(metadata);
         Map<String, List<CassandraInstance>> perDcHosts = new HashMap<>(4);
@@ -196,7 +204,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
             Token minToken = metadata.getTokenMap().get().getTokens(host).stream().min(Comparable::compareTo)
                                      .orElseThrow(() -> new RuntimeException("No token found for host: " + host));
             perDcHosts.computeIfAbsent(host.getDatacenter(), (dc) -> new ArrayList<>())
-                      .add(new CassandraInstance(tokenToString(minToken), getIpFromHost(dnsResolver, host)));
+                      .add(new CassandraInstance(tokenToString(minToken), getIpFromHost(dnsResolver, driverUtils, host)));
         }
         perDcHosts.forEach((dc, hosts) -> hosts.sort(Comparator.comparing(o -> new BigInteger(o.token))));
 

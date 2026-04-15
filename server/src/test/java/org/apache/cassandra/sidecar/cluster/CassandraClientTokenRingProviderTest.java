@@ -51,6 +51,7 @@ import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 
+import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
@@ -72,11 +73,13 @@ public class CassandraClientTokenRingProviderTest
 {
     private final CassandraClientTokenRingProvider tokenRingProvider = new CassandraClientTokenRingProvider(mockInstancesMetadata(),
                                                                                                             mockInstanceMetadataFetcher(),
-                                                                                                            mockDnsResolver());
+                                                                                                            mockDnsResolver(),
+                                                                                                            new DriverUtils());
 
     @Test
     public void testPrimaryRangesOfAllInstancesByDc()
     {
+        DriverUtils driverUtils = new DriverUtils();
         Metadata metadata = mock(Metadata.class);
         TokenMap tokenMap = mock(TokenMap.class);
         when(tokenMap.getPartitionerName()).thenReturn(Partitioners.MURMUR3.name());
@@ -235,7 +238,8 @@ public class CassandraClientTokenRingProviderTest
             return nodeTokens.get(n);
         });
 
-        Map<String, Map<String, List<TokenRange>>> tokens = CassandraClientTokenRingProvider.assignedRangesOfAllInstancesByDc(dnsResolver, metadata);
+        Map<String, Map<String, List<TokenRange>>> tokens = CassandraClientTokenRingProvider
+                                                            .assignedRangesOfAllInstancesByDc(dnsResolver, driverUtils, metadata);
         assertFalse(tokens.isEmpty());
         assertTrue(tokens.containsKey("DC1"));
         assertTrue(tokens.containsKey("DC2"));

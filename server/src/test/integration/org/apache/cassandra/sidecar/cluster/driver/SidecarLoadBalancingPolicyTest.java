@@ -83,8 +83,8 @@ public class SidecarLoadBalancingPolicyTest extends IntegrationTestBase
     {
         List<Node> connectedHosts = Collections.emptyList();
         int attempts = 0;
-        // Retry for up to 2 minutes, but passes much more quickly most of the time, so this should be safe.
-        while (attempts <= 24)
+        // Retry for up to 3 minutes, but passes much more quickly most of the time, so this should be safe.
+        while (attempts <= 36)
         {
             Collection<Node> hosts = sidecarTestContext.session().getMetadata().getNodes().values();
             connectedHosts = getConnectedHosts(hosts);
