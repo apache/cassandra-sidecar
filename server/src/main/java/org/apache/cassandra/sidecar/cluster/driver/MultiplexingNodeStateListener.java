@@ -35,7 +35,7 @@ import com.datastax.oss.driver.internal.core.util.Loggers;
 
 /**
  * Combines multiple node state listeners into a single one.
- * Implementation note: Copied from Java driver, but with unregistering functionality.
+ * Implementation note: copied from Java driver, but added functionality to unregister the listener.
  *
  * <p>Any exception thrown by a child listener is caught and logged.
  */

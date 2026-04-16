@@ -22,11 +22,18 @@ import com.datastax.oss.driver.api.core.config.DriverOption;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Custom driver options required by {@code SidecarLoadBalancingPolicy}.
+ * Custom driver options required by {@link SidecarLoadBalancingPolicy}.
  */
 public enum CustomDriverOption implements DriverOption
 {
+    /**
+     * Number of non-localhost Cassandra connections to be maintained by the Sidecar.
+     */
     NUM_CONNECTIONS("basic.load-balancing-policy.num-connections"),
+
+    /**
+     * Comma-separated list of local Cassandra instances in the format of {@code host:port}.
+     */
     LOCAL_INSTANCES("basic.load-balancing-policy.local-instances");
 
     private final String path;

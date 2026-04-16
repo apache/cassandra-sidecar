@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -92,6 +94,7 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSAND
 public class CassandraAdapterDelegate implements ICassandraAdapter, NodeStateListener, Consumer<ChannelEvent>
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraAdapterDelegate.class);
+    private static final ExecutorService eventExecutor = Executors.newFixedThreadPool(1);
 
     private final Vertx vertx;
     private final int cassandraInstanceId;
@@ -491,28 +494,28 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, NodeStateLis
     public void onAdd(@NotNull Node host)
     {
         LOGGER.debug("Host added. host={}", host);
-        CompletableFuture.runAsync(() -> runIfThisHost(host, this::healthCheck));
+        CompletableFuture.runAsync(() -> runIfThisHost(host, this::healthCheck), eventExecutor);
     }
 
     @Override
     public void onUp(@NotNull Node host)
     {
         LOGGER.debug("Host up. host={}", host);
-        CompletableFuture.runAsync(() -> runIfThisHost(host, this::healthCheck));
+        CompletableFuture.runAsync(() -> runIfThisHost(host, this::healthCheck), eventExecutor);
     }
 
     @Override
     public void onDown(@NotNull Node host)
     {
         LOGGER.debug("Host down. host={}", host);
-        CompletableFuture.runAsync(() -> runIfThisHost(host, this::markNativeDownAndMaybeNotifyDisconnection));
+        CompletableFuture.runAsync(() -> runIfThisHost(host, this::markNativeDownAndMaybeNotifyDisconnection), eventExecutor);
     }
 
     @Override
     public void onRemove(@NotNull Node host)
     {
         LOGGER.debug("Host removed. host={}", host);
-        CompletableFuture.runAsync(() -> runIfThisHost(host, this::healthCheck));
+        CompletableFuture.runAsync(() -> runIfThisHost(host, this::healthCheck), eventExecutor);
     }
 
     /**

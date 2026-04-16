@@ -180,7 +180,7 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
         {
             SchemaFieldDataType datahubType = convertType(type);
             String description = datahubType.getType().isNullType()
-                    ? "Unknown Cassandra data type " + type.asCql(true, true)
+                    ? "Unknown Cassandra data type " + type.asCql(true, true).toLowerCase()
                     : null;  // Column-level comments are not supported by Cassandra
 
             return Stream.of(new SchemaField()
@@ -188,7 +188,7 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
                     .setNullable(!partition)  // Everything is potentially nullable in Cassandra except for the partition key
                     .setDescription(description, SetMode.REMOVE_IF_NULL)
                     .setType(datahubType)
-                    .setNativeDataType(type.asCql(true, true))
+                    .setNativeDataType(type.asCql(true, true).toLowerCase())
                     .setIsPartitioningKey(partition)
                     .setIsPartOfKey(key));
         }

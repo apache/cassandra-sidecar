@@ -41,8 +41,6 @@ import com.datastax.oss.driver.api.core.metadata.Metadata;
 import com.datastax.oss.driver.api.core.metadata.Node;
 import com.datastax.oss.driver.api.core.metadata.TokenMap;
 import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
-import com.datastax.oss.driver.internal.core.metadata.token.Murmur3Token;
-import com.datastax.oss.driver.internal.core.metadata.token.RandomToken;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
@@ -51,6 +49,7 @@ import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.common.server.utils.TokenUtils;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -174,25 +173,9 @@ public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
     {
         return tokenMap.getTokens(host)
                    .stream()
-                   .map(InnerDcTokenAdjacentPeerProvider::tokenToBigInteger)
+                   .map(TokenUtils::tokenToBigInteger)
                    .min(BigInteger::compareTo)
                    .orElseThrow(() -> new RuntimeException("No min token found on host: " + host.getHostId()));
-    }
-
-    public static BigInteger tokenToBigInteger(com.datastax.oss.driver.api.core.metadata.token.Token token)
-    {
-        if (token instanceof RandomToken) // BigInteger - RandomPartitioner
-        {
-            RandomToken t = (RandomToken) token;
-            return t.getValue();
-        }
-        else if (token instanceof Murmur3Token) // Long - Murmur3Partitioner
-        {
-            Murmur3Token t = (Murmur3Token) token;
-            return BigInteger.valueOf(t.getValue());
-        }
-        throw new IllegalArgumentException("Unsupported token type: " + token.getClass().getName() +
-                                           ". Only tokens of Murmur3Partitioner and RandomPartitioner are supported.");
     }
 
     protected static BigInteger minToken(Stream<TokenRange> tokenRanges)

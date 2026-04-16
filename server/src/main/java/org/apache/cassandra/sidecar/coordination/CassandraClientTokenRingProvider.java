@@ -45,8 +45,6 @@ import com.datastax.oss.driver.api.core.metadata.Metadata;
 import com.datastax.oss.driver.api.core.metadata.Node;
 import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import com.datastax.oss.driver.api.core.metadata.token.Token;
-import com.datastax.oss.driver.internal.core.metadata.token.Murmur3Token;
-import com.datastax.oss.driver.internal.core.metadata.token.RandomToken;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
@@ -58,6 +56,7 @@ import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import org.apache.cassandra.sidecar.common.server.utils.TokenUtils;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 
@@ -204,27 +203,12 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
             Token minToken = metadata.getTokenMap().get().getTokens(host).stream().min(Comparable::compareTo)
                                      .orElseThrow(() -> new RuntimeException("No token found for host: " + host));
             perDcHosts.computeIfAbsent(host.getDatacenter(), (dc) -> new ArrayList<>())
-                      .add(new CassandraInstance(tokenToString(minToken), getIpFromHost(dnsResolver, driverUtils, host)));
+                      .add(new CassandraInstance(TokenUtils.tokenToBigInteger(minToken).toString(), getIpFromHost(dnsResolver, driverUtils, host)));
         }
         perDcHosts.forEach((dc, hosts) -> hosts.sort(Comparator.comparing(o -> new BigInteger(o.token))));
 
         return perDcHosts.entrySet().stream()
                          .collect(Collectors.toMap(Map.Entry::getKey, e -> calculateTokenRanges(partitioner, e.getValue())));
-    }
-
-    public static String tokenToString(Token token)
-    {
-        if (token instanceof Murmur3Token)
-        {
-            Murmur3Token t = (Murmur3Token) token;
-            return Long.toString(t.getValue());
-        }
-        else if (token instanceof RandomToken)
-        {
-            RandomToken t = (RandomToken) token;
-            return t.getValue().toString();
-        }
-        throw new UnsupportedOperationException("Unsupported token type: " + token.getClass().getName());
     }
 
     protected static Map<String, List<TokenRange>> calculateTokenRanges(Partitioner partitioner, List<CassandraInstance> sortedPerDcHosts)

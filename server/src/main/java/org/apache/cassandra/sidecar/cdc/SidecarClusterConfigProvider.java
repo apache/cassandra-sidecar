@@ -29,7 +29,7 @@ import com.datastax.oss.driver.api.core.metadata.TokenMap;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
-import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
+import org.apache.cassandra.sidecar.common.server.utils.TokenUtils;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.partitioner.CassandraInstance;
 import org.apache.cassandra.spark.data.partitioner.Partitioner;
@@ -70,7 +70,7 @@ public class SidecarClusterConfigProvider implements ClusterConfigProvider
                     .filter(host -> host.getListenAddress().isPresent())
                     .flatMap(host -> tokenMap.getTokens(host).stream()
                                          .map(token -> new CassandraInstance(
-                                         CassandraClientTokenRingProvider.tokenToString(token),
+                                         TokenUtils.tokenToBigInteger(token).toString(),
                                          driverUtils.getSocketAddress(host).getHostName(),
                                          host.getDatacenter()
                                          ))

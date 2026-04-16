@@ -79,7 +79,7 @@ public class TlsTestUtils
         CqlSessionBuilder builder = CqlSession.builder()
                                               .withSslContext(sslOptions)
                                               .withAuthCredentials(username, password)
-                                              .withLocalDatacenter("datacenter1")
+                                              .withLocalDatacenter(instance.config().localDatacenter())
                                               .addContactPoint(nativeInetSocketAddress);
 
         if (builderCustomizer != null)

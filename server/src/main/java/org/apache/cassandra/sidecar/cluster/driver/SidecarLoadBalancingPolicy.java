@@ -20,12 +20,12 @@ package org.apache.cassandra.sidecar.cluster.driver;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -52,7 +52,7 @@ public class SidecarLoadBalancingPolicy extends DefaultLoadBalancingPolicy
 {
     public static final int MIN_NON_LOCAL_CONNECTIONS = 2;
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarLoadBalancingPolicy.class);
-    private final Random random = new Random();
+    private final SecureRandom random = new SecureRandom();
 
     private final Set<InetSocketAddress> localHostAddresses;
     private final HashSet<Node> allHosts = new HashSet<>();

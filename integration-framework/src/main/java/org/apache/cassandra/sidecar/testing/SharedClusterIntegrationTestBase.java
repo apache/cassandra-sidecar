@@ -733,7 +733,8 @@ public abstract class SharedClusterIntegrationTestBase
         public CQLSessionProvider cqlSessionProvider()
         {
             List<InetSocketAddress> contactPoints = buildContactPoints(instances);
-            return new TemporaryCqlSessionProvider(contactPoints, "datacenter1", null);
+            IInstance instance = instances.iterator().next();
+            return new TemporaryCqlSessionProvider(contactPoints, instance.config().localDatacenter(), null);
         }
 
         @Provides
