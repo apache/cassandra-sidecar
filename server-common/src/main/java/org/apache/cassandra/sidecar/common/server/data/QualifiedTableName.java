@@ -117,6 +117,27 @@ public class QualifiedTableName
         return table;
     }
 
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o)
+        {
+            return true;
+        }
+        if (!(o instanceof QualifiedTableName))
+        {
+            return false;
+        }
+        QualifiedTableName that = (QualifiedTableName) o;
+        return Objects.equals(keyspace, that.keyspace) && Objects.equals(table, that.table);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(keyspace, table);
+    }
+
     /**
      * {@inheritDoc}
      */

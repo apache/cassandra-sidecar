@@ -25,6 +25,7 @@ import com.datastax.driver.core.Metadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -34,6 +35,7 @@ import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.MetadataUtils;
@@ -47,19 +49,24 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements AccessProtected
 {
+    private final DriverUnsupportedSchemaCache driverUnsupportedSchemaCache;
+
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
      *
      * @param metadataFetcher the interface to retrieve metadata
      * @param executorPools   executor pools for blocking executions
      * @param validator       a validator instance to validate Cassandra-specific input
+     * @param driverUnsupportedSchemaCache cache of unparseable table schemas by Java driver
      */
     @Inject
     protected KeyspaceSchemaHandler(InstanceMetadataFetcher metadataFetcher,
                                     ExecutorPools executorPools,
-                                    CassandraInputValidator validator)
+                                    CassandraInputValidator validator,
+                                    DriverUnsupportedSchemaCache driverUnsupportedSchemaCache)
     {
         super(metadataFetcher, executorPools, validator);
+        this.driverUnsupportedSchemaCache = driverUnsupportedSchemaCache;
     }
 
     @Override
@@ -78,9 +85,9 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
                                SocketAddress remoteAddress,
                                Name keyspace)
     {
-        metadata(host)
-        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace))
-        .onSuccess(metadata -> handleWithMetadata(context, keyspace, metadata));
+        Future.all(metadata(host), unsupportedSchema(keyspace))
+              .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace))
+              .onSuccess(future -> handleWithMetadata(context, keyspace, future));
     }
 
     /**
@@ -88,13 +95,19 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
      *
      * @param context  the event to handle
      * @param keyspace the keyspace parsed from the request
-     * @param metadata the metadata on the connected cluster, including known nodes and schema definitions
+     * @param future   composite future containing result of:
+     *                 - the metadata on the connected cluster, including known nodes and schema definitions
+     *                 - additional schema which could not be parsed by Java driver
      */
-    private void handleWithMetadata(RoutingContext context, Name keyspace, Metadata metadata)
+    private void handleWithMetadata(RoutingContext context, Name keyspace, CompositeFuture future)
     {
+        Metadata metadata = future.resultAt(0);
+        String unparseableSchema = future.resultAt(1);
         if (keyspace == null)
         {
-            SchemaResponse schemaResponse = new SchemaResponse(metadata.exportSchemaAsString());
+            String fullSchema = DriverUnsupportedSchemaCache.concatSchemas(metadata.exportSchemaAsString(),
+                                                                           unparseableSchema);
+            SchemaResponse schemaResponse = new SchemaResponse(fullSchema);
             context.json(schemaResponse);
             return;
         }
@@ -111,8 +124,9 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
             return;
         }
 
-        SchemaResponse schemaResponse = new SchemaResponse(keyspace.name(),
-                                                           ksMetadata.exportAsString());
+        String keyspaceSchema = DriverUnsupportedSchemaCache.concatSchemas(ksMetadata.exportAsString(),
+                                                                           unparseableSchema);
+        SchemaResponse schemaResponse = new SchemaResponse(keyspace.name(), keyspaceSchema);
         context.json(schemaResponse);
     }
 
@@ -127,6 +141,27 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
         return executorPools.service().executeBlocking(() -> {
             // metadata can block so we need to run in a blocking thread
             return metadataFetcher.delegate(host).metadata();
+        });
+    }
+
+    /**
+     * Get CQL schema not parseable by Java driver (and therefore not present in {@link Metadata}).
+     *
+     * @param keyspace optional keyspace name, {@code null} includes schema for all keyspaces
+     * @return {@link Future} containing CQL schema
+     */
+    private Future<String> unsupportedSchema(Name keyspace)
+    {
+        return executorPools.service().executeBlocking(() -> {
+            // schema cache can block if it was not successfully initialized at least once
+            if (keyspace == null)
+            {
+                return driverUnsupportedSchemaCache.getFullSchema();
+            }
+            else
+            {
+                return driverUnsupportedSchemaCache.getKeyspaceSchema(keyspace);
+            }
         });
     }
 

@@ -27,8 +27,10 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -46,12 +48,16 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTableName>
 {
+    private final DriverUnsupportedSchemaCache driverUnsupportedSchemaCache;
+
     @Inject
     public ValidateTableExistenceHandler(InstanceMetadataFetcher metadataFetcher,
                                          ExecutorPools executorPools,
-                                         CassandraInputValidator validator)
+                                         CassandraInputValidator validator,
+                                         DriverUnsupportedSchemaCache driverUnsupportedSchemaCache)
     {
         super(metadataFetcher, executorPools, validator);
+        this.driverUnsupportedSchemaCache = driverUnsupportedSchemaCache;
     }
 
     // It is a validator, and it does not assume values (keyspace and table) are present.
@@ -76,9 +82,13 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
             return;
         }
 
-        getKeyspaceMetadata(host, input.maybeQuotedKeyspace())
+        Future.all(getKeyspaceMetadata(host, input.maybeQuotedKeyspace()),
+                   unsupportedSchema(input.maybeQuotedKeyspace(), input.maybeQuotedTableName()))
         .onFailure(context::fail) // fail the request with the internal server error thrown from getKeyspaceMetadata
-        .onSuccess(keyspaceMetadata -> {
+        .onSuccess(compositeFuture -> {
+            KeyspaceMetadata keyspaceMetadata = compositeFuture.resultAt(0);
+            String unparseableSchema = compositeFuture.resultAt(1);
+
             if (keyspaceMetadata == null)
             {
                 context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND,
@@ -97,15 +107,20 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
             }
 
             TableMetadata tableMetadata = keyspaceMetadata.getTable(table);
-            if (tableMetadata == null)
+            boolean tableExists = tableMetadata != null || unparseableSchema != null;
+            if (!tableExists)
             {
                 String errMsg = "Table " + input.tableName() + " was not found for keyspace " + input.keyspace();
                 context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, errMsg));
             }
             else
             {
-                RoutingContextUtils.put(context, RoutingContextUtils.SC_TABLE_METADATA, tableMetadata);
                 // keyspace / [table] exists
+                if (tableMetadata != null)
+                {
+                    // SC_TABLE_METADATA will not be present for unparseable tables
+                    RoutingContextUtils.put(context, RoutingContextUtils.SC_TABLE_METADATA, tableMetadata);
+                }
                 context.next();
             }
         });
@@ -117,5 +132,19 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
                                                                             .delegate()
                                                                             .metadata()
                                                                             .getKeyspace(keyspace));
+    }
+
+    private Future<String> unsupportedSchema(String keyspace, String table)
+    {
+        return executorPools.service().executeBlocking(() -> {
+            if (table == null)
+            {
+                return null;
+            }
+            // schema cache can block if it was not successfully initialized at least once
+            return driverUnsupportedSchemaCache.getTableSchema(new Name(keyspace),
+                                                               new Name(table),
+                                                               false);
+        });
     }
 }

@@ -33,7 +33,6 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 import com.google.inject.Singleton;
 import io.vertx.core.Promise;
 import org.apache.cassandra.bridge.CassandraBridge;
@@ -44,6 +43,7 @@ import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.CqlTable;
@@ -69,6 +69,7 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
     private final AtomicReference<Set<CqlTable>> cdcTables = new AtomicReference<>(Collections.emptySet());
     private final ConcurrentHashMap<TableIdentifier, UUID> tableIdCache = new ConcurrentHashMap<>();
     private final CdcDatabaseAccessor databaseAccessor;
+    private final DriverUnsupportedSchemaCache driverUnsupportedSchemaCache;
     private final CopyOnWriteArrayList<Runnable> schemaChangeListeners = new CopyOnWriteArrayList<>();
     private final SidecarConfiguration sidecarConfiguration;
     private final InstanceMetadataFetcher instanceFetcher;
@@ -76,12 +77,14 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
 
     public CassandraClusterSchemaMonitor(InstanceMetadataFetcher instanceFetcher,
                                          CdcDatabaseAccessor databaseAccessor,
+                                         DriverUnsupportedSchemaCache driverUnsupportedSchemaCache,
                                          SidecarConfiguration sidecarConfiguration,
                                          CassandraBridgeFactory cassandraBridgeFactory)
     {
 
         this.instanceFetcher = instanceFetcher;
         this.databaseAccessor = databaseAccessor;
+        this.driverUnsupportedSchemaCache = driverUnsupportedSchemaCache;
         this.sidecarConfiguration = sidecarConfiguration;
         this.cassandraBridgeFactory = cassandraBridgeFactory;
     }
@@ -93,14 +96,15 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
 
     public void refresh()
     {
-        NodeSettings nodeSettings = instanceFetcher.callOnFirstAvailableInstance(instance-> instance.delegate().nodeSettings());
+        NodeSettings nodeSettings = instanceFetcher.callOnFirstAvailableInstance(instance -> instance.delegate().nodeSettings());
         CassandraBridge cassandraBridge = cassandraBridgeFactory.get(nodeSettings.releaseVersion());
         CdcBridge cdcBridge = CdcBridgeFactory.getCdcBridge(cassandraBridge);
 
         try
         {
             LOGGER.debug("Checking for schema changes...");
-            String fullSchemaText = databaseAccessor.fullSchema();
+            String fullSchemaText = DriverUnsupportedSchemaCache.concatSchemas(databaseAccessor.fullSchema(),
+                                                                               driverUnsupportedSchemaCache.getFullSchema());
             if (!fullSchemaText.equals(currSchemaText.get()))
             {
                 LOGGER.info("Schema change detected, refreshing CDC tables");
@@ -177,10 +181,13 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
 
     @VisibleForTesting
     static Set<CqlTable> buildCdcTables(CdcDatabaseAccessor cdcDatabaseAccessor,
+                                        DriverUnsupportedSchemaCache driverUnsupportedSchemaCache,
                                         ConcurrentHashMap<TableIdentifier, UUID> tableIdCache,
                                         @NotNull final CassandraBridge cassandraBridge)
     {
-        return buildCdcTables(cdcDatabaseAccessor.fullSchema(),
+        String fullSchema = DriverUnsupportedSchemaCache.concatSchemas(cdcDatabaseAccessor.fullSchema(),
+                                                                       driverUnsupportedSchemaCache.getFullSchema());
+        return buildCdcTables(fullSchema,
                               cdcDatabaseAccessor.partitioner(),
                               tableIdCache,
                               cdcDatabaseAccessor::getTableId,

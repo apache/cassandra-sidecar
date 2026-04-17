@@ -70,6 +70,7 @@ import org.apache.cassandra.sidecar.coordination.SidecarPeerProvider;
 import org.apache.cassandra.sidecar.coordination.TokenRingProvider;
 import org.apache.cassandra.sidecar.db.CdcConfigAccessor;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
 import org.apache.cassandra.sidecar.db.KafkaConfigAccessor;
 import org.apache.cassandra.sidecar.db.TokenSplitConfigAccessor;
 import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
@@ -128,10 +129,11 @@ public class CdcModule extends AbstractModule
     @Singleton
     CassandraClusterSchemaMonitor cassandraClusterSchemaMonitorInstance(InstanceMetadataFetcher instanceMetadataFetcher,
                                                                          CdcDatabaseAccessor databaseAccessor,
+                                                                         DriverUnsupportedSchemaCache driverUnsupportedSchemaCache,
                                                                          SidecarConfiguration configuration,
                                                                          CassandraBridgeFactory cassandraBridgeFactory)
     {
-        return new CassandraClusterSchemaMonitor(instanceMetadataFetcher, databaseAccessor, configuration, cassandraBridgeFactory);
+        return new CassandraClusterSchemaMonitor(instanceMetadataFetcher, databaseAccessor, driverUnsupportedSchemaCache, configuration, cassandraBridgeFactory);
     }
 
     @ProvidesIntoMap
