@@ -333,8 +333,14 @@ workflows:
   version: 2
   build-and-test:
     jobs:
-      - build-dtest-jdk11
-      - client_only_unit_java8
+      - approve-build:
+          type: approval
+      - build-dtest-jdk11:
+          requires:
+            - approve-build
+      - client_only_unit_java8:
+          requires:
+            - approve-build
       - unit_java11:
           requires:
             - build-dtest-jdk11
