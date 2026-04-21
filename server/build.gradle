@@ -186,6 +186,8 @@ dependencies {
 
     testFixturesApi(testFixtures(project(":server-common")))
     testFixturesApi(testFixtures(project(":vertx-auth-mtls")))
+    testFixturesApi(testFixtures(project(":client-common")))
+    testFixturesApi(testFixtures(project(":test-common")))
     testFixturesImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")
     testFixturesImplementation("com.google.inject:guice:${guiceVersion}")
     testFixturesImplementation('org.mockito:mockito-core:4.10.0')
@@ -195,6 +197,8 @@ dependencies {
     testFixturesImplementation("io.vertx:vertx-web:${project.vertxVersion}") {
         exclude group: 'junit', module: 'junit'
     }
+    testFixturesImplementation("io.vertx:vertx-web-client:${project.vertxVersion}")
+    testFixturesImplementation('com.datastax.cassandra:cassandra-driver-core:3.11.3')
     integrationTestImplementation(testFixtures(project(":test-common")))
     integrationTestImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
     // Needed by the Cassandra dtest framework
