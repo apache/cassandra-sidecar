@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * Adding endpoint for verifying files post data copy during live migration (CASSSIDECAR-226)
  * SAI support in Sidecar (CASSSIDECAR-422)
  * Update OperationalJob to support cluster-wide operations (CASSSIDECAR-376)
  * Support column types not parseable by Java 3.x driver (CASSSIDECAR-443)
@@ -11,7 +12,6 @@
 
 0.3.0
 -----
- * Adding endpoint for verifying files post data copy during live migration (CASSSIDECAR-226)
  * RangeManager should be singleton in CDCModule (CASSSIDECAR-411)
  * CDC: Add end-to-end CDC integration tests (CASSSIDECAR-308)
  * SchemaStorePublisherFactory should be Injectable in CachingSchemaStore (CASSSIDECAR-408)
