@@ -1,0 +1,161 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.cassandra.sidecar.job.storage;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+
+import com.datastax.driver.core.utils.UUIDs;
+import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * A data transfer object representing the persisted state of an operational job.
+ */
+public class OperationalJobRecord
+{
+    private final UUID jobId;
+    private final String operationType;
+    private final OperationalJobStatus status;
+    private final long creationTimeMillis;
+    @Nullable
+    private final List<List<String>> nodeExecutionOrder;
+    @Nullable
+    private final Map<String, String> operationMetadata;
+
+    /**
+     * Constructs an OperationalJobRecord with the given fields.
+     *
+     * @param jobId         time-based v1 UUID identifying the job
+     * @param operationType the operation type (e.g. "restart", "decommission")
+     * @param status        the current status of the job
+     */
+    public OperationalJobRecord(UUID jobId, String operationType, OperationalJobStatus status)
+    {
+        this(jobId, operationType, status, null, null);
+    }
+
+    /**
+     * Constructs an OperationalJobRecord with all fields.
+     *
+     * @param jobId             time-based v1 UUID identifying the job
+     * @param operationType     the operation type (e.g. "restart", "decommission")
+     * @param status            the current status of the job
+     * @param nodeExecutionOrder        the ordered list of parallel node groups for execution, or null
+     * @param operationMetadata the operation parameters, or null
+     */
+    public OperationalJobRecord(UUID jobId, String operationType, OperationalJobStatus status,
+                                @Nullable List<List<String>> nodeExecutionOrder,
+                                @Nullable Map<String, String> operationMetadata)
+    {
+        Preconditions.checkArgument(jobId != null, "jobId must not be null");
+        Preconditions.checkArgument(jobId.version() == 1, "jobId must be a time-based (v1) UUID");
+        Preconditions.checkArgument(operationType != null, "operationType must not be null");
+        Preconditions.checkArgument(status != null, "status must not be null");
+        this.jobId = jobId;
+        this.operationType = operationType;
+        this.status = status;
+        this.creationTimeMillis = UUIDs.unixTimestamp(jobId);
+        this.nodeExecutionOrder = nodeExecutionOrder;
+        this.operationMetadata = operationMetadata;
+    }
+
+    /**
+     * @return the time-based v1 UUID identifying this job
+     */
+    public UUID jobId()
+    {
+        return jobId;
+    }
+
+    /**
+     * @return the operation type (e.g. "restart", "decommission")
+     */
+    public String operationType()
+    {
+        return operationType;
+    }
+
+    /**
+     * @return the current status of the job
+     */
+    public OperationalJobStatus status()
+    {
+        return status;
+    }
+
+    /**
+     * @return the unix timestamp in milliseconds when the job was created, extracted from the time-based UUID
+     */
+    public long creationTimeMillis()
+    {
+        return creationTimeMillis;
+    }
+
+    /**
+     * @return the ordered list of parallel node groups for execution, or null if not set
+     */
+    @Nullable
+    public List<List<String>> nodeExecutionOrder()
+    {
+        return nodeExecutionOrder;
+    }
+
+    /**
+     * @return the operation parameters, or null if not set
+     */
+    @Nullable
+    public Map<String, String> operationMetadata()
+    {
+        return operationMetadata;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        OperationalJobRecord that = (OperationalJobRecord) o;
+        return Objects.equals(jobId, that.jobId)
+               && Objects.equals(operationType, that.operationType)
+               && status == that.status;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(jobId, operationType, status);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "OperationalJobRecord{" +
+               "jobId=" + jobId +
+               ", operationType='" + operationType + '\'' +
+               ", status=" + status +
+               ", creationTimeMillis=" + creationTimeMillis +
+               ", nodeExecutionOrder=" + nodeExecutionOrder +
+               ", operationMetadata=" + operationMetadata +
+               '}';
+    }
+}

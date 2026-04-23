@@ -120,4 +120,9 @@ public interface SidecarConfiguration
      * @return the configuration for lifecycle management
      */
     LifecycleConfiguration lifecycleConfiguration();
+
+    /**
+     * @return the configuration for operational jobs
+     */
+    OperationalJobConfiguration operationalJobConfiguration();
 }

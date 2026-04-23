@@ -34,4 +34,7 @@ public interface TableSchemaMapKeys
     interface SystemViewsClientsSchemaKey extends ClassKey {}
     interface TableHistorySchemaKey extends ClassKey {}
     interface CdcStatesSchemaKey extends ClassKey {}
+    interface ClusterOpsSchemaKey extends ClassKey {}
+    interface ClusterOpsNodeStateSchemaKey extends ClassKey {}
+    interface ActiveClusterOpsSchemaKey extends ClassKey {}
 }
