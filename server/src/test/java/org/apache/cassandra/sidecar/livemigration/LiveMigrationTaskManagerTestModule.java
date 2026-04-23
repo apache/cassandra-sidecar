@@ -23,6 +23,7 @@ import java.util.List;
 import com.google.inject.AbstractModule;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
@@ -118,6 +119,7 @@ class LiveMigrationTaskManagerTestModule extends AbstractModule
         when(instanceMeta.host()).thenReturn(hostName);
         when(instanceMeta.id()).thenReturn(id);
         when(instanceMeta.dataDirs()).thenReturn(dataDirs);
+        when(instanceMeta.delegate()).thenReturn(mock(CassandraAdapterDelegate.class));
     }
 
     private void configureDataCopyTaskFactory()
