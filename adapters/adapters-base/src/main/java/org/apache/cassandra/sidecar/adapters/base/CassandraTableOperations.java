@@ -32,7 +32,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class CassandraTableOperations implements TableOperations
 {
-    private final JmxClient jmxClient;
+    protected final JmxClient jmxClient;
 
     public CassandraTableOperations(JmxClient jmxClient)
     {

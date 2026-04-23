@@ -31,12 +31,9 @@ import org.jetbrains.annotations.NotNull;
  */
 public class Cassandra50TableOperations extends CassandraTableOperations
 {
-    private final JmxClient jmxClient;
-
     public Cassandra50TableOperations(JmxClient jmxClient)
     {
         super(jmxClient);
-        this.jmxClient = jmxClient;
     }
 
     /**
