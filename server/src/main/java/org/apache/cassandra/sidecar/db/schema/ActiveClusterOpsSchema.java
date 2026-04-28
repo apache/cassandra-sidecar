@@ -25,8 +25,11 @@ import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Schema for the {@code active_cluster_ops} table, which tracks active operations
- * and provides mutual exclusion via lightweight transactions (LWT).
+ * Schema for the {@code active_cluster_ops} table, which ensures that only one active operation of a given type
+ * is running at a time across the cluster. When a Sidecar instance receives a request to set an operation to
+ * {@code RUNNING}, it inserts the operation into this table using a lightweight transaction (LWT) to guarantee 
+ * mutual exclusion. Sidecar instances also periodically query this table to discover when an operation has been 
+ * activated.
  */
 public class ActiveClusterOpsSchema extends TableSchema
 {
@@ -66,29 +69,18 @@ public class ActiveClusterOpsSchema extends TableSchema
                              "  operation_type text," +
                              "  operation_id uuid," +
                              "  PRIMARY KEY ((cluster_name), operation_type)" +
-                             ") WITH default_time_to_live = %s",
+                             ") WITH compaction = {'class': 'LeveledCompactionStrategy'}" +
+                             "  AND default_time_to_live = %s",
                              keyspaceConfig.keyspace(), TABLE_NAME, tableTtl.toSeconds());
     }
 
     @Override
     protected void prepareStatements(@NotNull Session session)
     {
-        trySetActive = prepare(trySetActive, session,
-                               String.format("INSERT INTO %s.%s (cluster_name, operation_type, operation_id) " +
-                                             "VALUES (?, ?, ?) IF NOT EXISTS",
-                                             keyspaceName(), tableName()));
-        getActive = prepare(getActive, session,
-                            String.format("SELECT operation_type, operation_id FROM %s.%s " +
-                                          "WHERE cluster_name = ?",
-                                          keyspaceName(), tableName()));
-        getActiveByType = prepare(getActiveByType, session,
-                                  String.format("SELECT operation_id FROM %s.%s " +
-                                                "WHERE cluster_name = ? AND operation_type = ?",
-                                                keyspaceName(), tableName()));
-        clearActive = prepare(clearActive, session,
-                              String.format("DELETE FROM %s.%s " +
-                                            "WHERE cluster_name = ? AND operation_type = ? IF operation_id = ?",
-                                            keyspaceName(), tableName()));
+        trySetActive = prepare(trySetActive, session, CqlLiterals.trySetActive(keyspaceConfig));
+        getActive = prepare(getActive, session, CqlLiterals.getActive(keyspaceConfig));
+        getActiveByType = prepare(getActiveByType, session, CqlLiterals.getActiveByType(keyspaceConfig));
+        clearActive = prepare(clearActive, session, CqlLiterals.clearActive(keyspaceConfig));
     }
 
     public PreparedStatement trySetActive()
@@ -109,5 +101,37 @@ public class ActiveClusterOpsSchema extends TableSchema
     public PreparedStatement clearActive()
     {
         return clearActive;
+    }
+
+    private static class CqlLiterals
+    {
+        static String trySetActive(SchemaKeyspaceConfiguration config)
+        {
+            return withTable("INSERT INTO %s.%s (cluster_name, operation_type, operation_id) " +
+                             "VALUES (?, ?, ?) IF NOT EXISTS", config);
+        }
+
+        static String getActive(SchemaKeyspaceConfiguration config)
+        {
+            return withTable("SELECT operation_type, operation_id FROM %s.%s " +
+                             "WHERE cluster_name = ?", config);
+        }
+
+        static String getActiveByType(SchemaKeyspaceConfiguration config)
+        {
+            return withTable("SELECT operation_id FROM %s.%s " +
+                             "WHERE cluster_name = ? AND operation_type = ?", config);
+        }
+
+        static String clearActive(SchemaKeyspaceConfiguration config)
+        {
+            return withTable("DELETE FROM %s.%s " +
+                             "WHERE cluster_name = ? AND operation_type = ? IF operation_id = ?", config);
+        }
+
+        private static String withTable(String format, SchemaKeyspaceConfiguration config)
+        {
+            return String.format(format, config.keyspace(), TABLE_NAME);
+        }
     }
 }

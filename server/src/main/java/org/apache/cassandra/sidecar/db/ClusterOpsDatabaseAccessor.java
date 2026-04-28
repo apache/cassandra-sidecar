@@ -49,6 +49,8 @@ import org.jetbrains.annotations.VisibleForTesting;
 public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchema>
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClusterOpsDatabaseAccessor.class);
+    private static final TypeToken<List<List<UUID>>> NODES_ORDER_TYPE = new TypeToken<List<List<UUID>>>() {};
+
     @Inject
     public ClusterOpsDatabaseAccessor(SidecarSchema sidecarSchema, CQLSessionProvider sessionProvider)
     {
@@ -110,17 +112,22 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
         return records;
     }
 
-    private static final TypeToken<List<List<String>>> NODES_ORDER_TYPE = new TypeToken<List<List<String>>>() {};
-
     private OperationalJobRecord recordFromRow(Row row)
     {
         UUID operationId = row.getUUID("operation_id");
         String operationType = row.getString("operation_type");
         OperationalJobStatus status = OperationalJobStatus.valueOf(row.getString("status"));
-        List<List<String>> nodeExecutionOrder = row.get("node_execution_order", NODES_ORDER_TYPE);
+        List<List<UUID>> nodeExecutionOrder = row.get("node_execution_order", NODES_ORDER_TYPE);
+        if (nodeExecutionOrder != null && nodeExecutionOrder.isEmpty())
+        {
+            nodeExecutionOrder = null;
+        }
         Map<String, String> operationMetadata = row.getMap("operation_metadata", String.class, String.class);
+        if (operationMetadata.isEmpty())
+        {
+            operationMetadata = null;
+        }
         return new OperationalJobRecord(operationId, operationType, status,
-                                        nodeExecutionOrder == null || nodeExecutionOrder.isEmpty() ? null : nodeExecutionOrder,
-                                        operationMetadata.isEmpty() ? null : operationMetadata);
+                                        nodeExecutionOrder, operationMetadata);
     }
 }

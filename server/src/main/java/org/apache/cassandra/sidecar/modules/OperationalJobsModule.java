@@ -74,6 +74,6 @@ public class OperationalJobsModule extends AbstractModule
                                             ActiveClusterOpsDatabaseAccessor activeOpsAccessor)
     {
         return new CassandraStorageProvider(sessionProvider,
-                                            clusterOpsAccessor, nodeStateAccessor, activeOpsAccessor);
+                                            clusterOpsAccessor, nodeStateAccessor, activeOpsAccessor, null);
     }
 }

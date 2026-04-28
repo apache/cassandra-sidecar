@@ -25,7 +25,9 @@ import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Schema for the {@code cluster_ops_node_state} table, which tracks node-level status within an operation.
+ * Schema for the {@code cluster_ops_node_state} table, which tracks the status of an operation for a given node.
+ * Sidecar instances query this table to check the status of nodes being operated on before their local nodes,
+ * enabling distributed coordination of cluster-wide operations.
  */
 public class ClusterOpsNodeStateSchema extends TableSchema
 {
@@ -65,7 +67,8 @@ public class ClusterOpsNodeStateSchema extends TableSchema
                              "  node_id uuid," +
                              "  node_status text," +
                              "  PRIMARY KEY ((cluster_name, operation_id), node_id)" +
-                             ") WITH default_time_to_live = %s",
+                             ") WITH compaction = {'class': 'LeveledCompactionStrategy'}" +
+                             "  AND default_time_to_live = %s",
                              keyspaceConfig.keyspace(), TABLE_NAME, tableTtl.toSeconds());
     }
 

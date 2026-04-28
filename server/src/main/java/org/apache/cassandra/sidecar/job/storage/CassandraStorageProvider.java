@@ -46,15 +46,29 @@ public class CassandraStorageProvider implements StorageProvider
     private final ActiveClusterOpsDatabaseAccessor activeOpsAccessor;
     private volatile String clusterName;
 
+    /**
+     * Constructs a CassandraStorageProvider. When {@code clusterName} is non-null, it indicates that
+     * operational state is stored in a separate Cassandra cluster from the one Sidecar manages. When null,
+     * the cluster name is derived from the CQL session metadata during {@link #initialize()}, which is the
+     * default for same-cluster storage.
+     *
+     * @param sessionProvider  the CQL session provider
+     * @param clusterOpsAccessor  accessor for the cluster_ops table
+     * @param nodeStateAccessor   accessor for the cluster_ops_node_state table
+     * @param activeOpsAccessor   accessor for the active_cluster_ops table
+     * @param clusterName         the name of the managed cluster, or null to derive from session metadata
+     */
     public CassandraStorageProvider(CQLSessionProvider sessionProvider,
                                     ClusterOpsDatabaseAccessor clusterOpsAccessor,
                                     ClusterOpsNodeStateDatabaseAccessor nodeStateAccessor,
-                                    ActiveClusterOpsDatabaseAccessor activeOpsAccessor)
+                                    ActiveClusterOpsDatabaseAccessor activeOpsAccessor,
+                                    @Nullable String clusterName)
     {
         this.sessionProvider = sessionProvider;
         this.clusterOpsAccessor = clusterOpsAccessor;
         this.nodeStateAccessor = nodeStateAccessor;
         this.activeOpsAccessor = activeOpsAccessor;
+        this.clusterName = clusterName;
     }
 
     @Override
@@ -158,6 +172,10 @@ public class CassandraStorageProvider implements StorageProvider
     {
         // Schema initialization is handled by SidecarSchemaInitializer.
         // TTL on all tables handles record pruning.
+        if (clusterName != null)
+        {
+            return;
+        }
         try
         {
             clusterName = sessionProvider.get().getCluster().getMetadata().getClusterName();

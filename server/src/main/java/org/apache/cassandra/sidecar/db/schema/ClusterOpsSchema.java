@@ -25,7 +25,9 @@ import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Schema for the {@code cluster_ops} table, which persists and tracks operational jobs.
+ * Schema for the {@code cluster_ops} table, which persists and tracks active and past operational jobs.
+ * When durable operational job storage is used, all operational job APIs query from this table to retrieve
+ * job state, including the operation type, status, node execution order, and operation metadata.
  */
 public class ClusterOpsSchema extends TableSchema
 {
@@ -65,10 +67,11 @@ public class ClusterOpsSchema extends TableSchema
                              "  operation_id timeuuid," +
                              "  operation_type text," +
                              "  status text," +
-                             "  node_execution_order frozen<list<frozen<list<text>>>>," +
+                             "  node_execution_order frozen<list<frozen<list<uuid>>>>," +
                              "  operation_metadata frozen<map<text, text>>," +
                              "  PRIMARY KEY ((cluster_name), operation_id, operation_type)" +
                              ") WITH CLUSTERING ORDER BY (operation_id DESC, operation_type ASC)" +
+                             "  AND compaction = {'class': 'LeveledCompactionStrategy'}" +
                              "  AND default_time_to_live = %s",
                              keyspaceConfig.keyspace(), TABLE_NAME, tableTtl.toSeconds());
     }

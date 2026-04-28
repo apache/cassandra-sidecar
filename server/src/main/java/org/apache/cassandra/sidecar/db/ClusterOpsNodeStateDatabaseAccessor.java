@@ -43,6 +43,8 @@ import org.jetbrains.annotations.VisibleForTesting;
 @Singleton
 public class ClusterOpsNodeStateDatabaseAccessor extends DatabaseAccessor<ClusterOpsNodeStateSchema>
 {
+    private static final int BATCH_CHUNK_SIZE = 100;
+
     @Inject
     public ClusterOpsNodeStateDatabaseAccessor(SidecarSchema sidecarSchema, CQLSessionProvider sessionProvider)
     {
@@ -61,8 +63,6 @@ public class ClusterOpsNodeStateDatabaseAccessor extends DatabaseAccessor<Cluste
                                               .bind(clusterName, operationId, nodeId, nodeStatus.name());
         execute(statement);
     }
-
-    static final int BATCH_CHUNK_SIZE = 100;
 
     public void updateNodeStatuses(String clusterName, UUID operationId,
                                    List<UUID> nodeIds, OperationalJobStatus nodeStatus)

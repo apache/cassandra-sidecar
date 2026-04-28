@@ -38,7 +38,7 @@ public class OperationalJobRecord
     private final OperationalJobStatus status;
     private final long creationTimeMillis;
     @Nullable
-    private final List<List<String>> nodeExecutionOrder;
+    private final List<List<UUID>> nodeExecutionOrder;
     @Nullable
     private final Map<String, String> operationMetadata;
 
@@ -64,7 +64,7 @@ public class OperationalJobRecord
      * @param operationMetadata the operation parameters, or null
      */
     public OperationalJobRecord(UUID jobId, String operationType, OperationalJobStatus status,
-                                @Nullable List<List<String>> nodeExecutionOrder,
+                                @Nullable List<List<UUID>> nodeExecutionOrder,
                                 @Nullable Map<String, String> operationMetadata)
     {
         Preconditions.checkArgument(jobId != null, "jobId must not be null");
@@ -115,7 +115,7 @@ public class OperationalJobRecord
      * @return the ordered list of parallel node groups for execution, or null if not set
      */
     @Nullable
-    public List<List<String>> nodeExecutionOrder()
+    public List<List<UUID>> nodeExecutionOrder()
     {
         return nodeExecutionOrder;
     }
