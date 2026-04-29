@@ -93,7 +93,7 @@ public interface StorageProvider extends Closeable
      * @param operationType the operation type (e.g. "restart")
      * @param operationId   the unique identifier for this operation
      * @return {@code true} if the operation was successfully set as active, {@code false} if
-     *         another operation of the same type is already active
+     *         an operation of the same type is already active (including the same operation ID)
      */
     boolean trySetActiveOperation(String operationType, UUID operationId);
 
