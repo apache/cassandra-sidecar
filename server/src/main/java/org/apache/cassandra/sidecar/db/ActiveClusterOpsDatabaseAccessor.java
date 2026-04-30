@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
@@ -56,6 +57,8 @@ public class ActiveClusterOpsDatabaseAccessor extends DatabaseAccessor<ActiveClu
     public boolean trySetActiveOperation(String clusterName, String operationType, UUID operationId)
     {
         BoundStatement statement = tableSchema.trySetActive().bind(clusterName, operationType, operationId);
+        statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
+        statement.setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL);
         ResultSet resultSet = execute(statement);
         return resultSet.wasApplied();
     }
@@ -64,6 +67,7 @@ public class ActiveClusterOpsDatabaseAccessor extends DatabaseAccessor<ActiveClu
     public UUID getActiveOperation(String clusterName, String operationType)
     {
         BoundStatement statement = tableSchema.getActiveByType().bind(clusterName, operationType);
+        statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         ResultSet resultSet = execute(statement);
         Row row = resultSet.one();
         return row == null ? null : row.getUUID("operation_id");
@@ -73,6 +77,7 @@ public class ActiveClusterOpsDatabaseAccessor extends DatabaseAccessor<ActiveClu
     public Map<String, UUID> getActiveOperations(String clusterName)
     {
         BoundStatement statement = tableSchema.getActive().bind(clusterName);
+        statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         ResultSet resultSet = execute(statement);
         Map<String, UUID> activeOps = new HashMap<>();
         for (Row row : resultSet)
@@ -85,6 +90,8 @@ public class ActiveClusterOpsDatabaseAccessor extends DatabaseAccessor<ActiveClu
     public boolean clearActiveOperation(String clusterName, String operationType, UUID operationId)
     {
         BoundStatement statement = tableSchema.clearActive().bind(clusterName, operationType, operationId);
+        statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
+        statement.setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL);
         ResultSet resultSet = execute(statement);
         return resultSet.wasApplied();
     }

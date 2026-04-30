@@ -25,6 +25,7 @@ import java.util.UUID;
 
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
@@ -65,6 +66,7 @@ public class ClusterOpsNodeStateDatabaseAccessor extends DatabaseAccessor<Cluste
     {
         BoundStatement statement = tableSchema.insertNodeStatus()
                                               .bind(clusterName, operationId, nodeId, nodeStatus.name());
+        statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         execute(statement);
     }
 
@@ -81,6 +83,7 @@ public class ClusterOpsNodeStateDatabaseAccessor extends DatabaseAccessor<Cluste
                                                       .bind(clusterName, operationId, nodeId, nodeStatus.name());
                 batch.add(statement);
             }
+            batch.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
             execute(batch);
         }
     }
@@ -89,6 +92,7 @@ public class ClusterOpsNodeStateDatabaseAccessor extends DatabaseAccessor<Cluste
     public OperationalJobStatus getNodeStatus(String clusterName, UUID operationId, UUID nodeId)
     {
         BoundStatement statement = tableSchema.selectNodeStatus().bind(clusterName, operationId, nodeId);
+        statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         ResultSet resultSet = execute(statement);
         Row row = resultSet.one();
         if (row == null)
@@ -102,6 +106,7 @@ public class ClusterOpsNodeStateDatabaseAccessor extends DatabaseAccessor<Cluste
     public Map<UUID, OperationalJobStatus> getNodeStatusesForOperation(String clusterName, UUID operationId)
     {
         BoundStatement statement = tableSchema.selectAllNodeStatuses().bind(clusterName, operationId);
+        statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         ResultSet resultSet = execute(statement);
         Map<UUID, OperationalJobStatus> statuses = new HashMap<>();
         for (Row row : resultSet)

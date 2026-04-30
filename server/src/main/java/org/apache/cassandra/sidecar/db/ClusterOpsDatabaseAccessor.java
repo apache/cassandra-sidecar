@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
@@ -72,6 +73,7 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
                                                     job.status().name(),
                                                     job.nodeExecutionOrder(),
                                                     job.operationMetadata());
+        statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         execute(statement);
     }
 
@@ -79,6 +81,7 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
     public OperationalJobRecord findJob(String clusterName, UUID jobId)
     {
         BoundStatement statement = tableSchema.selectJob().bind(clusterName, jobId);
+        statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         ResultSet resultSet = execute(statement);
         Row row = resultSet.one();
         if (row == null)
@@ -96,6 +99,7 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
     {
         BoundStatement statement = tableSchema.updateStatus()
                                               .bind(status.name(), clusterName, jobId, operationType);
+        statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         execute(statement);
     }
 
@@ -103,6 +107,7 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
     public List<OperationalJobRecord> findAllJobs(String clusterName, int limit)
     {
         BoundStatement statement = tableSchema.findAllJobs().bind(clusterName, limit);
+        statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         ResultSet resultSet = execute(statement);
         List<OperationalJobRecord> records = new ArrayList<>();
         for (Row row : resultSet)
