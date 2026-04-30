@@ -43,18 +43,22 @@ import org.jetbrains.annotations.VisibleForTesting;
 @Singleton
 public class ClusterOpsNodeStateDatabaseAccessor extends DatabaseAccessor<ClusterOpsNodeStateSchema>
 {
-    private static final int BATCH_CHUNK_SIZE = 100;
+    private static final int DEFAULT_BATCH_CHUNK_SIZE = 100;
+
+    private final int batchChunkSize;
 
     @Inject
     public ClusterOpsNodeStateDatabaseAccessor(SidecarSchema sidecarSchema, CQLSessionProvider sessionProvider)
     {
-        this(sidecarSchema.tableSchema(ClusterOpsNodeStateSchema.class), sessionProvider);
+        this(sidecarSchema.tableSchema(ClusterOpsNodeStateSchema.class), sessionProvider, DEFAULT_BATCH_CHUNK_SIZE);
     }
 
     @VisibleForTesting
-    public ClusterOpsNodeStateDatabaseAccessor(ClusterOpsNodeStateSchema schema, CQLSessionProvider sessionProvider)
+    public ClusterOpsNodeStateDatabaseAccessor(ClusterOpsNodeStateSchema schema, CQLSessionProvider sessionProvider,
+                                               int batchChunkSize)
     {
         super(schema, sessionProvider);
+        this.batchChunkSize = batchChunkSize;
     }
 
     public void updateNodeStatus(String clusterName, UUID operationId, UUID nodeId, OperationalJobStatus nodeStatus)
@@ -67,9 +71,9 @@ public class ClusterOpsNodeStateDatabaseAccessor extends DatabaseAccessor<Cluste
     public void updateNodeStatuses(String clusterName, UUID operationId,
                                    List<UUID> nodeIds, OperationalJobStatus nodeStatus)
     {
-        for (int i = 0; i < nodeIds.size(); i += BATCH_CHUNK_SIZE)
+        for (int i = 0; i < nodeIds.size(); i += batchChunkSize)
         {
-            List<UUID> chunk = nodeIds.subList(i, Math.min(i + BATCH_CHUNK_SIZE, nodeIds.size()));
+            List<UUID> chunk = nodeIds.subList(i, Math.min(i + batchChunkSize, nodeIds.size()));
             BatchStatement batch = new BatchStatement(BatchStatement.Type.UNLOGGED);
             for (UUID nodeId : chunk)
             {
