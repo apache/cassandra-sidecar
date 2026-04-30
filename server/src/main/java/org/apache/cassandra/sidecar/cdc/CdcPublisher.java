@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.google.inject.Singleton;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -47,7 +46,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.CdcSystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -59,7 +58,6 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_
 /**
  * Class that handles CDC life cycle
  */
-@Singleton
 public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CdcPublisher.class);
@@ -71,7 +69,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
     private volatile boolean isInitialized = false;
     private volatile boolean cdcCacheWarmedUp = false;
     private final CdcDatabaseAccessor databaseAccessor;
-    private final VirtualTablesDatabaseAccessor virtualTables;
+    private final CdcSystemViewsDatabaseAccessor systemViews;
     private final SidecarCdcStats sidecarCdcStats;
     private final SchemaSupplier schemaSupplier;
     private final InstanceMetadataFetcher instanceMetadataFetcher;
@@ -95,7 +93,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
                         CdcConfig conf,
                         CdcDatabaseAccessor databaseAccessor,
                         ICdcStats cdcStats,
-                        VirtualTablesDatabaseAccessor virtualTables,
+                        CdcSystemViewsDatabaseAccessor systemViews,
                         SidecarCdcStats sidecarCdcStats,
                         Provider<RangeManager> rangeManagerProvider,
                         CassandraBridgeFactory cassandraBridgeFactory,
@@ -108,7 +106,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         this.executorPools = executorPools.internal();
         this.conf = conf;
         this.databaseAccessor = databaseAccessor;
-        this.virtualTables = virtualTables;
+        this.systemViews = systemViews;
         this.schemaSupplier = schemaSupplier;
         this.instanceMetadataFetcher = instanceMetadataFetcher;
         this.clusterConfigProvider = clusterConfigProvider;
@@ -276,7 +274,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
             {
                 LOGGER.info("Cdc not enabled in this DC localDc={} cdcDc={}", localDc, conf.datacenter());
             }
-            else if (virtualTables.isCdcOnRepairEnabled())
+            else if (systemViews.isCdcOnRepairEnabled())
             {
                 LOGGER.warn("Cannot run CDC while cdc on repair is enabled, disable cdc_on_repair_enabled in the yaml file.");
                 sidecarCdcStats.captureCdcOnRepairEnabled();

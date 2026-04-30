@@ -39,14 +39,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
-import org.apache.cassandra.sidecar.db.SystemViewsDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.CdcSystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.server.CdcMetrics;
@@ -64,7 +63,6 @@ import static org.apache.cassandra.sidecar.utils.CdcUtil.parseSegmentId;
  * PeriodTask to monitor and remove the oldest commit log segments in the `cdc_raw` directory
  * when the space used hits the `cdc_total_space` limit set in the yaml file.
  */
-@Singleton
 public class CdcRawDirectorySpaceCleaner implements PeriodicTask
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CdcRawDirectorySpaceCleaner.class);
@@ -72,7 +70,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
     public static final String CDC_DIR_NAME = "cdc_raw";
 
     private final TimeProvider timeProvider;
-    private final SystemViewsDatabaseAccessor systemViewsDatabaseAccessor;
+    private final CdcSystemViewsDatabaseAccessor systemViewsDatabaseAccessor;
     private final CdcConfiguration cdcConfiguration;
     private final InstancesMetadata instancesMetadata;
     private final CdcMetrics cdcMetrics;
@@ -87,7 +85,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
 
     @Inject
     public CdcRawDirectorySpaceCleaner(TimeProvider timeProvider,
-                                       SystemViewsDatabaseAccessor systemViewsDatabaseAccessor,
+                                       CdcSystemViewsDatabaseAccessor systemViewsDatabaseAccessor,
                                        ServiceConfiguration serviceConfiguration,
                                        InstancesMetadata instancesMetadata,
                                        SidecarMetrics metrics)

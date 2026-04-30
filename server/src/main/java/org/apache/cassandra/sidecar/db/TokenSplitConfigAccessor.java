@@ -20,7 +20,6 @@
 package org.apache.cassandra.sidecar.db;
 
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 
@@ -59,9 +58,8 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
  *
  * @see ConfigAccessorImpl
  * @see org.apache.cassandra.sidecar.utils.TokenSplitUtil
- * @see org.apache.cassandra.sidecar.db.CdcDatabaseAccessor
+ * @see CdcDatabaseAccessor
  */
-@Singleton
 public class TokenSplitConfigAccessor extends ConfigAccessorImpl
 {
     @Inject

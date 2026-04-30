@@ -34,7 +34,7 @@ import org.apache.cassandra.sidecar.cdc.SidecarCdcStats;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.CdcSystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -58,7 +58,7 @@ public class TestCdcPublisher extends CdcPublisher
                             CdcConfig conf,
                             CdcDatabaseAccessor databaseAccessor,
                             ICdcStats cdcStats,
-                            VirtualTablesDatabaseAccessor virtualTables,
+                            CdcSystemViewsDatabaseAccessor cdcSystemViews,
                             SidecarCdcStats sidecarCdcStats,
                             Provider<RangeManager> rangeManagerProvider,
                             CassandraBridgeFactory cassandraBridgeFactory,
@@ -67,7 +67,7 @@ public class TestCdcPublisher extends CdcPublisher
     {
         super(vertx, executorPools, clusterConfigProvider,
               schemaSupplier, instanceMetadataFetcher, conf, databaseAccessor, cdcStats,
-              virtualTables, sidecarCdcStats, rangeManagerProvider,
+              cdcSystemViews, sidecarCdcStats, rangeManagerProvider,
               cassandraBridgeFactory, sidecarCdcClientProvider,
               mock(CachingSchemaStore.class),
               mock(KafkaProducerFactory.class),

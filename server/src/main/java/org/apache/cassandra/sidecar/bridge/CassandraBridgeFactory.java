@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-import jakarta.inject.Singleton;
 import org.apache.cassandra.bridge.BaseCassandraBridgeFactory;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraVersion;
@@ -43,7 +42,6 @@ import static org.apache.cassandra.bridge.BaseCassandraBridgeFactory.getCassandr
  * and provides methods to retrieve bridge instances for specific Cassandra versions.
  * Each bridge is loaded from version-specific JAR resources and instantiated using reflection.
  */
-@Singleton
 public class CassandraBridgeFactory
 {
     // maps Cassandra version-specific jar name (e.g. 'four-zero') to matching CassandraBridge
@@ -120,8 +118,7 @@ public class CassandraBridgeFactory
 
     public ClassLoader buildClassLoader(String... resourceNames)
     {
-        return AccessController.doPrivileged((PrivilegedAction<ClassLoader>) () ->
-                BaseCassandraBridgeFactory.buildClassLoader(resourceNames));
+        return AccessController.doPrivileged((PrivilegedAction<ClassLoader>) () -> BaseCassandraBridgeFactory.buildClassLoader(resourceNames));
     }
 
 }

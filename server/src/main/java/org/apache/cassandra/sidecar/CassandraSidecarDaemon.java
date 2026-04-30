@@ -28,6 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Guice;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.jetbrains.annotations.VisibleForTesting;
@@ -42,9 +44,11 @@ public class CassandraSidecarDaemon
     @VisibleForTesting
     static Server runningApplication;
 
-    public static void main(String[] args)
+    public static void main(String[] args) throws Exception
     {
-        Server app = Guice.createInjector(SidecarModules.all(determineConfigPath()))
+        Path confPath = determineConfigPath();
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(confPath);
+        Server app = Guice.createInjector(SidecarModules.all(config))
                           .getInstance(Server.class);
         runningApplication = app;
         app.start().onSuccess(deploymentId -> Runtime.getRuntime().addShutdownHook(new Thread(() -> {

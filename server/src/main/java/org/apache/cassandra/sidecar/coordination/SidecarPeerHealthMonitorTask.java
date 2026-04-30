@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -53,7 +52,6 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
  * Pings other 'peer' Sidecar(s) that are relevant to this Sidecar over HTTP and notifies
  * listeners when other Sidecar(s) goes DOWN or OK.
  */
-@Singleton
 public class SidecarPeerHealthMonitorTask implements PeriodicTask
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarPeerHealthMonitorTask.class);

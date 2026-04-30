@@ -116,3 +116,58 @@ that can be later switched transparently without affecting the classes that depe
 Prefer creating concrete classes over utility methods. The concrete classes can be managed as a
 [Singleton](https://en.wikipedia.org/wiki/Singleton_pattern) if they do not have external dependencies that might
 change their behavior based on the configuration.
+
+## Scope all dependencies to the feature module that owns them
+
+When a feature has its own module, all bindings required exclusively by that feature should live in that module, not in a
+shared or base module. This prevents dependency leakage and keeps the module graph clean.
+
+For example, [CdcModule](CdcModule.java) owns every binding that CDC components depend on, including database accessors,
+schema stores, and coordination helpers. None of these CDC-specific bindings appear in general-purpose modules such as
+[UtilitiesModule](UtilitiesModule.java) or [SchedulingModule](SchedulingModule.java).
+
+The benefit is bi-directional: other modules stay lean (no unused bindings when the feature is disabled), and the feature
+module documents its own dependency surface without requiring readers to hunt across multiple modules.
+
+## Conditional module installation
+
+When a feature can be disabled at runtime, its module should be conditionally installed based on configuration.
+[SidecarModules](SidecarModules.java) illustrates this pattern with `addIf`:
+
+```java
+boolean cdcEnabled = config == null || config.serviceConfiguration().cdcConfiguration().isEnabled();
+...
+.addIf(cdcEnabled, new CdcModule())
+```
+
+Because all CDC bindings live in `CdcModule`, conditionally omitting the module is enough to exclude the entire feature.
+This only works if the previous practice — scope all dependencies to the feature module — is followed. A conditionally
+installed module must be self-contained: it must not leave unsatisfied bindings referenced by other always-installed
+modules.
+
+## Declare scope in the module for conditionally installed features
+
+The [Guice wiki on Scopes](https://github.com/google/guice/wiki/Scopes) recommends placing scope annotations directly on
+the implementation class:
+
+> *"Specify the scope for a type by applying the scope annotation to the implementation class. As well as being
+> functional, this annotation also serves as documentation."*
+
+This is good general advice, but it has a subtle consequence: a class annotated with both `@Singleton` and `@Inject` is
+eligible for Guice's just-in-time (JIT) binding. Guice will instantiate and cache it as a singleton even if the module
+that owns it was never installed. For always-installed modules this is harmless, but for conditionally installed modules
+it defeats the gate entirely.
+
+Therefore, for classes that belong exclusively to a conditionally installed module (such as [CdcModule](CdcModule.java)):
+
+- **Do not** place `@Singleton` on the class.
+- **Do** declare the singleton scope in the owning module, either via `bind(X.class).in(Scopes.SINGLETON)` in
+  `configure()`, or via `@Provides @Singleton` for interface-bound types.
+
+```java
+// In CdcModule.configure() — scope is owned by the module, not the class
+bind(CdcDatabaseAccessor.class).in(Scopes.SINGLETON);
+bind(CachingSchemaStore.class).in(Scopes.SINGLETON);
+```
+
+This ensures the singleton guarantee only exists when `CdcModule` is installed. No module, no binding, no object.

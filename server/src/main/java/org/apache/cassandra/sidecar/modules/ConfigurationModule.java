@@ -18,8 +18,6 @@
 
 package org.apache.cassandra.sidecar.modules;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -54,7 +52,6 @@ import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
@@ -64,6 +61,7 @@ import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.EventBusUtils;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.common.server.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
@@ -75,35 +73,30 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_
 public class ConfigurationModule extends AbstractModule
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationModule.class);
-    protected final Path confPath;
+    @Nullable
+    private final SidecarConfiguration config;
+
 
     /**
-     * Constructs the Guice main module to run Cassandra Sidecar
-     */
-    public ConfigurationModule()
-    {
-        confPath = null;
-    }
-
-    /**
-     * Constructs the Guice main module with the configured yaml {@code confPath} to run Cassandra Sidecar
+     * Constructs the Guice main module with a pre-parsed {@link SidecarConfiguration}.
+     * Using this constructor avoids a second YAML parse at injection time.
      *
-     * @param confPath the path to the yaml configuration file
+     * @param config the already-parsed sidecar configuration
      */
-    public ConfigurationModule(Path confPath)
+    public ConfigurationModule(SidecarConfiguration config)
     {
-        this.confPath = confPath;
+        this.config = config;
     }
 
     @Provides
     @Singleton
-    SidecarConfiguration sidecarConfiguration() throws IOException
+    SidecarConfiguration sidecarConfiguration()
     {
-        if (confPath == null)
+        if (config != null)
         {
-            throw new NullPointerException("the YAML configuration path for Sidecar has not been defined.");
+            return config;
         }
-        return SidecarConfigurationImpl.readYamlConfiguration(confPath);
+        throw new NullPointerException("Sidecar configuration is not defined");
     }
 
     @Provides

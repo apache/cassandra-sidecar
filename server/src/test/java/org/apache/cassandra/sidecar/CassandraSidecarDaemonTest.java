@@ -108,7 +108,7 @@ class CassandraSidecarDaemonTest
     }
 
     @Test
-    void testSuccessfulStartup()
+    void testSuccessfulStartup() throws Exception
     {
         Path path = Paths.get("../conf/sidecar.yaml");
         assertThat(path).exists();
@@ -186,7 +186,7 @@ class CassandraSidecarDaemonTest
     }
 
     @Test
-    void testLogbackConfiguration()
+    void testLogbackConfiguration() throws Exception
     {
         Path path = Paths.get("../conf/sidecar.yaml");
         assertThat(path).exists();

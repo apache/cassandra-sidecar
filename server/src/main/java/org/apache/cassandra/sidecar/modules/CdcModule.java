@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
+import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import io.vertx.core.Vertx;
@@ -59,7 +60,6 @@ import org.apache.cassandra.sidecar.cdc.SidecarCdcStats;
 import org.apache.cassandra.sidecar.cdc.SidecarClientSecretsProvider;
 import org.apache.cassandra.sidecar.cdc.SidecarClusterConfigProvider;
 import org.apache.cassandra.sidecar.cdc.SidecarCqlToAvroSchemaConverter;
-import org.apache.cassandra.sidecar.client.SidecarInstancesProvider;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload;
@@ -72,7 +72,6 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
 import org.apache.cassandra.sidecar.coordination.ContentionFreeRangeManager;
-import org.apache.cassandra.sidecar.coordination.DynamicSidecarInstancesProvider;
 import org.apache.cassandra.sidecar.coordination.InnerDcTokenAdjacentPeerProvider;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.coordination.SidecarHttpHealthProvider;
@@ -82,10 +81,10 @@ import org.apache.cassandra.sidecar.coordination.SidecarPeerProvider;
 import org.apache.cassandra.sidecar.coordination.TokenRingProvider;
 import org.apache.cassandra.sidecar.db.CdcConfigAccessor;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.CdcSystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
 import org.apache.cassandra.sidecar.db.KafkaConfigAccessor;
 import org.apache.cassandra.sidecar.db.TokenSplitConfigAccessor;
-import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.CdcStatesSchema;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemViewsSchema;
@@ -125,6 +124,20 @@ public class CdcModule extends AbstractModule
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CdcModule.class);
 
+    @Override
+    protected void configure()
+    {
+        bind(CachingSchemaStore.class).in(Scopes.SINGLETON);
+        bind(CdcRawDirectorySpaceCleaner.class).in(Scopes.SINGLETON);
+        bind(SidecarPeerHealthMonitorTask.class).in(Scopes.SINGLETON);
+        bind(InnerDcTokenAdjacentPeerProvider.class).in(Scopes.SINGLETON);
+        bind(CdcDatabaseAccessor.class).in(Scopes.SINGLETON);
+        bind(CdcConfigAccessor.class).in(Scopes.SINGLETON);
+        bind(KafkaConfigAccessor.class).in(Scopes.SINGLETON);
+        bind(TokenSplitConfigAccessor.class).in(Scopes.SINGLETON);
+        bind(CdcSystemViewsDatabaseAccessor.class).in(Scopes.SINGLETON);
+    }
+
     @ProvidesIntoMap
     @KeyClassMapKey(PeriodicTaskMapKeys.SidecarPeerHealthMonitorTaskKey.class)
     PeriodicTask sidecarPeerHealthMonitorTask(SidecarPeerHealthMonitorTask task)
@@ -143,14 +156,14 @@ public class CdcModule extends AbstractModule
     @Provides
     @Singleton
     CassandraClusterSchemaMonitor cassandraClusterSchemaMonitorInstance(InstanceMetadataFetcher instanceMetadataFetcher,
-                                                                         CdcDatabaseAccessor databaseAccessor,
-                                                                         DriverUnsupportedSchemaCache driverUnsupportedSchemaCache,
-                                                                         SidecarConfiguration configuration,
-                                                                         CassandraBridgeFactory cassandraBridgeFactory)
+                                                                        CdcDatabaseAccessor databaseAccessor,
+                                                                        DriverUnsupportedSchemaCache driverUnsupportedSchemaCache,
+                                                                        SidecarConfiguration configuration,
+                                                                        CassandraBridgeFactory cassandraBridgeFactory)
     {
         return new CassandraClusterSchemaMonitor(instanceMetadataFetcher, databaseAccessor,
-                                                  driverUnsupportedSchemaCache, configuration,
-                                                  cassandraBridgeFactory);
+                                                 driverUnsupportedSchemaCache, configuration,
+                                                 cassandraBridgeFactory);
     }
 
     @ProvidesIntoMap
@@ -331,13 +344,6 @@ public class CdcModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SidecarInstancesProvider sidecarInstancesProvider(InstancesMetadata instancesMetadata, ServiceConfiguration serviceConfiguration)
-    {
-        return new DynamicSidecarInstancesProvider(instancesMetadata, serviceConfiguration);
-    }
-
-    @Provides
-    @Singleton
     public SidecarCdcStats sidecarCdcStats()
     {
         return new SidecarCdcStats()
@@ -455,7 +461,7 @@ public class CdcModule extends AbstractModule
                               CdcConfig conf,
                               CdcDatabaseAccessor databaseAccessor,
                               ICdcStats cdcStats,
-                              VirtualTablesDatabaseAccessor virtualTables,
+                              CdcSystemViewsDatabaseAccessor systemViews,
                               SidecarCdcStats sidecarCdcStats,
                               RangeManager rangeManager,
                               CassandraBridgeFactory cassandraBridgeFactory,
@@ -472,7 +478,7 @@ public class CdcModule extends AbstractModule
                                 conf,
                                 databaseAccessor,
                                 cdcStats,
-                                virtualTables,
+                                systemViews,
                                 sidecarCdcStats,
                                 () -> rangeManager,
                                 cassandraBridgeFactory,
@@ -487,13 +493,6 @@ public class CdcModule extends AbstractModule
     public CdcOptions cdcOptions(InstanceMetadataFetcher instanceMetadataFetcher)
     {
         return new SidecarCdcOptions(instanceMetadataFetcher);
-    }
-
-    @Provides
-    @Singleton
-    public TableSchema virtualTablesDatabaseAccessor(ServiceConfiguration configuration)
-    {
-        return new CdcStatesSchema(configuration);
     }
 
     @ProvidesIntoMap

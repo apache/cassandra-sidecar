@@ -42,7 +42,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.CdcSystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.mockito.Mock;
@@ -78,7 +78,7 @@ public class CdcPublisherTests
     @Mock
     private ICdcStats cdcStats;
     @Mock
-    private VirtualTablesDatabaseAccessor virtualTables;
+    private CdcSystemViewsDatabaseAccessor systemViews;
     @Mock
     private SidecarCdcStats sidecarCdcStats;
     @Mock
@@ -119,7 +119,7 @@ public class CdcPublisherTests
             cdcConfig,
             databaseAccessor,
             cdcStats,
-            virtualTables,
+            systemViews,
             sidecarCdcStats,
             rangeManager,
             cassandraBridgeFactory,
