@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.db;
 
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
