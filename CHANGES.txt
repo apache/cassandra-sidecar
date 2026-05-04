@@ -1,5 +1,6 @@
 0.5.0
 -----
+ * Define storage provider interface and Cassandra implementation to support durable job tracking (CASSSIDECAR-373)
  * Validate snapshot name during list snapshot (CASSSIDECAR-461)
 
 0.4.0
