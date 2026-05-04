@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
-import io.netty.handler.codec.http.HttpResponseStatus;
+import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -53,6 +53,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * Supported digest algorithms are determined by {@link DigestAlgorithmFactory} and specified
  * via the {@link LiveMigrationFileDigestRequest#DIGEST_ALGORITHM_PARAM} query parameter.
  */
+@Singleton
 public class LiveMigrationFileDigestHandler extends AbstractHandler<DigestAlgorithm> implements AccessProtected
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationFileDigestHandler.class);
@@ -76,15 +77,7 @@ public class LiveMigrationFileDigestHandler extends AbstractHandler<DigestAlgori
     protected DigestAlgorithm extractParamsOrThrow(RoutingContext context)
     {
         String digestAlgorithmParam = getDigestAlgorithmParam(context);
-        try
-        {
-            return digestAlgorithmFactory.getDigestAlgorithm(digestAlgorithmParam, 0);
-        }
-        catch (IllegalArgumentException e)
-        {
-            LOGGER.error("Unexpected error while getting digest algorithm for {}", digestAlgorithmParam, e);
-            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, e.getMessage());
-        }
+        return digestAlgorithmFactory.getDigestAlgorithm(digestAlgorithmParam, 0);
     }
 
     @Override

@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationFileDigestRequest;
@@ -30,6 +31,7 @@ import static org.apache.cassandra.sidecar.common.request.LiveMigrationFileDiges
  * of the {@link LiveMigrationFileDigestRequest#DIGEST_ALGORITHM_PARAM} query parameter, otherwise
  * passes control to the next handler in the chain.
  */
+@Singleton
 public class LiveMigrationDigestHandlerWrapper implements Handler<RoutingContext>
 {
     private final LiveMigrationFileDigestHandler liveMigrationFileDigestHandler;

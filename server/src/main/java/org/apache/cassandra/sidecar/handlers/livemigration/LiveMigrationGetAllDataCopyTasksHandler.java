@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
@@ -37,6 +38,7 @@ import static org.apache.cassandra.sidecar.handlers.AbstractHandler.extractHostA
 /**
  * Handler for retrieving all Live Migration data copy tasks.
  */
+@Singleton
 public class LiveMigrationGetAllDataCopyTasksHandler implements Handler<RoutingContext>, AccessProtected
 {
     private final DataCopyTaskManager dataCopyTaskManager;

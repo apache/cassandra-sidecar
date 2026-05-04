@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
@@ -38,6 +39,7 @@ import static org.apache.cassandra.sidecar.handlers.AbstractHandler.extractHostA
  * Handler for retrieving all active live migration files verification tasks.
  * Returns a list of all verification tasks running on the local host.
  */
+@Singleton
 public class LiveMigrationGetAllFilesVerificationTasksHandler implements Handler<RoutingContext>, AccessProtected
 {
     private final FilesVerificationTaskManager taskManager;

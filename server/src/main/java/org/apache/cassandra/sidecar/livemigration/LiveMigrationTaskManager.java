@@ -62,7 +62,7 @@ public class LiveMigrationTaskManager
      */
     public boolean submitTask(int instanceId, LiveMigrationTask<?> newTask)
     {
-        return currentTasks.compute(instanceId, (integer, taskInMap) -> {
+        return currentTasks.compute(instanceId, (ignored, taskInMap) -> {
             if (taskInMap == null)
             {
                 return newTask;
@@ -92,11 +92,6 @@ public class LiveMigrationTaskManager
     public List<LiveMigrationTask<?>> getAllTasks(@NotNull String currentHost)
     {
         InstanceMetadata localInstance = instancesMetadata.instanceFromHost(currentHost);
-        if (localInstance == null)
-        {
-            throw new IllegalStateException("No instance found for host: " + currentHost);
-        }
-
         LiveMigrationTask<?> task = currentTasks.get(localInstance.id());
         return task == null ? Collections.emptyList() : Collections.singletonList(task);
     }

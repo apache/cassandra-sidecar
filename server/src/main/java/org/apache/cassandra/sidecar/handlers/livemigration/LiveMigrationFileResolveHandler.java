@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -67,6 +68,7 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholde
  * This handler does not allow using "/.." in the path to access files and does not serve files
  * which are excluded in the Live Migration configuration.
  */
+@Singleton
 public class LiveMigrationFileResolveHandler extends AbstractHandler<Void> implements AccessProtected
 {
 

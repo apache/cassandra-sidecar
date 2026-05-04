@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
@@ -43,6 +44,7 @@ import static org.apache.cassandra.sidecar.handlers.AbstractHandler.extractHostA
  *   <li>{@link #allowIfMigrationNotComplete(RoutingContext)} - Allows access only if migration is not yet completed</li>
  * </ul>
  */
+@Singleton
 public class LiveMigrationApiEnableDisableHandler
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationApiEnableDisableHandler.class);

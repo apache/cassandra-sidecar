@@ -18,7 +18,12 @@
 
 package org.apache.cassandra.sidecar.common.response;
 
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -29,32 +34,56 @@ class LiveMigrationFilesVerificationResponseTest
 {
     private final ObjectMapper mapper = new ObjectMapper();
 
-    @Test
-    void testSerializationRoundTrip() throws Exception
+    static Stream<Arguments> serializationRoundTripParams()
+    {
+        return Stream.of(
+        Arguments.of("test-id-123", "MD5", "COMPLETED", "192.168.1.100", 9042, 5, 10, 100, 15, 20, 3, 85),
+        Arguments.of("test-id-456", "XXHash32", "IN_PROGRESS", "192.168.1.200", 7000, 0, 0, 50, 0, 0, 0, 50)
+        );
+    }
+
+    static Stream<Arguments> verificationSuccessParams()
+    {
+        return Stream.of(
+        // all conditions met
+        Arguments.of("COMPLETED", 0, 0, 0, 0, 0, true),
+        // state not completed
+        Arguments.of("IN_PROGRESS", 0, 0, 0, 0, 0, false),
+        // failed state
+        Arguments.of("FAILED", 0, 0, 0, 0, 0, false),
+        // filesNotFoundAtSource > 0
+        Arguments.of("COMPLETED", 5, 0, 0, 0, 0, false),
+        // filesNotFoundAtDestination > 0
+        Arguments.of("COMPLETED", 0, 3, 0, 0, 0, false),
+        // metadataMismatches > 0
+        Arguments.of("COMPLETED", 0, 0, 5, 0, 0, false),
+        // digestMismatches > 0
+        Arguments.of("COMPLETED", 0, 0, 0, 10, 0, false),
+        // digestVerificationFailures > 0
+        Arguments.of("COMPLETED", 0, 0, 0, 0, 2, false),
+        // multiple failure conditions
+        Arguments.of("COMPLETED", 2, 3, 5, 8, 1, false)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("serializationRoundTripParams")
+    void testSerializationRoundTrip(String id, String digestAlgorithm, String state, String source,
+                                    int port, int filesNotFoundAtSource, int filesNotFoundAtDestination,
+                                    int metadataMatched, int metadataMismatches, int digestMismatches,
+                                    int digestVerificationFailures, int filesMatched) throws Exception
     {
         LiveMigrationFilesVerificationResponse original = new LiveMigrationFilesVerificationResponse(
-        "test-id-123",
-        "MD5",
-        "COMPLETED",
-        "192.168.1.100",
-        9042,
-        5,
-        10,
-        100,
-        15,
-        20,
-        3,
-        85
+        id, digestAlgorithm, state, source, port,
+        filesNotFoundAtSource, filesNotFoundAtDestination,
+        metadataMatched, metadataMismatches,
+        digestMismatches, digestVerificationFailures, filesMatched
         );
 
-        // Serialize to JSON
         String json = mapper.writeValueAsString(original);
-
-        // Deserialize back to object
         LiveMigrationFilesVerificationResponse deserialized =
         mapper.readValue(json, LiveMigrationFilesVerificationResponse.class);
 
-        // Verify all fields match
         assertThat(deserialized.id()).isEqualTo(original.id());
         assertThat(deserialized.digestAlgorithm()).isEqualTo(original.digestAlgorithm());
         assertThat(deserialized.state()).isEqualTo(original.state());
@@ -70,253 +99,29 @@ class LiveMigrationFilesVerificationResponseTest
         assertThat(deserialized.isVerificationSuccessful()).isEqualTo(original.isVerificationSuccessful());
     }
 
-    @Test
-    void testSerializationRoundTripInProgressState() throws Exception
-    {
-        LiveMigrationFilesVerificationResponse original = new LiveMigrationFilesVerificationResponse(
-        "test-id-456",
-        "XXHash32",
-        "IN_PROGRESS",
-        "192.168.1.200",
-        7000,
-        0,
-        0,
-        50,
-        0,
-        0,
-        0,
-        50
-        );
-
-        // Serialize to JSON
-        String json = mapper.writeValueAsString(original);
-
-        // Deserialize back to object
-        LiveMigrationFilesVerificationResponse deserialized =
-        mapper.readValue(json, LiveMigrationFilesVerificationResponse.class);
-
-        // Verify all fields match
-        assertThat(deserialized.id()).isEqualTo(original.id());
-        assertThat(deserialized.digestAlgorithm()).isEqualTo(original.digestAlgorithm());
-        assertThat(deserialized.state()).isEqualTo(original.state());
-        assertThat(deserialized.source()).isEqualTo(original.source());
-        assertThat(deserialized.port()).isEqualTo(original.port());
-        assertThat(deserialized.filesNotFoundAtSource()).isEqualTo(original.filesNotFoundAtSource());
-        assertThat(deserialized.filesNotFoundAtDestination()).isEqualTo(original.filesNotFoundAtDestination());
-        assertThat(deserialized.metadataMatched()).isEqualTo(original.metadataMatched());
-        assertThat(deserialized.metadataMismatches()).isEqualTo(original.metadataMismatches());
-        assertThat(deserialized.digestMismatches()).isEqualTo(original.digestMismatches());
-        assertThat(deserialized.digestVerificationFailures()).isEqualTo(original.digestVerificationFailures());
-        assertThat(deserialized.filesMatched()).isEqualTo(original.filesMatched());
-        assertThat(deserialized.isVerificationSuccessful()).isEqualTo(original.isVerificationSuccessful());
-    }
-
-    @Test
-    void testIsVerificationSuccessfulAllConditionsMet()
+    @ParameterizedTest
+    @MethodSource("verificationSuccessParams")
+    void testIsVerificationSuccessful(String state, int filesNotFoundAtSource, int filesNotFoundAtDestination,
+                                      int metadataMismatches, int digestMismatches,
+                                      int digestVerificationFailures, boolean expectedResult)
     {
         LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
-        "test-id",
-        "MD5",
-        "COMPLETED",
-        "192.168.1.1",
-        9042,
-        0,  // filesNotFoundAtSource
-        0,  // filesNotFoundAtDestination
-        100, // metadataMatched
-        0,  // metadataMismatches
-        0,  // digestMismatches
-        0,  // digestVerificationFailures
-        100 // filesMatched
+        "test-id", "MD5", state, "192.168.1.1", 9042,
+        filesNotFoundAtSource, filesNotFoundAtDestination,
+        100, metadataMismatches, digestMismatches,
+        digestVerificationFailures, 100
         );
 
-        assertThat(response.isVerificationSuccessful()).isTrue();
-    }
-
-    @Test
-    void testIsVerificationSuccessfulStateNotCompleted()
-    {
-        LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
-        "test-id",
-        "MD5",
-        "IN_PROGRESS",
-        "192.168.1.1",
-        9042,
-        0,
-        0,
-        100,
-        0,
-        0,
-        0,
-        100
-        );
-
-        assertThat(response.isVerificationSuccessful()).isFalse();
-    }
-
-    @Test
-    void testIsVerificationSuccessfulFilesNotFoundAtSource()
-    {
-        LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
-        "test-id",
-        "MD5",
-        "COMPLETED",
-        "192.168.1.1",
-        9042,
-        5,  // filesNotFoundAtSource > 0
-        0,
-        100,
-        0,
-        0,
-        0,
-        100
-        );
-
-        assertThat(response.isVerificationSuccessful()).isFalse();
-    }
-
-    @Test
-    void testIsVerificationSuccessfulFilesNotFoundAtDestination()
-    {
-        LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
-        "test-id",
-        "MD5",
-        "COMPLETED",
-        "192.168.1.1",
-        9042,
-        0,
-        3,  // filesNotFoundAtDestination > 0
-        100,
-        0,
-        0,
-        0,
-        100
-        );
-
-        assertThat(response.isVerificationSuccessful()).isFalse();
-    }
-
-    @Test
-    void testIsVerificationSuccessfulMetadataMismatches()
-    {
-        LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
-        "test-id",
-        "MD5",
-        "COMPLETED",
-        "192.168.1.1",
-        9042,
-        0,
-        0,
-        95,
-        5,  // metadataMismatches > 0
-        0,
-        0,
-        100
-        );
-
-        assertThat(response.isVerificationSuccessful()).isFalse();
-    }
-
-    @Test
-    void testIsVerificationSuccessfulDigestMismatches()
-    {
-        LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
-        "test-id",
-        "MD5",
-        "COMPLETED",
-        "192.168.1.1",
-        9042,
-        0,
-        0,
-        100,
-        0,
-        10, // digestMismatches > 0
-        0,
-        90
-        );
-
-        assertThat(response.isVerificationSuccessful()).isFalse();
-    }
-
-    @Test
-    void testIsVerificationSuccessfulDigestVerificationFailures()
-    {
-        LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
-        "test-id",
-        "MD5",
-        "COMPLETED",
-        "192.168.1.1",
-        9042,
-        0,
-        0,
-        100,
-        0,
-        0,
-        2,  // digestVerificationFailures > 0
-        98
-        );
-
-        assertThat(response.isVerificationSuccessful()).isFalse();
-    }
-
-    @Test
-    void testIsVerificationSuccessfulMultipleFailureConditions()
-    {
-        LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
-        "test-id",
-        "MD5",
-        "COMPLETED",
-        "192.168.1.1",
-        9042,
-        2,  // filesNotFoundAtSource > 0
-        3,  // filesNotFoundAtDestination > 0
-        90,
-        5,  // metadataMismatches > 0
-        8,  // digestMismatches > 0
-        1,  // digestVerificationFailures > 0
-        85
-        );
-
-        assertThat(response.isVerificationSuccessful()).isFalse();
+        assertThat(response.isVerificationSuccessful()).isEqualTo(expectedResult);
     }
 
     @Test
     void testConstructorThrowsNullPointerExceptionForNullId()
     {
         assertThatThrownBy(() -> new LiveMigrationFilesVerificationResponse(
-        null,  // null id
-        "MD5",
-        "COMPLETED",
-        "192.168.1.1",
-        9042,
-        0,
-        0,
-        100,
-        0,
-        0,
-        0,
-        100
+        null, "MD5", "COMPLETED", "192.168.1.1", 9042,
+        0, 0, 100, 0, 0, 0, 100
         )).isInstanceOf(NullPointerException.class)
           .hasMessageContaining("id of files verification task must be specified");
-    }
-
-    @Test
-    void testIsVerificationSuccessfulFailedState()
-    {
-        LiveMigrationFilesVerificationResponse response = new LiveMigrationFilesVerificationResponse(
-        "test-id",
-        "MD5",
-        "FAILED",  // FAILED state
-        "192.168.1.1",
-        9042,
-        0,  // all counters are perfect
-        0,
-        100,
-        0,
-        0,
-        0,
-        100
-        );
-
-        assertThat(response.isVerificationSuccessful()).isFalse();
     }
 }

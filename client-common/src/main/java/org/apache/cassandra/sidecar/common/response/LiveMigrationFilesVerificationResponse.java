@@ -59,11 +59,9 @@ public class LiveMigrationFilesVerificationResponse
                                                   @JsonProperty("digestVerificationFailures") int digestVerificationFailures,
                                                   @JsonProperty("filesMatched") int filesMatched)
     {
-        Objects.requireNonNull(id, "id of files verification task must be specified");
-        Objects.requireNonNull(state, "state of files verification task must be specified");
-        this.id = id;
+        this.id = Objects.requireNonNull(id, "id of files verification task must be specified");
         this.digestAlgorithm = digestAlgorithm;
-        this.state = state;
+        this.state = Objects.requireNonNull(state, "state of files verification task must be specified");
         this.source = source;
         this.port = port;
         this.filesNotFoundAtSource = filesNotFoundAtSource;

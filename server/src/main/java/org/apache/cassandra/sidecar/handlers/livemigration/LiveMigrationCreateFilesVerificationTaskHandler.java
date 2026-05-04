@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.DecodeException;
@@ -57,6 +58,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * HTTP handler for creating file digest verification tasks during live migration.
  * Manages concurrent verification tasks per instance and orchestrates the verification process.
  */
+@Singleton
 public class LiveMigrationCreateFilesVerificationTaskHandler extends AbstractHandler<LiveMigrationFilesVerificationRequest> implements AccessProtected
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationCreateFilesVerificationTaskHandler.class);
@@ -109,8 +111,6 @@ public class LiveMigrationCreateFilesVerificationTaskHandler extends AbstractHan
                                   SocketAddress remoteAddress,
                                   LiveMigrationFilesVerificationRequest request)
     {
-        LOGGER.debug("Received files verification request for host {} with maxConcurrency {}",
-                     host, request.maxConcurrency());
         InstanceMetadata localInstanceMetadata;
         try
         {

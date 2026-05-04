@@ -41,10 +41,8 @@ public class DigestResponse
     public DigestResponse(@JsonProperty("digest") String digest,
                           @JsonProperty("digestAlgorithm") String digestAlgorithm)
     {
-        Objects.requireNonNull(digest, "digest is required");
-        Objects.requireNonNull(digestAlgorithm, "digestAlgorithm is required");
-        this.digest = digest;
-        this.digestAlgorithm = digestAlgorithm;
+        this.digest = Objects.requireNonNull(digest, "digest is required");
+        this.digestAlgorithm = Objects.requireNonNull(digestAlgorithm, "digestAlgorithm is required");
     }
 
     @Override

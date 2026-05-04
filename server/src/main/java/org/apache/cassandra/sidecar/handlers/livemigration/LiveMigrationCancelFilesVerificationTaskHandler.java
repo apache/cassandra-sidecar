@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -47,6 +48,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * Handler for canceling an active live migration files verification task.
  * Accepts a task ID and cancels the corresponding verification task on the specified host.
  */
+@Singleton
 public class LiveMigrationCancelFilesVerificationTaskHandler extends AbstractHandler<String> implements AccessProtected
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationCancelFilesVerificationTaskHandler.class);
@@ -73,7 +75,12 @@ public class LiveMigrationCancelFilesVerificationTaskHandler extends AbstractHan
     @Override
     protected String extractParamsOrThrow(RoutingContext context)
     {
-        return context.pathParam("taskId");
+        String taskId = context.pathParam("taskId");
+        if (taskId == null || taskId.isBlank())
+        {
+            throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "taskId is required");
+        }
+        return taskId;
     }
 
     @Override

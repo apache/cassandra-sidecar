@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.DecodeException;
@@ -58,6 +59,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * - taskId: Unique identifier for tracking the created task
  * - statusUrl: URL that can be used to query the status of the data copy operation
  */
+@Singleton
 public class LiveMigrationCreateDataCopyTaskHandler extends AbstractHandler<LiveMigrationDataCopyRequest> implements AccessProtected
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationCreateDataCopyTaskHandler.class);

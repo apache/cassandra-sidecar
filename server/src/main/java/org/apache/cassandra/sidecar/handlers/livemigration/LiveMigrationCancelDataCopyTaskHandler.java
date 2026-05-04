@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -46,6 +47,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Handler for cancelling live migration data copy tasks.
  */
+@Singleton
 public class LiveMigrationCancelDataCopyTaskHandler extends AbstractHandler<String> implements AccessProtected
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationCancelDataCopyTaskHandler.class);

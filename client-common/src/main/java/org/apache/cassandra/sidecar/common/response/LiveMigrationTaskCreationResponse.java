@@ -36,11 +36,8 @@ public class LiveMigrationTaskCreationResponse
     public LiveMigrationTaskCreationResponse(@JsonProperty("taskId") String taskId,
                                              @JsonProperty("statusUrl") String statusUrl)
     {
-        Objects.requireNonNull(taskId, "taskId cannot be null");
-        Objects.requireNonNull(statusUrl, "statusUrl cannot be null");
-
-        this.taskId = taskId;
-        this.statusUrl = statusUrl;
+        this.taskId = Objects.requireNonNull(taskId, "taskId cannot be null");
+        this.statusUrl = Objects.requireNonNull(statusUrl, "statusUrl cannot be null");
     }
 
     @JsonProperty("taskId")

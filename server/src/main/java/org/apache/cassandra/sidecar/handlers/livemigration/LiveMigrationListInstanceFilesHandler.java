@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -48,6 +49,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Endpoint for returning list of files that a destination instance can copy.
  */
+@Singleton
 public class LiveMigrationListInstanceFilesHandler extends AbstractHandler<Void> implements AccessProtected
 {
 

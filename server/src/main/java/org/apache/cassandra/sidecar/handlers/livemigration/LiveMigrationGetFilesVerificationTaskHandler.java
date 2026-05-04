@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -47,6 +48,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * Handler for retrieving a specific live migration files verification task by task ID.
  * Returns the task details if found, or a 404 error if the task does not exist on the specified host.
  */
+@Singleton
 public class LiveMigrationGetFilesVerificationTaskHandler extends AbstractHandler<String> implements AccessProtected
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationGetFilesVerificationTaskHandler.class);
@@ -92,7 +94,7 @@ public class LiveMigrationGetFilesVerificationTaskHandler extends AbstractHandle
         try
         {
             LiveMigrationTask<LiveMigrationFilesVerificationResponse> task = taskManager.getTask(taskId, host);
-            LOGGER.info("Found live migration task with taskId={} on host={}", taskId, host);
+            LOGGER.debug("Found live migration task with taskId={} on host={}", taskId, host);
             context.json(task.getResponse());
         }
         catch (LiveMigrationTaskNotFoundException e)
