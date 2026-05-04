@@ -18,7 +18,15 @@
 
 package org.apache.cassandra.sidecar.modules;
 
+import java.io.IOException;
+
+import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.inject.AbstractModule;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoMap;
@@ -28,24 +36,27 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import org.apache.cassandra.bridge.CassandraBridgeFactory;
+import org.apache.cassandra.cdc.api.CdcOptions;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.cdc.avro.CqlToAvroSchemaConverter;
-import org.apache.cassandra.cdc.msg.CdcEvent;
+import org.apache.cassandra.cdc.kafka.KafkaProducerFactory;
 import org.apache.cassandra.cdc.schemastore.SchemaStorePublisherFactory;
 import org.apache.cassandra.cdc.sidecar.CdcSidecarInstancesProvider;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
 import org.apache.cassandra.cdc.stats.CdcStats;
 import org.apache.cassandra.cdc.stats.ICdcStats;
+import org.apache.cassandra.secrets.SecretsProvider;
 import org.apache.cassandra.sidecar.cdc.CachingSchemaStore;
-import org.apache.cassandra.sidecar.cdc.CdcAvroSerializer;
 import org.apache.cassandra.sidecar.cdc.CdcConfig;
 import org.apache.cassandra.sidecar.cdc.CdcConfigImpl;
 import org.apache.cassandra.sidecar.cdc.CdcDynamicSidecarInstancesProvider;
 import org.apache.cassandra.sidecar.cdc.CdcLogCache;
 import org.apache.cassandra.sidecar.cdc.CdcPublisher;
 import org.apache.cassandra.sidecar.cdc.CdcSchemaSupplier;
+import org.apache.cassandra.sidecar.cdc.SidecarCdcOptions;
 import org.apache.cassandra.sidecar.cdc.SidecarCdcStats;
+import org.apache.cassandra.sidecar.cdc.SidecarClientSecretsProvider;
 import org.apache.cassandra.sidecar.cdc.SidecarClusterConfigProvider;
 import org.apache.cassandra.sidecar.cdc.SidecarCqlToAvroSchemaConverter;
 import org.apache.cassandra.sidecar.client.SidecarInstancesProvider;
@@ -58,6 +69,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.coordination.CassandraClientTokenRingProvider;
 import org.apache.cassandra.sidecar.coordination.ContentionFreeRangeManager;
 import org.apache.cassandra.sidecar.coordination.DynamicSidecarInstancesProvider;
@@ -97,12 +109,13 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
 import org.apache.cassandra.sidecar.utils.TokenSplitUtil;
-import org.apache.kafka.common.serialization.Serializer;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
 /**
  * Provides Cassandra change-data capture (CDC) publishing capability
@@ -110,6 +123,8 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 @Path("/")
 public class CdcModule extends AbstractModule
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CdcModule.class);
+
     @ProvidesIntoMap
     @KeyClassMapKey(PeriodicTaskMapKeys.SidecarPeerHealthMonitorTaskKey.class)
     PeriodicTask sidecarPeerHealthMonitorTask(SidecarPeerHealthMonitorTask task)
@@ -133,7 +148,9 @@ public class CdcModule extends AbstractModule
                                                                          SidecarConfiguration configuration,
                                                                          CassandraBridgeFactory cassandraBridgeFactory)
     {
-        return new CassandraClusterSchemaMonitor(instanceMetadataFetcher, databaseAccessor, driverUnsupportedSchemaCache, configuration, cassandraBridgeFactory);
+        return new CassandraClusterSchemaMonitor(instanceMetadataFetcher, databaseAccessor,
+                                                  driverUnsupportedSchemaCache, configuration,
+                                                  cassandraBridgeFactory);
     }
 
     @ProvidesIntoMap
@@ -330,11 +347,9 @@ public class CdcModule extends AbstractModule
 
     @Provides
     @Singleton
-    public Serializer<CdcEvent> getSerializer(CachingSchemaStore schemaStore,
-                                              InstanceMetadataFetcher instanceMetadataFetcher,
-                                              CassandraBridgeFactory cassandraBridgeFactory)
+    public KafkaProducerFactory kafkaProducerFactory()
     {
-        return new CdcAvroSerializer(schemaStore, instanceMetadataFetcher, cassandraBridgeFactory);
+        return KafkaProducerFactory.DEFAULT;
     }
 
     @Provides
@@ -381,6 +396,50 @@ public class CdcModule extends AbstractModule
 
     @Provides
     @Singleton
+    public SidecarCdcClient sidecarCdcClient(Vertx vertx,
+                                             SidecarCdcClient.ClientConfig clientConfig,
+                                             CdcSidecarInstancesProvider cdcSidecarInstancesProvider,
+                                             @Nullable SecretsProvider secretsProvider,
+                                             ICdcStats cdcStats)
+    {
+        try
+        {
+            SidecarCdcClient sidecarCdcClient = new SidecarCdcClient(clientConfig, cdcSidecarInstancesProvider, secretsProvider, cdcStats);
+            vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> {
+                try
+                {
+                    sidecarCdcClient.close();
+                }
+                catch (Exception e)
+                {
+                    LOGGER.warn("Error closing SidecarCdcClient", e);
+                }
+            });
+            return sidecarCdcClient;
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException("Failed to create SidecarCdcClient", e);
+        }
+    }
+
+    @Nullable
+    @Provides
+    @Singleton
+    public SecretsProvider secretsProvider(SidecarConfiguration sidecarConfiguration)
+    {
+        SslConfiguration sslConfiguration = sidecarConfiguration.sidecarClientConfiguration().sslConfiguration();
+
+        if (sslConfiguration == null || !sslConfiguration.enabled())
+        {
+            return null;
+        }
+
+        return new SidecarClientSecretsProvider(sidecarConfiguration);
+    }
+
+    @Provides
+    @Singleton
     RangeManager rangeManager(Vertx vertx, TokenRingProvider tokenRingProvider)
     {
         return new ContentionFreeRangeManager(vertx, tokenRingProvider);
@@ -389,36 +448,45 @@ public class CdcModule extends AbstractModule
     @Provides
     @Singleton
     CdcPublisher cdcPublisher(Vertx vertx,
-                              SidecarConfiguration sidecarConfiguration,
                               ExecutorPools executorPools,
                               ClusterConfigProvider clusterConfigProvider,
                               SchemaSupplier schemaSupplier,
-                              CdcSidecarInstancesProvider sidecarInstancesProvider,
-                              SidecarCdcClient.ClientConfig clientConfig,
                               InstanceMetadataFetcher instanceMetadataFetcher,
                               CdcConfig conf,
                               CdcDatabaseAccessor databaseAccessor,
                               ICdcStats cdcStats,
                               VirtualTablesDatabaseAccessor virtualTables,
                               SidecarCdcStats sidecarCdcStats,
-                              Serializer<CdcEvent> avroSerializer,
-                              RangeManager rangeManager)
+                              RangeManager rangeManager,
+                              CassandraBridgeFactory cassandraBridgeFactory,
+                              Provider<SidecarCdcClient> sidecarCdcClientProvider,
+                              CachingSchemaStore schemaStore,
+                              KafkaProducerFactory kafkaProducerFactory,
+                              CdcOptions cdcOptions)
     {
         return new CdcPublisher(vertx,
-                                sidecarConfiguration,
                                 executorPools,
                                 clusterConfigProvider,
                                 schemaSupplier,
-                                sidecarInstancesProvider,
-                                clientConfig,
                                 instanceMetadataFetcher,
                                 conf,
                                 databaseAccessor,
                                 cdcStats,
                                 virtualTables,
                                 sidecarCdcStats,
-                                avroSerializer,
-                                () -> rangeManager);
+                                () -> rangeManager,
+                                cassandraBridgeFactory,
+                                sidecarCdcClientProvider,
+                                schemaStore,
+                                kafkaProducerFactory,
+                                cdcOptions);
+    }
+
+    @Provides
+    @Singleton
+    public CdcOptions cdcOptions(InstanceMetadataFetcher instanceMetadataFetcher)
+    {
+        return new SidecarCdcOptions(instanceMetadataFetcher);
     }
 
     @Provides

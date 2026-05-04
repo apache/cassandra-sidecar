@@ -19,24 +19,26 @@ package org.apache.cassandra.sidecar.testing;
 
 import com.google.inject.Provider;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.bridge.CassandraBridgeFactory;
+import org.apache.cassandra.cdc.api.CdcOptions;
 import org.apache.cassandra.cdc.api.EventConsumer;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
-import org.apache.cassandra.cdc.msg.CdcEvent;
-import org.apache.cassandra.cdc.sidecar.CdcSidecarInstancesProvider;
+import org.apache.cassandra.cdc.kafka.KafkaProducerFactory;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
 import org.apache.cassandra.cdc.stats.ICdcStats;
+import org.apache.cassandra.sidecar.cdc.CachingSchemaStore;
 import org.apache.cassandra.sidecar.cdc.CdcConfig;
 import org.apache.cassandra.sidecar.cdc.CdcPublisher;
 import org.apache.cassandra.sidecar.cdc.SidecarCdcStats;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-import org.apache.kafka.common.serialization.Serializer;
+
+import static org.mockito.Mockito.mock;
 
 /**
  * Test implementation of CdcPublisher that uses an in-memory event consumer
@@ -49,30 +51,32 @@ public class TestCdcPublisher extends CdcPublisher
     private final CdcDatabaseAccessor databaseAccessor;
 
     public TestCdcPublisher(Vertx vertx,
-                           SidecarConfiguration sidecarConfiguration,
-                           ExecutorPools executorPools,
-                           ClusterConfigProvider clusterConfigProvider,
-                           SchemaSupplier schemaSupplier,
-                           CdcSidecarInstancesProvider sidecarInstancesProvider,
-                           SidecarCdcClient.ClientConfig clientConfig,
-                           InstanceMetadataFetcher instanceMetadataFetcher,
-                           CdcConfig conf,
-                           CdcDatabaseAccessor databaseAccessor,
-                           ICdcStats cdcStats,
-                           VirtualTablesDatabaseAccessor virtualTables,
-                           SidecarCdcStats sidecarCdcStats,
-                           Serializer<CdcEvent> avroSerializer,
-                           Provider<RangeManager> rangeManagerProvider)
+                            ExecutorPools executorPools,
+                            ClusterConfigProvider clusterConfigProvider,
+                            SchemaSupplier schemaSupplier,
+                            InstanceMetadataFetcher instanceMetadataFetcher,
+                            CdcConfig conf,
+                            CdcDatabaseAccessor databaseAccessor,
+                            ICdcStats cdcStats,
+                            VirtualTablesDatabaseAccessor virtualTables,
+                            SidecarCdcStats sidecarCdcStats,
+                            Provider<RangeManager> rangeManagerProvider,
+                            CassandraBridgeFactory cassandraBridgeFactory,
+                            Provider<SidecarCdcClient> sidecarCdcClientProvider,
+                            CdcOptions cdcOptions)
     {
-        super(vertx, sidecarConfiguration, executorPools, clusterConfigProvider,
-              schemaSupplier, sidecarInstancesProvider, clientConfig,
-              instanceMetadataFetcher, conf, databaseAccessor, cdcStats,
-              virtualTables, sidecarCdcStats, avroSerializer, rangeManagerProvider);
+        super(vertx, executorPools, clusterConfigProvider,
+              schemaSupplier, instanceMetadataFetcher, conf, databaseAccessor, cdcStats,
+              virtualTables, sidecarCdcStats, rangeManagerProvider,
+              cassandraBridgeFactory, sidecarCdcClientProvider,
+              mock(CachingSchemaStore.class),
+              mock(KafkaProducerFactory.class),
+              cdcOptions);
         this.databaseAccessor = databaseAccessor;
     }
 
     @Override
-    public EventConsumer eventConsumer(CdcConfig conf, Serializer<CdcEvent> avroSerializer)
+    public EventConsumer eventConsumer(CdcConfig conf)
     {
         return testEventConsumer;
     }

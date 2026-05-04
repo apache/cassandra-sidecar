@@ -151,6 +151,10 @@ dependencies {
     implementation(group: "org.apache.cassandra", name: "cassandra-avro-converter_spark3_2.12", version: "${[project.analyticsVersion]}")
     implementation(group: "org.apache.cassandra", name: "cassandra-analytics-cdc_spark3_2.12", version: "${[project.analyticsVersion]}")
     implementation(group: "org.apache.cassandra", name: "cassandra-analytics-cdc-sidecar_spark3_2.12", version: "${[project.analyticsVersion]}")
+    // compileOnly: CdcModule directly instantiates SidecarCdcClient, requiring sidecar-client types at
+    // compile time. The jar is already on the runtime classpath transitively via cdc-sidecar, so
+    // implementation would duplicate it.
+    compileOnly(group: "org.apache.cassandra", name: "cassandra-analytics-sidecar-client", version: "${[project.analyticsVersion]}")
 
     implementation "org.apache.kafka:kafka-clients:${project.kafkaClientVersion}"
     implementation "com.esotericsoftware:kryo-shaded:${kryoVersion}"
