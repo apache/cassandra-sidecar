@@ -18,9 +18,11 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import java.util.Optional;
+
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.jetbrains.annotations.NotNull;
 
@@ -44,15 +46,15 @@ public class SystemAuthSchema extends CassandraSystemTableSchema
     }
 
     @Override
-    protected void prepareStatements(@NotNull Session session)
+    protected void prepareStatements(@NotNull CqlSession session)
     {
         allRoles = prepare(allRoles, session, "SELECT role, is_superuser, member_of FROM system_auth.roles");
         unpreparedListRoles = "LIST ROLES OF \"%s\"";
         allRolesAndPermissions = prepare(allRolesAndPermissions, session, "SELECT * FROM system_auth.role_permissions");
 
-        KeyspaceMetadata keyspaceMetadata = session.getCluster().getMetadata().getKeyspace(keyspaceName());
+        Optional<KeyspaceMetadata> keyspaceMetadata = session.getMetadata().getKeyspace(keyspaceName());
         // identity_to_role table exists in Cassandra versions starting 5.x
-        if (keyspaceMetadata == null || keyspaceMetadata.getTable(IDENTITY_TO_ROLE_TABLE) == null)
+        if (keyspaceMetadata.isEmpty() || keyspaceMetadata.get().getTable(IDENTITY_TO_ROLE_TABLE).isEmpty())
         {
             logger.info("system_auth.identity_to_role does not exist. Skip preparing. table={}.{}", keyspaceName(), IDENTITY_TO_ROLE_TABLE);
             return;

@@ -18,8 +18,10 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
+import java.util.Optional;
+
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -32,10 +34,8 @@ public abstract class TableSchema extends AbstractSchema
     @Override
     protected boolean exists(@NotNull Metadata metadata)
     {
-        KeyspaceMetadata ksMetadata = metadata.getKeyspace(keyspaceName());
-        if (ksMetadata == null)
-            return false;
-        return ksMetadata.getTable(tableName()) != null;
+        Optional<KeyspaceMetadata> ksMetadata = metadata.getKeyspace(keyspaceName());
+        return ksMetadata.map(keyspaceMetadata -> keyspaceMetadata.getTable(tableName()).isPresent()).orElse(false);
     }
 
     @Override

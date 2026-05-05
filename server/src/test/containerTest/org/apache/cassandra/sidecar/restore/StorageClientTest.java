@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.adobe.testing.s3mock.testcontainers.S3MockContainer;
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
@@ -111,7 +111,7 @@ class StorageClientTest
                                                            .sessionToken("session")
                                                            .region("us-west-1").build();
         restoreJob = RestoreJob.builder()
-                               .jobId(UUIDs.timeBased())
+                               .jobId(Uuids.timeBased())
                                .jobStatus(RestoreJobStatus.CREATED)
                                .jobSecrets(new RestoreJobSecrets(credentials, credentials))
                                .sstableImportOptions(SSTableImportOptions.defaults())
@@ -169,7 +169,7 @@ class StorageClientTest
     void testUnauthenticated()
     {
         // slice from a new job that has not been authenticated
-        RestoreRange unauthed = getMockRange(UUIDs.timeBased(), "newBucket", "newKey", null, null);
+        RestoreRange unauthed = getMockRange(Uuids.timeBased(), "newBucket", "newKey", null, null);
         assertThatThrownBy(() -> client.objectExists(unauthed).get())
         .isInstanceOf(ExecutionException.class)
         .hasCauseInstanceOf(IllegalStateException.class)

@@ -20,8 +20,8 @@ package org.apache.cassandra.sidecar.handlers;
 import java.util.Collections;
 import java.util.Set;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -94,7 +94,7 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     {
         if (keyspace == null)
         {
-            SchemaResponse schemaResponse = new SchemaResponse(metadata.exportSchemaAsString());
+            SchemaResponse schemaResponse = new SchemaResponse(MetadataUtils.describe(metadata));
             context.json(schemaResponse);
             return;
         }
@@ -112,7 +112,7 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
         }
 
         SchemaResponse schemaResponse = new SchemaResponse(keyspace.name(),
-                                                           ksMetadata.exportAsString());
+                                                           ksMetadata.describeWithChildren(true));
         context.json(schemaResponse);
     }
 

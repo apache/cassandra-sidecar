@@ -27,10 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.Timer;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.linkedin.data.template.RecordTemplate;
@@ -145,11 +145,11 @@ public class SchemaReporter
     /**
      * Public method for converting and reporting the Cassandra schema when triggered by a scheduled periodic task
      *
-     * @param cluster the {@link Cluster} to extract Cassandra schema from
+     * @param session the {@link CqlSession} to extract Cassandra schema from
      */
-    public void processScheduled(@NotNull Cluster cluster)
+    public void processScheduled(@NotNull CqlSession session)
     {
-        process(cluster.getMetadata(), reportingMetrics.startedSchedule.metric);
+        process(session.getMetadata(), reportingMetrics.startedSchedule.metric);
     }
 
     /**
@@ -208,7 +208,7 @@ public class SchemaReporter
         return Streams.concat(
         clusterConverters.stream()
                          .map(ThrowableUtils.function(converter -> converter.convert(metadata))),
-        metadata.getKeyspaces()
+        metadata.getKeyspaces().values()
                 .stream()
                 .filter(this::neitherVirtualNorSystem)
                 .flatMap(this::stream));
@@ -227,9 +227,9 @@ public class SchemaReporter
         return Streams.concat(
         keyspaceConverters.stream()
                           .map(ThrowableUtils.function(converter -> converter.convert(keyspace))),
-        keyspace.getTables()
+        keyspace.getTables().values()
                 .stream()
-                .flatMap(this::stream));
+                .flatMap(f -> stream(keyspace, f)));
     }
 
     /**
@@ -240,10 +240,11 @@ public class SchemaReporter
      * @return non-empty {@link Stream} of DataHub aspects
      */
     @NotNull
-    protected Stream<MetadataChangeProposalWrapper<? extends RecordTemplate>> stream(@NotNull TableMetadata table)
+    protected Stream<MetadataChangeProposalWrapper<? extends RecordTemplate>> stream(@NotNull KeyspaceMetadata keyspace,
+                                                                                     @NotNull TableMetadata table)
     {
         return tableConverters.stream()
-                              .map(ThrowableUtils.function(converter -> converter.convert(table)));
+                              .map(ThrowableUtils.function(converter -> converter.convert(keyspace, table)));
     }
 
     /**
@@ -261,7 +262,7 @@ public class SchemaReporter
             return false;
         }
 
-        String name = keyspace.getName();
+        String name = keyspace.getName().asInternal();
         return !name.equals("system") &&
                !name.startsWith("system_") &&
                !name.equals("sidecar_internal");

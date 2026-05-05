@@ -23,12 +23,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.cql.Statement;
 import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.ConfigsSchema;
@@ -107,11 +108,14 @@ class ConfigAccessorImplTest
     {
         ConfigsSchema mockConfigsSchema = mock(ConfigsSchema.class);
         PreparedStatement preparedStatement = mock(PreparedStatement.class);
-        when(preparedStatement.bind()).thenReturn(mock(BoundStatement.class));
-        when(preparedStatement.bind(any())).thenReturn(mock(BoundStatement.class));
+        BoundStatement boundStatement = mock(BoundStatement.class);
+        when(boundStatement.setConsistencyLevel(any())).thenReturn(boundStatement);
+        when(preparedStatement.bind()).thenReturn(boundStatement);
+        when(preparedStatement.bind(any())).thenReturn(boundStatement);
         when(mockConfigsSchema.selectConfig()).thenReturn(preparedStatement);
         when(mockConfigsSchema.insertConfig()).thenReturn(preparedStatement);
         when(mockConfigsSchema.deleteConfig()).thenReturn(preparedStatement);
+        when(mockConfigsSchema.getConsistencyLevel()).thenReturn(ConsistencyLevel.LOCAL_QUORUM);
         return mockConfigsSchema;
     }
 
@@ -129,7 +133,7 @@ class ConfigAccessorImplTest
             when(resultSet.one()).thenAnswer(invocation -> row);
         }
 
-        Session session = mock(Session.class);
+        CqlSession session = mock(CqlSession.class);
         when(session.execute(any(Statement.class))).then(invocation -> resultSet);
 
         CQLSessionProvider cqlSession = mock(CQLSessionProvider.class);

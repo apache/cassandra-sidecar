@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import com.google.common.collect.ImmutableMap;
@@ -25,11 +27,14 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.AbstractTableMetadata;
-import com.datastax.driver.core.ColumnMetadata;
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.TableMetadata;
-import com.datastax.driver.core.UserType;
+import com.datastax.oss.driver.api.core.metadata.schema.ColumnMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
+import com.datastax.oss.driver.api.core.type.DataType;
+import com.datastax.oss.driver.api.core.type.ListType;
+import com.datastax.oss.driver.api.core.type.SetType;
+import com.datastax.oss.driver.api.core.type.TupleType;
+import com.datastax.oss.driver.api.core.type.UserDefinedType;
 import com.linkedin.common.urn.DataPlatformUrn;
 import com.linkedin.data.template.SetMode;
 import com.linkedin.schema.ArrayType;
@@ -68,31 +73,27 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
     protected static final SchemaFieldDataType.Type STRING  = SchemaFieldDataType.Type.create(new StringType());
     protected static final SchemaFieldDataType.Type TIME    = SchemaFieldDataType.Type.create(new TimeType());
 
-    protected static final Map<DataType.Name, SchemaFieldDataType.Type> TYPES = new ImmutableMap.Builder<DataType.Name, SchemaFieldDataType.Type>()
-            .put(DataType.Name.ASCII,     STRING)
-            .put(DataType.Name.BIGINT,    NUMBER)
-            .put(DataType.Name.BLOB,      BYTES)
-            .put(DataType.Name.BOOLEAN,   BOOLEAN)
-            .put(DataType.Name.COUNTER,   NUMBER)
-            .put(DataType.Name.DATE,      DATE)
-            .put(DataType.Name.DECIMAL,   NUMBER)
-            .put(DataType.Name.DOUBLE,    NUMBER)
-            .put(DataType.Name.FLOAT,     NUMBER)
-            .put(DataType.Name.INET,      STRING)
-            .put(DataType.Name.INT,       NUMBER)
-            .put(DataType.Name.LIST,      ARRAY)
-            .put(DataType.Name.MAP,       MAP)
-            .put(DataType.Name.SET,       ARRAY)
-            .put(DataType.Name.SMALLINT,  NUMBER)
-            .put(DataType.Name.TEXT,      STRING)
-            .put(DataType.Name.TIME,      TIME)
-            .put(DataType.Name.TIMESTAMP, DATE)
-            .put(DataType.Name.TIMEUUID,  STRING)
-            .put(DataType.Name.TINYINT,   NUMBER)
-            .put(DataType.Name.TUPLE,     ARRAY)
-            .put(DataType.Name.UUID,      STRING)
-            .put(DataType.Name.VARCHAR,   STRING)
-            .put(DataType.Name.VARINT,    NUMBER)
+    protected static final Map<String, SchemaFieldDataType.Type> PRIMITIVE_TYPES = new ImmutableMap.Builder<String, SchemaFieldDataType.Type>()
+            .put("ascii",     STRING)
+            .put("bigint",    NUMBER)
+            .put("blob",      BYTES)
+            .put("boolean",   BOOLEAN)
+            .put("counter",   NUMBER)
+            .put("date",      DATE)
+            .put("decimal",   NUMBER)
+            .put("double",    NUMBER)
+            .put("float",     NUMBER)
+            .put("inet",      STRING)
+            .put("int",       NUMBER)
+            .put("smallint",  NUMBER)
+            .put("text",      STRING)
+            .put("time",      TIME)
+            .put("timestamp", DATE)
+            .put("timeuuid",  STRING)
+            .put("tinyint",   NUMBER)
+            .put("uuid",      STRING)
+            .put("varchar",   STRING)
+            .put("varint",    NUMBER)
             .build();
 
     public TableToSchemaMetadataConverter(@NotNull IdentifiersProvider identifiers)
@@ -102,24 +103,25 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
 
     @Override
     @NotNull
-    public MetadataChangeProposalWrapper<SchemaMetadata> convert(@NotNull TableMetadata table)
+    public MetadataChangeProposalWrapper<SchemaMetadata> convert(@NotNull KeyspaceMetadata keyspace,
+                                                                 @NotNull TableMetadata table)
     {
         String urn = identifiers.urnDataset(table);
 
         SchemaFieldArray fields = new SchemaFieldArray();
-        table.getColumns().stream()
-                .flatMap(this::convertColumn)
+        table.getColumns().values().stream()
+                .flatMap(c -> convertColumn(table, c))
                 .forEach(fields::add);
 
         // Use {@code CREATE TABLE} CQL statement with all associated indexes and views but without
         // UDTs as the native schema; using {@code asCQLQuery()} does not allow formatting produced CQL
-        String cql = table.exportAsString();
+        String cql = table.describeWithChildren(true);
         SchemaMetadata.PlatformSchema schema = new SchemaMetadata.PlatformSchema();
         schema.setOtherSchema(new OtherSchema().setRawSchema(cql));
         String hash = DigestUtils.sha1Hex(cql);
 
         SchemaMetadata aspect = new SchemaMetadata()
-                .setSchemaName(table.getName())
+                .setSchemaName(table.getName().asInternal())
                 .setPlatform(new DataPlatformUrn(identifiers.urnDataPlatform()))
                 .setVersion(VERSION)
                 .setFields(fields)
@@ -137,14 +139,13 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
      * @return non-empty {@link Stream} of DataHub schema field definitions
      */
     @NotNull
-    protected Stream<SchemaField> convertColumn(@NotNull ColumnMetadata column)
+    protected Stream<SchemaField> convertColumn(@NotNull TableMetadata table, @NotNull ColumnMetadata column)
     {
         DataType type = column.getType();
-        AbstractTableMetadata table = column.getParent();
         boolean partition = table.getPartitionKey().contains(column);
-        boolean key = partition || table.getClusteringColumns().contains(column);  // Only check clustering key if needed
+        boolean key = partition || table.getClusteringColumns().containsKey(column);  // Only check clustering key if needed
 
-        return convertType(column.getName(), type, partition, key);
+        return convertType(column.getName().asInternal(), type, partition, key);
     }
 
     /**
@@ -163,19 +164,23 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
                                               boolean partition,
                                               boolean key)
     {
-        if (type instanceof UserType)
+        if (type instanceof UserDefinedType)
         {
-            UserType udt = (UserType) type;
-
-            return udt.getFieldNames().stream()
-                    .flatMap(field -> convertType(name + DELIMITER + field, udt.getFieldType(field), partition, key));
+            UserDefinedType udt = (UserDefinedType) type;
+            List<Stream<SchemaField>> streams = new ArrayList<>(udt.getFieldNames().size());
+            for (int i = 0; i < udt.getFieldNames().size(); i++)
+            {
+                Stream<SchemaField> subFields = convertType(name + DELIMITER + udt.getFieldNames().get(i),
+                                                            udt.getFieldTypes().get(i), partition, key);
+                streams.add(subFields);
+            }
+            return streams.stream().flatMap(f -> f);
         }
         else
         {
-            DataType.Name cassandraType = type.getName();
-            SchemaFieldDataType datahubType = convertType(cassandraType);
+            SchemaFieldDataType datahubType = convertType(type);
             String description = datahubType.getType().isNullType()
-                    ? "Unknown Cassandra data type " + cassandraType
+                    ? "Unknown Cassandra data type " + type.asCql(true, true).toLowerCase()
                     : null;  // Column-level comments are not supported by Cassandra
 
             return Stream.of(new SchemaField()
@@ -183,7 +188,7 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
                     .setNullable(!partition)  // Everything is potentially nullable in Cassandra except for the partition key
                     .setDescription(description, SetMode.REMOVE_IF_NULL)
                     .setType(datahubType)
-                    .setNativeDataType(cassandraType.toString().toLowerCase())
+                    .setNativeDataType(type.asCql(true, true).toLowerCase())
                     .setIsPartitioningKey(partition)
                     .setIsPartOfKey(key));
         }
@@ -197,9 +202,24 @@ public class TableToSchemaMetadataConverter extends TableToAspectConverter<Schem
      * @return DataHub data type, or {@code NullType} if unknown/unsupported
      */
     @NotNull
-    protected SchemaFieldDataType convertType(@NotNull DataType.Name cassandraType)
+    protected SchemaFieldDataType convertType(@NotNull DataType cassandraType)
     {
-        SchemaFieldDataType.Type datahubType = TYPES.get(cassandraType);
+        SchemaFieldDataType.Type datahubType = null;
+        if (cassandraType instanceof ListType
+            || cassandraType instanceof TupleType
+            || cassandraType instanceof SetType)
+        {
+            datahubType = ARRAY;
+        }
+        else if (cassandraType instanceof com.datastax.oss.driver.api.core.type.MapType)
+        {
+            datahubType = MAP;
+        }
+        else
+        {
+            datahubType = PRIMITIVE_TYPES.get(cassandraType.asCql(false, false));
+        }
+
         if (datahubType == null)
         {
             datahubType = NULL;  // Use the null type as an indicator of an unknown data type

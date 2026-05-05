@@ -25,11 +25,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.Statement;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.cql.SimpleStatement;
+import com.datastax.oss.driver.api.core.cql.Statement;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.ext.auth.authorization.Authorization;
@@ -72,7 +72,8 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public String findRoleFromIdentity(String identity)
     {
-        BoundStatement statement = tableSchema.roleFromIdentity().bind(identity);
+        BoundStatement statement = tableSchema.roleFromIdentity().bind(identity)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet result = execute(statement);
         Row row = result.one();
         return row != null ? row.getString("role") : null;
@@ -85,7 +86,8 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public Map<String, String> findAllIdentityToRoles()
     {
-        BoundStatement statement = tableSchema.allRolesAndIdentities().bind();
+        BoundStatement statement = tableSchema.allRolesAndIdentities().bind()
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet resultSet = execute(statement);
         Map<String, String> results = new HashMap<>();
         for (Row row : resultSet)
@@ -103,7 +105,8 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public Map<String, Set<Authorization>> findAllRolesAndPermissions()
     {
-        BoundStatement statement = tableSchema.allRolesAndPermissions().bind();
+        BoundStatement statement = tableSchema.allRolesAndPermissions().bind()
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet result = execute(statement);
         Map<String, Set<Authorization>> roleAuthorizations = new HashMap<>();
         for (Row row : result)
@@ -139,7 +142,7 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public boolean isSuperUser(String role)
     {
-        Statement statement = new SimpleStatement(String.format(tableSchema.unpreparedListRoles(), role));
+        Statement statement = SimpleStatement.newInstance(String.format(tableSchema.unpreparedListRoles(), role));
         ResultSet result = execute(statement);
         for (Row row : result)
         {
@@ -156,7 +159,8 @@ public class SystemAuthDatabaseAccessor extends DatabaseAccessor<SystemAuthSchem
      */
     public Map<String, Boolean> findAllRolesToSuperuserStatus()
     {
-        BoundStatement statement = tableSchema.allRoles().bind();
+        BoundStatement statement = tableSchema.allRoles().bind()
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet result = execute(statement);
         List<Row> rows = result.all();
         Map<String, Boolean> roleToSuperUser = rows.stream()

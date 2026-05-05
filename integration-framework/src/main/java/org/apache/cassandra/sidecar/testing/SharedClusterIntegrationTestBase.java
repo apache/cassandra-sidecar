@@ -53,10 +53,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.MetricRegistry;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.CqlSessionBuilder;
+import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.SimpleStatement;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -323,7 +324,7 @@ public abstract class SharedClusterIntegrationTestBase
         createTestKeyspace(name.maybeQuotedKeyspace(), rf);
     }
 
-    protected void createTestKeyspace(Session session, QualifiedName name, Map<String, Integer> rf)
+    protected void createTestKeyspace(CqlSession session, QualifiedName name, Map<String, Integer> rf)
     {
         createTestKeyspace(session, name.maybeQuotedKeyspace(), rf);
     }
@@ -333,7 +334,7 @@ public abstract class SharedClusterIntegrationTestBase
         createTestKeyspace(cluster::schemaChangeIgnoringStoppedInstances, keyspace, rf);
     }
 
-    protected void createTestKeyspace(Session session, String keyspace, Map<String, Integer> rf)
+    protected void createTestKeyspace(CqlSession session, String keyspace, Map<String, Integer> rf)
     {
         createTestKeyspace(session::execute, keyspace, rf);
     }
@@ -350,7 +351,7 @@ public abstract class SharedClusterIntegrationTestBase
         createTestTable(cluster::schemaChangeIgnoringStoppedInstances, name, createTableStatement);
     }
 
-    protected void createTestTable(Session session, QualifiedName name, String createTableStatement)
+    protected void createTestTable(CqlSession session, QualifiedName name, String createTableStatement)
     {
         createTestTable(session::execute, name, createTableStatement);
     }
@@ -578,21 +579,20 @@ public abstract class SharedClusterIntegrationTestBase
      */
     protected ResultSet queryAllDataWithDriver(QualifiedName table, ConsistencyLevel consistency)
     {
-        Cluster driverCluster = createDriverCluster(cluster.delegate());
-        Session session = driverCluster.connect();
-        SimpleStatement statement = new SimpleStatement(String.format("SELECT * FROM %s;", table));
-        statement.setConsistencyLevel(com.datastax.driver.core.ConsistencyLevel.valueOf(consistency.name()));
+        CqlSession session = createDriverSession(cluster.delegate());
+        SimpleStatement statement = SimpleStatement.newInstance(String.format("SELECT * FROM %s;", table))
+                                                   .setConsistencyLevel(DefaultConsistencyLevel.valueOf(consistency.name()));
         return session.execute(statement);
     }
 
     // Utility methods
 
-    public static Cluster createDriverCluster(ICluster<? extends IInstance> dtest)
+    public static CqlSession createDriverSession(ICluster<? extends IInstance> dtest)
     {
-        return createDriverCluster(dtest, null);
+        return createDriverSession(dtest, null);
     }
 
-    public static Cluster createDriverCluster(ICluster<? extends IInstance> dtest, Consumer<com.datastax.driver.core.Cluster.Builder> overrideBuilder)
+    public static CqlSession createDriverSession(ICluster<? extends IInstance> dtest, Consumer<CqlSessionBuilder> overrideBuilder)
     {
         dtest.stream().forEach((i) -> {
             if (!i.config().has(Feature.NATIVE_PROTOCOL) || !i.config().has(Feature.GOSSIP))
@@ -601,12 +601,12 @@ public abstract class SharedClusterIntegrationTestBase
                                                 "but one or more is missing");
             }
         });
-        Cluster.Builder builder = Cluster.builder()
-                                         .withoutMetrics();
+        CqlSessionBuilder builder = CqlSession.builder();
         dtest.stream().forEach((i) -> {
             InetSocketAddress address = new InetSocketAddress(i.broadcastAddress().getAddress(),
                                                               i.config().getInt("native_transport_port"));
-            builder.addContactPointsWithPorts(address);
+            builder.addContactPoint(address);
+            builder.withLocalDatacenter(i.config().localDatacenter());
         });
         if (overrideBuilder != null)
         {
@@ -733,8 +733,8 @@ public abstract class SharedClusterIntegrationTestBase
         public CQLSessionProvider cqlSessionProvider()
         {
             List<InetSocketAddress> contactPoints = buildContactPoints(instances);
-            return new TemporaryCqlSessionProvider(contactPoints,
-                                                   SharedExecutorNettyOptions.INSTANCE);
+            IInstance instance = instances.iterator().next();
+            return new TemporaryCqlSessionProvider(contactPoints, instance.config().localDatacenter(), null);
         }
 
         @Provides

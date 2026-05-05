@@ -24,7 +24,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
@@ -77,7 +77,7 @@ public abstract class OperationalJob implements Task<Void>
      */
     public long creationTime()
     {
-        return UUIDs.unixTimestamp(jobId);
+        return Uuids.unixTimestamp(jobId);
     }
 
     /**

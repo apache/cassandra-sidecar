@@ -166,7 +166,9 @@ class RestoreJobDiscovererNodeLeavingIntTest extends IntegrationTestBase
         return MANAGED_CASSANDRA_NODE_IP;
     }
 
-    private static IClusterExtension<? extends IInstance> startCluster(TokenSupplier tokenSupplier, ConfigurableCassandraTestContext cassandraTestContext, int leavingNodeNum)
+    private static IClusterExtension<? extends IInstance> startCluster(TokenSupplier tokenSupplier,
+                                                                       ConfigurableCassandraTestContext cassandraTestContext,
+                                                                       int leavingNodeNum)
     {
         BBHelperLeavingNode.reset();
         return cassandraTestContext.configureAndStartCluster(builder -> {

@@ -200,8 +200,10 @@ public class CassandraTestTemplate implements TestTemplateInvocationContextProvi
                         if (requestedVersion.version.getMajor() >= MIN_VERSION_WITH_MTLS)
                         {
                             additionalInstanceConfig.put("authenticator.class_name", "org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator");
-                            additionalInstanceConfig.put("authenticator.parameters", Collections.singletonMap("validator_class_name",
-                                                                                                              "org.apache.cassandra.auth.SpiffeCertificateValidator"));
+                            additionalInstanceConfig.put(
+                            "authenticator.parameters",
+                            Collections.singletonMap("validator_class_name", "org.apache.cassandra.auth.SpiffeCertificateValidator")
+                            );
                             additionalInstanceConfig.put("role_manager", "CassandraRoleManager");
                             additionalInstanceConfig.put("authorizer", "CassandraAuthorizer");
                             additionalInstanceConfig.put("client_encryption_options.enabled", "true");

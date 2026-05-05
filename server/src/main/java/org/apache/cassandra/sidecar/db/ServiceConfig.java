@@ -18,7 +18,8 @@
 package org.apache.cassandra.sidecar.db;
 
 import java.util.Map;
-import com.datastax.driver.core.Row;
+
+import com.datastax.oss.driver.api.core.cql.Row;
 import org.jetbrains.annotations.Nullable;
 
 /**

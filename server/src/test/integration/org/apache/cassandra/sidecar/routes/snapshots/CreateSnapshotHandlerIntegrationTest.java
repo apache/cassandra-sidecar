@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -301,7 +301,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     {
         QualifiedTableName tableName = createTestTable(tableNamePrefix,
                                                        "CREATE TABLE %s (id text PRIMARY KEY, name text)" + WITH_COMPACTION_DISABLED + ";");
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
 
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('1', 'Francisco');");
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('2', 'Saranya');");
@@ -313,7 +313,7 @@ class CreateSnapshotHandlerIntegrationTest extends IntegrationTestBase
     {
         QualifiedTableName tableName = createTestTable(
         "CREATE TABLE %s (id text PRIMARY KEY, name text)" + WITH_COMPACTION_DISABLED + ";");
-        Session session = maybeGetSession();
+        CqlSession session = maybeGetSession();
 
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('1', 'Francisco');");
         session.execute("INSERT INTO " + tableName + " (id, name) VALUES ('2', 'Saranya');");

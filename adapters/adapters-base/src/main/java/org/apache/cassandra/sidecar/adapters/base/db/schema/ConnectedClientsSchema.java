@@ -18,8 +18,9 @@
 
 package org.apache.cassandra.sidecar.adapters.base.db.schema;
 
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import org.apache.cassandra.sidecar.db.schema.CassandraSystemTableSchema;
 import org.jetbrains.annotations.NotNull;
 
@@ -42,10 +43,16 @@ public class ConnectedClientsSchema extends CassandraSystemTableSchema
     }
 
     @Override
-    public void prepareStatements(@NotNull Session session)
+    public void prepareStatements(@NotNull CqlSession session)
     {
         statsStatement = prepare(statsStatement, session, statsStatement());
         connectionsByUserStatement = prepare(connectionsByUserStatement, session, selectConnectionsByUserStatement());
+    }
+
+    @Override
+    public ConsistencyLevel getConsistencyLevel()
+    {
+        return ConsistencyLevel.LOCAL_QUORUM;
     }
 
     @Override

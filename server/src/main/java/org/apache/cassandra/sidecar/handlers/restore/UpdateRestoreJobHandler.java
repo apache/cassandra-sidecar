@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -105,7 +105,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
             if (job.status == RestoreJobStatus.SUCCEEDED)
             {
                 metrics.successfulJobs.metric.update(1);
-                long startMillis = UUIDs.unixTimestamp(job.jobId);
+                long startMillis = Uuids.unixTimestamp(job.jobId);
                 long durationMillis = System.currentTimeMillis() - startMillis;
                 // toNanos does not overflow. Nanos in `long` can at most represent 106,751 days.
                 metrics.jobCompletionTime.metric.update(durationMillis, TimeUnit.MILLISECONDS);

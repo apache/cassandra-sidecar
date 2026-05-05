@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.handlers;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -29,9 +30,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.CqlIdentifier;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -186,11 +188,11 @@ public class TableStatsHandlerTest
 
             KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
             Metadata mockMetadata = mock(Metadata.class);
-            when(mockMetadata.getKeyspace(KEYSPACE)).thenReturn(mockKeyspaceMetadata);
+            when(mockMetadata.getKeyspace(KEYSPACE)).thenReturn(Optional.of(mockKeyspaceMetadata));
             TableMetadata table = mock(TableMetadata.class);
-            when(table.getKeyspace()).thenReturn(mockKeyspaceMetadata);
-            when(table.getName()).thenReturn(TABLE);
-            when(mockKeyspaceMetadata.getTable(TABLE)).thenReturn(table);
+            when(table.getKeyspace()).thenReturn(CqlIdentifier.fromCql(KEYSPACE));
+            when(table.getName()).thenReturn(CqlIdentifier.fromCql(TABLE));
+            when(mockKeyspaceMetadata.getTable(TABLE)).thenReturn(Optional.of(table));
             when(delegate.metadata()).thenReturn(mockMetadata);
 
             InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);

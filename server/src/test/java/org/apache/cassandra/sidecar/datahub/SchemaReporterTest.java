@@ -21,20 +21,29 @@ package org.apache.cassandra.sidecar.datahub;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
+
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.codahale.metrics.SharedMetricRegistries;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.ColumnMetadata;
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.TableMetadata;
-import com.datastax.driver.core.TableOptionsMetadata;
-import com.datastax.driver.core.UserType;
+import com.datastax.oss.driver.api.core.CqlIdentifier;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.ClusteringOrder;
+import com.datastax.oss.driver.api.core.metadata.schema.ColumnMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
+import com.datastax.oss.driver.api.core.type.UserDefinedType;
+import com.datastax.oss.driver.internal.core.type.DefaultListType;
+import com.datastax.oss.driver.internal.core.type.DefaultMapType;
+import com.datastax.oss.driver.internal.core.type.PrimitiveType;
+import com.datastax.oss.driver.internal.core.type.UserDefinedTypeBuilder;
+import com.datastax.oss.protocol.internal.ProtocolConstants;
 import org.apache.cassandra.sidecar.common.server.utils.IOUtils;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
@@ -42,6 +51,7 @@ import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
 import org.apache.cassandra.sidecar.metrics.server.SchemaReportingMetrics;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -74,7 +84,7 @@ final class SchemaReporterTest
     void testEmptyCluster() throws IOException
     {
         Metadata metadata = mock(Metadata.class);
-        when(metadata.getKeyspaces()).thenReturn(Collections.emptyList());
+        when(metadata.getKeyspaces()).thenReturn(Collections.emptyMap());
 
         JsonEmitter emitter = new JsonEmitter();
         new SchemaReporter(IDENTIFIERS, () -> emitter, metrics).processRequested(metadata);
@@ -98,10 +108,11 @@ final class SchemaReporterTest
     void testEmptyKeyspace() throws IOException
     {
         Metadata metadata = mock(Metadata.class);
+        CqlIdentifier keyspaceIdentifier = CqlIdentifier.fromCql("sample_keyspace");
         KeyspaceMetadata keyspace = mock(KeyspaceMetadata.class);
-        when(metadata.getKeyspaces()).thenReturn(Collections.singletonList(keyspace));
-        when(keyspace.getName()).thenReturn("sample_keyspace");
-        when(keyspace.getTables()).thenReturn(Collections.emptyList());
+        when(metadata.getKeyspaces()).thenReturn(Map.of(keyspaceIdentifier, keyspace));
+        when(keyspace.getName()).thenReturn(keyspaceIdentifier);
+        when(keyspace.getTables()).thenReturn(Collections.emptyMap());
 
         JsonEmitter emitter = new JsonEmitter();
         new SchemaReporter(IDENTIFIERS, () -> emitter, metrics).processRequested(metadata);
@@ -127,15 +138,15 @@ final class SchemaReporterTest
         Metadata metadata = mock(Metadata.class);
         KeyspaceMetadata keyspace = mock(KeyspaceMetadata.class);
         TableMetadata table = mock(TableMetadata.class);
-        TableOptionsMetadata options = mock(TableOptionsMetadata.class);
-        when(metadata.getKeyspaces()).thenReturn(Collections.singletonList(keyspace));
-        when(keyspace.getName()).thenReturn("sample_keyspace");
-        when(keyspace.getTables()).thenReturn(Collections.singletonList(table));
-        when(table.getKeyspace()).thenReturn(keyspace);
-        when(table.getName()).thenReturn("sample_table");
-        when(table.getOptions()).thenReturn(options);
-        when(table.exportAsString()).thenReturn("CREATE TABLE sample_keyspace.sample_table (...);");
-        when(options.getComment()).thenReturn("table comment");
+        CqlIdentifier keyspaceId = CqlIdentifier.fromCql("sample_keyspace");
+        when(metadata.getKeyspaces()).thenReturn(Map.of(keyspaceId, keyspace));
+        when(keyspace.getName()).thenReturn(keyspaceId);
+        CqlIdentifier tableId = CqlIdentifier.fromCql("sample_table");
+        when(keyspace.getTables()).thenReturn(Map.of(tableId, table));
+        when(table.getKeyspace()).thenReturn(keyspaceId);
+        when(table.getName()).thenReturn(tableId);
+        when(table.getOptions()).thenReturn(Map.of(CqlIdentifier.fromInternal("comment"), "table comment"));
+        when(table.describeWithChildren(anyBoolean())).thenReturn("CREATE TABLE sample_keyspace.sample_table (...);");
 
         JsonEmitter emitter = new JsonEmitter();
         new SchemaReporter(IDENTIFIERS, () -> emitter, metrics).processRequested(metadata);
@@ -158,11 +169,10 @@ final class SchemaReporterTest
     @Test
     void testPrimitiveTypes() throws IOException
     {
-        Cluster cluster = mock(Cluster.class);
+        CqlSession session = mock(CqlSession.class);
         Metadata metadata = mock(Metadata.class);
         KeyspaceMetadata keyspace = mock(KeyspaceMetadata.class);
         TableMetadata table = mock(TableMetadata.class);
-        TableOptionsMetadata options = mock(TableOptionsMetadata.class);
         ColumnMetadata pk1 = mock(ColumnMetadata.class);
         ColumnMetadata pk2 = mock(ColumnMetadata.class);
         ColumnMetadata ck1 = mock(ColumnMetadata.class);
@@ -175,57 +185,75 @@ final class SchemaReporterTest
         ColumnMetadata c6 = mock(ColumnMetadata.class);
         ColumnMetadata c7 = mock(ColumnMetadata.class);
         ColumnMetadata c8 = mock(ColumnMetadata.class);
-        when(cluster.getMetadata()).thenReturn(metadata);
-        when(metadata.getKeyspaces()).thenReturn(Collections.singletonList(keyspace));
-        when(keyspace.getName()).thenReturn("sample_keyspace");
-        when(keyspace.getTables()).thenReturn(ImmutableList.of(table));
-        when(table.getKeyspace()).thenReturn(keyspace);
-        when(table.getName()).thenReturn("sample_table");
-        when(table.getOptions()).thenReturn(options);
-        when(table.getColumns()).thenReturn(ImmutableList.of(pk1, pk2, ck1, ck2, c1, c2, c3, c4, c5, c6, c7, c8));
+        when(session.getMetadata()).thenReturn(metadata);
+        CqlIdentifier keyspaceId = CqlIdentifier.fromCql("sample_keyspace");
+        when(metadata.getKeyspaces()).thenReturn(Map.of(keyspaceId, keyspace));
+        when(keyspace.getName()).thenReturn(keyspaceId);
+        CqlIdentifier tableId = CqlIdentifier.fromCql("sample_table");
+        when(keyspace.getTables()).thenReturn(Map.of(tableId, table));
+        when(table.getKeyspace()).thenReturn(keyspaceId);
+        when(table.getName()).thenReturn(tableId);
+        when(table.getOptions()).thenReturn(Collections.emptyMap());
+        when(table.getColumns()).thenReturn(ImmutableMap.<CqlIdentifier, ColumnMetadata>builder()
+                                            .put(CqlIdentifier.fromInternal("pk1"), pk1)
+                                            .put(CqlIdentifier.fromInternal("pk2"), pk2)
+                                            .put(CqlIdentifier.fromInternal("ck1"), ck1)
+                                            .put(CqlIdentifier.fromInternal("ck2"), ck2)
+                                            .put(CqlIdentifier.fromInternal("c1"), c1)
+                                            .put(CqlIdentifier.fromInternal("c2"), c2)
+                                            .put(CqlIdentifier.fromInternal("c3"), c3)
+                                            .put(CqlIdentifier.fromInternal("c4"), c4)
+                                            .put(CqlIdentifier.fromInternal("c5"), c5)
+                                            .put(CqlIdentifier.fromInternal("c6"), c6)
+                                            .put(CqlIdentifier.fromInternal("c7"), c7)
+                                            .put(CqlIdentifier.fromInternal("c8"), c8)
+                                            .build());
         when(table.getPartitionKey()).thenReturn(ImmutableList.of(pk1, pk2));
-        when(table.getClusteringColumns()).thenReturn(ImmutableList.of(ck1, ck2));
-        when(table.exportAsString()).thenReturn("CREATE TABLE sample_keyspace.sample_table (...);");
-        when(options.getComment()).thenReturn("table comment");
-        when(pk1.getParent()).thenReturn(table);
-        when(pk1.getName()).thenReturn("pk1");
-        when(pk1.getType()).thenReturn(DataType.cint());
-        when(pk2.getParent()).thenReturn(table);
-        when(pk2.getName()).thenReturn("pk2");
-        when(pk2.getType()).thenReturn(DataType.cfloat());
-        when(ck1.getParent()).thenReturn(table);
-        when(ck1.getName()).thenReturn("ck1");
-        when(ck1.getType()).thenReturn(DataType.varint());
-        when(ck2.getParent()).thenReturn(table);
-        when(ck2.getName()).thenReturn("ck2");
-        when(ck2.getType()).thenReturn(DataType.decimal());
-        when(c1.getParent()).thenReturn(table);
-        when(c1.getName()).thenReturn("c1");
-        when(c1.getType()).thenReturn(DataType.cboolean());
-        when(c2.getParent()).thenReturn(table);
-        when(c2.getName()).thenReturn("c2");
-        when(c2.getType()).thenReturn(DataType.date());
-        when(c3.getParent()).thenReturn(table);
-        when(c3.getName()).thenReturn("c3");
-        when(c3.getType()).thenReturn(DataType.time());
-        when(c4.getParent()).thenReturn(table);
-        when(c4.getName()).thenReturn("c4");
-        when(c4.getType()).thenReturn(DataType.ascii());
-        when(c5.getParent()).thenReturn(table);
-        when(c5.getName()).thenReturn("c6");
-        when(c5.getType()).thenReturn(DataType.varchar());
-        when(c6.getParent()).thenReturn(table);
-        when(c6.getName()).thenReturn("c6");
-        when(c6.getType()).thenReturn(DataType.blob());
-        when(c7.getParent()).thenReturn(table);
-        when(c7.getName()).thenReturn("c7");
-        when(c7.getType()).thenReturn(DataType.list(DataType.uuid(), true));
-        when(c8.getParent()).thenReturn(table);
-        when(c8.getName()).thenReturn("c8");
-        when(c8.getType()).thenReturn(DataType.map(DataType.timestamp(), DataType.inet(), false));
+        when(table.getClusteringColumns()).thenReturn(Map.of(
+        ck1, ClusteringOrder.ASC,
+        ck2, ClusteringOrder.ASC));
+        when(table.describeWithChildren(anyBoolean())).thenReturn("CREATE TABLE sample_keyspace.sample_table (...);");
+        when(table.getOptions()).thenReturn(Map.of(CqlIdentifier.fromInternal("comment"), "table comment"));
+        when(pk1.getParent()).thenReturn(tableId);
+        when(pk1.getName()).thenReturn(CqlIdentifier.fromInternal("pk1"));
+        when(pk1.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.INT));
+        when(pk2.getParent()).thenReturn(tableId);
+        when(pk2.getName()).thenReturn(CqlIdentifier.fromInternal("pk2"));
+        when(pk2.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.FLOAT));
+        when(ck1.getParent()).thenReturn(tableId);
+        when(ck1.getName()).thenReturn(CqlIdentifier.fromInternal("ck1"));
+        when(ck1.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.VARINT));
+        when(ck2.getParent()).thenReturn(tableId);
+        when(ck2.getName()).thenReturn(CqlIdentifier.fromInternal("ck2"));
+        when(ck2.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.DECIMAL));
+        when(c1.getParent()).thenReturn(tableId);
+        when(c1.getName()).thenReturn(CqlIdentifier.fromInternal("c1"));
+        when(c1.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.BOOLEAN));
+        when(c2.getParent()).thenReturn(tableId);
+        when(c2.getName()).thenReturn(CqlIdentifier.fromInternal("c2"));
+        when(c2.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.DATE));
+        when(c3.getParent()).thenReturn(tableId);
+        when(c3.getName()).thenReturn(CqlIdentifier.fromInternal("c3"));
+        when(c3.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.TIME));
+        when(c4.getParent()).thenReturn(tableId);
+        when(c4.getName()).thenReturn(CqlIdentifier.fromInternal("c4"));
+        when(c4.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.ASCII));
+        when(c5.getParent()).thenReturn(tableId);
+        when(c5.getName()).thenReturn(CqlIdentifier.fromInternal("c6"));
+        when(c5.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.VARCHAR));
+        when(c6.getParent()).thenReturn(tableId);
+        when(c6.getName()).thenReturn(CqlIdentifier.fromInternal("c6"));
+        when(c6.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.BLOB));
+        when(c7.getParent()).thenReturn(tableId);
+        when(c7.getName()).thenReturn(CqlIdentifier.fromInternal("c7"));
+        when(c7.getType()).thenReturn(new DefaultListType(new PrimitiveType(ProtocolConstants.DataType.UUID), false));
+        when(c8.getParent()).thenReturn(tableId);
+        when(c8.getName()).thenReturn(CqlIdentifier.fromInternal("c8"));
+        when(c8.getType()).thenReturn(new DefaultMapType(new PrimitiveType(ProtocolConstants.DataType.TIMESTAMP),
+                                                         new PrimitiveType(ProtocolConstants.DataType.INET), false));
 
         JsonEmitter emitter = new JsonEmitter();
-        new SchemaReporter(IDENTIFIERS, () -> emitter, metrics).processScheduled(cluster);
+        new SchemaReporter(IDENTIFIERS, () -> emitter, metrics).processScheduled(session);
 
         String actual = emitter.content();
         String expected = IOUtils.readFully("/datahub/primitive_types.json");
@@ -237,7 +265,7 @@ final class SchemaReporterTest
         assertThat(metrics.finishedSuccess.metric.getValue()).isOne();                                 //  * one execution resulted in success
         assertThat(metrics.finishedFailure.metric.getValue()).isZero();                                //  * zero executions resulted in failure
         assertThat(metrics.sizeAspects.metric.getCount()).isOne();                                     //  * single number of aspects,
-        assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(13L);         //    equal to thirteen
+        assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(13L); //    equal to thirteen
         assertThat(metrics.totalDuration.metric.getCount()).isOne();                            //  * single duration of execution,
         assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
     }
@@ -245,65 +273,58 @@ final class SchemaReporterTest
     @Test
     void testUserTypes() throws IOException
     {
-        Cluster cluster = mock(Cluster.class);
+        CqlSession cluster = mock(CqlSession.class);
         Metadata metadata = mock(Metadata.class);
         KeyspaceMetadata keyspace = mock(KeyspaceMetadata.class);
         TableMetadata table = mock(TableMetadata.class);
-        TableOptionsMetadata options = mock(TableOptionsMetadata.class);
         ColumnMetadata pk = mock(ColumnMetadata.class);
         ColumnMetadata ck = mock(ColumnMetadata.class);
         ColumnMetadata udt1 = mock(ColumnMetadata.class);
         ColumnMetadata udt2 = mock(ColumnMetadata.class);
         ColumnMetadata c1 = mock(ColumnMetadata.class);
         ColumnMetadata c2 = mock(ColumnMetadata.class);
-        UserType udt1t = mock(UserType.class);
-        UserType udt2t = mock(UserType.class);
-        UserType.Field udt1c1 = mock(UserType.Field.class);
-        UserType.Field udt1udt2 = mock(UserType.Field.class);
-        UserType.Field udt2c2 = mock(UserType.Field.class);
+        UserDefinedType udt2t = new UserDefinedTypeBuilder("sample_keyspace", "udt2")
+                                .withField("c2", new PrimitiveType(ProtocolConstants.DataType.BOOLEAN))
+                                .build();
+        UserDefinedType udt1t = new UserDefinedTypeBuilder("sample_keyspace", "udt1")
+                                .withField("c1", new PrimitiveType(ProtocolConstants.DataType.ASCII))
+                                .withField("udt2", udt2t)
+                                .build();
         when(cluster.getMetadata()).thenReturn(metadata);
-        when(metadata.getKeyspaces()).thenReturn(Collections.singletonList(keyspace));
-        when(keyspace.getName()).thenReturn("sample_keyspace");
-        when(keyspace.getTables()).thenReturn(ImmutableList.of(table));
-        when(table.getKeyspace()).thenReturn(keyspace);
-        when(table.getName()).thenReturn("sample_table");
-        when(table.getOptions()).thenReturn(options);
-        when(table.getColumns()).thenReturn(ImmutableList.of(pk, ck, udt1));
+        CqlIdentifier keyspaceId = CqlIdentifier.fromCql("sample_keyspace");
+        CqlIdentifier tableId = CqlIdentifier.fromCql("sample_table");
+        when(metadata.getKeyspaces()).thenReturn(Map.of(keyspaceId, keyspace));
+        when(keyspace.getName()).thenReturn(keyspaceId);
+        when(keyspace.getTables()).thenReturn(Map.of(tableId, table));
+        when(table.getKeyspace()).thenReturn(keyspaceId);
+        when(table.getName()).thenReturn(tableId);
+        Map<CqlIdentifier, ColumnMetadata> columns = Maps.newLinkedHashMap();
+        columns.put(CqlIdentifier.fromCql("pk"), pk);
+        columns.put(CqlIdentifier.fromCql("cd"), ck);
+        columns.put(CqlIdentifier.fromCql("udt1"), udt1);
+        when(table.getColumns()).thenReturn(columns);
         when(table.getPartitionKey()).thenReturn(ImmutableList.of(pk));
-        when(table.getClusteringColumns()).thenReturn(ImmutableList.of(ck));
-        when(table.exportAsString()).thenReturn("CREATE TABLE sample_keyspace.sample_table (...);");
-        when(options.getComment()).thenReturn("table comment");
-        when(pk.getParent()).thenReturn(table);
-        when(pk.getName()).thenReturn("pk");
-        when(pk.getType()).thenReturn(DataType.cint());
-        when(ck.getParent()).thenReturn(table);
-        when(ck.getName()).thenReturn("ck");
-        when(ck.getType()).thenReturn(DataType.cfloat());
-        when(udt1.getParent()).thenReturn(table);
-        when(udt1.getName()).thenReturn("udt1");
+        when(table.getClusteringColumns()).thenReturn(Map.of(ck, ClusteringOrder.ASC));
+        when(table.describeWithChildren(anyBoolean())).thenReturn("CREATE TABLE sample_keyspace.sample_table (...);");
+        when(table.getOptions()).thenReturn(Map.of(CqlIdentifier.fromInternal("comment"), "table comment"));
+        when(pk.getParent()).thenReturn(tableId);
+        when(pk.getName()).thenReturn(CqlIdentifier.fromInternal("pk"));
+        when(pk.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.INT));
+        when(ck.getParent()).thenReturn(tableId);
+        when(ck.getName()).thenReturn(CqlIdentifier.fromInternal("ck"));
+        when(ck.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.FLOAT));
+        when(udt1.getParent()).thenReturn(tableId);
+        when(udt1.getName()).thenReturn(CqlIdentifier.fromInternal("udt1"));
         when(udt1.getType()).thenReturn(udt1t);
-        when(udt2.getParent()).thenReturn(table);
-        when(udt2.getName()).thenReturn("udt2");
+        when(udt2.getParent()).thenReturn(tableId);
+        when(udt2.getName()).thenReturn(CqlIdentifier.fromInternal("udt2"));
         when(udt2.getType()).thenReturn(udt2t);
-        when(c1.getParent()).thenReturn(table);
-        when(c1.getName()).thenReturn("c1");
-        when(c1.getType()).thenReturn(DataType.ascii());
-        when(c2.getParent()).thenReturn(table);
-        when(c2.getName()).thenReturn("c2");
-        when(c2.getType()).thenReturn(DataType.cboolean());
-        when(udt1t.getName()).thenReturn(DataType.Name.UDT);
-        when(udt1t.getFieldNames()).thenReturn(ImmutableList.of("c1", "udt2"));
-        when(udt1t.getFieldType("c1")).thenReturn(DataType.ascii());
-        when(udt1t.getFieldType("udt2")).thenReturn(udt2t);
-        when(udt2t.getName()).thenReturn(DataType.Name.UDT);
-        when(udt2t.getFieldNames()).thenReturn(ImmutableList.of("c2"));
-        when(udt2t.getFieldType("c2")).thenReturn(DataType.cboolean());
-        when(udt1c1.getName()).thenReturn("c1");
-        when(udt1c1.getType()).thenReturn(DataType.ascii());
-        when(udt1udt2.getName()).thenReturn("udt2");
-        when(udt1udt2.getType()).thenReturn(udt2t);
-        when(udt2c2.getName()).thenReturn("c2");
-        when(udt2c2.getType()).thenReturn(DataType.cboolean());
+        when(c1.getParent()).thenReturn(tableId);
+        when(c1.getName()).thenReturn(CqlIdentifier.fromInternal("c1"));
+        when(c1.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.ASCII));
+        when(c2.getParent()).thenReturn(tableId);
+        when(c2.getName()).thenReturn(CqlIdentifier.fromInternal("c2"));
+        when(c2.getType()).thenReturn(new PrimitiveType(ProtocolConstants.DataType.BOOLEAN));
 
         JsonEmitter emitter = new JsonEmitter();
         new SchemaReporter(IDENTIFIERS, () -> emitter, metrics).processScheduled(cluster);
@@ -318,7 +339,7 @@ final class SchemaReporterTest
         assertThat(metrics.finishedSuccess.metric.getValue()).isOne();                                 //  * one execution resulted in success
         assertThat(metrics.finishedFailure.metric.getValue()).isZero();                                //  * zero executions resulted in failure
         assertThat(metrics.sizeAspects.metric.getCount()).isOne();                                     //  * single number of aspects,
-        assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(13L);         //    equal to thirteen
+        assertThat(metrics.sizeAspects.metric.getSnapshot().getValues()).containsExactly(13L); //    equal to thirteen
         assertThat(metrics.totalDuration.metric.getCount()).isOne();                            //  * single duration of execution,
         assertThat(metrics.totalDuration.metric.getSnapshot().getValues()[0]).isNotNegative();  //    that is non-negative
     }

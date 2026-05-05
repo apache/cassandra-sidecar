@@ -42,7 +42,7 @@ public class SidecarCdcOptions implements CdcOptions
     {
 
         Map<String, String> replication = instanceMetadataFetcher
-                                          .callOnFirstAvailableInstance(instance-> instance.delegate().metadata().getKeyspace(keyspace).getReplication());
+                                          .callOnFirstAvailableInstance(instance-> instance.delegate().metadata().getKeyspace(keyspace).get().getReplication());
         return new ReplicationFactor(replication);
     }
 

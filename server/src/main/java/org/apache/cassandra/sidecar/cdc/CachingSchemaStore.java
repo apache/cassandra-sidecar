@@ -186,7 +186,9 @@ public class CachingSchemaStore implements SchemaStore
         // Remove any old schema entries for deleted tables, this operation can be done in the end as this is
         // only for removing stale entries and no one is going to use these entries once the table is removed.
         // This doesn't have to be an atomic operation.
-        avroSchemasCache.keySet().retainAll(refreshedCdcTables.stream().map(cqlTable -> TableIdentifier.of(cqlTable.keyspace(), cqlTable.table())).collect(Collectors.toList()));
+        avroSchemasCache.keySet().retainAll(refreshedCdcTables.stream()
+                                                              .map(cqlTable -> TableIdentifier.of(cqlTable.keyspace(), cqlTable.table()))
+                                                              .collect(Collectors.toList()));
         vertx.eventBus().publish(ON_CDC_CACHE_WARMED_UP.address(), "Cdc cache warmed up");
     }
 

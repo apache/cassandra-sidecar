@@ -20,28 +20,20 @@ package org.apache.cassandra.testing;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.PlainTextAuthProvider;
-import com.datastax.driver.core.RemoteEndpointAwareNettySSLOptions;
-import com.datastax.driver.core.SSLOptions;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.exceptions.AuthenticationException;
-import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.shared.Uninterruptibles;
 
@@ -52,13 +44,12 @@ import static org.apache.cassandra.testing.utils.IInstanceUtils.tryGetIntConfig;
  */
 public class TlsTestUtils
 {
-    public static SSLOptions getSSLOptions(String keystorePath, String keystorePassword,
+    public static SSLContext getSSLContext(String keystorePath, String keystorePassword,
                                            String trustStorePath, String trustStorePassword) throws RuntimeException
     {
         try
         {
-            SslContext context = buildSSLContext(keystorePath, keystorePassword, trustStorePath, trustStorePassword);
-            return new RemoteEndpointAwareNettySSLOptions(context);
+            return buildSSLContext(keystorePath, keystorePassword, trustStorePath, trustStorePassword);
         }
         catch (GeneralSecurityException | IOException e)
         {
@@ -69,8 +60,8 @@ public class TlsTestUtils
     public static void withAuthenticatedSession(IInstance instance,
                                                 String username,
                                                 String password,
-                                                Consumer<Session> consumer,
-                                                SSLOptions sslOptions)
+                                                Consumer<CqlSession> consumer,
+                                                SSLContext sslOptions)
     {
         withAuthenticatedSession(instance, username, password, (builder) -> builder, consumer, sslOptions);
     }
@@ -78,29 +69,25 @@ public class TlsTestUtils
     public static void withAuthenticatedSession(IInstance instance,
                                                 String username,
                                                 String password,
-                                                Function<Cluster.Builder, Cluster.Builder> builderCustomizer,
-                                                Consumer<Session> consumer,
-                                                SSLOptions sslOptions)
+                                                Function<CqlSessionBuilder, CqlSessionBuilder> builderCustomizer,
+                                                Consumer<CqlSession> consumer,
+                                                SSLContext sslOptions)
     {
         InetSocketAddress nativeInetSocketAddress = new InetSocketAddress(instance.config().broadcastAddress().getAddress(),
                                                                           tryGetIntConfig(instance.config(), "native_transport_port", 9042));
-        InetAddress address = nativeInetSocketAddress.getAddress();
 
-        com.datastax.driver.core.Cluster.Builder builder = com.datastax.driver.core.Cluster.builder()
-                                                                                           .withLoadBalancingPolicy(
-                                                                                           new DCAwareRoundRobinPolicy.Builder().build())
-                                                                                           .withSSL(sslOptions)
-                                                                                           .withoutJMXReporting()
-                                                                                           .withAuthProvider(new PlainTextAuthProvider(username, password))
-                                                                                           .addContactPoint(address.getHostAddress())
-                                                                                           .withPort(nativeInetSocketAddress.getPort());
+        CqlSessionBuilder builder = CqlSession.builder()
+                                              .withSslContext(sslOptions)
+                                              .withAuthCredentials(username, password)
+                                              .withLocalDatacenter(instance.config().localDatacenter())
+                                              .addContactPoint(nativeInetSocketAddress);
 
         if (builderCustomizer != null)
         {
             builder = builderCustomizer.apply(builder);
         }
 
-        try (com.datastax.driver.core.Cluster c = builder.build(); Session session = c.connect())
+        try (CqlSession session = builder.build())
         {
             consumer.accept(session);
         }
@@ -113,14 +100,14 @@ public class TlsTestUtils
      */
     public static void waitForExistingRoles(Runnable runnable)
     {
-        for (int i = 0; i < 60; i++)
+        for (int i = 0; i < 120; i++)
         {
             try
             {
                 runnable.run();
                 return;
             }
-            catch (AuthenticationException exception)
+            catch (RuntimeException exception)
             {
                 if (exception.getMessage() != null &&
                     exception.getMessage().contains("Provided username cassandra and/or password are incorrect"))
@@ -136,22 +123,21 @@ public class TlsTestUtils
         }
     }
 
-    public static SslContext buildSSLContext(String keystorePath, String keystorePassword,
+    public static SSLContext buildSSLContext(String keystorePath, String keystorePassword,
                                              String trustStorePath, String trustStorePassword) throws GeneralSecurityException, IOException
     {
 
-        SslContextBuilder sslContextBuilder;
+        SSLContext sslContext;
         try
         {
-            sslContextBuilder = SslContextBuilder.forClient()
-                                                 .protocols(List.of("TLSv1.2", "TLSv1.3"));
+            sslContext = SSLContext.getInstance("TLS");
 
+            KeyManagerFactory kmf = null;
             if (keystorePath != null && keystorePassword != null)
             {
                 KeyStore keyStore = createKeystore(keystorePath, keystorePassword);
-                KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
                 kmf.init(keyStore, keystorePassword.toCharArray());
-                sslContextBuilder.keyManager(kmf);
             }
 
             // We set the truststore only if it is configured. For an SSL connection, if the truststore is required
@@ -159,8 +145,10 @@ public class TlsTestUtils
             KeyStore truststore = createKeystore(trustStorePath, trustStorePassword);
             TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
             tmf.init(truststore);
-            sslContextBuilder.trustManager(tmf);
-            return sslContextBuilder.build();
+
+            sslContext.init(kmf != null ? kmf.getKeyManagers() : null,
+                            tmf.getTrustManagers(), null);
+            return sslContext;
         }
         catch (Exception e)
         {

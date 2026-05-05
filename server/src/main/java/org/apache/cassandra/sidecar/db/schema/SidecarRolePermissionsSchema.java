@@ -18,8 +18,8 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -54,7 +54,7 @@ public class SidecarRolePermissionsSchema extends TableSchema
     }
 
     @Override
-    protected void prepareStatements(@NotNull Session session)
+    protected void prepareStatements(@NotNull CqlSession session)
     {
         allRolesAndPermissions = prepare(allRolesAndPermissions, session, CqlLiterals.allRolesAndPermissions(keyspaceConfig));
     }

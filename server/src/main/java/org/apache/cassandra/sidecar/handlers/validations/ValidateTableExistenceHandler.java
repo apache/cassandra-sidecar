@@ -18,8 +18,10 @@
 
 package org.apache.cassandra.sidecar.handlers.validations;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.TableMetadata;
+import java.util.Optional;
+
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -96,15 +98,15 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
                 return;
             }
 
-            TableMetadata tableMetadata = keyspaceMetadata.getTable(table);
-            if (tableMetadata == null)
+            Optional<TableMetadata> tableMetadata = keyspaceMetadata.getTable(table);
+            if (tableMetadata.isEmpty())
             {
                 String errMsg = "Table " + input.tableName() + " was not found for keyspace " + input.keyspace();
                 context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, errMsg));
             }
             else
             {
-                RoutingContextUtils.put(context, RoutingContextUtils.SC_TABLE_METADATA, tableMetadata);
+                RoutingContextUtils.put(context, RoutingContextUtils.SC_TABLE_METADATA, tableMetadata.get());
                 // keyspace / [table] exists
                 context.next();
             }
@@ -116,6 +118,6 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
         return executorPools.service().executeBlocking(() -> metadataFetcher.instance(host)
                                                                             .delegate()
                                                                             .metadata()
-                                                                            .getKeyspace(keyspace));
+                                                                            .getKeyspace(keyspace).orElse(null));
     }
 }

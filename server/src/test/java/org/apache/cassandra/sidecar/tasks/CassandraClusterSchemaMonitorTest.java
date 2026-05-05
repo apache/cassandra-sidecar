@@ -211,7 +211,10 @@ class CassandraClusterSchemaMonitorTest
             cdcUtil.when(() -> CdcUtil.extractCdcTables(UPDATED_SCHEMA)).thenReturn(mockCreateStmts2);
             cqlUtils.when(() -> CqlUtils.extractUdts(anyString(), anyString())).thenReturn(Collections.emptySet());
             cqlUtils.when(() -> CqlUtils.extractReplicationFactor(anyString(), anyString())).thenReturn(ReplicationFactor.simpleStrategy(1));
-            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class), any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
+            when(mockCassandraBridge.buildSchema(
+            anyString(), anyString(), any(ReplicationFactor.class), any(Partitioner.class), any(Set.class),
+            any(UUID.class), any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class)
+            );
 
             // First call returns initial schema, second call returns updated schema
             when(mockDatabaseAccessor.fullSchema())
@@ -249,7 +252,9 @@ class CassandraClusterSchemaMonitorTest
             cdcUtil.when(() -> CdcUtil.extractCdcTables(anyString())).thenReturn(mockCreateStmts);
             cqlUtils.when(() -> CqlUtils.extractUdts(anyString(), anyString())).thenReturn(Collections.emptySet());
             cqlUtils.when(() -> CqlUtils.extractReplicationFactor(anyString(), anyString())).thenReturn(ReplicationFactor.simpleStrategy(1));
-            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class), any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
+            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class),
+                                                 any(Partitioner.class), any(Set.class), any(UUID.class),
+                                                 any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
 
             // First refresh
             clusterSchema.refresh();
@@ -279,7 +284,9 @@ class CassandraClusterSchemaMonitorTest
             cdcUtil.when(() -> CdcUtil.extractCdcTables(anyString())).thenReturn(mockCreateStmts);
             cqlUtils.when(() -> CqlUtils.extractUdts(anyString(), anyString())).thenReturn(Collections.emptySet());
             cqlUtils.when(() -> CqlUtils.extractReplicationFactor(anyString(), anyString())).thenReturn(ReplicationFactor.simpleStrategy(1));
-            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class), any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
+            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class),
+                                                 any(Partitioner.class), any(Set.class), any(UUID.class),
+                                                 any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
 
             AtomicBoolean listener1Called = new AtomicBoolean(false);
             AtomicBoolean listener2Called = new AtomicBoolean(false);
@@ -361,7 +368,9 @@ class CassandraClusterSchemaMonitorTest
             cdcUtil.when(() -> CdcUtil.extractCdcTables(anyString())).thenReturn(mockCreateStmts);
             cqlUtils.when(() -> CqlUtils.extractUdts(anyString(), anyString())).thenReturn(Collections.emptySet());
             cqlUtils.when(() -> CqlUtils.extractReplicationFactor(anyString(), anyString())).thenReturn(ReplicationFactor.simpleStrategy(1));
-            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class), any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
+            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class),
+                                                 any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class),
+                                                 any(Boolean.class))).thenReturn(mock(CqlTable.class));
 
             @SuppressWarnings("unchecked")
             Promise<Void> promise = mock(Promise.class);
@@ -410,7 +419,9 @@ class CassandraClusterSchemaMonitorTest
             cdcUtil.when(() -> CdcUtil.extractCdcTables(anyString())).thenReturn(mockCreateStmts);
             cqlUtils.when(() -> CqlUtils.extractUdts(anyString(), anyString())).thenReturn(Collections.emptySet());
             cqlUtils.when(() -> CqlUtils.extractReplicationFactor(anyString(), anyString())).thenReturn(ReplicationFactor.simpleStrategy(1));
-            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class), any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
+            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class),
+                                                 any(Partitioner.class), any(Set.class), any(UUID.class),
+                                                 any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
 
             ConcurrentHashMap<TableIdentifier, UUID> tableIdCache = new ConcurrentHashMap<>();
             UUID testTableId = UUID.randomUUID();
@@ -445,7 +456,9 @@ class CassandraClusterSchemaMonitorTest
             cdcUtil.when(() -> CdcUtil.extractCdcTables(anyString())).thenReturn(mockCreateStmts);
             cqlUtils.when(() -> CqlUtils.extractUdts(anyString(), anyString())).thenReturn(Collections.emptySet());
             cqlUtils.when(() -> CqlUtils.extractReplicationFactor(anyString(), anyString())).thenReturn(ReplicationFactor.simpleStrategy(1));
-            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class), any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
+            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class),
+                                                 any(Partitioner.class), any(Set.class), any(UUID.class),
+                                                 any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
 
             AtomicBoolean listenerCalled = new AtomicBoolean(false);
             Runnable listener = () -> listenerCalled.set(true);
@@ -472,7 +485,9 @@ class CassandraClusterSchemaMonitorTest
             cdcUtil.when(() -> CdcUtil.extractCdcTables(anyString())).thenReturn(mockCreateStmts);
             cqlUtils.when(() -> CqlUtils.extractUdts(anyString(), anyString())).thenReturn(Collections.emptySet());
             cqlUtils.when(() -> CqlUtils.extractReplicationFactor(anyString(), anyString())).thenReturn(ReplicationFactor.simpleStrategy(1));
-            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class), any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
+            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class),
+                                                 any(Partitioner.class), any(Set.class), any(UUID.class),
+                                                 any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
 
             AtomicBoolean listener1Called = new AtomicBoolean(false);
             AtomicBoolean listener2Called = new AtomicBoolean(false);
@@ -505,7 +520,9 @@ class CassandraClusterSchemaMonitorTest
             cdcUtil.when(() -> CdcUtil.extractCdcTables(anyString())).thenReturn(mockCreateStmts);
             cqlUtils.when(() -> CqlUtils.extractUdts(anyString(), anyString())).thenReturn(Collections.emptySet());
             cqlUtils.when(() -> CqlUtils.extractReplicationFactor(anyString(), anyString())).thenReturn(ReplicationFactor.simpleStrategy(1));
-            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class), any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
+            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class),
+                                                 any(Partitioner.class), any(Set.class), any(UUID.class),
+                                                 any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
 
             AtomicBoolean listenerCalled = new AtomicBoolean(false);
             clusterSchema.addSchemaChangeListener(() -> listenerCalled.set(true));
@@ -564,7 +581,9 @@ class CassandraClusterSchemaMonitorTest
             cdcUtil.when(() -> CdcUtil.extractCdcTables(anyString())).thenReturn(mockCreateStmts);
             cqlUtils.when(() -> CqlUtils.extractUdts(anyString(), anyString())).thenReturn(Collections.emptySet());
             cqlUtils.when(() -> CqlUtils.extractReplicationFactor(anyString(), anyString())).thenReturn(ReplicationFactor.simpleStrategy(1));
-            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class), any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class), any(Boolean.class))).thenReturn(mock(CqlTable.class));
+            when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class),
+                                                 any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class),
+                                                 any(Boolean.class))).thenReturn(mock(CqlTable.class));
 
             TableIdentifier expectedTableId = TableIdentifier.of("test", "cdc_table");
             UUID expectedUuid = UUID.randomUUID();

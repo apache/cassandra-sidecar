@@ -74,6 +74,6 @@ public enum DnsResolvers implements DnsResolver
     @Override
     public String resolve(String hostname) throws UnknownHostException
     {
-           return InetAddress.getByName(hostname).getHostAddress();
+        return InetAddress.getByName(hostname).getHostAddress();
     }
 }

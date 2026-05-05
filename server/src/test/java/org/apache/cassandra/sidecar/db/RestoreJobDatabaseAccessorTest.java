@@ -18,9 +18,9 @@
 
 package org.apache.cassandra.sidecar.db;
 
-import org.junit.jupiter.api.Test;
+import java.time.LocalDate;
 
-import com.datastax.driver.core.LocalDate;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,13 +30,13 @@ class RestoreJobDatabaseAccessorTest
     void testDaysInPast()
     {
         long now = System.currentTimeMillis();
-        LocalDate nowLocalDate = LocalDate.fromMillisSinceEpoch(now);
+        LocalDate nowLocalDate = LocalDate.ofEpochDay(now / 1000 / 60 / 60 / 24);
         for (int i = 0; i <= 10; i++)
         {
             LocalDate pastDate = RestoreJobDatabaseAccessor.dateInPast(now, i);
-            assertThat(pastDate.getDaysSinceEpoch())
+            assertThat(pastDate.toEpochDay())
             .describedAs(i + " days in the past")
-            .isEqualTo(nowLocalDate.getDaysSinceEpoch() - i);
+            .isEqualTo(nowLocalDate.toEpochDay() - i);
         }
     }
 }

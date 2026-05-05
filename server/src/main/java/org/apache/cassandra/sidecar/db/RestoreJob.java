@@ -20,16 +20,16 @@ package org.apache.cassandra.sidecar.db;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.LocalDate;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.utils.Bytes;
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
+import com.datastax.oss.protocol.internal.util.Bytes;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.data.ConsistencyConfig;
@@ -42,6 +42,8 @@ import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.common.utils.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor.ONE_DAY_MILLISECONDS;
 
 /**
  * RestoreJob is the in-memory representation of a restore job
@@ -86,14 +88,14 @@ public class RestoreJob
         Builder builder = new Builder();
         ConsistencyConfig consistencyConfig = ConsistencyConfig.parseString(row.getString("consistency_level"),
                                                                             row.getString("local_datacenter"));
-        builder.createdAt(row.getDate("created_at"))
-               .jobId(row.getUUID("job_id")).jobAgent(row.getString("job_agent"))
+        builder.createdAt(row.getLocalDate("created_at"))
+               .jobId(row.getUuid("job_id")).jobAgent(row.getString("job_agent"))
                .bucketCount((short) 0) // always use 0 for now; TODO - Add bucketCount field to CreateRestoreJobRequestPayload
                .keyspace(row.getString("keyspace_name")).table(row.getString("table_name"))
                .jobStatusText(row.getString("status"))
-               .jobSecrets(decodeJobSecrets(row.getBytes("blob_secrets")))
-               .expireAt(row.getTimestamp("expire_at"))
-               .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")))
+               .jobSecrets(decodeJobSecrets(row.getByteBuffer("blob_secrets")))
+               .expireAt(row.isNull("expire_at") ? null : Date.from(row.getInstant("expire_at")))
+               .sstableImportOptions(decodeSSTableImportOptions(row.getByteBuffer("import_options")))
                .consistencyLevel(consistencyConfig.consistencyLevel)
                .localDatacenter(consistencyConfig.localDatacenter)
                .shouldRestoreToLocalDatacenterOnly(row.getBool("local_datacenter_only"))
@@ -240,7 +242,7 @@ public class RestoreJob
 
     public static LocalDate toLocalDate(UUID jobId)
     {
-        return LocalDate.fromMillisSinceEpoch(UUIDs.unixTimestamp(jobId));
+        return LocalDate.ofEpochDay(Uuids.unixTimestamp(jobId) / ONE_DAY_MILLISECONDS);
     }
 
     private static <T> T deserializeJsonBytes(ByteBuffer byteBuffer, Class<T> type, String fieldNameHint)

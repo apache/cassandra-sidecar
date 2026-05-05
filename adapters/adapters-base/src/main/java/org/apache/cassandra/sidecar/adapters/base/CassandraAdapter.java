@@ -22,12 +22,12 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Objects;
 
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.Host;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Statement;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Node;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.common.server.ClusterMembershipOperations;
@@ -56,7 +56,7 @@ public class CassandraAdapter implements ICassandraAdapter
     protected final CQLSessionProvider cqlSessionProvider;
     protected final InetSocketAddress localNativeTransportAddress;
     protected final DriverUtils driverUtils;
-    private volatile Host host;
+    private volatile Node host;
     private final StorageOperations storageOperations;
     private final ClusterMembershipOperations clusterMembershipOperations;
     private final TableOperations tableOperations;
@@ -95,7 +95,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @NotNull
     public Metadata metadata() throws CassandraUnavailableException
     {
-        return cqlSessionProvider.get().getCluster().getMetadata();
+        return cqlSessionProvider.get().getMetadata();
     }
 
     /**
@@ -117,13 +117,13 @@ public class CassandraAdapter implements ICassandraAdapter
 
     @Override
     @NotNull
-    public ResultSet executeLocal(Statement statement)
+    public ResultSet executeLocal(Statement<?> statement)
     {
-        Session activeSession = cqlSessionProvider.get();
+        CqlSession activeSession = cqlSessionProvider.get();
         Metadata metadata = metadata();
-        Host host = getHost(metadata);
-        statement.setConsistencyLevel(ConsistencyLevel.ONE);
-        statement.setHost(host);
+        Node host = getHost(metadata);
+        statement = statement.setConsistencyLevel(ConsistencyLevel.ONE)
+                             .setNode(host);
         return activeSession.execute(statement);
     }
 
@@ -139,7 +139,7 @@ public class CassandraAdapter implements ICassandraAdapter
     public InetSocketAddress localStorageBroadcastAddress()
     {
         Metadata metadata = metadata();
-        return getHost(metadata).getBroadcastSocketAddress();
+        return getHost(metadata).getBroadcastAddress().get();
     }
 
     /**
@@ -248,7 +248,7 @@ public class CassandraAdapter implements ICassandraAdapter
     }
 
     @NotNull
-    protected Host getHost(Metadata metadata)
+    protected Node getHost(Metadata metadata)
     {
         if (host != null)
         {

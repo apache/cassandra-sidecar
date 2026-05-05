@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.handlers;
 import java.util.Collections;
 import java.util.Set;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import com.google.inject.Inject;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -82,7 +82,7 @@ public class NodeDrainHandler extends AbstractHandler<Void> implements AccessPro
                                Void unused)
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
-        NodeDrainJob job = new NodeDrainJob(UUIDs.timeBased(), operations);
+        NodeDrainJob job = new NodeDrainJob(Uuids.timeBased(), operations);
         this.jobManager.trySubmitJob(job,
                                      (completedJob, exception) ->
                                      OperationalJobUtils.sendStatusBasedResponse(context, completedJob, exception),

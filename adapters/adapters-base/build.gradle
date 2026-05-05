@@ -50,10 +50,10 @@ dependencies {
 
     api("com.google.guava:guava:${project.rootProject.guavaVersion}")
     compileOnly('org.jetbrains:annotations:23.0.0')
-    compileOnly('com.datastax.cassandra:cassandra-driver-core:3.11.3')
+    compileOnly('org.apache.cassandra:java-driver-core:4.19.1')
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
 
-    testImplementation('com.datastax.cassandra:cassandra-driver-core:3.11.3')
+    testImplementation('org.apache.cassandra:java-driver-core:4.19.1')
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${project.junitVersion}"
     testImplementation "org.assertj:assertj-core:3.24.2"

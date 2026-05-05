@@ -27,7 +27,7 @@ import java.util.Date;
 
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -62,7 +62,7 @@ public class RestoreRangeTest
         assertThat(range1).isEqualTo(range2);
 
         RestoreRange range3 = range1.unbuild()
-                                    .jobId(UUIDs.timeBased())
+                                    .jobId(Uuids.timeBased())
                                     .bucketId((short) 2)
                                     .startToken(BigInteger.valueOf(2)).endToken(BigInteger.TEN)
                                     .build();
@@ -105,7 +105,7 @@ public class RestoreRangeTest
     void testCreateTaskFailsWhenJobExpires() throws Exception
     {
         long anchor = 1730334656231L;
-        RestoreJob expiredJob = RestoreJobTest.createNewTestingJob(UUIDs.timeBased()).unbuild().expireAt(new Date(anchor - 10000L)).build();
+        RestoreJob expiredJob = RestoreJobTest.createNewTestingJob(Uuids.timeBased()).unbuild().expireAt(new Date(anchor - 10000L)).build();
         RestoreRange range = createTestRange(expiredJob, Paths.get("."), false);
         RestoreRangeHandler handler = createRestoreRangeHandler(range);
         assertFailedHandler(range, handler,
@@ -202,7 +202,7 @@ public class RestoreRangeTest
 
     public static RestoreRange createTestRange(long start, long end)
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, null);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.CREATED, null);
         return createTestRange(job, Paths.get("."), false, start, end);
     }
 
@@ -213,7 +213,7 @@ public class RestoreRangeTest
 
     public static RestoreRange createTestRange(Path rootDir, boolean jobManagedBySidecar)
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, null);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.CREATED, null);
         return createTestRange(job, rootDir, jobManagedBySidecar);
     }
 

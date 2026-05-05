@@ -18,12 +18,13 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
-import java.util.Collections;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.CqlIdentifier;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import org.jetbrains.annotations.NotNull;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,17 +76,19 @@ final class IdentifiersProviderTest
     {
         KeyspaceMetadata keyspace = mock(KeyspaceMetadata.class);
         TableMetadata table = mock(TableMetadata.class);
-        when(keyspace.getName()).thenReturn("keyspace");
-        when(table.getName()).thenReturn("table");
-        when(keyspace.getTables()).thenReturn(Collections.singleton(table));
-        when(table.getKeyspace()).thenReturn(keyspace);
+        CqlIdentifier keyspaceIdentifier = CqlIdentifier.fromCql("keyspace1");
+        CqlIdentifier tableIdentifier = CqlIdentifier.fromCql("table1");
+        when(keyspace.getName()).thenReturn(keyspaceIdentifier);
+        when(table.getName()).thenReturn(tableIdentifier);
+        when(keyspace.getTables()).thenReturn(Map.of(tableIdentifier, table));
+        when(table.getKeyspace()).thenReturn(keyspaceIdentifier);
 
         String urnDataPlatform = "urn:li:dataPlatform:cassandra";
         String urnDataPlatformInstance = "urn:li:dataPlatformInstance:" +
                                          "(urn:li:dataPlatform:cassandra,ace3ba6b-49b2-3dd5-955a-1de13730188b)";
-        String urnContainer = "urn:li:container:ace3ba6b-49b2-3dd5-955a-1de13730188b_keyspace";
+        String urnContainer = "urn:li:container:ace3ba6b-49b2-3dd5-955a-1de13730188b_keyspace1";
         String urnDataset = "urn:li:dataset:" +
-                            "(urn:li:dataPlatform:cassandra,ace3ba6b-49b2-3dd5-955a-1de13730188b.keyspace.table,PROD)";
+                            "(urn:li:dataPlatform:cassandra,ace3ba6b-49b2-3dd5-955a-1de13730188b.keyspace1.table1,PROD)";
 
         assertThat(IDENTIFIERS.urnDataPlatform()).isEqualTo(urnDataPlatform);
         assertThat(IDENTIFIERS.urnDataPlatformInstance()).isEqualTo(urnDataPlatformInstance);

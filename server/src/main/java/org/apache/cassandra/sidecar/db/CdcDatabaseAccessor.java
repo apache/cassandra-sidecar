@@ -20,9 +20,11 @@
 package org.apache.cassandra.sidecar.db;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -32,8 +34,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-import com.datastax.driver.core.ResultSetFuture;
-import com.datastax.driver.core.Row;
+import com.datastax.oss.driver.api.core.cql.AsyncResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.ProvisionException;
@@ -45,6 +47,7 @@ import org.apache.cassandra.sidecar.db.schema.CdcStatesSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.utils.ByteBufUtils;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import org.apache.cassandra.sidecar.utils.TokenSplitUtil;
 import org.apache.cassandra.spark.data.partitioner.Partitioner;
 import org.apache.cassandra.spark.utils.TableIdentifier;
@@ -99,19 +102,19 @@ public class CdcDatabaseAccessor extends DatabaseAccessor<CdcStatesSchema>
     @NotNull
     public String fullSchema()
     {
-        return session().getCluster().getMetadata().exportSchemaAsString();
+        return MetadataUtils.describe(session().getMetadata());
     }
 
     @NotNull
     public UUID getTableId(TableIdentifier id)
     {
-        return session().getCluster().getMetadata().getKeyspace(id.keyspace()).getTable(id.table()).getId();
+        return session().getMetadata().getKeyspace(id.keyspace()).get().getTable(id.table()).get().getId().get();
     }
 
-    public List<ResultSetFuture> storeStateAsync(String jobId,
-                                                 TokenRange range,
-                                                 ByteBuffer buf,
-                                                 long timestamp)
+    public List<CompletableFuture<AsyncResultSet>> storeStateAsync(String jobId,
+                                                                   TokenRange range,
+                                                                   ByteBuffer buf,
+                                                                   long timestamp)
     {
         // write state into all overlapping splits
         int[] splits = tokenSplitUtil().findOverlappingSplitIds(partitioner(), range);
@@ -126,7 +129,7 @@ public class CdcDatabaseAccessor extends DatabaseAccessor<CdcStatesSchema>
                      range.upperEndpoint(),
                      buf,
                      timestamp
-                     )))
+                     ).setConsistencyLevel(tableSchema.getConsistencyLevel())).toCompletableFuture())
                      .collect(Collectors.toList());
     }
 
@@ -144,27 +147,41 @@ public class CdcDatabaseAccessor extends DatabaseAccessor<CdcStatesSchema>
         LOGGER.info("Reading CDC state from splits lower={} upper={} splits='{}'", 
                     range.lowerEndpoint(), range.upperEndpoint(),
                     Arrays.stream(splits).mapToObj(Integer::toString).collect(Collectors.joining(",")));
-        Stream<ResultSetFuture> futures = Arrays.stream(splits)
-                                                .mapToObj(split -> selectCdcRange(jobId, split));
+        Stream<CompletableFuture<AsyncResultSet>> futures = Arrays.stream(splits)
+                                                                  .mapToObj(split -> selectCdcRange(jobId, split));
         Stream<Row> rows = await(futures);
         return rows.filter(row -> !row.isNull(0) && !row.isNull(1) && !row.isNull(2))
-                   .filter(row -> TokenSplitUtil.overlaps(range, row.getVarint(0), row.getVarint(1)))
-                   .map(row -> ByteBufUtils.getArray(row.getBytes(2)));
+                   .filter(row -> TokenSplitUtil.overlaps(range, row.getBigInteger(0), row.getBigInteger(1)))
+                   .map(row -> ByteBufUtils.getArray(row.getByteBuffer(2)));
     }
 
     @NotNull
     public Partitioner partitioner()
     {
-        String[] tokens = session().getCluster().getMetadata().getPartitioner().split("\\.");
+        String[] tokens = session().getMetadata().getTokenMap().get().getPartitionerName().split("\\.");
         return Partitioner.valueOf(tokens[tokens.length - 1]);
     }
 
-    public static Stream<Row> await(Stream<ResultSetFuture> futures)
+    public static Stream<Row> await(Stream<CompletableFuture<AsyncResultSet>> futures)
     {
         return futures.flatMap(f -> {
             try
             {
-                return f.get().all().stream();
+                List<Row> rows = new ArrayList<>();
+                do
+                {
+                    AsyncResultSet r = f.get();
+                    for (Row row : r.currentPage())
+                    {
+                        rows.add(row);
+                    }
+                    if (!r.hasMorePages())
+                    {
+                        break;
+                    }
+                    f = r.fetchNextPage().toCompletableFuture();
+                } while (true);
+                return rows.stream();
             }
             catch (InterruptedException e)
             {
@@ -178,8 +195,10 @@ public class CdcDatabaseAccessor extends DatabaseAccessor<CdcStatesSchema>
         });
     }
 
-    ResultSetFuture selectCdcRange(String jobId, int split)
+    CompletableFuture<AsyncResultSet> selectCdcRange(String jobId, int split)
     {
-        return session().executeAsync(tableSchema.select().bind(jobId, (short) split));
+        return session().executeAsync(tableSchema.select().bind(jobId, (short) split)
+                                                 .setConsistencyLevel(tableSchema.getConsistencyLevel()))
+                        .toCompletableFuture();
     }
 }

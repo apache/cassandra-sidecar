@@ -21,10 +21,10 @@ package org.apache.cassandra.sidecar.common.server;
 import java.net.InetSocketAddress;
 import java.util.Map;
 
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.Statement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.SimpleStatement;
+import com.datastax.oss.driver.api.core.cql.Statement;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.jetbrains.annotations.NotNull;
@@ -69,7 +69,7 @@ public interface ICassandraAdapter
     @NotNull
     default ResultSet executeLocal(String query) throws CassandraUnavailableException
     {
-        return executeLocal(new SimpleStatement(query));
+        return executeLocal(SimpleStatement.newInstance(query));
     }
 
     /**
@@ -79,7 +79,7 @@ public interface ICassandraAdapter
      * @return the {@link ResultSet}
      * @throws CassandraUnavailableException when CQL connection is not yet established
      */
-    @NotNull ResultSet executeLocal(Statement statement) throws CassandraUnavailableException;
+    @NotNull ResultSet executeLocal(Statement<?> statement) throws CassandraUnavailableException;
 
     /**
      * The address on which the local Cassandra instance is listening for CQL connections

@@ -95,14 +95,14 @@ dependencies {
     implementation("io.vertx:vertx-auth-jwt:$vertxVersion")
     implementation("io.vertx:vertx-auth-oauth2:$vertxVersion")
 
-    implementation('com.datastax.cassandra:cassandra-driver-core:3.11.3')
+    implementation('org.apache.cassandra:java-driver-core:4.19.1')
+    implementation('org.apache.cassandra:java-driver-query-builder:4.19.1')
     implementation("com.google.inject:guice:${guiceVersion}")
     implementation("com.github.ben-manes.caffeine:caffeine:${caffeineVersion}")
 
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
     implementation("ch.qos.logback:logback-core:${project.logbackVersion}")
     implementation("ch.qos.logback:logback-classic:${project.logbackVersion}")
-
 
     implementation(group: 'org.apache.commons', name: 'commons-lang3', version: '3.13.0')
     implementation(group: 'commons-codec', name: 'commons-codec', version: "${project.commonsCodecVersion}")
@@ -168,7 +168,7 @@ dependencies {
         exclude group: 'junit', module: 'junit'
     }
 
-    testImplementation('com.datastax.cassandra:cassandra-driver-core:3.11.3:tests')
+    testImplementation('org.apache.cassandra:java-driver-core:4.19.1:tests')
     testImplementation('org.mockito:mockito-core:4.10.0')
     testImplementation('org.mockito:mockito-inline:4.10.0')
     testImplementation("io.vertx:vertx-junit5:${project.vertxVersion}")

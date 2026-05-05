@@ -24,8 +24,8 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.ColumnDefinitions;
-import com.datastax.driver.core.Row;
+import com.datastax.oss.driver.api.core.cql.ColumnDefinitions;
+import com.datastax.oss.driver.api.core.cql.Row;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -109,7 +109,7 @@ public class ConnectedClientStatsTest
             when(mockRow.getColumnDefinitions().contains(anyString())).thenReturn(true);
         }
 
-        when(mockRow.getInet("address")).thenReturn(InetAddress.getLoopbackAddress());
+        when(mockRow.getInetAddress("address")).thenReturn(InetAddress.getLoopbackAddress());
         when(mockRow.getInt("port")).thenReturn(0);
         when(mockRow.getString("hostname")).thenReturn("localhost");
         when(mockRow.getString("username")).thenReturn("u1");
@@ -125,6 +125,5 @@ public class ConnectedClientStatsTest
         when(mockRow.getMap("authentication_metadata", String.class, String.class)).thenReturn(authMetadata);
         when(mockRow.getString("authentication_mode")).thenReturn(authMode);
         when(mockRow.getMap("client_options", String.class, String.class)).thenReturn(clientOptions);
-
     }
 }

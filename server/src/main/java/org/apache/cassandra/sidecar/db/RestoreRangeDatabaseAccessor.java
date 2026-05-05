@@ -25,9 +25,9 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -65,7 +65,8 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
                                                     range.jobId(),
                                                     range.bucketId(),
                                                     range.startToken(),
-                                                    range.endToken());
+                                                    range.endToken())
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         execute(statement);
         LOGGER.debug("Created range={}", range);
         return range;
@@ -80,7 +81,8 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
                                                     range.jobId(),
                                                     range.bucketId(),
                                                     range.startToken(),
-                                                    range.endToken());
+                                                    range.endToken())
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         execute(statement);
         LOGGER.debug("Updated range={}", range);
         return range;
@@ -93,7 +95,8 @@ public class RestoreRangeDatabaseAccessor extends DatabaseAccessor<RestoreRanges
 
         BoundStatement statement = tableSchema.findAll()
                                               .bind(jobId,
-                                                    bucketId);
+                                                    bucketId)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet result = execute(statement);
         List<RestoreRange> ranges = new ArrayList<>();
         for (Row row : result)

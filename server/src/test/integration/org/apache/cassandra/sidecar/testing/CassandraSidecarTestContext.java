@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.codahale.metrics.MetricRegistry;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.distributed.api.IInstanceConfig;
@@ -190,7 +190,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
         return this.instancesMetadata;
     }
 
-    public Session session()
+    public CqlSession session()
     {
         return sessionProvider == null ? null : sessionProvider.get();
     }
@@ -239,9 +239,9 @@ public class CassandraSidecarTestContext implements AutoCloseable
         IClusterExtension<? extends IInstance> cluster = cluster();
         List<IInstanceConfig> configs = buildInstanceConfigs(cluster);
         List<InetSocketAddress> addresses = buildContactList(configs);
-        return new CQLSessionProviderImpl(addresses, addresses, 500, null,
+        return new CQLSessionProviderImpl(addresses, addresses, 500, "datacenter1",
                                           0, username, password,
-                                          sslConfiguration, SharedExecutorNettyOptions.INSTANCE);
+                                          sslConfiguration);
     }
 
     private synchronized InstancesMetadata buildInstancesMetadata(CassandraVersionProvider versionProvider,
@@ -252,9 +252,9 @@ public class CassandraSidecarTestContext implements AutoCloseable
         jmxClients = new ArrayList<>();
         List<IInstanceConfig> configs = buildInstanceConfigs(cluster);
         List<InetSocketAddress> addresses = buildContactList(configs);
-        sessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, null,
+        sessionProvider = new CQLSessionProviderImpl(addresses, addresses, 500, "datacenter1",
                                                      0, username, password,
-                                                     sslConfiguration, SharedExecutorNettyOptions.INSTANCE);
+                                                     sslConfiguration);
         for (int i = 0; i < configs.size(); i++)
         {
             if (configs.get(i) == null)

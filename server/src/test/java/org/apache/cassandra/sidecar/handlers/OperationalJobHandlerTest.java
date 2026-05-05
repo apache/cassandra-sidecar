@@ -29,7 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -69,9 +69,9 @@ class OperationalJobHandlerTest
     Vertx vertx;
     Server server;
 
-    static UUID runningUuid = UUIDs.timeBased();
-    static UUID completedUuid = UUIDs.timeBased();
-    static UUID failedUuid = UUIDs.timeBased();
+    static UUID runningUuid = Uuids.timeBased();
+    static UUID completedUuid = Uuids.timeBased();
+    static UUID failedUuid = Uuids.timeBased();
 
     @BeforeEach
     void before() throws InterruptedException
@@ -105,7 +105,7 @@ class OperationalJobHandlerTest
     void testGetJobStatusNonExistentJob(VertxTestContext context)
     {
         WebClient client = WebClient.create(vertx);
-        String uuid = UUIDs.timeBased().toString();
+        String uuid = Uuids.timeBased().toString();
         String testRoute = "/api/v1/cassandra/operational-jobs/" + uuid;
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_NOT_FOUND)

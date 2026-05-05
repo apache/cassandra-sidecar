@@ -18,8 +18,8 @@
 
 package org.apache.cassandra.sidecar.db.schema;
 
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.jetbrains.annotations.NotNull;
@@ -60,7 +60,7 @@ public class SystemViewsSchema extends CassandraSystemTableSchema
     }
 
     @Override
-    protected void prepareStatements(@NotNull Session session)
+    protected void prepareStatements(@NotNull CqlSession session)
     {
         this.selectSettings = session.prepare("SELECT name, value FROM system_views.settings WHERE name IN ?");
         this.selectAllSettings = session.prepare("SELECT name, value FROM system_views.settings");

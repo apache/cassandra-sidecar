@@ -24,8 +24,8 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
@@ -77,7 +77,7 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership extends Abstrac
             return null;
         }
 
-        Session activeSession;
+        CqlSession activeSession;
         try
         {
             activeSession = cqlSessionProvider.get();
@@ -91,15 +91,15 @@ public class MostReplicatedKeyspaceTokenZeroElectorateMembership extends Abstrac
         Set<String> forbiddenKeyspaces = configuration.cassandraInputValidationConfiguration().forbiddenKeyspaces();
         String sidecarKeyspaceName = configuration.serviceConfiguration().schemaKeyspaceConfiguration().keyspace();
 
-        return activeSession.getCluster().getMetadata().getKeyspaces().stream()
-                            .filter(keyspace -> !forbiddenKeyspaces.contains(keyspace.getName()))
+        return activeSession.getMetadata().getKeyspaces().values().stream()
+                            .filter(keyspace -> !forbiddenKeyspaces.contains(keyspace.getName().asInternal()))
                             // Sort by the keyspace with the highest replication factor
                             // and then sort by the keyspace name to guarantee in the
                             // sorting order across all Sidecar instances
                             .sorted(Comparator.comparingInt(this::aggregateReplicationFactor)
                                               .reversed()
-                                              .thenComparing(KeyspaceMetadata::getName))
-                            .map(KeyspaceMetadata::getName)
+                                              .thenComparing(i -> i.getName().asInternal()))
+                            .map(i -> i.getName().asInternal())
                             .findFirst()
                             .orElse(sidecarKeyspaceName);
     }

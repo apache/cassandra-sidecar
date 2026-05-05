@@ -28,7 +28,8 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 
-import com.datastax.driver.core.DataType;
+import com.datastax.oss.driver.internal.core.metadata.token.Murmur3Token;
+import com.datastax.oss.driver.internal.core.metadata.token.RandomToken;
 
 /**
  * Range: (start, end] - start exclusive and end inclusive
@@ -45,16 +46,16 @@ public class TokenRange
      * @return list of token ranges. If the input token range wraps around, the size of the list is 2;
      * otherwise, the list has only one range
      */
-    public static List<TokenRange> from(com.datastax.driver.core.TokenRange dsTokenRange)
+    public static List<TokenRange> from(com.datastax.oss.driver.api.core.metadata.token.TokenRange dsTokenRange)
     {
-        DataType tokenDataType = dsTokenRange.getStart().getType();
-        if (tokenDataType == DataType.varint()) // BigInteger - RandomPartitioner
+        com.datastax.oss.driver.api.core.metadata.token.Token tokenData = dsTokenRange.getStart();
+        if (tokenData instanceof RandomToken) // BigInteger - RandomPartitioner
         {
             return dsTokenRange.unwrap()
                                .stream()
                                .map(range -> {
-                                   BigInteger start = (BigInteger) range.getStart().getValue();
-                                   BigInteger end = (BigInteger) range.getEnd().getValue();
+                                   BigInteger start = ((RandomToken) range.getStart()).getValue();
+                                   BigInteger end = ((RandomToken) range.getEnd()).getValue();
                                    if (end.compareTo(Partitioners.RANDOM.minimumToken().toBigInteger()) == 0)
                                    {
                                        end = Partitioners.RANDOM.maximumToken().toBigInteger();
@@ -63,13 +64,13 @@ public class TokenRange
                                })
                                .collect(Collectors.toList());
         }
-        else if (tokenDataType == DataType.bigint()) // Long - Murmur3Partitioner
+        else if (tokenData instanceof Murmur3Token) // Long - Murmur3Partitioner
         {
             return dsTokenRange.unwrap()
                                .stream()
                                .map(range -> {
-                                   BigInteger start = BigInteger.valueOf((Long) range.getStart().getValue());
-                                   BigInteger end = BigInteger.valueOf((Long) range.getEnd().getValue());
+                                   BigInteger start = BigInteger.valueOf(((Murmur3Token) range.getStart()).getValue());
+                                   BigInteger end = BigInteger.valueOf(((Murmur3Token) range.getEnd()).getValue());
                                    if (end.compareTo(Partitioners.MURMUR3.minimumToken().toBigInteger()) == 0)
                                    {
                                        end = Partitioners.MURMUR3.maximumToken().toBigInteger();
@@ -81,7 +82,7 @@ public class TokenRange
         else
         {
             throw new IllegalArgumentException(
-            "Unsupported token type: " + tokenDataType +
+            "Unsupported token type: " + tokenData.getClass().getName() +
             ". Only tokens of Murmur3Partitioner and RandomPartitioner are supported.");
         }
     }

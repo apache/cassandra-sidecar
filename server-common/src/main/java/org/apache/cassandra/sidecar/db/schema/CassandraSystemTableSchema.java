@@ -20,8 +20,9 @@ package org.apache.cassandra.sidecar.db.schema;
 
 import java.util.function.Predicate;
 
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -36,7 +37,7 @@ public abstract class CassandraSystemTableSchema extends TableSchema
     }
 
     @Override
-    protected boolean initializeInternal(@NotNull Session session,
+    protected boolean initializeInternal(@NotNull CqlSession session,
                                          @NotNull Predicate<AbstractSchema> shouldCreateSchema)
     {
         prepareStatements(session);
@@ -51,5 +52,11 @@ public abstract class CassandraSystemTableSchema extends TableSchema
     protected String createSchemaStatement()
     {
         return null;
+    }
+
+    @Override
+    public ConsistencyLevel getConsistencyLevel()
+    {
+        return ConsistencyLevel.ONE;
     }
 }

@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -35,12 +36,16 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.EndPoint;
-import com.datastax.driver.core.Host;
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.Token;
+import com.datastax.oss.driver.api.core.CqlIdentifier;
+import com.datastax.oss.driver.api.core.metadata.EndPoint;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Node;
+import com.datastax.oss.driver.api.core.metadata.TokenMap;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.token.Token;
+import com.datastax.oss.driver.internal.core.metadata.DefaultNode;
+import com.datastax.oss.driver.internal.core.metadata.token.Murmur3Token;
+import com.datastax.oss.driver.internal.core.metadata.token.Murmur3TokenRange;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -99,15 +104,30 @@ public class InnerDcTokenAdjacentPeerProviderTests
         when(serviceConfiguration.port()).thenReturn(9043);
 
         Metadata metadata = mock(Metadata.class);
-        List<KeyspaceMetadata> keyspaces = List.of(mockKeyspace("ks1", Map.of("DC1", "3", "DC2", "3")),
-                                                   mockKeyspace("ks2", Map.of("DC2", "5")),
-                                                   mockKeyspace("ks3", Map.of("DC1", "3")));
+        TokenMap tokenMap = mock(TokenMap.class);
+        Map<CqlIdentifier, KeyspaceMetadata> keyspaces = Map.of(
+        CqlIdentifier.fromCql("ks1"), mockKeyspace("ks1", Map.of("DC1", "3", "DC2", "3")),
+        CqlIdentifier.fromCql("ks2"), mockKeyspace("ks2", Map.of("DC2", "5")),
+        CqlIdentifier.fromCql("ks3"), mockKeyspace("ks3", Map.of("DC1", "3")));
         when(metadata.getKeyspaces()).thenReturn(keyspaces);
-        Set<Host> allHosts = IntStream.range(0, INSTANCES.size())
+        Set<Node> allHosts = IntStream.range(0, INSTANCES.size())
                                       .mapToObj(i -> List.of(mockHost("dc1-" + INSTANCES.get(i), TOKENS.get(i), "DC1"),
                                                              mockHost("dc2-" + INSTANCES.get(i), TOKENS.get(i).add(BigInteger.ONE), "DC2")
                                       )).flatMap(Collection::stream)
                                       .collect(Collectors.toSet());
+        Map<Node, Set<Token>> nodeTokens = allHosts.stream()
+                                                   .map(n -> (DefaultNode) n)
+                                                   .collect(Collectors.toMap(n -> n, n -> n.getRawTokens().stream()
+                                                                                           .map(t -> new Murmur3Token(Long.parseLong(t)))
+                                                                                           .collect(Collectors.toSet())));
+        when(metadata.getTokenMap()).thenReturn(Optional.of(tokenMap));
+        when(tokenMap.getTokenRanges()).thenReturn(IntStream.range(0, INSTANCES.size())
+                                                            .mapToObj(i -> mockTokenRange(TOKENS.get(i), TOKENS.get(i).add(BigInteger.ONE)))
+                                                            .collect(Collectors.toSet()));
+        when(metadata.getTokenMap().get().getTokens(any())).thenAnswer(invocation -> {
+            Node n = invocation.getArgument(0);
+            return nodeTokens.get(n);
+        });
 
         int numHosts = INSTANCES.size() / 4;
         when(metadataFetcher.callOnFirstAvailableInstance(any())).thenReturn(metadata);
@@ -123,7 +143,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
             when(metadataFetcher.allLocalInstances()).thenReturn(localInstances);
 
             CassandraClientTokenRingProvider cachedLocalTokenRanges = mock(CassandraClientTokenRingProvider.class);
-            Set<Host> localHosts = allHosts.stream().filter(host -> DRIVER_UTILS.getSocketAddress(host)
+            Set<Node> localHosts = allHosts.stream().filter(host -> DRIVER_UTILS.getSocketAddress(host)
                                                                                 .getAddress()
                                                                                 .getHostName()
                                                                                 .startsWith("dc1-host" + hostId + "-"))
@@ -165,7 +185,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
     @Test
     public void testAdjacentHosts()
     {
-        List<Pair<Host, BigInteger>> allHosts = IntStream.range(0, TOKENS.size())
+        List<Pair<Node, BigInteger>> allHosts = IntStream.range(0, TOKENS.size())
                                                          .mapToObj(idx -> {
                                                              BigInteger token = tokenAt(idx);
                                                              return Pair.of(mockHost(INSTANCES.get(idx), token), token);
@@ -178,13 +198,13 @@ public class InnerDcTokenAdjacentPeerProviderTests
             String localhost = INSTANCES.get(i);
             BigInteger token = tokenAt(i);
             test(localhost, token, allHosts, 1, tokenAt(i + 1));
-            Set<Host> adjacent = InnerDcTokenAdjacentPeerProvider.adjacentHosts(DRIVER_UTILS,
+            Set<Node> adjacent = InnerDcTokenAdjacentPeerProvider.adjacentHosts(DRIVER_UTILS,
                                                                                 (host) -> isLocal(localhost, host),
                                                                                 token,
                                                                                 allHosts,
                                                                                 1);
             assertEquals(1, adjacent.size());
-            String adjacentStr = adjacent.stream().findFirst().map(Host::toString).orElseThrow();
+            String adjacentStr = adjacent.stream().findFirst().map(Node::toString).orElseThrow();
             assertFalse(adjacentHosts.contains(adjacentStr));
             adjacentHosts.add(adjacentStr);
         }
@@ -215,7 +235,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
                                      "local1-i3", "local2-i3", "local3-i3",
                                      "local1-i4", "local2-i4", "local3-i4");
         BigInteger token = new BigInteger(tokens.stream().findFirst().orElseThrow());
-        List<Pair<Host, BigInteger>> sortedLocalDcHosts = IntStream.range(0, tokens.size())
+        List<Pair<Node, BigInteger>> sortedLocalDcHosts = IntStream.range(0, tokens.size())
                                                                    .mapToObj(i -> {
                                                                        BigInteger t = new BigInteger(tokens.get(i));
                                                                        return Pair.of(mockHost(hosts.get(i), t), t);
@@ -227,7 +247,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
                                                        token,
                                                        sortedLocalDcHosts,
                                                        quorum)
-                                        .stream().map(Host::toString)
+                                        .stream().map(Node::toString)
                                         .collect(Collectors.toSet());
     }
 
@@ -236,14 +256,14 @@ public class InnerDcTokenAdjacentPeerProviderTests
         return TOKENS.get(idx % TOKENS.size());
     }
 
-    private static void test(String localhost, BigInteger token, List<Pair<Host, BigInteger>> allHosts, int quorum, BigInteger... expected)
+    private static void test(String localhost, BigInteger token, List<Pair<Node, BigInteger>> allHosts, int quorum, BigInteger... expected)
     {
         Set<String> result = InnerDcTokenAdjacentPeerProvider.adjacentHosts(DRIVER_UTILS,
                                                                             (host) -> isLocal(localhost, host),
                                                                             token,
                                                                             allHosts,
                                                                             quorum)
-                                                             .stream().map(Host::toString)
+                                                             .stream().map(Node::toString)
                                                              .collect(Collectors.toSet());
         assertFalse(result.contains(token.toString()));
         for (BigInteger bi : expected)
@@ -253,7 +273,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
         assertEquals(result.size(), expected.length);
     }
 
-    private static boolean isLocal(String localhost, Host host)
+    private static boolean isLocal(String localhost, Node host)
     {
         return isLocal(localhost, DRIVER_UTILS.getSocketAddress(host).getAddress().getHostName());
     }
@@ -267,7 +287,7 @@ public class InnerDcTokenAdjacentPeerProviderTests
     public static KeyspaceMetadata mockKeyspace(String name, Map<String, String> replication)
     {
         KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
-        when(keyspaceMetadata.getName()).thenReturn(name);
+        when(keyspaceMetadata.getName()).thenReturn(CqlIdentifier.fromInternal(name));
         when(keyspaceMetadata.getReplication()).thenReturn(replication);
         return keyspaceMetadata;
     }
@@ -284,14 +304,14 @@ public class InnerDcTokenAdjacentPeerProviderTests
         return instanceMetadata;
     }
 
-    private static Host mockHost(String hostname, BigInteger token)
+    private static Node mockHost(String hostname, BigInteger token)
     {
         return mockHost(hostname, token, "DC1");
     }
 
-    private static Host mockHost(String hostname, BigInteger token, String dc)
+    private static DefaultNode mockHost(String hostname, BigInteger token, String dc)
     {
-        Host host = mock(Host.class);
+        DefaultNode host = mock(DefaultNode.class);
         InetAddress addr = mock(InetAddress.class);
         EndPoint mockEndpoint = mock(EndPoint.class);
         InetSocketAddress mockInetSocketAddress = mock(InetSocketAddress.class);
@@ -302,10 +322,12 @@ public class InnerDcTokenAdjacentPeerProviderTests
         when(mockInetSocketAddress.getAddress()).thenReturn(addr);
         when(host.toString()).thenReturn(token.toString());
         when(host.getDatacenter()).thenReturn(dc);
-        Token t = mock(Token.class);
-        when(t.getType()).thenReturn(DataType.bigint());
-        when(t.getValue()).thenReturn(token.longValue());
-        when(host.getTokens()).thenReturn(Set.of(t));
+        when(host.getRawTokens()).thenReturn(Set.of(token.toString()));
         return host;
+    }
+
+    private com.datastax.oss.driver.api.core.metadata.token.TokenRange mockTokenRange(BigInteger start, BigInteger end)
+    {
+        return new Murmur3TokenRange(new Murmur3Token(start.longValue()), new Murmur3Token(end.longValue()));
     }
 }

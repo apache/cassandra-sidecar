@@ -701,7 +701,8 @@ class LiveMigrationFileDownloaderTest
         TestFile emptyKeyspace = new TestFile(DATA_FILE_DIR, 0, "emptykeyspace", -1, timeStamp);
 
         long timeStamp2 = System.currentTimeMillis();
-        List<TestFile> localFiles = List.of(droppedKeyspaceFile, partiallyDownloadedFile, fullyDownloadedFile, wrongTimestampFile, dirDoesNotExistInRemote, emptyKeyspace);
+        List<TestFile> localFiles = List.of(droppedKeyspaceFile, partiallyDownloadedFile, fullyDownloadedFile, wrongTimestampFile,
+                                            dirDoesNotExistInRemote, emptyKeyspace);
         prepareDataHomeDir(storageDir, localFiles);
 
         Consumer<OperationStatus> mockStatusUpdater = mock(Consumer.class);
@@ -860,7 +861,7 @@ class LiveMigrationFileDownloaderTest
         = getInstanceFileInfo(new String[]{ fileExists, fileDoesNotExist }, fileSize, lastModifiedTime)
           .get(0);
         Path localFilePath = localPath(fileInfos.fileUrl, downloaderSpy.instanceMetadata());
-        createFile(localFilePath.toFile(), fileSize, lastModifiedTime);  // Creating file explicitly as sidecarClient is mocked and doesn't do anything
+        createFile(localFilePath.toFile(), fileSize, lastModifiedTime); // Creating file explicitly as sidecarClient is mocked and doesn't do anything
 
         SidecarClient sidecarClient = injector.getInstance(SidecarClient.class);
         when(sidecarClient.liveMigrationStreamFileAsync(any(), anyString(), anyString()))

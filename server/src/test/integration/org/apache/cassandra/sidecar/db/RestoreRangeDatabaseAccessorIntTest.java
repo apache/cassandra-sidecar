@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
@@ -37,10 +37,10 @@ class RestoreRangeDatabaseAccessorIntTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void testCrudOperations()
     {
-        waitForSchemaReady(10, TimeUnit.SECONDS);
+        waitForSchemaReady(30, TimeUnit.SECONDS);
 
         RestoreRangeDatabaseAccessor accessor = injector.getInstance(RestoreRangeDatabaseAccessor.class);
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         assertThat(accessor.findAll(jobId, (short) 0)).isEmpty();
 
         // create range

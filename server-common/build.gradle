@@ -51,7 +51,8 @@ dependencies {
     api(project(":client-common"))
 
     compileOnly('org.jetbrains:annotations:23.0.0')
-    compileOnly('com.datastax.cassandra:cassandra-driver-core:3.11.3')
+    compileOnly('org.apache.cassandra:java-driver-core:4.19.1')
+    compileOnly(group: 'com.google.guava', name: 'guava', version: "${project.guavaVersion}")
     implementation("org.slf4j:slf4j-api:${project.slf4jVersion}")
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${project.junitVersion}"
@@ -59,7 +60,8 @@ dependencies {
     testImplementation "org.assertj:assertj-core:3.24.2"
     testImplementation "org.mockito:mockito-core:4.10.0"
     testImplementation "org.mockito:mockito-inline:4.10.0"
-    testImplementation "com.datastax.cassandra:cassandra-driver-core:3.11.3"
+    testImplementation "org.apache.cassandra:java-driver-core:4.19.1"
+    testImplementation(group: 'com.google.guava', name: 'guava', version: "${project.guavaVersion}")
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${project.junitVersion}"
 
     testFixturesImplementation("org.assertj:assertj-core:3.24.2")

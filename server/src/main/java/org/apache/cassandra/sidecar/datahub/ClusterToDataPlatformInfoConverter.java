@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
-import com.datastax.driver.core.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
 import com.linkedin.dataplatform.DataPlatformInfo;
 import com.linkedin.dataplatform.PlatformType;
 import datahub.event.MetadataChangeProposalWrapper;

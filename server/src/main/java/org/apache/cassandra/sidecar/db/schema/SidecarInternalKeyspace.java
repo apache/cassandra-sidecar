@@ -22,8 +22,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.jetbrains.annotations.NotNull;
@@ -63,18 +64,18 @@ public class SidecarInternalKeyspace extends AbstractSchema
     }
 
     @Override
-    protected void prepareStatements(@NotNull Session session)
+    protected void prepareStatements(@NotNull CqlSession session)
     {
     }
 
     @Override
     protected boolean exists(@NotNull Metadata metadata)
     {
-        return metadata.getKeyspace(keyspaceName()) != null;
+        return metadata.getKeyspace(keyspaceName()).isPresent();
     }
 
     @Override
-    protected boolean initializeInternal(@NotNull Session session,
+    protected boolean initializeInternal(@NotNull CqlSession session,
                                          @NotNull Predicate<AbstractSchema> shouldCreateSchema)
     {
         super.initializeInternal(session, shouldCreateSchema);
@@ -101,5 +102,11 @@ public class SidecarInternalKeyspace extends AbstractSchema
     {
         return String.format("CREATE KEYSPACE IF NOT EXISTS %s WITH REPLICATION = %s",
                              keyspaceName(), keyspaceConfig.createReplicationStrategyString());
+    }
+
+    @Override
+    public ConsistencyLevel getConsistencyLevel()
+    {
+        return ConsistencyLevel.ONE;
     }
 }

@@ -33,7 +33,6 @@ import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SystemAuthSchema;
 import org.apache.cassandra.sidecar.db.schema.SystemViewsSchema;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
-import org.apache.cassandra.sidecar.testing.SharedExecutorNettyOptions;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 import org.apache.cassandra.testing.IClusterExtension;
 
@@ -104,6 +103,6 @@ class SystemDatabaseAccessorIntegrationTest extends SharedClusterSidecarIntegrat
     private CQLSessionProvider cqlSessionProvider(IClusterExtension<? extends IInstance> cluster)
     {
         List<InetSocketAddress> address = buildContactList(cluster.stream().map(IInstance::config).collect(Collectors.toUnmodifiableList()));
-        return new CQLSessionProviderImpl(address, address, 500, null, 0, "cassandra", "cassandra", null, SharedExecutorNettyOptions.INSTANCE);
+        return new CQLSessionProviderImpl(address, address, 500, "datacenter1", 0, "cassandra", "cassandra", null);
     }
 }

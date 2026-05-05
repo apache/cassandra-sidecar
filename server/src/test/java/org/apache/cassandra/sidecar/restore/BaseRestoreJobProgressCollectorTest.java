@@ -22,7 +22,7 @@ import java.nio.file.Paths;
 
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobProgressResponsePayload;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobSummaryResponsePayload;
@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 abstract class BaseRestoreJobProgressCollectorTest
 {
-    private final RestoreJob restoreJob = RestoreJobTest.createNewTestingJob(UUIDs.timeBased());
+    private final RestoreJob restoreJob = RestoreJobTest.createNewTestingJob(Uuids.timeBased());
     protected final RestoreJobProgressCollector collector = createCollector(restoreJob);
 
     protected abstract RestoreJobProgressCollector createCollector(RestoreJob restoreJob);

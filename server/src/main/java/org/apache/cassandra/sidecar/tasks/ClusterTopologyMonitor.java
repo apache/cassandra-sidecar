@@ -304,12 +304,14 @@ public class ClusterTopologyMonitor implements PeriodicTask
             final TokenRange currRange = curr.get(i);
             if (!prevRange.range.lowerEndpoint().equals(currRange.range.lowerEndpoint()))
             {
-                LOGGER.info("Change in instance lower token instanceId={} prev={} curr={}", instanceId, prevRange.range.lowerEndpoint(), currRange.range.lowerEndpoint());
+                LOGGER.info("Change in instance lower token instanceId={} prev={} curr={}",
+                            instanceId, prevRange.range.lowerEndpoint(), currRange.range.lowerEndpoint());
                 result = true;
             }
             if (!prevRange.range.upperEndpoint().equals(currRange.range.upperEndpoint()))
             {
-                LOGGER.info("Change in instance upper token instanceId={} prev={} curr={}", instanceId, prevRange.range.upperEndpoint(), currRange.range.upperEndpoint());
+                LOGGER.info("Change in instance upper token instanceId={} prev={} curr={}",
+                            instanceId, prevRange.range.upperEndpoint(), currRange.range.upperEndpoint());
                 result = true;
             }
         }

@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
@@ -102,14 +102,14 @@ public class RestoreJobTest
     @Test
     void testDefaultImportOptionsWhenNotSetInDb()
     {
-        RestoreJob job = createNewTestingJob(UUIDs.timeBased());
+        RestoreJob job = createNewTestingJob(Uuids.timeBased());
         assertThat(job.importOptions).isEqualTo(SSTableImportOptions.defaults());
     }
 
     @Test
     void testExpectedNextRangeStatus()
     {
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         for (RestoreJobStatus status : RestoreJobStatus.values())
         {
             RestoreJob job = createTestingJob(jobId, status);
@@ -142,7 +142,7 @@ public class RestoreJobTest
     @Test
     void testCreateLocalConsistencyLevelJobWithoutLocalDcFails()
     {
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         for (ConsistencyLevel localCL : Arrays.asList(ConsistencyLevel.LOCAL_QUORUM, ConsistencyLevel.LOCAL_ONE))
         {
             assertThatThrownBy(() -> createTestingJob(jobId, RestoreJobStatus.CREATED, localCL))
@@ -154,7 +154,7 @@ public class RestoreJobTest
     @Test
     void testCreateSidecarManagedJobs()
     {
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         String dcName = "dc1";
         for (ConsistencyLevel cl : ConsistencyLevel.values())
         {
@@ -168,7 +168,7 @@ public class RestoreJobTest
     {
         long timestamp = System.currentTimeMillis();
         Date expireAt = new Date(timestamp + TimeUnit.HOURS.toMillis(1));
-        RestoreJob job = createNewTestingJob(UUIDs.startOf(timestamp)).unbuild().expireAt(expireAt).build();
+        RestoreJob job = createNewTestingJob(Uuids.startOf(timestamp)).unbuild().expireAt(expireAt).build();
         assertThat(job.hasExpired(timestamp)).isFalse();
         assertThat(job.hasExpired(timestamp - 1000)).isFalse();
         assertThat(job.hasExpired(expireAt.getTime() - 1)).isFalse();

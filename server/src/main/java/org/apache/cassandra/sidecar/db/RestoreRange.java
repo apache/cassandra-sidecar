@@ -30,7 +30,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
-import com.datastax.driver.core.Row;
+import com.datastax.oss.driver.api.core.cql.Row;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
@@ -127,10 +127,10 @@ public class RestoreRange
     public static RestoreRange from(Row row)
     {
         return new Builder()
-               .jobId(row.getUUID("job_id"))
+               .jobId(row.getUuid("job_id"))
                .bucketId(row.getShort("bucket_id"))
-               .startToken(row.getVarint("start_token"))
-               .endToken(row.getVarint("end_token"))
+               .startToken(row.getBigInteger("start_token"))
+               .endToken(row.getBigInteger("end_token"))
                .replicaStatusText(row.getMap("status_by_replica", String.class, String.class))
                .sliceId(row.getString("slice_id"))
                .sliceBucket(row.getString("slice_bucket"))

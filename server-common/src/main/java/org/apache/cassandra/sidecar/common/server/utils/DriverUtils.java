@@ -19,40 +19,31 @@
 package org.apache.cassandra.sidecar.common.server.utils;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Host;
-import com.datastax.driver.core.Metadata;
+import com.google.common.base.Preconditions;
+
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Node;
 
 /**
- * A shim layer that provides information from the Cassandra driver. Instead of accessing the
- * {@link com.datastax.driver.core.DriverUtils} directly, this acts as a proxy that can be swapped out
+ * A shim layer that provides information from the Cassandra driver. This acts as a proxy that can be swapped out
  * based on the specific Sidecar implementation. This can be useful if a different driver version is used
  */
 public class DriverUtils
 {
     /**
-     * Start attempting to reconnect to the given host, as hosts with `IGNORED` distance aren't attempted
-     * and the SidecarLoadBalancingPolicy marks non-selected nodes as IGNORED until they need to rotate in.
-     *
-     * @param cluster The cluster object
-     * @param host    the host to which reconnect attempts will be made
-     */
-    public void startPeriodicReconnectionAttempt(Cluster cluster, Host host)
-    {
-        com.datastax.driver.core.DriverUtils.startPeriodicReconnectionAttempt(cluster, host);
-    }
-
-    /**
      * Gets a Host instance from metadata based on the native transport address
      *
      * @param metadata                    the {@link Metadata} instance to search for the host
      * @param localNativeTransportAddress the native transport ip address and port for the host to find
-     * @return the {@link Host}           instance if found, else null
+     * @return the {@link Node}           instance if found, else null
      */
-    public Host getHost(Metadata metadata, InetSocketAddress localNativeTransportAddress)
+    public Node getHost(Metadata metadata, InetSocketAddress localNativeTransportAddress)
     {
-        return com.datastax.driver.core.DriverUtils.getHost(metadata, localNativeTransportAddress);
+        return metadata.getNodes().values().stream()
+                .filter(n -> n.getEndPoint().resolve().equals(localNativeTransportAddress))
+                .findFirst().orElse(null);
     }
 
     /**
@@ -61,8 +52,10 @@ public class DriverUtils
      * @param host the host to which reconnect attempts will be made
      * @return the address.
      */
-    public InetSocketAddress getSocketAddress(Host host)
+    public InetSocketAddress getSocketAddress(Node host)
     {
-        return host.getEndPoint().resolve();
+        SocketAddress socketAddress = host.getEndPoint().resolve();
+        Preconditions.checkState(socketAddress instanceof InetSocketAddress, "Unsupported endpoint type: " + host.getEndPoint());
+        return (InetSocketAddress) socketAddress;
     }
 }

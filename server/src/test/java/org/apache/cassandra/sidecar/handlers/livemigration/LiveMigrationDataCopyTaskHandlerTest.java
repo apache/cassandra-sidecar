@@ -350,7 +350,8 @@ class LiveMigrationDataCopyTaskHandlerTest
         // Here, we are trying to trigger a data copy request with max concurrency greater than the allowed limit.
         // Thus, this should throw validation errors and this test case is trying to test this particular scenario.
         final JsonObject dataCopyTaskPayload = getDataCopyTaskPayload();
-        JsonObject badRequest = dataCopyTaskPayload.copy().put("maxConcurrency", sidecarConfiguration.liveMigrationConfiguration().maxConcurrentDownloads() + 1);
+        JsonObject badRequest = dataCopyTaskPayload.copy().put("maxConcurrency",
+                                                               sidecarConfiguration.liveMigrationConfiguration().maxConcurrentDownloads() + 1);
 
         // Data copy task request can only be submitted from a destination host (since it follows a pull model)
         client.post(server.actualPort(), FIRST_DESTINATION_HOST, LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE)

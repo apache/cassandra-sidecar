@@ -262,7 +262,8 @@ class CdcRawDirectorySpaceCleanerTest
     private void checkExists(Path tempDir, String logFileName, boolean orphaned, boolean intact)
     {
         assertThat(Files.exists(Paths.get(tempDir.toString(), CdcRawDirectorySpaceCleaner.CDC_DIR_NAME, logFileName))).isEqualTo(!orphaned);
-        assertThat(Files.exists(Paths.get(tempDir.toString(), CdcRawDirectorySpaceCleaner.CDC_DIR_NAME, CdcUtil.getIdxFileName(logFileName)))).isEqualTo(!intact);
+        assertThat(Files.exists(Paths.get(tempDir.toString(), CdcRawDirectorySpaceCleaner.CDC_DIR_NAME,
+                                          CdcUtil.getIdxFileName(logFileName)))).isEqualTo(!intact);
     }
 
     private void checkNotExists(Path tempDir, String logFileName)

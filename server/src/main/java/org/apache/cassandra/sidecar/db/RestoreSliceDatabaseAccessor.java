@@ -21,9 +21,9 @@ package org.apache.cassandra.sidecar.db;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -62,7 +62,8 @@ public class RestoreSliceDatabaseAccessor extends DatabaseAccessor<RestoreSlices
                                                     slice.startToken(),
                                                     slice.endToken(),
                                                     slice.compressedSize(),
-                                                    slice.uncompressedSize());
+                                                    slice.uncompressedSize())
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         execute(statement);
         return slice;
     }
@@ -81,7 +82,8 @@ public class RestoreSliceDatabaseAccessor extends DatabaseAccessor<RestoreSlices
                                               .bind(restoreJob.jobId,
                                                     bucketId,
                                                     range.start().toBigInteger(),
-                                                    range.end().toBigInteger());
+                                                    range.end().toBigInteger())
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet result = execute(statement);
         List<RestoreSlice> slices = new ArrayList<>();
         for (Row row : result)

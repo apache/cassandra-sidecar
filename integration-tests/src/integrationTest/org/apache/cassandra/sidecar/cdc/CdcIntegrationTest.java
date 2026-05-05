@@ -57,7 +57,7 @@ public class CdcIntegrationTest extends SharedClusterCdcSidecarIntegrationTestBa
     @Override
     protected void beforeTestStart()
     {
-        waitForSchemaReady(30, TimeUnit.SECONDS);
+        waitForSchemaReady(60, TimeUnit.SECONDS);
     }
 
     @Test

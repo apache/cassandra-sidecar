@@ -19,56 +19,58 @@
 package org.apache.cassandra.sidecar.cluster.driver;
 
 import java.net.InetSocketAddress;
-import java.util.Collection;
+import java.net.SocketAddress;
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.Queue;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.Iterators;
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Host;
-import com.datastax.driver.core.HostDistance;
-import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
-import com.datastax.driver.core.policies.LoadBalancingPolicy;
-import com.datastax.driver.core.policies.RoundRobinPolicy;
-import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
+import com.datastax.oss.driver.api.core.context.DriverContext;
+import com.datastax.oss.driver.api.core.loadbalancing.NodeDistance;
+import com.datastax.oss.driver.api.core.metadata.Node;
+import com.datastax.oss.driver.api.core.metadata.NodeState;
+import com.datastax.oss.driver.api.core.session.Request;
+import com.datastax.oss.driver.api.core.session.Session;
+import com.datastax.oss.driver.internal.core.loadbalancing.DefaultLoadBalancingPolicy;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * The SidecarLoadBalancingPolicy is designed to ensure that the Cassandra Metadata objects associated with the
  * CqlSessionProvider have enough non-local hosts in their allowed connections to be kept up-to-date
  * even if the local Cassandra instances are down/have their native transport disabled.
- * NOTE: This policy won't work with a child policy that is token-aware
  */
-public class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
+public class SidecarLoadBalancingPolicy extends DefaultLoadBalancingPolicy
 {
     public static final int MIN_NON_LOCAL_CONNECTIONS = 2;
     private static final Logger LOGGER = LoggerFactory.getLogger(SidecarLoadBalancingPolicy.class);
-    private final Set<Host> selectedHosts = new HashSet<>();
-    private final Set<InetSocketAddress> localHostAddresses;
-    private final DriverUtils driverUtils;
-    private final LoadBalancingPolicy childPolicy;
-    private final int totalRequestedConnections;
-    private final Random random = new Random();
-    private final HashSet<Host> allHosts = new HashSet<>();
-    private Cluster cluster;
+    private final SecureRandom random = new SecureRandom();
 
-    public SidecarLoadBalancingPolicy(List<InetSocketAddress> localHostAddresses,
-                                      String localDc,
-                                      int numAdditionalConnections,
-                                      DriverUtils driverUtils)
+    private final Set<InetSocketAddress> localHostAddresses;
+    private final HashSet<Node> allHosts = new HashSet<>();
+    private final int totalRequestedConnections;
+    private final Set<Node> selectedHosts = new HashSet<>();
+
+    public SidecarLoadBalancingPolicy(DriverContext context, String profileName)
     {
-        this.childPolicy = createChildPolicy(localDc);
-        this.localHostAddresses = new HashSet<>(localHostAddresses);
-        this.driverUtils = driverUtils;
+        super(context, profileName);
+        List<InetSocketAddress> localInstances = context.getConfig().getDefaultProfile().getStringList(CustomDriverOption.LOCAL_INSTANCES)
+                                                        .stream()
+                                                        .map(i -> {
+                                                            String[] hostPort = i.split(":");
+                                                            return new InetSocketAddress(hostPort[0], Integer.parseInt(hostPort[1]));
+                                                        })
+                                                        .collect(Collectors.toList());
+        int numAdditionalConnections = context.getConfig().getDefaultProfile().getInt(CustomDriverOption.NUM_CONNECTIONS);
+        this.localHostAddresses = new HashSet<>(localInstances);
         if (numAdditionalConnections < MIN_NON_LOCAL_CONNECTIONS)
         {
             LOGGER.warn("Additional instances requested was {}, which is less than the minimum of {}. Using {}.",
@@ -79,108 +81,69 @@ public class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
     }
 
     @Override
-    public void init(Cluster cluster, Collection<Host> hosts)
+    public void init(Map<UUID, Node> nodes, @NotNull DistanceReporter distanceReporter)
     {
-        this.cluster = cluster;
-        this.allHosts.addAll(hosts);
+        this.allHosts.addAll(nodes.values());
         recalculateSelectedHosts();
-        childPolicy.init(cluster, hosts);
+        super.init(nodes, distanceReporter);
     }
 
     @Override
-    public HostDistance distance(Host host)
+    protected NodeDistance computeNodeDistance(@NotNull Node node)
     {
-        if (selectedHosts.contains(host) || isLocalHost(host))
+        if (selectedHosts.contains(node) || isLocalHost(node))
         {
-            return childPolicy.distance(host);
+            return super.computeNodeDistance(node);
         }
-        return HostDistance.IGNORED;
+        return NodeDistance.IGNORED;
     }
 
     @Override
-    public Iterator<Host> newQueryPlan(String loggedKeyspace, Statement statement)
+    public @NotNull Queue<Node> newQueryPlan(Request request, Session session)
     {
-        Iterator<Host> child = childPolicy.newQueryPlan(loggedKeyspace, statement);
-        // Filter the child policy to only selected hosts
-        return Iterators.filter(child, selectedHosts::contains);
+        Queue<Node> plan = super.newQueryPlan(request, session);
+        plan.removeIf(n -> !selectedHosts.contains(n));
+        return plan;
     }
 
     @Override
-    public synchronized void onAdd(Host host)
+    public synchronized void onUp(@NotNull Node node)
     {
-        onUp(host);
-        childPolicy.onAdd(host);
-    }
-
-    @Override
-    public synchronized void onUp(Host host)
-    {
-        this.allHosts.add(host); // replace existing reference if there is one
+        this.allHosts.add(node); // replace existing reference if there is one
         if (selectedHosts.size() < totalRequestedConnections)
         {
             recalculateSelectedHosts();
         }
-        childPolicy.onUp(host);
+        super.onUp(node);
     }
 
     @Override
-    public synchronized void onDown(Host host)
+    public synchronized void onDown(@NotNull Node node)
     {
         // Don't remove local addresses from the selected host list
-        if (localHostAddresses.contains(driverUtils.getSocketAddress(host)))
+        if (localHostAddresses.contains(resolveEndpoint(node)))
         {
-            LOGGER.debug("Local Node {} has been marked down.", host);
+            LOGGER.debug("Local Node {} has been marked down.", node);
             return;
         }
-
-        boolean wasSelected = selectedHosts.remove(host);
-        if (!wasSelected)
-        {
-            // Non-selected nodes have been marked with HostDistance.IGNORED
-            // even if they may otherwise be useful. This has a side effect
-            // of preventing the driver from trying to reconnect to them
-            // if we miss the `onUp` event, so we need to schedule reconnects
-            // for these hosts explicitly unless we have active connections.
-            driverUtils.startPeriodicReconnectionAttempt(cluster, host);
-        }
+        selectedHosts.remove(node);
         recalculateSelectedHosts();
-        childPolicy.onDown(host);
+        super.onDown(node);
     }
 
     @Override
-    public synchronized void onRemove(Host host)
+    public void onRemove(@NotNull Node node)
     {
-        this.allHosts.remove(host);
-        onDown(host);
-        childPolicy.onRemove(host);
-    }
-
-    @Override
-    public void close()
-    {
-        childPolicy.close();
-    }
-
-    /**
-     * Creates the child policy based on the presence of a local datacenter
-     *
-     * @param localDc the local datacenter to use, or null
-     * @return a {@link LoadBalancingPolicy}
-     */
-    private LoadBalancingPolicy createChildPolicy(String localDc)
-    {
-        if (localDc != null)
-        {
-            return DCAwareRoundRobinPolicy.builder().withLocalDc(localDc).build();
-        }
-        return new RoundRobinPolicy();
+        this.allHosts.remove(node);
+        onDown(node);
+        super.onRemove(node);
     }
 
     private synchronized void recalculateSelectedHosts()
     {
-        Map<Boolean, List<Host>> partitionedHosts = allHosts.stream()
+        Map<Boolean, List<Node>> partitionedHosts = allHosts.stream()
                                                             .collect(Collectors.partitioningBy(this::isLocalHost));
-        List<Host> localHosts = partitionedHosts.get(true);
+        List<Node> localHosts = partitionedHosts.get(true);
         int numLocalHostsConfigured = localHostAddresses.size();
         if (localHosts == null || localHosts.isEmpty())
         {
@@ -198,7 +161,7 @@ public class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
         int requiredNonLocalHosts = this.totalRequestedConnections - selectedHosts.size();
         if (requiredNonLocalHosts > 0)
         {
-            List<Host> nonLocalHosts = partitionedHosts.get(false);
+            List<Node> nonLocalHosts = partitionedHosts.get(false);
             if (nonLocalHosts == null || nonLocalHosts.isEmpty())
             {
                 LOGGER.debug("Did not find any non-local hosts in allHosts");
@@ -207,7 +170,9 @@ public class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
 
             // Remove down and already selected hosts from consideration
             nonLocalHosts = nonLocalHosts.stream()
-                                         .filter(h -> !selectedHosts.contains(h) && h.isUp())
+                                         .filter(h -> !selectedHosts.contains(h)
+                                                      && (NodeState.UP.equals(h.getState())
+                                                          || NodeState.UNKNOWN.equals(h.getState())))
                                          .collect(Collectors.toList());
 
             if (nonLocalHosts.size() < requiredNonLocalHosts)
@@ -232,8 +197,15 @@ public class SidecarLoadBalancingPolicy implements LoadBalancingPolicy
         }
     }
 
-    private boolean isLocalHost(Host host)
+    private boolean isLocalHost(Node host)
     {
-        return localHostAddresses.contains(driverUtils.getSocketAddress(host));
+        return localHostAddresses.contains(resolveEndpoint(host));
+    }
+
+    private static InetSocketAddress resolveEndpoint(Node node)
+    {
+        SocketAddress socketAddress = node.getEndPoint().resolve();
+        Preconditions.checkState(socketAddress instanceof InetSocketAddress, "Unsupported endpoint type: " + node.getEndPoint());
+        return (InetSocketAddress) socketAddress;
     }
 }

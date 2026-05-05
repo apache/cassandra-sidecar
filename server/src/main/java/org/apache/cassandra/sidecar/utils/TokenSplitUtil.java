@@ -34,7 +34,7 @@ import com.google.common.collect.BoundType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Host;
+import com.datastax.oss.driver.api.core.metadata.Node;
 import com.google.inject.Singleton;
 import org.apache.cassandra.bridge.TokenRange;
 import org.apache.cassandra.sidecar.cdc.CdcConfig;
@@ -89,10 +89,10 @@ public class TokenSplitUtil
         }
 
         int maxDcSize = fetcher.callOnFirstAvailableInstance(instanceMetadata -> instanceMetadata.delegate().metadata())
-                               .getAllHosts()
+                               .getNodes().values()
                                .stream()
-                               .filter(host -> host.getDatacenter().equals(cdcConfig.datacenter()))
-                               .collect(Collectors.groupingBy(Host::getDatacenter, Collectors.toList()))
+                               .filter(host -> cdcConfig.datacenter().equals(host.getDatacenter()))
+                               .collect(Collectors.groupingBy(Node::getDatacenter, Collectors.toList()))
                                .values().stream()
                                .mapToInt(List::size)
                                .max()

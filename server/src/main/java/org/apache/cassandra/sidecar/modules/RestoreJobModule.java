@@ -35,6 +35,7 @@ import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobRespons
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobProgressResponsePayload;
 import org.apache.cassandra.sidecar.common.response.data.RestoreJobSummaryResponsePayload;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
@@ -85,9 +86,9 @@ public class RestoreJobModule extends AbstractModule
 
     @Provides
     @Singleton
-    LocalTokenRangesProvider localTokenRangesProvider(InstancesMetadata instancesMetadata, DnsResolver dnsResolver)
+    LocalTokenRangesProvider localTokenRangesProvider(InstancesMetadata instancesMetadata, DnsResolver dnsResolver, DriverUtils driverUtils)
     {
-        return new CachedLocalTokenRanges(instancesMetadata, dnsResolver);
+        return new CachedLocalTokenRanges(instancesMetadata, dnsResolver, driverUtils);
     }
 
     @ProvidesIntoMap

@@ -20,7 +20,8 @@ package org.apache.cassandra.sidecar.datahub;
 
 import java.net.URISyntaxException;
 
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.linkedin.common.BrowsePathEntry;
 import com.linkedin.common.BrowsePathEntryArray;
 import com.linkedin.common.BrowsePathsV2;
@@ -41,11 +42,12 @@ public class TableToBrowsePathsV2Converter extends TableToAspectConverter<Browse
 
     @Override
     @NotNull
-    public MetadataChangeProposalWrapper<BrowsePathsV2> convert(@NotNull TableMetadata table) throws URISyntaxException
+    public MetadataChangeProposalWrapper<BrowsePathsV2> convert(@NotNull KeyspaceMetadata keyspace,
+                                                                @NotNull TableMetadata table) throws URISyntaxException
     {
         String urn = identifiers.urnDataset(table);
 
-        String container = identifiers.urnContainer(table.getKeyspace());
+        String container = identifiers.urnContainer(keyspace);
 
         BrowsePathsV2 aspect = new BrowsePathsV2()
                 .setPath(new BrowsePathEntryArray(

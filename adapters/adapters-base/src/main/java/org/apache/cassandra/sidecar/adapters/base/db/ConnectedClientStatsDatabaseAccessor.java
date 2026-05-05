@@ -21,8 +21,8 @@ package org.apache.cassandra.sidecar.adapters.base.db;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.ResultSet;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
@@ -46,7 +46,7 @@ public class ConnectedClientStatsDatabaseAccessor extends LocalDatabaseAccessor<
     public ConnectedClientStatsSummary summary()
     {
         Preconditions.checkState(tableSchema.isInitialized(), () -> tableSchema.getClass().getSimpleName() + " is not initialized yet");
-        BoundStatement statement = tableSchema.connectionsByUser().bind();
+        BoundStatement statement = tableSchema.connectionsByUser().bind().setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet resultSet = execute(statement);
         return ConnectedClientStatsSummary.from(resultSet);
     }
@@ -58,7 +58,7 @@ public class ConnectedClientStatsDatabaseAccessor extends LocalDatabaseAccessor<
     public Stream<ConnectedClientStats> stats()
     {
         Preconditions.checkState(tableSchema.isInitialized(), () -> tableSchema.getClass().getSimpleName() + " is not initialized yet");
-        BoundStatement statement = tableSchema.stats().bind();
+        BoundStatement statement = tableSchema.stats().bind().setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet resultSet = execute(statement);
         return StreamSupport.stream(resultSet.spliterator(), false)
                             .map(ConnectedClientStats::from);

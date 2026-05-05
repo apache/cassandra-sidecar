@@ -72,7 +72,5 @@
     <appender-ref ref="STDOUT" />
   </root>
 
-
-  <logger name="com.datastax.driver.core" level="ERROR" />
-  <logger name="com.datastax.driver.core.ControlConnection" level="OFF" />
+  <logger name="com.datastax.oss.driver" level="ERROR" />
 </configuration>

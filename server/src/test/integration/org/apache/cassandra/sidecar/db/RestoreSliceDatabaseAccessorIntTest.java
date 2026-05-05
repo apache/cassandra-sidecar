@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.db;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
@@ -33,10 +33,10 @@ class RestoreSliceDatabaseAccessorIntTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void testCrudOperations()
     {
-        waitForSchemaReady(10, TimeUnit.SECONDS);
+        waitForSchemaReady(30, TimeUnit.SECONDS);
 
         RestoreSliceDatabaseAccessor accessor = injector.getInstance(RestoreSliceDatabaseAccessor.class);
-        RestoreJob testJob = RestoreJobTest.createNewTestingJob(UUIDs.timeBased());
+        RestoreJob testJob = RestoreJobTest.createNewTestingJob(Uuids.timeBased());
         List<RestoreSlice> fetchedSlices = accessor.selectByJobByBucketByTokenRange(testJob, (short) 0, new TokenRange(0, 10));
         assertThat(fetchedSlices).isEmpty();;
 

@@ -43,7 +43,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.codahale.metrics.SharedMetricRegistries;
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -149,7 +149,7 @@ class RestoreRangeTaskTest
     @Test
     void testRestoreSucceeds()
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.CREATED);
         HeadObjectResponse headObjectResponse = mock(HeadObjectResponse.class);
         when(headObjectResponse.contentLength()).thenReturn(1L);
         when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(headObjectResponse));
@@ -184,7 +184,7 @@ class RestoreRangeTaskTest
     @Test
     void testCaptureReplicationTimeOnlyOnce()
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.CREATED);
         // the existence of the slice is already confirmed by the s3 client
         when(mockRange.existsOnS3()).thenReturn(true);
         when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
@@ -206,7 +206,7 @@ class RestoreRangeTaskTest
     @Test
     void testStopProcessingCancelledSlice()
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.CREATED);
         when(mockRange.isCancelled()).thenReturn(true);
         RestoreRangeTask task = createTask(mockRange, job);
 
@@ -223,7 +223,7 @@ class RestoreRangeTaskTest
     @Test
     void testThrowRetryableExceptionOnS3ObjectNotFound()
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.CREATED);
         CompletableFuture<HeadObjectResponse> failedFuture = new CompletableFuture<>();
         failedFuture.completeExceptionally(mock(NoSuchKeyException.class));
         when(mockStorageClient.objectExists(mockRange)).thenReturn(failedFuture);
@@ -242,7 +242,7 @@ class RestoreRangeTaskTest
     void testStaging()
     {
         // test specific setup
-        RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGE_READY));
+        RestoreJob job = spy(RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.STAGE_READY));
         doReturn(true).when(job).isManagedBySidecar();
         doReturn(job).when(mockRange).job();
         doReturn(Paths.get("nonexist")).when(mockRange).stagedObjectPath();
@@ -268,7 +268,7 @@ class RestoreRangeTaskTest
     void testStagingWithExistingObject(@TempDir Path testFolder) throws IOException
     {
         // test specific setup
-        RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGE_READY));
+        RestoreJob job = spy(RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.STAGE_READY));
         doReturn(true).when(job).isManagedBySidecar();
         doReturn(job).when(mockRange).job();
         Path stagedPath = testFolder.resolve("slice.zip");
@@ -295,7 +295,7 @@ class RestoreRangeTaskTest
     void testImportPhase()
     {
         // test specific setup
-        RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.IMPORT_READY));
+        RestoreJob job = spy(RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.IMPORT_READY));
         doReturn(true).when(job).isManagedBySidecar();
         doReturn(job).when(mockRange).job();
         doReturn(true).when(mockRange).hasStaged();
@@ -315,7 +315,7 @@ class RestoreRangeTaskTest
     void testSliceNotStagedInImportPhase()
     {
         // test specific setup
-        RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.IMPORT_READY));
+        RestoreJob job = spy(RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.IMPORT_READY));
         doReturn(true).when(job).isManagedBySidecar();
         doReturn(job).when(mockRange).job();
         doReturn(false).when(mockRange).hasStaged();
@@ -345,7 +345,7 @@ class RestoreRangeTaskTest
     {
         // import is successful
         when(mockSSTableImporter.scheduleImport(any())).thenReturn(Future.succeededFuture());
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.IMPORT_READY, ConsistencyLevel.QUORUM);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.IMPORT_READY, ConsistencyLevel.QUORUM);
         RestoreRangeTask task = createTask(mockRange, job);
         Future<?> success = task.commit(testFolder.toFile());
         assertThat(success.failed()).isFalse();
@@ -361,7 +361,7 @@ class RestoreRangeTaskTest
     @Test
     void testHandlingUnexpectedExceptionInObjectExistsCheck(@TempDir Path testFolder)
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM);
         when(mockStorageClient.objectExists(mockRange)).thenThrow(new RuntimeException("Random exception"));
         Path stagedPath = testFolder.resolve("slice.zip");
         when(mockRange.stagedObjectPath()).thenReturn(stagedPath);
@@ -380,7 +380,7 @@ class RestoreRangeTaskTest
     @Test
     void testHandlingUnexpectedExceptionDuringDownloadSliceCheck(@TempDir Path testFolder)
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.STAGE_READY, ConsistencyLevel.QUORUM);
         Path stagedPath = testFolder.resolve("slice.zip");
         when(mockRange.stagedObjectPath()).thenReturn(stagedPath);
         when(mockRange.isCancelled()).thenReturn(false);
@@ -404,7 +404,7 @@ class RestoreRangeTaskTest
     @Test
     void testHandlingUnexpectedExceptionDuringUnzip(@TempDir Path testFolder) throws IOException
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.IMPORT_READY, ConsistencyLevel.QUORUM);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.IMPORT_READY, ConsistencyLevel.QUORUM);
         Path stagedPath = testFolder.resolve("slice.zip");
         Files.createFile(stagedPath);
         when(mockRange.hasStaged()).thenReturn(true);
@@ -422,7 +422,7 @@ class RestoreRangeTaskTest
     @Test
     void testHandlingUnexpectedExceptionDuringDownloadAndImport(@TempDir Path testFolder)
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED, null);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.CREATED, null);
         Path stagedPath = testFolder.resolve("slice.zip");
         when(mockRange.stagedObjectPath()).thenReturn(stagedPath);
         when(mockRange.isCancelled()).thenReturn(false);
@@ -446,7 +446,7 @@ class RestoreRangeTaskTest
     @Test
     void testSliceDuration()
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, ConsistencyLevel.QUORUM);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.STAGED, ConsistencyLevel.QUORUM);
         AtomicLong currentNanos = new AtomicLong(0);
         RestoreRangeTask task = createTask(mockRange, job, currentNanos::get);
         Promise<RestoreRange> promise = Promise.promise();
@@ -459,7 +459,7 @@ class RestoreRangeTaskTest
     void testRemoveOutOfRangeSSTables(@TempDir Path tempDir) throws RestoreJobException, IOException
     {
         // TODO: update test to use replica ranges implementation
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED, ConsistencyLevel.QUORUM);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.STAGED, ConsistencyLevel.QUORUM);
         RestoreRangeTask task = createTask(mockRange, job);
 
         // the mocked localTokenRangesProvider returns null, so retry later
@@ -509,7 +509,7 @@ class RestoreRangeTaskTest
     @Test
     void testCompareChecksum(@TempDir Path tempDir) throws RestoreJobFatalException, IOException
     {
-        RestoreJob job = RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
+        RestoreJob job = RestoreJobTest.createTestingJob(Uuids.timeBased(), RestoreJobStatus.CREATED);
         RestoreRangeTask task = createTask(mockRange, job);
 
         byte[] bytes = "Hello".getBytes(StandardCharsets.UTF_8);

@@ -22,11 +22,11 @@ import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Statement;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.cql.Statement;
 import org.apache.cassandra.sidecar.acl.authorization.PermissionFactoryImpl;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarRolePermissionsSchema;
@@ -66,7 +66,7 @@ class BasicPermissionsDatabaseAccessorTest
         }
 
         @Override
-        protected ResultSet execute(Statement statement)
+        protected ResultSet execute(Statement<?> statement)
         {
             ResultSet mockResultSet = mock(ResultSet.class);
             Row mockRow = mock(Row.class);

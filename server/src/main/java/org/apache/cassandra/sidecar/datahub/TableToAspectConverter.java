@@ -18,7 +18,8 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.linkedin.data.template.RecordTemplate;
 import datahub.event.MetadataChangeProposalWrapper;
 import org.jetbrains.annotations.NotNull;
@@ -53,5 +54,6 @@ public abstract class TableToAspectConverter<T extends RecordTemplate> extends M
     }
 
     @NotNull
-    public abstract MetadataChangeProposalWrapper<T> convert(@NotNull TableMetadata table) throws Exception;
+    public abstract MetadataChangeProposalWrapper<T> convert(@NotNull KeyspaceMetadata keyspace,
+                                                             @NotNull TableMetadata table) throws Exception;
 }

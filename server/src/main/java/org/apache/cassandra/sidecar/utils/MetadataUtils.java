@@ -17,10 +17,10 @@
  */
 package org.apache.cassandra.sidecar.utils;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.QueryOptions;
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
+import com.datastax.oss.driver.internal.core.util.Strings;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 
 /**
@@ -34,12 +34,11 @@ public class MetadataUtils
      * @param metadata the metadata object.
      * @param keyspace the name of the keyspace for which metadata should be returned.
      * @return the metadata of the requested keyspace or {@code null} if {@code keyspace} is not a
-     * known keyspace. Note that the result might be stale or null if metadata was explicitly
-     * disabled with {@link QueryOptions#setMetadataEnabled(boolean)}.
+     * known keyspace.
      */
     public static KeyspaceMetadata keyspace(Metadata metadata, Name keyspace)
     {
-        return metadata.getKeyspace(keyspace.maybeQuotedName());
+        return metadata.getKeyspace(keyspace.maybeQuotedName()).orElse(null);
     }
 
     /**
@@ -52,6 +51,20 @@ public class MetadataUtils
      */
     public static TableMetadata table(KeyspaceMetadata metadata, Name table)
     {
-        return metadata.getTable(table.maybeQuotedName());
+        return metadata.getTable(table.maybeQuotedName()).orElse(null);
+    }
+
+    public static String quoteIfNecessary(String literal)
+    {
+        return Strings.needsDoubleQuotes(literal) ? Strings.doubleQuote(literal) : literal;
+    }
+
+    public static String describe(Metadata metadata)
+    {
+        StringBuilder builder = new StringBuilder();
+        metadata.getKeyspaces().values().forEach(ks -> {
+            builder.append(ks.describeWithChildren(true)).append("\n");
+        });
+        return builder.toString();
     }
 }

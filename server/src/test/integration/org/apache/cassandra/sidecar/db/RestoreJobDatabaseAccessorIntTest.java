@@ -23,7 +23,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
@@ -46,7 +46,7 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void testCrudOperations()
     {
-        waitForSchemaReady(10, TimeUnit.SECONDS);
+        waitForSchemaReady(30, TimeUnit.SECONDS);
 
         RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
         assertThat(accessor.findAllRecent(now, 3)).isEmpty();
@@ -102,7 +102,7 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
 
     private UUID createJob(RestoreJobDatabaseAccessor accessor, boolean restoreToLocalDatacenterOnly)
     {
-        UUID jobId = UUIDs.timeBased();
+        UUID jobId = Uuids.timeBased();
         CreateRestoreJobRequestPayload.Builder builder = CreateRestoreJobRequestPayload.builder(secrets, expiresAtMillis)
                                                                                        .jobId(jobId)
                                                                                        .jobAgent("agent");

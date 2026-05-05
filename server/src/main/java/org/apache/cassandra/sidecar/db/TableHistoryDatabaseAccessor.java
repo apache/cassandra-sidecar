@@ -21,8 +21,9 @@ package org.apache.cassandra.sidecar.db;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
-import com.datastax.driver.core.ResultSetFuture;
+import com.datastax.oss.driver.api.core.cql.AsyncResultSet;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -43,11 +44,12 @@ public class TableHistoryDatabaseAccessor extends DatabaseAccessor<TableHistoryS
         super(sidecarSchema.tableSchema(TableHistorySchema.class), sessionProvider);
     }
 
-    public ResultSetFuture insertTableSchemaHistory(String keyspace, String tableName, String schema)
+    public CompletableFuture<AsyncResultSet> insertTableSchemaHistory(String keyspace, String tableName, String schema)
     {
         UUID schemaUuid = UUID.nameUUIDFromBytes(schema.getBytes(StandardCharsets.UTF_8));
         return session().executeAsync(tableSchema
                                       .insertTableSchema()
-                                      .bind(keyspace, tableName, schemaUuid, schema));
+                                      .bind(keyspace, tableName, schemaUuid, schema)
+                                      .setConsistencyLevel(tableSchema.getConsistencyLevel())).toCompletableFuture();
     }
 }

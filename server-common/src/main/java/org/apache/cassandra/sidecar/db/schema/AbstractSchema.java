@@ -23,11 +23,11 @@ import java.util.function.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
 import org.apache.cassandra.sidecar.exceptions.SidecarSchemaModificationException;
 import org.jetbrains.annotations.NotNull;
 
@@ -39,7 +39,7 @@ public abstract class AbstractSchema
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
     private volatile boolean initialized = false;
 
-    public synchronized boolean initialize(@NotNull Session session, @NotNull Predicate<AbstractSchema> shouldCreateSchema)
+    public synchronized boolean initialize(@NotNull CqlSession session, @NotNull Predicate<AbstractSchema> shouldCreateSchema)
     {
         initialized = initialized || initializeInternal(session, shouldCreateSchema);
         return initialized;
@@ -53,15 +53,15 @@ public abstract class AbstractSchema
         return initialized;
     }
 
-    protected PreparedStatement prepare(PreparedStatement cached, Session session, String cqlLiteral)
+    protected PreparedStatement prepare(PreparedStatement cached, CqlSession session, String cqlLiteral)
     {
-        return cached == null ? session.prepare(cqlLiteral).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM) : cached;
+        return cached == null ? session.prepare(cqlLiteral) : cached;
     }
 
-    protected boolean initializeInternal(@NotNull Session session,
+    protected boolean initializeInternal(@NotNull CqlSession session,
                                          @NotNull Predicate<AbstractSchema> shouldCreateSchema)
     {
-        if (!exists(session.getCluster().getMetadata()))
+        if (!exists(session.getMetadata()))
         {
             if (shouldCreateSchema.test(this))
             {
@@ -102,7 +102,7 @@ public abstract class AbstractSchema
      *
      * @param session the CQL session
      */
-    protected abstract void prepareStatements(@NotNull Session session);
+    protected abstract void prepareStatements(@NotNull CqlSession session);
 
     /**
      * @param metadata the cluster metadata
@@ -114,4 +114,9 @@ public abstract class AbstractSchema
      * @return the statement to create the schema
      */
     protected abstract String createSchemaStatement();
+
+    public ConsistencyLevel getConsistencyLevel()
+    {
+        return ConsistencyLevel.LOCAL_QUORUM;
+    }
 }

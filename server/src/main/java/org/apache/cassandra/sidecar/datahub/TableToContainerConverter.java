@@ -20,7 +20,8 @@ package org.apache.cassandra.sidecar.datahub;
 
 import java.net.URISyntaxException;
 
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.linkedin.common.urn.Urn;
 import com.linkedin.container.Container;
 import datahub.event.MetadataChangeProposalWrapper;
@@ -38,11 +39,12 @@ public class TableToContainerConverter extends TableToAspectConverter<Container>
 
     @Override
     @NotNull
-    public MetadataChangeProposalWrapper<Container> convert(@NotNull TableMetadata table) throws URISyntaxException
+    public MetadataChangeProposalWrapper<Container> convert(@NotNull KeyspaceMetadata keyspace,
+                                                            @NotNull TableMetadata table) throws URISyntaxException
     {
         String urn = identifiers.urnDataset(table);
 
-        String container = identifiers.urnContainer(table.getKeyspace());
+        String container = identifiers.urnContainer(keyspace);
 
         Container aspect = new Container()
                 .setContainer(new Urn(container));

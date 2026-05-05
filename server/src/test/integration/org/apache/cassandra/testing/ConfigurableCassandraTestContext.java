@@ -52,7 +52,8 @@ public class ConfigurableCassandraTestContext extends AbstractCassandraTestConte
     public IClusterExtension<? extends IInstance> configureAndStartCluster(Consumer<ClusterBuilderConfiguration> configurator)
     {
         configurator.accept(clusterConfiguration);
-        IClusterExtension<? extends IInstance> cluster = CassandraTestTemplate.retriableStartCluster(classLoaderWrapper, versionString, clusterConfiguration, 3);
+        IClusterExtension<? extends IInstance> cluster =
+        CassandraTestTemplate.retriableStartCluster(classLoaderWrapper, versionString, clusterConfiguration, 3);
         setCluster(cluster);
         return cluster;
     }

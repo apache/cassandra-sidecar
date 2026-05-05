@@ -20,9 +20,10 @@ package org.apache.cassandra.sidecar.cdc;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import com.datastax.driver.core.ResultSetFuture;
+import com.datastax.oss.driver.api.core.cql.AsyncResultSet;
 import org.apache.cassandra.bridge.TokenRange;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcCassandraClient;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
@@ -41,7 +42,7 @@ public class StateSidecarCdcCassandraClient implements SidecarCdcCassandraClient
         this.cdcDatabaseAccessor = cdcDatabaseAccessor;
     }
 
-    public List<ResultSetFuture> storeStateAsync(@NotNull String jobId, @NotNull TokenRange range, @NotNull ByteBuffer buf, long timestamp)
+    public List<CompletableFuture<AsyncResultSet>> storeStateAsync(@NotNull String jobId, @NotNull TokenRange range, @NotNull ByteBuffer buf, long timestamp)
     {
         return cdcDatabaseAccessor.storeStateAsync(jobId, range, buf, timestamp);
     }

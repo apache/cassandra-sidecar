@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -38,13 +39,14 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Host;
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Node;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.jetbrains.annotations.NotNull;
 
@@ -57,20 +59,22 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
     private static final Logger LOGGER = LoggerFactory.getLogger(CachedLocalTokenRanges.class);
     private final InstancesMetadata instancesMetadata;
     private final DnsResolver dnsResolver;
+    private final DriverUtils driverUtils;
 
     @GuardedBy("this")
     private Set<Integer> localInstanceIdsCache;
     @GuardedBy("this")
-    private Set<Host> allInstancesCache;
+    private Set<Node> allInstancesCache;
     @GuardedBy("this")
-    private Set<Host> localInstancesCache;
+    private Set<Node> localInstancesCache;
     @GuardedBy("this")
     private ImmutableMap<String, Map<Integer, Set<TokenRange>>> localTokenRangesCache;
 
-    public CachedLocalTokenRanges(InstancesMetadata instancesMetadata, DnsResolver dnsResolver)
+    public CachedLocalTokenRanges(InstancesMetadata instancesMetadata, DnsResolver dnsResolver, DriverUtils driverUtils)
     {
         this.instancesMetadata = instancesMetadata;
         this.dnsResolver = dnsResolver;
+        this.driverUtils = driverUtils;
         this.localTokenRangesCache = null;
         this.localInstanceIdsCache = null;
         this.allInstancesCache = null;
@@ -104,7 +108,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
             return Collections.emptyMap();
         }
 
-        if (metadata.getKeyspace(keyspace) == null)
+        if (metadata.getKeyspace(keyspace).isEmpty())
         {
             throw new NoSuchElementException("Keyspace does not exist. keyspace: " + keyspace);
         }
@@ -112,7 +116,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
         Set<Integer> localInstanceIds = localInstances.stream()
                                                       .map(InstanceMetadata::id)
                                                       .collect(Collectors.toSet());
-        Set<Host> allInstances = metadata.getAllHosts();
+        Set<Node> allInstances = new HashSet<>(metadata.getNodes().values());
         return getCacheOrReload(metadata, keyspace, localInstanceIds, localInstances, allInstances);
     }
 
@@ -121,12 +125,12 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
      * The result set is unmodifiable.
      */
     @Nullable
-    private Pair<Host, Set<TokenRange>> tokenRangesOfHost(Metadata metadata,
+    private Pair<Node, Set<TokenRange>> tokenRangesOfHost(Metadata metadata,
                                                           String keyspace,
                                                           InstanceMetadata instance,
-                                                          Map<IpAddressAndPort, Host> allHosts)
+                                                          Map<IpAddressAndPort, Node> allHosts)
     {
-        Host host;
+        Node host;
         try
         {
             final IpAddressAndPort ip = IpAddressAndPort.of(dnsResolver.resolve(instance.host()), instance.port());
@@ -145,9 +149,9 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
         return Pair.of(host, tokenRangesOfHost(metadata, keyspace, host));
     }
 
-    public Set<TokenRange> tokenRangesOfHost(Metadata metadata, String keyspace, Host host)
+    public Set<TokenRange> tokenRangesOfHost(Metadata metadata, String keyspace, Node host)
     {
-        return metadata.getTokenRanges(keyspace, host)
+        return metadata.getTokenMap().get().getTokenRanges(keyspace, host)
                        .stream()
                        .flatMap(range -> TokenRange.from(range).stream())
                        .collect(Collectors.toSet());
@@ -160,7 +164,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
                                                                         String keyspace,
                                                                         Set<Integer> localInstanceIds,
                                                                         List<InstanceMetadata> localInstances,
-                                                                        Set<Host> allInstances)
+                                                                        Set<Node> allInstances)
     {
         // exit early if no change is found
         boolean isClusterTheSame = allInstances.equals(allInstancesCache)
@@ -179,49 +183,49 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
         {
             LOGGER.warn("No instances found in client session");
         }
-        Map<IpAddressAndPort, Host> allHosts = new HashMap<>(allInstancesCache.size());
-        BiConsumer<InetSocketAddress, Host> putNullSafe = (endpoint, host) -> {
+        Map<IpAddressAndPort, Node> allHosts = new HashMap<>(allInstancesCache.size());
+        BiConsumer<InetSocketAddress, Node> putNullSafe = (endpoint, host) -> {
             if (endpoint != null)
             {
                 allHosts.put(IpAddressAndPort.of(endpoint), host);
             }
         };
-        for (Host host : allInstancesCache)
+        for (Node host : allInstancesCache)
         {
-            putNullSafe.accept(host.getSocketAddress(), host);
-            putNullSafe.accept(host.getListenSocketAddress(), host);
-            putNullSafe.accept(host.getBroadcastSocketAddress(), host);
+            putNullSafe.accept(driverUtils.getSocketAddress(host), host);
+            putNullSafe.accept(host.getListenAddress().orElse(null), host);
+            putNullSafe.accept(host.getBroadcastAddress().orElse(null), host);
         }
 
         ImmutableMap.Builder<String, Map<Integer, Set<TokenRange>>> perKeyspaceBuilder = ImmutableMap.builder();
-        ImmutableSet.Builder<Host> hostBuilder = ImmutableSet.builder();
+        ImmutableSet.Builder<Node> hostBuilder = ImmutableSet.builder();
         if (isClusterTheSame && localInstancesCache != null)
         {
             hostBuilder.addAll(localInstancesCache);
         }
 
-        for (KeyspaceMetadata ks : metadata.getKeyspaces())
+        for (KeyspaceMetadata ks : metadata.getKeyspaces().values())
         {
-            if (isClusterTheSame && localTokenRangesCache != null && localTokenRangesCache.containsKey(ks.getName()))
+            if (isClusterTheSame && localTokenRangesCache != null && localTokenRangesCache.containsKey(ks.getName().asInternal()))
             {
                 // we don't need to rebuild if already cached
-                Map<Integer, Set<TokenRange>> value = localTokenRangesCache.get(ks.getName());
+                Map<Integer, Set<TokenRange>> value = localTokenRangesCache.get(ks.getName().asInternal());
                 if (value != null)
-                    perKeyspaceBuilder.put(ks.getName(), value);
+                    perKeyspaceBuilder.put(ks.getName().asInternal(), value);
             }
             else
             {
                 ImmutableMap.Builder<Integer, Set<TokenRange>> resultBuilder = ImmutableMap.builder();
                 for (InstanceMetadata instance : localInstances)
                 {
-                    Pair<Host, Set<TokenRange>> pair = tokenRangesOfHost(metadata, keyspace, instance, allHosts);
+                    Pair<Node, Set<TokenRange>> pair = tokenRangesOfHost(metadata, keyspace, instance, allHosts);
                     if (pair != null)
                     {
                         hostBuilder.add(pair.getKey());
                         resultBuilder.put(instance.id(), Collections.unmodifiableSet(pair.getValue()));
                     }
                 }
-                perKeyspaceBuilder.put(ks.getName(), resultBuilder.build());
+                perKeyspaceBuilder.put(ks.getName().asInternal(), resultBuilder.build());
             }
         }
         localTokenRangesCache = perKeyspaceBuilder.build();

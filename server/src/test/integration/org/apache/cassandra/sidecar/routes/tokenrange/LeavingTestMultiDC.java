@@ -62,7 +62,8 @@ class LeavingTestMultiDC extends LeavingBaseTest
         // We'll manually swap around tokens, so use 0 as number of new DCs
         TestTokenSupplier tokenSupplier = TestTokenSupplier.evenlyDistributedTokens(6, 0, 2, 1);
         tokenSupplier.swap(5, 10);
-        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperLeavingNodesMultiDC::install, cassandraTestContext, tokenSupplier, null);
+        IClusterExtension<? extends IInstance> cluster = getMultiDCCluster(BBHelperLeavingNodesMultiDC::install,
+                                                                           cassandraTestContext, tokenSupplier, null);
         runLeavingTestScenario(context,
                                leavingNodesPerDC,
                                BBHelperLeavingNodesMultiDC.transientStateStart,
@@ -96,7 +97,8 @@ class LeavingTestMultiDC extends LeavingBaseTest
      * Note: Cassandra now returns token boundaries as separate single-token ranges, so the total
      * number of ranges is 13 (6 regular ranges + 6 token boundary ranges + 1 wraparound).
      */
-    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingLeavingNodeMultiDC(TokenSupplier tokenSupplier, CassandraIntegrationTest annotation)
+    private Map<String, Map<Range<BigInteger>, List<String>>> generateExpectedRangeMappingLeavingNodeMultiDC(TokenSupplier tokenSupplier,
+                                                                                                             CassandraIntegrationTest annotation)
     {
         List<Range<BigInteger>> expectedRanges = generateExpectedRanges(true, tokenSupplier, annotation);
         Map<Range<BigInteger>, List<String>> dc1Mapping = new HashMap<>();

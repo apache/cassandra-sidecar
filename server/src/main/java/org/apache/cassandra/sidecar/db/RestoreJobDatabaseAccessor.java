@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.db;
 
 import java.nio.ByteBuffer;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -27,12 +28,12 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
 
-import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.LocalDate;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.cql.BatchStatement;
+import com.datastax.oss.driver.api.core.cql.BatchType;
+import com.datastax.oss.driver.api.core.cql.BoundStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
@@ -55,7 +56,7 @@ import org.jetbrains.annotations.Nullable;
 public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSchema>
 {
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final long ONE_DAY_MILLISECONDS = TimeUnit.DAYS.toMillis(1);
+    public static final long ONE_DAY_MILLISECONDS = TimeUnit.DAYS.toMillis(1);
     public final SidecarSchema sidecarSchema;
 
     @Inject
@@ -72,7 +73,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         sidecarSchema.ensureInitialized();
 
         UUID jobIdFromRequest = payload.jobId();
-        UUID jobId = jobIdFromRequest == null ? UUIDs.timeBased() : jobIdFromRequest;
+        UUID jobId = jobIdFromRequest == null ? Uuids.timeBased() : jobIdFromRequest;
         RestoreJob job = RestoreJob.builder()
                                    .createdAt(RestoreJob.toLocalDate(jobId))
                                    .jobId(jobId)
@@ -101,7 +102,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
                                                     job.consistencyLevelText(),
                                                     job.localDatacenter,
                                                     job.shouldRestoreToLocalDatacenterOnly,
-                                                    job.expireAt);
+                                                    job.expireAt.toInstant())
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
 
         execute(statement);
         return job;
@@ -131,7 +133,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         Long sliceCount = payload.sliceCount();
         // all updates are going to the same partition. We use unlogged explicitly.
         // Cassandra internally combine those updates into the same mutation.
-        BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
+        BatchStatement batchStatement = BatchStatement.newInstance(BatchType.UNLOGGED);
         ByteBuffer wrappedSecrets;
         if (secrets != null)
         {
@@ -139,8 +141,9 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
             {
                 byte[] secretBytes = MAPPER.writeValueAsBytes(secrets);
                 wrappedSecrets = ByteBuffer.wrap(secretBytes);
-                batchStatement.add(tableSchema.updateBlobSecrets()
-                                              .bind(createdAt, jobId, wrappedSecrets));
+                batchStatement = batchStatement.add(tableSchema.updateBlobSecrets()
+                                                               .bind(createdAt, jobId, wrappedSecrets)
+                                                               .setConsistencyLevel(tableSchema.getConsistencyLevel()));
             }
             catch (JsonProcessingException e)
             {
@@ -150,22 +153,26 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         }
         if (status != null)
         {
-            batchStatement.add(tableSchema.updateStatus().bind(createdAt, jobId, status.name()));
+            batchStatement = batchStatement.add(tableSchema.updateStatus().bind(createdAt, jobId, status.name())
+                                                           .setConsistencyLevel(tableSchema.getConsistencyLevel()));
             updateBuilder.jobStatus(status);
         }
         if (jobAgent != null)
         {
-            batchStatement.add(tableSchema.updateJobAgent().bind(createdAt, jobId, jobAgent));
+            batchStatement = batchStatement.add(tableSchema.updateJobAgent().bind(createdAt, jobId, jobAgent)
+                                                           .setConsistencyLevel(tableSchema.getConsistencyLevel()));
             updateBuilder.jobAgent(jobAgent);
         }
         if (expireAt != null)
         {
-            batchStatement.add(tableSchema.updateExpireAt().bind(createdAt, jobId, expireAt));
+            batchStatement = batchStatement.add(tableSchema.updateExpireAt().bind(createdAt, jobId, expireAt.toInstant())
+                                                           .setConsistencyLevel(tableSchema.getConsistencyLevel()));
             updateBuilder.expireAt(expireAt);
         }
         if (sliceCount != null)
         {
-            batchStatement.add(tableSchema.updateSliceCount().bind(createdAt, jobId, sliceCount));
+            batchStatement = batchStatement.add(tableSchema.updateSliceCount().bind(createdAt, jobId, sliceCount)
+                                                           .setConsistencyLevel(tableSchema.getConsistencyLevel()));
             updateBuilder.sliceCount(sliceCount);
         }
 
@@ -184,7 +191,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
             status = status + ": " + reason;
         }
         BoundStatement statement = tableSchema.updateStatus()
-                                              .bind(createdAt, jobId, status);
+                                              .bind(createdAt, jobId, status)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         execute(statement);
     }
 
@@ -192,7 +200,8 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     {
         sidecarSchema.ensureInitialized();
 
-        BoundStatement statement = tableSchema.selectJob().bind(RestoreJob.toLocalDate(jobId), jobId);
+        BoundStatement statement = tableSchema.selectJob().bind(RestoreJob.toLocalDate(jobId), jobId)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet resultSet = execute(statement);
         Row row = resultSet.one();
         if (row == null)
@@ -217,17 +226,12 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     {
         sidecarSchema.ensureInitialized();
 
-        BoundStatement statement = tableSchema.findAllByCreatedAt().bind(date);
+        BoundStatement statement = tableSchema.findAllByCreatedAt().bind(date)
+                                              .setConsistencyLevel(tableSchema.getConsistencyLevel());
         ResultSet resultSet = execute(statement);
         List<RestoreJob> result = new ArrayList<>();
         for (Row row : resultSet)
         {
-            if (resultSet.getAvailableWithoutFetching() == 100 && !resultSet.isFullyFetched())
-            {
-                // trigger an async fetch sooner when there are more to fetch,
-                // and it still has around 100 available to consume from the resultSet
-                resultSet.fetchMoreResults();
-            }
             result.add(RestoreJob.from(row));
         }
         return result;
@@ -272,7 +276,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     static LocalDate dateInPast(long referenceTimestampMillis, int days)
     {
         long daysInMillis = days * ONE_DAY_MILLISECONDS;
-        return LocalDate.fromMillisSinceEpoch(referenceTimestampMillis - daysInMillis);
+        return LocalDate.ofEpochDay((referenceTimestampMillis - daysInMillis) / ONE_DAY_MILLISECONDS);
     }
 
     private static <T> ByteBuffer serializeValue(T value, String type)

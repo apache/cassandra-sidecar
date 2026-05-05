@@ -25,7 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.metadata.NodeStateListener;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -225,7 +226,7 @@ public class IntegrationTestModule extends AbstractModule
         {
             @Override
             @NotNull
-            public Session get()
+            public CqlSession get()
             {
                 return cassandraSidecarTestContext.session();
             }
@@ -237,9 +238,19 @@ public class IntegrationTestModule extends AbstractModule
             }
 
             @Override
-            public Session getIfConnected()
+            public CqlSession getIfConnected()
             {
                 return get();
+            }
+
+            @Override
+            public void registerNodeStateListener(NodeStateListener nodeStateListener)
+            {
+            }
+
+            @Override
+            public void unregisterNodeStateListener(NodeStateListener nodeStateListener)
+            {
             }
         };
         vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());

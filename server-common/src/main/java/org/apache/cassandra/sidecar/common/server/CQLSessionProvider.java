@@ -18,7 +18,8 @@
 
 package org.apache.cassandra.sidecar.common.server;
 
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.metadata.NodeStateListener;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -39,20 +40,30 @@ public interface CQLSessionProvider
      * @return the session that holds connections to a Cassandra cluster
      * @throws CassandraUnavailableException when CQL connection is not successful
      */
-    @NotNull Session get() throws CassandraUnavailableException;
+    @NotNull CqlSession get() throws CassandraUnavailableException;
 
     /**
-     * Gets the current Session object if it already exists.
+     * Gets the current CqlSession object if it already exists.
      * Unlike {@link #get()}, it does not attempt to connect to the cluster,
      * and it can return {@code null} when no connection is established.
      * The call-sites are required to handle {@code null} value.
      *
-     * @return the connected {@link Session} object if available. Null otherwise.
+     * @return the connected {@link CqlSession} object if available. Null otherwise.
      */
-    @Nullable Session getIfConnected();
+    @Nullable CqlSession getIfConnected();
 
     /**
      * Closes the CQLSessionProvider
      */
     void close();
+
+    /**
+     * Register new node state listener.
+     */
+    void registerNodeStateListener(NodeStateListener nodeStateListener);
+
+    /**
+     * Unregister node state listener.
+     */
+    void unregisterNodeStateListener(NodeStateListener nodeStateListener);
 }

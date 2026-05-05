@@ -37,6 +37,5 @@
   <logger name="shaded.io.netty" level="WARN" />
   <logger name="shaded.com.datastax.shaded.netty" level="WARN" />
   <logger name="o.a.c.sidecar.client.shaded.io.netty" level="WARN" />
-  <logger name="com.datastax.driver.core" level="ERROR" />
-  <logger name="com.datastax.driver.core.ControlConnection" level="OFF" />
+  <logger name="com.datastax.oss.driver" level="ERROR" />
 </configuration>

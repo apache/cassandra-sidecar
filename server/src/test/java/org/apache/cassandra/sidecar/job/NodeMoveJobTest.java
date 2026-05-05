@@ -25,7 +25,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
@@ -54,7 +54,7 @@ class NodeMoveJobTest
     void setUp()
     {
         mockStorageOperations = mock(StorageOperations.class);
-        jobId = UUIDs.timeBased();
+        jobId = Uuids.timeBased();
         newToken = "123456789";
     }
 

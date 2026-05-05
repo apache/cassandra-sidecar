@@ -20,7 +20,7 @@ package org.apache.cassandra.sidecar.adapters.base.db;
 
 import java.util.Map;
 
-import com.datastax.driver.core.Row;
+import com.datastax.oss.driver.api.core.cql.Row;
 import org.apache.cassandra.sidecar.db.DataObjectMappingException;
 import org.jetbrains.annotations.NotNull;
 
@@ -53,7 +53,7 @@ public class ConnectedClientStats
 
     public ConnectedClientStats(@NotNull Row row)
     {
-        this.address = row.getInet("address").getHostAddress();
+        this.address = row.getInetAddress("address").getHostAddress();
         this.port = row.getInt("port");
         this.hostname = row.getString("hostname");
         this.username = row.getString("username");

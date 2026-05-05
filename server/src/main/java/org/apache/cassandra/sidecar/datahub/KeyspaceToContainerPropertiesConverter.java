@@ -18,7 +18,7 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
-import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import com.linkedin.container.ContainerProperties;
 import com.linkedin.data.template.SetMode;
 import datahub.event.MetadataChangeProposalWrapper;
@@ -41,7 +41,7 @@ public class KeyspaceToContainerPropertiesConverter extends KeyspaceToAspectConv
         String urn = identifiers.urnContainer(keyspace);
 
         ContainerProperties aspect = new ContainerProperties()
-                .setName(keyspace.getName())
+                .setName(keyspace.getName().asInternal())
                 .setDescription(null, SetMode.REMOVE_IF_NULL);  // Keyspace-level comments are not supported by Cassandra
 
         return wrap(urn, aspect);

@@ -26,7 +26,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.management.Notification;
 import javax.management.NotificationListener;
@@ -35,16 +39,18 @@ import javax.management.remote.JMXConnectionNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.Host;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.exceptions.NoHostAvailableException;
+import com.datastax.oss.driver.api.core.AllNodesFailedException;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.cql.SimpleStatement;
+import com.datastax.oss.driver.api.core.cql.Statement;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.Node;
+import com.datastax.oss.driver.api.core.metadata.NodeStateListener;
+import com.datastax.oss.driver.internal.core.channel.ChannelEvent;
+import com.datastax.oss.driver.internal.core.context.InternalDriverContext;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
@@ -85,9 +91,10 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSAND
  * <li>We might need to swap out the adapter if the version has changed</li>
  * </ol>
  */
-public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateListener
+public class CassandraAdapterDelegate implements ICassandraAdapter, NodeStateListener, Consumer<ChannelEvent>
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraAdapterDelegate.class);
+    private static final ExecutorService eventExecutor = Executors.newFixedThreadPool(1);
 
     private final Vertx vertx;
     private final int cassandraInstanceId;
@@ -106,7 +113,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     private final AtomicBoolean isHealthCheckActive = new AtomicBoolean(false);
     private final InetSocketAddress localNativeTransportAddress;
     private final InstanceHealthMetrics healthMetrics;
-    private volatile Host host;
+    private volatile Node host;
     private volatile boolean closed = false;
 
     /**
@@ -154,26 +161,30 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         return notificationListener;
     }
 
-    private void maybeRegisterHostListener(@NotNull Session session)
+    private void maybeRegisterHostListener(@NotNull CqlSession activeSession)
     {
         if (!registered.get())
         {
-            Cluster cluster = session.getCluster();
-            if (!cluster.isClosed() && registered.compareAndSet(false, true))
+            if (!activeSession.isClosed() && registered.compareAndSet(false, true))
             {
-                cluster.register(this);
+                cqlSessionProvider.registerNodeStateListener(this);
+                // subscribe to receive reconnection start / stop events
+                ((InternalDriverContext) cqlSessionProvider.get().getContext()).getEventBus()
+                                                                               .register(ChannelEvent.class, this);
             }
         }
     }
 
-    private void maybeUnregisterHostListener(@NotNull Session session)
+    private void maybeUnregisterHostListener(@NotNull CqlSession activeSession)
     {
         if (registered.get())
         {
-            Cluster cluster = session.getCluster();
-            if (!cluster.isClosed() && registered.compareAndSet(true, false))
+            if (!activeSession.isClosed() && registered.compareAndSet(true, false))
             {
-                cluster.unregister(this);
+                cqlSessionProvider.unregisterNodeStateListener(this);
+                // subscribe to receive reconnection start / stop events
+                ((InternalDriverContext) cqlSessionProvider.get().getContext()).getEventBus()
+                                                                               .unregister(this, ChannelEvent.class);
             }
         }
     }
@@ -248,7 +259,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
      */
     protected void nativeProtocolHealthCheck()
     {
-        Session activeSession;
+        CqlSession activeSession;
         try
         {
             activeSession = cqlSessionProvider.get();
@@ -266,7 +277,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         try
         {
             // NOTE: We cannot use `executeLocal` here as there may be no adapter yet.
-            Metadata metadata = activeSession.getCluster().getMetadata();
+            Metadata metadata = activeSession.getMetadata();
             host = getHost(metadata);
             if (host == null)
             {
@@ -285,7 +296,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                 notifyNativeConnection();
             }
         }
-        catch (IllegalArgumentException | NoHostAvailableException e)
+        catch (IllegalArgumentException | AllNodesFailedException e)
         {
             LOGGER.debug("Unexpected error querying Cassandra instance {}", cassandraInstanceId, e);
             // The cassandra native protocol connection to the node is down.
@@ -340,7 +351,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
     }
 
-    protected Host getHost(Metadata metadata)
+    protected Node getHost(Metadata metadata)
     {
         if (host == null)
         {
@@ -405,7 +416,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
 
     @Override
     @NotNull
-    public ResultSet executeLocal(Statement statement) throws CassandraUnavailableException
+    public ResultSet executeLocal(Statement<?> statement) throws CassandraUnavailableException
     {
         return fromAdapter(adapter -> adapter.executeLocal(statement));
     }
@@ -467,41 +478,44 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
     }
 
     @Override
-    public void onAdd(Host host)
+    public void accept(ChannelEvent channelEvent)
+    {
+        if (channelEvent.type == ChannelEvent.Type.RECONNECTION_STARTED)
+        {
+            onRemove(channelEvent.node);
+        }
+        if (channelEvent.type == ChannelEvent.Type.RECONNECTION_STOPPED)
+        {
+            onUp(channelEvent.node);
+        }
+    }
+
+    @Override
+    public void onAdd(@NotNull Node host)
     {
         LOGGER.debug("Host added. host={}", host);
-        runIfThisHost(host, this::healthCheck);
+        CompletableFuture.runAsync(() -> runIfThisHost(host, this::healthCheck), eventExecutor);
     }
 
     @Override
-    public void onUp(Host host)
+    public void onUp(@NotNull Node host)
     {
         LOGGER.debug("Host up. host={}", host);
-        runIfThisHost(host, this::healthCheck);
+        CompletableFuture.runAsync(() -> runIfThisHost(host, this::healthCheck), eventExecutor);
     }
 
     @Override
-    public void onDown(Host host)
+    public void onDown(@NotNull Node host)
     {
         LOGGER.debug("Host down. host={}", host);
-        runIfThisHost(host, this::markNativeDownAndMaybeNotifyDisconnection);
+        CompletableFuture.runAsync(() -> runIfThisHost(host, this::markNativeDownAndMaybeNotifyDisconnection), eventExecutor);
     }
 
     @Override
-    public void onRemove(Host host)
+    public void onRemove(@NotNull Node host)
     {
         LOGGER.debug("Host removed. host={}", host);
-        runIfThisHost(host, this::healthCheck);
-    }
-
-    @Override
-    public void onRegister(Cluster cluster)
-    {
-    }
-
-    @Override
-    public void onUnregister(Cluster cluster)
-    {
+        CompletableFuture.runAsync(() -> runIfThisHost(host, this::healthCheck), eventExecutor);
     }
 
     /**
@@ -525,7 +539,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         closed = true;
         markNativeDownAndMaybeNotifyDisconnection();
         markJmxDownAndMaybeNotifyDisconnection();
-        Session activeSession = cqlSessionProvider.getIfConnected();
+        CqlSession activeSession = cqlSessionProvider.getIfConnected();
         if (activeSession != null)
         {
             maybeUnregisterHostListener(activeSession);
@@ -596,11 +610,11 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         }
     }
 
-    protected Map<String, String> queryNodeSettingsFromCql(Session activeSession, Host host)
+    protected Map<String, String> queryNodeSettingsFromCql(CqlSession activeSession, Node host)
     {
-        SimpleStatement allSystemSettingsStatement = new SimpleStatement("SELECT name, value FROM system_views.settings");
-        allSystemSettingsStatement.setHost(host);
-        allSystemSettingsStatement.setConsistencyLevel(ConsistencyLevel.ONE);
+        SimpleStatement allSystemSettingsStatement = SimpleStatement.newInstance("SELECT name, value FROM system_views.settings")
+                                                                    .setNode(host)
+                                                                    .setConsistencyLevel(ConsistencyLevel.ONE);
         ResultSet result = activeSession.execute(allSystemSettingsStatement);
         Map<String, String> nodeSettings = new HashMap<>();
         for (Row setting : result.all())
@@ -621,7 +635,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         return getter.apply(localAdapter);
     }
 
-    private void runIfThisHost(Host host, Runnable runnable)
+    private void runIfThisHost(Node host, Runnable runnable)
     {
         if (this.localNativeTransportAddress.equals(driverUtils.getSocketAddress(host)))
         {

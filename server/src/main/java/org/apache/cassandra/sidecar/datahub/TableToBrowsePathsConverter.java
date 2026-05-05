@@ -18,7 +18,8 @@
 
 package org.apache.cassandra.sidecar.datahub;
 
-import com.datastax.driver.core.TableMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.linkedin.common.BrowsePaths;
 import com.linkedin.data.template.StringArray;
 import datahub.event.MetadataChangeProposalWrapper;
@@ -38,7 +39,8 @@ public class TableToBrowsePathsConverter extends TableToAspectConverter<BrowsePa
 
     @Override
     @NotNull
-    public MetadataChangeProposalWrapper<BrowsePaths> convert(@NotNull TableMetadata table)
+    public MetadataChangeProposalWrapper<BrowsePaths> convert(@NotNull KeyspaceMetadata keyspace,
+                                                              @NotNull TableMetadata table)
     {
         String urn = identifiers.urnDataset(table);
 
@@ -48,7 +50,7 @@ public class TableToBrowsePathsConverter extends TableToAspectConverter<BrowsePa
                 identifiers.environment(),
                 identifiers.application(),
                 identifiers.cluster(),
-                table.getKeyspace().getName());
+                table.getKeyspace().asInternal());
 
         BrowsePaths aspect = new BrowsePaths()
                 .setPaths(new StringArray(path));

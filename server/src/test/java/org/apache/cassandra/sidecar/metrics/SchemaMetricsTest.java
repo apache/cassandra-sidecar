@@ -28,7 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.SharedMetricRegistries;
-import com.datastax.driver.core.Session;
+import com.datastax.oss.driver.api.core.CqlSession;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -115,11 +115,11 @@ class SchemaMetricsTest
         @Singleton
         public CQLSessionProvider cqlSessionProvider()
         {
-            CQLSessionProvider cqlSession = mock(CQLSessionProvider.class);
-            Session session = mock(Session.class);
-            when(cqlSession.get()).thenReturn(session);
-            when(cqlSession.getIfConnected()).thenReturn(session);
-            return cqlSession;
+            CQLSessionProvider cqlSessionProvider = mock(CQLSessionProvider.class);
+            CqlSession session = mock(CqlSession.class);
+            when(cqlSessionProvider.get()).thenReturn(session);
+            when(cqlSessionProvider.getIfConnected()).thenReturn(session);
+            return cqlSessionProvider;
         }
 
         @Provides

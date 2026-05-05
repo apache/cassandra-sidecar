@@ -54,6 +54,7 @@ import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.request.data.AllServicesConfigPayload;
 import org.apache.cassandra.sidecar.common.response.ListCdcSegmentsResponse;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
+import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
@@ -346,9 +347,10 @@ public class CdcModule extends AbstractModule
 
     @Provides
     @Singleton
-    public ClusterConfigProvider clusterConfigProvider(InstanceMetadataFetcher instanceMetadataFetcher)
+    public ClusterConfigProvider clusterConfigProvider(InstanceMetadataFetcher instanceMetadataFetcher,
+                                                       DriverUtils driverUtils)
     {
-        return new SidecarClusterConfigProvider(instanceMetadataFetcher);
+        return new SidecarClusterConfigProvider(instanceMetadataFetcher, driverUtils);
     }
 
     @Provides
@@ -362,9 +364,10 @@ public class CdcModule extends AbstractModule
 
     @Provides
     @Singleton
-    public TokenRingProvider tokenRingProvider(InstancesMetadata instancesMetadata, InstanceMetadataFetcher instanceMetadataFetcher, DnsResolver dnsResolver)
+    public TokenRingProvider tokenRingProvider(InstancesMetadata instancesMetadata, InstanceMetadataFetcher instanceMetadataFetcher,
+                                               DnsResolver dnsResolver, DriverUtils driverUtils)
     {
-        return new CassandraClientTokenRingProvider(instancesMetadata, instanceMetadataFetcher, dnsResolver);
+        return new CassandraClientTokenRingProvider(instancesMetadata, instanceMetadataFetcher, dnsResolver, driverUtils);
     }
 
     @Provides
