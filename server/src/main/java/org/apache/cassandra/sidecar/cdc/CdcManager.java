@@ -18,7 +18,8 @@
 
 package org.apache.cassandra.sidecar.cdc;
 
-import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,14 +34,14 @@ import org.apache.cassandra.cdc.api.CdcOptions;
 import org.apache.cassandra.cdc.api.EventConsumer;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.cdc.api.TokenRangeSupplier;
-import org.apache.cassandra.cdc.sidecar.CdcSidecarInstancesProvider;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
+import org.apache.cassandra.cdc.sidecar.ReplicationFactorSupplier;
 import org.apache.cassandra.cdc.sidecar.SidecarCdc;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
 import org.apache.cassandra.cdc.sidecar.SidecarStatePersister;
 import org.apache.cassandra.cdc.stats.ICdcStats;
-import org.apache.cassandra.secrets.SecretsProvider;
+import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
@@ -48,7 +49,6 @@ import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.utils.AsyncExecutor;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.VisibleForTesting;
 
 
 /**
@@ -76,20 +76,18 @@ import org.jetbrains.annotations.VisibleForTesting;
 public class CdcManager
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CdcManager.class);
-    private static final int UNKNOWN_INSTANCE = -1;
     private final CdcConfig conf;
     private final RangeManager rangeManager;
     private final InstanceMetadataFetcher instanceFetcher;
     private final EventConsumer eventConsumer;
     private final SchemaSupplier schemaSupplier;
     private final ClusterConfigProvider clusterConfigProvider;
-    private final CdcSidecarInstancesProvider sidecarInstancesProvider;
-    private final SecretsProvider secretsProvider;
-    private final SidecarCdcClient.ClientConfig clientConfig;
+    private final SidecarCdcClient sidecarCdcClient;
     private final ICdcStats cdcStats;
     private List<SidecarCdc> consumers = new ArrayList<>();
     private final TaskExecutorPool taskExecutorPool;
     private final CdcDatabaseAccessor cdcDatabaseAccessor;
+    private final ReplicationFactorSupplier replicationFactorSupplier;
 
 
     public CdcManager(EventConsumer eventConsumer,
@@ -98,12 +96,11 @@ public class CdcManager
                       RangeManager rangeManager,
                       InstanceMetadataFetcher instanceFetcher,
                       ClusterConfigProvider clusterConfigProvider,
-                      CdcSidecarInstancesProvider sidecarInstancesProvider,
-                      SecretsProvider secretsProvider,
-                      SidecarCdcClient.ClientConfig clientConfig,
+                      SidecarCdcClient sidecarCdcClient,
                       ICdcStats cdcStats,
                       TaskExecutorPool taskExecutorPool,
-                      CdcDatabaseAccessor cdcDatabaseAccessor)
+                      CdcDatabaseAccessor cdcDatabaseAccessor,
+                      ReplicationFactorSupplier replicationFactorSupplier)
     {
         this.eventConsumer = eventConsumer;
         this.schemaSupplier = schemaSupplier;
@@ -111,12 +108,11 @@ public class CdcManager
         this.rangeManager = rangeManager;
         this.instanceFetcher = instanceFetcher;
         this.clusterConfigProvider = clusterConfigProvider;
-        this.sidecarInstancesProvider = sidecarInstancesProvider;
-        this.secretsProvider = secretsProvider;
-        this.clientConfig = clientConfig;
+        this.sidecarCdcClient = sidecarCdcClient;
         this.cdcStats = cdcStats;
         this.taskExecutorPool = taskExecutorPool;
         this.cdcDatabaseAccessor = cdcDatabaseAccessor;
+        this.replicationFactorSupplier = replicationFactorSupplier;
     }
 
     List<SidecarCdc> buildCdcConsumers()
@@ -142,26 +138,15 @@ public class CdcManager
                                                                  range.endAsBigInt());
 
                                 // Only create consumer if not already created for this (instance, range)
-                                return uniqueConsumers.computeIfAbsent(uniqueKey, k -> {
-                                    try
-                                    {
-                                        return loadOrBuildCdcConsumer(instanceId,
-                                                                      clusterConfigProvider,
-                                                                      eventConsumer,
-                                                                      schemaSupplier,
-                                                                      () -> org.apache.cassandra.bridge.TokenRange.openClosed(range.startAsBigInt(), range.endAsBigInt()),
-                                                                      sidecarInstancesProvider,
-                                                                      secretsProvider,
-                                                                      clientConfig,
-                                                                      conf,
-                                                                      cdcStats,
-                                                                      taskExecutorPool);
-                                    }
-                                    catch (IOException e)
-                                    {
-                                        throw new RuntimeException(e);
-                                    }
-                                });
+                                return uniqueConsumers.computeIfAbsent(uniqueKey, k ->
+                                    loadOrBuildCdcConsumer(instanceId,
+                                                          clusterConfigProvider,
+                                                          eventConsumer,
+                                                          schemaSupplier,
+                                                          () -> org.apache.cassandra.bridge.TokenRange.openClosed(range.startAsBigInt(), range.endAsBigInt()),
+                                                          conf,
+                                                          cdcStats,
+                                                          taskExecutorPool));
                             }))
                    .collect(Collectors.toList());
 
@@ -174,12 +159,9 @@ public class CdcManager
                                       EventConsumer eventConsumer,
                                       SchemaSupplier schemaSupplier,
                                       TokenRangeSupplier tokenRangeSupplier,
-                                      CdcSidecarInstancesProvider sidecarInstancesProvider,
-                                      SecretsProvider secretsProvider,
-                                      SidecarCdcClient.ClientConfig clientConfig,
                                       CdcConfig conf,
                                       ICdcStats cdcStats,
-                                      TaskExecutorPool taskExecutorPool) throws IOException
+                                      TaskExecutorPool taskExecutorPool)
     {
         return buildConsumer(conf.jobId(),
                              instanceId,
@@ -188,9 +170,6 @@ public class CdcManager
                              eventConsumer,
                              schemaSupplier,
                              tokenRangeSupplier,
-                             sidecarInstancesProvider,
-                             clientConfig,
-                             secretsProvider,
                              cdcStats,
                              taskExecutorPool);
     }
@@ -204,19 +183,48 @@ public class CdcManager
     public void stopConsumers()
     {
         consumers.forEach(SidecarCdc::stop);
-    }
-
-    @VisibleForTesting
-    Integer getInstanceId(String instanceIp)
-    {
         try
         {
-            return instanceFetcher.instance(instanceIp).id();
+            sidecarCdcClient.close();
         }
         catch (Exception e)
         {
-            LOGGER.warn("Requested IP {} does not match with any instances", instanceIp);
-            return UNKNOWN_INSTANCE;
+            LOGGER.warn("Failed to close SidecarCdcClient", e);
+        }
+    }
+
+    private Integer getInstanceId(String instanceIp)
+    {
+        for (InstanceMetadata instance : instanceFetcher.allLocalInstances())
+        {
+            String configuredIpAddress = instance.ipAddress();
+
+            // Option 1a: Normalize both to InetAddress and compare
+            if (resolveToSameAddress(instanceIp, configuredIpAddress) || resolveToSameAddress(instanceIp, instance.host()))
+            {
+                return instance.id();
+            }
+        }
+        LOGGER.warn("Requested IP {} does not match any instance: {}",
+                instanceIp,
+                instanceFetcher.allLocalInstances().stream()
+                        .map(i -> "id=" + i.id() + " host=" + i.host() + " ipAddress=" + i.ipAddress())
+                        .collect(Collectors.toList()));
+        return -1;
+    }
+
+    public static boolean resolveToSameAddress(String address1, String address2)
+    {
+        try
+        {
+            InetAddress addr1 = InetAddress.getByName(address1);
+            InetAddress addr2 = InetAddress.getByName(address2);
+            return addr1.equals(addr2);
+        }
+        catch (UnknownHostException e)
+        {
+            LOGGER.warn("Could not resolve hostname: {}", e.getMessage());
+            return address1.equals(address2); // Fallback to string comparison
         }
     }
 
@@ -228,13 +236,9 @@ public class CdcManager
                                     EventConsumer eventConsumer,
                                     SchemaSupplier schemaSupplier,
                                     TokenRangeSupplier tokenRangeSupplier,
-                                    CdcSidecarInstancesProvider sidecarInstancesProvider,
-                                    SidecarCdcClient.ClientConfig clientConfig,
-                                    SecretsProvider secretsProvider,
                                     ICdcStats cdcStats,
-                                    TaskExecutorPool taskExecutorPool) throws IOException
+                                    TaskExecutorPool taskExecutorPool)
     {
-
         AsyncExecutor asyncExecutor = new ExecutorPoolsExecutor(taskExecutorPool);
 
         final SidecarStatePersister sidecarStatePersister = getSidecarStatePersister(cdcOptions, asyncExecutor);
@@ -245,10 +249,12 @@ public class CdcManager
                                                eventConsumer,
                                                schemaSupplier,
                                                tokenRangeSupplier,
-                                               sidecarInstancesProvider,
-                                               clientConfig,
-                                               secretsProvider,
-                                               cdcStats).withExecutor(asyncExecutor).withStatePersister(sidecarStatePersister).build();
+                                               sidecarCdcClient,
+                                               cdcStats)
+                                        .withReplicationFactorSupplier(replicationFactorSupplier)
+                                        .withExecutor(asyncExecutor)
+                                        .withStatePersister(sidecarStatePersister)
+                                        .build();
     }
 
     private @NotNull SidecarStatePersister getSidecarStatePersister(CdcOptions cdcOptions, AsyncExecutor asyncExecutor)

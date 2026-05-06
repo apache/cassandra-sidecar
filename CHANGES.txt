@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * Sidecar CDC should resolve real keyspace replication factors from the driver (CASSSIDECAR-451)
  * SAI support in Sidecar (CASSSIDECAR-422)
  * Update OperationalJob to support cluster-wide operations (CASSSIDECAR-376)
  * Support column types not parseable by Java 3.x driver (CASSSIDECAR-443)

@@ -18,9 +18,11 @@
 
 package org.apache.cassandra.sidecar.cdc;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
+import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.cdc.CdcLogMode;
 import org.apache.cassandra.cdc.api.EventConsumer;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
@@ -41,6 +44,7 @@ import org.apache.cassandra.cdc.kafka.TopicSupplier;
 import org.apache.cassandra.cdc.msg.CdcEvent;
 import org.apache.cassandra.cdc.sidecar.CdcSidecarInstancesProvider;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
+import org.apache.cassandra.cdc.sidecar.ReplicationFactorSupplier;
 import org.apache.cassandra.cdc.sidecar.SidecarCdc;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
 import org.apache.cassandra.cdc.stats.ICdcStats;
@@ -56,13 +60,16 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.SidecarRegistryCache;
 import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.spark.data.partitioner.CassandraInstance;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.common.serialization.Serializer;
 
+import static org.apache.cassandra.bridge.BaseCassandraBridgeFactory.getCassandraVersion;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CDC_CACHE_WARMED_UP;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CDC_CONFIGURATION_CHANGED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
@@ -91,6 +98,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
     private final SidecarCdcClient.ClientConfig clientConfig;
     private final ICdcStats cdcStats;
     private final SidecarConfiguration sidecarConfiguration;
+    private final SidecarRegistryCache sidecarRegistryCache;
     private CdcManager cdcManager;
     private final Serializer<CdcEvent> avroSerializer;
     private final Provider<RangeManager> rangeManagerProvider;
@@ -112,7 +120,8 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
                         VirtualTablesDatabaseAccessor virtualTables,
                         SidecarCdcStats sidecarCdcStats,
                         Serializer<CdcEvent> avroSerializer,
-                        Provider<RangeManager> rangeManagerProvider)
+                        Provider<RangeManager> rangeManagerProvider,
+                        SidecarRegistryCache sidecarRegistryCache)
     {
         this.sidecarCdcStats = sidecarCdcStats;
         this.executorPools = executorPools.internal();
@@ -129,6 +138,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         this.sidecarConfiguration = sidecarConfiguration;
         this.avroSerializer = avroSerializer;
         this.rangeManagerProvider = rangeManagerProvider;
+        this.sidecarRegistryCache = sidecarRegistryCache;
 
         if (conf.cdcEnabled())
         {
@@ -184,7 +194,11 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
             this.kafkaPublisher.close();
         }
         this.producer = new KafkaProducer<>(conf.kafkaConfigs());
-        this.kafkaPublisher = new KafkaPublisher(TopicSupplier.staticTopicSupplier(conf.kafkaTopic()),
+        String releaseVersion = instanceMetadataFetcher.callOnFirstAvailableInstance(
+            instance -> instance.delegate().nodeSettings().releaseVersion());
+        CassandraVersion cassandraVersion = getCassandraVersion(releaseVersion);
+        this.kafkaPublisher = new KafkaPublisher(cassandraVersion,
+                                                           TopicSupplier.staticTopicSupplier(conf.kafkaTopic()),
                                                            producer,
                                                            avroSerializer,
                                                            conf.maxRecordSizeBytes(),
@@ -192,6 +206,16 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
                                                            conf.failOnKafkaError(),
                                                            CdcLogMode.FULL);
         return new CdcEventConsumer(kafkaPublisher);
+    }
+
+    /**
+     * Returns the {@link ReplicationFactorSupplier} to use for CDC peer discovery.
+     * Override in tests to substitute a lightweight alternative (e.g. {@code ReplicationFactorSupplier.DEFAULT})
+     * without requiring a live Cassandra driver call.
+     */
+    protected ReplicationFactorSupplier createReplicationFactorSupplier()
+    {
+        return new SidecarReplicationFactorSupplier(instanceMetadataFetcher);
     }
 
     private class ConfigChangedHandler implements Handler<Message<Object>>
@@ -216,24 +240,84 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         }
         databaseAccessor.session();
 
+        SidecarCdcClient sidecarCdcClient = createSidecarCdcClient();
         cdcManager = new CdcManager(eventConsumer(conf, avroSerializer),
                                     schemaSupplier,
                                     conf,
                                     rangeManagerProvider.get(),
                                     instanceMetadataFetcher,
                                     clusterConfigProvider,
-                                    sidecarInstancesProvider,
-                                    secretsProvider(),
-                                    clientConfig,
+                                    sidecarCdcClient,
                                     cdcStats,
                                     this.executorPools,
-                                    databaseAccessor);
+                                    databaseAccessor,
+                                    createReplicationFactorSupplier());
 
         List<SidecarCdc> consumers = cdcManager.buildCdcConsumers();
         cdcManager.startConsumers();
         LOGGER.info("{} CDC iterators started successfully", consumers.size());
         isRunning = true;
         sidecarCdcStats.captureCdcStarted(consumers.size());
+    }
+
+    /**
+     * Resolves the sidecar port for a given Cassandra instance using the registry cache,
+     * falling back to {@code defaultPort} when no registry entry exists for the instance host.
+     *
+     * @param instance    the Cassandra instance whose sidecar port should be resolved
+     * @param defaultPort the port to return when the registry cache has no entry for the host
+     * @return the registry-cached port if known, otherwise {@code defaultPort}
+     */
+    Integer resolveSidecarPort(CassandraInstance instance, int defaultPort)
+    {
+        String host = instance.nodeName();
+        Integer port = sidecarRegistryCache.getPort(host);
+        if (port != null)
+        {
+            LOGGER.info("Resolved sidecar port from registry cache host={} port={}", host, port);
+            return port;
+        }
+        LOGGER.info("No registry entry for host={}, falling back to default port={} cacheSize={}",
+                    host, defaultPort, sidecarRegistryCache.size());
+        return defaultPort;
+    }
+
+    /**
+     * Builds the per-peer port-resolver {@link Function} handed to {@link SidecarCdcClient}.
+     * The returned function captures {@code defaultPort} so that each outbound CDC HTTP request
+     * to a peer can either use a registry-cached port or fall back to the default.
+     *
+     * @param defaultPort fallback port used when the registry cache has no entry for the peer
+     * @return a function mapping {@link CassandraInstance} -&gt; sidecar port
+     */
+    Function<CassandraInstance, Integer> portResolver(int defaultPort)
+    {
+        return instance -> resolveSidecarPort(instance, defaultPort);
+    }
+
+    /**
+     * Constructs the {@link SidecarCdcClient} used for CDC peer HTTP communication.
+     * Wraps the IO-throwing constructor so callers (notably {@link #run()}) get a
+     * single exception-handling site, and so unit tests can override the construction.
+     *
+     * @return a configured {@link SidecarCdcClient}
+     * @throws RuntimeException wrapping any {@link IOException} from the underlying client setup
+     */
+    SidecarCdcClient createSidecarCdcClient()
+    {
+        int defaultPort = clientConfig.effectivePort();
+        try
+        {
+            return new SidecarCdcClient(clientConfig,
+                                        sidecarInstancesProvider,
+                                        secretsProvider(),
+                                        cdcStats,
+                                        portResolver(defaultPort));
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException("Failed to create SidecarCdcClient", e);
+        }
     }
 
     protected synchronized void restart()

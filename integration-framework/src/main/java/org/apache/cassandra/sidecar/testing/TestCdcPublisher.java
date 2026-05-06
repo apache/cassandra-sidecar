@@ -24,6 +24,7 @@ import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.cdc.msg.CdcEvent;
 import org.apache.cassandra.cdc.sidecar.CdcSidecarInstancesProvider;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
+import org.apache.cassandra.cdc.sidecar.ReplicationFactorSupplier;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
 import org.apache.cassandra.cdc.stats.ICdcStats;
 import org.apache.cassandra.sidecar.cdc.CdcConfig;
@@ -33,6 +34,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.SidecarRegistryCache;
 import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -62,12 +64,14 @@ public class TestCdcPublisher extends CdcPublisher
                            VirtualTablesDatabaseAccessor virtualTables,
                            SidecarCdcStats sidecarCdcStats,
                            Serializer<CdcEvent> avroSerializer,
-                           Provider<RangeManager> rangeManagerProvider)
+                           Provider<RangeManager> rangeManagerProvider,
+                           SidecarRegistryCache sidecarRegistryCache)
     {
         super(vertx, sidecarConfiguration, executorPools, clusterConfigProvider,
               schemaSupplier, sidecarInstancesProvider, clientConfig,
               instanceMetadataFetcher, conf, databaseAccessor, cdcStats,
-              virtualTables, sidecarCdcStats, avroSerializer, rangeManagerProvider);
+              virtualTables, sidecarCdcStats, avroSerializer, rangeManagerProvider,
+              sidecarRegistryCache);
         this.databaseAccessor = databaseAccessor;
     }
 
@@ -75,6 +79,16 @@ public class TestCdcPublisher extends CdcPublisher
     public EventConsumer eventConsumer(CdcConfig conf, Serializer<CdcEvent> avroSerializer)
     {
         return testEventConsumer;
+    }
+
+    /**
+     * Use the library default (SimpleStrategy/RF=1) in tests to avoid live driver calls
+     * during peer discovery, which can race with schema propagation at test startup.
+     */
+    @Override
+    protected ReplicationFactorSupplier createReplicationFactorSupplier()
+    {
+        return ReplicationFactorSupplier.DEFAULT;
     }
 
     /**
