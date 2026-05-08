@@ -22,6 +22,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.concurrent.Callable;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,7 @@ import io.vertx.core.Vertx;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.cdc.api.CdcOptions;
+import io.vertx.core.eventbus.Message;
 import org.apache.cassandra.cdc.api.EventConsumer;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.cdc.kafka.KafkaProducerFactory;
@@ -49,11 +51,14 @@ import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.CdcSystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CDC_CACHE_WARMED_UP;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -61,6 +66,8 @@ import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -202,5 +209,100 @@ public class CdcPublisherTests
         when(mockBridge.getVersion()).thenReturn(CassandraVersion.FOURONE);
         when(cassandraBridgeFactory.get(anyString())).thenReturn(mockBridge);
         when(kafkaProducerFactory.create(any())).thenReturn(mock(KafkaProducer.class));
+    }
+
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testHandleTokenRangeChangedDispatchesToWorkerPool() throws Exception
+    {
+        Message<Object> msg = mock(Message.class);
+        when(msg.address()).thenReturn(RangeManager.RangeManagerEvents.ON_TOKEN_RANGE_CHANGED.address());
+
+        CdcPublisher spyPublisher = spy(cdcPublisher);
+        spyPublisher.handle(msg);
+
+        ArgumentCaptor<Callable<Void>> captor = ArgumentCaptor.forClass(Callable.class);
+        verify(taskExecutorPool).executeBlocking(captor.capture());
+
+        captor.getValue().call();
+        verify(spyPublisher).handleTokenRangeChange();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testHandleTokenRangeGainedPassesEventToHandler() throws Exception
+    {
+        Message<Object> msg = mock(Message.class);
+        when(msg.address()).thenReturn(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_GAINED.address());
+        RangeManager.RangeChangeEvent event = mock(RangeManager.RangeChangeEvent.class);
+        when(msg.body()).thenReturn(event);
+
+        CdcPublisher spyPublisher = spy(cdcPublisher);
+        spyPublisher.handle(msg);
+
+        ArgumentCaptor<Callable<Void>> captor = ArgumentCaptor.forClass(Callable.class);
+        verify(taskExecutorPool).executeBlocking(captor.capture());
+
+        captor.getValue().call();
+        verify(spyPublisher).handleRangeGained(event);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testHandleTokenRangeLostPassesEventToHandler() throws Exception
+    {
+        Message<Object> msg = mock(Message.class);
+        when(msg.address()).thenReturn(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_LOST.address());
+        RangeManager.RangeChangeEvent event = mock(RangeManager.RangeChangeEvent.class);
+        when(msg.body()).thenReturn(event);
+
+        CdcPublisher spyPublisher = spy(cdcPublisher);
+        spyPublisher.handle(msg);
+
+        ArgumentCaptor<Callable<Void>> captor = ArgumentCaptor.forClass(Callable.class);
+        verify(taskExecutorPool).executeBlocking(captor.capture());
+
+        captor.getValue().call();
+        verify(spyPublisher).handleRangeLost(event);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testHandleServerStopDispatchesStopToWorkerPool() throws Exception
+    {
+        Message<Object> msg = mock(Message.class);
+        when(msg.address()).thenReturn(ON_SERVER_STOP.address());
+
+        CdcPublisher spyPublisher = spy(cdcPublisher);
+        spyPublisher.handle(msg);
+
+        ArgumentCaptor<Callable<Void>> captor = ArgumentCaptor.forClass(Callable.class);
+        verify(taskExecutorPool).executeBlocking(captor.capture());
+
+        captor.getValue().call();
+        verify(spyPublisher).stop();
+    }
+
+    @Test
+    void testHandleCdcCacheWarmedUpRunsOnEventLoopWithoutWorkerPool()
+    {
+        Message<Object> msg = mock(Message.class);
+        when(msg.address()).thenReturn(ON_CDC_CACHE_WARMED_UP.address());
+
+        cdcPublisher.handle(msg);
+
+        verify(taskExecutorPool, never()).executeBlocking(any(Callable.class));
+    }
+
+    @Test
+    void testHandleUnknownAddressIsNoOp()
+    {
+        Message<Object> msg = mock(Message.class);
+        when(msg.address()).thenReturn("unknown.address");
+
+        cdcPublisher.handle(msg);
+
+        verify(taskExecutorPool, never()).executeBlocking(any(Callable.class));
     }
 }

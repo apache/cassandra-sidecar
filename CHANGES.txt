@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * Avoid blocking the event loop in CdcPublisher event-bus handler (CASSSIDECAR-452)
  * Added validations for Live migration configuration (CASSSIDECAR-470)
  * Route CDC events to topics by corresponding topic format configuration (CASSSIDECAR-453)
  * Add Docker Compose setup for local CDC demo (Cassandra → Sidecar → Kafka) (CASSSIDECAR-419)

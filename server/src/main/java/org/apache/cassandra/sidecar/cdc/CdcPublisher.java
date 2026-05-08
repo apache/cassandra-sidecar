@@ -335,26 +335,30 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
 
     // EventBus handlers
     @Override
-    public synchronized void handle(Message<Object> msg)
+    public void handle(Message<Object> msg)
     {
-        if (msg.address().equals(RangeManager.RangeManagerEvents.ON_TOKEN_RANGE_CHANGED.address()))
+        String address = msg.address();
+        if (address.equals(RangeManager.RangeManagerEvents.ON_TOKEN_RANGE_CHANGED.address()))
         {
-            handleTokenRangeChange();
+            executorPools.executeBlocking(() -> { handleTokenRangeChange(); return null; });
         }
-        else if (msg.address().equals(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_GAINED.address()))
+        else if (address.equals(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_GAINED.address()))
         {
-            handleRangeGained((RangeManager.RangeChangeEvent) msg.body());
+            RangeManager.RangeChangeEvent event = (RangeManager.RangeChangeEvent) msg.body();
+            executorPools.executeBlocking(() -> { handleRangeGained(event); return null; });
         }
-        else if (msg.address().equals(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_LOST.address()))
+        else if (address.equals(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_LOST.address()))
         {
-            handleRangeLost((RangeManager.RangeChangeEvent) msg.body());
+            RangeManager.RangeChangeEvent event = (RangeManager.RangeChangeEvent) msg.body();
+            executorPools.executeBlocking(() -> { handleRangeLost(event); return null; });
         }
-        else if (msg.address().equals(ON_SERVER_STOP.address()))
+        else if (address.equals(ON_SERVER_STOP.address()))
         {
-            stop();
+            executorPools.executeBlocking(() -> { stop(); return null; });
         }
-        else if (msg.address().equals(ON_CDC_CACHE_WARMED_UP.address()))
+        else if (address.equals(ON_CDC_CACHE_WARMED_UP.address()))
         {
+            // Single volatile write - safe on the event loop
             cdcCacheWarmedUp = true;
         }
     }
