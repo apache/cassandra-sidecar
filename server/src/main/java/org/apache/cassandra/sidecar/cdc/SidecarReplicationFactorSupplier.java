@@ -57,10 +57,7 @@ public class SidecarReplicationFactorSupplier implements ReplicationFactorSuppli
                 LOGGER.warn("Keyspace '{}' not found in driver metadata, falling back to SimpleStrategy/RF=1", keyspace);
                 return ReplicationFactor.simpleStrategy(1);
             }
-            ReplicationFactor rf = new ReplicationFactor(ks.getReplication());
-            LOGGER.info("Resolved replicationFactor for keyspace={}: strategy={} totalRf={}",
-                         keyspace, rf.getReplicationStrategy(), rf.getTotalReplicationFactor());
-            return rf;
+            return new ReplicationFactor(ks.getReplication());
         });
     }
 
@@ -79,10 +76,7 @@ public class SidecarReplicationFactorSupplier implements ReplicationFactorSuppli
                 LOGGER.warn("No keyspaces visible from driver; falling back to SimpleStrategy/RF=1");
                 return ReplicationFactor.simpleStrategy(1);
             }
-            ReplicationFactor rf = new ReplicationFactor(maxKs.getReplication());
-            LOGGER.info("Resolved maximalReplicationFactor from keyspace={} totalRf={}",
-                         maxKs.getName(), rf.getTotalReplicationFactor());
-            return rf;
+            return new ReplicationFactor(maxKs.getReplication());
         });
     }
 

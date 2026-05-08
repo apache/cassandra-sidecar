@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.cdc;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -60,6 +62,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -278,8 +281,7 @@ public class CdcManagerTest
         Map<String, Set<TokenRange>> ownedRanges = Collections.singletonMap(unknownIp, Collections.singleton(range));
 
         when(rangeManager.ownedTokenRanges()).thenReturn(ownedRanges);
-        when(instanceFetcher.instance(unknownIp))
-            .thenThrow(new NoSuchCassandraInstanceException("Instance not found: " + unknownIp));
+        when(instanceFetcher.instance(unknownIp)).thenThrow(new NoSuchCassandraInstanceException("Instance not found: " + unknownIp));
         when(cdcConfig.jobId()).thenReturn("test-job");
 
         CdcManager spyManager = spy(cdcManager);
@@ -291,6 +293,93 @@ public class CdcManagerTest
         List<SidecarCdc> consumers = spyManager.buildCdcConsumers();
 
         assertThat(consumers).hasSize(1);
+    }
+
+    @Test
+    void testResolveToSameAddressTrue()
+    {
+        assertThat(resolveToSameAddress("127.0.0.1", "localhost")).isTrue();
+    }
+
+    @Test
+    void testResolveToSameAddressFalse()
+    {
+        assertThat(resolveToSameAddress("127.0.0.1", "127.0.0.2")).isFalse();
+    }
+
+    /**
+     * Verifies that the correct instanceId is propagated into {@code loadOrBuildCdcConsumer}
+     * during the full {@code buildCdcConsumers()} flow when {@code ipAddress()} is null.
+     * Complements {@code testGetInstanceIdReturnsCorrectIdWhenIpAddressIsNull}, which tests
+     * {@code getInstanceId} in isolation; this test confirms the fix is effective end-to-end.
+     */
+    @Test
+    void testGetInstanceIdResolvesCorrectlyWhenIpAddressIsNull() throws IOException
+    {
+        String instanceIp = "172.19.0.5";
+        int instanceId = 1000;
+
+        TokenRange range = mockTokenRange(BigInteger.ZERO, BigInteger.TEN);
+        Map<String, Set<TokenRange>> ownedRanges = Collections.singletonMap(instanceIp, Collections.singleton(range));
+
+        InstanceMetadata instance = mock(InstanceMetadata.class, RETURNS_DEEP_STUBS);
+        when(instance.id()).thenReturn(instanceId);
+        when(instance.ipAddress()).thenReturn(null);
+
+        when(rangeManager.ownedTokenRanges()).thenReturn(ownedRanges);
+        when(instanceFetcher.instance(instanceIp)).thenReturn(instance);
+        when(cdcConfig.jobId()).thenReturn("test-job");
+
+        CdcManager spyManager = spy(cdcManager);
+        SidecarCdc mockConsumer = mock(SidecarCdc.class);
+        doReturn(mockConsumer).when(spyManager).loadOrBuildCdcConsumer(
+            anyInt(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+        );
+
+        List<SidecarCdc> consumers = spyManager.buildCdcConsumers();
+
+        assertThat(consumers).hasSize(1);
+        verify(spyManager).loadOrBuildCdcConsumer(
+            eq(instanceId), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+        );
+    }
+
+    /**
+     * Unit test for the CASSSIDECAR-417 bug fix: {@code getInstanceId} must return the correct id
+     * even when {@code ipAddress()} is null (not yet refreshed). The old code passed {@code null}
+     * to {@code resolveToSameAddress}, which resolved to {@code 127.0.0.1} and returned {@code -1}.
+     * The fix resolves the instance via {@code instanceFetcher.instance(ip)} instead.
+     */
+    @Test
+    void testGetInstanceIdReturnsCorrectIdWhenIpAddressIsNull()
+    {
+        String instanceIp = "172.19.0.5";
+        int instanceId = 1;
+
+        InstanceMetadata instance = mock(InstanceMetadata.class);
+        when(instance.id()).thenReturn(instanceId);
+        when(instance.ipAddress()).thenReturn(null); // not yet refreshed — the key precondition
+
+        when(instanceFetcher.allLocalInstances()).thenReturn(Collections.singletonList(instance));
+        when(instanceFetcher.instance(instanceIp)).thenReturn(instance);
+
+        assertThat(cdcManager.getInstanceId(instanceIp)).isEqualTo(instanceId);
+    }
+
+    /**
+     * Verifies that getInstanceId returns -1 when the IP is not known to any local instance.
+     * Both old and new code produce -1 here, but via different mechanisms.
+     */
+    @Test
+    void testGetInstanceIdReturnsMinusOneWhenInstanceNotFound()
+    {
+        String unknownIp = "192.168.1.100";
+
+        when(instanceFetcher.allLocalInstances()).thenReturn(Collections.emptyList());
+        when(instanceFetcher.instance(unknownIp))
+            .thenThrow(new NoSuchCassandraInstanceException("Instance not found: " + unknownIp));
+
+        assertThat(cdcManager.getInstanceId(unknownIp)).isEqualTo(-1);
     }
 
     @Test
@@ -322,6 +411,8 @@ public class CdcManagerTest
         }
     }
 
+    // Helper methods
+
     private TokenRange mockTokenRange(BigInteger start, BigInteger end)
     {
         TokenRange range = mock(TokenRange.class, RETURNS_DEEP_STUBS);
@@ -336,5 +427,19 @@ public class CdcManagerTest
         when(instance.id()).thenReturn(id);
         when(instance.ipAddress()).thenReturn(ipAddress);
         return instance;
+    }
+
+    private static boolean resolveToSameAddress(String address1, String address2)
+    {
+        try
+        {
+            InetAddress addr1 = InetAddress.getByName(address1);
+            InetAddress addr2 = InetAddress.getByName(address2);
+            return addr1.equals(addr2);
+        }
+        catch (UnknownHostException e)
+        {
+            return address1.equals(address2);
+        }
     }
 }
