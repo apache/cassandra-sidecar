@@ -34,7 +34,6 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.SidecarRegistryCache;
 import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -64,14 +63,12 @@ public class TestCdcPublisher extends CdcPublisher
                            VirtualTablesDatabaseAccessor virtualTables,
                            SidecarCdcStats sidecarCdcStats,
                            Serializer<CdcEvent> avroSerializer,
-                           Provider<RangeManager> rangeManagerProvider,
-                           SidecarRegistryCache sidecarRegistryCache)
+                           Provider<RangeManager> rangeManagerProvider)
     {
         super(vertx, sidecarConfiguration, executorPools, clusterConfigProvider,
               schemaSupplier, sidecarInstancesProvider, clientConfig,
               instanceMetadataFetcher, conf, databaseAccessor, cdcStats,
-              virtualTables, sidecarCdcStats, avroSerializer, rangeManagerProvider,
-              sidecarRegistryCache);
+              virtualTables, sidecarCdcStats, avroSerializer, rangeManagerProvider);
         this.databaseAccessor = databaseAccessor;
     }
 
