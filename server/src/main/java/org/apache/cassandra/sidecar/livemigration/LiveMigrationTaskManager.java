@@ -62,7 +62,7 @@ public class LiveMigrationTaskManager
      */
     public boolean submitTask(int instanceId, LiveMigrationTask<?> newTask)
     {
-        return currentTasks.compute(instanceId, (ignored, taskInMap) -> {
+        return newTask == currentTasks.compute(instanceId, (ignored, taskInMap) -> {
             if (taskInMap == null)
             {
                 return newTask;
@@ -78,7 +78,7 @@ public class LiveMigrationTaskManager
                 // Accept new task if existing task has completed
                 return newTask;
             }
-        }) == newTask;
+        });
     }
 
     /**
@@ -88,7 +88,6 @@ public class LiveMigrationTaskManager
      * @param currentHost the host where sidecar is running
      * @return list containing at most one task (empty if no task has ever been submitted for this host)
      */
-    @SuppressWarnings("ConstantValue")
     public List<LiveMigrationTask<?>> getAllTasks(@NotNull String currentHost)
     {
         InstanceMetadata localInstance = instancesMetadata.instanceFromHost(currentHost);
@@ -129,14 +128,9 @@ public class LiveMigrationTaskManager
         return taskInProgress;
     }
 
-    @SuppressWarnings("ConstantValue")
     private LiveMigrationTask<?> getLiveMigrationTask(@NotNull String taskId, @NotNull String currentHost)
     {
         InstanceMetadata localInstance = instancesMetadata.instanceFromHost(currentHost);
-        if (localInstance == null)
-        {
-            throw new IllegalStateException("No instance found for host: " + currentHost);
-        }
         LiveMigrationTask<?> taskInProgress = currentTasks.get(localInstance.id());
         if (taskInProgress == null || !taskId.equals(taskInProgress.id()))
         {
