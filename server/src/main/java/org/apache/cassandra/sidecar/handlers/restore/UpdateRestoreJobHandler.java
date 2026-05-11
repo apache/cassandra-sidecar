@@ -44,6 +44,8 @@ import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 import org.apache.cassandra.sidecar.handlers.AccessProtected;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.server.RestoreMetrics;
+import org.apache.cassandra.sidecar.restore.RestoreJobDiscoverer;
+import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -59,17 +61,23 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobRequestPayload> implements AccessProtected
 {
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
+    private final RestoreJobManagerGroup restoreJobManagerGroup;
+    private final RestoreJobDiscoverer restoreJobDiscoverer;
     private final RestoreMetrics metrics;
 
     @Inject
     public UpdateRestoreJobHandler(ExecutorPools executorPools,
                                    InstanceMetadataFetcher instanceMetadataFetcher,
                                    RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
+                                   RestoreJobManagerGroup restoreJobManagerGroup,
+                                   RestoreJobDiscoverer restoreJobDiscoverer,
                                    CassandraInputValidator validator,
                                    SidecarMetrics metrics)
     {
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
+        this.restoreJobManagerGroup = restoreJobManagerGroup;
+        this.restoreJobDiscoverer = restoreJobDiscoverer;
         this.metrics = metrics.server().restore();
     }
 
@@ -128,6 +136,12 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
             }
 
             context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
+            // Fire-and-forget on a worker thread — notifying the restore system should not
+            // block the event loop or delay the HTTP response.
+            executorPools.service().executeBlocking(() -> {
+                notifyPhaseSignalMaybe(job);
+                return null;
+            });
         })
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestPayload));
     }
@@ -156,6 +170,40 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
         {
             logger.warn("Bad request to update restore job. Received invalid JSON payload.");
             throw wrapHttpException(HttpResponseStatus.BAD_REQUEST, "Invalid request payload", decodeException);
+        }
+    }
+
+    private void notifyPhaseSignalMaybe(RestoreJob job)
+    {
+        if (job.status != RestoreJobStatus.IMPORT_READY && job.status != RestoreJobStatus.STAGE_READY)
+        {
+            return;
+        }
+
+        try
+        {
+            // The job returned from update() is sparse (only contains updated fields).
+            // Re-read the full job from DB to get all required fields (keyspace, consistency level, etc.).
+            RestoreJob fullJob = restoreJobDatabaseAccessor.find(job.jobId);
+            if (fullJob == null)
+            {
+                logger.warn("Cannot find restore job for phase signal notification. jobId={}", job.jobId);
+                return;
+            }
+
+            if (fullJob.status == RestoreJobStatus.IMPORT_READY)
+            {
+                restoreJobManagerGroup.updateRestoreJob(fullJob);
+            }
+            else if (fullJob.status == RestoreJobStatus.STAGE_READY)
+            {
+                restoreJobDiscoverer.processJobNow(fullJob);
+            }
+        }
+        catch (Exception e)
+        {
+            logger.warn("Failed to immediately process phase signal. " +
+                        "The discovery loop will pick it up on the next cycle. job={}", job, e);
         }
     }
 }

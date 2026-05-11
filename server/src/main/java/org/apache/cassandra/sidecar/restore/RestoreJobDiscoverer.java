@@ -628,6 +628,22 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         }
     }
 
+    /**
+     * Immediately processes a restore job without waiting for the next discovery loop iteration.
+     * Called by UpdateRestoreJobHandler after a phase signal (STAGE_READY) is written to DB.
+     * This is safe to call concurrently with the discovery loop — the DB write is the durable
+     * source of truth, and duplicate processing is deduplicated by existing idempotency checks.
+     *
+     * @param restoreJob the restore job to process immediately
+     */
+    public void processJobNow(RestoreJob restoreJob)
+    {
+        initLocalDatacenterMaybe();
+        RestoreJobManagerGroup restoreJobManagers = restoreJobManagerGroupSingleton.get();
+        restoreJobManagers.updateRestoreJob(restoreJob);
+        processSidecarManagedJobMaybe(restoreJob);
+    }
+
     @VisibleForTesting
     boolean hasInflightJobs()
     {

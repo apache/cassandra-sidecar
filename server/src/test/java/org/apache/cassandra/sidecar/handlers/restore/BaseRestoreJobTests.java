@@ -334,6 +334,7 @@ public abstract class BaseRestoreJobTests
         static class TestRestoreJobManagerGroup extends RestoreJobManagerGroup
         {
             ThrowableFunction<String, RestoreJobProgressTracker.Status, RestoreJobFatalException> submitFunc;
+            Consumer<RestoreJob> updateRestoreJobCallback;
 
             public TestRestoreJobManagerGroup(SidecarConfiguration configuration,
                                               InstancesMetadata instancesMetadata,
@@ -348,6 +349,16 @@ public abstract class BaseRestoreJobTests
                                                               RestoreJob restoreJob) throws RestoreJobFatalException
             {
                 return submitFunc.apply(null);
+            }
+
+            @Override
+            public void updateRestoreJob(RestoreJob restoreJob)
+            {
+                super.updateRestoreJob(restoreJob);
+                if (updateRestoreJobCallback != null)
+                {
+                    updateRestoreJobCallback.accept(restoreJob);
+                }
             }
         }
 
