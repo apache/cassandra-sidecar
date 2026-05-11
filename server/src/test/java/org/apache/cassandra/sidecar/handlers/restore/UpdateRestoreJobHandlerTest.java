@@ -21,9 +21,10 @@ package org.apache.cassandra.sidecar.handlers.restore;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -205,31 +206,31 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
     void testUpdateToImportReadyNotifiesManagerGroup(VertxTestContext context) throws Throwable
     {
         String jobId = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
-        AtomicBoolean updateRestoreJobCalled = new AtomicBoolean(false);
-        testRestoreJobManagerGroup.updateRestoreJobCallback = job -> updateRestoreJobCalled.set(true);
-        mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
+        CountDownLatch latch = new CountDownLatch(1);
+        testRestoreJobManagerGroup.updateRestoreJobCallback = job -> latch.countDown();
+        mockLookupRestoreJob(id -> createTestJobWithStatus(jobId, RestoreJobStatus.IMPORT_READY));
         mockUpdateRestoreJob(payload -> createTestJobWithStatus(jobId, RestoreJobStatus.IMPORT_READY));
         JsonObject payload = new JsonObject();
         payload.put("status", "IMPORT_READY");
         sendUpdateRestoreJobRequestAndVerify("ks", "table", jobId,
                                              payload, context, HttpResponseStatus.OK.code());
-        assertThat(updateRestoreJobCalled.get()).isTrue();
+        assertThat(Uninterruptibles.awaitUninterruptibly(latch, 5, TimeUnit.SECONDS)).isTrue();
     }
 
     @Test
     void testUpdateToStageReadyNotifiesDiscoverer(VertxTestContext context) throws Throwable
     {
         String jobId = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
-        AtomicBoolean updateRestoreJobCalled = new AtomicBoolean(false);
-        testRestoreJobManagerGroup.updateRestoreJobCallback = job -> updateRestoreJobCalled.set(true);
-        mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
+        CountDownLatch latch = new CountDownLatch(1);
+        testRestoreJobManagerGroup.updateRestoreJobCallback = job -> latch.countDown();
+        mockLookupRestoreJob(id -> createTestJobWithStatus(jobId, RestoreJobStatus.STAGE_READY));
         mockUpdateRestoreJob(payload -> createTestJobWithStatus(jobId, RestoreJobStatus.STAGE_READY));
         JsonObject payload = new JsonObject();
         payload.put("status", "STAGE_READY");
         sendUpdateRestoreJobRequestAndVerify("ks", "table", jobId,
                                              payload, context, HttpResponseStatus.OK.code());
         // processJobNow calls updateRestoreJob on the manager group
-        assertThat(updateRestoreJobCalled.get()).isTrue();
+        assertThat(Uninterruptibles.awaitUninterruptibly(latch, 5, TimeUnit.SECONDS)).isTrue();
     }
     }
 
