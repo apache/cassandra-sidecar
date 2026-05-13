@@ -100,7 +100,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
         }
         catch (CassandraUnavailableException ignored)
         {
-            LOGGER.debug("Not yet connect to Cassandra cluster");
+            LOGGER.debug("Not yet connected to Cassandra cluster");
             return Collections.emptyMap();
         }
 

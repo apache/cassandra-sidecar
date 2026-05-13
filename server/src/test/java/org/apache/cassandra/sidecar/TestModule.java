@@ -64,6 +64,7 @@ import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ThrottleConfigurationImpl;
+import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
@@ -252,5 +253,15 @@ public class TestModule extends AbstractModule
     public DnsResolver dnsResolver()
     {
         return CassandraClientTokenRingProviderTest.mockDnsResolver();
+    }
+
+    @Provides
+    @Singleton
+    public DriverUnsupportedSchemaCache driverUnsupportedSchemaCache()
+    {
+        DriverUnsupportedSchemaCache mock = mock(DriverUnsupportedSchemaCache.class);
+        when(mock.getFullSchema()).thenReturn("");
+        when(mock.getKeyspaceSchema(any())).thenReturn("");
+        return mock;
     }
 }

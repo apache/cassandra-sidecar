@@ -53,12 +53,14 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.utils.IOUtils;
+import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -134,7 +136,7 @@ class SchemaHandlerTest
                   JsonObject jsonObject = response.bodyAsJsonObject();
                   assertThat(jsonObject.getString("keyspace")).isEqualTo("testKeyspace");
                   assertThat(jsonObject.getString("schema"))
-                  .isEqualTo(testKeyspaceSchema);
+                  .isEqualTo(testKeyspaceSchema.trim());
                   context.completeNow();
               })));
     }
@@ -185,6 +187,16 @@ class SchemaHandlerTest
             when(mockInstancesMetadata.instanceFromHost(host)).thenReturn(instanceMetadata);
 
             return mockInstancesMetadata;
+        }
+
+        @Provides
+        @Singleton
+        public DriverUnsupportedSchemaCache driverUnsupportedSchemaCache()
+        {
+            DriverUnsupportedSchemaCache schemaAccessor = mock(DriverUnsupportedSchemaCache.class);
+            when(schemaAccessor.getFullSchema()).thenReturn("");
+            when(schemaAccessor.getKeyspaceSchema(any())).thenReturn("");
+            return schemaAccessor;
         }
     }
 }

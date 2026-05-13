@@ -30,7 +30,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Promise;
-
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.bridge.CdcBridge;
@@ -42,6 +41,7 @@ import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.CqlTable;
@@ -49,7 +49,6 @@ import org.apache.cassandra.spark.data.ReplicationFactor;
 import org.apache.cassandra.spark.data.partitioner.Partitioner;
 import org.apache.cassandra.spark.utils.CqlUtils;
 import org.apache.cassandra.spark.utils.TableIdentifier;
-
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -73,6 +72,7 @@ class CassandraClusterSchemaMonitorTest
     private CassandraClusterSchemaMonitor clusterSchema;
     private InstanceMetadataFetcher mockInstanceFetcher;
     private CdcDatabaseAccessor mockDatabaseAccessor;
+    private DriverUnsupportedSchemaCache mockDriverUnsupportedSchemaCache;
     private SidecarConfiguration mockSidecarConfiguration;
     private ServiceConfiguration mockServiceConfiguration;
     private CdcConfiguration mockCdcConfiguration;
@@ -102,6 +102,7 @@ class CassandraClusterSchemaMonitorTest
     {
         mockInstanceFetcher = mock(InstanceMetadataFetcher.class);
         mockDatabaseAccessor = mock(CdcDatabaseAccessor.class);
+        mockDriverUnsupportedSchemaCache = mock(DriverUnsupportedSchemaCache.class);
         mockSidecarConfiguration = mock(SidecarConfiguration.class);
         mockServiceConfiguration = mock(ServiceConfiguration.class);
         mockCdcConfiguration = mock(CdcConfiguration.class);
@@ -129,6 +130,7 @@ class CassandraClusterSchemaMonitorTest
 
         // Setup database accessor
         when(mockDatabaseAccessor.fullSchema()).thenReturn(INITIAL_SCHEMA);
+        when(mockDriverUnsupportedSchemaCache.getFullSchema()).thenReturn("");
         when(mockDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(mockDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
         when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
@@ -136,6 +138,7 @@ class CassandraClusterSchemaMonitorTest
         clusterSchema = new CassandraClusterSchemaMonitor(
         mockInstanceFetcher,
         mockDatabaseAccessor,
+        mockDriverUnsupportedSchemaCache,
         mockSidecarConfiguration,
         mockCassandraBridgeFactory
         );
@@ -223,6 +226,7 @@ class CassandraClusterSchemaMonitorTest
 
             // Verify initial schema processing
             verify(mockDatabaseAccessor, times(1)).fullSchema();
+            verify(mockDriverUnsupportedSchemaCache, times(1)).getFullSchema();
             verify(mockCdcBridge, times(1)).updateCdcSchema(any(Set.class), eq(Partitioner.Murmur3Partitioner), any());
 
             // Second refresh - should detect schema change and update
@@ -230,6 +234,7 @@ class CassandraClusterSchemaMonitorTest
 
             // Verify schema change detection and update
             verify(mockDatabaseAccessor, times(2)).fullSchema();
+            verify(mockDriverUnsupportedSchemaCache, times(2)).getFullSchema();
             verify(mockCdcBridge, times(2)).updateCdcSchema(any(Set.class), eq(Partitioner.Murmur3Partitioner), any());
         }
     }
@@ -420,6 +425,7 @@ class CassandraClusterSchemaMonitorTest
 
             Set<CqlTable> result = CassandraClusterSchemaMonitor.buildCdcTables(
             mockDatabaseAccessor,
+            mockDriverUnsupportedSchemaCache,
             tableIdCache,
             mockCassandraBridge
             );

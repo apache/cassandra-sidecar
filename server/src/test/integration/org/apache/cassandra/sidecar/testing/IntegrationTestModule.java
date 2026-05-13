@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import com.datastax.driver.core.Session;
 import com.google.inject.AbstractModule;
@@ -39,6 +40,7 @@ import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfigur
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.AccessControlConfiguration;
 import org.apache.cassandra.sidecar.config.CoordinationConfiguration;
+import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -48,6 +50,7 @@ import org.apache.cassandra.sidecar.config.yaml.AccessControlConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.CacheConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ClusterLeaseClaimConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.CoordinationConfigurationImpl;
+import org.apache.cassandra.sidecar.config.yaml.DriverConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.KeyStoreConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ParameterizedClassConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.PeriodicTaskConfigurationImpl;
@@ -60,6 +63,7 @@ import org.apache.cassandra.sidecar.coordination.ClusterLease;
 import org.apache.cassandra.sidecar.coordination.ClusterLeaseClaimTask;
 import org.apache.cassandra.sidecar.coordination.ElectorateMembership;
 import org.apache.cassandra.sidecar.db.SidecarLeaseDatabaseAccessor;
+import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.modules.multibindings.ClassKey;
@@ -70,6 +74,7 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
 /**
@@ -121,6 +126,10 @@ public class IntegrationTestModule extends AbstractModule
                                             MillisecondBoundConfiguration.parse("50ms"),
                                             MillisecondBoundConfiguration.parse("5000ms"));
 
+        DriverConfiguration driverConfiguration = new DriverConfigurationImpl(Collections.emptyList(), "dc1",
+                                                                              1, "cassandra", "cassandra",
+                                                                              null, new SecondBoundConfiguration(3, TimeUnit.SECONDS));
+
         SslConfiguration sslConfiguration =
         SslConfigurationImpl.builder()
                             .enabled(true)
@@ -138,6 +147,7 @@ public class IntegrationTestModule extends AbstractModule
                                        .accessControlConfiguration(accessControlConfiguration)
                                        .serviceConfiguration(conf)
                                        .healthCheckConfiguration(healthCheckConfiguration)
+                                       .driverConfiguration(driverConfiguration)
                                        .build();
     }
 
@@ -227,7 +237,12 @@ public class IntegrationTestModule extends AbstractModule
             @NotNull
             public Session get()
             {
-                return cassandraSidecarTestContext.session();
+                Session session = cassandraSidecarTestContext.session();
+                if (session == null)
+                {
+                    throw new CassandraUnavailableException(CQL, "CQL session unavailable");
+                }
+                return session;
             }
 
             @Override

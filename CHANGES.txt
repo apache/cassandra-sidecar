@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * Support column types not parseable by Java 3.x driver (CASSSIDECAR-443)
  * CdcManager.getInstanceId(instanceIp) returns -1 as it resolves ipAddress to null (CASSSIDECAR-417)
  * Fix circle CI pipelines OOM (CASSSIDECAR-423)
  * Add JDK11_OPTIONS to the startup script (CASSSIDECAR-416)

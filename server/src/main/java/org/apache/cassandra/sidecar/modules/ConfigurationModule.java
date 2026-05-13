@@ -32,6 +32,7 @@ import com.datastax.driver.core.NettyOptions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.ProvidesIntoMap;
 import com.google.inject.name.Named;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
@@ -54,12 +55,18 @@ import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
+import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
+import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
+import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys;
+import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
+import org.apache.cassandra.sidecar.utils.EventBusUtils;
 
 import static org.apache.cassandra.sidecar.common.server.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
 /**
@@ -124,6 +131,30 @@ public class ConfigurationModule extends AbstractModule
                                                                                driverUtils);
         vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
         return cqlSessionProvider;
+    }
+
+    @Provides
+    @Singleton
+    DriverUnsupportedSchemaCache driverUnsupportedSchemaCache(Vertx vertx,
+                                                              SidecarConfiguration sidecarConfiguration,
+                                                              CQLSessionProvider cqlSessionProvider)
+    {
+        DriverUnsupportedSchemaCache schemaCache = new DriverUnsupportedSchemaCache(sidecarConfiguration, cqlSessionProvider);
+        // trigger immediate cache population once Sidecar connects to Cassandra node
+        EventBusUtils.onceLocalConsumer(vertx.eventBus(),
+                                        ON_CASSANDRA_CQL_READY.address(),
+                                        ignored -> vertx.executeBlocking(() -> {
+                                            schemaCache.refresh(true);
+                                            return null;
+                                        }));
+        return schemaCache;
+    }
+
+    @ProvidesIntoMap
+    @KeyClassMapKey(PeriodicTaskMapKeys.UnsupportedSchemaCacheTaskKey.class)
+    PeriodicTask driverUnsupportedSchemaCachePeriodicTask(DriverUnsupportedSchemaCache schemaCache)
+    {
+        return schemaCache;
     }
 
     @Provides

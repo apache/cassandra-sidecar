@@ -117,10 +117,6 @@ jobs:
           distribution: "temurin"
           cache: "gradle"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Download dtest jars
         uses: actions/download-artifact@v5
@@ -166,10 +162,6 @@ jobs:
           distribution: "temurin"
           cache: "gradle"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Download dtest jars
         uses: actions/download-artifact@v5
@@ -244,10 +236,6 @@ jobs:
           distribution: "temurin"
           cache: "gradle"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Install prerequisites
         run: |
@@ -334,10 +322,6 @@ jobs:
           distribution: "temurin"
           cache: "gradle"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Install prerequisites
         run: |
@@ -412,10 +396,6 @@ jobs:
           distribution: "temurin"
           cache: "gradle"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Run build
         run: |
@@ -450,10 +430,6 @@ jobs:
           distribution: "temurin"
           cache: "gradle"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Build Debian package
         run: |
@@ -491,10 +467,6 @@ jobs:
           distribution: "temurin"
           cache: "gradle"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Install dnf
         run: |
@@ -535,10 +507,6 @@ jobs:
           distribution: "temurin"
           cache: "gradle"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Build Docker image with Jib
         run: |
@@ -563,10 +531,6 @@ jobs:
           distribution: "temurin"
           cache: "gradle"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/trunk' }}
 
       - name: Build documentation
         run: |
