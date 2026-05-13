@@ -105,7 +105,7 @@ public class RestoreJobManagerGroup
      *
      * @param restoreJob restore job to update
      */
-    public void updateRestoreJob(RestoreJob restoreJob)
+    void updateRestoreJob(RestoreJob restoreJob)
     {
         if (restoreJob.status.isFinal())
         {

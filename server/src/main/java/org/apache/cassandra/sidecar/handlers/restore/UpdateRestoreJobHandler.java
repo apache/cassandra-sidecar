@@ -45,7 +45,6 @@ import org.apache.cassandra.sidecar.handlers.AccessProtected;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.server.RestoreMetrics;
 import org.apache.cassandra.sidecar.restore.RestoreJobDiscoverer;
-import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -61,7 +60,6 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobRequestPayload> implements AccessProtected
 {
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
-    private final RestoreJobManagerGroup restoreJobManagerGroup;
     private final RestoreJobDiscoverer restoreJobDiscoverer;
     private final RestoreMetrics metrics;
 
@@ -69,14 +67,12 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
     public UpdateRestoreJobHandler(ExecutorPools executorPools,
                                    InstanceMetadataFetcher instanceMetadataFetcher,
                                    RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
-                                   RestoreJobManagerGroup restoreJobManagerGroup,
                                    RestoreJobDiscoverer restoreJobDiscoverer,
                                    CassandraInputValidator validator,
                                    SidecarMetrics metrics)
     {
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
-        this.restoreJobManagerGroup = restoreJobManagerGroup;
         this.restoreJobDiscoverer = restoreJobDiscoverer;
         this.metrics = metrics.server().restore();
     }
@@ -96,13 +92,13 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
     {
         RoutingContextUtils
         .getAsFuture(context, SC_RESTORE_JOB)
-        .compose(job -> {
-            if (job.status.isFinal())
+        .compose(existingJob -> {
+            if (existingJob.status.isFinal())
             {
                 // skip the update, since the job is in the final state already
-                logger.debug("The job has completed already. job={}", job);
+                logger.debug("The job has completed already. job={}", existingJob);
                 return Future.failedFuture(wrapHttpException(HttpResponseStatus.CONFLICT,
-                                                             "Job is already in final state: " + job.status));
+                                                             "Job is already in final state: " + existingJob.status));
             }
 
             // IAM jobs derive credentials from the instance profile / task role at runtime.
@@ -116,32 +112,30 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
             }
 
             return executorPools.service()
-                                .executeBlocking(() -> restoreJobDatabaseAccessor.update(requestPayload, job.jobId));
-        })
-        .onSuccess(job -> {
-            logger.info("Successfully updated restore job. job={}, request={}, remoteAddress={}, instance={}",
-                        job, requestPayload, remoteAddress, host);
-            if (job.status == RestoreJobStatus.SUCCEEDED)
-            {
-                metrics.successfulJobs.metric.update(1);
-                long startMillis = UUIDs.unixTimestamp(job.jobId);
-                long durationMillis = System.currentTimeMillis() - startMillis;
-                // toNanos does not overflow. Nanos in `long` can at most represent 106,751 days.
-                metrics.jobCompletionTime.metric.update(durationMillis, TimeUnit.MILLISECONDS);
-            }
+                                .executeBlocking(() -> restoreJobDatabaseAccessor.update(requestPayload, existingJob.jobId))
+                                .onSuccess(updatedJob -> {
+                                    logger.info("Successfully updated restore job. job={}, request={}, remoteAddress={}, instance={}",
+                                                updatedJob, requestPayload, remoteAddress, host);
+                                    if (updatedJob.status == RestoreJobStatus.SUCCEEDED)
+                                    {
+                                        metrics.successfulJobs.metric.update(1);
+                                        long startMillis = UUIDs.unixTimestamp(updatedJob.jobId);
+                                        long durationMillis = System.currentTimeMillis() - startMillis;
+                                        // toNanos does not overflow. Nanos in `long` can at most represent 106,751 days.
+                                        metrics.jobCompletionTime.metric.update(durationMillis, TimeUnit.MILLISECONDS);
+                                    }
 
-            if (job.secrets != null)
-            {
-                metrics.tokenRefreshed.metric.update(1);
-            }
+                                    if (updatedJob.secrets != null)
+                                    {
+                                        metrics.tokenRefreshed.metric.update(1);
+                                    }
 
-            context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
-            // Fire-and-forget on a worker thread — notifying the restore system should not
-            // block the event loop or delay the HTTP response.
-            executorPools.service().executeBlocking(() -> {
-                notifyPhaseSignalMaybe(job);
-                return null;
-            });
+                                    context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
+                                    // Fire-and-forget on a worker thread — notifying the restore system should not
+                                    // block the event loop or delay the HTTP response.
+                                    executorPools.service()
+                                                 .runBlocking(() -> notifyPhaseSignalMaybe(existingJob, updatedJob.status));
+                                });
         })
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestPayload));
     }
@@ -173,37 +167,24 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
         }
     }
 
-    private void notifyPhaseSignalMaybe(RestoreJob job)
+    private void notifyPhaseSignalMaybe(RestoreJob existingJob, RestoreJobStatus newStatus)
     {
-        if (job.status != RestoreJobStatus.IMPORT_READY && job.status != RestoreJobStatus.STAGE_READY)
+        if (newStatus != RestoreJobStatus.IMPORT_READY && newStatus != RestoreJobStatus.STAGE_READY)
         {
             return;
         }
 
         try
         {
-            // The job returned from update() is sparse (only contains updated fields).
-            // Re-read the full job from DB to get all required fields (keyspace, consistency level, etc.).
-            RestoreJob fullJob = restoreJobDatabaseAccessor.find(job.jobId);
-            if (fullJob == null)
-            {
-                logger.warn("Cannot find restore job for phase signal notification. jobId={}", job.jobId);
-                return;
-            }
-
-            if (fullJob.status == RestoreJobStatus.IMPORT_READY)
-            {
-                restoreJobManagerGroup.updateRestoreJob(fullJob);
-            }
-            else if (fullJob.status == RestoreJobStatus.STAGE_READY)
-            {
-                restoreJobDiscoverer.processJobNow(fullJob);
-            }
+            // The DB update returns a sparse job (only updated fields). Apply the new status to the
+            // pre-update full job already in scope to get a complete job with the correct phase.
+            RestoreJob updatedJob = existingJob.unbuild().jobStatus(newStatus).build();
+            restoreJobDiscoverer.processJobNow(updatedJob);
         }
         catch (Exception e)
         {
             logger.warn("Failed to immediately process phase signal. " +
-                        "The discovery loop will pick it up on the next cycle. job={}", job, e);
+                        "The discovery loop will pick it up on the next cycle. jobId={}", existingJob.jobId, e);
         }
     }
 }

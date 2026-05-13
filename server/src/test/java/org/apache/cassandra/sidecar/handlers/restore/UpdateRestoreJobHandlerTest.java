@@ -203,11 +203,11 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
     }
 
     @Test
-    void testUpdateToImportReadyNotifiesManagerGroup(VertxTestContext context) throws Throwable
+    void testUpdateToImportReadyNotifiesDiscoverer(VertxTestContext context) throws Throwable
     {
         String jobId = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
         CountDownLatch latch = new CountDownLatch(1);
-        testRestoreJobManagerGroup.updateRestoreJobCallback = job -> latch.countDown();
+        testRestoreJobDiscoverer.processJobNowCallback = job -> latch.countDown();
         mockLookupRestoreJob(id -> createTestJobWithStatus(jobId, RestoreJobStatus.IMPORT_READY));
         mockUpdateRestoreJob(payload -> createTestJobWithStatus(jobId, RestoreJobStatus.IMPORT_READY));
         JsonObject payload = new JsonObject();
@@ -222,14 +222,13 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
     {
         String jobId = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
         CountDownLatch latch = new CountDownLatch(1);
-        testRestoreJobManagerGroup.updateRestoreJobCallback = job -> latch.countDown();
+        testRestoreJobDiscoverer.processJobNowCallback = job -> latch.countDown();
         mockLookupRestoreJob(id -> createTestJobWithStatus(jobId, RestoreJobStatus.STAGE_READY));
         mockUpdateRestoreJob(payload -> createTestJobWithStatus(jobId, RestoreJobStatus.STAGE_READY));
         JsonObject payload = new JsonObject();
         payload.put("status", "STAGE_READY");
         sendUpdateRestoreJobRequestAndVerify("ks", "table", jobId,
                                              payload, context, HttpResponseStatus.OK.code());
-        // processJobNow calls updateRestoreJob on the manager group
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, 5, TimeUnit.SECONDS)).isTrue();
     }
     }
