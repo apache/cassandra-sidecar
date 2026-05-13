@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * SAI support in Sidecar (CASSSIDECAR-422)
  * Support column types not parseable by Java 3.x driver (CASSSIDECAR-443)
  * CdcManager.getInstanceId(instanceIp) returns -1 as it resolves ipAddress to null (CASSSIDECAR-417)
  * Fix circle CI pipelines OOM (CASSSIDECAR-423)
