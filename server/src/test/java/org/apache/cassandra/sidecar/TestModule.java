@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -217,6 +218,7 @@ public class TestModule extends AbstractModule
                                                  .rpcAddress(InetAddress.getLoopbackAddress())
                                                  .rpcPort(6475)
                                                  .tokens(Collections.singleton("testToken"))
+                                                 .hostId(UUID.randomUUID())
                                                  .build());
         }
         delegate.setIsNativeUp(isUp);

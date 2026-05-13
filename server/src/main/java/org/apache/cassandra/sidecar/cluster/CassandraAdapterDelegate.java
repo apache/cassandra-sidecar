@@ -26,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import javax.management.Notification;
@@ -307,6 +308,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
         String partitionerName = storageOperations.getPartitionerName();
         List<String> tokens = maybeGetTokens(storageOperations);
         String dataCenter = endpointSnitchOperations.getDatacenter();
+        UUID hostId = UUID.fromString(storageOperations.getLocalHostId());
 
         return NodeSettings.builder()
                            .releaseVersion(releaseVersion)
@@ -316,6 +318,7 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
                            .tokens(new LinkedHashSet<>(tokens))
                            .rpcAddress(localNativeTransportAddress.getAddress())
                            .rpcPort(localNativeTransportAddress.getPort())
+                           .hostId(hostId)
                            .build();
     }
 
@@ -689,6 +692,11 @@ public class CassandraAdapterDelegate implements ICassandraAdapter, Host.StateLi
          * @return a collection of tokens formatted as strings
          */
         List<String> getTokens();
+
+        /**
+         * @return the local host UUID as a string
+         */
+        String getLocalHostId();
     }
 
     /**

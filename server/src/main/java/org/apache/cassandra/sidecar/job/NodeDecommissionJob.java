@@ -28,6 +28,7 @@ import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Implementation of {@link OperationalJob} to perform node decommission operation.
@@ -41,7 +42,12 @@ public class NodeDecommissionJob extends OperationalJob
 
     public NodeDecommissionJob(UUID jobId, StorageOperations storageOps, boolean isForce)
     {
-        super(jobId);
+        this(jobId, null, storageOps, isForce);
+    }
+
+    public NodeDecommissionJob(UUID jobId, @Nullable UUID nodeId, StorageOperations storageOps, boolean isForce)
+    {
+        super(jobId, nodeId);
         this.storageOperations = storageOps;
         this.isForce = isForce;
     }

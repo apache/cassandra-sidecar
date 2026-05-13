@@ -31,6 +31,7 @@ import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Implementation of {@link OperationalJob} to perform node drain operation.
@@ -79,7 +80,12 @@ public class NodeDrainJob extends OperationalJob
 
     public NodeDrainJob(UUID jobId, StorageOperations storageOps)
     {
-        super(jobId);
+        this(jobId, null, storageOps);
+    }
+
+    public NodeDrainJob(UUID jobId, @Nullable UUID nodeId, StorageOperations storageOps)
+    {
+        super(jobId, nodeId);
         this.storageOperations = storageOps;
     }
 

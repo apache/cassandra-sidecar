@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,6 +37,7 @@ import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.tasks.Task;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * An abstract class representing operational jobs that run on Cassandra
@@ -44,9 +48,17 @@ public abstract class OperationalJob implements Task<Void>
 
     // use v1 time-based uuid
     private final UUID jobId;
+    @Nullable
+    private final UUID nodeId;
 
     private final Promise<Void> executionPromise;
     private volatile boolean isExecuting = false;
+    private volatile Instant startTime;
+    private volatile Instant lastUpdate;
+    private volatile List<UUID> nodesPending;
+    private volatile List<UUID> nodesExecuting;
+    private volatile List<UUID> nodesSucceeded;
+    private volatile List<UUID> nodesFailed;
 
     /**
      * Constructs a job with a unique UUID, in Pending state
@@ -55,14 +67,108 @@ public abstract class OperationalJob implements Task<Void>
      */
     protected OperationalJob(UUID jobId)
     {
+        this(jobId, null);
+    }
+
+    /**
+     * Constructs a job with a unique UUID and an associated node identifier, in Pending state
+     *
+     * @param jobId  UUID representing the Job to be created
+     * @param nodeId UUID of the node this job is running on, or {@code null} if not applicable
+     */
+    protected OperationalJob(UUID jobId, @Nullable UUID nodeId)
+    {
         Preconditions.checkArgument(jobId.version() == 1, "OperationalJob accepts only time-based UUID");
         this.jobId = jobId;
+        this.nodeId = nodeId;
         this.executionPromise = Promise.promise();
+        this.nodesPending = nodeId != null ? new ArrayList<>(Collections.singletonList(nodeId)) : Collections.emptyList();
+        this.nodesExecuting = Collections.emptyList();
+        this.nodesSucceeded = Collections.emptyList();
+        this.nodesFailed = Collections.emptyList();
     }
 
     public UUID jobId()
     {
         return jobId;
+    }
+
+    /**
+     * @return the node UUID associated with this job, or {@code null} if not applicable
+     */
+    public @Nullable UUID nodeId()
+    {
+        return nodeId;
+    }
+
+    /**
+     * @return the time this job started execution, or {@code null} if not yet started
+     */
+    public @Nullable Instant startTime()
+    {
+        return startTime;
+    }
+
+    /**
+     * @return the time of the last status update for this job, or {@code null} if not yet started
+     */
+    public @Nullable Instant lastUpdate()
+    {
+        return lastUpdate;
+    }
+
+    /**
+     * Updates the last update time for this job.
+     *
+     * @param lastUpdate the new last update time
+     */
+    protected void lastUpdate(Instant lastUpdate)
+    {
+        this.lastUpdate = lastUpdate;
+    }
+
+    /**
+     * @return the list of nodes pending execution for this job
+     */
+    @NotNull
+    public List<UUID> nodesPending()
+    {
+        return nodesPending;
+    }
+
+    /**
+     * @return the list of nodes currently executing this job
+     */
+    @NotNull
+    public List<UUID> nodesExecuting()
+    {
+        return nodesExecuting;
+    }
+
+    /**
+     * @return the list of nodes that have succeeded executing this job
+     */
+    @NotNull
+    public List<UUID> nodesSucceeded()
+    {
+        return nodesSucceeded;
+    }
+
+    /**
+     * @return the list of nodes that have failed executing this job
+     */
+    @NotNull
+    public List<UUID> nodesFailed()
+    {
+        return nodesFailed;
+    }
+
+    /**
+     * @return whether this job requires coordination across multiple nodes
+     */
+    public boolean requiresCoordination()
+    {
+        return false;
     }
 
     @Override
@@ -203,6 +309,13 @@ public abstract class OperationalJob implements Task<Void>
     public void execute(Promise<Void> promise)
     {
         isExecuting = true;
+        startTime = Instant.now();
+        lastUpdate = startTime;
+        if (nodeId != null)
+        {
+            nodesPending = Collections.emptyList();
+            nodesExecuting = Collections.singletonList(nodeId);
+        }
         LOGGER.info("Executing job. jobId={}", jobId);
         promise.future().onComplete(executionPromise);
         try
@@ -211,11 +324,23 @@ public abstract class OperationalJob implements Task<Void>
             internalFuture.onComplete(ar -> {
                 if (ar.succeeded())
                 {
+                    if (nodeId != null)
+                    {
+                        nodesExecuting = Collections.emptyList();
+                        nodesSucceeded = Collections.singletonList(nodeId);
+                    }
+                    lastUpdate = Instant.now();
                     promise.tryComplete();
                     LOGGER.info("Complete job execution. jobId={} status={}", jobId, status());
                 }
                 else
                 {
+                    if (nodeId != null)
+                    {
+                        nodesExecuting = Collections.emptyList();
+                        nodesFailed = Collections.singletonList(nodeId);
+                    }
+                    lastUpdate = Instant.now();
                     promise.tryFail(ar.cause());
                     LOGGER.error("Job execution failed. jobId={} reason={}", jobId, ar.cause().getMessage());
                 }
@@ -224,6 +349,12 @@ public abstract class OperationalJob implements Task<Void>
         catch (Throwable e)
         {
             OperationalJobException oje = OperationalJobException.wraps(e);
+            if (nodeId != null)
+            {
+                nodesExecuting = Collections.emptyList();
+                nodesFailed = Collections.singletonList(nodeId);
+            }
+            lastUpdate = Instant.now();
             LOGGER.error("Job execution failed. jobId={} reason={}", jobId, oje.getMessage(), oje);
             promise.tryFail(oje);
         }

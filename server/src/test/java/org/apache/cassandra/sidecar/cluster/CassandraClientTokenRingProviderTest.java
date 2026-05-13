@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Range;
@@ -338,6 +339,7 @@ public class CassandraClientTokenRingProviderTest
                                                                                       .partitioner("org.apache.cassandra.dht.Murmur3Partitioner")
                                                                                       .sidecarVersion("1.0-TEST")
                                                                                       .datacenter("DC1")
+                                                                                      .hostId(UUID.randomUUID())
                                                                                       .build());
         when(instanceMetadata.delegate().version()).thenReturn(SimpleCassandraVersion.create("4.0.0.68"));
         when(instanceMetadata.delegate().metadata()).thenReturn(metadata);

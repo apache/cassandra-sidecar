@@ -140,6 +140,7 @@ class OperationalJobTest
         assertThat(future.succeeded()).isTrue();
         assertThat(job.asyncResult().succeeded()).isTrue();
         assertThat(job.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
+        assertThat(job.lastUpdate()).isNotNull();
     }
 
     @Test
@@ -174,6 +175,7 @@ class OperationalJobTest
         assertThat(failingJob.asyncResult().cause())
         .isExactlyInstanceOf(OperationalJobException.class)
         .hasMessage(msg);
+        assertThat(failingJob.lastUpdate()).isNotNull();
     }
 
     @Test

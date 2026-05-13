@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
@@ -48,6 +49,8 @@ public class NodeSettings
     private final Set<String> tokens;
     @JsonProperty("sidecar")
     private final Map<String, String> sidecar;
+    @JsonProperty("hostId")
+    private final UUID hostId;
 
     /**
      * Constructs a new {@link NodeSettings}.
@@ -71,6 +74,7 @@ public class NodeSettings
         rpcPort = builder.rpcPort;
         tokens = builder.tokens;
         sidecar = builder.sidecar;
+        hostId = builder.hostId;
     }
 
     @JsonProperty("releaseVersion")
@@ -120,6 +124,12 @@ public class NodeSettings
         return tokens;
     }
 
+    @JsonProperty("hostId")
+    public UUID hostId()
+    {
+        return hostId;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -142,6 +152,7 @@ public class NodeSettings
                && Objects.equals(this.rpcAddress, that.rpcAddress)
                && Objects.equals(this.rpcPort, that.rpcPort)
                && Objects.equals(this.tokens, that.tokens)
+               && Objects.equals(this.hostId, that.hostId)
         ;
     }
 
@@ -151,7 +162,7 @@ public class NodeSettings
     @Override
     public int hashCode()
     {
-        return Objects.hash(releaseVersion, partitioner, sidecar, datacenter, rpcAddress, rpcPort, tokens);
+        return Objects.hash(releaseVersion, partitioner, sidecar, datacenter, rpcAddress, rpcPort, tokens, hostId);
     }
 
     /**
@@ -174,6 +185,7 @@ public class NodeSettings
         private int rpcPort;
         private Set<String> tokens;
         private Map<String, String> sidecar;
+        private UUID hostId;
 
         private Builder()
         {
@@ -260,6 +272,17 @@ public class NodeSettings
         public Builder sidecar(Map<String, String> sidecar)
         {
             return update(b -> b.sidecar = sidecar);
+        }
+
+        /**
+         * Sets the {@code hostId} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param hostId the {@code hostId} to set
+         * @return a reference to this Builder
+         */
+        public Builder hostId(UUID hostId)
+        {
+            return update(b -> b.hostId = hostId);
         }
 
         /**

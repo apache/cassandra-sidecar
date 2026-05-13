@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.handlers;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -40,6 +41,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
@@ -118,6 +120,9 @@ public class CommonTest
             this.delegate = mock(CassandraAdapterDelegate.class);
             this.storageOperations = storageOperations;
             when(delegate.storageOperations()).thenReturn(storageOperations);
+            when(delegate.nodeSettings()).thenReturn(NodeSettings.builder()
+                                                                 .hostId(UUID.randomUUID())
+                                                                 .build());
         }
 
         @Provides

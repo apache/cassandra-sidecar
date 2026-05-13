@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.handlers;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -46,6 +47,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
@@ -398,7 +400,11 @@ public class NodeMoveHandlerTest
 
             CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
 
+            NodeSettings mockNodeSettings = NodeSettings.builder()
+                                                        .hostId(UUID.randomUUID())
+                                                        .build();
             when(delegate.storageOperations()).thenReturn(mockStorageOperations);
+            when(delegate.nodeSettings()).thenReturn(mockNodeSettings);
             when(instanceMetadata.delegate()).thenReturn(delegate);
 
             InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);

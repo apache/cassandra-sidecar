@@ -29,6 +29,7 @@ import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Implementation of {@link OperationalJob} to perform node move operation.
@@ -43,7 +44,12 @@ public class NodeMoveJob extends OperationalJob
 
     public NodeMoveJob(UUID jobId, String newToken, StorageOperations storageOps)
     {
-        super(jobId);
+        this(jobId, null, newToken, storageOps);
+    }
+
+    public NodeMoveJob(UUID jobId, @Nullable UUID nodeId, String newToken, StorageOperations storageOps)
+    {
+        super(jobId, nodeId);
         this.newToken = newToken;
         this.storageOperations = storageOps;
     }
