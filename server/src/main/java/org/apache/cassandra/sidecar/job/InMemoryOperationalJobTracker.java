@@ -96,7 +96,7 @@ public class InMemoryOperationalJobTracker implements OperationalJobTracker
     }
 
     @Override
-    public OperationalJob get(UUID key)
+    public OperationalJobInfo get(UUID key)
     {
         return map.get(key);
     }

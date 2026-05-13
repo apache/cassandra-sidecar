@@ -26,7 +26,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.OperationalJobResponse;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
-import org.apache.cassandra.sidecar.job.OperationalJob;
+import org.apache.cassandra.sidecar.job.OperationalJobInfo;
 
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
 
@@ -47,7 +47,7 @@ public class OperationalJobUtils
      * @param job       the operational job to report status on
      * @param exception the conflict exception, if any (null if no conflict)
      */
-    public static void sendStatusBasedResponse(RoutingContext context, OperationalJob job, OperationalJobConflictException exception)
+    public static void sendStatusBasedResponse(RoutingContext context, OperationalJobInfo job, OperationalJobConflictException exception)
     {
         if (exception != null)
         {
@@ -81,9 +81,9 @@ public class OperationalJobUtils
         }
 
         String reason = null;
-        if (status == FAILED && job.asyncResult() != null && job.asyncResult().cause() != null)
+        if (status == FAILED)
         {
-            reason = job.asyncResult().cause().getMessage();
+            reason = job.failureReason();
         }
         context.json(OperationalJobResponse.builder()
                                            .jobId(job.jobId())

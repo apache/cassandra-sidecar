@@ -42,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * An abstract class representing operational jobs that run on Cassandra
  */
-public abstract class OperationalJob implements Task<Void>
+public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(OperationalJob.class);
 
@@ -216,6 +216,13 @@ public abstract class OperationalJob implements Task<Void>
      */
     public abstract boolean hasConflict(@NotNull List<OperationalJob> sameOperationJobs);
 
+    @Override
+    public String name()
+    {
+        String simpleName = this.getClass().getSimpleName();
+        return simpleName.isEmpty() ? this.getClass().getName() : simpleName;
+    }
+
     /**
      * Determines the status of the job. OperationalJob subclasses could choose to override the method.
      * <p>
@@ -254,6 +261,18 @@ public abstract class OperationalJob implements Task<Void>
     public Future<Void> asyncResult()
     {
         return executionPromise.future();
+    }
+
+    @Override
+    @Nullable
+    public String failureReason()
+    {
+        Future<Void> fut = asyncResult();
+        if (fut.isComplete() && fut.failed() && fut.cause() != null)
+        {
+            return fut.cause().getMessage();
+        }
+        return null;
     }
 
     /**

@@ -30,7 +30,7 @@ import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.job.OperationalJob;
+import org.apache.cassandra.sidecar.job.OperationalJobInfo;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -75,7 +75,7 @@ public class OperationalJobHandler extends AbstractHandler<UUID> implements Acce
     {
         executorPools.service()
                      .executeBlocking(() -> {
-                         OperationalJob job = jobManager.getJobIfExists(jobId);
+                         OperationalJobInfo job = jobManager.getJobIfExists(jobId);
                          if (job == null)
                          {
                              logger.info("No operational job found with the jobId. jobId={}", jobId);

@@ -47,9 +47,9 @@ public interface OperationalJobTracker
      * Retrieve a job by its ID.
      *
      * @param jobId the job identifier
-     * @return the job, or null if not found
+     * @return the job info, or null if not found
      */
-    OperationalJob get(UUID jobId);
+    OperationalJobInfo get(UUID jobId);
 
     /**
      * Returns an immutable view of all tracked jobs.

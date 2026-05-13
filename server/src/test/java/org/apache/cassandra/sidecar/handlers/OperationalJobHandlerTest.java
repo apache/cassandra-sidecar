@@ -184,6 +184,7 @@ class OperationalJobHandlerTest
             when(failedMock.jobId()).thenReturn(failedUuid);
             when(failedMock.status()).thenReturn(OperationalJobStatus.FAILED);
             when(failedMock.asyncResult()).thenReturn(Future.failedFuture("Test failed"));
+            when(failedMock.failureReason()).thenReturn("Test failed");
             when(failedMock.name()).thenReturn("testFailed");
 
             when(mockManager.getJobIfExists(runningUuid)).thenReturn(runningMock);
