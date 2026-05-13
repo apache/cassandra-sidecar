@@ -85,8 +85,8 @@ public class CassandraTableOperations implements TableOperations
                                           boolean validateIndexChecksum)
     {
         return importNewSSTables(keyspace, tableName, directory, resetLevel,
-                clearRepaired, verifySSTables, verifyTokens,
-                invalidateCaches, extendedVerify, copyData);
+                                 clearRepaired, verifySSTables, verifyTokens,
+                                 invalidateCaches, extendedVerify, copyData);
     }
 
     /**

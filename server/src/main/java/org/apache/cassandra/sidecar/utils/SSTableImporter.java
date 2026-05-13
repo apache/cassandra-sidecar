@@ -253,7 +253,8 @@ public class SSTableImporter
                     successCount++;
                     LOGGER.info("Successfully imported SSTables with options={}, serviceTimeMillis={}",
                                 options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos));
-                    cleanup(options).onComplete(ar -> promise.complete());
+                    promise.complete();
+                    cleanup(options);
                 }
             }
             catch (Exception exception)
@@ -278,19 +279,19 @@ public class SSTableImporter
      *
      * @param options import options
      */
-    private Future<Void> cleanup(ImportOptions options)
+    private void cleanup(ImportOptions options)
     {
-        return uploadPathBuilder.resolveUploadIdDirectory(options.host, options.uploadId)
-                                .compose(uploadPathBuilder::isValidDirectory)
-                                .compose(stagingDirectory -> vertx.fileSystem()
-                                                                  .deleteRecursive(stagingDirectory, true))
-                                .onSuccess(v ->
-                                           LOGGER.debug("Successfully removed staging directory for uploadId={}, " +
-                                                        "instance={}, options={}", options.uploadId, options.host, options))
-                                .onFailure(cause ->
-                                           LOGGER.error("Failed to remove staging directory for uploadId={}, " +
-                                                        "instance={}, options={}", options.uploadId, options.host, options,
-                                                        cause));
+        uploadPathBuilder.resolveUploadIdDirectory(options.host, options.uploadId)
+                         .compose(uploadPathBuilder::isValidDirectory)
+                         .compose(stagingDirectory -> vertx.fileSystem()
+                                                           .deleteRecursive(stagingDirectory, true))
+                         .onSuccess(v ->
+                                    LOGGER.debug("Successfully removed staging directory for uploadId={}, " +
+                                                 "instance={}, options={}", options.uploadId, options.host, options))
+                         .onFailure(cause ->
+                                    LOGGER.error("Failed to remove staging directory for uploadId={}, " +
+                                                 "instance={}, options={}", options.uploadId, options.host, options,
+                                                 cause));
     }
 
     /**
