@@ -74,7 +74,8 @@ public interface StorageProvider extends Closeable
     void updateJobStatus(UUID jobId, String operationType, OperationalJobStatus status);
 
     /**
-     * Retrieve stored job records, up to the specified limit.
+     * Retrieve stored job records, up to the specified limit. Implementations should return
+     * records in descending time order. 
      *
      * @param limit the maximum number of job records to return
      * @return list of job records, never null
