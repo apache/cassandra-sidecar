@@ -84,19 +84,6 @@ public class RegexBasedCassandraInputValidator implements CassandraInputValidato
      * {@inheritDoc}
      */
     @Override
-    public String validateSnapshotName(@NotNull String snapshotName)
-    {
-        Objects.requireNonNull(snapshotName, "snapshotName must not be null");
-        //  most UNIX systems only disallow file separator and null characters for directory names
-        if (snapshotName.contains(File.separator) || snapshotName.contains("\0"))
-            throw new CassandraInputException("Invalid characters in snapshot name: " + snapshotName);
-        return snapshotName;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public String validateComponentName(@NotNull String componentName)
     {
         return validateComponentNameByRegex(componentName,

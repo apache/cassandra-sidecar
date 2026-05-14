@@ -173,7 +173,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
 
         return SnapshotRequestParam.builder()
                                    .qualifiedTableName(qualifiedTableName(context))
-                                   .snapshotName(context.pathParam("snapshot"))
+                                   .snapshotName(validator.validateSnapshotName(context.pathParam("snapshot")))
                                    .includeSecondaryIndexFiles(includeSecondaryIndexFiles)
                                    .build();
     }

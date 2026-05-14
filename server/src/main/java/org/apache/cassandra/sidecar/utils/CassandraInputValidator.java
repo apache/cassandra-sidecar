@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.io.File;
+import java.util.Objects;
+
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.exceptions.CassandraInputException;
 import org.jetbrains.annotations.NotNull;
@@ -57,7 +60,19 @@ public interface CassandraInputValidator
      * @throws NullPointerException    when the {@code snapshotName} is {@code null}
      * @throws CassandraInputException when the {@code snapshotName} contains invalid characters in the name
      */
-    String validateSnapshotName(@NotNull String snapshotName);
+    default String validateSnapshotName(@NotNull String snapshotName)
+    {
+        Objects.requireNonNull(snapshotName, "snapshotName must not be null");
+
+        //  most UNIX systems only disallow file separator and null characters for directory names
+        for (int i = 0; i < snapshotName.length(); i++)
+        {
+            char c = snapshotName.charAt(i);
+            if (c == File.separatorChar || c == '\0')
+                throw new CassandraInputException("Invalid characters in snapshot name: " + snapshotName);
+        }
+        return snapshotName;
+    }
 
     /**
      * Validates that the {@code componentName} is not {@code null}, and it contains allowed names for the
