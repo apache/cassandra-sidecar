@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * Add ConfigurationProvider interfaces for pluggable overlay storage (CASSSIDECAR-424)
  * Refactor OperationalJob to have data separate from execution logic (CASSSIDECAR-460)
  * Sidecar’s CassandraBridgeFactory FQCN colliding with the Cassandra analytics class (CASSSIDECAR-467)
  * Fix ON_CDC_CACHE_WARMED_UP not fired when schema publisher fails (CASSSIDECAR-459)
