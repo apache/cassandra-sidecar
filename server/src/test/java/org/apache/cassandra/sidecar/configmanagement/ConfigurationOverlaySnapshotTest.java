@@ -1,0 +1,122 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.cassandra.sidecar.configmanagement;
+
+import java.time.Instant;
+import java.util.Arrays;
+
+import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * Tests for {@link ConfigurationOverlaySnapshot}
+ */
+class ConfigurationOverlaySnapshotTest
+{
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    @Test
+    void testHashIsDeterministic()
+    {
+        ObjectNode yaml1 = MAPPER.createObjectNode();
+        yaml1.put("concurrent_reads", 32);
+        yaml1.put("memtable_flush_writers", 4);
+
+        ObjectNode yaml2 = MAPPER.createObjectNode();
+        yaml2.put("concurrent_reads", 32);
+        yaml2.put("memtable_flush_writers", 4);
+
+        CassandraConfigurationOverlay overlay1 = new CassandraConfigurationOverlay(yaml1, Arrays.asList("-Xmx4G"));
+        CassandraConfigurationOverlay overlay2 = new CassandraConfigurationOverlay(yaml2, Arrays.asList("-Xmx4G"));
+
+        ConfigurationOverlaySnapshot snapshot1 = new ConfigurationOverlaySnapshot(Instant.now(), overlay1);
+        ConfigurationOverlaySnapshot snapshot2 = new ConfigurationOverlaySnapshot(Instant.now(), overlay2);
+
+        assertThat(snapshot1.hash()).isEqualTo(snapshot2.hash());
+    }
+
+    @Test
+    void testHashChangesWithDifferentContent()
+    {
+        ObjectNode yaml1 = MAPPER.createObjectNode();
+        yaml1.put("concurrent_reads", 32);
+
+        ObjectNode yaml2 = MAPPER.createObjectNode();
+        yaml2.put("concurrent_reads", 64);
+
+        CassandraConfigurationOverlay overlay1 = new CassandraConfigurationOverlay(yaml1, null);
+        CassandraConfigurationOverlay overlay2 = new CassandraConfigurationOverlay(yaml2, null);
+
+        ConfigurationOverlaySnapshot snapshot1 = new ConfigurationOverlaySnapshot(Instant.now(), overlay1);
+        ConfigurationOverlaySnapshot snapshot2 = new ConfigurationOverlaySnapshot(Instant.now(), overlay2);
+
+        assertThat(snapshot1.hash()).isNotEqualTo(snapshot2.hash());
+    }
+
+    @Test
+    void testHashIsCached()
+    {
+        ObjectNode yaml = MAPPER.createObjectNode();
+        yaml.put("commitlog_sync", "periodic");
+
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, null);
+        ConfigurationOverlaySnapshot snapshot = new ConfigurationOverlaySnapshot(Instant.now(), overlay);
+
+        String firstCall = snapshot.hash();
+        String secondCall = snapshot.hash();
+
+        // Same String instance (referential equality) proves caching
+        assertThat(firstCall).isSameAs(secondCall);
+    }
+
+    @Test
+    void testHashHasSha256Prefix()
+    {
+        ObjectNode yaml = MAPPER.createObjectNode();
+        yaml.put("native_transport_port", 9042);
+
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, null);
+        ConfigurationOverlaySnapshot snapshot = new ConfigurationOverlaySnapshot(Instant.now(), overlay);
+
+        assertThat(snapshot.hash()).startsWith("sha256:");
+        // SHA-256 produces 64 hex chars, plus "sha256:" prefix = 71 chars
+        assertThat(snapshot.hash()).hasSize(71);
+    }
+
+    @Test
+    void testToString()
+    {
+        ObjectNode yaml = MAPPER.createObjectNode();
+        yaml.put("concurrent_reads", 32);
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, Arrays.asList("-Xmx4G"));
+        Instant timestamp = Instant.parse("2026-02-20T14:32:18Z");
+
+        ConfigurationOverlaySnapshot snapshot = new ConfigurationOverlaySnapshot(timestamp, overlay);
+
+        String expected = "{\"hash\":\"" + snapshot.hash() + "\","
+                          + "\"lastModified\":\"2026-02-20T14:32:18Z\","
+                          + "\"configuration\":{\"cassandraYaml\":{\"concurrent_reads\":32},"
+                          + "\"extraJvmOpts\":[\"-Xmx4G\"]}}";
+        assertThat(snapshot.toString()).isEqualTo(expected);
+    }
+}
