@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.utils;
 
-import java.io.File;
 import java.util.Objects;
 
 import org.apache.cassandra.sidecar.common.server.data.Name;
