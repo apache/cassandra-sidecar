@@ -34,6 +34,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.ClusterOpsSchema;
@@ -69,7 +70,7 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
         BoundStatement statement = tableSchema.insertJob()
                                               .bind(clusterName,
                                                     job.jobId(),
-                                                    job.operationType(),
+                                                    job.operationType().name(),
                                                     job.status().name(),
                                                     job.nodeExecutionOrder(),
                                                     job.operationMetadata());
@@ -95,10 +96,10 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
         return recordFromRow(row);
     }
 
-    public void updateJobStatus(String clusterName, UUID jobId, String operationType, OperationalJobStatus status)
+    public void updateJobStatus(String clusterName, UUID jobId, OperationType operationType, OperationalJobStatus status)
     {
         BoundStatement statement = tableSchema.updateStatus()
-                                              .bind(status.name(), clusterName, jobId, operationType);
+                                              .bind(status.name(), clusterName, jobId, operationType.name());
         statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         execute(statement);
     }
@@ -120,7 +121,7 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
     private OperationalJobRecord recordFromRow(Row row)
     {
         UUID operationId = row.getUUID("operation_id");
-        String operationType = row.getString("operation_type");
+        OperationType operationType = OperationType.valueOf(row.getString("operation_type"));
         OperationalJobStatus status = OperationalJobStatus.valueOf(row.getString("status"));
         List<List<UUID>> nodeExecutionOrder = row.get("node_execution_order", NODES_ORDER_TYPE);
         if (nodeExecutionOrder != null && nodeExecutionOrder.isEmpty())

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -68,10 +69,10 @@ public interface StorageProvider extends Closeable
      * Implementations should throw {@link StorageProviderException} on write failure.
      *
      * @param jobId         the job identifier
-     * @param operationType the operation type (e.g. "restart")
+     * @param operationType the operation type
      * @param status        the new status
      */
-    void updateJobStatus(UUID jobId, String operationType, OperationalJobStatus status);
+    void updateJobStatus(UUID jobId, OperationType operationType, OperationalJobStatus status);
 
     /**
      * Retrieve stored job records, up to the specified limit. Implementations should return
@@ -91,12 +92,12 @@ public interface StorageProvider extends Closeable
      * Implementations must provide compare-and-set (CAS) semantics to ensure only one active
      * operation of a given type runs at a time across the cluster.
      *
-     * @param operationType the operation type (e.g. "restart")
+     * @param operationType the operation type
      * @param operationId   the unique identifier for this operation
      * @return {@code true} if the operation was successfully set as active, {@code false} if
      *         an operation of the same type is already active (including the same operation ID)
      */
-    boolean trySetActiveOperation(String operationType, UUID operationId);
+    boolean trySetActiveOperation(OperationType operationType, UUID operationId);
 
     /**
      * Get the active operation ID for a given operation type.
@@ -105,7 +106,7 @@ public interface StorageProvider extends Closeable
      * @return the active operation ID, or {@code null} if no operation of this type is active
      */
     @Nullable
-    UUID getActiveOperation(String operationType);
+    UUID getActiveOperation(OperationType operationType);
 
     /**
      * Get all active operations for the cluster.
@@ -113,7 +114,7 @@ public interface StorageProvider extends Closeable
      * @return a map of operation type to operation ID for all currently active operations, never null
      */
     @NotNull
-    Map<String, UUID> getActiveOperations();
+    Map<OperationType, UUID> getActiveOperations();
 
     /**
      * Clear the active operation lock, but only if the provided operation ID matches
@@ -124,7 +125,7 @@ public interface StorageProvider extends Closeable
      * @return {@code true} if the active operation was cleared, {@code false} if the provided
      *         operation ID did not match the active one
      */
-    boolean clearActiveOperation(String operationType, UUID operationId);
+    boolean clearActiveOperation(OperationType operationType, UUID operationId);
 
     // --- Node Status Tracking ---
 

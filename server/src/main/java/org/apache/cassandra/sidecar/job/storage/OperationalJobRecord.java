@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import com.datastax.driver.core.utils.UUIDs;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.jetbrains.annotations.Nullable;
@@ -34,7 +35,7 @@ import org.jetbrains.annotations.Nullable;
 public class OperationalJobRecord
 {
     private final UUID jobId;
-    private final String operationType;
+    private final OperationType operationType;
     private final OperationalJobStatus status;
     private final long creationTimeMillis;
     @Nullable
@@ -46,10 +47,10 @@ public class OperationalJobRecord
      * Constructs an OperationalJobRecord with the given fields.
      *
      * @param jobId         time-based v1 UUID identifying the job
-     * @param operationType the operation type (e.g. "restart", "decommission")
+     * @param operationType the operation type
      * @param status        the current status of the job
      */
-    public OperationalJobRecord(UUID jobId, String operationType, OperationalJobStatus status)
+    public OperationalJobRecord(UUID jobId, OperationType operationType, OperationalJobStatus status)
     {
         this(jobId, operationType, status, null, null);
     }
@@ -58,12 +59,12 @@ public class OperationalJobRecord
      * Constructs an OperationalJobRecord with all fields.
      *
      * @param jobId             time-based v1 UUID identifying the job
-     * @param operationType     the operation type (e.g. "restart", "decommission")
+     * @param operationType     the operation type
      * @param status            the current status of the job
      * @param nodeExecutionOrder        the ordered list of parallel node groups for execution, or null
      * @param operationMetadata the operation parameters, or null
      */
-    public OperationalJobRecord(UUID jobId, String operationType, OperationalJobStatus status,
+    public OperationalJobRecord(UUID jobId, OperationType operationType, OperationalJobStatus status,
                                 @Nullable List<List<UUID>> nodeExecutionOrder,
                                 @Nullable Map<String, String> operationMetadata)
     {
@@ -88,9 +89,9 @@ public class OperationalJobRecord
     }
 
     /**
-     * @return the operation type (e.g. "restart", "decommission")
+     * @return the operation type
      */
-    public String operationType()
+    public OperationType operationType()
     {
         return operationType;
     }
@@ -151,7 +152,7 @@ public class OperationalJobRecord
     {
         return "OperationalJobRecord{" +
                "jobId=" + jobId +
-               ", operationType='" + operationType + '\'' +
+               ", operationType=" + operationType +
                ", status=" + status +
                ", creationTimeMillis=" + creationTimeMillis +
                ", nodeExecutionOrder=" + nodeExecutionOrder +

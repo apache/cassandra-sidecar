@@ -67,7 +67,7 @@ public class ActiveClusterOpsSchema extends TableSchema
         return String.format("CREATE TABLE IF NOT EXISTS %s.%s (" +
                              "  cluster_name text," +
                              "  operation_type text," +
-                             "  operation_id uuid," +
+                             "  operation_id timeuuid," +
                              "  PRIMARY KEY ((cluster_name), operation_type)" +
                              ") WITH compaction = {'class': 'LeveledCompactionStrategy'}" +
                              "  AND default_time_to_live = %s",

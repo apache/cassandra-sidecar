@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 import com.datastax.driver.core.exceptions.DriverException;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.ActiveClusterOpsDatabaseAccessor;
@@ -82,7 +83,7 @@ public class CassandraStorageProvider implements StorageProvider
     }
 
     @Override
-    public void updateJobStatus(UUID jobId, String operationType, OperationalJobStatus status)
+    public void updateJobStatus(UUID jobId, OperationType operationType, OperationalJobStatus status)
     {
         execute("updateJobStatus", () -> {
             clusterOpsAccessor.updateJobStatus(clusterName, jobId, operationType, status);
@@ -98,7 +99,7 @@ public class CassandraStorageProvider implements StorageProvider
     }
 
     @Override
-    public boolean trySetActiveOperation(String operationType, UUID operationId)
+    public boolean trySetActiveOperation(OperationType operationType, UUID operationId)
     {
         return execute("trySetActiveOperation",
                        () -> activeOpsAccessor.trySetActiveOperation(clusterName, operationType, operationId));
@@ -106,7 +107,7 @@ public class CassandraStorageProvider implements StorageProvider
 
     @Override
     @Nullable
-    public UUID getActiveOperation(String operationType)
+    public UUID getActiveOperation(OperationType operationType)
     {
         return execute("getActiveOperation",
                        () -> activeOpsAccessor.getActiveOperation(clusterName, operationType));
@@ -114,14 +115,14 @@ public class CassandraStorageProvider implements StorageProvider
 
     @Override
     @NotNull
-    public Map<String, UUID> getActiveOperations()
+    public Map<OperationType, UUID> getActiveOperations()
     {
         return execute("getActiveOperations",
                        () -> activeOpsAccessor.getActiveOperations(clusterName));
     }
 
     @Override
-    public boolean clearActiveOperation(String operationType, UUID operationId)
+    public boolean clearActiveOperation(OperationType operationType, UUID operationId)
     {
         return execute("clearActiveOperation",
                        () -> activeOpsAccessor.clearActiveOperation(clusterName, operationType, operationId));

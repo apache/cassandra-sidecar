@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import com.datastax.driver.core.utils.UUIDs;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.testing.IntegrationTestBase;
 import org.apache.cassandra.testing.CassandraIntegrationTest;
@@ -44,7 +45,7 @@ class ClusterOpsNodeStateDatabaseAccessorIntegrationTest extends IntegrationTest
         ClusterOpsNodeStateDatabaseAccessor accessor = injector.getInstance(ClusterOpsNodeStateDatabaseAccessor.class);
         String clusterName = maybeGetSession().getCluster().getMetadata().getClusterName();
 
-        UUID operationId = UUID.randomUUID();
+        UUID operationId = UUIDs.timeBased();
         UUID nodeId1 = UUID.randomUUID();
         UUID nodeId2 = UUID.randomUUID();
         UUID nodeId3 = UUID.randomUUID();
@@ -89,7 +90,7 @@ class ClusterOpsNodeStateDatabaseAccessorIntegrationTest extends IntegrationTest
                 .containsEntry(nodeId2, OperationalJobStatus.CREATED)
                 .containsEntry(nodeId3, OperationalJobStatus.CREATED);
 
-        UUID otherOperationId = UUID.randomUUID();
+        UUID otherOperationId = UUIDs.timeBased();
         accessor.updateNodeStatus(clusterName, otherOperationId, nodeId1, OperationalJobStatus.SUCCEEDED);
         assertThat(accessor.getNodeStatusesForOperation(clusterName, otherOperationId))
                 .withFailMessage("getNodeStatusesForOperation should only return nodes for the queried operation")
@@ -98,7 +99,7 @@ class ClusterOpsNodeStateDatabaseAccessorIntegrationTest extends IntegrationTest
                 .withFailMessage("getNodeStatus should be unaffected by node updates in a different operation")
                 .isEqualTo(OperationalJobStatus.RUNNING);
 
-        UUID chunkOperationId = UUID.randomUUID();
+        UUID chunkOperationId = UUIDs.timeBased();
         List<UUID> nodeIds = new ArrayList<>();
         for (int i = 0; i < 250; i++)
         {

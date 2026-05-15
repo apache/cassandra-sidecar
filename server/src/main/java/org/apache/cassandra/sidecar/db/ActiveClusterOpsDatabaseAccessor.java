@@ -28,6 +28,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.ActiveClusterOpsSchema;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
@@ -54,9 +55,9 @@ public class ActiveClusterOpsDatabaseAccessor extends DatabaseAccessor<ActiveClu
         super(schema, sessionProvider);
     }
 
-    public boolean trySetActiveOperation(String clusterName, String operationType, UUID operationId)
+    public boolean trySetActiveOperation(String clusterName, OperationType operationType, UUID operationId)
     {
-        BoundStatement statement = tableSchema.trySetActive().bind(clusterName, operationType, operationId);
+        BoundStatement statement = tableSchema.trySetActive().bind(clusterName, operationType.name(), operationId);
         statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         statement.setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL);
         ResultSet resultSet = execute(statement);
@@ -64,9 +65,9 @@ public class ActiveClusterOpsDatabaseAccessor extends DatabaseAccessor<ActiveClu
     }
 
     @Nullable
-    public UUID getActiveOperation(String clusterName, String operationType)
+    public UUID getActiveOperation(String clusterName, OperationType operationType)
     {
-        BoundStatement statement = tableSchema.getActiveByType().bind(clusterName, operationType);
+        BoundStatement statement = tableSchema.getActiveByType().bind(clusterName, operationType.name());
         statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         ResultSet resultSet = execute(statement);
         Row row = resultSet.one();
@@ -74,22 +75,22 @@ public class ActiveClusterOpsDatabaseAccessor extends DatabaseAccessor<ActiveClu
     }
 
     @NotNull
-    public Map<String, UUID> getActiveOperations(String clusterName)
+    public Map<OperationType, UUID> getActiveOperations(String clusterName)
     {
         BoundStatement statement = tableSchema.getActive().bind(clusterName);
         statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         ResultSet resultSet = execute(statement);
-        Map<String, UUID> activeOps = new HashMap<>();
+        Map<OperationType, UUID> activeOps = new HashMap<>();
         for (Row row : resultSet)
         {
-            activeOps.put(row.getString("operation_type"), row.getUUID("operation_id"));
+            activeOps.put(OperationType.valueOf(row.getString("operation_type")), row.getUUID("operation_id"));
         }
         return activeOps;
     }
 
-    public boolean clearActiveOperation(String clusterName, String operationType, UUID operationId)
+    public boolean clearActiveOperation(String clusterName, OperationType operationType, UUID operationId)
     {
-        BoundStatement statement = tableSchema.clearActive().bind(clusterName, operationType, operationId);
+        BoundStatement statement = tableSchema.clearActive().bind(clusterName, operationType.name(), operationId);
         statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         statement.setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL);
         ResultSet resultSet = execute(statement);

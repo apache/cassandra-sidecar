@@ -63,7 +63,7 @@ public class ClusterOpsNodeStateSchema extends TableSchema
     {
         return String.format("CREATE TABLE IF NOT EXISTS %s.%s (" +
                              "  cluster_name text," +
-                             "  operation_id uuid," +
+                             "  operation_id timeuuid," +
                              "  node_id uuid," +
                              "  node_status text," +
                              "  PRIMARY KEY ((cluster_name, operation_id), node_id)" +
