@@ -438,6 +438,117 @@ class RestoreJobDiscovererTest
         assertThat(captured.jobId).isEqualTo(jobId);
     }
 
+    @Test
+    void testInflightJobIdsReturnsNonTerminalJobsAfterDiscovery()
+    {
+        when(sidecarSchema.isInitialized()).thenReturn(true);
+        UUID activeJobId = UUIDs.timeBased();
+        UUID terminalJobId = UUIDs.timeBased();
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(List.of(
+        RestoreJob.builder()
+                  .createdAt(RestoreJob.toLocalDate(activeJobId))
+                  .jobId(activeJobId)
+                  .jobAgent("agent")
+                  .jobStatus(RestoreJobStatus.CREATED)
+                  .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                  .build(),
+        RestoreJob.builder()
+                  .createdAt(RestoreJob.toLocalDate(terminalJobId))
+                  .jobId(terminalJobId)
+                  .jobAgent("agent")
+                  .jobStatus(RestoreJobStatus.SUCCEEDED)
+                  .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                  .build()));
+        executeBlocking();
+
+        assertThat(loop.inflightJobIds()).containsOnly(activeJobId);
+    }
+
+    @Test
+    void testHandleStatusTransitionIsNoOpWhenJobNotTracked()
+    {
+        when(sidecarSchema.isInitialized()).thenReturn(true);
+        UUID jobId = UUIDs.timeBased();
+        RestoreJob job = RestoreJob.builder()
+                                   .createdAt(RestoreJob.toLocalDate(jobId))
+                                   .jobId(jobId)
+                                   .jobAgent("agent")
+                                   .jobStatus(RestoreJobStatus.STAGE_READY)
+                                   .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                                   .build();
+
+        loop.handleStatusTransition(job);
+
+        verify(mockManagers, never()).updateRestoreJob(any());
+        verify(mockManagers, never()).removeJobInternal(any());
+    }
+
+    @Test
+    void testHandleStatusTransitionIsNoOpWhenStatusUnchanged()
+    {
+        when(sidecarSchema.isInitialized()).thenReturn(true);
+        UUID jobId = UUIDs.timeBased();
+        RestoreJob initial = RestoreJob.builder()
+                                       .createdAt(RestoreJob.toLocalDate(jobId))
+                                       .jobId(jobId)
+                                       .jobAgent("agent")
+                                       .jobStatus(RestoreJobStatus.CREATED)
+                                       .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                                       .build();
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(List.of(initial));
+        executeBlocking();
+        Mockito.reset(mockManagers);
+
+        loop.handleStatusTransition(initial);
+
+        verify(mockManagers, never()).updateRestoreJob(any());
+        verify(mockManagers, never()).removeJobInternal(any());
+    }
+
+    @Test
+    void testHandleStatusTransitionFinalizesOnTerminalTransition()
+    {
+        when(sidecarSchema.isInitialized()).thenReturn(true);
+        UUID jobId = UUIDs.timeBased();
+        RestoreJob active = RestoreJob.builder()
+                                      .createdAt(RestoreJob.toLocalDate(jobId))
+                                      .jobId(jobId)
+                                      .jobAgent("agent")
+                                      .jobStatus(RestoreJobStatus.IMPORT_READY)
+                                      .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                                      .build();
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(List.of(active));
+        executeBlocking();
+        Mockito.reset(mockManagers);
+
+        RestoreJob succeeded = active.unbuild().jobStatus(RestoreJobStatus.SUCCEEDED).build();
+        loop.handleStatusTransition(succeeded);
+
+        verify(mockManagers).removeJobInternal(succeeded);
+    }
+
+    @Test
+    void testHandleStatusTransitionUpdatesManagersOnActiveTransition()
+    {
+        when(sidecarSchema.isInitialized()).thenReturn(true);
+        UUID jobId = UUIDs.timeBased();
+        RestoreJob created = RestoreJob.builder()
+                                       .createdAt(RestoreJob.toLocalDate(jobId))
+                                       .jobId(jobId)
+                                       .jobAgent("agent")
+                                       .jobStatus(RestoreJobStatus.CREATED)
+                                       .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                                       .build();
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(List.of(created));
+        executeBlocking();
+        Mockito.reset(mockManagers);
+
+        RestoreJob stageReady = created.unbuild().jobStatus(RestoreJobStatus.STAGE_READY).build();
+        loop.handleStatusTransition(stageReady);
+
+        verify(mockManagers).updateRestoreJob(stageReady);
+    }
+
     private RestoreJobConfiguration testConfig()
     {
         RestoreJobConfiguration restoreJobConfiguration = mock(RestoreJobConfiguration.class);

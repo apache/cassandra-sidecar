@@ -56,6 +56,7 @@ import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
 import org.apache.cassandra.sidecar.restore.RestoreJobDiscoverer;
+import org.apache.cassandra.sidecar.restore.RestoreJobStatusChecker;
 import org.apache.cassandra.sidecar.restore.RestoreProcessor;
 import org.apache.cassandra.sidecar.restore.RingTopologyRefresher;
 import org.apache.cassandra.sidecar.routes.RouteBuilder;
@@ -79,6 +80,7 @@ public class RestoreJobModule extends AbstractModule
         MultiBindingUtils.newClassKeyClassMapBinder(binder(), PeriodicTask.class);
         // The bindings using DSL if the bound type, e.g. RestoreJobDiscoverer, is referenced _directly_ by other components.
         periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RestoreJobDiscovererKey.class).to(RestoreJobDiscoverer.class);
+        periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RestoreJobStatusCheckerKey.class).to(RestoreJobStatusChecker.class);
         periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RestoreProcessorKey.class).to(RestoreProcessor.class);
         periodicTaskMapBinder.addBinding(PeriodicTaskMapKeys.RingTopologyRefresherKey.class).to(RingTopologyRefresher.class);
     }

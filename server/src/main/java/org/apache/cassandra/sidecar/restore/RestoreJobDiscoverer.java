@@ -87,6 +87,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
     private final JobIdsByDay jobIdsByDay;
     private final RingTopologyRefresher ringTopologyRefresher;
     private final AtomicBoolean isExecuting = new AtomicBoolean(false);
+    private final Object stateLock = new Object();
     private String localDatacenter = null;
     private int inflightJobsCount = 0;
     private int jobDiscoveryRecencyDays;
@@ -219,37 +220,102 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
     {
         Preconditions.checkState(periodicTaskExecutor != null, "Loop executor is not registered");
 
-        LOGGER.debug("Discovering restore jobs. " +
-                     "inflightJobsCount={} jobDiscoveryRecencyDays={}",
-                     inflightJobsCount, delay(), jobDiscoveryRecencyDays);
-
-        // reset in-flight jobs
-        inflightJobsCount = 0;
-        RunContext context = new RunContext();
-        List<RestoreJob> restoreJobs = restoreJobDatabaseAccessor.findAllRecent(context.nowMillis, jobDiscoveryRecencyDays);
-        RestoreJobManagerGroup restoreJobManagers = restoreJobManagerGroupSingleton.get();
-        for (RestoreJob job : restoreJobs)
+        synchronized (stateLock)
         {
+            LOGGER.debug("Discovering restore jobs. " +
+                         "inflightJobsCount={} jobDiscoveryRecencyDays={}",
+                         inflightJobsCount, delay(), jobDiscoveryRecencyDays);
+
+            // reset in-flight jobs
+            inflightJobsCount = 0;
+            RunContext context = new RunContext();
+            List<RestoreJob> restoreJobs = restoreJobDatabaseAccessor.findAllRecent(context.nowMillis, jobDiscoveryRecencyDays);
+            RestoreJobManagerGroup restoreJobManagers = restoreJobManagerGroupSingleton.get();
+            for (RestoreJob job : restoreJobs)
+            {
+                try
+                {
+                    processOneJob(job, restoreJobManagers, context);
+                }
+                catch (Exception exception) // do not fail on the job. Continue to drain the entire list
+                {
+                    LOGGER.warn("Exception on processing job. jobId: {}", job.jobId, exception);
+                }
+            }
+            jobIdsByDay.cleanupMaybe();
+            // resize to the earliestInDays with the minimum days as defined in jobDiscoveryMinimumRecencyDays
+            jobDiscoveryRecencyDays = Math.max(context.earliestInDays, restoreJobConfig.jobDiscoveryMinimumRecencyDays());
+            LOGGER.info("Exit job discovery. " +
+                        "inflightJobsCount={} " +
+                        "delay={} " +
+                        "jobDiscoveryRecencyDays={} " +
+                        "expiredJobs={} " +
+                        "abortedJobs={}",
+                        inflightJobsCount, delay(), jobDiscoveryRecencyDays, context.expiredJobs, context.abortedJobs);
+            metrics.activeJobs.metric.setValue(inflightJobsCount);
+        }
+    }
+
+    /**
+     * Snapshot of restore job IDs currently considered in-flight (non-terminal), as seen by the most recent
+     * full discovery pass. Used by the fast status-check loop ({@link RestoreJobStatusChecker}) to decide
+     * which jobs to point-read for status transitions.
+     */
+    public Set<UUID> inflightJobIds()
+    {
+        synchronized (stateLock)
+        {
+            Set<UUID> result = new HashSet<>();
+            for (Map<UUID, RestoreJobStatus> jobs : jobIdsByDay.jobsByDay().values())
+            {
+                for (Map.Entry<UUID, RestoreJobStatus> entry : jobs.entrySet())
+                {
+                    if (!entry.getValue().isFinal())
+                    {
+                        result.add(entry.getKey());
+                    }
+                }
+            }
+            return result;
+        }
+    }
+
+    /**
+     * Applies the same transition handling as a full discovery pass, but only for a single freshly-read job.
+     * Called by the fast status-check loop when it detects a status change on a known in-flight job.
+     * A no-op when the job's status matches the last-known status cached during discovery.
+     */
+    public void handleStatusTransition(RestoreJob currentJob)
+    {
+        // Resolve local DC outside the lock — it may block on JMX/CQL and the assignment itself is atomic.
+        initLocalDatacenterMaybe();
+        synchronized (stateLock)
+        {
+            int day = currentJob.createdAt.getDaysSinceEpoch();
+            RestoreJobStatus previousStatus = jobIdsByDay.getKnownStatus(currentJob.jobId, day);
+            if (previousStatus == null)
+            {
+                // Job isn't tracked yet; let the next full discovery pass pick it up so that
+                // the in-flight set and derived state stay consistent.
+                return;
+            }
+            if (previousStatus == currentJob.status)
+            {
+                return;
+            }
+
+            RunContext context = new RunContext();
+            RestoreJobManagerGroup managers = restoreJobManagerGroupSingleton.get();
             try
             {
-                processOneJob(job, restoreJobManagers, context);
+                processOneJob(currentJob, managers, context);
             }
-            catch (Exception exception) // do not fail on the job. Continue to drain the entire list
+            catch (Exception e)
             {
-                LOGGER.warn("Exception on processing job. jobId: {}", job.jobId, exception);
+                LOGGER.warn("Exception on processing status transition. jobId={} previousStatus={} newStatus={}",
+                            currentJob.jobId, previousStatus, currentJob.status, e);
             }
         }
-        jobIdsByDay.cleanupMaybe();
-        // resize to the earliestInDays with the minimum days as defined in jobDiscoveryMinimumRecencyDays
-        jobDiscoveryRecencyDays = Math.max(context.earliestInDays, restoreJobConfig.jobDiscoveryMinimumRecencyDays());
-        LOGGER.info("Exit job discovery. " +
-                    "inflightJobsCount={} " +
-                    "delay={} " +
-                    "jobDiscoveryRecencyDays={} " +
-                    "expiredJobs={} " +
-                    "abortedJobs={}",
-                    inflightJobsCount, delay(), jobDiscoveryRecencyDays, context.expiredJobs, context.abortedJobs);
-        metrics.activeJobs.metric.setValue(inflightJobsCount);
     }
 
     @Override
@@ -591,6 +657,12 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
             int day = populateDiscoveredDay(job);
             return sliceDiscoveredJobsByDay.getOrDefault(day, Collections.emptySet())
                                            .contains(job.jobId);
+        }
+
+        RestoreJobStatus getKnownStatus(UUID jobId, int day)
+        {
+            Map<UUID, RestoreJobStatus> jobs = jobsByDay.get(day);
+            return jobs == null ? null : jobs.get(jobId);
         }
 
         void unsetSlicesDiscovered(RestoreJob job)

@@ -38,6 +38,13 @@ public interface RestoreJobConfiguration
     MillisecondBoundConfiguration jobDiscoveryIdleLoopDelay();
 
     /**
+     * @return the interval between cheap status-only checks of known in-flight restore jobs.
+     * The check reacts on phase transitions (STAGE_READY, IMPORT_READY, terminal) without
+     * waiting for the next full {@link #jobDiscoveryActiveLoopDelay()} / {@link #jobDiscoveryIdleLoopDelay()} cycle.
+     */
+    MillisecondBoundConfiguration jobDiscoveryStatusCheckInterval();
+
+    /**
      * @return the minimum number of days in the past to look up the restore jobs
      */
     int jobDiscoveryMinimumRecencyDays();
