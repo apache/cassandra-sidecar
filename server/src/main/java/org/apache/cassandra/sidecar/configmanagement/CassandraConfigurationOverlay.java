@@ -68,7 +68,7 @@ public class CassandraConfigurationOverlay
         }
         else
         {
-            this.cassandraYaml = cassandraYaml;
+            this.cassandraYaml = ((ObjectNode) cassandraYaml).deepCopy();
         }
         this.extraJvmOpts = extraJvmOpts != null
                             ? Collections.unmodifiableMap(new LinkedHashMap<>(extraJvmOpts))
@@ -76,6 +76,9 @@ public class CassandraConfigurationOverlay
     }
 
     /**
+     * Returns the cassandra.yaml overlay as a version-agnostic JSON object. Callers must not mutate the
+     * returned node; use {@link #updated} to produce a new overlay with changes applied.
+     *
      * @return the cassandra.yaml overlay as a version-agnostic JSON object
      */
     @JsonProperty("cassandraYaml")

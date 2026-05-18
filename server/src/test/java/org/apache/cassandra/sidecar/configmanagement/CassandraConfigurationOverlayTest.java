@@ -109,6 +109,18 @@ class CassandraConfigurationOverlayTest
     }
 
     @Test
+    void testConstructorDeepCopiesCassandraYaml()
+    {
+        ObjectNode yaml = MAPPER.createObjectNode();
+        yaml.put("concurrent_reads", 32);
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, null);
+
+        yaml.put("concurrent_reads", 64);
+
+        assertThat(overlay.cassandraYaml().get("concurrent_reads").asInt()).isEqualTo(32);
+    }
+
+    @Test
     void testUpdatedReturnsNewInstance()
     {
         ObjectNode yaml = MAPPER.createObjectNode();
