@@ -43,7 +43,7 @@ public interface ConfigurationProvider
      * @return the configuration overlay snapshot, or {@code null} if no overlay exists for the instance
      */
     @Nullable
-    ConfigurationOverlaySnapshot getConfiguration(InstanceMetadata instance);
+    ConfigurationOverlaySnapshot getOverlay(InstanceMetadata instance);
 
     /**
      * Atomically store a new configuration overlay snapshot for the given instance,
@@ -60,7 +60,7 @@ public interface ConfigurationProvider
      * @return {@code true} if the snapshot was stored successfully (hash matched),
      *         {@code false} if a conflict was detected (hash mismatch)
      */
-    boolean storeConfiguration(InstanceMetadata instance,
-                               @Nullable String originalHash,
-                               @NotNull ConfigurationOverlaySnapshot newSnapshot);
+    boolean storeOverlay(InstanceMetadata instance,
+                         @Nullable String originalHash,
+                         @NotNull ConfigurationOverlaySnapshot newSnapshot);
 }

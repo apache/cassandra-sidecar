@@ -36,15 +36,15 @@ public class InMemoryConfigurationProvider implements ConfigurationProvider
 
     @Override
     @Nullable
-    public ConfigurationOverlaySnapshot getConfiguration(InstanceMetadata instance)
+    public ConfigurationOverlaySnapshot getOverlay(InstanceMetadata instance)
     {
         return overlays.get(instance.id());
     }
 
     @Override
-    public boolean storeConfiguration(InstanceMetadata instance,
-                                      @Nullable String originalHash,
-                                      @NotNull ConfigurationOverlaySnapshot newSnapshot)
+    public boolean storeOverlay(InstanceMetadata instance,
+                                @Nullable String originalHash,
+                                @NotNull ConfigurationOverlaySnapshot newSnapshot)
     {
         Objects.requireNonNull(newSnapshot, "newSnapshot must not be null");
         Object lock = locks.computeIfAbsent(instance.id(), k -> new Object());
