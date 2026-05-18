@@ -113,10 +113,19 @@ class ConfigurationOverlaySnapshotTest
 
         ConfigurationOverlaySnapshot snapshot = new ConfigurationOverlaySnapshot(timestamp, overlay);
 
-        String expected = "{\"hash\":\"" + snapshot.hash() + "\","
-                          + "\"lastModified\":\"2026-02-20T14:32:18Z\","
-                          + "\"configuration\":{\"cassandraYaml\":{\"concurrent_reads\":32},"
-                          + "\"extraJvmOpts\":{\"-Xmx\":\"4G\"}}}";
+        String expected = String.join("\n",
+            "{",
+            "  \"hash\" : \"" + snapshot.hash() + "\",",
+            "  \"lastModified\" : \"2026-02-20T14:32:18Z\",",
+            "  \"configuration\" : {",
+            "    \"cassandraYaml\" : {",
+            "      \"concurrent_reads\" : 32",
+            "    },",
+            "    \"extraJvmOpts\" : {",
+            "      \"-Xmx\" : \"4G\"",
+            "    }",
+            "  }",
+            "}");
         assertThat(snapshot.toString()).isEqualTo(expected);
     }
 }
