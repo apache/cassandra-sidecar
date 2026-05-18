@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar.configmanagement;
 
 import java.time.Instant;
-import java.util.Arrays;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -108,7 +108,7 @@ class ConfigurationOverlaySnapshotTest
     {
         ObjectNode yaml = MAPPER.createObjectNode();
         yaml.put("concurrent_reads", 32);
-        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, Arrays.asList("-Xmx4G"));
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, Map.of("-Xmx", "4G"));
         Instant timestamp = Instant.parse("2026-02-20T14:32:18Z");
 
         ConfigurationOverlaySnapshot snapshot = new ConfigurationOverlaySnapshot(timestamp, overlay);
@@ -116,7 +116,7 @@ class ConfigurationOverlaySnapshotTest
         String expected = "{\"hash\":\"" + snapshot.hash() + "\","
                           + "\"lastModified\":\"2026-02-20T14:32:18Z\","
                           + "\"configuration\":{\"cassandraYaml\":{\"concurrent_reads\":32},"
-                          + "\"extraJvmOpts\":[\"-Xmx4G\"]}}";
+                          + "\"extraJvmOpts\":{\"-Xmx\":\"4G\"}}}";
         assertThat(snapshot.toString()).isEqualTo(expected);
     }
 }
