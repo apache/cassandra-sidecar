@@ -66,9 +66,10 @@ public class ActiveClusterOpsSchema extends TableSchema
     {
         return String.format("CREATE TABLE IF NOT EXISTS %s.%s (" +
                              "  cluster_name text," +
+                             "  datacenter text," +
                              "  operation_type text," +
                              "  operation_id timeuuid," +
-                             "  PRIMARY KEY ((cluster_name), operation_type)" +
+                             "  PRIMARY KEY ((cluster_name, datacenter), operation_type)" +
                              ") WITH compaction = {'class': 'LeveledCompactionStrategy'}" +
                              "  AND default_time_to_live = %s",
                              keyspaceConfig.keyspace(), TABLE_NAME, tableTtl.toSeconds());
@@ -107,26 +108,27 @@ public class ActiveClusterOpsSchema extends TableSchema
     {
         static String trySetActive(SchemaKeyspaceConfiguration config)
         {
-            return withTable("INSERT INTO %s.%s (cluster_name, operation_type, operation_id) " +
-                             "VALUES (?, ?, ?) IF NOT EXISTS", config);
+            return withTable("INSERT INTO %s.%s (cluster_name, datacenter, operation_type, operation_id) " +
+                             "VALUES (?, ?, ?, ?) IF NOT EXISTS", config);
         }
 
         static String getActive(SchemaKeyspaceConfiguration config)
         {
             return withTable("SELECT operation_type, operation_id FROM %s.%s " +
-                             "WHERE cluster_name = ?", config);
+                             "WHERE cluster_name = ? AND datacenter = ?", config);
         }
 
         static String getActiveByType(SchemaKeyspaceConfiguration config)
         {
             return withTable("SELECT operation_id FROM %s.%s " +
-                             "WHERE cluster_name = ? AND operation_type = ?", config);
+                             "WHERE cluster_name = ? AND datacenter = ? AND operation_type = ?", config);
         }
 
         static String clearActive(SchemaKeyspaceConfiguration config)
         {
             return withTable("DELETE FROM %s.%s " +
-                             "WHERE cluster_name = ? AND operation_type = ? IF operation_id = ?", config);
+                             "WHERE cluster_name = ? AND datacenter = ? AND operation_type = ? " +
+                             "IF operation_id = ?", config);
         }
 
         private static String withTable(String format, SchemaKeyspaceConfiguration config)

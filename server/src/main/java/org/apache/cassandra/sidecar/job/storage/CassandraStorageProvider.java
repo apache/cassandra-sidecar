@@ -18,11 +18,14 @@
 
 package org.apache.cassandra.sidecar.job.storage;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+import com.datastax.driver.core.Host;
+import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.DriverException;
 import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
@@ -46,6 +49,7 @@ public class CassandraStorageProvider implements StorageProvider
     private final ClusterOpsNodeStateDatabaseAccessor nodeStateAccessor;
     private final ActiveClusterOpsDatabaseAccessor activeOpsAccessor;
     private volatile String clusterName;
+    private volatile String datacenter;
 
     /**
      * Constructs a CassandraStorageProvider. When {@code clusterName} is non-null, it indicates that
@@ -102,7 +106,8 @@ public class CassandraStorageProvider implements StorageProvider
     public boolean trySetActiveOperation(OperationType operationType, UUID operationId)
     {
         return execute("trySetActiveOperation",
-                       () -> activeOpsAccessor.trySetActiveOperation(clusterName, operationType, operationId));
+                       () -> activeOpsAccessor.trySetActiveOperation(clusterName, datacenter,
+                                                                     operationType, operationId));
     }
 
     @Override
@@ -110,7 +115,7 @@ public class CassandraStorageProvider implements StorageProvider
     public UUID getActiveOperation(OperationType operationType)
     {
         return execute("getActiveOperation",
-                       () -> activeOpsAccessor.getActiveOperation(clusterName, operationType));
+                       () -> activeOpsAccessor.getActiveOperation(clusterName, datacenter, operationType));
     }
 
     @Override
@@ -118,14 +123,15 @@ public class CassandraStorageProvider implements StorageProvider
     public Map<OperationType, UUID> getActiveOperations()
     {
         return execute("getActiveOperations",
-                       () -> activeOpsAccessor.getActiveOperations(clusterName));
+                       () -> activeOpsAccessor.getActiveOperations(clusterName, datacenter));
     }
 
     @Override
     public boolean clearActiveOperation(OperationType operationType, UUID operationId)
     {
         return execute("clearActiveOperation",
-                       () -> activeOpsAccessor.clearActiveOperation(clusterName, operationType, operationId));
+                       () -> activeOpsAccessor.clearActiveOperation(clusterName, datacenter,
+                                                                    operationType, operationId));
     }
 
     @Override
@@ -167,17 +173,27 @@ public class CassandraStorageProvider implements StorageProvider
     {
         // Schema initialization is handled by SidecarSchemaInitializer.
         // TTL on all tables handles record pruning.
-        if (clusterName != null)
-        {
-            return;
-        }
         try
         {
-            clusterName = sessionProvider.get().getCluster().getMetadata().getClusterName();
+            Session session = sessionProvider.get();
+            if (clusterName == null)
+            {
+                clusterName = session.getCluster().getMetadata().getClusterName();
+            }
+            if (datacenter == null)
+            {
+                Collection<Host> connectedHosts = session.getState().getConnectedHosts();
+                if (connectedHosts.isEmpty())
+                {
+                    throw new StorageProviderException(
+                    "Failed to resolve local datacenter: no connected hosts available");
+                }
+                datacenter = connectedHosts.iterator().next().getDatacenter();
+            }
         }
         catch (CassandraUnavailableException e)
         {
-            throw new StorageProviderException("Failed to resolve cluster name during initialization", e);
+            throw new StorageProviderException("Failed to initialize storage provider", e);
         }
     }
 
@@ -197,7 +213,7 @@ public class CassandraStorageProvider implements StorageProvider
 
     private <T> T execute(String operation, Supplier<T> action)
     {
-        if (clusterName == null)
+        if (clusterName == null || datacenter == null)
         {
             throw new StorageProviderException("StorageProvider has not been initialized. Call initialize() first.");
         }

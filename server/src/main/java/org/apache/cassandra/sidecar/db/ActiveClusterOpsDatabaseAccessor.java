@@ -55,9 +55,11 @@ public class ActiveClusterOpsDatabaseAccessor extends DatabaseAccessor<ActiveClu
         super(schema, sessionProvider);
     }
 
-    public boolean trySetActiveOperation(String clusterName, OperationType operationType, UUID operationId)
+    public boolean trySetActiveOperation(String clusterName, String datacenter,
+                                         OperationType operationType, UUID operationId)
     {
-        BoundStatement statement = tableSchema.trySetActive().bind(clusterName, operationType.name(), operationId);
+        BoundStatement statement = tableSchema.trySetActive()
+                                              .bind(clusterName, datacenter, operationType.name(), operationId);
         statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         statement.setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL);
         ResultSet resultSet = execute(statement);
@@ -65,9 +67,9 @@ public class ActiveClusterOpsDatabaseAccessor extends DatabaseAccessor<ActiveClu
     }
 
     @Nullable
-    public UUID getActiveOperation(String clusterName, OperationType operationType)
+    public UUID getActiveOperation(String clusterName, String datacenter, OperationType operationType)
     {
-        BoundStatement statement = tableSchema.getActiveByType().bind(clusterName, operationType.name());
+        BoundStatement statement = tableSchema.getActiveByType().bind(clusterName, datacenter, operationType.name());
         statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         ResultSet resultSet = execute(statement);
         Row row = resultSet.one();
@@ -75,9 +77,9 @@ public class ActiveClusterOpsDatabaseAccessor extends DatabaseAccessor<ActiveClu
     }
 
     @NotNull
-    public Map<OperationType, UUID> getActiveOperations(String clusterName)
+    public Map<OperationType, UUID> getActiveOperations(String clusterName, String datacenter)
     {
-        BoundStatement statement = tableSchema.getActive().bind(clusterName);
+        BoundStatement statement = tableSchema.getActive().bind(clusterName, datacenter);
         statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         ResultSet resultSet = execute(statement);
         Map<OperationType, UUID> activeOps = new HashMap<>();
@@ -88,9 +90,11 @@ public class ActiveClusterOpsDatabaseAccessor extends DatabaseAccessor<ActiveClu
         return activeOps;
     }
 
-    public boolean clearActiveOperation(String clusterName, OperationType operationType, UUID operationId)
+    public boolean clearActiveOperation(String clusterName, String datacenter,
+                                        OperationType operationType, UUID operationId)
     {
-        BoundStatement statement = tableSchema.clearActive().bind(clusterName, operationType.name(), operationId);
+        BoundStatement statement = tableSchema.clearActive()
+                                              .bind(clusterName, datacenter, operationType.name(), operationId);
         statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         statement.setSerialConsistencyLevel(ConsistencyLevel.LOCAL_SERIAL);
         ResultSet resultSet = execute(statement);

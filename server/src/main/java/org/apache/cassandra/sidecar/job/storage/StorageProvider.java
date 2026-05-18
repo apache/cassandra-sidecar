@@ -30,12 +30,12 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * A provider-agnostic storage abstraction for durable operational job state.
- * Each {@code StorageProvider} instance is scoped to a single cluster. The cluster
- * identity is configuration, not a per-call parameter.
+ * Each {@code StorageProvider} instance is scoped to a single cluster and datacenter.
+ * The cluster and datacenter identity is configuration, not a per-call parameter.
  * <p>
  * This interface defines a data access pattern for persisting, modifying, and querying OperationalJobs.
  * Higher-level coordination logic, such as clearing the active operation lock when a job reaches
- * a terminal state, belongs in the layers that depend on this interface. 
+ * a terminal state, belongs in the layers that depend on this interface.
  */
 public interface StorageProvider extends Closeable
 {
@@ -109,9 +109,10 @@ public interface StorageProvider extends Closeable
     UUID getActiveOperation(OperationType operationType);
 
     /**
-     * Get all active operations for the cluster.
+     * Get all active operations for the local datacenter.
      *
-     * @return a map of operation type to operation ID for all currently active operations, never null
+     * @return a map of operation type to operation ID for all currently active operations
+     *         in the local datacenter, never null
      */
     @NotNull
     Map<OperationType, UUID> getActiveOperations();
