@@ -272,6 +272,13 @@ public abstract class BaseRestoreJobTests
             }
 
             @Override
+            public RestoreJob update(UpdateRestoreJobRequestPayload payload,
+                                     RestoreJob existingJob)
+            {
+                return updateFunc.apply(payload);
+            }
+
+            @Override
             public void abort(UUID jobId, String reason)
             {
                 // do nothing

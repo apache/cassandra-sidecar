@@ -42,6 +42,7 @@ import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
 
+import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.assertRestoreRange;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.createJob;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.disableRestoreProcessor;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
@@ -103,7 +104,7 @@ class RestoreJobDiscovererPhaseSignalIntTest extends SharedClusterSidecarIntegra
         short bucketId = 0;
         CreateSliceRequestPayload slicePayload = new CreateSliceRequestPayload(
         "sliceId-stage", bucketId, "bucket", "key", "checksum",
-        BigInteger.valueOf(1L), BigInteger.valueOf(1500L), 100L, 100L);
+        BigInteger.valueOf(500L), BigInteger.valueOf(1500L), 100L, 100L);
         testClient.createRestoreSlice(SIDECAR_QUALIFIED_TABLE, jobId, slicePayload);
 
         RestoreRangeDatabaseAccessor rangeAccessor =
@@ -115,37 +116,14 @@ class RestoreJobDiscovererPhaseSignalIntTest extends SharedClusterSidecarIntegra
                                                                   .withStatus(RestoreJobStatus.STAGE_READY)
                                                                   .build());
 
-        loopAssert(10, 500, () -> assertThat(rangeAccessor.findAll(jobId, bucketId))
-                                  .describedAs("STAGE_READY should immediately create restore ranges via the wake-up path")
-                                  .isNotEmpty());
-    }
-
-    @Test
-    void testStageReadyCreatesCorrectTokenRanges()
-    {
-        RestoreJobTestUtils.RestoreJobClient testClient = restoreJobClient();
-        UUID jobId = createJob(testClient, SIDECAR_QUALIFIED_TABLE);
-        short bucketId = 0;
-        CreateSliceRequestPayload slicePayload = new CreateSliceRequestPayload(
-        "sliceId-tokens", bucketId, "bucket", "key", "checksum",
-        BigInteger.valueOf(500L), BigInteger.valueOf(1500L), 100L, 100L);
-        testClient.createRestoreSlice(SIDECAR_QUALIFIED_TABLE, jobId, slicePayload);
-
-        testClient.updateRestoreJob(SIDECAR_QUALIFIED_TABLE, jobId,
-                                    UpdateRestoreJobRequestPayload.builder()
-                                                                  .withStatus(RestoreJobStatus.STAGE_READY)
-                                                                  .build());
-
-        RestoreRangeDatabaseAccessor rangeAccessor =
-        serverWrapper.injector.getInstance(RestoreRangeDatabaseAccessor.class);
+        // Single-node cluster owns the entire ring, so the slice (500, 1500] is not trimmed.
+        // Ranges are stored with exclusive start, so the slice's start of 500 surfaces as 499.
         loopAssert(10, 500, () -> {
             List<RestoreRange> ranges = rangeAccessor.findAll(jobId, bucketId);
-            assertThat(ranges).describedAs("STAGE_READY should produce trimmed ranges").isNotEmpty();
-            for (RestoreRange range : ranges)
-            {
-                assertThat(range.startToken()).isNotNull();
-                assertThat(range.endToken()).isNotNull();
-            }
+            assertThat(ranges)
+            .describedAs("STAGE_READY should immediately create restore ranges via the wake-up path")
+            .hasSize(1);
+            assertRestoreRange(ranges.get(0), 499L, 1500L);
         });
     }
 

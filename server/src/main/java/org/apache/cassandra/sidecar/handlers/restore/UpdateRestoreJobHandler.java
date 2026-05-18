@@ -112,7 +112,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
             }
 
             return executorPools.service()
-                                .executeBlocking(() -> restoreJobDatabaseAccessor.update(requestPayload, existingJob.jobId))
+                                .executeBlocking(() -> restoreJobDatabaseAccessor.update(requestPayload, existingJob))
                                 .onSuccess(updatedJob -> {
                                     logger.info("Successfully updated restore job. job={}, request={}, remoteAddress={}, instance={}",
                                                 updatedJob, requestPayload, remoteAddress, host);
@@ -134,7 +134,7 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
                                     // Fire-and-forget on a worker thread — notifying the restore system should not
                                     // block the event loop or delay the HTTP response.
                                     executorPools.service()
-                                                 .runBlocking(() -> notifyPhaseSignalMaybe(existingJob, updatedJob.status));
+                                                 .runBlocking(() -> notifyPhaseSignalMaybe(updatedJob));
                                 });
         })
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestPayload));
@@ -167,24 +167,21 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
         }
     }
 
-    private void notifyPhaseSignalMaybe(RestoreJob existingJob, RestoreJobStatus newStatus)
+    private void notifyPhaseSignalMaybe(RestoreJob updatedJob)
     {
-        if (newStatus != RestoreJobStatus.IMPORT_READY && newStatus != RestoreJobStatus.STAGE_READY)
+        if (updatedJob.status != RestoreJobStatus.IMPORT_READY && updatedJob.status != RestoreJobStatus.STAGE_READY)
         {
             return;
         }
 
         try
         {
-            // The DB update returns a sparse job (only updated fields). Apply the new status to the
-            // pre-update full job already in scope to get a complete job with the correct phase.
-            RestoreJob updatedJob = existingJob.unbuild().jobStatus(newStatus).build();
             restoreJobDiscoverer.processJobNow(updatedJob);
         }
         catch (Exception e)
         {
             logger.warn("Failed to immediately process phase signal. " +
-                        "The discovery loop will pick it up on the next cycle. jobId={}", existingJob.jobId, e);
+                        "The discovery loop will pick it up on the next cycle. jobId={}", updatedJob.jobId, e);
         }
     }
 }
