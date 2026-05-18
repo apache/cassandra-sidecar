@@ -61,7 +61,7 @@ class InMemoryConfigurationProviderTest
     @Test
     void testGetReturnsNullForUnknownInstance()
     {
-        assertThat(provider.getConfiguration(instance1)).isNull();
+        assertThat(provider.getOverlay(instance1)).isNull();
     }
 
     @Test
@@ -69,10 +69,10 @@ class InMemoryConfigurationProviderTest
     {
         ConfigurationOverlaySnapshot snapshot = createSnapshot("concurrent_reads", 64);
 
-        boolean stored = provider.storeConfiguration(instance1, null, snapshot);
+        boolean stored = provider.storeOverlay(instance1, null, snapshot);
 
         assertThat(stored).isTrue();
-        ConfigurationOverlaySnapshot fetched = provider.getConfiguration(instance1);
+        ConfigurationOverlaySnapshot fetched = provider.getOverlay(instance1);
         assertThat(fetched).isSameAs(snapshot);
     }
 
@@ -81,41 +81,41 @@ class InMemoryConfigurationProviderTest
     {
         ConfigurationOverlaySnapshot snapshot = createSnapshot("memtable_flush_writers", 8);
 
-        assertThat(provider.storeConfiguration(instance1, null, snapshot)).isTrue();
+        assertThat(provider.storeOverlay(instance1, null, snapshot)).isTrue();
     }
 
     @Test
     void testStoreReturnsFalseOnHashMismatch()
     {
         ConfigurationOverlaySnapshot initial = createSnapshot("concurrent_reads", 32);
-        provider.storeConfiguration(instance1, null, initial);
+        provider.storeOverlay(instance1, null, initial);
 
         ConfigurationOverlaySnapshot update = createSnapshot("concurrent_reads", 64);
-        assertThat(provider.storeConfiguration(instance1, "sha256:stale", update)).isFalse();
+        assertThat(provider.storeOverlay(instance1, "sha256:stale", update)).isFalse();
 
         // Original is preserved
-        assertThat(provider.getConfiguration(instance1)).isSameAs(initial);
+        assertThat(provider.getOverlay(instance1)).isSameAs(initial);
     }
 
     @Test
     void testStoreReturnsFalseWhenNoOverlayButHashProvided()
     {
         ConfigurationOverlaySnapshot snapshot = createSnapshot("concurrent_reads", 32);
-        assertThat(provider.storeConfiguration(instance1, "sha256:unexpected", snapshot)).isFalse();
-        assertThat(provider.getConfiguration(instance1)).isNull();
+        assertThat(provider.storeOverlay(instance1, "sha256:unexpected", snapshot)).isFalse();
+        assertThat(provider.getOverlay(instance1)).isNull();
     }
 
     @Test
     void testStoreReturnsFalseWhenOverlayExistsButNullHashProvided()
     {
         ConfigurationOverlaySnapshot initial = createSnapshot("concurrent_reads", 32);
-        provider.storeConfiguration(instance1, null, initial);
+        provider.storeOverlay(instance1, null, initial);
 
         ConfigurationOverlaySnapshot update = createSnapshot("concurrent_reads", 64);
-        assertThat(provider.storeConfiguration(instance1, null, update)).isFalse();
+        assertThat(provider.storeOverlay(instance1, null, update)).isFalse();
 
         // Original is preserved
-        assertThat(provider.getConfiguration(instance1)).isSameAs(initial);
+        assertThat(provider.getOverlay(instance1)).isSameAs(initial);
     }
 
     @Test
@@ -124,11 +124,11 @@ class InMemoryConfigurationProviderTest
         ConfigurationOverlaySnapshot snap1 = createSnapshot("concurrent_reads", 32);
         ConfigurationOverlaySnapshot snap2 = createSnapshot("concurrent_reads", 64);
 
-        provider.storeConfiguration(instance1, null, snap1);
-        provider.storeConfiguration(instance2, null, snap2);
+        provider.storeOverlay(instance1, null, snap1);
+        provider.storeOverlay(instance2, null, snap2);
 
-        assertThat(provider.getConfiguration(instance1)).isSameAs(snap1);
-        assertThat(provider.getConfiguration(instance2)).isSameAs(snap2);
+        assertThat(provider.getOverlay(instance1)).isSameAs(snap1);
+        assertThat(provider.getOverlay(instance2)).isSameAs(snap2);
     }
 
     @Test
@@ -147,7 +147,7 @@ class InMemoryConfigurationProviderTest
                 startLatch.await();
                 InstanceMetadata instance = mockInstance(instanceId);
                 ConfigurationOverlaySnapshot snapshot = createSnapshot("concurrent_reads", instanceId * 10);
-                return provider.storeConfiguration(instance, null, snapshot);
+                return provider.storeOverlay(instance, null, snapshot);
             }));
         }
 
@@ -159,7 +159,7 @@ class InMemoryConfigurationProviderTest
 
         for (int i = 0; i < instanceCount; i++)
         {
-            assertThat(provider.getConfiguration(mockInstance(i))).isNotNull();
+            assertThat(provider.getOverlay(mockInstance(i))).isNotNull();
         }
 
         executor.shutdown();
@@ -169,7 +169,7 @@ class InMemoryConfigurationProviderTest
     void testConcurrentStoresSameInstance() throws Exception
     {
         ConfigurationOverlaySnapshot initial = createSnapshot("concurrent_reads", 32);
-        provider.storeConfiguration(instance1, null, initial);
+        provider.storeOverlay(instance1, null, initial);
         String hashBeforeRace = initial.hash();
 
         int threadCount = 10;
@@ -188,7 +188,7 @@ class InMemoryConfigurationProviderTest
                 {
                     startLatch.await();
                     ConfigurationOverlaySnapshot snapshot = createSnapshot("concurrent_reads", value);
-                    boolean stored = provider.storeConfiguration(instance1, hashBeforeRace, snapshot);
+                    boolean stored = provider.storeOverlay(instance1, hashBeforeRace, snapshot);
                     if (stored)
                     {
                         successes.incrementAndGet();
