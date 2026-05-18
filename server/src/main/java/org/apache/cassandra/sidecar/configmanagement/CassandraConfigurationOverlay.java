@@ -178,6 +178,6 @@ public class CassandraConfigurationOverlay
         ObjectNode node = MAPPER.createObjectNode();
         node.set("cassandraYaml", cassandraYaml);
         node.set("extraJvmOpts", MAPPER.valueToTree(extraJvmOpts));
-        return node.toString();
+        return node.toPrettyString();
     }
 }

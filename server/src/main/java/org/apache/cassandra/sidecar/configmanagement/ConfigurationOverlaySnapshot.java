@@ -133,6 +133,6 @@ public class ConfigurationOverlaySnapshot
         node.put("hash", hash());
         node.put("lastModified", lastModified.toString());
         node.set("configuration", MAPPER.valueToTree(configuration));
-        return node.toString();
+        return node.toPrettyString();
     }
 }

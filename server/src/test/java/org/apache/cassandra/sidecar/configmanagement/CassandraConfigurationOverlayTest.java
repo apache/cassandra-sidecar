@@ -145,9 +145,16 @@ class CassandraConfigurationOverlayTest
         yaml.put("commitlog_sync", "periodic");
         CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, Map.of("-Xmx", "4G"));
 
-        assertThat(overlay.toString()).isEqualTo(
-            "{\"cassandraYaml\":{\"concurrent_reads\":32,\"commitlog_sync\":\"periodic\"},"
-            + "\"extraJvmOpts\":{\"-Xmx\":\"4G\"}}");
+        assertThat(overlay.toString()).isEqualTo(String.join("\n",
+            "{",
+            "  \"cassandraYaml\" : {",
+            "    \"concurrent_reads\" : 32,",
+            "    \"commitlog_sync\" : \"periodic\"",
+            "  },",
+            "  \"extraJvmOpts\" : {",
+            "    \"-Xmx\" : \"4G\"",
+            "  }",
+            "}"));
     }
 
     @Test
@@ -155,7 +162,10 @@ class CassandraConfigurationOverlayTest
     {
         CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(null, null);
 
-        assertThat(overlay.toString()).isEqualTo(
-            "{\"cassandraYaml\":{},\"extraJvmOpts\":{}}");
+        assertThat(overlay.toString()).isEqualTo(String.join("\n",
+            "{",
+            "  \"cassandraYaml\" : { },",
+            "  \"extraJvmOpts\" : { }",
+            "}"));
     }
 }
