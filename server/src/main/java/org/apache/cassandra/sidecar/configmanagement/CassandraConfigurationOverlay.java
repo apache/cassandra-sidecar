@@ -18,8 +18,9 @@
 
 package org.apache.cassandra.sidecar.configmanagement;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -41,8 +42,7 @@ import org.jetbrains.annotations.Nullable;
  * the responsibility of the Configuration Manager.
  *
  * <p>The {@code extraJvmOpts} field contains JVM options that are appended to the Cassandra JVM startup
- * command. Each entry maps the full option flag (e.g. {@code -Dcassandra.jmx.local.port}) to its value
- * (e.g. {@code 7199}). These are opaque strings not subject to schema validation.
+ * command. These are opaque strings not subject to schema validation.
  */
 public class CassandraConfigurationOverlay
 {
@@ -52,11 +52,11 @@ public class CassandraConfigurationOverlay
     private final JsonNode cassandraYaml;
 
     @NotNull
-    private final Map<String, String> extraJvmOpts;
+    private final List<String> extraJvmOpts;
 
     @JsonCreator
     public CassandraConfigurationOverlay(@JsonProperty("cassandraYaml") @Nullable JsonNode cassandraYaml,
-                                         @JsonProperty("extraJvmOpts") @Nullable Map<String, String> extraJvmOpts)
+                                         @JsonProperty("extraJvmOpts") @Nullable List<String> extraJvmOpts)
     {
         if (cassandraYaml == null)
         {
@@ -71,8 +71,8 @@ public class CassandraConfigurationOverlay
             this.cassandraYaml = ((ObjectNode) cassandraYaml).deepCopy();
         }
         this.extraJvmOpts = extraJvmOpts != null
-                            ? Collections.unmodifiableMap(new LinkedHashMap<>(extraJvmOpts))
-                            : Collections.emptyMap();
+                            ? Collections.unmodifiableList(new ArrayList<>(extraJvmOpts))
+                            : Collections.emptyList();
     }
 
     /**
@@ -89,11 +89,11 @@ public class CassandraConfigurationOverlay
     }
 
     /**
-     * @return an unmodifiable map of extra JVM options (option name to value)
+     * @return an unmodifiable list of extra JVM options
      */
     @JsonProperty("extraJvmOpts")
     @NotNull
-    public Map<String, String> extraJvmOpts()
+    public List<String> extraJvmOpts()
     {
         return extraJvmOpts;
     }
@@ -101,19 +101,17 @@ public class CassandraConfigurationOverlay
     /**
      * Returns a new overlay with the given updates applied. The current instance is not modified.
      *
-     * <p>Both parameters follow the same semantics: a {@code null} value for a key removes that entry,
-     * a non-null value upserts it.
-     *
      * @param cassandraYamlUpdates field-level changes to cassandra.yaml: key = field name, value = new value.
      *                             A null or {@link com.fasterxml.jackson.databind.node.NullNode} value removes
      *                             the field. Pass {@code null} for no yaml changes.
-     * @param extraJvmOptsUpdates  JVM option changes: key = option name, value = new option value.
-     *                             A {@code null} value removes the option. Pass {@code null} for no changes.
+     * @param addJvmOpts           JVM options to append to the current list. Pass {@code null} for no additions.
+     * @param removeJvmOpts        JVM options to remove by value. Pass {@code null} for no removals.
      * @return a new overlay with the updates applied
      */
     @NotNull
     public CassandraConfigurationOverlay updated(@Nullable Map<String, JsonNode> cassandraYamlUpdates,
-                                                 @Nullable Map<String, String> extraJvmOptsUpdates)
+                                                 @Nullable List<String> addJvmOpts,
+                                                 @Nullable List<String> removeJvmOpts)
     {
         ObjectNode mergedYaml = ((ObjectNode) cassandraYaml).deepCopy();
         if (cassandraYamlUpdates != null)
@@ -131,20 +129,14 @@ public class CassandraConfigurationOverlay
             }
         }
 
-        LinkedHashMap<String, String> mergedOpts = new LinkedHashMap<>(extraJvmOpts);
-        if (extraJvmOptsUpdates != null)
+        List<String> mergedOpts = new ArrayList<>(extraJvmOpts);
+        if (removeJvmOpts != null)
         {
-            for (Map.Entry<String, String> entry : extraJvmOptsUpdates.entrySet())
-            {
-                if (entry.getValue() == null)
-                {
-                    mergedOpts.remove(entry.getKey());
-                }
-                else
-                {
-                    mergedOpts.put(entry.getKey(), entry.getValue());
-                }
-            }
+            mergedOpts.removeAll(removeJvmOpts);
+        }
+        if (addJvmOpts != null)
+        {
+            mergedOpts.addAll(addJvmOpts);
         }
 
         return new CassandraConfigurationOverlay(mergedYaml, mergedOpts);
