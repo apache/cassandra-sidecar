@@ -86,9 +86,10 @@ class CassandraConfigurationOverlayTest
 
         CassandraConfigurationOverlay updated = overlay.updated(null, updates);
 
-        assertThat(updated.extraJvmOpts()).containsExactlyEntriesOf(Map.of(
-            "-Dcassandra.jmx.local.port", "7199",
-            "-Xmx", "8G"));
+        Map<String, String> expected = new LinkedHashMap<>();
+        expected.put("-Dcassandra.jmx.local.port", "7199");
+        expected.put("-Xmx", "8G");
+        assertThat(updated.extraJvmOpts()).containsExactlyEntriesOf(expected);
     }
 
     @Test

@@ -40,15 +40,15 @@ public class ConfigurationOverlaySnapshot
     private final Instant lastModified;
 
     @NotNull
-    private final CassandraConfigurationOverlay configuration;
+    private final CassandraConfigurationOverlay overlay;
 
     private volatile String hash;
 
     public ConfigurationOverlaySnapshot(@NotNull Instant lastModified,
-                                        @NotNull CassandraConfigurationOverlay configuration)
+                                        @NotNull CassandraConfigurationOverlay overlay)
     {
         this.lastModified = Objects.requireNonNull(lastModified, "lastModified must not be null");
-        this.configuration = Objects.requireNonNull(configuration, "configuration must not be null");
+        this.overlay = Objects.requireNonNull(overlay, "overlay must not be null");
     }
 
     /**
@@ -74,16 +74,16 @@ public class ConfigurationOverlaySnapshot
     }
 
     @NotNull
-    public CassandraConfigurationOverlay configuration()
+    public CassandraConfigurationOverlay overlay()
     {
-        return configuration;
+        return overlay;
     }
 
     private String computeHash()
     {
         try
         {
-            byte[] bytes = MAPPER.writeValueAsBytes(configuration);
+            byte[] bytes = MAPPER.writeValueAsBytes(overlay);
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hashBytes = digest.digest(bytes);
             return "sha256:" + bytesToHex(hashBytes);
@@ -117,13 +117,13 @@ public class ConfigurationOverlaySnapshot
         }
         ConfigurationOverlaySnapshot that = (ConfigurationOverlaySnapshot) o;
         return Objects.equals(lastModified, that.lastModified)
-               && Objects.equals(configuration, that.configuration);
+               && Objects.equals(overlay, that.overlay);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(lastModified, configuration);
+        return Objects.hash(lastModified, overlay);
     }
 
     @Override
@@ -132,7 +132,7 @@ public class ConfigurationOverlaySnapshot
         ObjectNode node = MAPPER.createObjectNode();
         node.put("hash", hash());
         node.put("lastModified", lastModified.toString());
-        node.set("configuration", MAPPER.valueToTree(configuration));
+        node.set("overlay", MAPPER.valueToTree(overlay));
         return node.toPrettyString();
     }
 }
