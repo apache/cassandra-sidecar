@@ -75,6 +75,33 @@ public class ConfigurationOverlaySnapshot
         return overlay;
     }
 
+    /**
+     * Returns a JSON representation of this snapshot, suitable for persistence.
+     *
+     * @return a new {@link JsonObject} representing this snapshot
+     */
+    @NotNull
+    public JsonObject toJson()
+    {
+        return new JsonObject()
+               .put("lastModified", lastModified.toString())
+               .put("overlay", overlay.toJson());
+    }
+
+    /**
+     * Creates a {@link ConfigurationOverlaySnapshot} from its JSON representation.
+     *
+     * @param json the JSON object containing {@code lastModified} and {@code overlay}
+     * @return a new snapshot instance
+     */
+    @NotNull
+    public static ConfigurationOverlaySnapshot fromJson(@NotNull JsonObject json)
+    {
+        Instant lastModified = Instant.parse(json.getString("lastModified"));
+        CassandraConfigurationOverlay overlay = CassandraConfigurationOverlay.fromJson(json.getJsonObject("overlay"));
+        return new ConfigurationOverlaySnapshot(lastModified, overlay);
+    }
+
     private String computeHash()
     {
         try

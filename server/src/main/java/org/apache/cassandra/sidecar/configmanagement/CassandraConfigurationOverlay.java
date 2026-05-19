@@ -94,6 +94,29 @@ public class CassandraConfigurationOverlay
     }
 
     /**
+     * Creates a {@link CassandraConfigurationOverlay} from its JSON representation.
+     *
+     * @param json the JSON object containing {@code cassandraYaml} and {@code extraJvmOpts}
+     * @return a new overlay instance
+     */
+    @NotNull
+    public static CassandraConfigurationOverlay fromJson(@NotNull JsonObject json)
+    {
+        JsonObject cassandraYaml = json.getJsonObject("cassandraYaml");
+        JsonObject jvmOptsJson = json.getJsonObject("extraJvmOpts");
+        Map<String, String> extraJvmOpts = null;
+        if (jvmOptsJson != null)
+        {
+            extraJvmOpts = new LinkedHashMap<>();
+            for (Map.Entry<String, Object> entry : jvmOptsJson)
+            {
+                extraJvmOpts.put(entry.getKey(), String.valueOf(entry.getValue()));
+            }
+        }
+        return new CassandraConfigurationOverlay(cassandraYaml, extraJvmOpts);
+    }
+
+    /**
      * Returns a new overlay with the given updates applied. The current instance is not modified.
      *
      * <p>Both parameters follow the same semantics: a {@code null} value for a key removes that entry,
