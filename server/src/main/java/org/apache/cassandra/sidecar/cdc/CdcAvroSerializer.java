@@ -18,10 +18,10 @@
 
 package org.apache.cassandra.sidecar.cdc;
 
-import org.apache.cassandra.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.cdc.TypeCache;
 import org.apache.cassandra.cdc.kafka.AvroGenericRecordSerializer;
 import org.apache.cassandra.cdc.schemastore.SchemaStore;
+import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 /**
