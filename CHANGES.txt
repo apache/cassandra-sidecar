@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * Fix ON_CDC_CACHE_WARMED_UP not fired when schema publisher fails (CASSSIDECAR-459)
  * Add SidecarReplicationFactorSupplier for live replication factor lookups (CASSSIDECAR-458)
  * Fix CDC message loss during Sidecar restarts (CASSSIDECAR-457)
  * Fix CDC resource leaks: thread leaks, Kafka resource cleanup, singleton SidecarCdcClient (CASSSIDECAR-456)

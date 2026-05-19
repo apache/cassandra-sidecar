@@ -150,8 +150,15 @@ public class CachingSchemaStore implements SchemaStore
                         return v;
                     });
                 }
-                loadPublisher();
-                publishSchemas();
+                try
+                {
+                    loadPublisher();
+                    publishSchemas();
+                }
+                catch (Exception e)
+                {
+                    LOGGER.error("Failed to publish schemas to Kafka during initialization, CDC will still start", e);
+                }
             });
         });
     }
@@ -211,8 +218,15 @@ public class CachingSchemaStore implements SchemaStore
                 return v;
             });
         }
-        loadPublisher();
-        publishSchemas();
+        try
+        {
+            loadPublisher();
+            publishSchemas();
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("Failed to publish schemas to Kafka, CDC will still start", e);
+        }
         // Remove any old schema entries for deleted tables, this operation can be done in the end as this is
         // only for removing stale entries and no one is going to use these entries once the table is removed.
         // This doesn't have to be an atomic operation.
