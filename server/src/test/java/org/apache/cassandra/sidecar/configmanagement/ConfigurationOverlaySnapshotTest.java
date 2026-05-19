@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.configmanagement;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -46,8 +47,8 @@ class ConfigurationOverlaySnapshotTest
         yaml2.put("concurrent_reads", 32);
         yaml2.put("memtable_flush_writers", 4);
 
-        CassandraConfigurationOverlay overlay1 = new CassandraConfigurationOverlay(yaml1, Arrays.asList("-Xmx4G"));
-        CassandraConfigurationOverlay overlay2 = new CassandraConfigurationOverlay(yaml2, Arrays.asList("-Xmx4G"));
+        CassandraConfigurationOverlay overlay1 = new CassandraConfigurationOverlay(yaml1, Collections.singletonMap("-Xmx", "4G"));
+        CassandraConfigurationOverlay overlay2 = new CassandraConfigurationOverlay(yaml2, Collections.singletonMap("-Xmx", "4G"));
 
         ConfigurationOverlaySnapshot snapshot1 = new ConfigurationOverlaySnapshot(Instant.now(), overlay1);
         ConfigurationOverlaySnapshot snapshot2 = new ConfigurationOverlaySnapshot(Instant.now(), overlay2);
