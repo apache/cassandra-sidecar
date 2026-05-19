@@ -112,30 +112,29 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
             }
 
             return executorPools.service()
-                                .executeBlocking(() -> restoreJobDatabaseAccessor.update(requestPayload, existingJob))
-                                .onSuccess(updatedJob -> {
-                                    logger.info("Successfully updated restore job. job={}, request={}, remoteAddress={}, instance={}",
-                                                updatedJob, requestPayload, remoteAddress, host);
-                                    if (updatedJob.status == RestoreJobStatus.SUCCEEDED)
-                                    {
-                                        metrics.successfulJobs.metric.update(1);
-                                        long startMillis = UUIDs.unixTimestamp(updatedJob.jobId);
-                                        long durationMillis = System.currentTimeMillis() - startMillis;
-                                        // toNanos does not overflow. Nanos in `long` can at most represent 106,751 days.
-                                        metrics.jobCompletionTime.metric.update(durationMillis, TimeUnit.MILLISECONDS);
-                                    }
+                                .executeBlocking(() -> restoreJobDatabaseAccessor.update(requestPayload, existingJob));
+        })
+        .onSuccess(updatedJob -> {
+            logger.info("Successfully updated restore job. job={}, request={}, remoteAddress={}, instance={}",
+                        updatedJob, requestPayload, remoteAddress, host);
+            if (updatedJob.status == RestoreJobStatus.SUCCEEDED)
+            {
+                metrics.successfulJobs.metric.update(1);
+                long startMillis = UUIDs.unixTimestamp(updatedJob.jobId);
+                long durationMillis = System.currentTimeMillis() - startMillis;
+                // toNanos does not overflow. Nanos in `long` can at most represent 106,751 days.
+                metrics.jobCompletionTime.metric.update(durationMillis, TimeUnit.MILLISECONDS);
+            }
 
-                                    if (updatedJob.secrets != null)
-                                    {
-                                        metrics.tokenRefreshed.metric.update(1);
-                                    }
+            if (updatedJob.secrets != null)
+            {
+                metrics.tokenRefreshed.metric.update(1);
+            }
 
-                                    context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
-                                    // Fire-and-forget on a worker thread — notifying the restore system should not
-                                    // block the event loop or delay the HTTP response.
-                                    executorPools.service()
-                                                 .runBlocking(() -> notifyPhaseSignalMaybe(updatedJob));
-                                });
+            context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
+            // Fire-and-forget on a worker thread — notifying the restore system should not
+            // block the event loop or delay the HTTP response.
+            executorPools.service().runBlocking(() -> notifyPhaseSignalMaybe(updatedJob));
         })
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestPayload));
     }
