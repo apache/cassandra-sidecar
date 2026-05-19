@@ -94,20 +94,20 @@ class LiveMigrationStatusHandlersTest
     @Test
     void testUpdateStatusAndGetStatusSucceedsAtSource(VertxTestContext context)
     {
-        updateStatusAndGetStatusSucceedsAtDestination(context, Map.of("localhost", "localhost3"));
+        updateStatusAndGetStatusSucceedsAtDestination(context, Map.of("127.0.0.1", "127.0.0.3"));
     }
 
     @Test
     void testUpdateStatusAndGetStatusSucceedsAtDestination(VertxTestContext context)
     {
-        updateStatusAndGetStatusSucceedsAtDestination(context, Map.of("localhost3", "localhost"));
+        updateStatusAndGetStatusSucceedsAtDestination(context, Map.of("127.0.0.3", "127.0.0.1"));
     }
 
     void updateStatusAndGetStatusSucceedsAtDestination(VertxTestContext context, Map<String, String> liveMigrationMap)
     {
         mockLiveMigrationMap(injector, liveMigrationMap);
         WebClient client = WebClient.create(vertx);
-        client.post(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+        client.post(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
               .as(BodyCodec.buffer())
               .send()
               .compose(response -> {
@@ -115,7 +115,7 @@ class LiveMigrationStatusHandlersTest
                   assertThat(response.bodyAsJsonObject().getString("state")).isEqualTo("COMPLETED");
                   return Future.succeededFuture();
               })
-              .compose(v -> client.get(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+              .compose(v -> client.get(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
                                   .send()
                                   .compose(response -> {
                                       assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
@@ -131,9 +131,9 @@ class LiveMigrationStatusHandlersTest
     {
         // Not updating migration status as completed. Get status call should succeed, but the status
         // should be NOT_COMPLETED.
-        mockLiveMigrationMap(injector, Map.of("localhost", "localhost3"));
+        mockLiveMigrationMap(injector, Map.of("127.0.0.1", "127.0.0.3"));
         WebClient client = WebClient.create(vertx);
-        client.get(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+        client.get(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
               .send()
               .compose(response -> {
                   assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
@@ -148,10 +148,10 @@ class LiveMigrationStatusHandlersTest
     @Test
     void testUpdatingStatusSecondTimeShouldFail(VertxTestContext context)
     {
-        mockLiveMigrationMap(injector, Map.of("localhost", "localhost3"));
+        mockLiveMigrationMap(injector, Map.of("127.0.0.1", "127.0.0.3"));
 
         WebClient client = WebClient.create(vertx);
-        client.post(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+        client.post(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
               .as(BodyCodec.buffer())
               .send()
               .compose(response -> {
@@ -160,7 +160,7 @@ class LiveMigrationStatusHandlersTest
                   return Future.succeededFuture();
               })
               // Updating status for the second time
-              .compose(v -> client.post(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+              .compose(v -> client.post(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
                                   .send()
                                   .compose(response -> {
                                       assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
@@ -175,10 +175,10 @@ class LiveMigrationStatusHandlersTest
     @Test
     void testDeleteStatusShouldSucceedPostMigrationMapCleanup(VertxTestContext context)
     {
-        mockLiveMigrationMap(injector, Map.of("localhost", "localhost3"));
+        mockLiveMigrationMap(injector, Map.of("127.0.0.1", "127.0.0.3"));
 
         WebClient client = WebClient.create(vertx);
-        client.post(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+        client.post(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
               .as(BodyCodec.buffer())
               .send()
               // Updating live migration status
@@ -188,7 +188,7 @@ class LiveMigrationStatusHandlersTest
                   return Future.succeededFuture();
               })
               // Getting the live migration status
-              .compose(v -> client.get(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+              .compose(v -> client.get(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
                                   .send()
                                   .compose(response -> {
                                       assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
@@ -201,7 +201,7 @@ class LiveMigrationStatusHandlersTest
                   return Future.succeededFuture();
               })
               // Sending the delete status request
-              .compose(v -> client.delete(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+              .compose(v -> client.delete(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
                                   .send()
                                   .compose(response -> {
                                       assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
@@ -215,10 +215,10 @@ class LiveMigrationStatusHandlersTest
     @Test
     void testDeleteStatusShouldNotSucceedBeforeMigrationMapCleanup(VertxTestContext context)
     {
-        mockLiveMigrationMap(injector, Map.of("localhost", "localhost3"));
+        mockLiveMigrationMap(injector, Map.of("127.0.0.1", "127.0.0.3"));
 
         WebClient client = WebClient.create(vertx);
-        client.post(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+        client.post(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
               .as(BodyCodec.buffer())
               .send()
               .compose(response -> {
@@ -228,7 +228,7 @@ class LiveMigrationStatusHandlersTest
               })
               // Migration map is not cleared before sending delete status request,
               // so delete status request should fail.
-              .compose(v -> client.delete(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+              .compose(v -> client.delete(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
                                   .as(BodyCodec.buffer())
                                   .send())
               .compose(response -> {
@@ -247,7 +247,7 @@ class LiveMigrationStatusHandlersTest
         .thenReturn(Future.failedFuture(new IOException("Failed to fetch config")));
 
         WebClient client = WebClient.create(vertx);
-        client.post(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+        client.post(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
               .as(BodyCodec.buffer())
               .send()
               .compose(response -> {
@@ -262,9 +262,9 @@ class LiveMigrationStatusHandlersTest
     @Test
     void testDeleteStatusShouldNotSucceedWhenFetchingMigrationMapFails(VertxTestContext context)
     {
-        mockLiveMigrationMap(injector, Map.of("localhost", "localhost3"));
+        mockLiveMigrationMap(injector, Map.of("127.0.0.1", "127.0.0.3"));
         WebClient client = WebClient.create(vertx);
-        client.post(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+        client.post(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
               .as(BodyCodec.buffer())
               .send()
               .compose(response -> {
@@ -278,7 +278,7 @@ class LiveMigrationStatusHandlersTest
                   .thenReturn(Future.failedFuture(new IOException("Failed to fetch config")));
                   return Future.succeededFuture();
               })
-              .compose(v -> client.delete(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+              .compose(v -> client.delete(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
                                   .as(BodyCodec.buffer())
                                   .send())
               .compose(response -> {
@@ -298,7 +298,7 @@ class LiveMigrationStatusHandlersTest
 
         mockLiveMigrationMap(injector, Map.of("localhost12345", "localhost54321"));
         WebClient client = WebClient.create(vertx);
-        client.delete(server.actualPort(), "localhost", LIVE_MIGRATION_STATUS_ROUTE)
+        client.delete(server.actualPort(), "127.0.0.1", LIVE_MIGRATION_STATUS_ROUTE)
               .as(BodyCodec.buffer())
               .send()
               .compose(response -> {
