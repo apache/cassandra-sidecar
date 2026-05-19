@@ -42,8 +42,9 @@ import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Verifies that {@link RestoreJobStatusChecker} reacts to a restore-job status transition
- * within the configured fast-loop interval, without waiting for the slow discovery loop.
+ * Verifies that the fast status-check loop owned by {@link RestoreJobDiscoverer} (its non-static inner
+ * {@code StatusCheckTask}) reacts to a restore-job status transition within the configured fast-loop
+ * interval, without waiting for the slow discovery loop.
  *
  * <p>The test seeds an in-flight job, runs one discovery pass to populate the in-flight set,
  * then flips the job's status directly in the {@code sidecar_internal} keyspace and asserts

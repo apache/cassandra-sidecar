@@ -88,6 +88,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
     private final RingTopologyRefresher ringTopologyRefresher;
     private final AtomicBoolean isExecuting = new AtomicBoolean(false);
     private final Object stateLock = new Object();
+    final StatusCheckTask statusCheckTask = new StatusCheckTask();
     private String localDatacenter = null;
     private int inflightJobsCount = 0;
     private int jobDiscoveryRecencyDays;
@@ -150,6 +151,9 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
     {
         this.periodicTaskExecutor = executor;
         PeriodicTask.super.deploy(vertx, executor);
+        // Co-deploy the fast status-check loop. It reads only job.status for already-known
+        // in-flight jobs and reacts to phase transitions without waiting for the slow loop.
+        executor.schedule(statusCheckTask);
     }
 
     @Override
@@ -258,10 +262,10 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
 
     /**
      * Snapshot of restore job IDs currently considered in-flight (non-terminal), as seen by the most recent
-     * full discovery pass. Used by the fast status-check loop ({@link RestoreJobStatusChecker}) to decide
+     * full discovery pass. Used by the fast status-check loop ({@link StatusCheckTask}) to decide
      * which jobs to point-read for status transitions.
      */
-    public Set<UUID> inflightJobIds()
+    Set<UUID> inflightJobIds()
     {
         synchronized (stateLock)
         {
@@ -285,7 +289,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
      * Called by the fast status-check loop when it detects a status change on a known in-flight job.
      * A no-op when the job's status matches the last-known status cached during discovery.
      */
-    public void handleStatusTransition(RestoreJob currentJob)
+    void handleStatusTransition(RestoreJob currentJob)
     {
         // Resolve local DC outside the lock — it may block on JMX/CQL and the assignment itself is atomic.
         initLocalDatacenterMaybe();
@@ -756,5 +760,83 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         int earliestInDays = 0;
         int abortedJobs = 0;
         int expiredJobs = 0;
+    }
+
+    /**
+     * Fast status-check loop that complements the slow {@link RestoreJobDiscoverer} discovery loop.
+     *
+     * <p>Runs on {@link RestoreJobConfiguration#jobDiscoveryStatusCheckInterval()} (default ~1s) and
+     * performs cheap point-reads of {@code job.status} for the in-flight jobs the discoverer already knows
+     * about. When a status transition is detected the task delegates to
+     * {@link RestoreJobDiscoverer#handleStatusTransition(RestoreJob)} so peer Sidecar instances react to
+     * phase signals without waiting for the slow full-scan loop. The slow loop remains the correctness
+     * and recovery guarantee (new-job discovery, expired-job aborts, missed signals).
+     *
+     * <p>Implemented as a non-static inner class so it has direct access to the discoverer's state and
+     * shares its lifecycle — it isn't an independent component.
+     */
+    class StatusCheckTask implements PeriodicTask
+    {
+        private final AtomicBoolean checkerExecuting = new AtomicBoolean(false);
+
+        @Override
+        public DurationSpec delay()
+        {
+            return restoreJobConfig.jobDiscoveryStatusCheckInterval();
+        }
+
+        @Override
+        public ScheduleDecision scheduleDecision()
+        {
+            if (!sidecarSchema.isInitialized())
+            {
+                return ScheduleDecision.SKIP;
+            }
+            if (checkerExecuting.get())
+            {
+                return ScheduleDecision.SKIP;
+            }
+            if (inflightJobIds().isEmpty())
+            {
+                return ScheduleDecision.SKIP;
+            }
+            return ScheduleDecision.EXECUTE;
+        }
+
+        @Override
+        public void execute(Promise<Void> promise)
+        {
+            if (!checkerExecuting.compareAndSet(false, true))
+            {
+                promise.tryComplete();
+                return;
+            }
+
+            try
+            {
+                for (UUID jobId : inflightJobIds())
+                {
+                    try
+                    {
+                        RestoreJob current = restoreJobDatabaseAccessor.find(jobId);
+                        if (current == null)
+                        {
+                            continue;
+                        }
+                        handleStatusTransition(current);
+                    }
+                    catch (Exception e)
+                    {
+                        // Do not fail the whole pass on one job; the slow loop will retry it.
+                        LOGGER.warn("Exception on status check for jobId={}", jobId, e);
+                    }
+                }
+            }
+            finally
+            {
+                checkerExecuting.set(false);
+                promise.tryComplete();
+            }
+        }
     }
 }

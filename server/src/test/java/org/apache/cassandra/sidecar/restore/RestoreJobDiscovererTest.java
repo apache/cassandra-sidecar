@@ -549,6 +549,82 @@ class RestoreJobDiscovererTest
         verify(mockManagers).updateRestoreJob(stageReady);
     }
 
+    @Test
+    void testStatusCheckTaskSkipsWhenNoInflightJobs()
+    {
+        when(sidecarSchema.isInitialized()).thenReturn(true);
+        assertThat(loop.statusCheckTask.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
+    }
+
+    @Test
+    void testStatusCheckTaskSkipsWhenSchemaNotInitialized()
+    {
+        when(sidecarSchema.isInitialized()).thenReturn(false);
+        assertThat(loop.statusCheckTask.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
+    }
+
+    @Test
+    void testStatusCheckTaskExecutesAgainstInflightJobs()
+    {
+        when(sidecarSchema.isInitialized()).thenReturn(true);
+        UUID jobId = UUIDs.timeBased();
+        RestoreJob created = RestoreJob.builder()
+                                       .createdAt(RestoreJob.toLocalDate(jobId))
+                                       .jobId(jobId)
+                                       .jobAgent("agent")
+                                       .jobStatus(RestoreJobStatus.CREATED)
+                                       .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                                       .build();
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(List.of(created));
+        executeBlocking();
+        assertThat(loop.statusCheckTask.scheduleDecision()).isEqualTo(ScheduleDecision.EXECUTE);
+
+        // Flip the DB-side status; the task should point-read each in-flight job and dispatch the transition
+        RestoreJob stageReady = created.unbuild().jobStatus(RestoreJobStatus.STAGE_READY).build();
+        when(mockJobAccessor.find(jobId)).thenReturn(stageReady);
+        Mockito.reset(mockManagers);
+
+        Promise<Void> promise = Promise.promise();
+        loop.statusCheckTask.execute(promise);
+
+        verify(mockJobAccessor).find(jobId);
+        verify(mockManagers).updateRestoreJob(stageReady);
+        assertThat(promise.future().succeeded()).isTrue();
+    }
+
+    @Test
+    void testStatusCheckTaskTolerantOfMissingOrFailingJobs()
+    {
+        when(sidecarSchema.isInitialized()).thenReturn(true);
+        UUID missingJobId = UUIDs.timeBased();
+        UUID failingJobId = UUIDs.timeBased();
+        RestoreJob missingJob = RestoreJob.builder()
+                                          .createdAt(RestoreJob.toLocalDate(missingJobId))
+                                          .jobId(missingJobId)
+                                          .jobAgent("agent")
+                                          .jobStatus(RestoreJobStatus.CREATED)
+                                          .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                                          .build();
+        RestoreJob failingJob = RestoreJob.builder()
+                                          .createdAt(RestoreJob.toLocalDate(failingJobId))
+                                          .jobId(failingJobId)
+                                          .jobAgent("agent")
+                                          .jobStatus(RestoreJobStatus.CREATED)
+                                          .expireAt(new Date(System.currentTimeMillis() + 10000L))
+                                          .build();
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(List.of(missingJob, failingJob));
+        executeBlocking();
+        when(mockJobAccessor.find(missingJobId)).thenReturn(null);                          // job vanished
+        when(mockJobAccessor.find(failingJobId)).thenThrow(new RuntimeException("db down")); // transient error
+
+        Promise<Void> promise = Promise.promise();
+        loop.statusCheckTask.execute(promise);
+
+        assertThat(promise.future().succeeded())
+        .describedAs("a missing or failing job should not abort the whole pass")
+        .isTrue();
+    }
+
     private RestoreJobConfiguration testConfig()
     {
         RestoreJobConfiguration restoreJobConfiguration = mock(RestoreJobConfiguration.class);
