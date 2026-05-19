@@ -23,9 +23,14 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -34,7 +39,9 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ConfigurationOverlaySnapshot
 {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     @NotNull
     private final Instant lastModified;
@@ -44,8 +51,9 @@ public class ConfigurationOverlaySnapshot
 
     private volatile String hash;
 
-    public ConfigurationOverlaySnapshot(@NotNull Instant lastModified,
-                                        @NotNull CassandraConfigurationOverlay overlay)
+    @JsonCreator
+    public ConfigurationOverlaySnapshot(@JsonProperty("lastModified") @NotNull Instant lastModified,
+                                        @JsonProperty("overlay") @NotNull CassandraConfigurationOverlay overlay)
     {
         this.lastModified = Objects.requireNonNull(lastModified, "lastModified must not be null");
         this.overlay = Objects.requireNonNull(overlay, "overlay must not be null");
@@ -57,6 +65,7 @@ public class ConfigurationOverlaySnapshot
      *
      * @return the content hash in the form "sha256:&lt;64 hex chars&gt;"
      */
+    @JsonIgnore
     @NotNull
     public String hash()
     {
@@ -67,12 +76,14 @@ public class ConfigurationOverlaySnapshot
         return hash;
     }
 
+    @JsonProperty("lastModified")
     @NotNull
     public Instant lastModified()
     {
         return lastModified;
     }
 
+    @JsonProperty("overlay")
     @NotNull
     public CassandraConfigurationOverlay overlay()
     {
