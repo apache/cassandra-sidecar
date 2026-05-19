@@ -37,7 +37,7 @@ import org.jetbrains.annotations.Nullable;
  * File-based implementation of {@link ConfigurationProvider} that persists configuration
  * overlays as JSON files within a configuration store directory.
  *
- * <p>Each instance's overlay is stored at {@code {configDir}/{instanceId}/config.json}.
+ * <p>Each instance's overlay is stored at {@code {configDir}/{instanceId}/overlay.json}.
  * Writes are atomic (write to temp file, then rename) to prevent corruption from crashes.
  */
 public class FileBasedConfigurationProvider implements ConfigurationProvider
