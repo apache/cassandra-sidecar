@@ -118,7 +118,7 @@ class ConfigurationOverlaySnapshotTest
             "{",
             "  \"hash\" : \"" + snapshot.hash() + "\",",
             "  \"lastModified\" : \"2026-02-20T14:32:18Z\",",
-            "  \"configuration\" : {",
+            "  \"overlay\" : {",
             "    \"cassandraYaml\" : {",
             "      \"concurrent_reads\" : 32",
             "    },",
