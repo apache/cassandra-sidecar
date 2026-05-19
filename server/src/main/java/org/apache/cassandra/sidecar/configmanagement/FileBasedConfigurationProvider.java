@@ -42,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class FileBasedConfigurationProvider implements ConfigurationProvider
 {
-    private static final String CONFIG_FILE_NAME = "config.json";
+    private static final String CONFIG_FILE_NAME = "overlay.json";
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)

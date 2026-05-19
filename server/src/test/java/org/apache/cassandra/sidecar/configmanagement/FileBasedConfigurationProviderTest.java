@@ -257,7 +257,7 @@ class FileBasedConfigurationProviderTest
 
         Path instanceDir = tempDir.resolve("1");
         assertThat(instanceDir).isDirectory();
-        assertThat(instanceDir.resolve("config.json")).isRegularFile();
+        assertThat(instanceDir.resolve("overlay.json")).isRegularFile();
     }
 
     @Test
@@ -270,7 +270,7 @@ class FileBasedConfigurationProviderTest
         try (Stream<Path> files = Files.list(instanceDir))
         {
             List<String> fileNames = files.map(p -> p.getFileName().toString()).sorted().collect(Collectors.toList());
-            assertThat(fileNames).containsExactly("config.json");
+            assertThat(fileNames).containsExactly("overlay.json");
         }
     }
 
