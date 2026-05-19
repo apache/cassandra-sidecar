@@ -193,6 +193,21 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         }
     }
 
+    /**
+     * Backstop for fire-and-forget {@code executeBlocking(...)} dispatches in event-bus handlers.
+     * The handler methods ({@code restart}, {@code stop}) already catch and record their own
+     * failures via {@code sidecarCdcStats}; this fires only when something unexpected escapes
+     * (e.g. an {@link Error}, or a stats-counter increment that throws before reaching the
+     * handler's own try/catch). Logging at ERROR + bumping
+     * {@link SidecarCdcStats#captureUnrecoverableCdcError(Throwable)} so the issue is surfaced
+     * rather than silently dropped by the discarded {@code Future}.
+     */
+    private void handleAsyncFailure(String address, Throwable t)
+    {
+        LOGGER.error("Unexpected error while processing event '{}' on worker pool", address, t);
+        sidecarCdcStats.captureUnrecoverableCdcError(t);
+    }
+
     @SuppressWarnings("resource")
     private synchronized void run() throws IllegalStateException
     {
@@ -340,21 +355,26 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         String address = msg.address();
         if (address.equals(RangeManager.RangeManagerEvents.ON_TOKEN_RANGE_CHANGED.address()))
         {
-            executorPools.executeBlocking(() -> { handleTokenRangeChange(); return null; });
+            executorPools.executeBlocking(() -> { handleTokenRangeChange(); return null; })
+                         .onFailure(t -> handleAsyncFailure(address, t));
         }
         else if (address.equals(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_GAINED.address()))
         {
             RangeManager.RangeChangeEvent event = (RangeManager.RangeChangeEvent) msg.body();
-            executorPools.executeBlocking(() -> { handleRangeGained(event); return null; });
+            executorPools.executeBlocking(() -> { handleRangeGained(event); return null; })
+                         .onFailure(t -> handleAsyncFailure(address, t));
         }
         else if (address.equals(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_LOST.address()))
         {
             RangeManager.RangeChangeEvent event = (RangeManager.RangeChangeEvent) msg.body();
-            executorPools.executeBlocking(() -> { handleRangeLost(event); return null; });
+            executorPools.executeBlocking(() -> { handleRangeLost(event); return null; })
+                         .onFailure(t -> handleAsyncFailure(address, t));
         }
         else if (address.equals(ON_SERVER_STOP.address()))
         {
-            executorPools.executeBlocking(() -> { stop(); return null; });
+            // Run stop() on the event loop so it completes before the loop closes during shutdown;
+            // stopConsumers() only signals the SidecarCdc iterators (not heavy work).
+            stop();
         }
         else if (address.equals(ON_CDC_CACHE_WARMED_UP.address()))
         {

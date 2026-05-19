@@ -30,6 +30,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import com.google.inject.Provider;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraVersion;
@@ -120,6 +121,8 @@ public class CdcPublisherTests
 
         // Mock ExecutorPools behavior
         when(executorPools.internal()).thenReturn(taskExecutorPool);
+        // Return a real successfully-completed Future so .onFailure(...) chaining in handle() is a safe no-op.
+        when(taskExecutorPool.executeBlocking(any(Callable.class))).thenReturn(Future.succeededFuture(null));
 
         // Mock Vertx EventBus for event listeners
         when(vertx.eventBus()).thenReturn(mock(io.vertx.core.eventbus.EventBus.class, RETURNS_DEEP_STUBS));
@@ -268,8 +271,7 @@ public class CdcPublisherTests
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void testHandleServerStopDispatchesStopToWorkerPool() throws Exception
+    void testHandleServerStopRunsStopOnEventLoopWithoutWorkerPool()
     {
         Message<Object> msg = mock(Message.class);
         when(msg.address()).thenReturn(ON_SERVER_STOP.address());
@@ -277,11 +279,10 @@ public class CdcPublisherTests
         CdcPublisher spyPublisher = spy(cdcPublisher);
         spyPublisher.handle(msg);
 
-        ArgumentCaptor<Callable<Void>> captor = ArgumentCaptor.forClass(Callable.class);
-        verify(taskExecutorPool).executeBlocking(captor.capture());
-
-        captor.getValue().call();
+        // stop() must run synchronously on the event loop so it completes before
+        // the loop closes during shutdown; no worker-pool dispatch should occur.
         verify(spyPublisher).stop();
+        verify(taskExecutorPool, never()).executeBlocking(any(Callable.class));
     }
 
     @Test
@@ -304,5 +305,22 @@ public class CdcPublisherTests
         cdcPublisher.handle(msg);
 
         verify(taskExecutorPool, never()).executeBlocking(any(Callable.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testHandleWorkerPoolFailureIsLoggedAndCaptured()
+    {
+        RuntimeException boom = new RuntimeException("boom");
+        when(taskExecutorPool.executeBlocking(any(Callable.class))).thenReturn(Future.failedFuture(boom));
+
+        Message<Object> msg = mock(Message.class);
+        when(msg.address()).thenReturn(RangeManager.RangeManagerEvents.ON_TOKEN_RANGE_CHANGED.address());
+
+        cdcPublisher.handle(msg);
+
+        // The discarded Future's failure path must reach our backstop:
+        // captureUnrecoverableCdcError so the failure is observable in metrics.
+        verify(sidecarCdcStats).captureUnrecoverableCdcError(boom);
     }
 }
