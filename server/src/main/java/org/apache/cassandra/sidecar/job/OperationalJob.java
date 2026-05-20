@@ -271,7 +271,7 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
         if (fut.isComplete() && fut.failed() && fut.cause() != null)
         {
             String message = fut.cause().getMessage();
-            return message != null ? message : fut.cause().getClass().getName();
+            return message != null ? message : String.format("Encountered %s during job execution", fut.cause().getClass().getName());
         }
         return null;
     }
