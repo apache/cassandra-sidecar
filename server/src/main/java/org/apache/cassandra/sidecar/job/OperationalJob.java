@@ -88,30 +88,37 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
         this.nodesFailed = Collections.emptyList();
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public UUID jobId()
     {
         return jobId;
     }
 
     /**
-     * @return the node UUID associated with this job, or {@code null} if not applicable
+     * {@inheritDoc}
      */
+    @Override
     public @Nullable UUID nodeId()
     {
         return nodeId;
     }
 
     /**
-     * @return the time this job started execution, or {@code null} if not yet started
+     * {@inheritDoc}
      */
+    @Override
     public @Nullable Instant startTime()
     {
         return startTime;
     }
 
     /**
-     * @return the time of the last status update for this job, or {@code null} if not yet started
+     * {@inheritDoc}
      */
+    @Override
     public @Nullable Instant lastUpdate()
     {
         return lastUpdate;
@@ -128,8 +135,9 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
     }
 
     /**
-     * @return the list of nodes pending execution for this job
+     * {@inheritDoc}
      */
+    @Override
     @NotNull
     public List<UUID> nodesPending()
     {
@@ -137,8 +145,9 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
     }
 
     /**
-     * @return the list of nodes currently executing this job
+     * {@inheritDoc}
      */
+    @Override
     @NotNull
     public List<UUID> nodesExecuting()
     {
@@ -146,8 +155,9 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
     }
 
     /**
-     * @return the list of nodes that have succeeded executing this job
+     * {@inheritDoc}
      */
+    @Override
     @NotNull
     public List<UUID> nodesSucceeded()
     {
@@ -155,8 +165,9 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
     }
 
     /**
-     * @return the list of nodes that have failed executing this job
+     * {@inheritDoc}
      */
+    @Override
     @NotNull
     public List<UUID> nodesFailed()
     {
@@ -179,16 +190,18 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
     }
 
     /**
-     * @return unix timestamp of the job creation time in milliseconds
+     * {@inheritDoc}
      */
+    @Override
     public long creationTime()
     {
         return UUIDs.unixTimestamp(jobId);
     }
 
     /**
-     * @return whether the operational job is executing or not.
+     * {@inheritDoc}
      */
+    @Override
     public boolean isExecuting()
     {
         return isExecuting;
@@ -216,6 +229,9 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
      */
     public abstract boolean hasConflict(@NotNull List<OperationalJob> sameOperationJobs);
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String name()
     {
@@ -236,6 +252,7 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
      *
      * @return status of the OperationalJob execution
      */
+    @Override
     public OperationalJobStatus status()
     {
         Future<Void> fut = asyncResult();
@@ -263,6 +280,9 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
         return executionPromise.future();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @Nullable
     public String failureReason()

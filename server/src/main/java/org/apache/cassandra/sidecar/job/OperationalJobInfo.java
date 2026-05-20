@@ -32,37 +32,76 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface OperationalJobInfo
 {
+    /**
+     * @return the unique identifier for the job
+     */
     UUID jobId();
 
+    /**
+     * @return the node UUID associated with the job, or {@code null} for jobs spanning multiple nodes
+     */
     @Nullable
     UUID nodeId();
 
+    /**
+     * @return the name of the operation the job performs
+     */
     String name();
 
+    /**
+     * @return the current status of the job
+     */
     OperationalJobStatus status();
 
+    /**
+     * @return unix timestamp of the job creation time in milliseconds
+     */
     long creationTime();
 
+    /**
+     * @return the time this job started execution, or {@code null} if not yet started
+     */
     @Nullable
     Instant startTime();
 
+    /**
+     * @return list of node UUIDs pending execution of the job
+     */
     @NotNull
     List<UUID> nodesPending();
 
+    /**
+     * @return list of node UUIDs currently executing the job
+     */
     @NotNull
     List<UUID> nodesExecuting();
 
+    /**
+     * @return list of node UUIDs that have succeeded executing the job
+     */
     @NotNull
     List<UUID> nodesSucceeded();
 
+    /**
+     * @return list of node UUIDs that have failed executing the job
+     */
     @NotNull
     List<UUID> nodesFailed();
 
+    /**
+     * @return the time of the last status update, or {@code null} if not yet started
+     */
     @Nullable
     Instant lastUpdate();
 
+    /**
+     * @return whether the job is currently executing
+     */
     boolean isExecuting();
 
+    /**
+     * @return the failure reason if the job has failed, or {@code null} if the job is still in progress or succeeded
+     */
     @Nullable
     String failureReason();
 }
