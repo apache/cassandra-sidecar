@@ -270,7 +270,8 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
         Future<Void> fut = asyncResult();
         if (fut.isComplete() && fut.failed() && fut.cause() != null)
         {
-            return fut.cause().getMessage();
+            String message = fut.cause().getMessage();
+            return message != null ? message : fut.cause().getClass().getName();
         }
         return null;
     }

@@ -61,11 +61,11 @@ public class OperationalJobManager
      *
      * @return instances of the jobs that are in pending or running states
      */
-    public List<OperationalJob> allInflightJobs()
+    public List<OperationalJobInfo> allInflightJobs()
     {
         return jobTracker.jobsView().values()
                          .stream()
-                         .filter(j -> !j.asyncResult().isComplete())
+                         .filter(j -> !j.status().isCompleted())
                          .collect(Collectors.toList());
     }
 

@@ -50,6 +50,7 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.job.OperationalJob;
+import org.apache.cassandra.sidecar.job.OperationalJobInfo;
 import org.apache.cassandra.sidecar.job.OperationalJobManager;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
@@ -128,7 +129,7 @@ class ListOperationalJobsHandlerTest
         @Singleton
         public OperationalJobManager jobManager()
         {
-            List<OperationalJob> testJobs = Arrays.asList(running, running2);
+            List<OperationalJobInfo> testJobs = Arrays.asList(running, running2);
             OperationalJobManager mockManager = mock(OperationalJobManager.class);
             when(mockManager.allInflightJobs()).thenReturn(testJobs);
             return mockManager;
