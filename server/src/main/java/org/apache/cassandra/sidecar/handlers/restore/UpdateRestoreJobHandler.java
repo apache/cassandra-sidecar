@@ -132,9 +132,9 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
             }
 
             context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
-            // Fire-and-forget on a worker thread — notifying the restore system should not
-            // block the event loop or delay the HTTP response.
-            executorPools.service().runBlocking(() -> notifyPhaseSignalMaybe(updatedJob));
+            // Fire-and-forget on the internal worker pool — notifying the restore system is internal work
+            // that shouldn't block the event loop or share the service pool with client-facing requests.
+            executorPools.internal().runBlocking(() -> notifyPhaseSignalMaybe(updatedJob));
         })
         .onFailure(cause -> processFailure(cause, context, host, remoteAddress, requestPayload));
     }
