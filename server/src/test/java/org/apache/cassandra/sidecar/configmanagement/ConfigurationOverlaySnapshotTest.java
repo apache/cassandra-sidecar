@@ -19,7 +19,7 @@
 package org.apache.cassandra.sidecar.configmanagement;
 
 import java.time.Instant;
-import java.util.Arrays;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -43,8 +43,8 @@ class ConfigurationOverlaySnapshotTest
                            .put("concurrent_reads", 32)
                            .put("memtable_flush_writers", 4);
 
-        CassandraConfigurationOverlay overlay1 = new CassandraConfigurationOverlay(yaml1, Arrays.asList("-Xmx4G"));
-        CassandraConfigurationOverlay overlay2 = new CassandraConfigurationOverlay(yaml2, Arrays.asList("-Xmx4G"));
+        CassandraConfigurationOverlay overlay1 = new CassandraConfigurationOverlay(yaml1, Map.of("-Xmx", "4G"));
+        CassandraConfigurationOverlay overlay2 = new CassandraConfigurationOverlay(yaml2, Map.of("-Xmx", "4G"));
 
         ConfigurationOverlaySnapshot snapshot1 = new ConfigurationOverlaySnapshot(Instant.now(), overlay1);
         ConfigurationOverlaySnapshot snapshot2 = new ConfigurationOverlaySnapshot(Instant.now(), overlay2);
@@ -99,7 +99,7 @@ class ConfigurationOverlaySnapshotTest
     void testToString()
     {
         JsonObject yaml = new JsonObject().put("concurrent_reads", 32);
-        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, Arrays.asList("-Xmx4G"));
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, Map.of("-Xmx", "4G"));
         Instant timestamp = Instant.parse("2026-02-20T14:32:18Z");
 
         ConfigurationOverlaySnapshot snapshot = new ConfigurationOverlaySnapshot(timestamp, overlay);
@@ -112,7 +112,9 @@ class ConfigurationOverlaySnapshotTest
             "    \"cassandraYaml\" : {",
             "      \"concurrent_reads\" : 32",
             "    },",
-            "    \"extraJvmOpts\" : [ \"-Xmx4G\" ]",
+            "    \"extraJvmOpts\" : {",
+            "      \"-Xmx\" : \"4G\"",
+            "    }",
             "  }",
             "}");
         assertThat(snapshot.toString()).isEqualTo(expected);

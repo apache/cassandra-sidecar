@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.configmanagement;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -47,7 +46,7 @@ class CassandraConfigurationOverlayTest
         updates.put("concurrent_reads", 64);
         updates.put("storage_compatibility_mode", null);
 
-        CassandraConfigurationOverlay updated = overlay.updated(updates, null, null);
+        CassandraConfigurationOverlay updated = overlay.updated(updates, null);
 
         // concurrent_reads updated
         assertThat(updated.cassandraYaml().getInteger("concurrent_reads")).isEqualTo(64);
@@ -58,21 +57,39 @@ class CassandraConfigurationOverlayTest
     }
 
     @Test
-    void testUpdatedAddsAndRemovesJvmOpts()
+    void testUpdatedUpsertsAndRemovesJvmOpts()
     {
-        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(null, List.of(
-            "-Dcassandra.available_processors=8",
-            "-Xmx4G"
-        ));
+        Map<String, String> jvmOpts = new LinkedHashMap<>();
+        jvmOpts.put("-Dcassandra.jmx.local.port", "7199");
+        jvmOpts.put("-Xmx", "4G");
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(null, jvmOpts);
 
-        CassandraConfigurationOverlay updated = overlay.updated(
-            null,
-            List.of("-Xmx8G"),
-            List.of("-Xmx4G"));
+        Map<String, String> updates = new LinkedHashMap<>();
+        updates.put("-Xmx", "8G");
 
-        assertThat(updated.extraJvmOpts()).containsExactly(
-            "-Dcassandra.available_processors=8",
-            "-Xmx8G");
+        CassandraConfigurationOverlay updated = overlay.updated(null, updates);
+
+        Map<String, String> expected = new LinkedHashMap<>();
+        expected.put("-Dcassandra.jmx.local.port", "7199");
+        expected.put("-Xmx", "8G");
+        assertThat(updated.extraJvmOpts()).containsExactlyEntriesOf(expected);
+    }
+
+    @Test
+    void testUpdatedRemovesJvmOptWithNullValue()
+    {
+        Map<String, String> jvmOpts = new LinkedHashMap<>();
+        jvmOpts.put("-Dcassandra.jmx.local.port", "7199");
+        jvmOpts.put("-Xmx", "4G");
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(null, jvmOpts);
+
+        Map<String, String> updates = new LinkedHashMap<>();
+        updates.put("-Xmx", null);
+
+        CassandraConfigurationOverlay updated = overlay.updated(null, updates);
+
+        assertThat(updated.extraJvmOpts()).containsExactlyEntriesOf(Map.of(
+            "-Dcassandra.jmx.local.port", "7199"));
     }
 
     @Test
@@ -90,11 +107,11 @@ class CassandraConfigurationOverlayTest
     void testUpdatedReturnsNewInstance()
     {
         JsonObject yaml = new JsonObject().put("concurrent_reads", 32);
-        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, List.of("-Xmx4G"));
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, Map.of("-Xmx", "4G"));
 
         CassandraConfigurationOverlay updated = overlay.updated(
             Collections.singletonMap("concurrent_reads", 64),
-            null, null);
+            null);
 
         assertThat(updated).isNotSameAs(overlay);
         assertThat(updated.cassandraYaml().getInteger("concurrent_reads")).isEqualTo(64);
@@ -108,7 +125,7 @@ class CassandraConfigurationOverlayTest
         JsonObject yaml = new JsonObject()
                           .put("concurrent_reads", 32)
                           .put("commitlog_sync", "periodic");
-        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, List.of("-Xmx4G"));
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, Map.of("-Xmx", "4G"));
 
         assertThat(overlay.toString()).isEqualTo(String.join("\n",
             "{",
@@ -116,7 +133,9 @@ class CassandraConfigurationOverlayTest
             "    \"concurrent_reads\" : 32,",
             "    \"commitlog_sync\" : \"periodic\"",
             "  },",
-            "  \"extraJvmOpts\" : [ \"-Xmx4G\" ]",
+            "  \"extraJvmOpts\" : {",
+            "    \"-Xmx\" : \"4G\"",
+            "  }",
             "}"));
     }
 
@@ -128,7 +147,7 @@ class CassandraConfigurationOverlayTest
         assertThat(overlay.toString()).isEqualTo(String.join("\n",
             "{",
             "  \"cassandraYaml\" : { },",
-            "  \"extraJvmOpts\" : [ ]",
+            "  \"extraJvmOpts\" : { }",
             "}"));
     }
 }
