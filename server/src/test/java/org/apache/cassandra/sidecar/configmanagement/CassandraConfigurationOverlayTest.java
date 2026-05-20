@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import io.vertx.core.json.JsonObject;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for {@link CassandraConfigurationOverlay}
@@ -90,6 +91,34 @@ class CassandraConfigurationOverlayTest
 
         assertThat(updated.extraJvmOpts()).containsExactlyEntriesOf(Map.of(
             "-Dcassandra.jmx.local.port", "7199"));
+    }
+
+    @Test
+    void testUpdatedRejectsConflictingBooleanOpts()
+    {
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(null, Map.of("-XX:+UseG1GC", ""));
+
+        Map<String, String> updates = new LinkedHashMap<>();
+        updates.put("-XX:-UseG1GC", "");
+
+        assertThatThrownBy(() -> overlay.updated(null, updates))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("-XX:+UseG1GC")
+            .hasMessageContaining("-XX:-UseG1GC");
+    }
+
+    @Test
+    void testUpdatedAllowsReplacingBooleanOpt()
+    {
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(null, Map.of("-XX:+UseG1GC", ""));
+
+        Map<String, String> updates = new LinkedHashMap<>();
+        updates.put("-XX:+UseG1GC", null);
+        updates.put("-XX:-UseG1GC", "");
+
+        CassandraConfigurationOverlay updated = overlay.updated(null, updates);
+
+        assertThat(updated.extraJvmOpts()).containsExactlyEntriesOf(Map.of("-XX:-UseG1GC", ""));
     }
 
     @Test
