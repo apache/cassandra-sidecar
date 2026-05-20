@@ -23,8 +23,7 @@ import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.vertx.core.json.JsonObject;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,18 +32,16 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ConfigurationOverlaySnapshotTest
 {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-
     @Test
     void testHashIsDeterministic()
     {
-        ObjectNode yaml1 = MAPPER.createObjectNode();
-        yaml1.put("concurrent_reads", 32);
-        yaml1.put("memtable_flush_writers", 4);
+        JsonObject yaml1 = new JsonObject()
+                           .put("concurrent_reads", 32)
+                           .put("memtable_flush_writers", 4);
 
-        ObjectNode yaml2 = MAPPER.createObjectNode();
-        yaml2.put("concurrent_reads", 32);
-        yaml2.put("memtable_flush_writers", 4);
+        JsonObject yaml2 = new JsonObject()
+                           .put("concurrent_reads", 32)
+                           .put("memtable_flush_writers", 4);
 
         CassandraConfigurationOverlay overlay1 = new CassandraConfigurationOverlay(yaml1, Arrays.asList("-Xmx4G"));
         CassandraConfigurationOverlay overlay2 = new CassandraConfigurationOverlay(yaml2, Arrays.asList("-Xmx4G"));
@@ -58,11 +55,8 @@ class ConfigurationOverlaySnapshotTest
     @Test
     void testHashChangesWithDifferentContent()
     {
-        ObjectNode yaml1 = MAPPER.createObjectNode();
-        yaml1.put("concurrent_reads", 32);
-
-        ObjectNode yaml2 = MAPPER.createObjectNode();
-        yaml2.put("concurrent_reads", 64);
+        JsonObject yaml1 = new JsonObject().put("concurrent_reads", 32);
+        JsonObject yaml2 = new JsonObject().put("concurrent_reads", 64);
 
         CassandraConfigurationOverlay overlay1 = new CassandraConfigurationOverlay(yaml1, null);
         CassandraConfigurationOverlay overlay2 = new CassandraConfigurationOverlay(yaml2, null);
@@ -76,8 +70,7 @@ class ConfigurationOverlaySnapshotTest
     @Test
     void testHashIsCached()
     {
-        ObjectNode yaml = MAPPER.createObjectNode();
-        yaml.put("commitlog_sync", "periodic");
+        JsonObject yaml = new JsonObject().put("commitlog_sync", "periodic");
 
         CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, null);
         ConfigurationOverlaySnapshot snapshot = new ConfigurationOverlaySnapshot(Instant.now(), overlay);
@@ -92,8 +85,7 @@ class ConfigurationOverlaySnapshotTest
     @Test
     void testHashHasSha256Prefix()
     {
-        ObjectNode yaml = MAPPER.createObjectNode();
-        yaml.put("native_transport_port", 9042);
+        JsonObject yaml = new JsonObject().put("native_transport_port", 9042);
 
         CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, null);
         ConfigurationOverlaySnapshot snapshot = new ConfigurationOverlaySnapshot(Instant.now(), overlay);
@@ -106,8 +98,7 @@ class ConfigurationOverlaySnapshotTest
     @Test
     void testToString()
     {
-        ObjectNode yaml = MAPPER.createObjectNode();
-        yaml.put("concurrent_reads", 32);
+        JsonObject yaml = new JsonObject().put("concurrent_reads", 32);
         CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, Arrays.asList("-Xmx4G"));
         Instant timestamp = Instant.parse("2026-02-20T14:32:18Z");
 

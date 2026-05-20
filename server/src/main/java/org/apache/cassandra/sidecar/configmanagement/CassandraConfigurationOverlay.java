@@ -24,11 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,44 +43,29 @@ import org.jetbrains.annotations.Nullable;
  */
 public class CassandraConfigurationOverlay
 {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-
     @NotNull
-    private final JsonNode cassandraYaml;
+    private final JsonObject cassandraYaml;
 
     @NotNull
     private final List<String> extraJvmOpts;
 
-    @JsonCreator
-    public CassandraConfigurationOverlay(@JsonProperty("cassandraYaml") @Nullable JsonNode cassandraYaml,
-                                         @JsonProperty("extraJvmOpts") @Nullable List<String> extraJvmOpts)
+    public CassandraConfigurationOverlay(@Nullable JsonObject cassandraYaml,
+                                         @Nullable List<String> extraJvmOpts)
     {
-        if (cassandraYaml == null)
-        {
-            this.cassandraYaml = MAPPER.createObjectNode();
-        }
-        else if (!cassandraYaml.isObject())
-        {
-            throw new IllegalArgumentException("cassandraYaml must be a JSON object, got " + cassandraYaml.getNodeType());
-        }
-        else
-        {
-            this.cassandraYaml = ((ObjectNode) cassandraYaml).deepCopy();
-        }
+        this.cassandraYaml = cassandraYaml != null ? cassandraYaml.copy() : new JsonObject();
         this.extraJvmOpts = extraJvmOpts != null
-                            ? Collections.unmodifiableList(new ArrayList<>(extraJvmOpts))
+                            ? List.copyOf(extraJvmOpts)
                             : Collections.emptyList();
     }
 
     /**
      * Returns the cassandra.yaml overlay as a version-agnostic JSON object. Callers must not mutate the
-     * returned node; use {@link #updated} to produce a new overlay with changes applied.
+     * returned object; use {@link #updated} to produce a new overlay with changes applied.
      *
      * @return the cassandra.yaml overlay as a version-agnostic JSON object
      */
-    @JsonProperty("cassandraYaml")
     @NotNull
-    public JsonNode cassandraYaml()
+    public JsonObject cassandraYaml()
     {
         return cassandraYaml;
     }
@@ -91,7 +73,6 @@ public class CassandraConfigurationOverlay
     /**
      * @return an unmodifiable list of extra JVM options
      */
-    @JsonProperty("extraJvmOpts")
     @NotNull
     public List<String> extraJvmOpts()
     {
@@ -99,32 +80,44 @@ public class CassandraConfigurationOverlay
     }
 
     /**
+     * Returns a JSON representation of this overlay.
+     *
+     * @return a new {@link JsonObject} containing {@code cassandraYaml} and {@code extraJvmOpts}
+     */
+    @NotNull
+    public JsonObject toJson()
+    {
+        return new JsonObject()
+               .put("cassandraYaml", cassandraYaml.copy())
+               .put("extraJvmOpts", new JsonArray(new ArrayList<>(extraJvmOpts)));
+    }
+
+    /**
      * Returns a new overlay with the given updates applied. The current instance is not modified.
      *
      * @param cassandraYamlUpdates field-level changes to cassandra.yaml: key = field name, value = new value.
-     *                             A null or {@link com.fasterxml.jackson.databind.node.NullNode} value removes
-     *                             the field. Pass {@code null} for no yaml changes.
+     *                             A {@code null} value removes the field. Pass {@code null} for no yaml changes.
      * @param addJvmOpts           JVM options to append to the current list. Pass {@code null} for no additions.
      * @param removeJvmOpts        JVM options to remove by value. Pass {@code null} for no removals.
      * @return a new overlay with the updates applied
      */
     @NotNull
-    public CassandraConfigurationOverlay updated(@Nullable Map<String, JsonNode> cassandraYamlUpdates,
+    public CassandraConfigurationOverlay updated(@Nullable Map<String, Object> cassandraYamlUpdates,
                                                  @Nullable List<String> addJvmOpts,
                                                  @Nullable List<String> removeJvmOpts)
     {
-        ObjectNode mergedYaml = ((ObjectNode) cassandraYaml).deepCopy();
+        JsonObject mergedYaml = cassandraYaml.copy();
         if (cassandraYamlUpdates != null)
         {
-            for (Map.Entry<String, JsonNode> entry : cassandraYamlUpdates.entrySet())
+            for (Map.Entry<String, Object> entry : cassandraYamlUpdates.entrySet())
             {
-                if (entry.getValue() == null || entry.getValue().isNull())
+                if (entry.getValue() == null)
                 {
                     mergedYaml.remove(entry.getKey());
                 }
                 else
                 {
-                    mergedYaml.set(entry.getKey(), entry.getValue());
+                    mergedYaml.put(entry.getKey(), entry.getValue());
                 }
             }
         }
@@ -167,9 +160,6 @@ public class CassandraConfigurationOverlay
     @Override
     public String toString()
     {
-        ObjectNode node = MAPPER.createObjectNode();
-        node.set("cassandraYaml", cassandraYaml);
-        node.set("extraJvmOpts", MAPPER.valueToTree(extraJvmOpts));
-        return node.toPrettyString();
+        return toJson().encodePrettily();
     }
 }

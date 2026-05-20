@@ -31,8 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.vertx.core.json.JsonObject;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,8 +43,6 @@ import static org.mockito.Mockito.when;
  */
 class InMemoryConfigurationProviderTest
 {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-
     private InMemoryConfigurationProvider provider;
     private InstanceMetadata instance1;
     private InstanceMetadata instance2;
@@ -219,8 +216,7 @@ class InMemoryConfigurationProviderTest
 
     private static ConfigurationOverlaySnapshot createSnapshot(String field, int value)
     {
-        ObjectNode yaml = MAPPER.createObjectNode();
-        yaml.put(field, value);
+        JsonObject yaml = new JsonObject().put(field, value);
         CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, null);
         return new ConfigurationOverlaySnapshot(Instant.now(), overlay);
     }

@@ -32,7 +32,6 @@ import org.jetbrains.annotations.Nullable;
 public class InMemoryConfigurationProvider implements ConfigurationProvider
 {
     private final ConcurrentHashMap<Integer, ConfigurationOverlaySnapshot> overlays = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Integer, Object> locks = new ConcurrentHashMap<>();
 
     @Override
     @Nullable
@@ -47,23 +46,17 @@ public class InMemoryConfigurationProvider implements ConfigurationProvider
                                 @NotNull ConfigurationOverlaySnapshot newSnapshot)
     {
         Objects.requireNonNull(newSnapshot, "newSnapshot must not be null");
-        Object lock = locks.computeIfAbsent(instance.id(), k -> new Object());
-        synchronized (lock)
-        {
-            ConfigurationOverlaySnapshot current = overlays.get(instance.id());
-
+        return overlays.compute(instance.id(), (k, current) -> {
             if (current == null && originalHash != null)
             {
-                return false;
+                return null;
             }
 
             if (current != null && (originalHash == null || !current.hash().equals(originalHash)))
             {
-                return false;
+                return current;
             }
-
-            overlays.put(instance.id(), newSnapshot);
-            return true;
-        }
+            return newSnapshot;
+        }) == newSnapshot;
     }
 }

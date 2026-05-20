@@ -23,9 +23,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Objects;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.vertx.core.json.JsonObject;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -34,8 +32,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ConfigurationOverlaySnapshot
 {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-
     @NotNull
     private final Instant lastModified;
 
@@ -83,12 +79,12 @@ public class ConfigurationOverlaySnapshot
     {
         try
         {
-            byte[] bytes = MAPPER.writeValueAsBytes(overlay);
+            byte[] bytes = overlay.toJson().toBuffer().getBytes();
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hashBytes = digest.digest(bytes);
             return "sha256:" + bytesToHex(hashBytes);
         }
-        catch (JsonProcessingException | NoSuchAlgorithmException e)
+        catch (NoSuchAlgorithmException e)
         {
             throw new RuntimeException("Failed to compute configuration hash", e);
         }
@@ -129,10 +125,10 @@ public class ConfigurationOverlaySnapshot
     @Override
     public String toString()
     {
-        ObjectNode node = MAPPER.createObjectNode();
-        node.put("hash", hash());
-        node.put("lastModified", lastModified.toString());
-        node.set("overlay", MAPPER.valueToTree(overlay));
-        return node.toPrettyString();
+        return new JsonObject()
+               .put("hash", hash())
+               .put("lastModified", lastModified.toString())
+               .put("overlay", overlay.toJson())
+               .encodePrettily();
     }
 }
