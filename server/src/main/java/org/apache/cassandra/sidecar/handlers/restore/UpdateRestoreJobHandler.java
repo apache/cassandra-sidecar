@@ -104,9 +104,9 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
             // IAM jobs derive credentials from the instance profile / task role at runtime.
             // There are no static credentials to supply or rotate, so any attempt to update
             // credentials on an IAM job is always invalid.
-            if (job.credentialType == CredentialType.IAM && requestPayload.secrets() != null)
+            if (existingJob.credentialType == CredentialType.IAM && requestPayload.secrets() != null)
             {
-                logger.warn("Credential update rejected for IAM job. job={}", job);
+                logger.warn("Credential update rejected for IAM job. job={}", existingJob);
                 return Future.failedFuture(wrapHttpException(HttpResponseStatus.BAD_REQUEST,
                                                              "Credentials cannot be updated for IAM jobs"));
             }
