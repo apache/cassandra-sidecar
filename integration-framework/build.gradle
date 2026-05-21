@@ -70,6 +70,7 @@ dependencies {
 
     // CDC dependencies
     api(group: "org.apache.cassandra", name: "cassandra-analytics-cdc_spark3_2.12", version: "${project.analyticsVersion}")
+    api(group: "org.apache.cassandra", name: "cassandra-analytics-cdc-codec_spark3_2.12", version: "${project.analyticsVersion}")
     api(group: "org.apache.cassandra", name: "cassandra-analytics-cdc-sidecar_spark3_2.12", version: "${project.analyticsVersion}")
     api "org.apache.kafka:kafka-clients:${project.kafkaClientVersion}"
 }

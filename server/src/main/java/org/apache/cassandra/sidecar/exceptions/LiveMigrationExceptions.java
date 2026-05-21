@@ -27,12 +27,13 @@ public class LiveMigrationExceptions
 {
 
     /**
-     * There can be only one Live Migration task running at any time. This exception is thrown when client is trying
-     * to create a new Live Migration data copy task while another task is in progress.
+     * Thrown when attempting to create a new live migration task while another task is already in progress
+     * for the same instance. Only one live migration task (e.g., data copy, file digest verification) can be
+     * active per instance at a time to prevent resource conflicts and ensure data integrity.
      */
-    public static class LiveMigrationDataCopyInProgressException extends IllegalArgumentException
+    public static class LiveMigrationTaskInProgressException extends IllegalStateException
     {
-        public LiveMigrationDataCopyInProgressException(String message)
+        public LiveMigrationTaskInProgressException(String message)
         {
             super(message);
         }
@@ -53,6 +54,11 @@ public class LiveMigrationExceptions
         {
             super(message);
         }
+
+        public LiveMigrationInvalidRequestException(String message, Throwable cause)
+        {
+            super(message, cause);
+        }
     }
 
     /**
@@ -63,6 +69,46 @@ public class LiveMigrationExceptions
         public LiveMigrationTaskNotFoundException(String message)
         {
             super(message);
+        }
+    }
+
+    /**
+     * Exception thrown when file verification fails during live migration.
+     */
+    public static class FileVerificationFailureException extends Exception
+    {
+        public FileVerificationFailureException(String message)
+        {
+            super(message);
+        }
+    }
+
+    /**
+     * Exception thrown when file digest verification fails during live migration.
+     * This indicates that the digest of a file at the destination does not match
+     * the digest of the same file at the source, suggesting data corruption or
+     * incomplete file transfer.
+     */
+    public static class DigestMismatchException extends Exception
+    {
+        private final String path;
+        private final String fileUrl;
+
+        public DigestMismatchException(String path, String fileUrl, Throwable cause)
+        {
+            super("Digest mismatch for file: " + fileUrl + " (local path: " + path + ")", cause);
+            this.path = path;
+            this.fileUrl = fileUrl;
+        }
+
+        public String path()
+        {
+            return path;
+        }
+
+        public String fileUrl()
+        {
+            return fileUrl;
         }
     }
 }

@@ -27,6 +27,7 @@ public class RestoreJobConstants
     public static final String JOB_AGENT = "jobAgent";
     public static final String JOB_STATUS = "status";
     public static final String JOB_SECRETS = "secrets";
+    public static final String JOB_CREDENTIAL_TYPE = "credentialType";
     public static final String JOB_EXPIRE_AT = "expireAt";
     public static final String JOB_SLICE_COUNT = "sliceCount";
     public static final String JOB_IMPORT_OPTIONS = "importOptions";

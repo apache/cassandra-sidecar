@@ -1,6 +1,20 @@
 0.4
 ===
 
+Upgrading
+---------
+    - In CASSSIDECAR-415, a new internal table (restore_job_v6) is created to support IAM credential
+      tracking for restore jobs. Spark jobs performing S3 restores should be paused during sidecar
+      upgrade to ensure in-flight restore job state is not lost.
+
+New features
+------------
+    - IAM instance profile credential support for S3 restore jobs (CASSSIDECAR-415). Sidecar can now
+      resolve AWS credentials automatically from the platform (IMDS/ECS/EKS) without requiring key
+      material to be passed by the caller. Set credentialType to IAM when creating a restore job to
+      enable this mode.
+    - SAI (Storage Attached Index) support in Sidecar (CASSSIDECAR-422).
+
 0.3
 ===
 

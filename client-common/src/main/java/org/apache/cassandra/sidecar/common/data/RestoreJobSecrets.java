@@ -31,6 +31,26 @@ import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.SECRE
  */
 public class RestoreJobSecrets
 {
+    /**
+     * Creates a {@link RestoreJobSecrets} for IAM instance profile mode.
+     *
+     * <p>In IAM mode no static keys are provided; the AWS SDK resolves credentials via the default
+     * credential chain (IAM instance profile, ECS task role, environment variables, etc.). Only the
+     * region is required so the SDK can route requests to the correct S3 endpoint.
+     *
+     * <p>The same region-only {@link StorageCredentials} is used for both read and write because in
+     * IAM mode a single instance profile covers both operations.
+     *
+     * @param region the AWS region of the S3 bucket (e.g. {@code "us-east-1"})
+     * @return a region-only {@link RestoreJobSecrets} instance signalling IAM mode
+     */
+    public static RestoreJobSecrets iamMode(String region)
+    {
+        StorageCredentials regionOnly = StorageCredentials.builder().region(region).build();
+        return new RestoreJobSecrets(regionOnly, regionOnly);
+    }
+
+
     private final StorageCredentials writeCredentials;
     private final StorageCredentials readCredentials;
 

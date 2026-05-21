@@ -33,6 +33,8 @@ import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.codec.BodyCodec;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.common.data.CredentialType;
+import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.db.RestoreJob;
@@ -147,6 +149,47 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
         String jobId = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
         long sliceCount = 100;
         mockLookupRestoreJob(RestoreJobTest::createNewTestingJob);
+        mockUpdateRestoreJob(payload -> {
+            assertThat(payload.sliceCount()).isEqualTo(sliceCount);
+            return createTestNewJob(jobId);
+        });
+        JsonObject payload = new JsonObject();
+        payload.put("sliceCount", sliceCount);
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", jobId,
+                                             payload, context, HttpResponseStatus.OK.code());
+    }
+
+    @Test
+    void testUpdateCredentialsRejectedForIamJob(VertxTestContext context) throws Throwable
+    {
+        mockLookupRestoreJob(id -> RestoreJob.builder()
+                                            .jobId(id)
+                                            .keyspace("ks").table("table")
+                                            .jobAgent("agent")
+                                            .jobStatus(RestoreJobStatus.CREATED)
+                                            .jobSecrets(RestoreJobSecrets.iamMode("us-east-1"))
+                                            .credentialType(CredentialType.IAM)
+                                            .sstableImportOptions(SSTableImportOptions.defaults())
+                                            .build());
+        JsonObject payload = getRequestPayload(); // contains secrets
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", "8e5799a4-d277-11ed-8d85-6916bb9b8056",
+                                             payload, context, HttpResponseStatus.BAD_REQUEST.code());
+    }
+
+    @Test
+    void testUpdateSliceCountAllowedForIamJob(VertxTestContext context) throws Throwable
+    {
+        String jobId = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
+        long sliceCount = 100;
+        mockLookupRestoreJob(id -> RestoreJob.builder()
+                                            .jobId(id)
+                                            .keyspace("ks").table("table")
+                                            .jobAgent("agent")
+                                            .jobStatus(RestoreJobStatus.CREATED)
+                                            .jobSecrets(RestoreJobSecrets.iamMode("us-east-1"))
+                                            .credentialType(CredentialType.IAM)
+                                            .sstableImportOptions(SSTableImportOptions.defaults())
+                                            .build());
         mockUpdateRestoreJob(payload -> {
             assertThat(payload.sliceCount()).isEqualTo(sliceCount);
             return createTestNewJob(jobId);

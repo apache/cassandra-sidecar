@@ -33,6 +33,7 @@ import static org.apache.cassandra.sidecar.common.http.SidecarHttpHeaderNames.CO
  */
 public class XXHash32Digest implements Digest
 {
+    public static final String XXHASH_32_ALGORITHM = "XXHash32";
     private final @NotNull String value;
     private final @Nullable String seedHex;
 
@@ -90,7 +91,7 @@ public class XXHash32Digest implements Digest
     @Override
     public String algorithm()
     {
-        return "XXHash32";
+        return XXHASH_32_ALGORITHM;
     }
 
     /**

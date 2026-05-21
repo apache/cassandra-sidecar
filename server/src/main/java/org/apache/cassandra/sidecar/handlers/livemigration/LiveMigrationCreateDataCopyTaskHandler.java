@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.DecodeException;
@@ -35,9 +36,10 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationDataCopyInProgressException;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationTaskInProgressException;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 import org.apache.cassandra.sidecar.handlers.AccessProtected;
 import org.apache.cassandra.sidecar.livemigration.DataCopyTaskManager;
@@ -57,6 +59,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * - taskId: Unique identifier for tracking the created task
  * - statusUrl: URL that can be used to query the status of the data copy operation
  */
+@Singleton
 public class LiveMigrationCreateDataCopyTaskHandler extends AbstractHandler<LiveMigrationDataCopyRequest> implements AccessProtected
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationCreateDataCopyTaskHandler.class);
@@ -106,10 +109,10 @@ public class LiveMigrationCreateDataCopyTaskHandler extends AbstractHandler<Live
                 LOGGER.error("Invalid live migration request.", throwable);
                 context.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, throwable.getMessage(), throwable));
             }
-            else if (throwable instanceof LiveMigrationDataCopyInProgressException)
+            else if (throwable instanceof LiveMigrationTaskInProgressException)
             {
                 LOGGER.error("Cannot start a new data copy task while another one is in progress.");
-                context.fail(wrapHttpException(HttpResponseStatus.FORBIDDEN, throwable.getMessage(), throwable));
+                context.fail(wrapHttpException(HttpResponseStatus.CONFLICT, throwable.getMessage(), throwable));
             }
             else
             {
@@ -120,7 +123,7 @@ public class LiveMigrationCreateDataCopyTaskHandler extends AbstractHandler<Live
         });
     }
 
-    private JsonObject buildResponse(LiveMigrationTask task)
+    private JsonObject buildResponse(LiveMigrationTask<LiveMigrationDataCopyResponse> task)
     {
         return new JsonObject()
                .put("taskId", task.id())

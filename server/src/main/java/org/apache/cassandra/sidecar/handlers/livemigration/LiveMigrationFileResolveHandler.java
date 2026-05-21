@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -61,25 +62,27 @@ import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.DIR_TYPE_PARAM;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.replacePlaceholder;
 
 /**
- * Handler that allows Cassandra instance files to be downloaded during LiveMigration. This handler
- * doesn't stream the file but relies on {@link FileStreamHandler} to do so. This handler doesn't allow
- * using "/.." in the path to access files. This handler does not serve files which are excluded in
- * Live Migration configuration.
+ * Handler that resolves and validates file paths for live migration operations.
+ * This handler validates that the requested file exists, is accessible, and is not excluded
+ * from live migration. It sets the resolved file path in the routing context for downstream handlers.
+ * This handler does not allow using "/.." in the path to access files and does not serve files
+ * which are excluded in the Live Migration configuration.
  */
-public class LiveMigrationFileStreamHandler extends AbstractHandler<Void> implements AccessProtected
+@Singleton
+public class LiveMigrationFileResolveHandler extends AbstractHandler<Void> implements AccessProtected
 {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationFileStreamHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationFileResolveHandler.class);
 
     private final Map<Integer, List<PathMatcher>> fileExclusionsByInstanceId = new ConcurrentHashMap<>();
     private final Map<Integer, List<PathMatcher>> dirExclusionsByInstanceId = new ConcurrentHashMap<>();
     private final LiveMigrationConfiguration liveMigrationConfiguration;
 
     @Inject
-    public LiveMigrationFileStreamHandler(InstanceMetadataFetcher metadataFetcher,
-                                          ExecutorPools executorPools,
-                                          CassandraInputValidator validator,
-                                          SidecarConfiguration sidecarConfiguration)
+    public LiveMigrationFileResolveHandler(InstanceMetadataFetcher metadataFetcher,
+                                           ExecutorPools executorPools,
+                                           CassandraInputValidator validator,
+                                           SidecarConfiguration sidecarConfiguration)
     {
         super(metadataFetcher, executorPools, validator);
         this.liveMigrationConfiguration = sidecarConfiguration.liveMigrationConfiguration();

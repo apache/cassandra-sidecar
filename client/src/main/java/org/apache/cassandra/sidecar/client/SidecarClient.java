@@ -44,6 +44,7 @@ import org.apache.cassandra.sidecar.common.request.CreateRestoreJobSliceRequest;
 import org.apache.cassandra.sidecar.common.request.DeleteServiceConfigRequest;
 import org.apache.cassandra.sidecar.common.request.ImportSSTableRequest;
 import org.apache.cassandra.sidecar.common.request.ListCdcSegmentsRequest;
+import org.apache.cassandra.sidecar.common.request.LiveMigrationFileDigestRequest;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationListInstanceFilesRequest;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationStatusRequest;
 import org.apache.cassandra.sidecar.common.request.RepairRequest;
@@ -68,6 +69,7 @@ import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestP
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
+import org.apache.cassandra.sidecar.common.response.DigestResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.InstanceFilesListResponse;
@@ -1062,6 +1064,24 @@ public class SidecarClient implements AutoCloseable, SidecarClientBlobRestoreExt
                                                             .request(new StreamFileRequest(reqPath, targetFilePath))
                                                             .retryPolicy(new LiveMigrationDownloadRetryPolicy(defaultRetryPolicy, targetFilePath))
                                                             .build());
+    }
+
+
+    /**
+     * Retrieves the digest of a file calculated using the specified algorithm during live migration.
+     *
+     * @param instance the instance where the request will be executed
+     * @param fileUrl the file url for which digest should be calculated
+     * @param digestAlgorithm the digest algorithm to use (e.g., "md5", "xxhash32")
+     * @return a completable future of the digest response
+     */
+    public CompletableFuture<DigestResponse> liveMigrationFileDigestAsync(SidecarInstance instance,
+                                                                          String fileUrl,
+                                                                          String digestAlgorithm)
+    {
+        return executor.executeRequestAsync(requestBuilder().singleInstanceSelectionPolicy(instance)
+                                            .request(LiveMigrationFileDigestRequest.create(fileUrl, digestAlgorithm))
+                                            .build());
     }
 
     /**

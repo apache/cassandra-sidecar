@@ -83,6 +83,7 @@ import org.apache.cassandra.sidecar.common.request.data.XXHash32Digest;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
+import org.apache.cassandra.sidecar.common.response.DigestResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.common.response.InstanceFileInfo;
@@ -2195,6 +2196,29 @@ abstract class SidecarClientTest
         assertThat(result.isCompletedExceptionally()).isTrue();
         assertThat(Files.exists(filePath)).isFalse();
         validateResponseServed(fileUrl);
+    }
+
+    @Test
+    void testLiveMigrationFileDigestAsync() throws ExecutionException, InterruptedException
+    {
+        MockResponse response = new MockResponse();
+        response.setResponseCode(200);
+        response.setHeader("content-type", "application/json");
+        String digest = "0123456789abcdef";
+        String digestAlgorithm = "md5";
+
+        response.setBody("{\"digest\":\"" + digest + "\",\"digestAlgorithm\":\"md5\"}");
+        enqueue(response);
+
+        SidecarInstance instance = instances.get(0);
+        String url = LIVE_MIGRATION_FILES_ROUTE + "/data/0/test_file.text";
+
+        DigestResponse digestResponse = client.liveMigrationFileDigestAsync(instance, url, digestAlgorithm).get();
+
+        assertThat(digestResponse).isNotNull();
+        assertThat(digestResponse.digest).isEqualTo(digest);
+
+        validateResponseServed(url + "?digestAlgorithm=md5");
     }
 
     @Test

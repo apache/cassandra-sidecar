@@ -31,7 +31,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
-import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
@@ -40,8 +40,10 @@ import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
  * Implementation of live migration task that handles file downloading with retry logic.
  * Manages the lifecycle of data copy operations from source to destination instances.
  */
-public class LiveMigrationTaskImpl implements LiveMigrationTask
+public class LiveMigrationDataCopyTask implements LiveMigrationTask<LiveMigrationDataCopyResponse>
 {
+    public static final String DATA_COPY_TASK_TYPE = "data-copy-task";
+
     private final String id;
     private final LiveMigrationDataCopyRequest request;
     private final Map<Integer, OperationStatus> statusMap = new TreeMap<>();
@@ -62,15 +64,16 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
     volatile LiveMigrationFileDownloader downloader;
     private volatile boolean cancelled = false;
 
-    public LiveMigrationTaskImpl(Vertx vertx,
-                                 ExecutorPools executorPools,
-                                 SidecarClientProvider sidecarClientProvider,
-                                 LiveMigrationConfiguration liveMigrationConfiguration,
-                                 String id,
-                                 LiveMigrationDataCopyRequest request,
-                                 String source,
-                                 int port,
-                                 InstanceMetadata instanceMetadata, LiveMigrationFileDownloadPreCheck preCheck)
+    public LiveMigrationDataCopyTask(Vertx vertx,
+                                     ExecutorPools executorPools,
+                                     SidecarClientProvider sidecarClientProvider,
+                                     LiveMigrationConfiguration liveMigrationConfiguration,
+                                     String id,
+                                     LiveMigrationDataCopyRequest request,
+                                     String source,
+                                     int port,
+                                     InstanceMetadata instanceMetadata,
+                                     LiveMigrationFileDownloadPreCheck preCheck)
     {
         this.vertx = vertx;
         this.executorPools = executorPools;
@@ -91,6 +94,12 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
     public String id()
     {
         return id;
+    }
+
+    @Override
+    public String type()
+    {
+        return DATA_COPY_TASK_TYPE;
     }
 
     /**
@@ -184,9 +193,9 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
      * {@inheritDoc}
      */
     @Override
-    public LiveMigrationTaskResponse getResponse()
+    public LiveMigrationDataCopyResponse getResponse()
     {
-        return new LiveMigrationTaskResponse(id, source, port, request, getStatusResponse());
+        return new LiveMigrationDataCopyResponse(id, source, port, request, getStatusResponse());
     }
 
     Consumer<OperationStatus> statusUpdater(int iteration)
@@ -194,23 +203,23 @@ public class LiveMigrationTaskImpl implements LiveMigrationTask
         return (operationStatus) -> statusMap.put(iteration, operationStatus);
     }
 
-    private List<LiveMigrationTaskResponse.Status> getStatusResponse()
+    private List<LiveMigrationDataCopyResponse.Status> getStatusResponse()
     {
         return statusMap.entrySet().stream()
                         .map(entry -> toStatusResponse(entry.getValue(), entry.getKey()))
                         .collect(Collectors.toList());
     }
 
-    private LiveMigrationTaskResponse.Status toStatusResponse(OperationStatus operationStatus, int iteration)
+    private LiveMigrationDataCopyResponse.Status toStatusResponse(OperationStatus operationStatus, int iteration)
     {
-        return new LiveMigrationTaskResponse.Status(iteration,
-                                                    operationStatus.state().toString(),
-                                                    operationStatus.totalSize(),
-                                                    operationStatus.totalFiles(),
-                                                    operationStatus.bytesToDownload(),
-                                                    operationStatus.filesToDownload(),
-                                                    operationStatus.filesDownloaded(),
-                                                    operationStatus.downloadFailures(),
-                                                    operationStatus.bytesDownloaded());
+        return new LiveMigrationDataCopyResponse.Status(iteration,
+                                                        operationStatus.state().toString(),
+                                                        operationStatus.totalSize(),
+                                                        operationStatus.totalFiles(),
+                                                        operationStatus.bytesToDownload(),
+                                                        operationStatus.filesToDownload(),
+                                                        operationStatus.filesDownloaded(),
+                                                        operationStatus.downloadFailures(),
+                                                        operationStatus.bytesDownloaded());
     }
 }

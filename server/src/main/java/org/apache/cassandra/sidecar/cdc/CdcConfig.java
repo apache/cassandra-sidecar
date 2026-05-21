@@ -139,6 +139,22 @@ public interface CdcConfig
     MillisecondBoundConfiguration persistDelay();
 
     /**
+     * Returns the namespace prefix used when building Avro schemas for CDC events.
+     * This is an extension point for schema registry integration: implementations that
+     * register schemas with a shared registry should override this to return a globally
+     * unique prefix so that schema names do not collide across clusters or services.
+     * The prefix is combined with the Cassandra keyspace to form the Avro schema namespace:
+     * {@code <prefix>.<keyspace>}.
+     *
+     * <p>Defaults to empty string, in which case the keyspace name is used directly as
+     * the Avro namespace.
+     */
+    default String schemaNamespacePrefix()
+    {
+        return "";
+    }
+
+    /**
      * Topic format
      */
     enum TopicFormatType

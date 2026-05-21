@@ -108,6 +108,8 @@ ext {
 
 }
 
+apply from: "${project.rootDir}/gradle/common/environmentChecks.gradle"
+
 // Force checkstyle, rat, and spotBugs to run before test tasks for faster feedback
 def codeCheckTasks = task("codeCheckTasks")
 
@@ -157,6 +159,7 @@ allprojects {
         shouldRunAfter(codeCheckTasks)
         shouldRunAfter(tasks.withType(Checkstyle))
         shouldRunAfter(tasks.withType(RatTask))
+        dependsOn(rootProject.tasks.named('checkEnvironment'))
     }
 }
 
@@ -300,6 +303,18 @@ subprojects {
 
     test {
         finalizedBy jacocoTestReport // report is always generated after tests run
+    }
+}
+
+tasks.register('jacocoRootReport', JacocoReport) {
+    sourceDirectories.from(fileTree(rootDir).include("**/src/main/java/**"))
+    classDirectories.from(fileTree(rootDir).include("**/build/classes/java/main/**"))
+    executionData.from(fileTree(rootDir).include("**/build/jacoco/*.exec"))
+
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
     }
 }
 

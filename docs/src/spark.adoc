@@ -1,0 +1,178 @@
+////
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing,
+  software distributed under the License is distributed on an
+  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, either express or implied.  See the License for the
+  specific language governing permissions and limitations
+  under the License.
+////
+
+= S3 Restore Jobs from Spark
+
+This document describes how Spark jobs create S3 restore jobs through the sidecar client and
+explains the two supported credential modes.
+
+== Credential Modes
+
+Two modes are supported, selected by `credentialType` on the request payload.
+
+[cols="1,3"]
+|===
+| Mode | How credentials are resolved
+
+| `STATIC` (default)
+| Short-lived STS key fields are passed in the request. The sidecar uses them directly.
+Rotate them by calling `updateRestoreJob` before they expire.
+
+| `IAM`
+| No key fields are passed. The sidecar resolves credentials from the AWS default chain:
+instance profile on EC2, task role on ECS, or IRSA on EKS.
+|===
+
+[[static-flow]]
+== Static Credentials Flow
+
+Use static mode when Spark runs outside AWS, or when credentials are issued by an STS
+vending service that your job controls.
+
+....
+  Spark Job                     Credential Vending Service              Sidecar
+     |                                    |                                |
+     |--- request STS credentials ------->|                                |
+     |<-- accessKeyId / secretAccessKey --|                                |
+     |       sessionToken                 |                                |
+     |                                                                     |
+     |--- createRestoreJob(STATIC, keys) --------------------------------->|
+     |                                                          stores keys in DB
+     |                                                          uses StaticCredentialsProvider
+     |                                                          downloads slices from S3
+     |
+     | (credentials near expiry)
+     |--- updateRestoreJob(new keys) ------------------------------------->|
+     |                                                          replaces cached provider
+     |
+....
+
+=== Code Example
+
+[source,java]
+----
+StorageCredentials readCredentials = StorageCredentials.builder()
+                                                       .accessKeyId("ASIA...")
+                                                       .secretAccessKey("wJalr...")
+                                                       .sessionToken("AQoX...")
+                                                       .region("us-east-1")
+                                                       .build();
+
+StorageCredentials writeCredentials = StorageCredentials.builder()
+                                                        .accessKeyId("ASIA...")
+                                                        .secretAccessKey("wJalr...")
+                                                        .sessionToken("AQoX...")
+                                                        .region("us-east-1")
+                                                        .build();
+
+RestoreJobSecrets secrets = new RestoreJobSecrets(readCredentials, writeCredentials);
+
+long jobDeadline = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(4);
+
+CreateRestoreJobRequestPayload payload =
+    CreateRestoreJobRequestPayload.builder(secrets, jobDeadline)
+                                  .jobAgent("Spark Bulk Analytics")
+                                  .credentialType(CredentialType.STATIC)
+                                  .consistencyLevel(ConsistencyLevel.QUORUM)
+                                  .build();
+
+CreateRestoreJobResponsePayload response =
+    sidecarClient.createRestoreJob("my_keyspace", "my_table", payload).get();
+
+UUID jobId = response.jobId();
+----
+
+
+[[iam-flow]]
+== IAM Instance Profile Flow
+
+Use IAM mode when the sidecar runs on AWS infrastructure with an IAM role attached. No key
+material is passed. The sidecar resolves credentials automatically from the platform.
+
+....
+  Spark Job                     Sidecar                        AWS (IMDS / ECS / EKS)
+     |                             |                                    |
+     |--- createRestoreJob(IAM) -->|                                    |
+     |                    stores region in DB                           |
+     |                    (no key fields stored)                        |
+     |                             |                                    |
+     |                             |--- describe instance profile ----->|
+     |                             |<-- temporary credentials ----------|
+     |                             |    (refreshed automatically)       |
+     |                             |                                    |
+     |                             |--- downloads slices from S3 ------>|
+     |
+....
+
+
+=== Code Example
+
+Use `RestoreJobSecrets.iamMode(region)` to build the secrets object. Only `region` is
+required; all key fields must be absent.
+
+[source,java]
+----
+RestoreJobSecrets secrets = RestoreJobSecrets.iamMode("us-east-1");
+
+long jobDeadline = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(4);
+
+CreateRestoreJobRequestPayload payload =
+    CreateRestoreJobRequestPayload.builder(secrets, jobDeadline)
+                                  .jobAgent("Spark Bulk Analytics")
+                                  .credentialType(CredentialType.IAM)
+                                  .consistencyLevel(ConsistencyLevel.QUORUM)
+                                  .build();
+
+CreateRestoreJobResponsePayload response =
+    sidecarClient.createRestoreJob("my_keyspace", "my_table", payload).get();
+
+UUID jobId = response.jobId();
+----
+
+NOTE: `expireAt` (the `jobDeadline` above) is the restore job deadline — how long the sidecar
+will attempt the restore before aborting. It is not related to credential lifetime and must
+always be provided regardless of credential mode.
+
+[[choosing-a-mode]]
+== Choosing a Mode
+
+[cols="1,1,1"]
+|===
+| | STATIC | IAM
+
+| Spark runs inside AWS
+| Works, but requires credential vending
+| Recommended
+
+| Spark runs outside AWS
+| Required
+| Not applicable
+
+| Credential rotation
+| Caller calls `updateRestoreJob`
+| AWS SDK handles automatically
+
+| Key fields in request
+| Required
+| Must be absent — use `RestoreJobSecrets.iamMode(region)`
+
+| Sidecar requires IAM role
+| No
+| Yes
+|===

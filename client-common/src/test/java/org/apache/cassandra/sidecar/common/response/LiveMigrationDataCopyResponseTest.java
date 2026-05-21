@@ -24,14 +24,14 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse.Status;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse.Status;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for {@link LiveMigrationTaskResponse} JSON serialization and deserialization.
+ * Unit tests for {@link LiveMigrationDataCopyResponse} JSON serialization and deserialization.
  */
-class LiveMigrationTaskResponseTest
+class LiveMigrationDataCopyResponseTest
 {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -44,7 +44,7 @@ class LiveMigrationTaskResponseTest
         new Status(3, "SUCCESS", 1000000L, 100, 200000L, 20, 20, 0, 200000L)
         );
 
-        LiveMigrationTaskResponse original = new LiveMigrationTaskResponse(
+        LiveMigrationDataCopyResponse original = new LiveMigrationDataCopyResponse(
         "task-123",
         "192.168.1.100",
         9043,
@@ -55,7 +55,7 @@ class LiveMigrationTaskResponseTest
         );
 
         String json = objectMapper.writeValueAsString(original);
-        LiveMigrationTaskResponse deserialized = objectMapper.readValue(json, LiveMigrationTaskResponse.class);
+        LiveMigrationDataCopyResponse deserialized = objectMapper.readValue(json, LiveMigrationDataCopyResponse.class);
 
         assertThat(deserialized.taskId()).isEqualTo(original.taskId());
         assertThat(deserialized.source()).isEqualTo(original.source());

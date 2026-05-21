@@ -114,14 +114,14 @@ class MD5DigestVerifierTest
 
         public ExposeAsyncFileMD5DigestVerifier(FileSystem fs, MD5Digest md5Digest)
         {
-            super(fs, md5Digest, new JdkMd5DigestProvider.JdkMD5Digest());
+            super(fs, md5Digest, new JdkMd5DigestProvider.JdkMD5DigestAlgorithm());
         }
 
         @Override
         protected Future<String> calculateDigest(AsyncFile file)
         {
             this.file = file;
-            return super.calculateDigest(file);
+            return AsyncFileDigestCalculator.calculateDigest(file, new JdkMd5DigestProvider.JdkMD5DigestAlgorithm());
         }
     }
 }

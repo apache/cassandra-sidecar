@@ -42,6 +42,12 @@ public class CdcEventConsumer implements EventConsumer
         kafka.processEvent(cdcEvent);
     }
 
+    @Override
+    public void flush() throws InterruptedException
+    {
+        kafka.flush();
+    }
+
     public @NotNull Consumer<CdcEvent> andThen(@NotNull Consumer<? super CdcEvent> after)
     {
         return EventConsumer.super.andThen(after);

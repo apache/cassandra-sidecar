@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
@@ -46,6 +47,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
  * Handler that retrieves the status and details of a specific data copy task in the live migration process.
  * This handler processes GET requests for a particular live migration task by its unique task ID.
  */
+@Singleton
 public class LiveMigrationGetDataCopyTaskHandler extends AbstractHandler<String> implements AccessProtected
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationGetDataCopyTaskHandler.class);

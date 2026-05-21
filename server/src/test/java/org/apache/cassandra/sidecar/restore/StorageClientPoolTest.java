@@ -22,6 +22,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
@@ -41,5 +42,53 @@ class StorageClientPoolTest
                                    .build();
         StorageClient client = pool.storageClient(job);
         assertThat(client).isNotNull();
+    }
+
+    @Test
+    void testRetrieveClientWithIamCredentials() throws RestoreJobFatalException
+    {
+        StorageClientPool pool = new StorageClientPool(new SidecarConfigurationImpl(), null);
+        RestoreJobSecrets iamSecrets = RestoreJobSecrets.iamMode("us-east-1");
+        RestoreJob job = RestoreJob.builder()
+                                   .jobId(UUID.randomUUID())
+                                   .jobSecrets(iamSecrets)
+                                   .build();
+        StorageClient client = pool.storageClient(job);
+        assertThat(client).isNotNull();
+    }
+
+    @Test
+    void testIamJobsInSameRegionShareStorageClient() throws RestoreJobFatalException
+    {
+        StorageClientPool pool = new StorageClientPool(new SidecarConfigurationImpl(), null);
+        RestoreJobSecrets iamSecrets = RestoreJobSecrets.iamMode("us-east-1");
+
+        RestoreJob job1 = RestoreJob.builder().jobId(UUID.randomUUID()).jobSecrets(iamSecrets).build();
+        RestoreJob job2 = RestoreJob.builder().jobId(UUID.randomUUID()).jobSecrets(iamSecrets).build();
+
+        StorageClient client1 = pool.storageClient(job1);
+        StorageClient client2 = pool.storageClient(job2);
+
+        assertThat(client1).isSameAs(client2);
+    }
+
+    @Test
+    void testIamJobsInDifferentRegionsGetDifferentStorageClients() throws RestoreJobFatalException
+    {
+        StorageClientPool pool = new StorageClientPool(new SidecarConfigurationImpl(), null);
+
+        RestoreJob job1 = RestoreJob.builder()
+                                    .jobId(UUID.randomUUID())
+                                    .jobSecrets(RestoreJobSecrets.iamMode("us-east-1"))
+                                    .build();
+        RestoreJob job2 = RestoreJob.builder()
+                                    .jobId(UUID.randomUUID())
+                                    .jobSecrets(RestoreJobSecrets.iamMode("eu-west-1"))
+                                    .build();
+
+        StorageClient client1 = pool.storageClient(job1);
+        StorageClient client2 = pool.storageClient(job2);
+
+        assertThat(client1).isNotSameAs(client2);
     }
 }

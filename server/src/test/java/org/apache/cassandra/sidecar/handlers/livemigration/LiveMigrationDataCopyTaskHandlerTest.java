@@ -50,8 +50,8 @@ import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.request.LiveMigrationDataCopyRequest;
-import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
-import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse.Status;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse.Status;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
@@ -134,9 +134,9 @@ class LiveMigrationDataCopyTaskHandlerTest
         when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0),
-                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "SUCCESS", 1000, 10, 1000, 10, 10, 0, 1000))
+            new LiveMigrationDataCopyResponse(invocation.getArgument(0),
+                                              "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                              List.of(new Status(0, "SUCCESS", 1000, 10, 1000, 10, 10, 0, 1000))
             ));
         });
 
@@ -194,9 +194,9 @@ class LiveMigrationDataCopyTaskHandlerTest
         when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0),
-                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "STARTING", -1, -1, -1, -1, 0, 0, 0))
+            new LiveMigrationDataCopyResponse(invocation.getArgument(0),
+                                              "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                              List.of(new Status(0, "STARTING", -1, -1, -1, -1, 0, 0, 0))
             ));
         }); // Task in starting state only.
 
@@ -212,7 +212,7 @@ class LiveMigrationDataCopyTaskHandlerTest
                                          .as(BodyCodec.jsonObject())
                                          .sendJsonObject(dataCopyTaskPayload))
               .onSuccess(result -> context.verify(() -> {
-                  assertThat(result.statusCode()).isEqualTo(HttpResponseStatus.FORBIDDEN.code());
+                  assertThat(result.statusCode()).isEqualTo(HttpResponseStatus.CONFLICT.code());
                   JsonObject task = result.body();
                   assertThat(task).isNotNull();
                   assertThat(task.getString("message")).isNotNull();
@@ -228,7 +228,7 @@ class LiveMigrationDataCopyTaskHandlerTest
 
         LiveMigrationTaskFactory taskFactory = injector.getInstance(LiveMigrationTaskFactory.class);
         when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
-        .thenAnswer(invocation -> new FakeLiveMigrationTask(new LiveMigrationTaskResponse(
+        .thenAnswer(invocation -> new FakeLiveMigrationTask(new LiveMigrationDataCopyResponse(
         invocation.getArgument(0),
         "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
         List.of(new Status(0, "STARTING", -1, -1, -1, -1, 0, 0, 0))
@@ -265,9 +265,9 @@ class LiveMigrationDataCopyTaskHandlerTest
         when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0),
-                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "STARTING", -1, -1, -1, -1, 0, 0, 0))
+            new LiveMigrationDataCopyResponse(invocation.getArgument(0),
+                                              "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                              List.of(new Status(0, "STARTING", -1, -1, -1, -1, 0, 0, 0))
             ));
         }); // Task in starting state only.
 
@@ -312,9 +312,9 @@ class LiveMigrationDataCopyTaskHandlerTest
         when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0),
-                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "SUCCESS", 1000, 10, 1000, 10, 10, 0, 1000))
+            new LiveMigrationDataCopyResponse(invocation.getArgument(0),
+                                              "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                              List.of(new Status(0, "SUCCESS", 1000, 10, 1000, 10, 10, 0, 1000))
             ));
         });
 
@@ -341,16 +341,16 @@ class LiveMigrationDataCopyTaskHandlerTest
         when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0),
-                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "SUCCESS", 1000, 10, 1000, 10, 10, 0, 1000))
+            new LiveMigrationDataCopyResponse(invocation.getArgument(0),
+                                              "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                              List.of(new Status(0, "SUCCESS", 1000, 10, 1000, 10, 10, 0, 1000))
             ));
         });
 
         // Here, we are trying to trigger a data copy request with max concurrency greater than the allowed limit.
         // Thus, this should throw validation errors and this test case is trying to test this particular scenario.
         final JsonObject dataCopyTaskPayload = getDataCopyTaskPayload();
-        JsonObject badRequest = dataCopyTaskPayload.copy().put("maxConcurrency", sidecarConfiguration.liveMigrationConfiguration().maxConcurrentDownloads() + 1);
+        JsonObject badRequest = dataCopyTaskPayload.copy().put("maxConcurrency", sidecarConfiguration.liveMigrationConfiguration().maxConcurrentFileRequests() + 1);
 
         // Data copy task request can only be submitted from a destination host (since it follows a pull model)
         client.post(server.actualPort(), FIRST_DESTINATION_HOST, LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE)
@@ -401,9 +401,9 @@ class LiveMigrationDataCopyTaskHandlerTest
         when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0),
-                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "SUCCESS", 1000, 2, 1000, 2, 2, 0, 1000))
+            new LiveMigrationDataCopyResponse(invocation.getArgument(0),
+                                              "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                              List.of(new Status(0, "SUCCESS", 1000, 2, 1000, 2, 2, 0, 1000))
             ));
         });
 
@@ -447,9 +447,9 @@ class LiveMigrationDataCopyTaskHandlerTest
         when(taskFactory.create(anyString(), any(LiveMigrationDataCopyRequest.class), anyString(), anyInt(), any(InstanceMetadata.class)))
         .thenAnswer(invocation -> {
             return new FakeLiveMigrationTask(
-            new LiveMigrationTaskResponse(invocation.getArgument(0),
-                                          "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
-                                          List.of(new Status(0, "CANCELLED", 1000, 2, 1000, 2, 1, 0, 100))
+            new LiveMigrationDataCopyResponse(invocation.getArgument(0),
+                                              "dummysource", 9043, invocation.getArgument(1, LiveMigrationDataCopyRequest.class),
+                                              List.of(new Status(0, "CANCELLED", 1000, 2, 1000, 2, 1, 0, 100))
             ));
         });
 
@@ -510,7 +510,7 @@ class LiveMigrationDataCopyTaskHandlerTest
             .thenReturn(Collections.singleton("glob:${DATA_FILE_DIR}/*/*/snapshots"));
             when(mockLiveMigrationConfiguration.migrationMap())
             .thenReturn(migrationMap);
-            when(mockLiveMigrationConfiguration.maxConcurrentDownloads()).thenReturn(10);
+            when(mockLiveMigrationConfiguration.maxConcurrentFileRequests()).thenReturn(10);
 
             SidecarConfiguration sidecarConfiguration = SidecarConfigurationImpl.builder()
                                                                                 .liveMigrationConfiguration(mockLiveMigrationConfiguration)

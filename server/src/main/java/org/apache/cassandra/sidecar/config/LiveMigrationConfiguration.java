@@ -49,7 +49,9 @@ public interface LiveMigrationConfiguration
     Map<String, String> migrationMap();
 
     /**
-     * Maximum number of concurrent downloads allowed.
+     * Maximum number of concurrent file requests allowed.
+     * This limits concurrent file downloads and digest calculation requests to protect the source node
+     * from rogue clients.
      */
-    int maxConcurrentDownloads();
+    int maxConcurrentFileRequests();
 }

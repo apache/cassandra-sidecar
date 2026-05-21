@@ -24,12 +24,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationTaskNotFoundException;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
@@ -45,6 +47,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 /**
  * Handler for cancelling live migration data copy tasks.
  */
+@Singleton
 public class LiveMigrationCancelDataCopyTaskHandler extends AbstractHandler<String> implements AccessProtected
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationCancelDataCopyTaskHandler.class);
@@ -75,7 +78,7 @@ public class LiveMigrationCancelDataCopyTaskHandler extends AbstractHandler<Stri
     {
         try
         {
-            LiveMigrationTask task = dataCopyTaskManager.cancelTask(taskId, host);
+            LiveMigrationTask<LiveMigrationDataCopyResponse> task = dataCopyTaskManager.cancelTask(taskId, host);
             LOGGER.info("Successfully cancelled the data copy task with TaskID={}", taskId);
             context.json(task.getResponse());
         }

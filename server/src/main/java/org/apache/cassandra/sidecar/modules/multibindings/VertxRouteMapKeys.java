@@ -254,6 +254,11 @@ public interface VertxRouteMapKeys
         HttpMethod HTTP_METHOD = HttpMethod.PATCH;
         String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_DATA_COPY_TASK_ROUTE;
     }
+    interface LiveMigrationCancelFilesVerificationTaskRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.PATCH;
+        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_FILES_VERIFICATION_TASK_ROUTE;
+    }
     interface LiveMigrationCreateDataCopyTaskRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.POST;
@@ -264,15 +269,30 @@ public interface VertxRouteMapKeys
         HttpMethod HTTP_METHOD = HttpMethod.GET;
         String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE;
     }
+    interface LiveMigrationGetAllFilesVerificationTasksRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_FILES_VERIFICATION_TASKS_ROUTE;
+    }
     interface LiveMigrationGetDataCopyTaskRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.GET;
         String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_DATA_COPY_TASK_ROUTE;
     }
+    interface LiveMigrationGetFilesVerificationTaskRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.GET;
+        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_FILES_VERIFICATION_TASK_ROUTE;
+    }
     interface LiveMigrationFileStreamHandlerRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.GET;
         String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_FILE_TRANSFER_ROUTE;
+    }
+    interface LiveMigrationCreateFilesDigestVerificationTaskRouteKey extends RouteClassKey
+    {
+        HttpMethod HTTP_METHOD = HttpMethod.POST;
+        String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_FILES_VERIFICATION_TASKS_ROUTE;
     }
     interface LiveMigrationListInstanceFilesRouteKey extends RouteClassKey
     {
@@ -284,12 +304,12 @@ public interface VertxRouteMapKeys
         HttpMethod HTTP_METHOD = HttpMethod.GET;
         String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_STATUS_ROUTE;
     }
-    public interface LiveMigrationStatusUpdateRouteKey extends RouteClassKey
+    interface LiveMigrationStatusUpdateRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.POST;
         String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_STATUS_ROUTE;
     }
-    public interface LiveMigrationStatusDeleteRouteKey extends RouteClassKey
+    interface LiveMigrationStatusDeleteRouteKey extends RouteClassKey
     {
         HttpMethod HTTP_METHOD = HttpMethod.DELETE;
         String ROUTE_URI = ApiEndpointsV1.LIVE_MIGRATION_STATUS_ROUTE;

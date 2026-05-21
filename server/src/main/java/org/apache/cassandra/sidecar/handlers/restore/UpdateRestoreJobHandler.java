@@ -34,6 +34,7 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.common.data.CredentialType;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.UpdateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -94,6 +95,16 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
                 logger.debug("The job has completed already. job={}", job);
                 return Future.failedFuture(wrapHttpException(HttpResponseStatus.CONFLICT,
                                                              "Job is already in final state: " + job.status));
+            }
+
+            // IAM jobs derive credentials from the instance profile / task role at runtime.
+            // There are no static credentials to supply or rotate, so any attempt to update
+            // credentials on an IAM job is always invalid.
+            if (job.credentialType == CredentialType.IAM && requestPayload.secrets() != null)
+            {
+                logger.warn("Credential update rejected for IAM job. job={}", job);
+                return Future.failedFuture(wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                                                             "Credentials cannot be updated for IAM jobs"));
             }
 
             return executorPools.service()

@@ -29,15 +29,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.data.ConsistencyConfig;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
+import org.apache.cassandra.sidecar.common.data.CredentialType;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
+import org.apache.cassandra.sidecar.common.data.StorageCredentials;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.common.utils.StringUtils;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_AGENT;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_CONSISTENCY_LEVEL;
+import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_CREDENTIAL_TYPE;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_EXPIRE_AT;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_ID;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_IMPORT_OPTIONS;
@@ -47,6 +50,19 @@ import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_S
 
 /**
  * Request payload for creating restore jobs.
+ *
+ * <p>Two credential modes are supported, selected by the {@code credentialType} field:
+ * <ul>
+ *   <li><b>{@link CredentialType#STATIC}</b> (default when {@code credentialType} is absent): all three key
+ *       fields ({@code accessKeyId}, {@code secretAccessKey}, {@code sessionToken}) must be present on both
+ *       {@code readCredentials} and {@code writeCredentials}.</li>
+ *   <li><b>{@link CredentialType#IAM}</b>: key fields must be absent; only {@code region} is required so
+ *       the AWS SDK can route requests to the correct S3 endpoint. Use
+ *       {@link RestoreJobSecrets#iamMode(String)} to build the secrets object for this mode.</li>
+ * </ul>
+ *
+ * <p>The {@code credentialType} field drives validation: passing credentials that do not match the declared
+ * type is rejected at construction time to surface misconfigurations before they reach the AWS SDK.
  */
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class CreateRestoreJobRequestPayload
@@ -54,16 +70,25 @@ public class CreateRestoreJobRequestPayload
     private final UUID jobId;
     private final String jobAgent;
     private final RestoreJobSecrets secrets;
+    private final CredentialType credentialType;
     private final SSTableImportOptions importOptions;
     private final long expireAtInMillis;
     private final ConsistencyConfig consistencyConfig;
     private final boolean localDatacenterOnly;
 
     /**
-     * Builder to build a CreateRestoreJobRequest
+     * Builder to build a {@link CreateRestoreJobRequestPayload}.
      *
-     * @param secrets          secrets for access objects on storage cloud
-     * @param expireAtInMillis time in future that the job expires,
+     * <p>For IAM instance profile mode set {@code credentialType} to {@link CredentialType#IAM} and use
+     * {@link RestoreJobSecrets#iamMode(String)} to construct the secrets argument:
+     * <pre>
+     *     CreateRestoreJobRequestPayload.builder(RestoreJobSecrets.iamMode("us-east-1"), expireAt)
+     *                                   .credentialType(CredentialType.IAM)
+     *                                   .build();
+     * </pre>
+     *
+     * @param secrets          secrets for accessing objects on the storage cloud
+     * @param expireAtInMillis time in the future that the job expires,
      *                         i.e. fail the restore job if it is not in a final {@link RestoreJobStatus} yet
      * @return builder
      */
@@ -75,19 +100,21 @@ public class CreateRestoreJobRequestPayload
     /**
      * CreateRestoreJobRequest deserializer
      *
-     * @param jobId            job id of restore job
-     * @param jobAgent         arbitrary text a job can put, which can be used to identity itself during Http request
-     * @param secrets          secrets to be used by restore job to download data
-     * @param importOptions    the configured options for SSTable import
-     * @param expireAtInMillis a timestamp in the future when the job is considered expired
-     * @param consistencyLevel consistency level a job should satisfy
-     * @param localDatacenter  the local datacenter name; required if using local consistency level and localDatacenterOnly is specified
+     * @param jobId               job id of restore job
+     * @param jobAgent            arbitrary text a job can put, which can be used to identity itself during Http request
+     * @param secrets             secrets to be used by restore job to download data
+     * @param credentialType      the credential mode; {@code null} is treated as {@link CredentialType#STATIC}
+     * @param importOptions       the configured options for SSTable import
+     * @param expireAtInMillis    a timestamp in the future when the job is considered expired
+     * @param consistencyLevel    consistency level a job should satisfy
+     * @param localDatacenter     the local datacenter name; required if using local consistency level and localDatacenterOnly is specified
      * @param localDatacenterOnly whether the job should restore to the specified local datacenter only
      */
     @JsonCreator
     public CreateRestoreJobRequestPayload(@JsonProperty(JOB_ID) UUID jobId,
                                           @JsonProperty(JOB_AGENT) String jobAgent,
                                           @JsonProperty(JOB_SECRETS) RestoreJobSecrets secrets,
+                                          @JsonProperty(JOB_CREDENTIAL_TYPE) @Nullable CredentialType credentialType,
                                           @JsonProperty(JOB_IMPORT_OPTIONS) SSTableImportOptions importOptions,
                                           @JsonProperty(JOB_EXPIRE_AT) long expireAtInMillis,
                                           @JsonProperty(JOB_CONSISTENCY_LEVEL) String consistencyLevel,
@@ -98,30 +125,23 @@ public class CreateRestoreJobRequestPayload
                                     "Only time based UUIDs allowed for jobId");
         Preconditions.checkArgument(expireAtInMillis != 0 && expireAtInMillis > System.currentTimeMillis(),
                                     "expireAt cannot be absent or a time in past");
-        Objects.requireNonNull(secrets, "secrets cannot be null");
+        Objects.requireNonNull(secrets, "secrets must be provided");
+        CredentialType effectiveType = credentialType == null ? CredentialType.STATIC : credentialType;
+        validateCredentials(secrets.readCredentials(), "readCredentials", effectiveType);
+        validateCredentials(secrets.writeCredentials(), "writeCredentials", effectiveType);
         this.jobId = jobId;
         this.jobAgent = jobAgent;
         this.secrets = secrets;
-        this.importOptions = importOptions == null
-                             ? SSTableImportOptions.defaults()
-                             : importOptions;
+        this.credentialType = effectiveType;
+        SSTableImportOptions base = importOptions == null ? SSTableImportOptions.defaults() : importOptions;
+        SSTableImportOptions importOptionsCopy = SSTableImportOptions.defaults();
+        importOptionsCopy.putAll(base);
+        this.importOptions = importOptionsCopy;
         this.expireAtInMillis = expireAtInMillis;
         this.consistencyConfig = ConsistencyConfig.parseString(consistencyLevel, localDatacenter);
         Preconditions.checkArgument(!localDatacenterOnly || StringUtils.isNotEmpty(localDatacenter),
                                     "Must specify a localDatacenter when restoreToLocalDatacenterOnly is true");
         this.localDatacenterOnly = localDatacenterOnly;
-    }
-
-    private CreateRestoreJobRequestPayload(Builder builder)
-    {
-        this(builder.jobId,
-             builder.jobAgent,
-             builder.secrets,
-             builder.importOptions,
-             builder.expireAtInMillis,
-             nameOrNull(builder.consistencyLevel),
-             builder.localDc,
-             builder.localDatacenterOnly);
     }
 
     /**
@@ -149,6 +169,15 @@ public class CreateRestoreJobRequestPayload
     public RestoreJobSecrets secrets()
     {
         return secrets;
+    }
+
+    /**
+     * @return the credential type for this job; defaults to {@link CredentialType#STATIC} when absent from the request
+     */
+    @JsonProperty(JOB_CREDENTIAL_TYPE)
+    public CredentialType credentialType()
+    {
+        return credentialType;
     }
 
     /**
@@ -213,6 +242,14 @@ public class CreateRestoreJobRequestPayload
         return consistencyConfig;
     }
 
+    /**
+     * @return the AWS region of the S3 bucket, derived from {@code secrets.readCredentials().region()}
+     */
+    public String storageRegion()
+    {
+        return secrets.readCredentials().region();
+    }
+
     @Override
     public String toString()
     {
@@ -238,6 +275,7 @@ public class CreateRestoreJobRequestPayload
 
         private UUID jobId = null;
         private String jobAgent = null;
+        private CredentialType credentialType = null;
         private ConsistencyLevel consistencyLevel = null;
         private String localDc = null;
         private boolean localDatacenterOnly = false;
@@ -256,6 +294,11 @@ public class CreateRestoreJobRequestPayload
         public Builder jobAgent(String jobAgent)
         {
             return update(b -> b.jobAgent = jobAgent);
+        }
+
+        public Builder credentialType(CredentialType credentialType)
+        {
+            return update(b -> b.credentialType = credentialType);
         }
 
         public Builder updateImportOptions(Consumer<SSTableImportOptions> updater)
@@ -297,8 +340,45 @@ public class CreateRestoreJobRequestPayload
         }
     }
 
+    private CreateRestoreJobRequestPayload(Builder builder)
+    {
+        this(builder.jobId,
+             builder.jobAgent,
+             builder.secrets,
+             builder.credentialType,
+             builder.importOptions,
+             builder.expireAtInMillis,
+             nameOrNull(builder.consistencyLevel),
+             builder.localDc,
+             builder.localDatacenterOnly);
+    }
+
     private static String nameOrNull(ConsistencyLevel cl)
     {
         return cl == null ? null : cl.name();
+    }
+
+    /**
+     * Validates credentials against the declared {@link CredentialType}.
+     * For {@link CredentialType#STATIC}: all three key fields must be present.
+     * For {@link CredentialType#IAM}: all three key fields must be absent (only region is allowed).
+     */
+    private static void validateCredentials(StorageCredentials credentials, String fieldName, CredentialType credentialType)
+    {
+        boolean hasAccessKey = credentials.accessKeyId() != null;
+        boolean hasSecretKey = credentials.secretAccessKey() != null;
+        boolean hasSessionToken = credentials.sessionToken() != null;
+        if (credentialType == CredentialType.IAM)
+        {
+            Preconditions.checkArgument(!hasAccessKey && !hasSecretKey && !hasSessionToken,
+                                        "IAM credentials must not contain key fields for " + fieldName +
+                                        ": accessKeyId, secretAccessKey, and sessionToken must all be absent");
+        }
+        else
+        {
+            Preconditions.checkArgument(hasAccessKey && hasSecretKey && hasSessionToken,
+                                        "Static credentials must have all key fields present for " + fieldName +
+                                        ": accessKeyId, secretAccessKey, and sessionToken are all required");
+        }
     }
 }

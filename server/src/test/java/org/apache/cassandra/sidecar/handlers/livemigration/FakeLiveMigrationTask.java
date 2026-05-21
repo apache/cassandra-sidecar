@@ -19,18 +19,20 @@
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
 
-import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationTask;
+
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationDataCopyTask.DATA_COPY_TASK_TYPE;
 
 /**
  * Test implementation of LiveMigrationTask that returns predefined responses for testing purposes.
  */
-public class FakeLiveMigrationTask implements LiveMigrationTask
+public class FakeLiveMigrationTask implements LiveMigrationTask<LiveMigrationDataCopyResponse>
 {
-    private final LiveMigrationTaskResponse taskResponse;
+    private final LiveMigrationDataCopyResponse taskResponse;
     private boolean cancelled = false;
 
-    public FakeLiveMigrationTask(LiveMigrationTaskResponse taskResponse)
+    public FakeLiveMigrationTask(LiveMigrationDataCopyResponse taskResponse)
     {
         this.taskResponse = taskResponse;
     }
@@ -42,12 +44,18 @@ public class FakeLiveMigrationTask implements LiveMigrationTask
     }
 
     @Override
+    public String type()
+    {
+        return DATA_COPY_TASK_TYPE;
+    }
+
+    @Override
     public void start()
     {
     }
 
     @Override
-    public LiveMigrationTaskResponse getResponse()
+    public LiveMigrationDataCopyResponse getResponse()
     {
         return taskResponse;
     }

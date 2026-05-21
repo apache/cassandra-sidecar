@@ -18,12 +18,14 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -35,7 +37,7 @@ public class TestFileUtils
      * Writes random data to a file with name {@code filename} under the specified {@code directory} with
      * the specified size in bytes.
      *
-     * @param directory   the directory where to
+     * @param directory   the directory in which files needs to be created
      * @param fileName    the name of the desired file to create
      * @param sizeInBytes the size of the files in bytes
      * @return the path of the file that was recently created
@@ -76,7 +78,7 @@ public class TestFileUtils
         Path parent = file.getParent();
         if (null == parent)
         {
-            throw new IOException("Parent doesn't exists for file " + file);
+            throw new IOException("Parent doesn't exist for file " + file);
         }
         Files.createDirectories(parent);
         Files.write(file, content.getBytes(StandardCharsets.UTF_8));
@@ -94,5 +96,26 @@ public class TestFileUtils
     {
         Path dir = Paths.get(first, more);
         Files.createDirectories(dir);
+    }
+
+    public static void createFile(String file, int size, long lastModifiedTime) throws IOException
+    {
+        createFile(new File(file), size, lastModifiedTime);
+    }
+
+    public static void createFile(File f, int size, long lastModifiedTime) throws IOException
+    {
+        Path p = f.toPath();
+        Files.createDirectories(p.getParent());
+        Files.createFile(p);
+        byte[] bytes = new byte[size];
+        ThreadLocalRandom.current().nextBytes(bytes);
+        Files.write(p, bytes);
+        Files.setLastModifiedTime(p, FileTime.fromMillis(lastModifiedTime));
+    }
+
+    public static void createDirectory(File f)  throws IOException
+    {
+        Files.createDirectories(f.toPath());
     }
 }

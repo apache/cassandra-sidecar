@@ -21,7 +21,9 @@ package org.apache.cassandra.sidecar.common.data;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.CREDENTIALS_ACCESS_KEY_ID;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.CREDENTIALS_REGION;
@@ -31,11 +33,12 @@ import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.CREDE
 /**
  * Used for storing credential details needed for either reading/writing to S3
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class StorageCredentials
 {
-    private final String accessKeyId;
-    private final String secretAccessKey;
-    private final String sessionToken;
+    private final @Nullable String accessKeyId;
+    private final @Nullable String secretAccessKey;
+    private final @Nullable String sessionToken;
     private final String region;
 
     public static Builder builder()
@@ -44,14 +47,11 @@ public class StorageCredentials
     }
 
     @JsonCreator
-    public StorageCredentials(@JsonProperty(CREDENTIALS_ACCESS_KEY_ID) String accessKeyId,
-                              @JsonProperty(CREDENTIALS_SECRET_ACCESS_KEY) String secretAccessKey,
-                              @JsonProperty(CREDENTIALS_SESSION_TOKEN) String sessionToken,
+    public StorageCredentials(@JsonProperty(CREDENTIALS_ACCESS_KEY_ID) @Nullable String accessKeyId,
+                              @JsonProperty(CREDENTIALS_SECRET_ACCESS_KEY) @Nullable String secretAccessKey,
+                              @JsonProperty(CREDENTIALS_SESSION_TOKEN) @Nullable String sessionToken,
                               @JsonProperty(CREDENTIALS_REGION) String region)
     {
-        Objects.requireNonNull(accessKeyId, "accessKeyId must be supplied");
-        Objects.requireNonNull(secretAccessKey, "secretAccessKey must be supplied");
-        Objects.requireNonNull(sessionToken, "sessionToken must be supplied");
         Objects.requireNonNull(region, "region must be supplied");
         this.accessKeyId = accessKeyId;
         this.secretAccessKey = secretAccessKey;
@@ -60,19 +60,19 @@ public class StorageCredentials
     }
 
     @JsonProperty(CREDENTIALS_ACCESS_KEY_ID)
-    public String accessKeyId()
+    public @Nullable String accessKeyId()
     {
         return accessKeyId;
     }
 
     @JsonProperty(CREDENTIALS_SECRET_ACCESS_KEY)
-    public String secretAccessKey()
+    public @Nullable String secretAccessKey()
     {
         return secretAccessKey;
     }
 
     @JsonProperty(CREDENTIALS_SESSION_TOKEN)
-    public String sessionToken()
+    public @Nullable String sessionToken()
     {
         return sessionToken;
     }
@@ -84,7 +84,28 @@ public class StorageCredentials
     }
 
     /**
-     * @return secrets string with redacted values
+     * Returns true if all three key fields ({@code accessKeyId}, {@code secretAccessKey}, {@code sessionToken})
+     * are non-null, indicating that static AWS credentials are present and should be used.
+     *
+     * <p>All three fields are required together because the sidecar exclusively uses
+     * {@code AwsSessionCredentials} — STS-issued short-lived
+     * credentials that include a session token. Long-term IAM user keys (key + secret without a token)
+     * are intentionally unsupported: they cannot expire, carry broader permissions, and pose a higher
+     * blast radius if leaked. Callers that want permanent access should use IAM instance profiles instead.
+     *
+     * <p>A return value of {@code false} means the key fields are absent. Callers that have already validated
+     * credentials via {@link org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload}
+     * can treat this as an indication to use the AWS default credential chain (IAM instance profile, etc.).
+     * Callers that have not performed that validation should not assume {@code false} implies a valid IAM state —
+     * it could also mean partially-populated credentials that were not yet rejected.
+     */
+    public boolean hasStaticCredentials()
+    {
+        return accessKeyId != null && secretAccessKey != null && sessionToken != null;
+    }
+
+    /**
+     * @return credentials string with all secret values redacted; safe for logging
      */
     @Override
     public String toString()
@@ -119,13 +140,13 @@ public class StorageCredentials
     }
 
     /**
-     * Builds the RestoreJobSecrets
+     * Builds a {@link StorageCredentials} instance
      */
     public static class Builder
     {
-        private String accessKeyId;
-        private String secretAccessKey;
-        private String sessionToken;
+        private @Nullable String accessKeyId;
+        private @Nullable String secretAccessKey;
+        private @Nullable String sessionToken;
         private String region;
 
         private Builder()

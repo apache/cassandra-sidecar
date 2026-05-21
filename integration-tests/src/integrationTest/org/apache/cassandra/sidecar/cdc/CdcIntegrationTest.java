@@ -75,6 +75,9 @@ public class CdcIntegrationTest extends SharedClusterCdcSidecarIntegrationTestBa
             expectedMutations.put(i, i);
         }
 
+        // Seal the active commit log segment so CDC can find the mutations in cdc_raw
+        cluster.getFirstRunningInstance().flush(CDC_TEST_TABLE.keyspace());
+
         TestCdcEventConsumer consumer = getTestEventConsumer();
         waitUntil(() -> consumer.getEvents().size() >= mutationCount, 120, 1000);
         assertThat(consumer.getEvents().size())

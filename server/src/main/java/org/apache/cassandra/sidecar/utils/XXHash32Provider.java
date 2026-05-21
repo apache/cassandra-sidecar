@@ -28,17 +28,17 @@ public class XXHash32Provider implements DigestAlgorithmProvider
     @Override
     public DigestAlgorithm get(int seed)
     {
-        return new Lz4XXHash32(seed);
+        return new Lz4XXHash32DigestAlgorithm(seed);
     }
 
     /**
      * XXHash32 implementation from LZ4
      */
-    public static class Lz4XXHash32 implements DigestAlgorithm
+    public static class Lz4XXHash32DigestAlgorithm implements DigestAlgorithm
     {
         private final XXHash32 xxHash32;
 
-        Lz4XXHash32(int seed)
+        Lz4XXHash32DigestAlgorithm(int seed)
         {
             this.xxHash32 = new XXHash32(seed);
         }

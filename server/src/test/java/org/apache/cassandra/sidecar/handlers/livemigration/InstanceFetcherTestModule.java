@@ -49,9 +49,10 @@ class InstanceFetcherTestModule extends AbstractModule
     {
         InstancesMetadata instancesMetadata = new InstancesMetadataImpl(
         List.of(
-        getMockInstance(1, "localhost"),
-        getMockInstance(2, "localhost2"),
-        getMockInstance(3, "localhost3")),
+        getMockInstance(1, "127.0.0.1"),
+        getMockInstance(2, "127.0.0.2"),
+        getMockInstance(3, "127.0.0.3"),
+        getMockInstance(4, "127.0.0.4")),
         new DnsResolver()
         {
             @Override

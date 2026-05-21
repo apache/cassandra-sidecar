@@ -27,10 +27,12 @@ import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.utils.UUIDs;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
+import org.apache.cassandra.sidecar.common.data.CredentialType;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.server.data.RestoreRangeStatus;
+import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -161,6 +163,39 @@ public class RestoreJobTest
             RestoreJob job = createTestingJob(jobId, "ks", RestoreJobStatus.CREATED, cl, dcName);
             assertThat(job.isManagedBySidecar()).isTrue();
         }
+    }
+
+    @Test
+    void testCredentialTypePreservedThroughUnbuild()
+    {
+        UUID jobId = UUIDs.timeBased();
+        RestoreJobSecrets iamSecrets = RestoreJobSecrets.iamMode("us-east-1");
+        RestoreJob job = RestoreJob.builder()
+                                   .jobId(jobId)
+                                   .jobSecrets(iamSecrets)
+                                   .credentialType(CredentialType.IAM)
+                                   .build();
+
+        assertThat(job.credentialType).isEqualTo(CredentialType.IAM);
+
+        RestoreJob rebuilt = job.unbuild().build();
+        assertThat(rebuilt.credentialType).isEqualTo(CredentialType.IAM);
+    }
+
+    @Test
+    void testStaticCredentialTypePreservedThroughUnbuild()
+    {
+        UUID jobId = UUIDs.timeBased();
+        RestoreJob job = RestoreJob.builder()
+                                   .jobId(jobId)
+                                   .jobSecrets(RestoreJobSecretsGen.genRestoreJobSecrets())
+                                   .credentialType(CredentialType.STATIC)
+                                   .build();
+
+        assertThat(job.credentialType).isEqualTo(CredentialType.STATIC);
+
+        RestoreJob rebuilt = job.unbuild().build();
+        assertThat(rebuilt.credentialType).isEqualTo(CredentialType.STATIC);
     }
 
     @Test

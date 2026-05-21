@@ -50,6 +50,7 @@ import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
@@ -91,7 +92,14 @@ public class StorageClient
     }
 
     /**
-     * Authenticate and cache the credentials of a {@link RestoreJob}
+     * Authenticate and cache the credentials of a {@link RestoreJob}.
+     *
+     * <p>Credentials are only replaced when the job's secrets have changed (determined by
+     * {@link #matches}), avoiding redundant re-initialization on every polling cycle.
+     *
+     * <p><b>Threading note</b>: the update runs inside {@link java.util.concurrent.ConcurrentHashMap#compute},
+     * which holds a per-bucket lock for its duration. {@link Credentials#init()} must therefore remain
+     * non-blocking — no I/O, no external calls, and no locks that could form a cycle.
      */
     public StorageClient authenticate(RestoreJob restoreJob) throws RestoreJobFatalException
     {
@@ -321,13 +329,41 @@ public class StorageClient
         return failure;
     }
 
+    /**
+     * Holds the AWS credential provider for a specific restore job.
+     *
+     * <p>Two credential modes are supported:
+     * <ul>
+     *   <li><b>Static credentials</b>: {@code accessKeyId}, {@code secretAccessKey}, and {@code sessionToken}
+     *       are all non-null in the job's {@link StorageCredentials}. A {@link StaticCredentialsProvider}
+     *       is used, wrapping {@link AwsSessionCredentials}.</li>
+     *   <li><b>IAM instance profile</b>: the job's {@link StorageCredentials} contains only a region.
+     *       A shared {@link DefaultCredentialsProvider} is used, which resolves credentials via the
+     *       standard AWS chain: IAM instance profile → ECS task role → environment variables → etc.
+     *       This is the AWS-recommended approach for workloads running on EC2/ECS/EKS.</li>
+     * </ul>
+     *
+     * <p>{@link #init()} must be called after construction and before {@link #awsCredentialsProvider()}.
+     * This two-phase pattern exists so that the caller (see {@link StorageClient#authenticate}) can
+     * compare old and new credentials before deciding whether to re-initialize, avoiding unnecessary
+     * re-creation when secrets have not changed.
+     */
     private static class Credentials
     {
+        // package-private so authenticate() can compare old vs new credentials via matches() without a getter
         final StorageCredentials readCredentials;
         private AwsCredentialsProvider awsCredential;
 
+        // Shared across all IAM-mode jobs. DefaultCredentialsProvider.create() initializes a thread pool
+        // for async credential refresh; creating one per job would waste threads and resources.
+        private static final DefaultCredentialsProvider DEFAULT_CREDENTIALS_PROVIDER =
+        DefaultCredentialsProvider.create();
+
         Credentials(RestoreJob restoreJob) throws RestoreJobFatalException
         {
+            // RestoreJobFatalException is used here (rather than NullPointerException) so that the
+            // restore pipeline can treat a missing-secrets job as a terminal failure and update job
+            // status accordingly, rather than propagating an unchecked exception up through the scheduler.
             if (restoreJob.secrets == null)
             {
                 throw new RestoreJobFatalException("Restore job is missing credentials. JobId: " + restoreJob.jobId);
@@ -338,14 +374,29 @@ public class StorageClient
 
         void init()
         {
-            AwsCredentials credentials = AwsSessionCredentials.create(readCredentials.accessKeyId(),
-                                                                      readCredentials.secretAccessKey(),
-                                                                      readCredentials.sessionToken());
-            this.awsCredential = StaticCredentialsProvider.create(credentials);
+            if (readCredentials.hasStaticCredentials())
+            {
+                AwsCredentials credentials = AwsSessionCredentials.create(readCredentials.accessKeyId(),
+                                                                          readCredentials.secretAccessKey(),
+                                                                          readCredentials.sessionToken());
+                this.awsCredential = StaticCredentialsProvider.create(credentials);
+            }
+            else
+            {
+                // No static credentials provided; delegate to the AWS default credential chain.
+                // The shared singleton is used to avoid re-initializing the chain per job.
+                this.awsCredential = DEFAULT_CREDENTIALS_PROVIDER;
+            }
         }
 
         AwsCredentialsProvider awsCredentialsProvider()
         {
+            if (awsCredential == null)
+            {
+                // init() must be called before awsCredentialsProvider(); see class-level Javadoc.
+                throw new IllegalStateException("Credentials have not been initialized. " +
+                                                "Call init() before awsCredentialsProvider().");
+            }
             return awsCredential;
         }
     }

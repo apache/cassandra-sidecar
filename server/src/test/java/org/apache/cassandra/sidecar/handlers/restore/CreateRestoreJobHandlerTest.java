@@ -30,6 +30,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobTest;
@@ -113,6 +114,22 @@ class CreateRestoreJobHandlerTest extends BaseRestoreJobTests
     }
 
     @Test
+    void testIamModeRequest(VertxTestContext context) throws Throwable
+    {
+        mockCreateRestoreJob(x -> createTestNewJob("8e5799a4-d277-11ed-8d85-6916bb9b8056"));
+        mockLookupRestoreJob(id -> null);
+        JsonObject regionOnlyCredentials = new JsonObject().put("region", "us-east-1");
+        JsonObject secrets = new JsonObject()
+                             .put("readCredentials", regionOnlyCredentials)
+                             .put("writeCredentials", regionOnlyCredentials);
+        JsonObject payload = new JsonObject();
+        payload.put("credentialType", "IAM");
+        payload.put("secrets", secrets);
+        payload.put("expireAt", System.currentTimeMillis() + 10000L);
+        sendCreateRestoreJobRequestAndVerify("ks", "table", payload, context, HttpResponseStatus.OK.code());
+    }
+
+    @Test
     void testExceptionThrownDuringExecution(VertxTestContext context) throws Throwable
     {
         JsonObject payload = getRequestPayload("8e5799a4-d277-11ed-8d85-6916bb9b8056");
@@ -174,6 +191,7 @@ class CreateRestoreJobHandlerTest extends BaseRestoreJobTests
                                  {
                                      assertThat(responseBody.getString(JOB_ID)).isEqualTo(expectedJobId);
                                  }
+                                 assertThat(responseBody.getString(STATUS)).isEqualTo(RestoreJobStatus.CREATED.name());
                              }
                          });
     }

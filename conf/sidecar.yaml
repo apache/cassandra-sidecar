@@ -483,7 +483,7 @@ live_migration:
     - glob:${DATA_FILE_DIR}/*/*/snapshots # Excludes snapshot directories in data folder to copy to destination
   migration_map:                          # Map of source and destination Cassandra instances
 #    localhost1: localhost4               # This entry says that localhost1 will be migrated to localhost4
-  max_concurrent_downloads: 20            # Maximum number of concurrent downloads allowed
+  max_concurrent_file_requests: 20        # Maximum number of concurrent file requests allowed
 
 # Configuration to allow sidecar start and stop Cassandra instances via the lifecycle API (disabled by default)
 lifecycle:

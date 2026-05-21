@@ -23,11 +23,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
-import org.apache.cassandra.sidecar.common.response.LiveMigrationTaskResponse;
+import org.apache.cassandra.sidecar.common.response.LiveMigrationDataCopyResponse;
 import org.apache.cassandra.sidecar.handlers.AccessProtected;
 import org.apache.cassandra.sidecar.livemigration.DataCopyTaskManager;
 import org.apache.cassandra.sidecar.livemigration.LiveMigrationTask;
@@ -37,6 +38,7 @@ import static org.apache.cassandra.sidecar.handlers.AbstractHandler.extractHostA
 /**
  * Handler for retrieving all Live Migration data copy tasks.
  */
+@Singleton
 public class LiveMigrationGetAllDataCopyTasksHandler implements Handler<RoutingContext>, AccessProtected
 {
     private final DataCopyTaskManager dataCopyTaskManager;
@@ -51,10 +53,10 @@ public class LiveMigrationGetAllDataCopyTasksHandler implements Handler<RoutingC
     public void handle(RoutingContext context)
     {
         String localhost = extractHostAddressWithoutPort(context.request());
-        List<LiveMigrationTaskResponse> tasks = dataCopyTaskManager.getAllTasks(localhost)
-                                                                   .stream()
-                                                                   .map(LiveMigrationTask::getResponse)
-                                                                   .collect(Collectors.toList());
+        List<LiveMigrationDataCopyResponse> tasks = dataCopyTaskManager.getAllTasks(localhost)
+                                                                       .stream()
+                                                                       .map(LiveMigrationTask::getResponse)
+                                                                       .collect(Collectors.toList());
         context.json(tasks);
     }
 

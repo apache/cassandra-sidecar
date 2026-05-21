@@ -21,11 +21,8 @@ package org.apache.cassandra.sidecar.bridge;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,7 +32,6 @@ import org.apache.cassandra.bridge.BaseCassandraBridgeFactory;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.bridge.CassandraVersionFeatures;
-import org.apache.cassandra.bridge.PostDelegationClassLoader;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.bridge.BaseCassandraBridgeFactory.getCassandraVersion;
@@ -124,21 +120,8 @@ public class CassandraBridgeFactory
 
     public ClassLoader buildClassLoader(String... resourceNames)
     {
-        URL[] urls = Arrays.stream(resourceNames)
-                           .map(BaseCassandraBridgeFactory::copyClassResourceToFile)
-                           .map(jar -> {
-                               try
-                               {
-                                   return jar.toURI().toURL();
-                               }
-                               catch (MalformedURLException e)
-                               {
-                                   throw new RuntimeException(e);
-                               }
-                           }).toArray(URL[]::new);
-
         return AccessController.doPrivileged((PrivilegedAction<ClassLoader>) () ->
-                                                                             new PostDelegationClassLoader(urls, Thread.currentThread().getContextClassLoader()));
+                BaseCassandraBridgeFactory.buildClassLoader(resourceNames));
     }
 
 }

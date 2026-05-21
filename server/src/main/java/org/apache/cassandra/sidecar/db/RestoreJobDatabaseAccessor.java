@@ -81,6 +81,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
                                    .jobAgent(payload.jobAgent())
                                    .jobStatus(RestoreJobStatus.CREATED)
                                    .jobSecrets(payload.secrets())
+                                   .credentialType(payload.credentialType())
                                    .sstableImportOptions(payload.importOptions())
                                    .expireAt(payload.expireAtAsDate())
                                    .consistencyLevel(payload.consistencyConfig().consistencyLevel)
@@ -101,6 +102,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
                                                     job.consistencyLevelText(),
                                                     job.localDatacenter,
                                                     job.shouldRestoreToLocalDatacenterOnly,
+                                                    job.credentialType.name(),
                                                     job.expireAt);
 
         execute(statement);

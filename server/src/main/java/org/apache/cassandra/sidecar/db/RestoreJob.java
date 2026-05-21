@@ -34,6 +34,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.data.ConsistencyConfig;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
+import org.apache.cassandra.sidecar.common.data.CredentialType;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
@@ -58,6 +59,7 @@ public class RestoreJob
     public final String jobAgent;
     public final RestoreJobStatus status;
     public final RestoreJobSecrets secrets;
+    public final CredentialType credentialType;
     public final SSTableImportOptions importOptions;
     public final Date expireAt;
     public final short bucketCount;
@@ -92,6 +94,7 @@ public class RestoreJob
                .keyspace(row.getString("keyspace_name")).table(row.getString("table_name"))
                .jobStatusText(row.getString("status"))
                .jobSecrets(decodeJobSecrets(row.getBytes("blob_secrets")))
+               .credentialType(decodeCredentialType(row.getString("credential_type")))
                .expireAt(row.getTimestamp("expire_at"))
                .sstableImportOptions(decodeSSTableImportOptions(row.getBytes("import_options")))
                .consistencyLevel(consistencyConfig.consistencyLevel)
@@ -120,6 +123,18 @@ public class RestoreJob
                : deserializeJsonBytes(secretsBytes,
                                       RestoreJobSecrets.class,
                                       "secrets");
+    }
+
+    private static CredentialType decodeCredentialType(String value)
+    {
+        try
+        {
+            return CredentialType.valueOf(value);
+        }
+        catch (IllegalArgumentException e)
+        {
+            throw new DataObjectMappingException("Failed to decode credentialType: " + value, e);
+        }
     }
 
     private static SSTableImportOptions decodeSSTableImportOptions(ByteBuffer importOptionsBytes)
@@ -164,6 +179,7 @@ public class RestoreJob
         this.status = builder.status;
         this.statusText = builder.statusText;
         this.secrets = builder.secrets;
+        this.credentialType = builder.credentialType;
         this.importOptions = builder.importOptions == null
                              ? SSTableImportOptions.defaults()
                              : builder.importOptions;
@@ -268,6 +284,7 @@ public class RestoreJob
         private RestoreJobStatus status;
         private String statusText;
         private RestoreJobSecrets secrets;
+        private CredentialType credentialType;
         private SSTableImportOptions importOptions;
         private Date expireAt;
         private short bucketCount;
@@ -292,6 +309,7 @@ public class RestoreJob
             this.status = restoreJob.status;
             this.statusText = restoreJob.statusText;
             this.secrets = restoreJob.secrets;
+            this.credentialType = restoreJob.credentialType;
             this.importOptions = restoreJob.importOptions;
             this.expireAt = restoreJob.expireAt;
             this.bucketCount = restoreJob.bucketCount;
@@ -350,6 +368,11 @@ public class RestoreJob
         public Builder jobSecrets(RestoreJobSecrets jobSecrets)
         {
             return update(b -> b.secrets = jobSecrets);
+        }
+
+        public Builder credentialType(CredentialType credentialType)
+        {
+            return update(b -> b.credentialType = credentialType);
         }
 
         public Builder sstableImportOptions(SSTableImportOptions options)

@@ -68,11 +68,11 @@ import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static org.apache.cassandra.sidecar.common.ApiEndpointsV1.LIVE_MIGRATION_FILES_ROUTE;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_COMMITLOG_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_HINTS_DIR_PATH;
+import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_SAVED_CACHES_DIR_PATH;
 import static org.apache.cassandra.sidecar.livemigration.InstanceFileInfoTestUtil.findInstanceFileInfo;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_COMMITLOG_DIR_PATH;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_DATA_FILE_DIR_PATH;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_HINTS_DIR_PATH;
-import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.LIVE_MIGRATION_SAVED_CACHES_DIR_PATH;
 import static org.apache.cassandra.sidecar.utils.TestFileUtils.createFile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

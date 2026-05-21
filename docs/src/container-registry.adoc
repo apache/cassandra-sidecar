@@ -1,0 +1,71 @@
+= Publishing a Container Image to a Custom Registry
+
+Cassandra Sidecar uses https://github.com/GoogleContainerTools/jib[Jib] to build and publish container images without requiring a local Docker daemon. You can push to any OCI-compatible registry by passing the target image and credentials as system properties on the command line — no changes to `build.gradle` are needed.
+
+== Basic Usage
+
+[source,shell]
+----
+./gradlew :server:jib \
+  -Djib.to.image=<registry>/<repository>:<tag> \
+  -Djib.to.auth.username=<username> \
+  -Djib.to.auth.password=<password>
+----
+
+To apply multiple tags, use the `jib.to.tags` property (comma-separated):
+
+[source,shell]
+----
+./gradlew :server:jib \
+  -Djib.to.image=<registry>/<repository>:<tag> \
+  -Djib.to.tags=latest,stable
+----
+
+== Examples
+
+=== Amazon Elastic Container Registry (ECR)
+
+==== Prerequisites
+
+The AWS identity pushing the image must have the following IAM permissions:
+`sts:GetCallerIdentity`, `ecr:GetAuthorizationToken`, `ecr:BatchCheckLayerAvailability`,
+`ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`, `ecr:CompleteLayerUpload`, `ecr:PutImage`.
+The AWS managed policy `AmazonEC2ContainerRegistryPowerUser` grants all of these.
+
+==== Pushing the image
+
+Use the `scripts/publish-ecr.sh` script. The repository name defaults to `cassandra-sidecar` and can be overridden with the `-r` flag or the `REPO_NAME` environment variable:
+
+[source,shell]
+----
+# no namespace — publishes as cassandra-sidecar
+./scripts/publish-ecr.sh
+
+# with namespace via flag — publishes as my-namespace/cassandra-sidecar
+./scripts/publish-ecr.sh -n my-namespace
+
+# with namespace via env var
+REPO_NAMESPACE=my-namespace ./scripts/publish-ecr.sh
+----
+
+The script will prompt to create the repository if it does not already exist.
+
+=== Docker Hub
+
+[source,shell]
+----
+./gradlew :server:jib \
+  -Djib.to.image=docker.io/<username>/cassandra-sidecar:<tag> \
+  -Djib.to.auth.username=<dockerhub-username> \
+  -Djib.to.auth.password=<dockerhub-access-token>
+----
+
+=== GitHub Container Registry (GHCR)
+
+[source,shell]
+----
+./gradlew :server:jib \
+  -Djib.to.image=ghcr.io/<org>/cassandra-sidecar:<tag> \
+  -Djib.to.auth.username=<github-username> \
+  -Djib.to.auth.password=<github-personal-access-token>
+----

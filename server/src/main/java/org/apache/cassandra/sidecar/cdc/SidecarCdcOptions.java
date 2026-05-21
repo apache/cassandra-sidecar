@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.cdc;
 
 import java.util.Map;
 
+import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.cdc.api.CdcOptions;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.ReplicationFactor;
@@ -49,5 +50,13 @@ public class SidecarCdcOptions implements CdcOptions
     public String dc()
     {
         return instanceMetadataFetcher.callOnFirstAvailableInstance(instance-> instance.delegate().nodeSettings().datacenter());
+    }
+
+    @Override
+    public CassandraVersion version()
+    {
+        String releaseVersion = instanceMetadataFetcher.callOnFirstAvailableInstance(
+                instance -> instance.delegate().nodeSettings().releaseVersion());
+        return CassandraVersion.fromVersion(releaseVersion).orElse(CassandraVersion.FOURZERO);
     }
 }

@@ -1,5 +1,12 @@
 0.4.0
 -----
+ * Fix ON_CDC_CACHE_WARMED_UP not fired when schema publisher fails (CASSSIDECAR-459)
+ * Add SidecarReplicationFactorSupplier for live replication factor lookups (CASSSIDECAR-458)
+ * Fix CDC message loss during Sidecar restarts (CASSSIDECAR-457)
+ * Fix CDC resource leaks: thread leaks, Kafka resource cleanup, singleton SidecarCdcClient (CASSSIDECAR-456)
+ * Fix breaking changes for Analytics 0.4.0 (CASSSIDECAR-455)
+ * Support IAM instance profile credentials for S3 restore jobs (CASSSIDECAR-415)
+ * Adding endpoint for verifying files post data copy during live migration (CASSSIDECAR-226)
  * SAI support in Sidecar (CASSSIDECAR-422)
  * Update OperationalJob to support cluster-wide operations (CASSSIDECAR-376)
  * Support column types not parseable by Java 3.x driver (CASSSIDECAR-443)

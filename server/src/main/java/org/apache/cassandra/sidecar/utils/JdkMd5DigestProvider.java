@@ -30,17 +30,17 @@ public class JdkMd5DigestProvider implements DigestAlgorithmProvider
     @Override
     public DigestAlgorithm get(int seed)
     {
-        return new JdkMD5Digest();
+        return new JdkMD5DigestAlgorithm();
     }
 
     /**
      * MD5 implementation from JDK
      */
-    public static class JdkMD5Digest implements DigestAlgorithm
+    public static class JdkMD5DigestAlgorithm implements DigestAlgorithm
     {
         private final MessageDigest md5;
 
-        public JdkMD5Digest()
+        public JdkMD5DigestAlgorithm()
         {
             try
             {

@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.datastax.driver.core.utils.UUIDs;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
+import org.apache.cassandra.sidecar.common.data.CredentialType;
 import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
@@ -95,6 +96,48 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
         assertThat(restoreToLocalDcOnlyJob.get().shouldRestoreToLocalDatacenterOnly).isTrue();
     }
 
+    @CassandraIntegrationTest
+    void testIamCredentialTypeRoundTrips()
+    {
+        waitForSchemaReady(10, TimeUnit.SECONDS);
+
+        RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
+        RestoreJobSecrets iamSecrets = RestoreJobSecrets.iamMode("us-east-1");
+        UUID jobId = UUIDs.timeBased();
+        CreateRestoreJobRequestPayload payload = CreateRestoreJobRequestPayload.builder(iamSecrets, expiresAtMillis)
+                                                                               .jobId(jobId)
+                                                                               .jobAgent("agent")
+                                                                               .credentialType(CredentialType.IAM)
+                                                                               .build();
+        accessor.create(payload, qualifiedTableName);
+
+        RestoreJob found = accessor.find(jobId);
+        assertThat(found).isNotNull();
+        assertThat(found.credentialType).isEqualTo(CredentialType.IAM);
+        assertThat(found.secrets.readCredentials().region()).isEqualTo("us-east-1");
+        assertThat(found.secrets.readCredentials().accessKeyId()).isNull();
+        assertThat(found.secrets.readCredentials().secretAccessKey()).isNull();
+        assertThat(found.secrets.readCredentials().sessionToken()).isNull();
+    }
+
+    @CassandraIntegrationTest
+    void testStaticCredentialTypeRoundTrips()
+    {
+        waitForSchemaReady(10, TimeUnit.SECONDS);
+
+        RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
+        UUID jobId = UUIDs.timeBased();
+        CreateRestoreJobRequestPayload payload = CreateRestoreJobRequestPayload.builder(secrets, expiresAtMillis)
+                                                                               .jobId(jobId)
+                                                                               .jobAgent("agent")
+                                                                               .build();
+        accessor.create(payload, qualifiedTableName);
+
+        RestoreJob found = accessor.find(jobId);
+        assertThat(found).isNotNull();
+        assertThat(found.credentialType).isEqualTo(CredentialType.STATIC);
+    }
+
     private UUID createJob(RestoreJobDatabaseAccessor accessor)
     {
         return createJob(accessor, false);
@@ -138,5 +181,6 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
         assertThat(job.status).isEqualTo(status);
         assertThat(job.expireAt.getTime()).isEqualTo(expiresAtMillis);
         assertThat(job.secrets).isEqualTo(secrets);
+        assertThat(job.credentialType).isEqualTo(CredentialType.STATIC);
     }
 }

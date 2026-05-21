@@ -1,0 +1,80 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+tasks.register('checkEnvironment') {
+    description = 'Validates the local environment is configured correctly for running tests'
+    group = 'verification'
+    onlyIf { org.gradle.internal.os.OperatingSystem.current().isMacOsX() }
+
+    doLast {
+        def failures = []
+
+        // Check 1: /etc/hosts entries
+        def hostsFile = new File('/etc/hosts')
+        def hostsLines = hostsFile.readLines()
+        def hasLocalhost2 = hostsLines.any { it =~ /^\s*127\.0\.0\.2\s+.*\blocalhost2\b/ }
+        def hasLocalhost20 = hostsLines.any { it =~ /^\s*127\.0\.0\.20\s+.*\blocalhost20\b/ }
+        if (!hasLocalhost2 || !hasLocalhost20) {
+            def missing = []
+            if (!hasLocalhost2) missing << '127.0.0.2 localhost2'
+            if (!hasLocalhost20) missing << '127.0.0.20 localhost20'
+            failures << """\
+Missing /etc/hosts entries. Edit /etc/hosts and add:
+${missing.collect { "        ${it}" }.join('\n')}"""
+        }
+
+        // Check 2: loopback aliases 127.0.0.2 - 127.0.0.20
+        // Java's NetworkInterface API does not see macOS lo0 aliases; parse ifconfig directly
+        def ifconfigOutput = 'ifconfig lo0'.execute().text
+        def missingAliases = (2..20).findAll { n -> !ifconfigOutput.contains("127.0.0.${n}") }
+                                    .collect { n -> "127.0.0.${n}" }
+        if (!missingAliases.isEmpty()) {
+            failures << """\
+Missing loopback aliases: ${missingAliases.join(', ')}
+    Fix: for i in {2..20}; do sudo ifconfig lo0 alias "127.0.0.\${i}"; done"""
+        }
+
+        // Check 3: dtest jars present
+        def dtestJarDir = new File("${rootDir}/dtest-jars")
+        def dtestJars = dtestJarDir.listFiles({ f -> f.name.matches('dtest-.*\\.jar') } as FileFilter) ?: new File[0]
+        if (dtestJars.length == 0) {
+            failures << """\
+No dtest jars found in ${dtestJarDir.path}
+    Fix: ./scripts/build-dtest-jars.sh"""
+        }
+
+        // Check 4: Java version must be <= 17 (Java 21+ is broken)
+        def javaMajor = JavaVersion.current().getMajorVersion().toInteger()
+        if (javaMajor > 17) {
+            failures << """\
+Java ${javaMajor} is not supported (max Java 17; Java 21+ is broken with this project)
+    Fix: switch to Java 11 or 17, e.g.: sdk use java 17.x.x-tem  (or jabba/jenv equivalent)"""
+        }
+
+        if (!failures.isEmpty()) {
+            def separator = '\n' + ('-' * 60) + '\n'
+            def message = "Environment check failed. Fix all of the following before running tests:${separator}" +
+                          failures.collect { "  [FAIL] ${it}" }.join(separator) +
+                          separator
+            throw new GradleException(message)
+        }
+
+        logger.lifecycle('checkEnvironment: all checks passed')
+    }
+}

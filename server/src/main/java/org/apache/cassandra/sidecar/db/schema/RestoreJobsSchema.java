@@ -32,7 +32,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLeaseholderOnly
 {
-    private static final String RESTORE_JOB_TABLE_NAME = "restore_job_v5";
+    private static final String RESTORE_JOB_TABLE_NAME = "restore_job_v6";
 
     private final SchemaKeyspaceConfiguration keyspaceConfig;
     private final SecondBoundConfiguration tableTtl;
@@ -96,6 +96,7 @@ public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLe
                              "  consistency_level text," +
                              "  local_datacenter text," +
                              "  local_datacenter_only boolean," +
+                             "  credential_type text," +
                              "  PRIMARY KEY (created_at, job_id)" +
                              ") WITH default_time_to_live = %s",
                              keyspaceConfig.keyspace(), RESTORE_JOB_TABLE_NAME, tableTtl.toSeconds());
@@ -157,8 +158,9 @@ public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLe
                              "  consistency_level," +
                              "  local_datacenter," +
                              "  local_datacenter_only," +
+                             "  credential_type," +
                              "  expire_at" +
-                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
+                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
         }
 
         static String updateBlobSecrets(SchemaKeyspaceConfiguration config)
@@ -220,6 +222,7 @@ public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLe
                              "consistency_level, " +
                              "local_datacenter, " +
                              "local_datacenter_only, " +
+                             "credential_type, " +
                              "expire_at, " +
                              "slice_count " +
                              "FROM %s.%s " +
@@ -239,6 +242,7 @@ public class RestoreJobsSchema extends TableSchema implements ExecuteOnClusterLe
                              "consistency_level, " +
                              "local_datacenter, " +
                              "local_datacenter_only, " +
+                             "credential_type, " +
                              "expire_at, " +
                              "slice_count " +
                              "FROM %s.%s " +

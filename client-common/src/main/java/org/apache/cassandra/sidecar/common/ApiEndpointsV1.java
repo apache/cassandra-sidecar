@@ -171,6 +171,8 @@ public final class ApiEndpointsV1
     public static final String LIVE_MIGRATION_DATA_COPY_TASK_ROUTE = LIVE_MIGRATION_DATA_COPY_TASKS_ROUTE + "/:taskId";
     public static final String LIVE_MIGRATION_STATUS_ROUTE = LIVE_MIGRATION_API_PREFIX + "/status";
 
+    public static final String LIVE_MIGRATION_FILES_VERIFICATION_TASKS_ROUTE = LIVE_MIGRATION_API_PREFIX + "/files-verification-tasks";
+    public static final String LIVE_MIGRATION_FILES_VERIFICATION_TASK_ROUTE = LIVE_MIGRATION_FILES_VERIFICATION_TASKS_ROUTE + "/:taskId";
 
     public static final String OPENAPI_JSON_ROUTE = "/spec/openapi.json";
     public static final String OPENAPI_YAML_ROUTE = "/spec/openapi.yaml";
