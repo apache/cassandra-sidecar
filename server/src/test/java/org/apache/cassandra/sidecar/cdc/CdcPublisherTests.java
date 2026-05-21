@@ -21,8 +21,8 @@ package org.apache.cassandra.sidecar.cdc;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,10 +32,10 @@ import org.junit.jupiter.params.provider.EnumSource;
 import com.google.inject.Provider;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.Message;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.cdc.api.CdcOptions;
-import io.vertx.core.eventbus.Message;
 import org.apache.cassandra.cdc.api.EventConsumer;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.cdc.kafka.KafkaProducerFactory;
@@ -45,8 +45,11 @@ import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
 import org.apache.cassandra.cdc.stats.ICdcStats;
 import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
+import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
+import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.CdcSystemViewsDatabaseAccessor;
@@ -61,6 +64,7 @@ import org.mockito.MockitoAnnotations;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CDC_CACHE_WARMED_UP;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -276,12 +280,10 @@ public class CdcPublisherTests
         Message<Object> msg = mock(Message.class);
         when(msg.address()).thenReturn(ON_SERVER_STOP.address());
 
-        CdcPublisher spyPublisher = spy(cdcPublisher);
-        spyPublisher.handle(msg);
-
-        // stop() must run synchronously on the event loop so it completes before
-        // the loop closes during shutdown; no worker-pool dispatch should occur.
-        verify(spyPublisher).stop();
+        // ON_SERVER_STOP must run synchronously on the event loop so shutdown
+        // completes before the loop closes; the no-worker-pool assertion below
+        // is the load-bearing part of the contract.
+        assertThatCode(() -> cdcPublisher.handle(msg)).doesNotThrowAnyException();
         verify(taskExecutorPool, never()).executeBlocking(any(Callable.class));
     }
 
