@@ -189,7 +189,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
             executorPools.executeBlocking(() -> {
                 restart();
                 return null;
-            });
+            }).onFailure(t -> handleAsyncFailure(ON_CDC_CONFIGURATION_CHANGED.address(), t));
         }
     }
 
