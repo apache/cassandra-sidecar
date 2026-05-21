@@ -29,9 +29,11 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * An abstraction of the management and tracking of long-running jobs running on the sidecar.
@@ -41,18 +43,33 @@ public class OperationalJobManager
 {
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final OperationalJobTracker jobTracker;
-
+    @Nullable
+    private final OperationalJobCoordinator coordinator;
     private final TaskExecutorPool internalExecutorPool;
 
     /**
-     * Creates a manager instance with a default sized job-tracker.
+     * Creates a manager instance without a coordinator.
      *
      * @param jobTracker the tracker for the operational jobs
      */
-    @Inject
     public OperationalJobManager(OperationalJobTracker jobTracker, ExecutorPools executorPools)
     {
+        this(jobTracker, null, executorPools);
+    }
+
+    /**
+     * Creates a manager instance with a coordinator for cluster-wide operation mutual exclusion.
+     *
+     * @param jobTracker  the tracker for the operational jobs
+     * @param coordinator the coordinator for cluster-wide operations, or {@code null} if not needed
+     */
+    @Inject
+    public OperationalJobManager(OperationalJobTracker jobTracker,
+                                 @Nullable OperationalJobCoordinator coordinator,
+                                 ExecutorPools executorPools)
+    {
         this.jobTracker = jobTracker;
+        this.coordinator = coordinator;
         this.internalExecutorPool = executorPools.internal();
     }
 
@@ -104,6 +121,7 @@ public class OperationalJobManager
             OperationalJob tracked = jobTracker.computeIfAbsent(job.jobId(), jobId -> job);
             if (tracked == job)
             {
+                checkCoordination(job);
                 internalExecutorPool.executeBlocking(job::execute);
             }
         }
@@ -130,6 +148,28 @@ public class OperationalJobManager
         if (job.hasConflict(sameOperationJobs))
         {
             throw new OperationalJobConflictException("The same operational job is already running on Cassandra. operationName='" + job.name() + '\'');
+        }
+    }
+
+    /**
+     * For jobs that require cluster-wide coordination, attempts to acquire the active operation lock
+     * via the coordinator. Throws a conflict if another operation is already active.
+     *
+     * @param job instance of the job to coordinate
+     * @throws OperationalJobConflictException when the coordinator cannot activate the operation
+     */
+    private void checkCoordination(OperationalJob job) throws OperationalJobConflictException
+    {
+        if (job.requiresCoordination())
+        {
+            Preconditions.checkState(coordinator != null,
+                                     "Job requires coordination but no OperationalJobCoordinator is configured");
+            boolean activated = coordinator.trySetActive(job.operationType(), job.jobId());
+            if (!activated)
+            {
+                throw new OperationalJobConflictException("An active operation already exists. operationType='"
+                                                         + job.operationType() + '\'');
+            }
         }
     }
 }
