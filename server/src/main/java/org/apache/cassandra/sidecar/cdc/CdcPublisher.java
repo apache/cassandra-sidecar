@@ -186,21 +186,14 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         {
             sidecarCdcStats.captureCdcConfigChange();
             // Execute restart on worker thread to avoid blocking event loop
-            executorPools.executeBlocking(() -> {
-                restart();
-                return null;
-            }).onFailure(t -> handleAsyncFailure(ON_CDC_CONFIGURATION_CHANGED.address(), t));
+            executorPools.runBlocking(
+                CdcPublisher.this::restart
+            ).onFailure(t -> handleAsyncFailure(ON_CDC_CONFIGURATION_CHANGED.address(), t));
         }
     }
 
     /**
-     * Backstop for fire-and-forget {@code executeBlocking(...)} dispatches in event-bus handlers.
-     * The handler methods ({@code restart}, {@code stop}) already catch and record their own
-     * failures via {@code sidecarCdcStats}; this fires only when something unexpected escapes
-     * (e.g. an {@link Error}, or a stats-counter increment that throws before reaching the
-     * handler's own try/catch). Logging at ERROR + bumping
-     * {@link SidecarCdcStats#captureUnrecoverableCdcError(Throwable)} so the issue is surfaced
-     * rather than silently dropped by the discarded {@code Future}.
+     * Handle the unexpected error while processing event on worker pool.
      */
     private void handleAsyncFailure(String address, Throwable t)
     {
@@ -270,7 +263,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         return isRunning;
     }
 
-    private synchronized void stop()
+    synchronized void stop()
     {
         if (!isRunning)
         {
@@ -355,19 +348,19 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         String address = msg.address();
         if (address.equals(RangeManager.RangeManagerEvents.ON_TOKEN_RANGE_CHANGED.address()))
         {
-            executorPools.executeBlocking(() -> { handleTokenRangeChange(); return null; })
+            executorPools.runBlocking(CdcPublisher.this::handleTokenRangeChange)
                          .onFailure(t -> handleAsyncFailure(address, t));
         }
         else if (address.equals(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_GAINED.address()))
         {
             RangeManager.RangeChangeEvent event = (RangeManager.RangeChangeEvent) msg.body();
-            executorPools.executeBlocking(() -> { handleRangeGained(event); return null; })
+            executorPools.runBlocking(() -> handleRangeGained(event))
                          .onFailure(t -> handleAsyncFailure(address, t));
         }
         else if (address.equals(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_LOST.address()))
         {
             RangeManager.RangeChangeEvent event = (RangeManager.RangeChangeEvent) msg.body();
-            executorPools.executeBlocking(() -> { handleRangeLost(event); return null; })
+            executorPools.runBlocking(() -> handleRangeLost(event))
                          .onFailure(t -> handleAsyncFailure(address, t));
         }
         else if (address.equals(ON_SERVER_STOP.address()))

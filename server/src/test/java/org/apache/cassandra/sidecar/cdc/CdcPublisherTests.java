@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.cdc;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -45,11 +44,9 @@ import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
 import org.apache.cassandra.cdc.stats.ICdcStats;
 import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
-import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.ThrowingRunnable;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
-import org.apache.cassandra.sidecar.config.KeyStoreConfiguration;
-import org.apache.cassandra.sidecar.config.SslConfiguration;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.CdcSystemViewsDatabaseAccessor;
@@ -64,7 +61,6 @@ import org.mockito.MockitoAnnotations;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CDC_CACHE_WARMED_UP;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -126,7 +122,7 @@ public class CdcPublisherTests
         // Mock ExecutorPools behavior
         when(executorPools.internal()).thenReturn(taskExecutorPool);
         // Return a real successfully-completed Future so .onFailure(...) chaining in handle() is a safe no-op.
-        when(taskExecutorPool.executeBlocking(any(Callable.class))).thenReturn(Future.succeededFuture(null));
+        when(taskExecutorPool.runBlocking(any(ThrowingRunnable.class))).thenReturn(Future.succeededFuture(null));
 
         // Mock Vertx EventBus for event listeners
         when(vertx.eventBus()).thenReturn(mock(io.vertx.core.eventbus.EventBus.class, RETURNS_DEEP_STUBS));
@@ -220,7 +216,6 @@ public class CdcPublisherTests
 
 
     @Test
-    @SuppressWarnings("unchecked")
     void testHandleTokenRangeChangedDispatchesToWorkerPool() throws Exception
     {
         Message<Object> msg = mock(Message.class);
@@ -229,15 +224,14 @@ public class CdcPublisherTests
         CdcPublisher spyPublisher = spy(cdcPublisher);
         spyPublisher.handle(msg);
 
-        ArgumentCaptor<Callable<Void>> captor = ArgumentCaptor.forClass(Callable.class);
-        verify(taskExecutorPool).executeBlocking(captor.capture());
+        ArgumentCaptor<ThrowingRunnable> captor = ArgumentCaptor.forClass(ThrowingRunnable.class);
+        verify(taskExecutorPool).runBlocking(captor.capture());
 
-        captor.getValue().call();
+        captor.getValue().run();
         verify(spyPublisher).handleTokenRangeChange();
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void testHandleTokenRangeGainedPassesEventToHandler() throws Exception
     {
         Message<Object> msg = mock(Message.class);
@@ -248,15 +242,14 @@ public class CdcPublisherTests
         CdcPublisher spyPublisher = spy(cdcPublisher);
         spyPublisher.handle(msg);
 
-        ArgumentCaptor<Callable<Void>> captor = ArgumentCaptor.forClass(Callable.class);
-        verify(taskExecutorPool).executeBlocking(captor.capture());
+        ArgumentCaptor<ThrowingRunnable> captor = ArgumentCaptor.forClass(ThrowingRunnable.class);
+        verify(taskExecutorPool).runBlocking(captor.capture());
 
-        captor.getValue().call();
+        captor.getValue().run();
         verify(spyPublisher).handleRangeGained(event);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void testHandleTokenRangeLostPassesEventToHandler() throws Exception
     {
         Message<Object> msg = mock(Message.class);
@@ -267,10 +260,10 @@ public class CdcPublisherTests
         CdcPublisher spyPublisher = spy(cdcPublisher);
         spyPublisher.handle(msg);
 
-        ArgumentCaptor<Callable<Void>> captor = ArgumentCaptor.forClass(Callable.class);
-        verify(taskExecutorPool).executeBlocking(captor.capture());
+        ArgumentCaptor<ThrowingRunnable> captor = ArgumentCaptor.forClass(ThrowingRunnable.class);
+        verify(taskExecutorPool).runBlocking(captor.capture());
 
-        captor.getValue().call();
+        captor.getValue().run();
         verify(spyPublisher).handleRangeLost(event);
     }
 
@@ -280,11 +273,13 @@ public class CdcPublisherTests
         Message<Object> msg = mock(Message.class);
         when(msg.address()).thenReturn(ON_SERVER_STOP.address());
 
-        // ON_SERVER_STOP must run synchronously on the event loop so shutdown
-        // completes before the loop closes; the no-worker-pool assertion below
-        // is the load-bearing part of the contract.
-        assertThatCode(() -> cdcPublisher.handle(msg)).doesNotThrowAnyException();
-        verify(taskExecutorPool, never()).executeBlocking(any(Callable.class));
+        cdcPublisher = spy(cdcPublisher);
+        cdcPublisher.handle(msg);
+
+        // stop() must run synchronously on the event loop so shutdown completes
+        // before the loop closes; no worker-pool dispatch should occur.
+        verify(cdcPublisher).stop();
+        verify(taskExecutorPool, never()).runBlocking(any(ThrowingRunnable.class));
     }
 
     @Test
@@ -295,7 +290,7 @@ public class CdcPublisherTests
 
         cdcPublisher.handle(msg);
 
-        verify(taskExecutorPool, never()).executeBlocking(any(Callable.class));
+        verify(taskExecutorPool, never()).runBlocking(any(ThrowingRunnable.class));
     }
 
     @Test
@@ -306,15 +301,14 @@ public class CdcPublisherTests
 
         cdcPublisher.handle(msg);
 
-        verify(taskExecutorPool, never()).executeBlocking(any(Callable.class));
+        verify(taskExecutorPool, never()).runBlocking(any(ThrowingRunnable.class));
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void testHandleWorkerPoolFailureIsLoggedAndCaptured()
     {
         RuntimeException boom = new RuntimeException("boom");
-        when(taskExecutorPool.executeBlocking(any(Callable.class))).thenReturn(Future.failedFuture(boom));
+        when(taskExecutorPool.runBlocking(any(ThrowingRunnable.class))).thenReturn(Future.failedFuture(boom));
 
         Message<Object> msg = mock(Message.class);
         when(msg.address()).thenReturn(RangeManager.RangeManagerEvents.ON_TOKEN_RANGE_CHANGED.address());
