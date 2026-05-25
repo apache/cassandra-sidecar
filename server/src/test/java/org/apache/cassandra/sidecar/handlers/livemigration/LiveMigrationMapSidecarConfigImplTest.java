@@ -34,6 +34,7 @@ import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.LiveMigrationInvalidRequestException;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 class LiveMigrationMapSidecarConfigImplTest
 {
@@ -111,6 +112,65 @@ class LiveMigrationMapSidecarConfigImplTest
 
         assertThat(migrationMapSidecarConfig.getSource(null).cause())
         .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void testMigrationMapRejectsDuplicateDestinations()
+    {
+        Map<String, String> migrationMap = Map.of("localhost1", "localhost3",
+                                                  "localhost2", "localhost3");
+
+        assertThatThrownBy(() -> new LiveMigrationConfigurationImpl(Collections.emptySet(),
+                                                                    Collections.emptySet(),
+                                                                    migrationMap,
+                                                                    20))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("a node cannot be the destination of multiple sources")
+        .hasMessageContaining("localhost3");
+    }
+
+    @Test
+    void testMigrationMapRejectsNodeAsBothSourceAndDestination()
+    {
+        Map<String, String> migrationMap = Map.of("localhost1", "localhost2",
+                                                  "localhost2", "localhost3");
+
+        assertThatThrownBy(() -> new LiveMigrationConfigurationImpl(Collections.emptySet(),
+                                                                    Collections.emptySet(),
+                                                                    migrationMap,
+                                                                    20))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("a node cannot be both source and destination")
+        .hasMessageContaining("localhost2");
+    }
+
+    @Test
+    void testMigrationMapRejectsSelfMapping()
+    {
+        Map<String, String> migrationMap = Map.of("localhost1", "localhost1");
+
+        assertThatThrownBy(() -> new LiveMigrationConfigurationImpl(Collections.emptySet(),
+                                                                    Collections.emptySet(),
+                                                                    migrationMap,
+                                                                    20))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("a node cannot be both source and destination")
+        .hasMessageContaining("localhost1");
+    }
+
+    @Test
+    void testMigrationMapAcceptsDistinctSourcesAndDestinations()
+    {
+        Map<String, String> migrationMap = Map.of("localhost1", "localhost3",
+                                                  "localhost2", "localhost4");
+
+        LiveMigrationConfiguration liveMigrationConfiguration =
+        new LiveMigrationConfigurationImpl(Collections.emptySet(),
+                                           Collections.emptySet(),
+                                           migrationMap,
+                                           20);
+
+        assertThat(liveMigrationConfiguration.migrationMap()).isEqualTo(migrationMap);
     }
 
     InstanceMetadata instanceMetadata(String host, int id)
