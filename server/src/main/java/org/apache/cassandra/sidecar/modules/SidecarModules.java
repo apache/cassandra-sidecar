@@ -64,6 +64,7 @@ public class SidecarModules
                .add(new LifecycleModule())
                .add(new LiveMigrationModule())
                .add(new MultiBindingTypeResolverModule())
+               .add(new OperationalJobsModule())
                .add(new OpenApiModule())
                .add(new RestoreJobModule())
                .add(new SchedulingModule())

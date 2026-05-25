@@ -18,7 +18,9 @@
 
 package org.apache.cassandra.sidecar.db;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -67,11 +69,13 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
 
     public void persistJob(String clusterName, OperationalJobRecord job)
     {
+        Date lastUpdate = Date.from(Instant.now());
         BoundStatement statement = tableSchema.insertJob()
                                               .bind(clusterName,
                                                     job.jobId(),
                                                     job.operationType().name(),
                                                     job.status().name(),
+                                                    lastUpdate,
                                                     job.nodeExecutionOrder(),
                                                     job.operationMetadata());
         statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
@@ -96,12 +100,37 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
         return recordFromRow(row);
     }
 
-    public void updateJobStatus(String clusterName, UUID jobId, OperationType operationType, OperationalJobStatus status)
+    public void updateJobStatus(String clusterName, UUID jobId, OperationType operationType,
+                                OperationalJobStatus status, @Nullable String failureReason)
     {
-        BoundStatement statement = tableSchema.updateStatus()
-                                              .bind(status.name(), clusterName, jobId, operationType.name());
+        Date lastUpdate = Date.from(Instant.now());
+        BoundStatement statement;
+        if (failureReason != null)
+        {
+            statement = tableSchema.updateStatusWithFailure()
+                                   .bind(status.name(), lastUpdate, failureReason,
+                                         clusterName, jobId, operationType.name());
+        }
+        else if (status == OperationalJobStatus.RUNNING && shouldSetStartTime(clusterName, jobId))
+        {
+            statement = tableSchema.updateStatusWithStartTime()
+                                   .bind(status.name(), lastUpdate, lastUpdate,
+                                         clusterName, jobId, operationType.name());
+        }
+        else
+        {
+            statement = tableSchema.updateStatus()
+                                   .bind(status.name(), lastUpdate,
+                                         clusterName, jobId, operationType.name());
+        }
         statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
         execute(statement);
+    }
+
+    private boolean shouldSetStartTime(String clusterName, UUID jobId)
+    {
+        OperationalJobRecord existing = findJob(clusterName, jobId);
+        return existing != null && existing.startTime() == null;
     }
 
     @NotNull
@@ -123,6 +152,11 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
         UUID operationId = row.getUUID("operation_id");
         OperationType operationType = OperationType.valueOf(row.getString("operation_type"));
         OperationalJobStatus status = OperationalJobStatus.valueOf(row.getString("status"));
+        Date startTimeDate = row.getTimestamp("start_time");
+        Instant startTime = startTimeDate != null ? startTimeDate.toInstant() : null;
+        Date lastUpdateDate = row.getTimestamp("last_update");
+        Instant lastUpdate = lastUpdateDate != null ? lastUpdateDate.toInstant() : null;
+        String failureReason = row.getString("failure_reason");
         List<List<UUID>> nodeExecutionOrder = row.get("node_execution_order", NODES_ORDER_TYPE);
         if (nodeExecutionOrder != null && nodeExecutionOrder.isEmpty())
         {
@@ -134,6 +168,7 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
             operationMetadata = null;
         }
         return new OperationalJobRecord(operationId, operationType, status,
+                                        startTime, lastUpdate, failureReason,
                                         nodeExecutionOrder, operationMetadata);
     }
 }

@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.job.storage;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,6 +40,12 @@ public class OperationalJobRecord
     private final OperationalJobStatus status;
     private final long creationTimeMillis;
     @Nullable
+    private final Instant startTime;
+    @Nullable
+    private final Instant lastUpdate;
+    @Nullable
+    private final String failureReason;
+    @Nullable
     private final List<List<UUID>> nodeExecutionOrder;
     @Nullable
     private final Map<String, String> operationMetadata;
@@ -52,7 +59,7 @@ public class OperationalJobRecord
      */
     public OperationalJobRecord(UUID jobId, OperationType operationType, OperationalJobStatus status)
     {
-        this(jobId, operationType, status, null, null);
+        this(jobId, operationType, status, null, Instant.now(), null, null, null);
     }
 
     /**
@@ -61,10 +68,16 @@ public class OperationalJobRecord
      * @param jobId             time-based v1 UUID identifying the job
      * @param operationType     the operation type
      * @param status            the current status of the job
+     * @param startTime         the timestamp when execution started, or null if not yet started
+     * @param lastUpdate        the timestamp of the last status update, or null for pre-existing rows
+     * @param failureReason     the failure reason if the job failed, or null
      * @param nodeExecutionOrder        the ordered list of parallel node groups for execution, or null
      * @param operationMetadata the operation parameters, or null
      */
     public OperationalJobRecord(UUID jobId, OperationType operationType, OperationalJobStatus status,
+                                @Nullable Instant startTime,
+                                @Nullable Instant lastUpdate,
+                                @Nullable String failureReason,
                                 @Nullable List<List<UUID>> nodeExecutionOrder,
                                 @Nullable Map<String, String> operationMetadata)
     {
@@ -76,6 +89,9 @@ public class OperationalJobRecord
         this.operationType = operationType;
         this.status = status;
         this.creationTimeMillis = UUIDs.unixTimestamp(jobId);
+        this.startTime = startTime;
+        this.lastUpdate = lastUpdate;
+        this.failureReason = failureReason;
         this.nodeExecutionOrder = nodeExecutionOrder;
         this.operationMetadata = operationMetadata;
     }
@@ -110,6 +126,33 @@ public class OperationalJobRecord
     public long creationTimeMillis()
     {
         return creationTimeMillis;
+    }
+
+    /**
+     * @return the timestamp when execution started, or null if not yet started
+     */
+    @Nullable
+    public Instant startTime()
+    {
+        return startTime;
+    }
+
+    /**
+     * @return the timestamp of the last status update, or null for pre-existing rows
+     */
+    @Nullable
+    public Instant lastUpdate()
+    {
+        return lastUpdate;
+    }
+
+    /**
+     * @return the failure reason if the job failed, or null otherwise
+     */
+    @Nullable
+    public String failureReason()
+    {
+        return failureReason;
     }
 
     /**
@@ -155,6 +198,9 @@ public class OperationalJobRecord
                ", operationType=" + operationType +
                ", status=" + status +
                ", creationTimeMillis=" + creationTimeMillis +
+               ", startTime=" + startTime +
+               ", lastUpdate=" + lastUpdate +
+               ", failureReason=" + failureReason +
                ", nodeExecutionOrder=" + nodeExecutionOrder +
                ", operationMetadata=" + operationMetadata +
                '}';

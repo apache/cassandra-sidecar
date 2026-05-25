@@ -39,6 +39,8 @@ public class ClusterOpsSchema extends TableSchema
     private PreparedStatement insertJob;
     private PreparedStatement selectJob;
     private PreparedStatement updateStatus;
+    private PreparedStatement updateStatusWithStartTime;
+    private PreparedStatement updateStatusWithFailure;
     private PreparedStatement findAllJobs;
 
     public ClusterOpsSchema(SchemaKeyspaceConfiguration keyspaceConfig, SecondBoundConfiguration tableTtl)
@@ -67,6 +69,9 @@ public class ClusterOpsSchema extends TableSchema
                              "  operation_id timeuuid," +
                              "  operation_type text," +
                              "  status text," +
+                             "  start_time timestamp," +
+                             "  last_update timestamp," +
+                             "  failure_reason text," +
                              "  node_execution_order frozen<list<frozen<list<uuid>>>>," +
                              "  operation_metadata frozen<map<text, text>>," +
                              "  PRIMARY KEY ((cluster_name), operation_id, operation_type)" +
@@ -82,6 +87,8 @@ public class ClusterOpsSchema extends TableSchema
         insertJob = prepare(insertJob, session, CqlLiterals.insertJob(keyspaceConfig));
         selectJob = prepare(selectJob, session, CqlLiterals.selectJob(keyspaceConfig));
         updateStatus = prepare(updateStatus, session, CqlLiterals.updateStatus(keyspaceConfig));
+        updateStatusWithStartTime = prepare(updateStatusWithStartTime, session, CqlLiterals.updateStatusWithStartTime(keyspaceConfig));
+        updateStatusWithFailure = prepare(updateStatusWithFailure, session, CqlLiterals.updateStatusWithFailure(keyspaceConfig));
         findAllJobs = prepare(findAllJobs, session, CqlLiterals.findAllJobs(keyspaceConfig));
     }
 
@@ -100,6 +107,16 @@ public class ClusterOpsSchema extends TableSchema
         return updateStatus;
     }
 
+    public PreparedStatement updateStatusWithStartTime()
+    {
+        return updateStatusWithStartTime;
+    }
+
+    public PreparedStatement updateStatusWithFailure()
+    {
+        return updateStatusWithFailure;
+    }
+
     public PreparedStatement findAllJobs()
     {
         return findAllJobs;
@@ -114,9 +131,10 @@ public class ClusterOpsSchema extends TableSchema
                              "  operation_id," +
                              "  operation_type," +
                              "  status," +
+                             "  last_update," +
                              "  node_execution_order," +
                              "  operation_metadata" +
-                             ") VALUES (?, ?, ?, ?, ?, ?)", config);
+                             ") VALUES (?, ?, ?, ?, ?, ?, ?)", config);
         }
 
         static String selectJob(SchemaKeyspaceConfiguration config)
@@ -125,6 +143,9 @@ public class ClusterOpsSchema extends TableSchema
                              "operation_id, " +
                              "operation_type, " +
                              "status, " +
+                             "start_time, " +
+                             "last_update, " +
+                             "failure_reason, " +
                              "node_execution_order, " +
                              "operation_metadata " +
                              "FROM %s.%s " +
@@ -133,7 +154,19 @@ public class ClusterOpsSchema extends TableSchema
 
         static String updateStatus(SchemaKeyspaceConfiguration config)
         {
-            return withTable("UPDATE %s.%s SET status = ? " +
+            return withTable("UPDATE %s.%s SET status = ?, last_update = ? " +
+                             "WHERE cluster_name = ? AND operation_id = ? AND operation_type = ?", config);
+        }
+
+        static String updateStatusWithStartTime(SchemaKeyspaceConfiguration config)
+        {
+            return withTable("UPDATE %s.%s SET status = ?, last_update = ?, start_time = ? " +
+                             "WHERE cluster_name = ? AND operation_id = ? AND operation_type = ?", config);
+        }
+
+        static String updateStatusWithFailure(SchemaKeyspaceConfiguration config)
+        {
+            return withTable("UPDATE %s.%s SET status = ?, last_update = ?, failure_reason = ? " +
                              "WHERE cluster_name = ? AND operation_id = ? AND operation_type = ?", config);
         }
 
@@ -143,6 +176,9 @@ public class ClusterOpsSchema extends TableSchema
                              "operation_id, " +
                              "operation_type, " +
                              "status, " +
+                             "start_time, " +
+                             "last_update, " +
+                             "failure_reason, " +
                              "node_execution_order, " +
                              "operation_metadata " +
                              "FROM %s.%s " +

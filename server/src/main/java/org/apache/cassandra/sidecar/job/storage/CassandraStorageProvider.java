@@ -87,10 +87,11 @@ public class CassandraStorageProvider implements StorageProvider
     }
 
     @Override
-    public void updateJobStatus(UUID jobId, OperationType operationType, OperationalJobStatus status)
+    public void updateJobStatus(UUID jobId, OperationType operationType, OperationalJobStatus status,
+                                @Nullable String failureReason)
     {
         execute("updateJobStatus", () -> {
-            clusterOpsAccessor.updateJobStatus(clusterName, jobId, operationType, status);
+            clusterOpsAccessor.updateJobStatus(clusterName, jobId, operationType, status, failureReason);
             return null;
         });
     }

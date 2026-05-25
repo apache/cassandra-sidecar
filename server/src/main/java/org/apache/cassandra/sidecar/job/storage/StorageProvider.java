@@ -71,8 +71,10 @@ public interface StorageProvider extends Closeable
      * @param jobId         the job identifier
      * @param operationType the operation type
      * @param status        the new status
+     * @param failureReason the failure reason if the job has failed, or {@code null} otherwise
      */
-    void updateJobStatus(UUID jobId, OperationType operationType, OperationalJobStatus status);
+    void updateJobStatus(UUID jobId, OperationType operationType, OperationalJobStatus status,
+                         @Nullable String failureReason);
 
     /**
      * Retrieve stored job records, up to the specified limit. Implementations should return

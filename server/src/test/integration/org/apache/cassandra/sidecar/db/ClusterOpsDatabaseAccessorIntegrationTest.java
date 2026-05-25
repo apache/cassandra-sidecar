@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.db;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,7 @@ class ClusterOpsDatabaseAccessorIntegrationTest extends IntegrationTestBase
         );
         Map<String, String> metadata = Map.of("key1", "value1", "key2", "value2");
         OperationalJobRecord job1 = new OperationalJobRecord(jobId1, OperationType.RESTART, OperationalJobStatus.CREATED,
-                                                             nodeOrder, metadata);
+                                                             null, Instant.now(), null, nodeOrder, metadata);
         accessor.persistJob(clusterName, job1);
 
         OperationalJobRecord found = accessor.findJob(clusterName, jobId1);
@@ -72,6 +73,9 @@ class ClusterOpsDatabaseAccessorIntegrationTest extends IntegrationTestBase
                     assertThat(job.jobId()).isEqualTo(jobId1);
                     assertThat(job.operationType()).isEqualTo(OperationType.RESTART);
                     assertThat(job.status()).isEqualTo(OperationalJobStatus.CREATED);
+                    assertThat(job.startTime()).isNull();
+                    assertThat(job.lastUpdate()).isNotNull();
+                    assertThat(job.failureReason()).isNull();
                     assertThat(job.nodeExecutionOrder()).isEqualTo(nodeOrder);
                     assertThat(job.operationMetadata()).isEqualTo(metadata);
                 });
@@ -91,14 +95,38 @@ class ClusterOpsDatabaseAccessorIntegrationTest extends IntegrationTestBase
                     assertThat(job.operationMetadata()).isNull();
                 });
 
-        accessor.updateJobStatus(clusterName, jobId1, OperationType.RESTART, OperationalJobStatus.RUNNING);
+        Instant beforeRunning = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
+        accessor.updateJobStatus(clusterName, jobId1, OperationType.RESTART, OperationalJobStatus.RUNNING, null);
         OperationalJobRecord updated = accessor.findJob(clusterName, jobId1);
         assertThat(updated)
                 .withFailMessage("findJob should reflect the updated status while preserving other fields")
                 .isNotNull()
                 .satisfies(job -> {
                     assertThat(job.status()).isEqualTo(OperationalJobStatus.RUNNING);
+                    assertThat(job.startTime()).isNotNull();
+                    assertThat(job.startTime()).isAfterOrEqualTo(beforeRunning);
+                    assertThat(job.lastUpdate()).isAfterOrEqualTo(beforeRunning);
                     assertThat(job.nodeExecutionOrder()).isEqualTo(nodeOrder);
+                });
+
+        Instant firstStartTime = updated.startTime();
+        accessor.updateJobStatus(clusterName, jobId1, OperationType.RESTART, OperationalJobStatus.RUNNING, null);
+        OperationalJobRecord afterSecondRunning = accessor.findJob(clusterName, jobId1);
+        assertThat(afterSecondRunning.startTime())
+                .withFailMessage("start_time should not change on subsequent RUNNING updates")
+                .isEqualTo(firstStartTime);
+        assertThat(afterSecondRunning.lastUpdate())
+                .withFailMessage("last_update should advance on each status update")
+                .isAfterOrEqualTo(updated.lastUpdate());
+
+        accessor.updateJobStatus(clusterName, jobId1, OperationType.RESTART, OperationalJobStatus.FAILED, "node unreachable");
+        OperationalJobRecord failed = accessor.findJob(clusterName, jobId1);
+        assertThat(failed)
+                .isNotNull()
+                .satisfies(job -> {
+                    assertThat(job.status()).isEqualTo(OperationalJobStatus.FAILED);
+                    assertThat(job.failureReason()).isEqualTo("node unreachable");
+                    assertThat(job.startTime()).isEqualTo(firstStartTime);
                 });
 
         UUID jobId3 = UUIDs.timeBased();
@@ -119,7 +147,7 @@ class ClusterOpsDatabaseAccessorIntegrationTest extends IntegrationTestBase
 
         OperationalJobRecord job1Updated = new OperationalJobRecord(jobId1, OperationType.RESTART,
                                                                      OperationalJobStatus.SUCCEEDED,
-                                                                     nodeOrder, metadata);
+                                                                     null, Instant.now(), null, nodeOrder, metadata);
         accessor.persistJob(clusterName, job1Updated);
         OperationalJobRecord afterUpsert = accessor.findJob(clusterName, jobId1);
         assertThat(afterUpsert)
