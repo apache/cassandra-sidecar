@@ -231,7 +231,6 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
                                              payload, context, HttpResponseStatus.OK.code());
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, 5, TimeUnit.SECONDS)).isTrue();
     }
-    }
 
     private RestoreJob createTestNewJob(String jobId)
     {
