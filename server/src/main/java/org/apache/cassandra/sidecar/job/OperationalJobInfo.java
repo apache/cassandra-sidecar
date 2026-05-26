@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -47,6 +48,11 @@ public interface OperationalJobInfo
      * @return the name of the operation the job performs
      */
     String name();
+
+    /**
+     * @return the {@link OperationType} of this job
+     */
+    OperationType operationType();
 
     /**
      * @return the current status of the job

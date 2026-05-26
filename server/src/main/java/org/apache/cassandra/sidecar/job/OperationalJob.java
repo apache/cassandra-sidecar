@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -238,6 +239,12 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
         String simpleName = this.getClass().getSimpleName();
         return simpleName.isEmpty() ? this.getClass().getName() : simpleName;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract OperationType operationType();
 
     /**
      * Determines the status of the job. OperationalJob subclasses could choose to override the method.

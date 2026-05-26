@@ -1,5 +1,6 @@
 0.5.0
 -----
+ * Implement durable operational job tracker (CASSSIDECAR-374)
  * Remove filesystem path from Http response (CASSSIDECAR-477)
  * Add basic configuration retrieval logic to ConfigurationManager (CASSSIDECAR-427)
  * RPM package is created with wrong version (CASSSIDECAR-472)

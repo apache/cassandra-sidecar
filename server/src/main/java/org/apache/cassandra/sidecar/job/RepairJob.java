@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.adapters.base.RepairOptions;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.request.data.RepairPayload;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
@@ -182,6 +183,15 @@ public class RepairJob extends OperationalJob
     {
         refreshStatusFromCassandra();
         return currentStatus != null ? currentStatus : super.status();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public OperationType operationType()
+    {
+        return OperationType.REPAIR;
     }
 
     /**

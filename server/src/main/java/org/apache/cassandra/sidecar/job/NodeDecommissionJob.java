@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.jetbrains.annotations.NotNull;
@@ -101,6 +102,15 @@ public class NodeDecommissionJob extends OperationalJob
         LOGGER.info("Executing decommission operation. jobId={}", this.jobId());
         storageOperations.decommission(isForce);
         return Future.succeededFuture();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public OperationType operationType()
+    {
+        return OperationType.DECOMMISSION;
     }
 
     /**

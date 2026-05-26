@@ -100,11 +100,12 @@ public class OperationalJobManager
         {
             checkConflict(job);
 
-            // New job is submitted for all cases when we do not have a corresponding downstream job
-            jobTracker.computeIfAbsent(job.jobId(), jobId -> {
+            // Track the job first, then start execution separately
+            OperationalJob tracked = jobTracker.computeIfAbsent(job.jobId(), jobId -> job);
+            if (tracked == job)
+            {
                 internalExecutorPool.executeBlocking(job::execute);
-                return job;
-            });
+            }
         }
         catch (OperationalJobConflictException oje)
         {

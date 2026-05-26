@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.job.storage;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -28,12 +29,17 @@ import com.datastax.driver.core.utils.UUIDs;
 import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
+import org.apache.cassandra.sidecar.job.OperationalJob;
+import org.apache.cassandra.sidecar.job.OperationalJobInfo;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * A data transfer object representing the persisted state of an operational job.
+ * Implements {@link OperationalJobInfo} so that completed jobs stored in a persistent storage
+ * can be returned directly through the tracker without requiring a live {@link OperationalJob}.
  */
-public class OperationalJobRecord
+public class OperationalJobRecord implements OperationalJobInfo
 {
     private final UUID jobId;
     private final OperationType operationType;
@@ -171,6 +177,70 @@ public class OperationalJobRecord
     public Map<String, String> operationMetadata()
     {
         return operationMetadata;
+    }
+
+    @Override
+    @Nullable
+    public UUID nodeId()
+    {
+        return null;
+    }
+
+    @Override
+    public String name()
+    {
+        return operationType.name();
+    }
+
+    @Override
+    public long creationTime()
+    {
+        return creationTimeMillis;
+    }
+
+    @Override
+    @NotNull
+    public List<UUID> nodesPending()
+    {
+        return Collections.emptyList();
+    }
+
+    @Override
+    @NotNull
+    public List<UUID> nodesExecuting()
+    {
+        return Collections.emptyList();
+    }
+
+    @Override
+    @NotNull
+    public List<UUID> nodesSucceeded()
+    {
+        return Collections.emptyList();
+    }
+
+    @Override
+    @NotNull
+    public List<UUID> nodesFailed()
+    {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public boolean isExecuting()
+    {
+        return status == OperationalJobStatus.RUNNING;
+    }
+
+    /**
+     * Creates an {@link OperationalJobRecord} from a live {@link OperationalJob}.
+     *
+     * @param job the operational job to convert
+     * @return a new record capturing the job's current state
+     */
+    public static OperationalJobRecord fromOperationalJob(OperationalJob job)
+    {
+        return new OperationalJobRecord(job.jobId(), job.operationType(), job.status());
     }
 
     @Override
