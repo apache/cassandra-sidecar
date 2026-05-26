@@ -142,6 +142,8 @@ allprojects {
 
         // for dtest jar
         mavenLocal()
+        // Confluent Schema Registry artifacts (kafka-avro-serializer)
+        maven { url "https://packages.confluent.io/maven/" }
     }
 
     checkstyle {

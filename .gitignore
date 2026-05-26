@@ -92,6 +92,9 @@ agents
 bin
 conf
 lib
+# Exception: docker demo config files are tracked
+!docker/cdc-demo/conf/
+!docker/cdc-demo/conf/**
 
 # Local gradle cache
 .gradle

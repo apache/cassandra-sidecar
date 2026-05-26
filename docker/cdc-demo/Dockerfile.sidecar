@@ -1,0 +1,38 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Single-stage build: copies the pre-built distribution assembled on the host
+# by start.sh (./gradlew installDist).  Keep Gradle off the critical path of
+# every docker build — the Gradle daemon on the host stays warm between runs.
+#
+# Usage (called automatically by start.sh):
+#   ./gradlew installDist -x test
+#   docker build -f docker/cdc-demo/Dockerfile.sidecar -t cassandra-sidecar:dev .
+
+FROM eclipse-temurin:11-jre-jammy
+
+WORKDIR /app
+
+# Distribution assembled by ./gradlew installDist
+COPY build/install/apache-cassandra-sidecar/ ./
+
+# Bake demo config; docker-compose overrides at runtime via volume mount.
+COPY docker/cdc-demo/conf/sidecar.yaml /app/conf/sidecar.yaml
+
+EXPOSE 9043
+
+ENTRYPOINT ["/app/bin/cassandra-sidecar"]

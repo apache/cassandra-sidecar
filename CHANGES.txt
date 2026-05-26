@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * Add Docker Compose setup for local CDC demo (Cassandra → Sidecar → Kafka) (CASSSIDECAR-419)
  * Scope all CDC dependencies exclusively to CdcModule (CASSSIDECAR-447)
  * Add ConfigurationProvider interfaces for pluggable overlay storage (CASSSIDECAR-424)
  * Refactor OperationalJob to have data separate from execution logic (CASSSIDECAR-460)

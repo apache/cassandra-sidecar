@@ -1,0 +1,186 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Cassandra CDC demo stack
+#
+# Startup order:
+#   kafka ──► schema-registry
+#   cassandra ──► cassandra-init  (seeds schema + configs, then exits)
+#                     └──► sidecar
+#   kafka-ui
+#
+# Wipe all data: docker compose down -v  (or: ./scripts/stop.sh --clean)
+
+services:
+
+  # ── Kafka (KRaft — no ZooKeeper) ────────────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    networks:
+      - demo-network
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # Must not change across restarts — required for volume persistence.
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "kafka:9092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+  # ── Confluent Schema Registry ────────────────────────────────────────────────
+  # Stores and serves Avro schemas; the sidecar's KafkaAvroSerializer registers
+  # table schemas here on first publish.  Exposed on host port 8081.
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.6.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - demo-network
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/subjects || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+  # ── Cassandra ───────────────────────────────────────────────────────────────
+  cassandra:
+    image: cassandra:${CASSANDRA_VERSION:-5.0}
+    # Patches CDC settings into cassandra.yaml, then delegates to the stock entrypoint.
+    entrypoint: ["/bin/bash", "/scripts/cassandra-entrypoint.sh"]
+    command: ["cassandra", "-f"]
+    networks:
+      - demo-network
+    environment:
+      CASSANDRA_CLUSTER_NAME: "CDC Demo Cluster"
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      # Required: lets SidecarLoadBalancingPolicy match this node by hostname.
+      CASSANDRA_BROADCAST_RPC_ADDRESS: cassandra
+      # Enables remote JMX so the sidecar can connect.
+      LOCAL_JMX: "no"
+      JVM_EXTRA_OPTS: "-Djava.rmi.server.hostname=cassandra -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
+      MAX_HEAP_SIZE: "512M"
+      HEAP_NEWSIZE: "128M"
+    volumes:
+      - ./scripts:/scripts:ro
+      # commitlog/ and cdc_raw/ must share a filesystem for CDC hard-links.
+      - cassandra-varlib:/var/lib/cassandra
+    ports:
+      - "9042:9042"
+      # 9043 is published here because the sidecar shares this container's network namespace.
+      - "9043:9043"
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'SELECT now() FROM system.local' 2>/dev/null || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+
+  # ── Cassandra init (one-shot) ───────────────────────────────────────────────
+  # Seeds sidecar_internal schema and CDC/Kafka configs after Cassandra and
+  # Schema Registry are both healthy.
+  cassandra-init:
+    image: cassandra:${CASSANDRA_VERSION:-5.0}
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    networks:
+      - demo-network
+    entrypoint: ["/bin/bash", "-c",
+      "bash /scripts/init-cdc-schema.sh && bash /scripts/seed-cdc-configs.sh"]
+    environment:
+      CASSANDRA_HOST: cassandra
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      CDC_TOPIC: cdc-mutations
+      CDC_DATACENTER: datacenter1
+      # Set by start.sh: confluent | bytearray
+      SERIALIZER_MODE: ${SERIALIZER_MODE:-confluent}
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+    volumes:
+      - ./scripts:/scripts:ro
+    restart: "no"
+
+  # ── Kafka UI ─────────────────────────────────────────────────────────────────
+  # Browse topics and Avro-decoded messages at http://localhost:8080
+  # kafbat/kafka-ui is the actively maintained fork of provectuslabs/kafka-ui.
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:v1.5.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - demo-network
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
+    ports:
+      - "8080:8080"
+
+  # ── Sidecar ─────────────────────────────────────────────────────────────────
+  # Shares Cassandra's network namespace — sidecar is reachable at cassandra:9043.
+  sidecar:
+    image: cassandra-sidecar:dev
+    build:
+      context: ../../
+      dockerfile: docker/cdc-demo/Dockerfile.sidecar
+    depends_on:
+      cassandra-init:
+        condition: service_completed_successfully
+    network_mode: "service:cassandra"
+    volumes:
+      # Overrides the baked-in config; edit without rebuilding the image.
+      - ./conf/sidecar.yaml:/app/conf/sidecar.yaml:ro
+      # Shared with Cassandra so the sidecar can read cdc_raw/ and commitlog/.
+      - cassandra-varlib:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9043/api/v1/__health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  kafka-data:
+  # commitlog/ and cdc_raw/ must share a filesystem for CDC hard-links.
+  cassandra-varlib:
+
+networks:
+  demo-network:
+    driver: bridge
