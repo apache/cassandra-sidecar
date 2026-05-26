@@ -50,6 +50,7 @@ import org.apache.cassandra.testing.ClusterBuilderConfiguration;
 
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.createJob;
 import static org.apache.cassandra.sidecar.restore.RestoreJobTestUtils.disableRestoreProcessor;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -128,14 +129,19 @@ class RestoreJobDiscovererSAIOptionsIntTest extends SharedClusterSidecarIntegrat
         RestoreJobDiscoverer restoreJobDiscoverer = serverWrapper.injector.getInstance(RestoreJobDiscoverer.class);
         restoreJobDiscoverer.tryExecuteDiscovery();
 
-        // verify ranges were created and link to the correct job
+        // verify ranges were created and link to the correct job. Wrapped in loopAssert because the
+        // STAGE_READY PATCH triggers an asynchronous wake-up (CASSSIDECAR-454) on a worker thread; the
+        // wake-up and the synchronous tryExecuteDiscovery above race on isExecuting, and ranges may not
+        // be visible immediately after either path returns.
         RestoreRangeDatabaseAccessor rangeDatabaseAccessor = serverWrapper.injector.getInstance(RestoreRangeDatabaseAccessor.class);
-        List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
-        assertThat(ranges).isNotEmpty();
-        for (RestoreRange range : ranges)
-        {
-            assertThat(range.jobId()).isEqualTo(jobId);
-        }
+        loopAssert(10, 500, () -> {
+            List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
+            assertThat(ranges).isNotEmpty();
+            for (RestoreRange range : ranges)
+            {
+                assertThat(range.jobId()).isEqualTo(jobId);
+            }
+        });
 
         // Re-read the job after discovery to confirm default importOptions are preserved
         RestoreJob jobAfterDiscovery = jobAccessor.find(jobId);
@@ -186,14 +192,19 @@ class RestoreJobDiscovererSAIOptionsIntTest extends SharedClusterSidecarIntegrat
         RestoreJobDiscoverer restoreJobDiscoverer = serverWrapper.injector.getInstance(RestoreJobDiscoverer.class);
         restoreJobDiscoverer.tryExecuteDiscovery();
 
-        // verify ranges were created by the discoverer and link back to the correct job
+        // verify ranges were created by the discoverer and link back to the correct job. Wrapped in
+        // loopAssert because the STAGE_READY PATCH triggers an asynchronous wake-up (CASSSIDECAR-454)
+        // on a worker thread; the wake-up and the synchronous tryExecuteDiscovery above race on
+        // isExecuting, and ranges may not be visible immediately after either path returns.
         RestoreRangeDatabaseAccessor rangeDatabaseAccessor = serverWrapper.injector.getInstance(RestoreRangeDatabaseAccessor.class);
-        List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
-        assertThat(ranges).isNotEmpty();
-        for (RestoreRange range : ranges)
-        {
-            assertThat(range.jobId()).isEqualTo(jobId);
-        }
+        loopAssert(10, 500, () -> {
+            List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
+            assertThat(ranges).isNotEmpty();
+            for (RestoreRange range : ranges)
+            {
+                assertThat(range.jobId()).isEqualTo(jobId);
+            }
+        });
 
         // Re-read the job after discovery to confirm importOptions are still intact.
         RestoreJob jobAfterDiscovery = jobAccessor.find(jobId);
