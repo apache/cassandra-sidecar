@@ -18,7 +18,6 @@
 package org.apache.cassandra.sidecar.db;
 
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.request.Service;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
@@ -28,7 +27,6 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
  * "configs" table in sidecar keyspace. All the kafka configurations required for CDC feature are
  * stored in this table using this class.
  */
-@Singleton
 public class KafkaConfigAccessor extends ConfigAccessorImpl
 {
     @Inject

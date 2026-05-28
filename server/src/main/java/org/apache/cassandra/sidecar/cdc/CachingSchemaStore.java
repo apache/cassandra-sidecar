@@ -31,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import org.apache.avro.Schema;
@@ -73,7 +72,6 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
  * <p>Schema version UUIDs ({@link #getVersion}) are derived from the CQL {@code CREATE TABLE}
  * statement, consistent with the analytics {@code CachingSchemaStore} implementation.
  */
-@Singleton
 public class CachingSchemaStore implements SchemaStore
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CachingSchemaStore.class);
@@ -230,9 +228,10 @@ public class CachingSchemaStore implements SchemaStore
         // Remove any old schema entries for deleted tables, this operation can be done in the end as this is
         // only for removing stale entries and no one is going to use these entries once the table is removed.
         // This doesn't have to be an atomic operation.
-        avroSchemasCache.keySet().retainAll(refreshedCdcTables.stream()
-                                                               .map(cqlTable -> TableIdentifier.of(cqlTable.keyspace(), cqlTable.table()))
-                                                               .collect(Collectors.toList()));
+        Set<TableIdentifier> toKeep = refreshedCdcTables.stream()
+                                                        .map(cqlTable -> TableIdentifier.of(cqlTable.keyspace(), cqlTable.table()))
+                                                        .collect(Collectors.toSet());
+        avroSchemasCache.keySet().retainAll(toKeep);
         vertx.eventBus().publish(ON_CDC_CACHE_WARMED_UP.address(), "Cdc cache warmed up");
     }
 

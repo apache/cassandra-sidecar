@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import com.google.inject.Singleton;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -47,7 +46,7 @@ import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.CdcSystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
@@ -59,7 +58,6 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_
 /**
  * Class that handles CDC life cycle
  */
-@Singleton
 public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CdcPublisher.class);
@@ -71,7 +69,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
     private volatile boolean isInitialized = false;
     private volatile boolean cdcCacheWarmedUp = false;
     private final CdcDatabaseAccessor databaseAccessor;
-    private final VirtualTablesDatabaseAccessor virtualTables;
+    private final CdcSystemViewsDatabaseAccessor systemViews;
     private final SidecarCdcStats sidecarCdcStats;
     private final SchemaSupplier schemaSupplier;
     private final InstanceMetadataFetcher instanceMetadataFetcher;
@@ -95,7 +93,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
                         CdcConfig conf,
                         CdcDatabaseAccessor databaseAccessor,
                         ICdcStats cdcStats,
-                        VirtualTablesDatabaseAccessor virtualTables,
+                        CdcSystemViewsDatabaseAccessor systemViews,
                         SidecarCdcStats sidecarCdcStats,
                         Provider<RangeManager> rangeManagerProvider,
                         CassandraBridgeFactory cassandraBridgeFactory,
@@ -108,7 +106,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         this.executorPools = executorPools.internal();
         this.conf = conf;
         this.databaseAccessor = databaseAccessor;
-        this.virtualTables = virtualTables;
+        this.systemViews = systemViews;
         this.schemaSupplier = schemaSupplier;
         this.instanceMetadataFetcher = instanceMetadataFetcher;
         this.clusterConfigProvider = clusterConfigProvider;
@@ -138,7 +136,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
                 instance.delegate().nodeSettings()).releaseVersion()
         ).getVersion();
         this.kafkaPublisher = KafkaPublisher.create(version,
-                                                    TopicSupplier.staticTopicSupplier(conf.kafkaTopic()),
+                                                    buildTopicSupplier(conf),
                                                     conf.kafkaConfigs(),
                                                     kafkaProducerFactory,
                                                     schemaStore,
@@ -151,17 +149,56 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         return new CdcEventConsumer(kafkaPublisher);
     }
 
+    /**
+     * Build the {@link TopicSupplier} that determines which Kafka topic each CDC event is
+     * published to, honoring {@link CdcConfig#topicFormat()}. The interpretation of
+     * {@link CdcConfig#kafkaTopic()} depends on the format:
+     * <ul>
+     *   <li>{@code STATIC}        - literal topic name (single topic for all tables)</li>
+     *   <li>{@code KEYSPACE}      - {@link String#format} template with one {@code %s} for keyspace, e.g. {@code "cdc-%s"}</li>
+     *   <li>{@code KEYSPACETABLE} - template with two {@code %s} for keyspace + table, e.g. {@code "cdc-%s-%s"}</li>
+     *   <li>{@code TABLE}         - template with one {@code %s} for table name, e.g. {@code "cdc-%s"}</li>
+     *   <li>{@code MAP}           - JSON object string mapping {@code "keyspace.table"} to topic name</li>
+     * </ul>
+     */
+    private static TopicSupplier buildTopicSupplier(CdcConfig conf)
+    {
+        switch (conf.topicFormat())
+        {
+            case STATIC:
+                return TopicSupplier.staticTopicSupplier(conf.kafkaTopic());
+            case KEYSPACE:
+                return TopicSupplier.keyspaceSupplier(conf.kafkaTopic());
+            case KEYSPACETABLE:
+                return TopicSupplier.keyspaceTableSupplier(conf.kafkaTopic());
+            case TABLE:
+                return TopicSupplier.tableSupplier(conf.kafkaTopic());
+            case MAP:
+                return TopicSupplier.mapSupplier(conf.kafkaTopic());
+            default:
+                throw new IllegalStateException("Unsupported topic format: " + conf.topicFormat());
+        }
+    }
+
     private class ConfigChangedHandler implements Handler<Message<Object>>
     {
         public void handle(Message<Object> event)
         {
             sidecarCdcStats.captureCdcConfigChange();
             // Execute restart on worker thread to avoid blocking event loop
-            executorPools.executeBlocking(() -> {
-                restart();
-                return null;
-            });
+            executorPools.runBlocking(
+                CdcPublisher.this::restart
+            ).onFailure(t -> handleAsyncFailure(ON_CDC_CONFIGURATION_CHANGED.address(), t));
         }
+    }
+
+    /**
+     * Handle the unexpected error while processing event on worker pool.
+     */
+    private void handleAsyncFailure(String address, Throwable t)
+    {
+        LOGGER.error("Unexpected error while processing event '{}' on worker pool", address, t);
+        sidecarCdcStats.captureUnrecoverableCdcError(t);
     }
 
     @SuppressWarnings("resource")
@@ -226,7 +263,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         return isRunning;
     }
 
-    private synchronized void stop()
+    synchronized void stop()
     {
         if (!isRunning)
         {
@@ -276,7 +313,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
             {
                 LOGGER.info("Cdc not enabled in this DC localDc={} cdcDc={}", localDc, conf.datacenter());
             }
-            else if (virtualTables.isCdcOnRepairEnabled())
+            else if (systemViews.isCdcOnRepairEnabled())
             {
                 LOGGER.warn("Cannot run CDC while cdc on repair is enabled, disable cdc_on_repair_enabled in the yaml file.");
                 sidecarCdcStats.captureCdcOnRepairEnabled();
@@ -306,26 +343,35 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
 
     // EventBus handlers
     @Override
-    public synchronized void handle(Message<Object> msg)
+    public void handle(Message<Object> msg)
     {
-        if (msg.address().equals(RangeManager.RangeManagerEvents.ON_TOKEN_RANGE_CHANGED.address()))
+        String address = msg.address();
+        if (address.equals(RangeManager.RangeManagerEvents.ON_TOKEN_RANGE_CHANGED.address()))
         {
-            handleTokenRangeChange();
+            executorPools.runBlocking(CdcPublisher.this::handleTokenRangeChange)
+                         .onFailure(t -> handleAsyncFailure(address, t));
         }
-        else if (msg.address().equals(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_GAINED.address()))
+        else if (address.equals(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_GAINED.address()))
         {
-            handleRangeGained((RangeManager.RangeChangeEvent) msg.body());
+            RangeManager.RangeChangeEvent event = (RangeManager.RangeChangeEvent) msg.body();
+            executorPools.runBlocking(() -> handleRangeGained(event))
+                         .onFailure(t -> handleAsyncFailure(address, t));
         }
-        else if (msg.address().equals(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_LOST.address()))
+        else if (address.equals(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_LOST.address()))
         {
-            handleRangeLost((RangeManager.RangeChangeEvent) msg.body());
+            RangeManager.RangeChangeEvent event = (RangeManager.RangeChangeEvent) msg.body();
+            executorPools.runBlocking(() -> handleRangeLost(event))
+                         .onFailure(t -> handleAsyncFailure(address, t));
         }
-        else if (msg.address().equals(ON_SERVER_STOP.address()))
+        else if (address.equals(ON_SERVER_STOP.address()))
         {
+            // Run stop() on the event loop so it completes before the loop closes during shutdown;
+            // stopConsumers() only signals the SidecarCdc iterators (not heavy work).
             stop();
         }
-        else if (msg.address().equals(ON_CDC_CACHE_WARMED_UP.address()))
+        else if (address.equals(ON_CDC_CACHE_WARMED_UP.address()))
         {
+            // Single volatile write - safe on the event loop
             cdcCacheWarmedUp = true;
         }
     }

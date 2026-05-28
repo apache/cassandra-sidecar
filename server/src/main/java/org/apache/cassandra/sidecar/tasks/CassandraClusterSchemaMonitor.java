@@ -33,7 +33,6 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.inject.Singleton;
 import io.vertx.core.Promise;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CdcBridge;
@@ -59,7 +58,6 @@ import org.jetbrains.annotations.NotNull;
  * focused on CDC (Change Data Capture) operations. It maintains real-time awareness of schema changes
  * in the Cassandra cluster and manages CDC-enabled table metadata.
  */
-@Singleton
 public class CassandraClusterSchemaMonitor implements PeriodicTask
 {
     // 49sec least-common multiple with 60sec is 49min so offers best monitor frequency without clashing with 60sec

@@ -24,7 +24,6 @@ import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import io.vertx.core.Handler;
 
 import io.vertx.core.Vertx;
@@ -43,7 +42,6 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CDC_CON
  * Implementation of the interface {@link CdcConfig}, an in-memory representation holding
  * CDC and Kafka configurations from "configs" table inside sidecar internal keyspace.
  */
-@Singleton
 public class CdcConfigImpl implements CdcConfig
 {
     private static final int DEFAULT_MAX_WATERMARKER_SIZE = 400000;

@@ -1,0 +1,887 @@
+////
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing,
+  software distributed under the License is distributed on an
+  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, either express or implied.  See the License for the
+  specific language governing permissions and limitations
+  under the License.
+////
+
+= Live Migration User Guide
+:toc:
+:toclevels: 2
+
+NOTE: Live Migration is the implementation of https://cwiki.apache.org/confluence/display/CASSANDRA/CEP-40%3A+Data+Transfer+Using+Cassandra+Sidecar+for+Live+Migrating+Instances[CEP-40]
+in Cassandra Sidecar. Familiarity with the CEP helps but is not required to
+follow this guide.
+
+== Motivation
+
+Operators managing Cassandra clusters over long periods commonly need
+to:
+
+* Move a cluster to higher-capacity hardware or replace aging servers.
+* Move a cluster to a new physical datacenter.
+* Move a cluster to a different type of infrastructure.
+
+In each of these cases the affected Cassandra instances can be replaced
+using the regular host-replacement procedure. The time to replace a
+single instance depends on its data volume, network bandwidth, and other
+factors; replacing all required instances of a large cluster while
+maintaining its availability can take days, or even weeks. Most of that
+time is spent in bootstrap, during which the new instance streams data
+from its replicas.
+
+Instead of bootstrapping, data can be transferred directly from the
+instance being replaced to the new one, which then starts up with the
+same data — equivalent to the source coming up with a different IP.
+This is what Live Migration does, reusing the file-streaming path
+Sidecar already has. File streaming via Sidecar is much faster than
+bootstrap. Multiple instances can be migrated in parallel without
+downtime as long as quorum of every replica set is preserved at all
+times (assuming `*_QUORUM` consistency levels are in use).
+
+Live Migration migrates *healthy* Cassandra instances quickly,
+with minimal Cassandra downtime — only the final-sync window
+requires the source to be down.
+
+== How Live Migration Works
+
+The procedure has six phases:
+
+. *Initial copy (source running)* — Destination pulls SSTables from the
+  source while Cassandra on the source continues to serve. Uses
+  `successThreshold` < 1.0 and may run multiple iterations.
+. *Stop the source and run the final sync* — Drain and stop the source
+  Cassandra, then submit a second data-copy task with
+  `successThreshold: 1.0` to make the destination an exact copy.
+. *File verification* — Compare every file's metadata and digest
+  between source and destination.
+. *Mark migration complete* — `POST /status` on both hosts records
+  completion in Sidecar; further data-copy and verification calls are
+  then blocked on the marked instance.
+. *Start the destination Cassandra* — Bring Cassandra up on the
+  destination and confirm it's `UN` in `nodetool status`.
+. *Decommission the migration map and clear status* — Remove the entry
+  from `migration_map` on both hosts and `DELETE /status` to fully turn
+  the Live Migration API back off.
+
+Live Migration does not manage Cassandra processes, modify cluster
+topology, or handle unhealthy instances; those fall outside its scope.
+
+The transfer itself reuses Sidecar's existing file-streaming handler, and
+the on-disk layout at the destination matches the source. The operation
+is roughly equivalent to running `rsync` a couple of times — except that
+it works in environments where `rsync` is not permitted (Kubernetes,
+locked-down cloud instances, etc.) and inherits Sidecar's authentication,
+throttling, and audit story.
+
+The <<lm-walkthrough,Migration Walkthrough>> section below works through
+each phase with concrete `curl` commands.
+
+== When Live Migration Is the Right Tool
+
+Use Live Migration when:
+
+* You are replacing a *healthy* instance — hardware refresh, re-platforming
+  (bare metal to VM, between cloud providers), datacenter relocation, or
+  moving a node to different storage.
+* The source instance's on-disk data is intact and the destination has
+  enough disk to hold a full copy plus headroom.
+* You can deploy Sidecar on both hosts and reach each Sidecar's HTTP
+  endpoint from the other.
+
+Fall back to the standard host replacement procedure when:
+
+* The source has disk failures, filesystem corruption, or suspected data
+  corruption. Live Migration will faithfully copy the bad bytes; bootstrap
+  will not.
+* Sidecar is not deployed — or cannot be deployed — on the source host.
+* Your environment's security posture does not allow exposing file-level
+  APIs on the source Sidecar, even temporarily.
+
+== Prerequisites
+
+* Cassandra Sidecar installed on both source and destination hosts.
+* Network reachability between the two Sidecar HTTP endpoints (default
+  port 9043).
+* Destination disk capacity at least equal to the source data size, plus
+  headroom.
+* Operator-level access to both Sidecar HTTP APIs. The Live Migration
+  endpoints require the `LIVE_MIGRATION:DATA_COPY` permission when
+  access control is enabled.
+
+[[lm-config]]
+== Configuration
+
+Live Migration is configured under the `live_migration` section of
+`sidecar.yaml`. The same `live_migration` configuration applies to both
+source and destination — the role each host plays is derived from where
+its hostname appears in `migration_map`.
+
+[source,yaml]
+----
+live_migration:
+  # Hostname of the source -> hostname of the destination.
+  # Both endpoints in this map have Live Migration endpoints enabled
+  # (with role-based authorization). Hosts not appearing here see 404
+  # on Live Migration endpoints.
+  migration_map:
+    source-host.example.com: dest-host.example.com
+
+  # File-name patterns to skip during copy (glob: or regex: prefix).
+  files_to_exclude: [ ]
+
+  # Directory patterns to skip during copy. Snapshots are excluded by
+  # default because they share inodes via hardlinks on the source;
+  # copying them naively would multiply destination disk usage.
+  dirs_to_exclude:
+    - glob:${DATA_FILE_DIR}/*/*/snapshots
+
+  # Upper bound on concurrent file/digest requests the *source* will
+  # serve at once. Protects the source from being overwhelmed.
+  # Default: 20. Must be >= 1.
+  max_concurrent_file_requests: 20
+----
+
+NOTE: If the source host is listed as a Cassandra seed in any node's
+`cassandra.yaml` (including the destination's own), plan to remove or
+replace that entry before bringing the destination Cassandra up. See
+<<lm-phase5,Phase 5>> for the actual step.
+
+=== Path placeholders
+
+`files_to_exclude` and `dirs_to_exclude` accept Java `PathMatcher` patterns
+prefixed with `glob:` or `regex:`. The following placeholders are expanded
+using the local Cassandra instance's configured directories:
+
+[cols="2,3"]
+|===
+| Placeholder | Resolves to
+
+| `${DATA_FILE_DIR}`              | All configured data directories
+| `${DATA_FILE_DIR_0}`, `${DATA_FILE_DIR_1}`, ... | A specific data directory by index
+| `${COMMITLOG_DIR}`              | The commit log directory
+| `${HINTS_DIR}`                  | The hints directory
+| `${SAVED_CACHES_DIR}`           | The saved caches directory
+| `${CDC_RAW_DIR}`                | The CDC raw directory
+| `${LOCAL_SYSTEM_DATA_FILE_DIR}` | The local system data directory
+|===
+
+=== Roles derived from the migration map
+
+* If the local hostname matches a *key* in `migration_map`, the local Sidecar
+  acts as a *source*.
+* If it matches a *value*, the local Sidecar acts as a *destination*.
+* If it matches neither, all Live Migration endpoints return `404 Not Found`.
+
+A given Sidecar instance can only be one role per pair. The lookup is keyed on
+the host portion of the request's `Host` header.
+
+[[lm-walkthrough]]
+== Migration Walkthrough
+
+The examples below assume default Sidecar port 9043 and that access control
+is configured for your environment (substitute your TLS/auth flags into the
+`curl` calls as needed).
+
+For the full list of guards that can reject a request — and the HTTP
+statuses they return — see <<lm-api,API Reference and Safety Model>>.
+
+=== Phase 1 — Initial copy (source running)
+
+Submit the data copy on the *destination*:
+
+[source,bash]
+----
+curl -X POST http://dest-host.example.com:9043/api/v1/live-migration/data-copy-tasks \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "maxIterations": 3,
+    "successThreshold": 0.95,
+    "maxConcurrency": 10
+  }'
+----
+
+Body fields (all required):
+
+* `maxIterations` — Number of copy passes. Each pass re-lists the source,
+  diffs it against the destination, and downloads what's missing or changed.
+  Must be `> 0`. 2–5 is typical.
+* `successThreshold` — Fraction (0.0–1.0) of bytes that must match between
+  source and destination for the iteration to count as successful. Use
+  0.90–0.99 while the source is serving writes; use `1.0` for the final sync.
+* `maxConcurrency` — Concurrent file downloads. Must be `> 0` and must not
+  exceed `max_concurrent_file_requests` on the source.
+
+On acceptance, the response is `202 Accepted`:
+
+[source,json]
+----
+{
+  "taskId": "a7f3e2c1-4b5a-4c8d-9e1f-2a3b4c5d6e7f",
+  "statusUrl": "/api/v1/live-migration/data-copy-tasks/a7f3e2c1-4b5a-4c8d-9e1f-2a3b4c5d6e7f"
+}
+----
+
+Failure modes:
+
+[cols="1,3"]
+|===
+| Status | Meaning
+
+| `400 Bad Request` | Invalid body, `maxConcurrency` exceeds the source's
+  `max_concurrent_file_requests`, or the destination Cassandra is currently
+  running (JMX or native is reachable).
+| `404 Not Found`   | This Sidecar is not configured as a destination.
+| `409 Conflict`    | Another Live Migration task is already in progress on
+  this destination.
+|===
+
+Poll the status URL until the last entry's `state` is `SUCCESS`, `FAILED`,
+or `CANCELLED`:
+
+[source,bash]
+----
+curl http://dest-host.example.com:9043/api/v1/live-migration/data-copy-tasks/a7f3e2c1-4b5a-4c8d-9e1f-2a3b4c5d6e7f
+----
+
+[source,json]
+----
+{
+  "taskId": "a7f3e2c1-4b5a-4c8d-9e1f-2a3b4c5d6e7f",
+  "source": "source-host.example.com",
+  "port": 9043,
+  "maxIterations": 3,
+  "successThreshold": 0.95,
+  "maxConcurrency": 10,
+  "status": [
+    {
+      "iteration": 0,
+      "state": "DOWNLOAD_COMPLETE",
+      "totalSize": 339394171,
+      "totalFiles": 379,
+      "bytesToDownload": 147050,
+      "filesToDownload": 160,
+      "filesDownloaded": 160,
+      "downloadFailures": 0,
+      "bytesDownloaded": 147050
+    },
+    {
+      "iteration": 1,
+      "state": "SUCCESS",
+      "totalSize": 339394171,
+      "totalFiles": 379,
+      "bytesToDownload": -1,
+      "filesToDownload": -1,
+      "filesDownloaded": 0,
+      "downloadFailures": 0,
+      "bytesDownloaded": 0
+    }
+  ]
+}
+----
+
+The `status` array grows one entry per iteration. The last element reflects
+the current iteration. `bytesToDownload` and `filesToDownload` are `-1` when
+the value is not yet computed (e.g., during `STARTING`/`CLEANING`) or when
+the iteration was a no-op success.
+
+[[lm-data-copy-states]]
+==== Data copy task states
+
+[cols="1,3"]
+|===
+| State | Meaning
+
+| `STARTING`          | Initial state when the iteration is being set up.
+| `CLEANING`          | Removing files at the destination that don't exist at the source.
+| `PREPARING`         | Listing source files and computing what to download.
+| `DOWNLOADING`       | Files are actively being transferred.
+| `DOWNLOAD_COMPLETE` | All planned files transferred; threshold has not yet been re-checked.
+| `SUCCESS`           | Iteration met `successThreshold` (terminal). Reached only from `PREPARING` (a no-op iteration is also `SUCCESS`).
+| `FAILED`            | Iteration failed (terminal). Grep the Sidecar log on both hosts for `liveMigrationRequest=<taskId>` to find related messages.
+| `CANCELLED`         | Operator cancelled the task with `PATCH` (terminal).
+|===
+
+If `successThreshold` is not met after `maxIterations`, the last entry
+will be in `FAILED`. Either lower the threshold and resubmit, or proceed
+to Phase 2 (the final sync) which uses 1.0 anyway.
+
+For the complete state-transition rules (which transitions are allowed
+from each state, and the edge cases), see `OperationStatus.State` in
+the Sidecar source.
+
+==== Cancelling a task
+
+[source,bash]
+----
+curl -X PATCH http://dest-host.example.com:9043/api/v1/live-migration/data-copy-tasks/<taskId>
+----
+
+The cancel endpoint takes no body. The response is the task's final
+`LiveMigrationDataCopyResponse` with the last status flipped to `CANCELLED`.
+
+==== If the destination Sidecar restarts mid-copy
+
+Task state is in-memory only — it is not persisted to disk. If the
+destination Sidecar process restarts (crash, deployment, OS reboot)
+while a data-copy task is in progress, the task is lost; there is no
+automatic resume. Submit a fresh data-copy task to continue.
+
+Files already downloaded by the previous task remain on disk. The new
+task's diff pass against the source will skip files whose size matches,
+so most of the prior work is preserved; partial downloads (size
+mismatch) are deleted and re-downloaded.
+
+=== Phase 2 — Stop the source and run the final sync
+
+Stop the source Cassandra cleanly:
+
+[source,bash]
+----
+nodetool drain
+systemctl stop cassandra
+----
+
+Substitute whichever script or command your environment uses to stop
+Cassandra; `systemctl stop cassandra` is just one example.
+
+Then submit the final data copy on the destination, this time with
+`successThreshold: 1.0`:
+
+[source,bash]
+----
+curl -X POST http://dest-host.example.com:9043/api/v1/live-migration/data-copy-tasks \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "maxIterations": 3,
+    "successThreshold": 1.0,
+    "maxConcurrency": 10
+  }'
+----
+
+Because most data was already copied in Phase 1, this should complete
+quickly. `maxIterations` can be anything `>= 1`; keeping it
+above 1 simply gives the task a few retries if a transient error
+(network blip, partial download) trips it up. Wait until the last status
+entry's `state` is `SUCCESS`, `FAILED`, or `CANCELLED`.
+
+=== Phase 3 — File verification
+
+Verify the destination matches the source byte-for-byte:
+
+[source,bash]
+----
+curl -X POST http://dest-host.example.com:9043/api/v1/live-migration/files-verification-tasks \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "maxConcurrency": 10,
+    "digestAlgorithm": "MD5"
+  }'
+----
+
+Body fields (both required):
+
+* `maxConcurrency` — Concurrent files to digest. Must be `>= 1`.
+* `digestAlgorithm` — Either `"MD5"` or `"XXHash32"` (case-insensitive).
+  XXHash32 is faster and is a good choice for large SSTable files; MD5 is
+  the safer cross-tool default.
+
+The response is `202 Accepted`:
+
+[source,json]
+----
+{
+  "taskId": "b8e4f3d2-5c6b-5d9e-0f2a-3b4c5d6e7f80",
+  "statusUrl": "/api/v1/live-migration/files-verification-tasks/b8e4f3d2-5c6b-5d9e-0f2a-3b4c5d6e7f80"
+}
+----
+
+Poll for the result:
+
+[source,bash]
+----
+curl http://dest-host.example.com:9043/api/v1/live-migration/files-verification-tasks/b8e4f3d2-5c6b-5d9e-0f2a-3b4c5d6e7f80
+----
+
+[source,json]
+----
+{
+  "id": "b8e4f3d2-5c6b-5d9e-0f2a-3b4c5d6e7f80",
+  "digestAlgorithm": "MD5",
+  "state": "COMPLETED",
+  "source": "source-host.example.com",
+  "port": 9043,
+  "filesNotFoundAtSource": 0,
+  "filesNotFoundAtDestination": 0,
+  "metadataMatched": 379,
+  "metadataMismatches": 0,
+  "digestMismatches": 0,
+  "digestVerificationFailures": 0,
+  "filesMatched": 323
+}
+----
+
+Verification succeeded only if `state` is `COMPLETED` and every counter
+below is `0`:
+
+* `filesNotFoundAtSource` — present at destination but missing at source.
+* `filesNotFoundAtDestination` — present at source but missing at destination.
+* `metadataMismatches` — present on both, but size, type, or modification
+  time differ.
+* `digestMismatches` — metadata matched but digests differ (the content
+  actually differs).
+* `digestVerificationFailures` — the digest could not be computed or
+  compared (network or IO error, not a content mismatch).
+
+(`filesMatched` counts only non-directory files that passed both metadata
+and digest checks. Directories are checked for metadata only and contribute
+to `metadataMatched`. So `metadataMatched` is normally larger than
+`filesMatched`.)
+
+==== Verification task states
+
+`NOT_STARTED` -> `IN_PROGRESS` -> `COMPLETED`. Either of `FAILED` or
+`CANCELLED` is reachable from any non-terminal state. `FAILED` is set
+automatically if metadata comparison or any digest check fails — the
+mismatch counters in the response tell you what went wrong.
+
+If verification fails, the typical recovery is:
+
+. Inspect the Sidecar log on the destination for the specific files that
+  failed; mismatches are logged at `ERROR`. Use the verification task
+  `id` to grep the logs.
+. Re-run a data copy with `successThreshold: 1.0` to resync.
+. Re-run verification.
+
+=== Phase 4 — Mark migration complete
+
+Once verification passes, mark the migration complete on *both* source
+and destination. The completion record is per-instance (each Sidecar
+writes its own `live_migration_status.json` under its staging directory),
+so the operator must `POST /status` to each host separately:
+
+[source,bash]
+----
+curl -X POST http://source-host.example.com:9043/api/v1/live-migration/status
+curl -X POST http://dest-host.example.com:9043/api/v1/live-migration/status
+----
+
+Successful response (from each call):
+
+[source,json]
+----
+{
+  "state": "COMPLETED",
+  "endTime": 1716480000000
+}
+----
+
+`endTime` is epoch milliseconds (UTC) at which completion was recorded.
+Calling `POST /status` twice on the same host returns `400 Bad Request`
+— completion is recorded as a one-shot file, not a toggle.
+
+After this point, creating new data-copy or verification tasks on each
+marked instance returns `400` (via `allowIfMigrationNotComplete`). The
+`/status` endpoints are intentionally exempt — `GET /status` still
+returns the `COMPLETED` record, and `DELETE /status` is required in
+Phase 6 to clear it.
+
+[[lm-phase5]]
+=== Phase 5 — Start the destination Cassandra
+
+If the source host's address appears in any node's `seeds` list in
+`cassandra.yaml` (including the destination's own), remove or replace
+that entry before bringing the destination up. The source's address is
+going away with the migration, and stale seed entries can prevent new
+or restarting nodes from discovering the cluster.
+
+Then start Cassandra on the destination:
+
+[source,bash]
+----
+systemctl start cassandra
+nodetool status     # confirm UN
+----
+
+Substitute whichever script or command your environment uses to start
+Cassandra; `systemctl start cassandra` is just one example.
+
+If the destination has a different data directory layout than the source,
+run `nodetool relocatesstables` to put files in the correct disks. See
+the `nodetool` documentation for timing and impact details.
+
+=== Phase 6 — Decommission the migration map and clear status
+
+This is a hard requirement to fully turn the Live Migration API back off
+on both hosts.
+
+. Edit `sidecar.yaml` on both hosts and remove the entry from
+  `migration_map`:
++
+[source,yaml]
+----
+live_migration:
+  migration_map: { }   # was: source-host.example.com: dest-host.example.com
+  files_to_exclude: [ ]
+  dirs_to_exclude:
+    - glob:${DATA_FILE_DIR}/*/*/snapshots
+  max_concurrent_file_requests: 20
+----
++
+Apply the change according to your environment's config-management practice
+and restart Sidecar.
+
+. Confirm the API is now off — data-copy and verification endpoints
+  should return `404`:
++
+[source,bash]
+----
+curl -i http://dest-host.example.com:9043/api/v1/live-migration/data-copy-tasks
+# expect: HTTP/1.1 404 Not Found
+----
++
+`/status` reads are exempt and still return `200` with
+`state=COMPLETED` — the status record persists until you clear it in
+the next step.
+
+. Clear the persisted completion status:
++
+[source,bash]
+----
+curl -X DELETE http://dest-host.example.com:9043/api/v1/live-migration/status
+----
+
+`DELETE /status` enforces *both* preconditions; it returns:
+
+* `403 Forbidden` if the host is still in `migration_map`.
+* `400 Bad Request` if the migration status was never set to `COMPLETED` on
+  this host.
+
+Failing to delete the status will block any future migration of this same
+host (because `allowIfMigrationNotComplete` will keep failing).
+
+[[lm-api]]
+== API Reference and Safety Model
+
+All routes are rooted at `/api/v1/live-migration`. Default Sidecar port is
+9043. Every endpoint requires the `LIVE_MIGRATION:DATA_COPY` permission when
+access control is enabled.
+
+Live Migration is destructive on the destination (it deletes files that
+don't exist on the source) and exposes the source's data files over HTTP.
+The Sidecar enforces several non-bypassable guards on the endpoints below:
+role-based endpoint authorization, a Cassandra-not-running check,
+single-task serialization, a concurrency cap on the source, and a
+one-way completion record. None of these can be disabled without code
+changes. A pluggable per-iteration pre-check hook is also available for
+deployments that want to plug in their own checks; the default binding
+is a no-op.
+
+=== Endpoint authorization
+
+The `LiveMigrationApiEnableDisableHandler` runs as a route filter on every
+Live Migration endpoint. It checks the `migration_map` and the migration
+status before delegating to the handler:
+
+[cols="3,2,2"]
+|===
+| Guard | Allows | Otherwise
+
+| `isSource`                  | Local host is a key in `migration_map`           | `404 Not Found`
+| `isDestination`             | Local host is a value in `migration_map`         | `404 Not Found`
+| `isSourceOrDestination`     | Local host appears anywhere in `migration_map`   | `404 Not Found`
+| `neitherSourceNorDestination` | Local host is *not* in `migration_map`         | `403 Forbidden`
+| `allowIfMigrationNotComplete` | Migration not yet marked COMPLETED on this host | `400 Bad Request`
+|===
+
+If the role check fails internally (e.g., resolution error), the response is
+`503 Service Unavailable`.
+
+=== Data copy tasks
+
+[cols="1,1,2,2"]
+|===
+| Method | Path | Allowed role | Purpose
+
+| `POST`   | `/data-copy-tasks`            | destination | Create a data copy task. Body: `{maxIterations, successThreshold, maxConcurrency}`. Returns `202` with `{taskId, statusUrl}`.
+| `GET`    | `/data-copy-tasks`            | destination | List the current data-copy task (at most one).
+| `GET`    | `/data-copy-tasks/{taskId}`   | destination | Get a data-copy task's status.
+| `PATCH`  | `/data-copy-tasks/{taskId}`   | destination | Cancel a data-copy task. No body.
+|===
+
+=== Files verification tasks
+
+[cols="1,1,2,2"]
+|===
+| Method | Path | Allowed role | Purpose
+
+| `POST`   | `/files-verification-tasks`            | destination | Create a verification task. Body: `{maxConcurrency, digestAlgorithm}`. Returns `202` with `{taskId, statusUrl}`.
+| `GET`    | `/files-verification-tasks`            | destination | List the current verification task.
+| `GET`    | `/files-verification-tasks/{taskId}`   | destination | Get a verification task's status.
+| `PATCH`  | `/files-verification-tasks/{taskId}`   | destination | Cancel a verification task. No body.
+|===
+
+`digestAlgorithm` is `"MD5"` or `"XXHash32"` (case-insensitive). MD5 is
+the safe default and is widely understood by external tools; XXHash32 is
+significantly faster on large SSTables and a good choice for verifying
+multi-TB instances.
+
+=== Migration status
+
+[cols="1,1,2,2"]
+|===
+| Method | Path | Allowed role | Purpose
+
+| `GET`    | `/status` | source or destination | Returns `{state, endTime}` where `state` is `NOT_COMPLETED` or `COMPLETED` and `endTime` is epoch ms (`null` when not completed).
+| `POST`   | `/status` | source or destination | Mark migration as `COMPLETED` for this host. `400` if already completed.
+| `DELETE` | `/status` | neither (host must already be removed from `migration_map`) | Clear the completion record. `403` if still in map; `400` if status was never `COMPLETED`.
+|===
+
+=== File access (used internally by the data-copy and verification tasks)
+
+[cols="1,1,2,2"]
+|===
+| Method | Path | Allowed role | Purpose
+
+| `GET` | `/files`                                | source or destination | List the migratable files visible to this Sidecar.
+| `GET` | `/files/{dirType}/{dirIndex}/{path}`    | source                | Stream a file. With `?digestAlgorithm=MD5` (or `XXHash32`), returns a JSON `DigestResponse` instead of the file body. Subject to `max_concurrent_file_requests`; over-limit requests get `503`.
+|===
+
+These endpoints are exposed for transparency and tooling; in normal use the
+data-copy and verification tasks call them on your behalf.
+
+=== Cassandra-not-running check on data copy creation
+
+When a `POST /data-copy-tasks` arrives at the destination, the Sidecar runs
+a fast local check (`DataCopyTaskManager#verifyCassandraNotRunning`) that
+attempts to reach the destination Cassandra over JMX and over native CQL.
+If *either* responds, the task is rejected with `400 Bad Request`:
+
+----
+Cannot start data copy: Cassandra is currently running on this instance
+(JMX or native connectivity established). Data copy cannot proceed while
+Cassandra is active.
+----
+
+This prevents the data copy from racing against a live Cassandra process on
+the destination, which would corrupt the SSTable directory.
+
+WARNING: If this guard fires *unexpectedly* mid-migration — i.e., the
+destination Cassandra has been brought up legitimately (Phase 5) and is
+already receiving production traffic — do *not* stop the destination and
+re-run the data copy. Re-syncing now would overwrite the destination's
+current state with stale data from the (now-gone) source, and Live
+Migration has no rollback path at this stage. Pause, investigate why a
+new data-copy task was submitted, and if the destination is genuinely
+broken, fall back to the standard Cassandra node-replacement procedure
+rather than re-running Live Migration.
+
+=== Pluggable per-iteration pre-check
+
+The data copy runs in iterations. Before *every* iteration, the downloader
+calls `LiveMigrationFileDownloadPreCheck#doCheck(PreCheckContext)`. The
+context exposes the source hostname, the destination instance metadata, the
+Sidecar port, and the original request, so deployments can plug in custom
+safety logic — common choices include:
+
+* Verifying via gossip that the source is still up and the destination has
+  *not* yet joined the ring (preventing a copy onto a node that has already
+  bootstrapped).
+* Re-checking that the destination Cassandra has not been started.
+* Validating that destination free disk is still sufficient.
+
+The default binding is a no-op (`LiveMigrationFileDownloadPreCheck.DEFAULT`).
+Custom implementations are bound via Guice in your deployment's module.
+
+=== One task per instance
+
+The Sidecar accepts at most one in-flight Live Migration task per instance,
+across both data-copy and files-verification tasks. Submitting a second task
+while one is running yields `409 Conflict`. To replace the running task,
+cancel it first with `PATCH /<route>/{taskId}`.
+
+=== Concurrency limit on the source
+
+The file-streaming endpoint (`GET /files/{dirType}/{dirIndex}/*`) is wrapped
+in `LiveMigrationConcurrencyLimitHandler`, which gates concurrent requests
+at `max_concurrent_file_requests`. When the cap is reached, additional
+requests get `503 Service Unavailable` rather than being queued. The
+destination's `maxConcurrency` request parameter is also bounded by this
+configuration value — exceeding it is rejected as `400 Bad Request` at task
+creation.
+
+=== Migration completion is one-way
+
+Once `POST /status` is called, the migration is marked `COMPLETED` for that
+instance and persisted to disk (`live_migration_status.json` under the
+configured staging directory). After that:
+
+* Endpoints that require `allowIfMigrationNotComplete` return `400`.
+* The status can only be cleared with `DELETE /status`, which itself requires
+  the host to first be removed from `migration_map`. Calling `DELETE /status`
+  while still in the map returns `403`.
+
+This makes it impossible to accidentally re-run a data copy onto an instance
+that has already been brought up.
+
+[[lm-tuning]]
+== Tuning and Best Practices
+
+=== Choosing thresholds and iterations
+
+* *Initial copy:* `successThreshold` between 0.90 and 0.99, depending on how
+  write-heavy the source is. A heavily-loaded source needs a lower threshold
+  because more files will mutate during the copy.
+* *Final sync:* always `1.0`. The source must be drained and stopped first,
+  so an exact match is achievable and required.
+* `maxIterations`: 2–3 for low-write workloads; 3–5 for high-write
+  workloads. Each iteration only re-copies what changed, so extra iterations
+  are cheap on the source.
+
+=== Concurrency
+
+The effective number of parallel downloads is bounded by three
+independent ceilings — the smallest one wins:
+
+* `maxConcurrency` (per request, set on the destination) — your declared
+  upper bound on parallel downloads. Start at 10 and adjust based on
+  destination disk and network saturation.
+* `live_migration.max_concurrent_file_requests` (`sidecar.yaml`, on the
+  *source*) — caps the source's combined load across all migration
+  clients. The request's `maxConcurrency` cannot exceed this value; task
+  creation is rejected with `400 Bad Request` if you try. Default `20`.
+* `sidecar_client.connection_pool_max_size` (`sidecar.yaml`, on the
+  *destination*, default `10`) — size of the destination's HTTP/1
+  connection pool to a single peer Sidecar. If `maxConcurrency` is larger
+  than this, excess requests do *not* run in parallel; they queue in the
+  pool's wait queue (`sidecar_client.connection_pool_max_wait_queue_size`,
+  default `-1` = unbounded). To get the full parallelism out of
+  `maxConcurrency`, raise `connection_pool_max_size` to match it on the
+  destination.
+
+=== Throughput control
+
+Live Migration's file streaming flows through Sidecar's standard
+file-streaming path (`FileStreamHandler` / `FileStreamer`), so the
+global traffic-shaping knobs that already throttle SSTable and CDC
+streaming also throttle migration. These live under `sidecar:` in
+`sidecar.yaml`, not under `live_migration:`. Apply them on the *source*
+to cap how fast it serves bytes:
+
+* `sidecar.traffic_shaping.outbound_global_bandwidth_bps` (default `0`,
+  unlimited) — hard cap on outbound *bytes* per second across all HTTP
+  connections on the source. The most direct lever for capping migration
+  egress.
+* `sidecar.traffic_shaping.peak_outbound_global_bandwidth_bps` (default
+  `400 MiB/s`) — peak buffered outbound bytes before writes suspend.
+* `sidecar.traffic_shaping.inbound_global_bandwidth_bps` — set on the
+  *destination* if you also want to cap how fast it accepts bytes.
+
+These settings are global to Sidecar — turning them down throttles
+*everything* the source serves, not just migration. That is usually
+what you want during Phase 1 so production traffic is not impacted by
+the copy.
+
+See the `sidecar.traffic_shaping` section of the main user guide
+(`user.adoc`) for the complete list of fields and defaults.
+
+=== Multi-instance migrations
+
+When migrating multiple nodes from the same cluster:
+
+* Never break quorum. For RF=3 with `LOCAL_QUORUM`, migrate at most one node
+  per replica set at a time.
+* Avoid topology-changing operations (like expansion) for the duration
+  of migration to prevent interleaving with topology changes.
+* Group migrations by replica set and run them sequentially per group.
+
+=== Operational checklist
+
+* Test the entire flow in a staging cluster of the same shape before doing
+  it in production. Pay attention to `relocatesstables` and any rack/DC
+  alignment.
+* Monitor source CPU, disk read I/O, and request latency during Phase 1.
+  If the source is impacted, lower `max_concurrent_file_requests`.
+* Always run Phase 3 (verification). It is the only check that catches
+  silent corruption between source and destination.
+* Always finish Phase 6 (remove from `migration_map` and `DELETE /status`).
+  Leaving the migration map populated keeps the file-access endpoints
+  enabled on the source.
+
+[[lm-troubleshooting]]
+== Troubleshooting
+
+[cols="2,2,3"]
+|===
+| Symptom | Likely cause | Resolution
+
+| `400 Bad Request` on `POST /data-copy-tasks` with "max concurrency..."
+| Request `maxConcurrency` exceeds the source's `max_concurrent_file_requests`
+| Lower the request value, or raise `max_concurrent_file_requests` on the source's `sidecar.yaml`.
+
+| `409 Conflict` on task creation
+| Another Live Migration task is already running on this instance
+| Wait for it to finish, or `PATCH` it to cancel before submitting a new one.
+
+| `404 Not Found` on a Live Migration endpoint
+| This host's role doesn't match the endpoint, or the host is not in `migration_map` at all
+| Check `migration_map` on this host's `sidecar.yaml`; remember source-only and destination-only endpoints are disjoint.
+
+| `403 Forbidden` on `DELETE /status`
+| Host is still listed in `migration_map`
+| Remove the entry from `migration_map`, restart Sidecar, then retry the `DELETE`.
+
+| `400 Bad Request` on `POST /status`
+| Migration is already marked `COMPLETED` for this host
+| If you really need to redo the migration, finish the cleanup (remove from map, then `DELETE /status`) before starting a new one.
+
+| `503 Service Unavailable` on `GET /files/...`
+| Source's `max_concurrent_file_requests` cap reached
+| Retry with backoff, or lower `maxConcurrency` on the destination's data-copy task.
+
+| `successThreshold` never reached after `maxIterations`
+| Source is still receiving heavy writes
+| Expected during Phase 1. Either lower the threshold or proceed to Phase 2 (stop source, final sync at 1.0).
+
+| Verification reports digest mismatches
+| Files changed between data copy and verification, or genuine corruption
+| Re-run a data-copy task with `successThreshold: 1.0`, then re-run verification. Persistent mismatches indicate disk/network issues — check Sidecar logs on both hosts.
+
+| `400 Bad Request` on `POST /data-copy-tasks` with "Cassandra is currently running"
+| Destination Cassandra has been started (JMX or native is reachable)
+| See the *Cassandra-not-running check on data copy creation* subsection under <<lm-api,API Reference and Safety Model>> for recovery guidance — *do not* reflexively stop the destination and re-run.
+|===
+
+== Summary
+
+* Live Migration is for replacing healthy Cassandra instances quickly via a
+  direct Sidecar-to-Sidecar file copy.
+* The `migration_map` in `sidecar.yaml` controls which hosts have the API
+  enabled and which role each plays; clearing it after the migration is the
+  primary way to lock the API back down.
+* The Sidecar enforces several non-bypassable safety checks: role-based
+  endpoint authorization, a Cassandra-not-running guard on the destination
+  before data copy, single-task serialization, and a one-way completion
+  record that gates re-migration. A pluggable per-iteration pre-check
+  hook is also available for deployments that want to add their own
+  checks (no-op by default).
+* The migration is a multi-phase flow: live initial copy with
+  `successThreshold < 1.0`, source stop and final sync at `1.0`, full
+  verification, mark complete, start destination, then remove from the map
+  and `DELETE /status` to fully decommission the API.
+* Always finish Phase 3 (verification) and Phase 6 (cleanup). Skipping
+  verification leaves you without proof the destination matches the
+  source; skipping cleanup leaves the Live Migration endpoints enabled
+  on both hosts.

@@ -36,7 +36,9 @@ import org.apache.cassandra.sidecar.tasks.ClusterTopologyMonitor;
 /**
  * Message codec for encoding and decoding datacenter-local topology change events over the Vert.x event bus.
  */
-public class DcLocalTopologyChangeEventCodec implements MessageCodec<ClusterTopologyMonitor.DcLocalTopologyChangeEvent, ClusterTopologyMonitor.DcLocalTopologyChangeEvent>
+public class DcLocalTopologyChangeEventCodec
+        implements MessageCodec<ClusterTopologyMonitor.DcLocalTopologyChangeEvent,
+                                ClusterTopologyMonitor.DcLocalTopologyChangeEvent>
 {
     public static final DcLocalTopologyChangeEventCodec INSTANCE = new DcLocalTopologyChangeEventCodec();
 

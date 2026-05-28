@@ -48,7 +48,7 @@ import org.apache.cassandra.sidecar.coordination.ContentionFreeRangeManager;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.coordination.TokenRingProvider;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.VirtualTablesDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.CdcSystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 import org.apache.cassandra.testing.ClusterBuilderConfiguration;
@@ -162,7 +162,7 @@ public abstract class SharedClusterCdcSidecarIntegrationTestBase extends SharedC
                                   CdcConfig conf,
                                   CdcDatabaseAccessor databaseAccessor,
                                   ICdcStats cdcStats,
-                                  VirtualTablesDatabaseAccessor virtualTables,
+                                  CdcSystemViewsDatabaseAccessor systemViews,
                                   SidecarCdcStats sidecarCdcStats,
                                   TokenRingProvider tokenRingProvider,
                                   CassandraBridgeFactory cassandraBridgeFactory,
@@ -178,7 +178,7 @@ public abstract class SharedClusterCdcSidecarIntegrationTestBase extends SharedC
                                        conf,
                                        databaseAccessor,
                                        cdcStats,
-                                       virtualTables,
+                                       systemViews,
                                        sidecarCdcStats,
                                        () -> rangeManager,
                                        cassandraBridgeFactory,

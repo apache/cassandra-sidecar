@@ -26,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.google.inject.Singleton;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CdcBridge;
 import org.apache.cassandra.bridge.CdcBridgeFactory;
@@ -71,7 +70,6 @@ import org.jetbrains.annotations.NotNull;
  * @see CdcUtil
  * @see CassandraBridge
  */
-@Singleton
 public class CdcSchemaSupplier implements SchemaSupplier
 {
     private final InstanceMetadataFetcher instanceMetadataFetcher;
@@ -79,7 +77,9 @@ public class CdcSchemaSupplier implements SchemaSupplier
     private final CdcDatabaseAccessor cdcDatabaseAccessor;
     private final ConcurrentHashMap<TableIdentifier, UUID> tableIdCache = new ConcurrentHashMap<>();
 
-    public CdcSchemaSupplier(InstanceMetadataFetcher instanceMetadataFetcher, CassandraBridgeFactory cassandraBridgeFactory, CdcDatabaseAccessor cdcDatabaseAccessor)
+    public CdcSchemaSupplier(InstanceMetadataFetcher instanceMetadataFetcher,
+                             CassandraBridgeFactory cassandraBridgeFactory,
+                             CdcDatabaseAccessor cdcDatabaseAccessor)
     {
         this.instanceMetadataFetcher = instanceMetadataFetcher;
         this.cassandraBridgeFactory = cassandraBridgeFactory;

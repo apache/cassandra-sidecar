@@ -67,7 +67,7 @@ class SystemDatabaseAccessorIntegrationTest extends SharedClusterSidecarIntegrat
         CQLSessionProvider sessionProvider = cqlSessionProvider(cluster);
         SystemViewsSchema systemViewsSchema = new SystemViewsSchema();
         systemViewsSchema.initialize(sessionProvider.get(), t -> false);
-        SystemViewsDatabaseAccessor accessor = new SystemViewsDatabaseAccessor(systemViewsSchema, sessionProvider);
+        CdcSystemViewsDatabaseAccessor accessor = new CdcSystemViewsDatabaseAccessor(systemViewsSchema, sessionProvider);
         Long cdcTotalSpaceSettings = accessor.cdcTotalSpaceBytesSetting();
         assertThat(cdcTotalSpaceSettings).isNotNull().isEqualTo(CDC_SIZE_LIMIT_IN_MIB * ONE_MIB);
     }

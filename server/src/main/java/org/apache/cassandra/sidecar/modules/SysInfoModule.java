@@ -50,7 +50,10 @@ public class SysInfoModule extends AbstractModule
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
                  schema = @Schema(type = SchemaType.ARRAY, implementation = DiskInfo.class,
-                 example = "[{\"totalSpace\":1000000000000,\"freeSpace\":500000000000,\"usableSpace\":450000000000,\"name\":\"data1\",\"mount\":\"/dev/sda1\",\"type\":\"ext4\"},{\"totalSpace\":2000000000000,\"freeSpace\":1500000000000,\"usableSpace\":1400000000000,\"name\":\"data2\",\"mount\":\"/dev/sdb1\",\"type\":\"xfs\"}]")))
+                 example = "[{\"totalSpace\":1000000000000,\"freeSpace\":500000000000,\"usableSpace\":450000000000," +
+                           "\"name\":\"data1\",\"mount\":\"/dev/sda1\",\"type\":\"ext4\"}," +
+                           "{\"totalSpace\":2000000000000,\"freeSpace\":1500000000000,\"usableSpace\":1400000000000," +
+                           "\"name\":\"data2\",\"mount\":\"/dev/sdb1\",\"type\":\"xfs\"}]")))
     @APIResponse(description = "Unauthorized - requires SYSTEM permission",
                  responseCode = "401")
     @APIResponse(description = "Service unavailable - unable to fetch disk information",

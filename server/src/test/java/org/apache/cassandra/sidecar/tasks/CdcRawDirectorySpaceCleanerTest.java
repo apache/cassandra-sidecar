@@ -44,7 +44,7 @@ import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.CdcConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
-import org.apache.cassandra.sidecar.db.SystemViewsDatabaseAccessor;
+import org.apache.cassandra.sidecar.db.CdcSystemViewsDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.server.CdcMetrics;
@@ -89,7 +89,7 @@ class CdcRawDirectorySpaceCleanerTest
     void testCdcRawDirectorySpaceCleaner(@TempDir Path tempDir) throws IOException
     {
         TimeProvider timeProvider = TimeProvider.DEFAULT_TIME_PROVIDER;
-        SystemViewsDatabaseAccessor systemViewsDatabaseAccessor = mock(SystemViewsDatabaseAccessor.class);
+        CdcSystemViewsDatabaseAccessor systemViewsDatabaseAccessor = mock(CdcSystemViewsDatabaseAccessor.class);
         when(systemViewsDatabaseAccessor.getSettings(any()))
         .thenAnswer((Answer<Map<String, String>>) invocation -> Map.of("cdc_total_space", "1MiB"));
         when(systemViewsDatabaseAccessor.cdcTotalSpaceBytesSetting()).thenCallRealMethod();
@@ -145,9 +145,9 @@ class CdcRawDirectorySpaceCleanerTest
     {
         FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
         InstancesMetadata instancesMetadata = mock(InstancesMetadata.class);
-        SystemViewsDatabaseAccessor mockSystemViewsDatabaseAccessor = mock(SystemViewsDatabaseAccessor.class);
+        CdcSystemViewsDatabaseAccessor mockCdcSystemViewsDatabaseAccessor = mock(CdcSystemViewsDatabaseAccessor.class);
         // First return 1MiB
-        when(mockSystemViewsDatabaseAccessor.cdcTotalSpaceBytesSetting()).thenReturn(1L << 20)
+        when(mockCdcSystemViewsDatabaseAccessor.cdcTotalSpaceBytesSetting()).thenReturn(1L << 20)
                                                                          // Next return 1GiB
                                                                          .thenReturn(1L << 30)
                                                                          // Next throw an exception when accessing Accessor layer
@@ -163,53 +163,53 @@ class CdcRawDirectorySpaceCleanerTest
 
         CdcRawDirectorySpaceCleaner cleaner = new CdcRawDirectorySpaceCleaner(
         fakeTimeProvider,
-        mockSystemViewsDatabaseAccessor,
+        mockCdcSystemViewsDatabaseAccessor,
         serviceConfiguration,
         instancesMetadata,
         mockSidecarMetrics
         );
 
         // start with no interactions
-        verifyNoInteractions(mockSystemViewsDatabaseAccessor);
+        verifyNoInteractions(mockCdcSystemViewsDatabaseAccessor);
 
         assertThat(cleaner.maxUsageBytes()).isEqualTo(1_024L * 1_024L);
-        verify(mockSystemViewsDatabaseAccessor, times(1)).cdcTotalSpaceBytesSetting();
+        verify(mockCdcSystemViewsDatabaseAccessor, times(1)).cdcTotalSpaceBytesSetting();
 
         assertThat(cleaner.maxUsageBytes()).as("Should read from the cached value").isEqualTo(1_024L * 1_024L);
-        verify(mockSystemViewsDatabaseAccessor, times(1)).cdcTotalSpaceBytesSetting();
+        verify(mockCdcSystemViewsDatabaseAccessor, times(1)).cdcTotalSpaceBytesSetting();
 
         // Advance the time provider to 1 millisecond before the cache expires
         fakeTimeProvider.advance(cdcConfiguration.cacheMaxUsage().toMillis() - 1, TimeUnit.MILLISECONDS);
 
         // Let's assert it again to ensure we are not reading from Accessor layer
         assertThat(cleaner.maxUsageBytes()).as("Should read from the cached value").isEqualTo(1_024L * 1_024L);
-        verify(mockSystemViewsDatabaseAccessor, times(1)).cdcTotalSpaceBytesSetting();
+        verify(mockCdcSystemViewsDatabaseAccessor, times(1)).cdcTotalSpaceBytesSetting();
 
         // Now advance the time provider by the configured cache max usage
         fakeTimeProvider.advance(cdcConfiguration.cacheMaxUsage().toMillis(), TimeUnit.MILLISECONDS);
 
         // and we should now read 1GiB
         assertThat(cleaner.maxUsageBytes()).isEqualTo(1_024L * 1_024L * 1_024L);
-        verify(mockSystemViewsDatabaseAccessor, times(2)).cdcTotalSpaceBytesSetting();
+        verify(mockCdcSystemViewsDatabaseAccessor, times(2)).cdcTotalSpaceBytesSetting();
 
         // Now advance the time provider by the configured cache max usage
         fakeTimeProvider.advance(cdcConfiguration.cacheMaxUsage().toMillis(), TimeUnit.MILLISECONDS);
 
         // we should fall back when a SchemaUnavailableException is thrown
         assertThat(cleaner.maxUsageBytes()).isEqualTo(cdcConfiguration.fallbackCdcRawDirectoryMaxSizeBytes());
-        verify(mockSystemViewsDatabaseAccessor, times(3)).cdcTotalSpaceBytesSetting();
+        verify(mockCdcSystemViewsDatabaseAccessor, times(3)).cdcTotalSpaceBytesSetting();
 
         // also fall back when another exception is thrown
         assertThat(cleaner.maxUsageBytes()).isEqualTo(cdcConfiguration.fallbackCdcRawDirectoryMaxSizeBytes());
-        verify(mockSystemViewsDatabaseAccessor, times(4)).cdcTotalSpaceBytesSetting();
+        verify(mockCdcSystemViewsDatabaseAccessor, times(4)).cdcTotalSpaceBytesSetting();
 
         // Finally, we recover and are able to read from accessor. Should read 1GiB
         assertThat(cleaner.maxUsageBytes()).isEqualTo(1_024L * 1_024L * 1_024L);
-        verify(mockSystemViewsDatabaseAccessor, times(5)).cdcTotalSpaceBytesSetting();
+        verify(mockCdcSystemViewsDatabaseAccessor, times(5)).cdcTotalSpaceBytesSetting();
 
         // And read cached value
         assertThat(cleaner.maxUsageBytes()).isEqualTo(1_024L * 1_024L * 1_024L);
-        verify(mockSystemViewsDatabaseAccessor, times(5)).cdcTotalSpaceBytesSetting();
+        verify(mockCdcSystemViewsDatabaseAccessor, times(5)).cdcTotalSpaceBytesSetting();
     }
 
     /* test utils */

@@ -37,7 +37,6 @@ import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.ProvisionException;
-import com.google.inject.Singleton;
 
 import org.apache.cassandra.bridge.TokenRange;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -58,7 +57,6 @@ import org.jetbrains.annotations.NotNull;
  * operations.
  */
 @SuppressWarnings("resource")
-@Singleton
 public class CdcDatabaseAccessor extends DatabaseAccessor<CdcStatesSchema>
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CdcDatabaseAccessor.class);

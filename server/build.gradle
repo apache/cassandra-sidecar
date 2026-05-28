@@ -159,6 +159,9 @@ dependencies {
     implementation "org.apache.kafka:kafka-clients:${project.kafkaClientVersion}"
     implementation "com.esotericsoftware:kryo-shaded:${kryoVersion}"
 
+    // Confluent Avro serializer — used when value.serializer=KafkaAvroSerializer (confluent mode)
+    implementation 'io.confluent:kafka-avro-serializer:7.6.0'
+
     // OSHI core library for fetching system information
     implementation("com.github.oshi:oshi-core:${oshiVersion}")
 
