@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * Sidecar should wake up immediately on the instance receiving a phase signal instead of waiting for the discovery loop (CASSSIDECAR-454)
  * Add ConfigurationProvider interfaces for pluggable overlay storage (CASSSIDECAR-424)
  * Refactor OperationalJob to have data separate from execution logic (CASSSIDECAR-460)
  * Sidecar’s CassandraBridgeFactory FQCN colliding with the Cassandra analytics class (CASSSIDECAR-467)
@@ -8,7 +9,6 @@
  * Fix CDC message loss during Sidecar restarts (CASSSIDECAR-457)
  * Fix CDC resource leaks: thread leaks, Kafka resource cleanup, singleton SidecarCdcClient (CASSSIDECAR-456)
  * Fix breaking changes for Analytics 0.4.0 (CASSSIDECAR-455)
- * Sidecar should wake up immediately on the instance receiving a phase signal instead of waiting for the discovery loop (CASSSIDECAR-454)
  * Support IAM instance profile credentials for S3 restore jobs (CASSSIDECAR-415)
  * Adding endpoint for verifying files post data copy during live migration (CASSSIDECAR-226)
  * SAI support in Sidecar (CASSSIDECAR-422)
