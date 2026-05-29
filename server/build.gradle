@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import java.nio.file.Paths
 
 buildscript {
     dependencies {
@@ -239,17 +238,6 @@ test {
     // ordinarily we don't need integration tests
     // see the integrationTest task
     useJUnitPlatform()
-    reports {
-        junitXml.setRequired(true)
-        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "test").toFile()
-        println("Destination directory for unit tests: ${destDir}")
-        junitXml.getOutputLocation().set(destDir)
-        html.setRequired(true)
-        html.getOutputLocation().set(destDir)
-    }
-    testLogging {
-        events "passed", "skipped", "failed"
-    }
     finalizedBy jacocoTestReport // report is always generated after tests run
 }
 
@@ -262,17 +250,6 @@ tasks.register("containerTest", Test) {
     }
 
     useJUnitPlatform()
-    reports {
-        junitXml.setRequired(true)
-        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "containerTest").toFile()
-        println("Destination directory for testcontainer tests: ${destDir}")
-        junitXml.getOutputLocation().set(destDir)
-        html.setRequired(true)
-        html.getOutputLocation().set(destDir)
-    }
-    testLogging {
-        events "passed", "skipped", "failed"
-    }
     testClassesDirs = sourceSets.containerTest.output.classesDirs
     classpath = sourceSets.containerTest.runtimeClasspath
     shouldRunAfter test
@@ -285,6 +262,24 @@ jib {
     }
     to {
         image = "cassandra-sidecar:${project.version}"
+    }
+    container {
+        // Static OCI labels — set here; dynamic ones injected via -Doci.image.* at build time
+        // (workaround for https://github.com/GoogleContainerTools/jib/issues/3094)
+        def dynamicLabels = [
+            'org.opencontainers.image.source'  : System.getProperty('oci.image.source'),
+            'org.opencontainers.image.revision': System.getProperty('oci.image.revision'),
+            'org.opencontainers.image.created' : System.getProperty('oci.image.created'),
+            'org.opencontainers.image.version' : System.getProperty('oci.image.version', project.version.toString()),
+        ].findAll { k, v -> v != null }
+
+        labels = [
+            'org.opencontainers.image.title'      : 'Apache Cassandra Sidecar',
+            'org.opencontainers.image.description': 'Sidecar Management Tool for Apache Cassandra',
+            'org.opencontainers.image.licenses'   : 'Apache-2.0',
+            'org.opencontainers.image.vendor'     : 'Apache Software Foundation',
+            'org.opencontainers.image.url'        : 'https://cassandra.apache.org/',
+        ] + dynamicLabels
     }
 }
 

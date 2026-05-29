@@ -53,6 +53,7 @@ public class SidecarSchemaInitializer implements PeriodicTask
     private final SidecarInternalKeyspace sidecarInternalKeyspace;
     private final SchemaMetrics schemaMetrics;
     private final ClusterLease clusterLease;
+    private final SidecarSchema sidecarSchema;
     private final boolean isSidecarSchemaEnabled;
     private Vertx vertx;
     private PeriodicTaskExecutor periodicTaskExecutor;
@@ -61,12 +62,14 @@ public class SidecarSchemaInitializer implements PeriodicTask
                                     CQLSessionProvider cqlSessionProvider,
                                     SidecarInternalKeyspace sidecarInternalKeyspace,
                                     SchemaMetrics schemaMetrics,
+                                    SidecarSchema sidecarSchema,
                                     ClusterLease clusterLease)
     {
         this.isSidecarSchemaEnabled = sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration().isEnabled();
         this.cqlSessionProvider = cqlSessionProvider;
         this.sidecarInternalKeyspace = sidecarInternalKeyspace;
         this.schemaMetrics = schemaMetrics;
+        this.sidecarSchema = sidecarSchema;
         this.clusterLease = clusterLease;
     }
 
@@ -135,6 +138,7 @@ public class SidecarSchemaInitializer implements PeriodicTask
 
     protected void reportSidecarSchemaInitialized()
     {
+        sidecarSchema.markInitialized();
         vertx.eventBus().publish(ON_SIDECAR_SCHEMA_INITIALIZED.address(), "SidecarSchema initialized");
     }
 

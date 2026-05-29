@@ -1113,6 +1113,7 @@ class RoleBasedAuthorizationIntegrationTest extends SharedClusterSidecarIntegrat
                                                 cqlSessionProvider,
                                                 sidecarSchema.sidecarInternalKeyspace(),
                                                 sidecarMetrics.server().schema(),
+                                                sidecarSchema,
                                                 clusterLease)
             {
                 @Override

@@ -36,7 +36,6 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -124,13 +123,13 @@ class SchemaMetricsTest
 
         @Provides
         @Singleton
-        public SidecarSchema sidecarSchema(Vertx vertx, SidecarConfiguration configuration)
+        public SidecarSchema sidecarSchema(SidecarConfiguration configuration)
         {
             SidecarInternalKeyspace sidecarInternalKeyspace = mock(SidecarInternalKeyspace.class);
             when(sidecarInternalKeyspace.initialize(any(), any()))
             .thenThrow(new SidecarSchemaModificationException("Simulated failure",
                                                               new RuntimeException("Simulated exception")));
-            return new SidecarSchema(vertx, configuration, sidecarInternalKeyspace);
+            return new SidecarSchema(configuration, sidecarInternalKeyspace);
         }
 
         @Provides

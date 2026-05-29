@@ -23,12 +23,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.utils.EventBusUtils;
-
-import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 
 /**
  * Encapsulates all related operations for features provided by Sidecar
@@ -41,22 +37,20 @@ public class SidecarSchema implements TableSchemaFetcher
     private final SidecarInternalKeyspace sidecarInternalKeyspace;
     private final AtomicBoolean isInitialized = new AtomicBoolean(false);
 
-    public SidecarSchema(Vertx vertx,
-                         SidecarConfiguration config,
+    public SidecarSchema(SidecarConfiguration config,
                          SidecarInternalKeyspace sidecarInternalKeyspace)
     {
         this.schemaKeyspaceConfiguration = config.serviceConfiguration().schemaKeyspaceConfiguration();
         this.sidecarInternalKeyspace = sidecarInternalKeyspace;
-        if (this.schemaKeyspaceConfiguration.isEnabled())
-        {
-            EventBusUtils.onceLocalConsumer(vertx.eventBus(),
-                                            ON_SIDECAR_SCHEMA_INITIALIZED.address(),
-                                            ignored -> isInitialized.set(true));
-        }
-        else
+        if (!this.schemaKeyspaceConfiguration.isEnabled())
         {
             LOGGER.info("Sidecar schema is disabled!");
         }
+    }
+
+    void markInitialized()
+    {
+        isInitialized.set(true);
     }
 
     public boolean isInitialized()

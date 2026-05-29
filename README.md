@@ -65,6 +65,13 @@ To get up and running, create a temporary alias for every node except the first:
 
 Note that this does not persist across reboots, so you'll have to run it every time you restart.
 
+### File descriptor limit
+Integration tests open many sockets and kqueue selectors via Netty. The default macOS file descriptor limit (256) is too low and will cause `Too many open files` errors. Increase it before running tests:
+
+```
+ulimit -n 65536
+```
+
 Getting started: Running The Sidecar
 --------------------------------------
 

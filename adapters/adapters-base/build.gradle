@@ -18,7 +18,6 @@
  */
 
 
-import java.nio.file.Paths
 
 plugins {
     id 'java-library'
@@ -35,14 +34,6 @@ sourceCompatibility = JavaVersion.VERSION_11
 test {
     useJUnitPlatform()
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
-    reports {
-        junitXml.setRequired(true)
-        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "adapters-base").toFile()
-        println("Destination directory for adapters-base tests: ${destDir}")
-        junitXml.getOutputLocation().set(destDir)
-        html.setRequired(true)
-        html.getOutputLocation().set(destDir)
-    }
 }
 
 dependencies {

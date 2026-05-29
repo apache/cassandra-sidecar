@@ -181,9 +181,8 @@ jobs:
         with:
           name: unit-test-results-java-${{ matrix.java }}
           path: |
-            **/build/test-results/test/**
-            **/build/test-results/containerTest/**
-            **/build/reports/tests/
+            build/test-results/**
+            build/reports/tests/**
           retention-days: 30
 
       - name: Upload static analysis reports
@@ -279,8 +278,8 @@ jobs:
         with:
           name: integration-lightweight-results-java-${{ matrix.java }}-cassandra-${{ matrix.cassandra }}
           path: |
-            **/build/test-results/integrationTest*/**
-            **/build/reports/tests/integrationTest*/
+            build/test-results/**
+            build/reports/tests/**
           retention-days: 30
 
   # Run heavyweight integration tests on full matrix
@@ -373,8 +372,8 @@ jobs:
         with:
           name: integration-heavyweight-results-java-${{ matrix.java }}-cassandra-${{ matrix.cassandra }}
           path: |
-            **/build/test-results/integrationTest*/**
-            **/build/reports/tests/integrationTest*/
+            build/test-results/**
+            build/reports/tests/**
           retention-days: 30
 
   # Run Java 8 client unit tests for client compatibility
@@ -407,8 +406,8 @@ jobs:
         with:
           name: unit-test-results-java-8
           path: |
-            **/build/test-results/test/**
-            **/build/reports/tests/
+            build/test-results/**
+            build/reports/tests/**
           retention-days: 30
 
   # Build and verify Debian package
@@ -510,7 +509,13 @@ jobs:
 
       - name: Build Docker image with Jib
         run: |
-          ./gradlew --info clean :server:jibDockerBuild
+          IMAGE_CREATED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          VERSION=$(grep "^version=" gradle.properties | cut -d'=' -f2)
+          ./gradlew --info clean :server:jibDockerBuild \
+            "-Doci.image.revision=${{ github.sha }}" \
+            "-Doci.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            "-Doci.image.created=${IMAGE_CREATED}" \
+            "-Doci.image.version=${VERSION}"
 
   # Build documentation
   docs-build:

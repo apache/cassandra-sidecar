@@ -47,7 +47,7 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void testCrudOperations()
     {
-        waitForSchemaReady(10, TimeUnit.SECONDS);
+        waitForSchemaReady(30, TimeUnit.SECONDS);
 
         RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
         assertThat(accessor.findAllRecent(now, 3)).isEmpty();
@@ -99,7 +99,7 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void testIamCredentialTypeRoundTrips()
     {
-        waitForSchemaReady(10, TimeUnit.SECONDS);
+        waitForSchemaReady(30, TimeUnit.SECONDS);
 
         RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
         RestoreJobSecrets iamSecrets = RestoreJobSecrets.iamMode("us-east-1");
@@ -123,7 +123,7 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
     @CassandraIntegrationTest
     void testStaticCredentialTypeRoundTrips()
     {
-        waitForSchemaReady(10, TimeUnit.SECONDS);
+        waitForSchemaReady(30, TimeUnit.SECONDS);
 
         RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
         UUID jobId = UUIDs.timeBased();

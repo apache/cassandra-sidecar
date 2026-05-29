@@ -17,7 +17,6 @@
  */
 
 
-import java.nio.file.Paths
 
 plugins {
     id('idea')
@@ -39,14 +38,6 @@ test {
         events "passed", "skipped", "failed"
     }
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
-    reports {
-        junitXml.setRequired(true)
-        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "client").toFile()
-        println("Destination directory for client tests: ${destDir}")
-        junitXml.getOutputLocation().set(destDir)
-        html.setRequired(true)
-        html.getOutputLocation().set(destDir)
-    }
 }
 
 configurations {

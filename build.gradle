@@ -306,6 +306,20 @@ subprojects {
     test {
         finalizedBy jacocoTestReport // report is always generated after tests run
     }
+
+    tasks.withType(Test).configureEach { testTask ->
+        reports {
+            junitXml.outputLocation.set(rootProject.file("build/test-results/${project.name}/${testTask.name}"))
+            html.outputLocation.set(rootProject.file("build/reports/tests/${project.name}/${testTask.name}"))
+        }
+        testLogging {
+            events "started", "passed", "skipped", "failed"
+            exceptionFormat "full"
+            showExceptions true
+            showCauses true
+            showStackTraces true
+        }
+    }
 }
 
 tasks.register('jacocoRootReport', JacocoReport) {
