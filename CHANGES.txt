@@ -1,5 +1,6 @@
 0.4.0
 -----
+ * Sidecar should wake up immediately on the instance receiving a phase signal instead of waiting for the discovery loop (CASSSIDECAR-454)
  * Fix schema initialization race, CI test reporting, and build stability (CASSSIDECAR-468)
  * Add FileBasedConfigurationProvider for file-based overlay persistence (CASSSIDECAR-426)
  * Avoid blocking the event loop in CdcPublisher event-bus handler (CASSSIDECAR-452)
