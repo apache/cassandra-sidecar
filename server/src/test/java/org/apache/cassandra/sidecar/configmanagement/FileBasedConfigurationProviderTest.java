@@ -81,7 +81,7 @@ class FileBasedConfigurationProviderTest
         assertThat(stored).isTrue();
         ConfigurationOverlaySnapshot fetched = provider.getOverlay(instance1);
         assertThat(fetched).isNotNull();
-        assertThat(fetched.overlay()).isEqualTo(snapshot.overlay());
+        assertThat(fetched.configuration()).isEqualTo(snapshot.configuration());
         assertThat(fetched.lastModified()).isEqualTo(snapshot.lastModified());
         assertThat(fetched.hash()).isEqualTo(snapshot.hash());
     }
@@ -105,7 +105,7 @@ class FileBasedConfigurationProviderTest
 
         // Original is preserved
         ConfigurationOverlaySnapshot fetched = provider.getOverlay(instance1);
-        assertThat(fetched.overlay()).isEqualTo(initial.overlay());
+        assertThat(fetched.configuration()).isEqualTo(initial.configuration());
     }
 
     @Test
@@ -127,7 +127,7 @@ class FileBasedConfigurationProviderTest
 
         // Original is preserved
         ConfigurationOverlaySnapshot fetched = provider.getOverlay(instance1);
-        assertThat(fetched.overlay()).isEqualTo(initial.overlay());
+        assertThat(fetched.configuration()).isEqualTo(initial.configuration());
     }
 
     @Test
@@ -141,8 +141,8 @@ class FileBasedConfigurationProviderTest
 
         ConfigurationOverlaySnapshot fetched1 = provider.getOverlay(instance1);
         ConfigurationOverlaySnapshot fetched2 = provider.getOverlay(instance2);
-        assertThat(fetched1.overlay()).isEqualTo(snap1.overlay());
-        assertThat(fetched2.overlay()).isEqualTo(snap2.overlay());
+        assertThat(fetched1.configuration()).isEqualTo(snap1.configuration());
+        assertThat(fetched2.configuration()).isEqualTo(snap2.configuration());
     }
 
     @Test
@@ -241,7 +241,7 @@ class FileBasedConfigurationProviderTest
         ConfigurationOverlaySnapshot fetched = newProvider.getOverlay(instance1);
 
         assertThat(fetched).isNotNull();
-        assertThat(fetched.overlay()).isEqualTo(snapshot.overlay());
+        assertThat(fetched.configuration()).isEqualTo(snapshot.configuration());
         assertThat(fetched.lastModified()).isEqualTo(snapshot.lastModified());
         assertThat(fetched.hash()).isEqualTo(snapshot.hash());
     }
@@ -282,7 +282,7 @@ class FileBasedConfigurationProviderTest
         assertThat(provider.storeOverlay(instance1, hash, updated)).isTrue();
 
         ConfigurationOverlaySnapshot fetched = provider.getOverlay(instance1);
-        assertThat(fetched.overlay()).isEqualTo(updated.overlay());
+        assertThat(fetched.configuration()).isEqualTo(updated.configuration());
         assertThat(fetched.hash()).isEqualTo(updated.hash());
     }
 
@@ -298,8 +298,8 @@ class FileBasedConfigurationProviderTest
 
         ConfigurationOverlaySnapshot fetched = provider.getOverlay(instance1);
         assertThat(fetched).isNotNull();
-        assertThat(fetched.overlay().extraJvmOpts()).containsEntry("-Xmx", "4G");
-        assertThat(fetched.overlay().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(64);
+        assertThat(fetched.configuration().extraJvmOpts()).containsEntry("-Xmx", "4G");
+        assertThat(fetched.configuration().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(64);
     }
 
     private static ConfigurationOverlaySnapshot createSnapshot(String field, int value)
