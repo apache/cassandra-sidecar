@@ -44,14 +44,21 @@ import org.jetbrains.annotations.Nullable;
  */
 public class FileBasedConfigurationProvider implements ConfigurationProvider
 {
-    private static final String CONFIG_FILE_NAME = "overlay.json";
+    static final String DEFAULT_OVERLAY_FILE_NAME = "overlay.json";
 
     private final Path configDir;
+    private final String configFileName;
     private final ConcurrentHashMap<Integer, ConfigurationOverlaySnapshot> overlays = new ConcurrentHashMap<>();
 
     public FileBasedConfigurationProvider(Path configDir)
     {
+        this(configDir, DEFAULT_OVERLAY_FILE_NAME);
+    }
+
+    public FileBasedConfigurationProvider(Path configDir, String configFileName)
+    {
         this.configDir = Objects.requireNonNull(configDir, "configDir must not be null");
+        this.configFileName = Objects.requireNonNull(configFileName, "configFileName must not be null");
     }
 
     @Override
@@ -93,7 +100,7 @@ public class FileBasedConfigurationProvider implements ConfigurationProvider
     @Nullable
     private ConfigurationOverlaySnapshot readFromDisk(InstanceMetadata instance)
     {
-        Path configFile = resolveInstanceDir(instance).resolve(CONFIG_FILE_NAME);
+        Path configFile = resolveInstanceDir(instance).resolve(configFileName);
         if (!Files.exists(configFile))
         {
             return null;
@@ -112,7 +119,7 @@ public class FileBasedConfigurationProvider implements ConfigurationProvider
     private void writeToDisk(InstanceMetadata instance, ConfigurationOverlaySnapshot snapshot)
     {
         Path instanceDir = resolveInstanceDir(instance);
-        Path configFile = instanceDir.resolve(CONFIG_FILE_NAME);
+        Path configFile = instanceDir.resolve(configFileName);
         Path tempFile = null;
         try
         {
