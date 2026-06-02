@@ -1,6 +1,6 @@
 0.4.0
 -----
- * Split RestoreJobDiscoverer into a fast status-check loop and a slow slice-discovery loop (CASSSIDECAR-462)
+ * Ability to load Cassandra connection secrets from filesystem (CASSSIDECAR-407)
  * Sidecar should wake up immediately on the instance receiving a phase signal instead of waiting for the discovery loop (CASSSIDECAR-454)
  * Fix schema initialization race, CI test reporting, and build stability (CASSSIDECAR-468)
  * Add FileBasedConfigurationProvider for file-based overlay persistence (CASSSIDECAR-426)

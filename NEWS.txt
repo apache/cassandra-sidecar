@@ -6,6 +6,10 @@ Upgrading
     - In CASSSIDECAR-415, a new internal table (restore_job_v6) is created to support IAM credential
       tracking for restore jobs. Spark jobs performing S3 restores should be paused during sidecar
       upgrade to ensure in-flight restore job state is not lost.
+    - In CASSSIDECAR-407, the driver_parameters.username and driver_parameters.password settings in
+      sidecar.yaml are now nested under a pluggable driver_parameters.auth_provider. The top-level
+      username/password keys remain as a deprecated fallback. Update sidecar.yaml to configure
+      auth_provider with the ConfigProvider (or FileProvider) implementation during the upgrade.
 
 New features
 ------------
@@ -14,6 +18,23 @@ New features
       material to be passed by the caller. Set credentialType to IAM when creating a restore job to
       enable this mode.
     - SAI (Storage Attached Index) support in Sidecar (CASSSIDECAR-422).
+    - Pluggable Cassandra driver authentication provider (CASSSIDECAR-407). A new auth_provider under
+      driver_parameters supports loading connection credentials from different sources, with two
+      implementations: ConfigProvider (credentials in sidecar.yaml, the prior behavior) and
+      FileProvider (username and password read from files on disk).
+    - File-based configuration overlay persistence with pluggable ConfigurationProvider interfaces and
+      a FileBasedConfigurationProvider implementation (CASSSIDECAR-424, CASSSIDECAR-426).
+    - Cluster-wide operational jobs (CASSSIDECAR-376), building on a refactored OperationalJob that
+      separates job data from execution logic (CASSSIDECAR-460, CASSSIDECAR-372).
+    - Live Migration enhancements including an endpoint to verify files after data copy
+      (CASSSIDECAR-226), a safety check on the data copy endpoint (CASSSIDECAR-409), configuration
+      validations (CASSSIDECAR-470), and feature documentation (CASSSIDECAR-469). The Live Migration
+      feature is now fully implemented.
+    - CDC enhancements including routing events to topics by topic-format configuration
+      (CASSSIDECAR-453), immediate wake-up on receiving a phase signal rather than waiting for the
+      discovery loop (CASSSIDECAR-454), and a Docker Compose setup for a local CDC demo from Cassandra
+      to Sidecar to Kafka (CASSSIDECAR-419).
+    - Support for column types not parseable by the Java 3.x driver (CASSSIDECAR-443).
 
 0.3
 ===

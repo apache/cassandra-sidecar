@@ -267,8 +267,17 @@ access_control:
 driver_parameters:
   contact_points:
     - "127.0.0.1:9042"
-  username: cassandra
-  password: cassandra
+  auth_provider:
+  # Authentication information, implementing org.apache.cassandra.sidecar.cluster.auth.CqlAuthProvider;
+  # used to provide username/password to connect to the Cassandra cluster.
+  #   class_name: org.apache.cassandra.sidecar.cluster.auth.FileProvider
+  #   parameters:
+  #     username_path: /opt/sidecar/superuser/username
+  #     password_path: /opt/sidecar/superuser/password
+    class_name: org.apache.cassandra.sidecar.cluster.auth.ConfigProvider
+    parameters:
+      username: cassandra
+      password: cassandra
   ssl:
     enabled:  false
     keystore:

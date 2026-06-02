@@ -225,6 +225,22 @@ class SidecarConfigurationTest
     }
 
     @Test
+    void testDriverParametersWithAuthProvider() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_driver_params_config_provider.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+
+        DriverConfiguration driverConfiguration = config.driverConfiguration();
+        assertThat(driverConfiguration).isNotNull();
+        assertThat(driverConfiguration.authProvider()).isNotNull();
+        ParameterizedClassConfiguration authProvider = driverConfiguration.authProvider();
+        assertThat(authProvider.className()).isEqualTo("org.apache.cassandra.sidecar.cluster.auth.ConfigProvider");
+        assertThat(authProvider.namedParameters())
+        .containsExactlyInAnyOrderEntriesOf(Map.of("username", "cassandra",
+                                                   "password", "cassandra"));
+    }
+
+    @Test
     void testReadCustomSchemaKeyspaceConfiguration() throws IOException
     {
         Path yamlPath = yaml("config/sidecar_schema_keyspace_configuration.yaml");

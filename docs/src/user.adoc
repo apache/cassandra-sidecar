@@ -99,8 +99,16 @@ driver_parameters:
   contact_points:
     - "<host from cassandra_instances>:<port from cassandra_instances>"
     - "<host of additional cassandra instances in your cluster>:<port of instance>"
-  username: <A user which has been configured on the local Cassandra cluster>
-  password: <Password associated with the above user>
+  auth_provider:
+    class_name: org.apache.cassandra.sidecar.cluster.auth.ConfigProvider
+    parameters:
+      username: <A user configured on the local Cassandra cluster>
+      password: <Password associated with the above user>
+    # Alternative option is to read username and password from a file
+    # class_name: org.apache.cassandra.sidecar.cluster.auth.FileProvider
+    # parameters:
+    #   username_path: <Path to file containing Cassandra username>
+    #   password_path: <Path to file containing Cassandra password>
   ssl:
     enabled: <true if you have enabled encryption for CQL, false if otherwise>
     keystore:
@@ -338,8 +346,9 @@ This section of the `sidecar.yaml` file configures how requests are authenticate
 The `driver_parameters` section of the `sidecar.yaml` file is used to configure the Cassandra driver used by Cassandra Sidecar to connect to Cassandra over CQL. The following properties are defined:
 
 * `contact_points`: This is a list of IP Addresses or hostnames and ports of the Cassandra instances that Cassandra Sidecar can use to bootstrap its connection to the Cassandra cluster.
-* `username`: This is the username used to authenticate with the Cassandra cluster.
-* `password`: This is the password used to authenticate with the Cassandra cluster.
+* `auth_provider`: Provider entry used to resolve driver authentication details. Implementation choices are `org.apache.cassandra.sidecar.cluster.auth.FileProvider` and `org.apache.cassandra.sidecar.cluster.auth.ConfigProvider`. If both `auth_provider` and `username`/`password` are configured, Sidecar uses `auth_provider` and uses `username`/`password` as fallback when no provider is configured.
+* `username`: This is the username used to authenticate with the Cassandra cluster. This is a legacy fallback and is deprecated in favor of `auth_provider` with `ConfigProvider`.
+* `password`: This is the password used to authenticate with the Cassandra cluster. This is a legacy fallback and is deprecated in favor of `auth_provider` with `ConfigProvider`.
 * `ssl`: This defines how the Cassandra driver can connect to Cassandra over SSL. See the above <<ssl, SSL/TLS Configuration>> section for more information.
 * `num_connections`: This defines the number of connections that the Cassandra driver will open to each Cassandra instance. By default, 2.
 * `local_dc`: This configures the local data center of the Cassandra driver. Ensure that this is the same value as the data center of the Cassandra nodes which this Cassandra Sidecar manages.

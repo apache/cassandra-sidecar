@@ -74,6 +74,8 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.cluster.auth.ConfigProvider.PASSWORD_PARAM;
+import static org.apache.cassandra.sidecar.cluster.auth.ConfigProvider.USERNAME_PARAM;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 
@@ -126,9 +128,16 @@ public class IntegrationTestModule extends AbstractModule
                                             MillisecondBoundConfiguration.parse("50ms"),
                                             MillisecondBoundConfiguration.parse("5000ms"));
 
-        DriverConfiguration driverConfiguration = new DriverConfigurationImpl(Collections.emptyList(), "dc1",
-                                                                              1, "cassandra", "cassandra",
-                                                                              null, new SecondBoundConfiguration(3, TimeUnit.SECONDS));
+        ParameterizedClassConfiguration authProvider = new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.cluster.auth.ConfigProvider",
+                                                                                               Map.of(USERNAME_PARAM, "cassandra",
+                                                                                                      PASSWORD_PARAM, "cassandra"));
+
+        DriverConfiguration driverConfiguration = DriverConfigurationImpl.builder()
+                                                                         .localDc("dc1")
+                                                                         .numConnections(1)
+                                                                         .unsupportedTableSchemaRefreshTime(new SecondBoundConfiguration(3, TimeUnit.SECONDS))
+                                                                         .authProvider(authProvider)
+                                                                         .build();
 
         SslConfiguration sslConfiguration =
         SslConfigurationImpl.builder()
