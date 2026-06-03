@@ -121,7 +121,7 @@ public class OperationalJobManager
             OperationalJob tracked = jobTracker.computeIfAbsent(job.jobId(), jobId -> job);
             if (tracked == job)
             {
-                checkCoordination(job);
+                tryCoordination(job);
                 internalExecutorPool.executeBlocking(job::execute);
             }
         }
@@ -158,7 +158,7 @@ public class OperationalJobManager
      * @param job instance of the job to coordinate
      * @throws OperationalJobConflictException when the coordinator cannot activate the operation
      */
-    private void checkCoordination(OperationalJob job) throws OperationalJobConflictException
+    private void tryCoordination(OperationalJob job) throws OperationalJobConflictException
     {
         if (job.requiresCoordination())
         {

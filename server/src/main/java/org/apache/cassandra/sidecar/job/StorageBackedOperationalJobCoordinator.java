@@ -33,12 +33,12 @@ import org.jetbrains.annotations.Nullable;
  * for coordination of active operations.
  */
 @Singleton
-public class StorageOperationalJobCoordinator implements OperationalJobCoordinator
+public class StorageBackedOperationalJobCoordinator implements OperationalJobCoordinator
 {
     private final StorageProvider storageProvider;
 
     @Inject
-    public StorageOperationalJobCoordinator(StorageProvider storageProvider)
+    public StorageBackedOperationalJobCoordinator(StorageProvider storageProvider)
     {
         this.storageProvider = storageProvider;
     }

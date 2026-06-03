@@ -239,9 +239,9 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
         String simpleName = this.getClass().getSimpleName();
         return simpleName.isEmpty() ? this.getClass().getName() : simpleName;
     }
-    
-    /** 
-     * @return the {@link OperationType} of this job
+
+    /**
+     * @return the type of operation this job performs
      */
     public abstract OperationType operationType();
 

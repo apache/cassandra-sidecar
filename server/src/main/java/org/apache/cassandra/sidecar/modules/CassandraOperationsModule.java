@@ -64,7 +64,7 @@ import org.apache.cassandra.sidecar.handlers.validations.ValidateTableExistenceH
 import org.apache.cassandra.sidecar.job.InMemoryOperationalJobTracker;
 import org.apache.cassandra.sidecar.job.OperationalJobCoordinator;
 import org.apache.cassandra.sidecar.job.OperationalJobTracker;
-import org.apache.cassandra.sidecar.job.StorageOperationalJobCoordinator;
+import org.apache.cassandra.sidecar.job.StorageBackedOperationalJobCoordinator;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
@@ -85,7 +85,7 @@ public class CassandraOperationsModule extends AbstractModule
     protected void configure()
     {
         bind(OperationalJobTracker.class).to(InMemoryOperationalJobTracker.class);
-        bind(OperationalJobCoordinator.class).to(StorageOperationalJobCoordinator.class);
+        bind(OperationalJobCoordinator.class).to(StorageBackedOperationalJobCoordinator.class);
     }
 
     @ProvidesIntoMap
