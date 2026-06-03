@@ -159,7 +159,7 @@ class OperationalJobManagerTest
             @Override
             public OperationType operationType()
             {
-                return OperationType.DECOMMISSION;
+                return OperationType.DRAIN;
             }
 
             @Override
@@ -189,7 +189,8 @@ class OperationalJobManagerTest
             .when(storageProvider).persistJob(any());
 
         DurableOperationalJobTracker durableTracker = new DurableOperationalJobTracker(new ServiceConfigurationImpl(),
-                                                                                       storageProvider);
+                                                                                       storageProvider,
+                                                                                       executorPool.service());
         OperationalJobManager manager = new OperationalJobManager(durableTracker, executorPool);
 
         UUID jobId = UUIDs.timeBased();

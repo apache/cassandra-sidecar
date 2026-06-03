@@ -100,7 +100,7 @@ class OperationalJobInfoTest
         @Override
         public OperationType operationType()
         {
-            return OperationType.DECOMMISSION;
+            return OperationType.DRAIN;
         }
 
         @Override
@@ -123,7 +123,7 @@ class OperationalJobInfoTest
             @Override
             public OperationType operationType()
             {
-                return OperationType.DECOMMISSION;
+                return OperationType.DRAIN;
             }
 
             @Override
@@ -148,7 +148,7 @@ class OperationalJobInfoTest
             @Override
             public OperationType operationType()
             {
-                return OperationType.DECOMMISSION;
+                return OperationType.DRAIN;
             }
 
             @Override

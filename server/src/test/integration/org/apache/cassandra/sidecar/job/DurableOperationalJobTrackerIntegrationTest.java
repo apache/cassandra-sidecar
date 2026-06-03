@@ -49,10 +49,11 @@ class DurableOperationalJobTrackerIntegrationTest extends IntegrationTestBase
         StorageProvider storageProvider = injector.getInstance(StorageProvider.class);
         storageProvider.initialize();
 
-        DurableOperationalJobTracker tracker = new DurableOperationalJobTracker(new ServiceConfigurationImpl(),
-                                                                                storageProvider);
         ExecutorPools executorPools = injector.getInstance(ExecutorPools.class);
         TaskExecutorPool executorPool = executorPools.internal();
+        DurableOperationalJobTracker tracker = new DurableOperationalJobTracker(new ServiceConfigurationImpl(),
+                                                                                storageProvider,
+                                                                                executorPool);
 
         UUID jobId1 = UUIDs.timeBased();
         OperationalJob job1 = OperationalJobTest.createOperationalJob(jobId1, OperationalJobStatus.CREATED);

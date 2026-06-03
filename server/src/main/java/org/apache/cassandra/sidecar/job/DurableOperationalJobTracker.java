@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
+import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.job.storage.OperationalJobRecord;
 import org.apache.cassandra.sidecar.job.storage.StorageProvider;
@@ -54,13 +55,16 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
 
     private final ConcurrentHashMap<UUID, OperationalJob> liveJobs;
     private final StorageProvider storageProvider;
+    private final TaskExecutorPool executor;
 
     @Inject
     public DurableOperationalJobTracker(ServiceConfiguration serviceConfiguration,
-                                        StorageProvider storageProvider)
+                                        StorageProvider storageProvider,
+                                        TaskExecutorPool executor)
     {
         this.liveJobs = new ConcurrentHashMap<>(serviceConfiguration.operationalJobTrackerSize());
         this.storageProvider = storageProvider;
+        this.executor = executor;
     }
 
     /**
@@ -121,31 +125,28 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
      */
     private void updateTerminalStatus(OperationalJob job)
     {
-        OperationalJobStatus terminalStatus = job.status();
-        String failureReason = job.failureReason();
-        for (int attempt = 1; attempt <= MAX_STATUS_UPDATE_ATTEMPTS; attempt++)
+        updateTerminalStatus(job, 1);
+    }
+
+    private void updateTerminalStatus(OperationalJob job, int attempt)
+    {
+        try
         {
-            try
+            storageProvider.updateJobStatus(job.jobId(), job.operationType(), job.status(), job.failureReason());
+        }
+        catch (RuntimeException e)
+        {
+            LOGGER.warn("Failed to update terminal status for job {} (attempt {}/{}). error={}",
+                        job.jobId(), attempt, MAX_STATUS_UPDATE_ATTEMPTS, e.getMessage());
+            if (attempt < MAX_STATUS_UPDATE_ATTEMPTS)
             {
-                storageProvider.updateJobStatus(job.jobId(), job.operationType(), terminalStatus, failureReason);
-                return;
+                executor.setTimer(RETRY_DELAY_MS * attempt,
+                                  id -> updateTerminalStatus(job, attempt + 1));
             }
-            catch (RuntimeException e)
+            else
             {
-                LOGGER.warn("Failed to update terminal status for job {} (attempt {}/{}). error={}",
-                            job.jobId(), attempt, MAX_STATUS_UPDATE_ATTEMPTS, e.getMessage());
-                if (attempt < MAX_STATUS_UPDATE_ATTEMPTS)
-                {
-                    try
-                    {
-                        Thread.sleep(RETRY_DELAY_MS * attempt);
-                    }
-                    catch (InterruptedException ie)
-                    {
-                        Thread.currentThread().interrupt();
-                        return;
-                    }
-                }
+                LOGGER.error("Exhausted retries when updating terminal status for job {}. " +
+                             "Manual intervention may be required to correct job metadata.", job.jobId(), e);
             }
         }
     }

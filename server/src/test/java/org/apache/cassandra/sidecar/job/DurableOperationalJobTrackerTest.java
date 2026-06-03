@@ -74,10 +74,10 @@ class DurableOperationalJobTrackerTest
     void setUp()
     {
         storageProvider = mock(StorageProvider.class);
-        tracker = new DurableOperationalJobTracker(new ServiceConfigurationImpl(), storageProvider);
         vertx = Vertx.vertx();
         executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         executorPool = executorPools.internal();
+        tracker = new DurableOperationalJobTracker(new ServiceConfigurationImpl(), storageProvider, executorPool);
     }
 
     @AfterEach
@@ -127,7 +127,7 @@ class DurableOperationalJobTrackerTest
         assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
         loopAssert(2, () -> {
-            verify(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DECOMMISSION), eq(SUCCEEDED), isNull());
+            verify(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(SUCCEEDED), isNull());
         });
     }
 
@@ -147,7 +147,7 @@ class DurableOperationalJobTrackerTest
         assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
         loopAssert(2, () -> {
-            verify(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DECOMMISSION), eq(FAILED), eq("test failure"));
+            verify(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(FAILED), eq("test failure"));
         });
     }
 
@@ -293,7 +293,7 @@ class DurableOperationalJobTrackerTest
 
         doThrow(new StorageProviderException("Transient failure"))
             .doNothing()
-            .when(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DECOMMISSION), eq(SUCCEEDED), isNull());
+            .when(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(SUCCEEDED), isNull());
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -304,7 +304,7 @@ class DurableOperationalJobTrackerTest
         assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
         loopAssert(2, () -> {
-            verify(storageProvider, times(2)).updateJobStatus(eq(jobId), eq(OperationType.DECOMMISSION), eq(SUCCEEDED), isNull());
+            verify(storageProvider, times(2)).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(SUCCEEDED), isNull());
         });
     }
 
@@ -315,7 +315,7 @@ class DurableOperationalJobTrackerTest
         OperationalJob job = OperationalJobTest.createOperationalJob(jobId, MillisecondBoundConfiguration.parse("50ms"));
 
         doThrow(new StorageProviderException("Persistent failure"))
-            .when(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DECOMMISSION), eq(SUCCEEDED), isNull());
+            .when(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(SUCCEEDED), isNull());
 
         CountDownLatch latch = new CountDownLatch(1);
         tracker.computeIfAbsent(jobId, id -> job);
@@ -325,7 +325,7 @@ class DurableOperationalJobTrackerTest
         assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
         loopAssert(2, () -> {
-            verify(storageProvider, times(2)).updateJobStatus(eq(jobId), eq(OperationType.DECOMMISSION), eq(SUCCEEDED), isNull());
+            verify(storageProvider, times(2)).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(SUCCEEDED), isNull());
             assertThat(tracker.jobsView()).doesNotContainKey(jobId);
         });
     }

@@ -161,7 +161,7 @@ class ListOperationalJobsHandlerTest
         @Override
         public OperationType operationType()
         {
-            return OperationType.DECOMMISSION;
+            return OperationType.DRAIN;
         }
 
         @Override
