@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
@@ -31,12 +34,15 @@ import org.apache.cassandra.sidecar.exceptions.ForbiddenCassandraInputException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
+import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_ALLOWED_CHARS_FOR_SNAPSHOT_NAME;
+
 /**
  * An implementation of the {@link CassandraInputValidator} that does not use regular expressions
  * for validations and uses optimized validations.
  */
 public class FastCassandraInputValidator implements CassandraInputValidator
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(FastCassandraInputValidator.class);
     /**
      * Longest acceptable file name. Longer names lead to too long file name error.
      */
@@ -83,6 +89,14 @@ public class FastCassandraInputValidator implements CassandraInputValidator
         Map<String, String> configMap = validationConfiguration.validatorConfiguration().namedParameters();
         validTerminations = parseConfiguredOrDefault(configMap, "valid_terminations", DEFAULT_VALID_TERMINATIONS);
         validRestrictedTerminations = parseConfiguredOrDefault(configMap, "valid_restricted_terminations", DEFAULT_VALID_RESTRICTED_TERMINATIONS);
+
+        if (!DEFAULT_ALLOWED_CHARS_FOR_SNAPSHOT_NAME.equals(validationConfiguration.allowedPatternForSnapshotName()))
+        {
+            LOGGER.info("The cassandra_input_validation.allowed_chars_for_snapshot_name is configured to a non-default " +
+                        "value of '{}'. This value will not take effect when using the FastCassandraInputValidator " +
+                        "implementation and it will use the validations as introduced in CASSANDRA-21389.",
+                        validationConfiguration.allowedPatternForSnapshotName());
+        }
     }
 
     /**
