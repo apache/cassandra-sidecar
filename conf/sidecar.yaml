@@ -437,6 +437,11 @@ cassandra_input_validation:
   allowed_chars_for_quoted_name: "[a-zA-Z_0-9]{1,48}"
   allowed_chars_for_component_name: "[a-zA-Z0-9_-]+(\\.db|\\.cql|\\.json|\\.crc32|TOC\\.txt)"
   allowed_chars_for_restricted_component_name: "[a-zA-Z0-9_-]+(\\.db|TOC\\.txt)"
+  # CASSANDRA-21389 introduced snapshot name validation in Cassandra. To maintain
+  # the prior behavior where the snapshot name was only validated for separator char
+  # or null characters, use the RegexBasedCassandraInputValidator configure allowed_chars_for_snapshot_name
+  # to ".*" which should allow any character.
+  allowed_chars_for_snapshot_name: "[a-zA-Z0-9_.+-]{1,255}"
 
 blob_restore:
   job_discovery_active_loop_delay: 5m

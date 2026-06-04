@@ -136,7 +136,7 @@ public class StreamSSTableComponentHandler extends AbstractHandler<StreamSSTable
         logger.error(errMsg, request, remoteAddress, host, cause);
         if (cause instanceof NoSuchFileException)
         {
-            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
+            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, "The requested SSTable component was not found. " + request));
         }
         else
         {

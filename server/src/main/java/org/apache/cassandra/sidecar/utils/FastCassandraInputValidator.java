@@ -35,8 +35,12 @@ import org.jetbrains.annotations.VisibleForTesting;
  * An implementation of the {@link CassandraInputValidator} that does not use regular expressions
  * for validations and uses optimized validations.
  */
-public class FastCassandraInputValidator extends RegexBasedCassandraInputValidator
+public class FastCassandraInputValidator implements CassandraInputValidator
 {
+    /**
+     * Longest acceptable file name. Longer names lead to too long file name error.
+     */
+    public static final int FILENAME_LENGTH = 255;
     /**
      * Longest permissible keyspace name
      */
@@ -60,6 +64,7 @@ public class FastCassandraInputValidator extends RegexBasedCassandraInputValidat
     final List<String> validTerminations;
     @VisibleForTesting
     final List<String> validRestrictedTerminations;
+    private final CassandraInputValidationConfiguration validationConfiguration;
 
     @VisibleForTesting
     public FastCassandraInputValidator()
@@ -74,7 +79,7 @@ public class FastCassandraInputValidator extends RegexBasedCassandraInputValidat
      */
     public FastCassandraInputValidator(CassandraInputValidationConfiguration validationConfiguration)
     {
-        super(validationConfiguration);
+        this.validationConfiguration = validationConfiguration;
         Map<String, String> configMap = validationConfiguration.validatorConfiguration().namedParameters();
         validTerminations = parseConfiguredOrDefault(configMap, "valid_terminations", DEFAULT_VALID_TERMINATIONS);
         validRestrictedTerminations = parseConfiguredOrDefault(configMap, "valid_restricted_terminations", DEFAULT_VALID_RESTRICTED_TERMINATIONS);
@@ -106,6 +111,20 @@ public class FastCassandraInputValidator extends RegexBasedCassandraInputValidat
         validateNameLength(name, "table name", TABLE_NAME_LENGTH);
         validateNamePattern(name, "table name");
         return name;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String validateSnapshotName(@NotNull String snapshotName)
+    {
+        CassandraInputValidator.super.validateSnapshotName(snapshotName);
+        Preconditions.checkArgument(snapshotName.length() <= FILENAME_LENGTH,
+                                    () -> String.format("snapshot name must not be more than %d characters long (got %d characters for \"%s\")",
+                                                        FILENAME_LENGTH, snapshotName.length(), snapshotName));
+        validateSnapshotNamePattern(snapshotName);
+        return snapshotName;
     }
 
     /**
@@ -157,6 +176,29 @@ public class FastCassandraInputValidator extends RegexBasedCassandraInputValidat
     public void validateNamePattern(Name name, String exceptionHint)
     {
         validateNamePattern(name.name(), name.maybeQuotedName(), name.isSourceQuoted(), exceptionHint, 0);
+    }
+
+    /**
+     * Validates that the {@code name} is a valid name as introduced by {@code CASSANDRA-21389}.
+     *
+     * @param name the name of the snapshot
+     */
+    protected void validateSnapshotNamePattern(String name)
+    {
+        char c;
+        boolean isValidCharacter;
+        for (int i = 0; i < name.length(); i++)
+        {
+            c = name.charAt(i);
+            isValidCharacter = isAlphanumeric(c)
+                               || isUnderscore(c)
+                               || isPeriod(c)
+                               || isPlus(c)
+                               || isDash(c);
+
+            if (!isValidCharacter)
+                throw new CassandraInputException("Invalid character in snapshot name: " + name);
+        }
     }
 
     /**
@@ -300,6 +342,15 @@ public class FastCassandraInputValidator extends RegexBasedCassandraInputValidat
     protected boolean isPlus(char c)
     {
         return c == '+';
+    }
+
+    /**
+     * @param c the character to test
+     * @return {@code true} if the input {@code c} is a period character, {@code false} otherwise
+     */
+    protected boolean isPeriod(char c)
+    {
+        return c == '.';
     }
 
     /**

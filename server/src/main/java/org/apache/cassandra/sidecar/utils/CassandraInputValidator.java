@@ -22,6 +22,7 @@ import java.io.File;
 import java.util.Objects;
 
 import org.apache.cassandra.sidecar.common.server.data.Name;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.exceptions.CassandraInputException;
 import org.jetbrains.annotations.NotNull;
 
@@ -63,6 +64,10 @@ public interface CassandraInputValidator
     default String validateSnapshotName(@NotNull String snapshotName)
     {
         Objects.requireNonNull(snapshotName, "snapshotName must not be null");
+        Preconditions.checkArgument(!snapshotName.isEmpty(), "snapshotName must be provided");
+
+        if (".".equals(snapshotName) || "..".equals(snapshotName))
+            throw new CassandraInputException("Snapshot name '" + snapshotName + "' is reserved");
 
         //  most UNIX systems only disallow file separator and null characters for directory names
         for (int i = 0; i < snapshotName.length(); i++)
@@ -109,7 +114,17 @@ public interface CassandraInputValidator
      *
      * @param tableId the table identifier to validate
      */
-    void validateTableId(String tableId);
+    default void validateTableId(String tableId)
+    {
+        Objects.requireNonNull(tableId, "tableId must not be null");
+        Preconditions.checkArgument(tableId.length() <= 32, "tableId cannot be longer than 32 characters");
+        for (int i = 0; i < tableId.length(); i++)
+        {
+            char c = tableId.charAt(i);
+            if (!isHex(c))
+                throw new CassandraInputException("Invalid characters in table id: " + tableId);
+        }
+    }
 
     /**
      * Validates that the {@code name} matches the name pattern
@@ -119,4 +134,13 @@ public interface CassandraInputValidator
      * @throws CassandraInputException when the {@code unquotedInput} does not match the pattern
      */
     void validateNamePattern(Name name, String exceptionHint);
+
+    /**
+     * @param c the character to test
+     * @return {@code true} if the input {@code c} is valid hexadecimal, {@code false} otherwise
+     */
+    static boolean isHex(char c)
+    {
+        return (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F');
+    }
 }

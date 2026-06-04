@@ -83,6 +83,19 @@ public class RegexBasedCassandraInputValidator implements CassandraInputValidato
      * {@inheritDoc}
      */
     @Override
+    public String validateSnapshotName(@NotNull String snapshotName)
+    {
+        CassandraInputValidator.super.validateSnapshotName(snapshotName);
+        if (!snapshotName.matches(validationConfiguration.allowedPatternForSnapshotName()))
+            throw new CassandraInputException("Invalid pattern for snapshot name: " + snapshotName +
+                                              ". The valid pattern is: " + validationConfiguration.allowedPatternForSnapshotName());
+        return snapshotName;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public String validateComponentName(@NotNull String componentName)
     {
         return validateComponentNameByRegex(componentName,
@@ -127,22 +140,6 @@ public class RegexBasedCassandraInputValidator implements CassandraInputValidato
      * {@inheritDoc}
      */
     @Override
-    public void validateTableId(String tableId)
-    {
-        Objects.requireNonNull(tableId, "tableId must not be null");
-        Preconditions.checkArgument(tableId.length() <= 32, "tableId cannot be longer than 32 characters");
-        for (int i = 0; i < tableId.length(); i++)
-        {
-            char c = tableId.charAt(i);
-            if (!isHex(c))
-                throw new CassandraInputException("Invalid characters in table id: " + tableId);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public void validateNamePattern(Name name, String exceptionHint)
     {
         validatePattern(name.name(), name.maybeQuotedName(), exceptionHint, name.isSourceQuoted());
@@ -166,14 +163,5 @@ public class RegexBasedCassandraInputValidator implements CassandraInputValidato
 
         if (!unquotedInput.matches(pattern))
             throw new CassandraInputException("Invalid characters in " + exceptionHint + ": " + maybeQuoted);
-    }
-
-    /**
-     * @param c the character to test
-     * @return {@code true} if the input {@code c} is valid hexadecimal, {@code false} otherwise
-     */
-    protected boolean isHex(char c)
-    {
-        return (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F');
     }
 }
