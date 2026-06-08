@@ -42,6 +42,9 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     MillisecondBoundConfiguration.parse("5m");
     private static final MillisecondBoundConfiguration DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY =
     MillisecondBoundConfiguration.parse("10m");
+    // Caps the wake-up latency on peer Sidecars for a phase transition: the Sidecar that
+    // receives the HTTP phase signal reacts immediately, peers learn via DB point-read on
+    // this interval (vs. the 5m/10m slow loop). Costs N reads/sec where N is in-flight jobs.
     private static final MillisecondBoundConfiguration DEFAULT_JOB_DISCOVERY_STATUS_CHECK_INTERVAL =
     MillisecondBoundConfiguration.parse("1s");
     private static final int DEFAULT_JOB_DISCOVERY_MINIMUM_RECENCY_DAYS = 5;
