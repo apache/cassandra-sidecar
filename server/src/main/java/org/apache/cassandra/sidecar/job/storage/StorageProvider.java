@@ -92,7 +92,9 @@ public interface StorageProvider extends Closeable
      * Set an operation as active if no other operation of the same type is currently active.
      * <p>
      * Implementations must provide compare-and-set (CAS) semantics to ensure only one active
-     * operation of a given type runs at a time across the cluster.
+     * operation of a given type runs at a time across the cluster. This lock is per operation
+     * plan, not per node; within a single operation, multiple nodes may be operated on
+     * concurrently as defined by the node execution order.
      *
      * @param operationType the operation type
      * @param operationId   the unique identifier for this operation

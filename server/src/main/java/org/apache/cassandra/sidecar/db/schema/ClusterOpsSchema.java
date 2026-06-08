@@ -28,6 +28,9 @@ import org.jetbrains.annotations.NotNull;
  * Schema for the {@code cluster_ops} table, which persists and tracks active and past operational jobs.
  * When durable operational job storage is used, all operational job APIs query from this table to retrieve
  * job state, including the operation type, status, node execution order, and operation metadata.
+ * <p>
+ * The {@code cluster_name} partition key identifies the cluster being operated on, allowing a single
+ * Cassandra cluster to store operational job state for multiple managed clusters.
  */
 public class ClusterOpsSchema extends TableSchema
 {

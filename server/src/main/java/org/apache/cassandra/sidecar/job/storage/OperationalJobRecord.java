@@ -21,7 +21,7 @@ package org.apache.cassandra.sidecar.job.storage;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+
 import java.util.UUID;
 
 import com.datastax.driver.core.utils.UUIDs;
@@ -171,23 +171,6 @@ public class OperationalJobRecord
     public Map<String, String> operationMetadata()
     {
         return operationMetadata;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        OperationalJobRecord that = (OperationalJobRecord) o;
-        return Objects.equals(jobId, that.jobId)
-               && Objects.equals(operationType, that.operationType)
-               && status == that.status;
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(jobId, operationType, status);
     }
 
     @Override

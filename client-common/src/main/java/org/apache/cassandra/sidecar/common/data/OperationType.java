@@ -26,6 +26,5 @@ public enum OperationType
     DECOMMISSION,
     DRAIN,
     MOVE,
-    REPAIR,
-    RESTART
+    REPAIR
 }

@@ -47,7 +47,7 @@ class ActiveClusterOpsDatabaseAccessorIntegrationTest extends IntegrationTestBas
         UUID operationId1 = UUIDs.timeBased();
         UUID operationId2 = UUIDs.timeBased();
 
-        assertThat(accessor.getActiveOperation(clusterName, datacenter, OperationType.RESTART))
+        assertThat(accessor.getActiveOperation(clusterName, datacenter, OperationType.REPAIR))
                 .withFailMessage("getActiveOperation should return null when no active operation exists")
                 .isNull();
         assertThat(accessor.getActiveOperations(clusterName, datacenter))
@@ -57,18 +57,18 @@ class ActiveClusterOpsDatabaseAccessorIntegrationTest extends IntegrationTestBas
         assertThat(accessor)
                 .withFailMessage("trySetActiveOperation should succeed when no active operation, and getActiveOperation should return the operation")
                 .satisfies(a -> {
-                    assertThat(a.trySetActiveOperation(clusterName, datacenter, OperationType.RESTART, operationId1)).isTrue();
-                    assertThat(a.getActiveOperation(clusterName, datacenter, OperationType.RESTART)).isEqualTo(operationId1);
+                    assertThat(a.trySetActiveOperation(clusterName, datacenter, OperationType.REPAIR, operationId1)).isTrue();
+                    assertThat(a.getActiveOperation(clusterName, datacenter, OperationType.REPAIR)).isEqualTo(operationId1);
                 });
 
         assertThat(accessor)
                 .withFailMessage("trySetActiveOperation should fail when an operation of the same type is active")
                 .satisfies(a -> {
-                    assertThat(a.trySetActiveOperation(clusterName, datacenter, OperationType.RESTART, operationId2)).isFalse();
-                    assertThat(a.getActiveOperation(clusterName, datacenter, OperationType.RESTART)).isEqualTo(operationId1);
+                    assertThat(a.trySetActiveOperation(clusterName, datacenter, OperationType.REPAIR, operationId2)).isFalse();
+                    assertThat(a.getActiveOperation(clusterName, datacenter, OperationType.REPAIR)).isEqualTo(operationId1);
                 });
 
-        assertThat(accessor.trySetActiveOperation(clusterName, datacenter, OperationType.RESTART, operationId1))
+        assertThat(accessor.trySetActiveOperation(clusterName, datacenter, OperationType.REPAIR, operationId1))
                 .withFailMessage("trySetActiveOperation should fail when retried with same active operation ID")
                 .isFalse();
 
@@ -79,32 +79,32 @@ class ActiveClusterOpsDatabaseAccessorIntegrationTest extends IntegrationTestBas
         assertThat(accessor.getActiveOperations(clusterName, datacenter))
                 .withFailMessage("getActiveOperations should return all concurrently active operations")
                 .hasSize(2)
-                .containsEntry(OperationType.RESTART, operationId1)
+                .containsEntry(OperationType.REPAIR, operationId1)
                 .containsEntry(OperationType.DECOMMISSION, decommissionId);
 
         assertThat(accessor)
                 .withFailMessage("clearActiveOperation should fail when a non-matching operation ID is supplied")
                 .satisfies(a -> {
-                    assertThat(a.clearActiveOperation(clusterName, datacenter, OperationType.RESTART, operationId2)).isFalse();
-                    assertThat(a.getActiveOperation(clusterName, datacenter, OperationType.RESTART)).isEqualTo(operationId1);
+                    assertThat(a.clearActiveOperation(clusterName, datacenter, OperationType.REPAIR, operationId2)).isFalse();
+                    assertThat(a.getActiveOperation(clusterName, datacenter, OperationType.REPAIR)).isEqualTo(operationId1);
                 });
 
         assertThat(accessor)
                 .withFailMessage("clearActiveOperation should succeed when the operation ID matches the active operation")
                 .satisfies(a -> {
-                    assertThat(a.clearActiveOperation(clusterName, datacenter, OperationType.RESTART, operationId1)).isTrue();
-                    assertThat(a.getActiveOperation(clusterName, datacenter, OperationType.RESTART)).isNull();
+                    assertThat(a.clearActiveOperation(clusterName, datacenter, OperationType.REPAIR, operationId1)).isTrue();
+                    assertThat(a.getActiveOperation(clusterName, datacenter, OperationType.REPAIR)).isNull();
                 });
 
-        assertThat(accessor.clearActiveOperation(clusterName, datacenter, OperationType.RESTART, operationId1))
+        assertThat(accessor.clearActiveOperation(clusterName, datacenter, OperationType.REPAIR, operationId1))
                 .withFailMessage("clearActiveOperation should be a safe no-op when retried after operation is already cleared")
                 .isFalse();
 
         assertThat(accessor)
                 .withFailMessage("trySetActiveOperation should succeed after active operation is cleared, and other operation types should be unaffected")
                 .satisfies(a -> {
-                    assertThat(a.trySetActiveOperation(clusterName, datacenter, OperationType.RESTART, operationId2)).isTrue();
-                    assertThat(a.getActiveOperation(clusterName, datacenter, OperationType.RESTART)).isEqualTo(operationId2);
+                    assertThat(a.trySetActiveOperation(clusterName, datacenter, OperationType.REPAIR, operationId2)).isTrue();
+                    assertThat(a.getActiveOperation(clusterName, datacenter, OperationType.REPAIR)).isEqualTo(operationId2);
                     assertThat(a.getActiveOperation(clusterName, datacenter, OperationType.DECOMMISSION)).isEqualTo(decommissionId);
                 });
     }

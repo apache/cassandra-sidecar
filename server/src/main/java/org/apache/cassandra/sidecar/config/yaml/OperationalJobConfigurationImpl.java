@@ -59,12 +59,6 @@ public class OperationalJobConfigurationImpl implements OperationalJobConfigurat
         return tablesTtl;
     }
 
-    @JsonProperty(value = "tables_ttl")
-    public void setTablesTtl(SecondBoundConfiguration tablesTtl)
-    {
-        this.tablesTtl = tablesTtl;
-    }
-
     public static Builder builder()
     {
         return new Builder();

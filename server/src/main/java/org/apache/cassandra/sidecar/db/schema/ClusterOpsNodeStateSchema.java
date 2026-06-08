@@ -28,6 +28,9 @@ import org.jetbrains.annotations.NotNull;
  * Schema for the {@code cluster_ops_node_state} table, which tracks the status of an operation for a given node.
  * Sidecar instances query this table to check the status of nodes being operated on before their local nodes,
  * enabling distributed coordination of cluster-wide operations.
+ * <p>
+ * The {@code cluster_name} partition key identifies the cluster being operated on, allowing a single
+ * Cassandra cluster to store operational job state for multiple managed clusters.
  */
 public class ClusterOpsNodeStateSchema extends TableSchema
 {
