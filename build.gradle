@@ -381,6 +381,7 @@ gradle.taskGraph.whenReady { taskGraph ->
 ospackage {
     packageName = "apache-cassandra-sidecar"
     version = project.version
+    release = "1"
     // ospackage puts packages into /opt/[package] by default
     // which is _technically_ the right spot for packages
     link("/usr/local/bin/cassandra-sidecar", "/opt/${packageName}/bin/cassandra-sidecar")
