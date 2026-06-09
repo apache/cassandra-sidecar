@@ -101,6 +101,9 @@ public final class ConfigUtils
      * contain, fields are merged recursively. For all other node types (scalars, arrays, nulls),
      * the overlay value replaces the base value. The base node is not modified.
      *
+     * <p>Overlays may introduce keys not present in the base configuration. Such keys are
+     * added to the result as-is (scalars, arrays) or merged recursively (nested objects).
+     *
      * @param base    the base configuration tree
      * @param overlay the overlay tree whose values take precedence
      * @return a new tree with the merged result

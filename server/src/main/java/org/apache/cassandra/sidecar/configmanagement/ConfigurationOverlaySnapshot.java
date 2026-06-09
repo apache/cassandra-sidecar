@@ -57,6 +57,10 @@ public class ConfigurationOverlaySnapshot
      * types are replaced by the other snapshot's values). Merges {@code extraJvmOpts} with the
      * other snapshot's entries overriding this snapshot's entries on key conflict.
      *
+     * <p>Overlays may introduce keys not present in the base snapshot. New keys in
+     * {@code cassandraYaml} are added to the result, and new keys in {@code extraJvmOpts}
+     * are added alongside existing entries.
+     *
      * @param other the overlay snapshot whose values take precedence
      * @return a new snapshot with the merged configuration and the max of both lastModified timestamps
      */
