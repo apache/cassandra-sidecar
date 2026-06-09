@@ -31,6 +31,10 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Represents a snapshot of a configuration with its metadata.
  * The SHA-256 hash is dynamically computed from the configuration contents and cached.
+ *
+ * <p>{@code lastModified} tracks when the configuration content was last updated at its source.
+ * Merging two snapshots takes the maximum of both timestamps because merging combines existing
+ * content without producing new configuration.
  */
 public class ConfigurationOverlaySnapshot
 {
