@@ -70,12 +70,15 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
     public void persistJob(String clusterName, OperationalJobRecord job)
     {
         Date lastUpdate = Date.from(Instant.now());
+        Date startTime = job.startTime() != null ? Date.from(job.startTime()) : null;
         BoundStatement statement = tableSchema.insertJob()
                                               .bind(clusterName,
                                                     job.jobId(),
                                                     job.operationType().name(),
                                                     job.status().name(),
+                                                    startTime,
                                                     lastUpdate,
+                                                    job.failureReason(),
                                                     job.nodeExecutionOrder(),
                                                     job.operationMetadata());
         statement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);

@@ -134,10 +134,12 @@ public class ClusterOpsSchema extends TableSchema
                              "  operation_id," +
                              "  operation_type," +
                              "  status," +
+                             "  start_time," +
                              "  last_update," +
+                             "  failure_reason," +
                              "  node_execution_order," +
                              "  operation_metadata" +
-                             ") VALUES (?, ?, ?, ?, ?, ?, ?)", config);
+                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", config);
         }
 
         static String selectJob(SchemaKeyspaceConfiguration config)

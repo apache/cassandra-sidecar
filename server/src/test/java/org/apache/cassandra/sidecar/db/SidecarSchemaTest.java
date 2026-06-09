@@ -236,7 +236,7 @@ public class SidecarSchemaTest
             "INSERT INTO sidecar_internal.cdc_state_v2 (job_id, split, start, end, state) VALUES (?, ?, ?, ?, ?) USING TIMESTAMP ?",
             "SELECT start, end, state FROM sidecar_internal.cdc_state_v2 WHERE job_id = ? AND split = ?",
 
-            "INSERT INTO sidecar_internal.cluster_ops (  cluster_name,  operation_id,  operation_type,  status,  last_update,  node_execution_order,  operation_metadata) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO sidecar_internal.cluster_ops (  cluster_name,  operation_id,  operation_type,  status,  start_time,  last_update,  failure_reason,  node_execution_order,  operation_metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             "SELECT cluster_name, operation_id, operation_type, status, start_time, last_update, failure_reason, node_execution_order, operation_metadata FROM sidecar_internal.cluster_ops WHERE cluster_name = ? AND operation_id = ?",
             "UPDATE sidecar_internal.cluster_ops SET status = ?, last_update = ? WHERE cluster_name = ? AND operation_id = ? AND operation_type = ?",
             "UPDATE sidecar_internal.cluster_ops SET status = ?, last_update = ?, start_time = ? WHERE cluster_name = ? AND operation_id = ? AND operation_type = ?",
