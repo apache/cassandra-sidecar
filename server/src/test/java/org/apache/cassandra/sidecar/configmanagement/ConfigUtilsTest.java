@@ -97,6 +97,42 @@ class ConfigUtilsTest
     }
 
     @Test
+    void testMergeOverlayOnlyOverridesSpecifiedKeys()
+    {
+        JsonObject base = new JsonObject()
+                          .put("a", "a")
+                          .put("b", "b")
+                          .put("c", "c");
+
+        JsonObject overlay = new JsonObject()
+                             .put("b", "b2");
+
+        JsonObject result = ConfigUtils.mergeConfigurations(base, overlay);
+
+        assertThat(result.getString("a")).isEqualTo("a");
+        assertThat(result.getString("b")).isEqualTo("b2");
+        assertThat(result.getString("c")).isEqualTo("c");
+    }
+
+    @Test
+    void testMergeNullOverlayValueKeepsBaseValue()
+    {
+        JsonObject base = new JsonObject()
+                          .put("a", "a")
+                          .put("b", "b")
+                          .put("c", "c");
+
+        JsonObject overlay = new JsonObject()
+                             .put("b", (String) null);
+
+        JsonObject result = ConfigUtils.mergeConfigurations(base, overlay);
+
+        assertThat(result.getString("a")).isEqualTo("a");
+        assertThat(result.getString("b")).isEqualTo("b");
+        assertThat(result.getString("c")).isEqualTo("c");
+    }
+
+    @Test
     void testMergeEmptyOverlay()
     {
         JsonObject base = new JsonObject()

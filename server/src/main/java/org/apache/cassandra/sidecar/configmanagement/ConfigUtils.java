@@ -127,6 +127,11 @@ public final class ConfigUtils
             Object overlayValue = field.getValue();
             Object baseValue = result.getValue(fieldName);
 
+            if (overlayValue == null)
+            {
+                continue;
+            }
+
             if (isJsonObject(baseValue) && isJsonObject(overlayValue))
             {
                 JsonObject merged = mergeConfigurations(
