@@ -29,6 +29,7 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.core.JsonParser;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import io.vertx.core.json.JsonObject;
@@ -58,7 +59,16 @@ public final class ConfigUtils
      * @param yamlPath path to the YAML configuration file, or {@code null} for an empty snapshot
      * @return a snapshot representing the file contents
      */
-    public static ConfigurationOverlaySnapshot loadConfiguration(Path yamlPath)
+    /**
+     * Loads configuration from the given YAML path, returning the cached snapshot if the file
+     * has not been modified since it was last read.
+     *
+     * @param yamlPath the path to the YAML file, or {@code null} for an empty snapshot
+     * @param cached   a previously loaded snapshot to reuse if the file is unchanged, or {@code null}
+     * @return the cached snapshot if still valid, or a freshly loaded snapshot
+     */
+    public static ConfigurationOverlaySnapshot loadConfiguration(@Nullable Path yamlPath,
+                                                                  @Nullable ConfigurationOverlaySnapshot cached)
     {
         if (yamlPath == null)
         {
@@ -67,6 +77,10 @@ public final class ConfigUtils
         try
         {
             Instant lastModifiedBefore = Files.getLastModifiedTime(yamlPath).toInstant();
+            if (cached != null && cached.lastModified().equals(lastModifiedBefore))
+            {
+                return cached;
+            }
             JsonObject yaml = loadYaml(yamlPath);
             Instant lastModifiedAfter = Files.getLastModifiedTime(yamlPath).toInstant();
             if (!lastModifiedBefore.equals(lastModifiedAfter))

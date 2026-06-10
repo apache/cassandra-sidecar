@@ -34,6 +34,9 @@ public class ConfigurationManager
     @Nullable
     private final Path baseTemplatePath;
 
+    @Nullable
+    private volatile ConfigurationOverlaySnapshot cachedBaseSnapshot;
+
     /**
      * @param provider         the configuration provider for fetching overlays
      * @param baseTemplatePath path to the base cassandra.yaml template, or {@code null} for an empty base
@@ -55,7 +58,7 @@ public class ConfigurationManager
     @NotNull
     public ConfigurationOverlaySnapshot getEffectiveConfiguration(InstanceMetadata instance)
     {
-        ConfigurationOverlaySnapshot baseSnapshot = ConfigUtils.loadConfiguration(baseTemplatePath);
+        ConfigurationOverlaySnapshot baseSnapshot = getBaseSnapshot();
 
         ConfigurationOverlaySnapshot providerSnapshot;
         try
@@ -73,5 +76,12 @@ public class ConfigurationManager
             return baseSnapshot.overlay(providerSnapshot);
         }
         return baseSnapshot;
+    }
+
+    private ConfigurationOverlaySnapshot getBaseSnapshot()
+    {
+        ConfigurationOverlaySnapshot snapshot = ConfigUtils.loadConfiguration(baseTemplatePath, cachedBaseSnapshot);
+        cachedBaseSnapshot = snapshot;
+        return snapshot;
     }
 }

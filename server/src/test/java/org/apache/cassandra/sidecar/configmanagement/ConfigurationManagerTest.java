@@ -161,6 +161,18 @@ class ConfigurationManagerTest
         assertThat(result.lastModified()).isEqualTo(overlayTime);
     }
 
+    @Test
+    void testGetEffectiveConfigurationCachesBaseSnapshot()
+    {
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        InstanceMetadata instance = mockInstance(1);
+
+        ConfigurationOverlaySnapshot first = manager.getEffectiveConfiguration(instance);
+        ConfigurationOverlaySnapshot second = manager.getEffectiveConfiguration(instance);
+
+        assertThat(second).isSameAs(first);
+    }
+
     private static InstanceMetadata mockInstance(int id)
     {
         InstanceMetadata instance = mock(InstanceMetadata.class);

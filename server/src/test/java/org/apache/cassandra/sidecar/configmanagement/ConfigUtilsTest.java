@@ -170,7 +170,7 @@ class ConfigUtilsTest
     {
         Path yamlPath = Paths.get("src/test/resources/configmanagement/cassandra_latest.yaml");
 
-        ConfigurationOverlaySnapshot snapshot = ConfigUtils.loadConfiguration(yamlPath);
+        ConfigurationOverlaySnapshot snapshot = ConfigUtils.loadConfiguration(yamlPath, null);
 
         assertThat(snapshot).isNotNull();
         assertThat(snapshot.configuration().cassandraYaml().getString("cluster_name")).isEqualTo("Test Cluster");
@@ -183,12 +183,23 @@ class ConfigUtilsTest
     @Test
     void testLoadConfigurationNullPath()
     {
-        ConfigurationOverlaySnapshot snapshot = ConfigUtils.loadConfiguration(null);
+        ConfigurationOverlaySnapshot snapshot = ConfigUtils.loadConfiguration(null, null);
 
         assertThat(snapshot).isNotNull();
         assertThat(snapshot.lastModified()).isEqualTo(Instant.EPOCH);
         assertThat(snapshot.configuration().cassandraYaml()).isEmpty();
         assertThat(snapshot.configuration().extraJvmOpts()).isEmpty();
         assertThat(snapshot.hash()).startsWith("sha256:");
+    }
+
+    @Test
+    void testLoadConfigurationReturnsCachedWhenUnmodified()
+    {
+        Path yamlPath = Paths.get("src/test/resources/configmanagement/cassandra_latest.yaml");
+
+        ConfigurationOverlaySnapshot first = ConfigUtils.loadConfiguration(yamlPath, null);
+        ConfigurationOverlaySnapshot second = ConfigUtils.loadConfiguration(yamlPath, first);
+
+        assertThat(second).isSameAs(first);
     }
 }
