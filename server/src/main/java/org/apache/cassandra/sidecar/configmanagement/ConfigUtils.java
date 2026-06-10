@@ -25,8 +25,10 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 
 import com.fasterxml.jackson.core.JsonParser;
+import org.jetbrains.annotations.NotNull;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import io.vertx.core.json.JsonObject;
@@ -108,13 +110,11 @@ public final class ConfigUtils
      * @param overlay the overlay tree whose values take precedence
      * @return a new tree with the merged result
      */
-    public static JsonObject mergeConfigurations(JsonObject base, JsonObject overlay)
+    public static JsonObject mergeConfigurations(@NotNull JsonObject base, @NotNull JsonObject overlay)
     {
-        if (base == null)
-        {
-            return overlay.copy();
-        }
-        if (overlay == null || overlay.isEmpty())
+        Objects.requireNonNull(base, "base must not be null");
+        Objects.requireNonNull(overlay, "overlay must not be null");
+        if (overlay.isEmpty())
         {
             return base.copy();
         }
