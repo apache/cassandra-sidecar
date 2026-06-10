@@ -64,18 +64,22 @@ public final class ConfigUtils
         {
             return ConfigurationOverlaySnapshot.emptySnapshot();
         }
-        JsonObject yaml = loadYaml(yamlPath);
-        Instant lastModified;
         try
         {
-            lastModified = Files.getLastModifiedTime(yamlPath).toInstant();
+            Instant lastModifiedBefore = Files.getLastModifiedTime(yamlPath).toInstant();
+            JsonObject yaml = loadYaml(yamlPath);
+            Instant lastModifiedAfter = Files.getLastModifiedTime(yamlPath).toInstant();
+            if (!lastModifiedBefore.equals(lastModifiedAfter))
+            {
+                throw new IllegalStateException("File was modified while reading: " + yamlPath);
+            }
+            CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, Collections.emptyMap());
+            return new ConfigurationOverlaySnapshot(lastModifiedAfter, overlay);
         }
         catch (IOException e)
         {
             throw new UncheckedIOException("Failed to read modification time of " + yamlPath, e);
         }
-        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, Collections.emptyMap());
-        return new ConfigurationOverlaySnapshot(lastModified, overlay);
     }
 
     /**
