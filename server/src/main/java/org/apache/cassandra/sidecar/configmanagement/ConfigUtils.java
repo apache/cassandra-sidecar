@@ -124,8 +124,7 @@ public final class ConfigUtils
         }
 
         JsonObject result = base.copy();
-        JsonObject overlayCopy = overlay.copy();
-        for (Map.Entry<String, Object> field : overlayCopy)
+        for (Map.Entry<String, Object> field : overlay)
         {
             String fieldName = field.getKey();
             Object overlayValue = field.getValue();
