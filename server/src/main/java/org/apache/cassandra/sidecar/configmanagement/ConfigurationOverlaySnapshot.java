@@ -75,7 +75,15 @@ public class ConfigurationOverlaySnapshot
                                                                 other.configuration().cassandraYaml());
 
         Map<String, String> mergedOpts = new LinkedHashMap<>(configuration.extraJvmOpts());
-        mergedOpts.putAll(other.configuration().extraJvmOpts());
+        for (Map.Entry<String, String> entry : other.configuration().extraJvmOpts().entrySet())
+        {
+            String key = entry.getKey();
+            if (CassandraConfigurationOverlay.hasConflictingBooleanOpt(mergedOpts, key))
+            {
+                continue;
+            }
+            mergedOpts.put(key, entry.getValue());
+        }
 
         Instant mergedLastModified = lastModified.isAfter(other.lastModified)
                                      ? lastModified

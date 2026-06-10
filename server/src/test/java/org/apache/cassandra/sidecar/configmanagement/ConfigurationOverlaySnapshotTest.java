@@ -143,6 +143,28 @@ class ConfigurationOverlaySnapshotTest
     }
 
     @Test
+    void testOverlayPrefersBaseOnConflictingBooleanJvmOpts()
+    {
+        Map<String, String> baseOpts = new LinkedHashMap<>();
+        baseOpts.put("-XX:+UseG1GC", "");
+        baseOpts.put("-Xmx", "4g");
+        CassandraConfigurationOverlay baseOverlay = new CassandraConfigurationOverlay(null, baseOpts);
+        ConfigurationOverlaySnapshot base = new ConfigurationOverlaySnapshot(Instant.now(), baseOverlay);
+
+        Map<String, String> otherOpts = new LinkedHashMap<>();
+        otherOpts.put("-XX:-UseG1GC", "");
+        otherOpts.put("-Xmx", "8g");
+        CassandraConfigurationOverlay otherOverlay = new CassandraConfigurationOverlay(null, otherOpts);
+        ConfigurationOverlaySnapshot other = new ConfigurationOverlaySnapshot(Instant.now(), otherOverlay);
+
+        ConfigurationOverlaySnapshot result = base.overlay(other);
+
+        assertThat(result.configuration().extraJvmOpts()).containsEntry("-XX:+UseG1GC", "");
+        assertThat(result.configuration().extraJvmOpts()).doesNotContainKey("-XX:-UseG1GC");
+        assertThat(result.configuration().extraJvmOpts()).containsEntry("-Xmx", "8g");
+    }
+
+    @Test
     void testOverlayUsesMaxLastModified()
     {
         Instant older = Instant.parse("2026-01-01T00:00:00Z");
