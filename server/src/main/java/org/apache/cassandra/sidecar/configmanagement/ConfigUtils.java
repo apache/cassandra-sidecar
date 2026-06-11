@@ -49,17 +49,6 @@ public final class ConfigUtils
     }
 
     /**
-     * Loads a YAML configuration file and returns it as a {@link ConfigurationOverlaySnapshot}.
-     * The snapshot's {@code lastModified} is set to the file's modification time and
-     * {@code extraJvmOpts} is empty.
-     *
-     * <p>If {@code yamlPath} is {@code null}, returns an {@linkplain ConfigurationOverlaySnapshot#emptySnapshot()
-     * empty snapshot}.
-     *
-     * @param yamlPath path to the YAML configuration file, or {@code null} for an empty snapshot
-     * @return a snapshot representing the file contents
-     */
-    /**
      * Loads configuration from the given YAML path, returning the cached snapshot if the file
      * has not been modified since it was last read.
      *
