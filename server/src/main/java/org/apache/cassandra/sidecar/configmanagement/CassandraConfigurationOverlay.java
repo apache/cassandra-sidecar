@@ -169,15 +169,21 @@ public class CassandraConfigurationOverlay
 
     static boolean hasConflictingBooleanOpt(Map<String, String> existing, String key)
     {
+        String conflicting = conflictingBooleanOpt(key);
+        return conflicting != null && existing.containsKey(conflicting);
+    }
+
+    static String conflictingBooleanOpt(String key)
+    {
         if (key.startsWith("-XX:+"))
         {
-            return existing.containsKey("-XX:-" + key.substring(5));
+            return "-XX:-" + key.substring(5);
         }
         if (key.startsWith("-XX:-"))
         {
-            return existing.containsKey("-XX:+" + key.substring(5));
+            return "-XX:+" + key.substring(5);
         }
-        return false;
+        return null;
     }
 
     private static void validateNoConflictingBooleanOpts(Map<String, String> opts)

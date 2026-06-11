@@ -25,6 +25,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.vertx.core.json.JsonObject;
 import org.jetbrains.annotations.NotNull;
 
@@ -38,6 +41,8 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ConfigurationOverlaySnapshot
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationOverlaySnapshot.class);
+
     @NotNull
     private final Instant lastModified;
 
@@ -65,11 +70,16 @@ public class ConfigurationOverlaySnapshot
      * {@code cassandraYaml} are added to the result, and new keys in {@code extraJvmOpts}
      * are added alongside existing entries.
      *
-     * @param other the overlay snapshot whose values take precedence
+     * <p>When a conflicting boolean JVM option is detected (e.g. {@code -XX:+UseG1GC} in the base
+     * and {@code -XX:-UseG1GC} in the overlay), the base option is preserved and the overlay's
+     * conflicting entry is skipped. A warning is logged to alert the operator.
+     *
+     * @param other      the overlay snapshot whose values take precedence
+     * @param instanceId the Cassandra instance id, used for contextual log messages
      * @return a new snapshot with the merged configuration and the max of both lastModified timestamps
      */
     @NotNull
-    public ConfigurationOverlaySnapshot overlay(@NotNull ConfigurationOverlaySnapshot other)
+    public ConfigurationOverlaySnapshot overlay(@NotNull ConfigurationOverlaySnapshot other, int instanceId)
     {
         JsonObject mergedYaml = ConfigUtils.mergeConfigurations(configuration.cassandraYaml(),
                                                                 other.configuration().cassandraYaml());
@@ -80,6 +90,9 @@ public class ConfigurationOverlaySnapshot
             String key = entry.getKey();
             if (CassandraConfigurationOverlay.hasConflictingBooleanOpt(mergedOpts, key))
             {
+                LOGGER.warn("Instance {}: Conflicting boolean JVM option '{}' in overlay conflicts with base " +
+                            "option '{}'. Preserving base option and skipping overlay entry.",
+                            instanceId, key, CassandraConfigurationOverlay.conflictingBooleanOpt(key));
                 continue;
             }
             mergedOpts.put(key, entry.getValue());

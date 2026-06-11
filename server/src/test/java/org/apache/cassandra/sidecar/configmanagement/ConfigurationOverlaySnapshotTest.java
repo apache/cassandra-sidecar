@@ -113,7 +113,7 @@ class ConfigurationOverlaySnapshotTest
         ConfigurationOverlaySnapshot other = new ConfigurationOverlaySnapshot(Instant.parse("2026-02-01T00:00:00Z"),
                                                                               otherOverlay);
 
-        ConfigurationOverlaySnapshot result = base.overlay(other);
+        ConfigurationOverlaySnapshot result = base.overlay(other, 1);
 
         assertThat(result.configuration().cassandraYaml().getString("cluster_name")).isEqualTo("test");
         assertThat(result.configuration().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(64);
@@ -135,7 +135,7 @@ class ConfigurationOverlaySnapshotTest
         CassandraConfigurationOverlay otherOverlay = new CassandraConfigurationOverlay(null, otherOpts);
         ConfigurationOverlaySnapshot other = new ConfigurationOverlaySnapshot(Instant.now(), otherOverlay);
 
-        ConfigurationOverlaySnapshot result = base.overlay(other);
+        ConfigurationOverlaySnapshot result = base.overlay(other, 1);
 
         assertThat(result.configuration().extraJvmOpts()).containsEntry("-Xmx", "8g");
         assertThat(result.configuration().extraJvmOpts()).containsEntry("-Dcassandra.jmx.local.port", "7199");
@@ -157,7 +157,7 @@ class ConfigurationOverlaySnapshotTest
         CassandraConfigurationOverlay otherOverlay = new CassandraConfigurationOverlay(null, otherOpts);
         ConfigurationOverlaySnapshot other = new ConfigurationOverlaySnapshot(Instant.now(), otherOverlay);
 
-        ConfigurationOverlaySnapshot result = base.overlay(other);
+        ConfigurationOverlaySnapshot result = base.overlay(other, 1);
 
         assertThat(result.configuration().extraJvmOpts()).containsEntry("-XX:+UseG1GC", "");
         assertThat(result.configuration().extraJvmOpts()).doesNotContainKey("-XX:-UseG1GC");
@@ -174,11 +174,11 @@ class ConfigurationOverlaySnapshotTest
 
         ConfigurationOverlaySnapshot baseOlder = new ConfigurationOverlaySnapshot(older, emptyOverlay);
         ConfigurationOverlaySnapshot otherNewer = new ConfigurationOverlaySnapshot(newer, emptyOverlay);
-        assertThat(baseOlder.overlay(otherNewer).lastModified()).isEqualTo(newer);
+        assertThat(baseOlder.overlay(otherNewer, 1).lastModified()).isEqualTo(newer);
 
         ConfigurationOverlaySnapshot baseNewer = new ConfigurationOverlaySnapshot(newer, emptyOverlay);
         ConfigurationOverlaySnapshot otherOlder = new ConfigurationOverlaySnapshot(older, emptyOverlay);
-        assertThat(baseNewer.overlay(otherOlder).lastModified()).isEqualTo(newer);
+        assertThat(baseNewer.overlay(otherOlder, 1).lastModified()).isEqualTo(newer);
     }
 
     @Test
@@ -200,7 +200,7 @@ class ConfigurationOverlaySnapshotTest
         CassandraConfigurationOverlay otherOverlay = new CassandraConfigurationOverlay(otherYaml, null);
         ConfigurationOverlaySnapshot other = new ConfigurationOverlaySnapshot(Instant.now(), otherOverlay);
 
-        ConfigurationOverlaySnapshot result = base.overlay(other);
+        ConfigurationOverlaySnapshot result = base.overlay(other, 1);
 
         JsonObject resultConfigs = result.configuration().cassandraYaml()
                                          .getJsonObject("memtable")

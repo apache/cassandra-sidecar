@@ -73,7 +73,7 @@ public class ConfigurationManager
 
         if (providerSnapshot != null)
         {
-            return baseSnapshot.overlay(providerSnapshot);
+            return baseSnapshot.overlay(providerSnapshot, instance.id());
         }
         return baseSnapshot;
     }
