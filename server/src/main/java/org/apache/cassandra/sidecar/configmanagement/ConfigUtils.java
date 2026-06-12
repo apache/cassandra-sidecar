@@ -107,8 +107,9 @@ public final class ConfigUtils
 
     /**
      * Deep-merges the overlay onto the base configuration. For nested objects both base and overlay
-     * contain, fields are merged recursively. For all other node types (scalars, arrays, nulls),
-     * the overlay value replaces the base value. The base node is not modified.
+     * contain, fields are merged recursively. For all other node types (scalars, arrays),
+     * the overlay value replaces the base value. Null overlay values are skipped and the
+     * corresponding base value is preserved. The base node is not modified.
      *
      * <p>Overlays may introduce keys not present in the base configuration. Such keys are
      * added to the result as-is (scalars, arrays) or merged recursively (nested objects).
