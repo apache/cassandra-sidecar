@@ -196,8 +196,16 @@ public class LiveMigrationModule extends AbstractModule
     responseCode = "200",
     content = @Content(mediaType = "application/json",
     schema = @Schema(implementation = DigestResponse.class)))
+    @APIResponse(responseCode = "400",
+    description = "Invalid path parameter (e.g., non-numeric directory index) or a directory was requested",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
+    @APIResponse(responseCode = "403",
+    description = "Resolved path is outside the configured live-migration directories",
+    content = @Content(mediaType = "application/json",
+    schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "404",
-    description = "Live migration not enabled or node not configured as source",
+    description = "Live migration not enabled, node not configured as source, or requested file not found",
     content = @Content(mediaType = "application/json",
     schema = @Schema(type = SchemaType.OBJECT)))
     @APIResponse(responseCode = "503",
