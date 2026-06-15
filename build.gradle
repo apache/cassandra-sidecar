@@ -439,6 +439,9 @@ rat {
 
     // XML, TXT and HTML reports directory, defaults to 'build/reports/rat'
     reportDir.set(file("build/reports/rat"))
+
+    excludes.add("AGENTS.md")
+    excludes.add("SECURITY.md")
 }
 
 check.dependsOn codeCheckTasks
