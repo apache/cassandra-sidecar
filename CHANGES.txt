@@ -1,5 +1,6 @@
 0.5.0
 -----
+ * RPM package is created with wrong version (CASSSIDECAR-472)
  * Define storage provider interface and Cassandra implementation to support durable job tracking (CASSSIDECAR-373)
  * Validate snapshot name during list snapshot (CASSSIDECAR-461)
 
