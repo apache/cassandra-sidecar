@@ -455,14 +455,19 @@ jobs:
 
       - name: Verify DEB package version
         run: |
-          EXPECTED_VERSION=$(grep "^version=" gradle.properties | cut -d'=' -f2)
+          EXPECTED_UPSTREAM=$(grep "^version=" gradle.properties | cut -d'=' -f2 | tr '-' '~')
           ACTUAL_VERSION=$(dpkg-query -W -f='${Version}' apache-cassandra-sidecar)
-          echo "Expected upstream: ${EXPECTED_VERSION}, Installed: ${ACTUAL_VERSION}"
-          case "${ACTUAL_VERSION}" in
-            *-) echo "DEB version has trailing '-': '${ACTUAL_VERSION}'"; exit 1;;
-            *${EXPECTED_VERSION}*) ;;
-            *) echo "DEB version '${ACTUAL_VERSION}' does not contain expected '${EXPECTED_VERSION}'"; exit 1;;
-          esac
+          ACTUAL_UPSTREAM="${ACTUAL_VERSION%-*}"
+          ACTUAL_REVISION="${ACTUAL_VERSION##*-}"
+          echo "DEB: upstream=${ACTUAL_UPSTREAM}, revision=${ACTUAL_REVISION}, expected upstream=${EXPECTED_UPSTREAM}"
+          if [ -z "${ACTUAL_REVISION}" ] || [ "${ACTUAL_REVISION}" = "${ACTUAL_VERSION}" ]; then
+            echo "DEB has no Debian revision — yields trailing '-' style bug"
+            exit 1
+          fi
+          if [ "${ACTUAL_UPSTREAM}" != "${EXPECTED_UPSTREAM}" ]; then
+            echo "DEB upstream version mismatch: expected '${EXPECTED_UPSTREAM}', got '${ACTUAL_UPSTREAM}'"
+            exit 1
+          fi
 
   # Build and verify RPM package
   rpm-build-install:
