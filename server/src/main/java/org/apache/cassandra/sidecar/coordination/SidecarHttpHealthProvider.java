@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.coordination;
 import java.util.concurrent.CompletableFuture;
 
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.client.SidecarClient;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
@@ -33,7 +32,6 @@ import org.apache.cassandra.sidecar.utils.SidecarClientProvider;
  * Provides the health of a Sidecar instance over HTTP API, retrying to
  * confirm Sidecar is DOWN for extended period of time.
  */
-@Singleton
 public class SidecarHttpHealthProvider implements SidecarPeerHealthProvider
 {
     private final SidecarClientProvider clientProvider;

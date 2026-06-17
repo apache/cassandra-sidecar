@@ -23,7 +23,7 @@ export CASSANDRA_USE_JDK11=true
 SCRIPT_DIR=$( dirname -- "$( readlink -f -- "$0"; )"; )
 TARBALL_DIR="$(dirname "${SCRIPT_DIR}/")/cassandra-tarballs"
 
-ant artifacts -Dant.gen-doc.skip=true -Dno-checkstyle=true
+ant artifacts -Dant.gen-doc.skip=true -Dno-checkstyle=true -Drat.skip=true
 mkdir -p ${TARBALL_DIR}
 cp ./build/apache-cassandra-*-bin.tar.gz ${TARBALL_DIR}
 

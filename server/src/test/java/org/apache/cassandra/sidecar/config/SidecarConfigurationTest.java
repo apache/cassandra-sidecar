@@ -96,8 +96,22 @@ class SidecarConfigurationTest
     @Test
     void testReadingCassandraInputValidation() throws IOException
     {
-        Path yamlPath = yaml("config/sidecar_validation_configuration.yaml");
-        SidecarConfiguration configuration = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+        String yaml = "cassandra_input_validation:\n" +
+                      "  validator:\n" +
+                      "  - class_name: org.apache.cassandra.sidecar.utils.FastCassandraInputValidator\n" +
+                      "    parameters:\n" +
+                      "      valid_terminations: \".abc,.def\"\n" +
+                      "      valid_restricted_terminations: \".xml\"\n" +
+                      "  forbidden_keyspaces:\n" +
+                      "    - a\n" +
+                      "    - b\n" +
+                      "    - c\n" +
+                      "  allowed_chars_for_directory: \"[a-z]+\"\n" +
+                      "  allowed_chars_for_quoted_name: \"[A-Z]+\"\n" +
+                      "  allowed_chars_for_component_name: \"(\\\\.db|\\\\.cql|\\\\.json|\\\\.crc32|TOC\\\\.txt)\"\n" +
+                      "  allowed_chars_for_restricted_component_name: \"(\\\\.db|TOC\\\\.txt)\"\n" +
+                      "  allowed_chars_for_snapshot_name: \".*\"";
+        SidecarConfiguration configuration = SidecarConfigurationImpl.fromYamlString(yaml);
         CassandraInputValidationConfiguration validationConfiguration =
         configuration.cassandraInputValidationConfiguration();
 
@@ -114,6 +128,8 @@ class SidecarConfigurationTest
         .isEqualTo("(\\.db|\\.cql|\\.json|\\.crc32|TOC\\.txt)");
         assertThat(validationConfiguration.allowedPatternForRestrictedComponentName())
         .isEqualTo("(\\.db|TOC\\.txt)");
+        assertThat(validationConfiguration.allowedPatternForSnapshotName())
+        .isEqualTo(".*");
     }
 
     @Test
@@ -222,6 +238,22 @@ class SidecarConfigurationTest
         assertThat(sslConfiguration.truststore().type()).isEqualTo("PKCS12");
         assertThat(sslConfiguration.truststore().path()).isEqualTo("path/to/keystore.p12");
         assertThat(sslConfiguration.truststore().password()).isEqualTo("password");
+    }
+
+    @Test
+    void testDriverParametersWithAuthProvider() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_driver_params_config_provider.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+
+        DriverConfiguration driverConfiguration = config.driverConfiguration();
+        assertThat(driverConfiguration).isNotNull();
+        assertThat(driverConfiguration.authProvider()).isNotNull();
+        ParameterizedClassConfiguration authProvider = driverConfiguration.authProvider();
+        assertThat(authProvider.className()).isEqualTo("org.apache.cassandra.sidecar.cluster.auth.ConfigProvider");
+        assertThat(authProvider.namedParameters())
+        .containsExactlyInAnyOrderEntriesOf(Map.of("username", "cassandra",
+                                                   "password", "cassandra"));
     }
 
     @Test

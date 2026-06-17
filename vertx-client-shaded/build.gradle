@@ -27,7 +27,6 @@ import com.github.jengelman.gradle.plugins.shadow.transformers.TransformerContex
 import org.apache.tools.zip.ZipEntry
 import org.apache.tools.zip.ZipOutputStream
 
-import java.nio.file.Paths
 
 plugins {
     id('java-library')
@@ -54,14 +53,6 @@ dependencies {
 tasks.named('test') {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
-    reports {
-        junitXml.setRequired(true)
-        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "vertx-client-shaded").toFile()
-        println("Destination directory for vertx-client-shaded tests: ${destDir}")
-        junitXml.getOutputLocation().set(destDir)
-        html.setRequired(true)
-        html.getOutputLocation().set(destDir)
-    }
 }
 
 // Relocating a Package

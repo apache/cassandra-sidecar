@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.config.yaml;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -50,16 +51,54 @@ public class LiveMigrationConfigurationImpl implements LiveMigrationConfiguratio
                                           @JsonProperty("migration_map") Map<String, String> migrationMap,
                                           @JsonProperty("max_concurrent_file_requests") int maxConcurrentFileRequests)
     {
-        this.filesToExclude = filesToExclude;
-        this.directoriesToExclude = directoriesToExclude;
-        this.migrationMap = migrationMap == null ? Collections.emptyMap() : Collections.unmodifiableMap(migrationMap);
-
+        Map<String, String> migrationMapOrEmpty = migrationMap == null
+                                                  ? Collections.emptyMap()
+                                                  : Collections.unmodifiableMap(migrationMap);
+        validateMigrationMap(migrationMapOrEmpty);
         if (maxConcurrentFileRequests < 1)
         {
             throw new IllegalArgumentException("Invalid max_concurrent_file_requests " + maxConcurrentFileRequests +
                                                ". It must be >= 1");
         }
+
+        this.filesToExclude = filesToExclude;
+        this.directoriesToExclude = directoriesToExclude;
+        this.migrationMap = migrationMapOrEmpty;
         this.maxConcurrentFileRequests = maxConcurrentFileRequests;
+    }
+
+    private static void validateMigrationMap(Map<String, String> migrationMap)
+    {
+        Set<String> sources = migrationMap.keySet();
+        Set<String> destinations = new HashSet<>();
+        Set<String> duplicateDestinations = new HashSet<>();
+        for (String destination : migrationMap.values())
+        {
+            if (!destinations.add(destination))
+            {
+                duplicateDestinations.add(destination);
+            }
+        }
+
+        if (!duplicateDestinations.isEmpty())
+        {
+            throw new IllegalArgumentException("Invalid migration_map: a node cannot be the destination of multiple " +
+                                               "sources. Duplicate destinations: " + duplicateDestinations);
+        }
+
+        Set<String> sourceAndDestination = new HashSet<>();
+        for (String source : sources)
+        {
+            if (destinations.contains(source))
+            {
+                sourceAndDestination.add(source);
+            }
+        }
+        if (!sourceAndDestination.isEmpty())
+        {
+            throw new IllegalArgumentException("Invalid migration_map: a node cannot be both source and destination. " +
+                                               "Conflicting nodes: " + sourceAndDestination);
+        }
     }
 
     @Override

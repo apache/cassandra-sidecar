@@ -27,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.codecs.CdcConfigMappingsCodec;
@@ -44,7 +43,6 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR
 /**
  * Periodic task notifying if the CDC config changed
  */
-@Singleton
 public class CdcConfigRefresherNotifierTask implements PeriodicTask
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CdcConfigRefresherNotifierTask.class);
@@ -93,7 +91,8 @@ public class CdcConfigRefresherNotifierTask implements PeriodicTask
     @Override
     public ScheduleDecision scheduleDecision()
     {
-        if (!sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration().isEnabled() || !sidecarConfiguration.serviceConfiguration().cdcConfiguration().isEnabled())
+        if (!sidecarConfiguration.serviceConfiguration().schemaKeyspaceConfiguration().isEnabled()
+            || !sidecarConfiguration.serviceConfiguration().cdcConfiguration().isEnabled())
         {
             LOGGER.trace("Skipping config refreshing");
             return ScheduleDecision.SKIP;

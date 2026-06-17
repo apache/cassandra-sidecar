@@ -121,11 +121,16 @@ class RestoreJobDiscovererNodeJoiningIntTest extends IntegrationTestBase
                                        new TokenRange(0, 1000),
                                        new TokenRange(1500, Long.MAX_VALUE)));
 
-        // assert that no restore ranges are create
+        // assert that the expected restore range is created.
+        // Wrapped in loopAssert because the STAGE_READY PATCH triggers an asynchronous wake-up
+        // (CASSSIDECAR-454) that races on isExecuting with the synchronous tryExecuteDiscovery above;
+        // ranges may not be visible immediately after either path returns.
         RestoreRangeDatabaseAccessor rangeDatabaseAccessor = injector.getInstance(RestoreRangeDatabaseAccessor.class);
-        List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
-        assertThat(ranges).hasSize(1);
-        assertRestoreRange(ranges.get(0), 1500L, 1600L);
+        loopAssert(10, 500, () -> {
+            List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
+            assertThat(ranges).hasSize(1);
+            assertRestoreRange(ranges.get(0), 1500L, 1600L);
+        });
 
         // start move in the background
         IInstance seed = cluster.get(1);
@@ -164,7 +169,7 @@ class RestoreJobDiscovererNodeJoiningIntTest extends IntegrationTestBase
             assertThat(restoreRanges)
             .describedAs("Local token ranges are effectively the same. Therefore restore ranges do not change")
             .hasSize(1);
-            assertRestoreRange(ranges.get(0), 1500L, 1600L);
+            assertRestoreRange(restoreRanges.get(0), 1500L, 1600L);
         });
     }
 

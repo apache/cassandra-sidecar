@@ -17,7 +17,6 @@
  * under the License.
  */
 
-import java.nio.file.Paths
 
 plugins {
     id 'java-library'
@@ -37,14 +36,6 @@ test {
         println("JVM arguments for $project.name are $allJvmArgs")
     }
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
-    reports {
-        junitXml.setRequired(true)
-        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "server-common").toFile()
-        println("Destination directory for server-common tests: ${destDir}")
-        junitXml.getOutputLocation().set(destDir)
-        html.setRequired(true)
-        html.getOutputLocation().set(destDir)
-    }
 }
 
 dependencies {

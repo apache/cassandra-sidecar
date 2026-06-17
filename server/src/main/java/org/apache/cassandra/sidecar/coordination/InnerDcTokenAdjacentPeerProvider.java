@@ -42,7 +42,6 @@ import com.datastax.driver.core.Host;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.client.SidecarInstanceImpl;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
@@ -60,7 +59,6 @@ import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationC
 /**
  * Return Sidecar(s) adjacent to current Sidecar in the token ring within the same datacenter.
  */
-@Singleton
 public class InnerDcTokenAdjacentPeerProvider implements SidecarPeerProvider
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(InnerDcTokenAdjacentPeerProvider.class);

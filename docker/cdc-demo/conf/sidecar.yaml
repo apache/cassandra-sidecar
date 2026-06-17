@@ -1,0 +1,78 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+cassandra_instances:
+  - id: 1
+    host: cassandra
+    port: 9042
+    storage_dir: /var/lib/cassandra
+    cdc_dir: /var/lib/cassandra/cdc_raw
+    commitlog_dir: /var/lib/cassandra/commitlog
+    staging_dir: /var/lib/cassandra/sstable-staging
+    jmx_host: 127.0.0.1
+    jmx_port: 7199
+    jmx_ssl_enabled: false  # demo only — enable TLS in production
+
+sidecar:
+  host: 0.0.0.0
+  port: 9043
+  cdc:
+    enabled: true
+    segment_hardlink_cache_expiry: 5m
+    table_schema_refresh_time: 5s
+    config_refresh_time: 5s
+  worker_pools:
+    service:
+      name: "sidecar-worker-pool"
+      size: 20
+      max_execution_time: 1m
+    internal:
+      name: "sidecar-internal-worker-pool"
+      size: 20
+      max_execution_time: 15m
+  jmx:
+    max_retries: 10
+    retry_delay: 3s
+  # Required: sidecar creates sidecar_internal keyspace and configs/cdc_states tables
+  schema:
+    is_enabled: true
+    keyspace: sidecar_internal
+    replication_strategy: NetworkTopologyStrategy
+    replication_factor: 1
+    lease_schema_ttl: 5m
+  coordination:
+    cluster_lease_claim:
+      electorate_membership_strategy: MostReplicatedKeyspaceTokenZeroElectorateMembership
+      enabled: true
+      initial_delay: 1s
+      initial_delay_random_delta: 5s
+      execute_interval: 100s
+
+driver_parameters:
+  contact_points:
+    - "cassandra:9042"
+  num_connections: 6
+  local_dc: datacenter1
+
+healthcheck:
+  initial_delay: 0ms
+  execute_interval: 30s
+
+cluster_topology_monitor:
+  enabled: true
+  initial_delay: 0s
+  execute_interval: 1000ms

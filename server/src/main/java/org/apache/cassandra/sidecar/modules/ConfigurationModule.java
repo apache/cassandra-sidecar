@@ -18,9 +18,9 @@
 
 package org.apache.cassandra.sidecar.modules;
 
-import java.io.IOException;
-import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.google.common.util.concurrent.SidecarRateLimiter;
@@ -42,6 +42,9 @@ import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadataImpl;
+import org.apache.cassandra.sidecar.cluster.auth.ConfigProvider;
+import org.apache.cassandra.sidecar.cluster.auth.CqlAuthProvider;
+import org.apache.cassandra.sidecar.cluster.auth.FileProvider;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadataImpl;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
@@ -50,13 +53,15 @@ import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.DriverUtils;
 import org.apache.cassandra.sidecar.common.server.utils.SidecarVersionProvider;
 import org.apache.cassandra.sidecar.config.CassandraInputValidationConfiguration;
+import org.apache.cassandra.sidecar.config.DriverConfiguration;
 import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.JmxConfiguration;
+import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
+import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceHealthMetrics;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
@@ -64,6 +69,7 @@ import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys;
 import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 import org.apache.cassandra.sidecar.utils.EventBusUtils;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.common.server.utils.ByteUtils.bytesToHumanReadableBinaryPrefix;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
@@ -75,35 +81,30 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_
 public class ConfigurationModule extends AbstractModule
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigurationModule.class);
-    protected final Path confPath;
+    @Nullable
+    private final SidecarConfiguration config;
+
 
     /**
-     * Constructs the Guice main module to run Cassandra Sidecar
-     */
-    public ConfigurationModule()
-    {
-        confPath = null;
-    }
-
-    /**
-     * Constructs the Guice main module with the configured yaml {@code confPath} to run Cassandra Sidecar
+     * Constructs the Guice main module with a pre-parsed {@link SidecarConfiguration}.
+     * Using this constructor avoids a second YAML parse at injection time.
      *
-     * @param confPath the path to the yaml configuration file
+     * @param config the already-parsed sidecar configuration
      */
-    public ConfigurationModule(Path confPath)
+    public ConfigurationModule(SidecarConfiguration config)
     {
-        this.confPath = confPath;
+        this.config = config;
     }
 
     @Provides
     @Singleton
-    SidecarConfiguration sidecarConfiguration() throws IOException
+    SidecarConfiguration sidecarConfiguration()
     {
-        if (confPath == null)
+        if (config != null)
         {
-            throw new NullPointerException("the YAML configuration path for Sidecar has not been defined.");
+            return config;
         }
-        return SidecarConfigurationImpl.readYamlConfiguration(confPath);
+        throw new NullPointerException("Sidecar configuration is not defined");
     }
 
     @Provides
@@ -124,13 +125,49 @@ public class ConfigurationModule extends AbstractModule
     @Singleton
     CQLSessionProvider cqlSessionProvider(Vertx vertx,
                                           SidecarConfiguration sidecarConfiguration,
+                                          CqlAuthProvider cqlAuthProvider,
                                           DriverUtils driverUtils)
     {
         CQLSessionProviderImpl cqlSessionProvider = new CQLSessionProviderImpl(sidecarConfiguration,
                                                                                NettyOptions.DEFAULT_INSTANCE,
+                                                                               cqlAuthProvider,
                                                                                driverUtils);
         vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), message -> cqlSessionProvider.close());
         return cqlSessionProvider;
+    }
+
+    @Provides
+    @Singleton
+    CqlAuthProvider cqlAuthProvider(SidecarConfiguration sidecarConfiguration)
+    {
+        DriverConfiguration driverConfiguration = sidecarConfiguration.driverConfiguration();
+
+        ParameterizedClassConfiguration config = driverConfiguration.authProvider();
+        if (config == null)
+        {
+            // Fallback to the old one
+            Map<String, String> namedParameters = new HashMap<>();
+            namedParameters.put("username", driverConfiguration.username());
+            namedParameters.put("password", driverConfiguration.password());
+            return new ConfigProvider(namedParameters);
+        }
+
+        if (config.namedParameters() == null)
+        {
+            throw new ConfigurationException("Missing parameters for auth_provider");
+        }
+
+        Map<String, String> namedParameters = config.namedParameters();
+
+        if (config.className().equalsIgnoreCase(ConfigProvider.class.getName()))
+        {
+            return new ConfigProvider(namedParameters);
+        }
+        if (config.className().equalsIgnoreCase(FileProvider.class.getName()))
+        {
+            return new FileProvider(namedParameters);
+        }
+        throw new ConfigurationException("Unrecognized cql auth_provider " + config.className() + " set");
     }
 
     @Provides

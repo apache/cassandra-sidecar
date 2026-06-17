@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.db.schema.SystemViewsSchema;
 import org.apache.cassandra.sidecar.exceptions.SchemaUnavailableException;
@@ -37,19 +36,19 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Database Accessor that queries cassandra to get information maintained under system_views keyspace.
+ * Database accessor for CDC-related settings in the {@code system_views.settings} virtual table.
  */
-@Singleton
-public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSchema>
+public class CdcSystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSchema>
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SystemViewsDatabaseAccessor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CdcSystemViewsDatabaseAccessor.class);
 
-    private static final String YAML_PROP_IN_MB = "cdc_total_space_in_mb";
-    private static final String YAML_PROP_WITH_UNIT = "cdc_total_space"; // expects value with units e.g. "5MiB"
+    private static final String CDC_TOTAL_SPACE_IN_MB_NAME = "cdc_total_space_in_mb";
+    private static final String CDC_TOTAL_SPACE_NAME = "cdc_total_space"; // expects value with units e.g. "5MiB"
+    private static final String CDC_ON_REPAIR_ENABLED_FLAG = "cdc_on_repair_enabled";
 
     @Inject
-    public SystemViewsDatabaseAccessor(SystemViewsSchema systemViewsSchema,
-                                       CQLSessionProvider sessionProvider)
+    public CdcSystemViewsDatabaseAccessor(SystemViewsSchema systemViewsSchema,
+                                          CQLSessionProvider sessionProvider)
     {
         super(systemViewsSchema, sessionProvider);
     }
@@ -61,17 +60,17 @@ public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSch
     @Nullable
     public Long cdcTotalSpaceBytesSetting() throws SchemaUnavailableException
     {
-        // attempt to parse Cassandra v4.0 'cdc_total_space_in_mb' yaml prop
-        String[] cdcTotalSpaceSettingNames = { YAML_PROP_IN_MB, YAML_PROP_WITH_UNIT };
+        // attempt to read Cassandra v4.0 'cdc_total_space_in_mb'
+        String[] cdcTotalSpaceSettingNames = { CDC_TOTAL_SPACE_IN_MB_NAME, CDC_TOTAL_SPACE_NAME };
         Map<String, String> settings = getSettings(cdcTotalSpaceSettingNames);
-        String cdcTotalSpaceInMb = settings.get(YAML_PROP_IN_MB);
+        String cdcTotalSpaceInMb = settings.get(CDC_TOTAL_SPACE_IN_MB_NAME);
         if (cdcTotalSpaceInMb != null)
         {
             return FileUtils.mbStringToBytes(cdcTotalSpaceInMb);
         }
 
-        // otherwise parse current (v5.0+) 'cdc_total_space' yaml prop
-        String storageStringToBytes = settings.get(YAML_PROP_WITH_UNIT);
+        // otherwise read Cassandra v5.0+ 'cdc_total_space'
+        String storageStringToBytes = settings.get(CDC_TOTAL_SPACE_NAME);
         if (storageStringToBytes != null)
         {
             return FileUtils.storageStringToBytes(storageStringToBytes);
@@ -101,5 +100,15 @@ public class SystemViewsDatabaseAccessor extends DatabaseAccessor<SystemViewsSch
                               row -> row.getString(0),
                               row -> row.getString(1))
                      );
+    }
+
+    /**
+     * @return {@code true} if {@code cdc_on_repair_enabled} is set to {@code true} in {@code system_views.settings}
+     * @throws SchemaUnavailableException when the schema is not initialized
+     */
+    public boolean isCdcOnRepairEnabled() throws SchemaUnavailableException
+    {
+        String value = getSettings(CDC_ON_REPAIR_ENABLED_FLAG).get(CDC_ON_REPAIR_ENABLED_FLAG);
+        return value != null && "true".equalsIgnoreCase(value);
     }
 }

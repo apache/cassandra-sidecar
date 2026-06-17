@@ -49,14 +49,25 @@ public interface DriverConfiguration
     String localDc();
 
     /**
+     * @deprecated use {@link #authProvider()} with
+     * {@code org.apache.cassandra.sidecar.cluster.auth.ConfigProvider} instead.
      * @return the username used for connecting to the Cassandra instance
      */
+    @Deprecated
     String username();
 
     /**
+     * @deprecated use {@link #authProvider()} with
+     * {@code org.apache.cassandra.sidecar.cluster.auth.ConfigProvider} instead.
      * @return the password used for connecting to the Cassandra instance
      */
+    @Deprecated
     String password();
+
+    /**
+     * @return Configured authentication provider for CQL connections.
+     */
+    ParameterizedClassConfiguration authProvider();
 
     /**
      * @return Configuration such as keystore, truststore needed for establishing SSL/mTLS connection with

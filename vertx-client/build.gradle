@@ -17,7 +17,6 @@
  */
 
 
-import java.nio.file.Paths
 
 plugins {
     id('java-library')
@@ -32,14 +31,6 @@ sourceCompatibility = 1.8
 test {
     useJUnitPlatform()
     maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
-    reports {
-        junitXml.setRequired(true)
-        def destDir = Paths.get(rootProject.rootDir.absolutePath, "build", "test-results", "vertx-client").toFile()
-        println("Destination directory for vertx-client tests: ${destDir}")
-        junitXml.getOutputLocation().set(destDir)
-        html.setRequired(true)
-        html.getOutputLocation().set(destDir)
-    }
 }
 
 configurations {

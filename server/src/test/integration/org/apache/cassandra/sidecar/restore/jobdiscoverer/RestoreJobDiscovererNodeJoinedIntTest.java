@@ -111,13 +111,18 @@ class RestoreJobDiscovererNodeJoinedIntTest extends IntegrationTestBase
                                              new TokenRange(1000, 1500)))
         .doesNotContainKey(NODE_JOINED);
 
-        // assert that no restore ranges are create
+        // assert that the expected restore ranges are created.
+        // Wrapped in loopAssert because the STAGE_READY PATCH triggers an asynchronous wake-up
+        // (CASSSIDECAR-454) that races on isExecuting with the synchronous tryExecuteDiscovery above;
+        // ranges may not be visible immediately after either path returns.
         RestoreRangeDatabaseAccessor rangeDatabaseAccessor = injector.getInstance(RestoreRangeDatabaseAccessor.class);
-        List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
-        Collections.sort(ranges, RestoreRange.TOKEN_BASED_NATURAL_ORDER);
-        assertThat(ranges).hasSize(2);
-        assertThat(ranges.get(0).tokenRange()).isEqualTo(new TokenRange(0, 1000));
-        assertThat(ranges.get(1).tokenRange()).isEqualTo(new TokenRange(1000, 1500));
+        loopAssert(10, 500, () -> {
+            List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
+            Collections.sort(ranges, RestoreRange.TOKEN_BASED_NATURAL_ORDER);
+            assertThat(ranges).hasSize(2);
+            assertThat(ranges.get(0).tokenRange()).isEqualTo(new TokenRange(0, 1000));
+            assertThat(ranges.get(1).tokenRange()).isEqualTo(new TokenRange(1000, 1500));
+        });
 
         // Decommission
         IInstance seed = cluster.get(1);

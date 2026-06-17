@@ -21,8 +21,10 @@ package org.apache.cassandra.sidecar.handlers.restore;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -200,6 +202,36 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
                                              payload, context, HttpResponseStatus.OK.code());
     }
 
+    @Test
+    void testUpdateToImportReadyNotifiesDiscoverer(VertxTestContext context) throws Throwable
+    {
+        String jobId = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
+        CountDownLatch latch = new CountDownLatch(1);
+        testRestoreJobDiscoverer.processJobNowCallback = job -> latch.countDown();
+        mockLookupRestoreJob(id -> createTestJobWithStatus(jobId, RestoreJobStatus.IMPORT_READY));
+        mockUpdateRestoreJob(payload -> createTestJobWithStatus(jobId, RestoreJobStatus.IMPORT_READY));
+        JsonObject payload = new JsonObject();
+        payload.put("status", "IMPORT_READY");
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", jobId,
+                                             payload, context, HttpResponseStatus.OK.code());
+        assertThat(Uninterruptibles.awaitUninterruptibly(latch, 5, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    void testUpdateToStageReadyNotifiesDiscoverer(VertxTestContext context) throws Throwable
+    {
+        String jobId = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
+        CountDownLatch latch = new CountDownLatch(1);
+        testRestoreJobDiscoverer.processJobNowCallback = job -> latch.countDown();
+        mockLookupRestoreJob(id -> createTestJobWithStatus(jobId, RestoreJobStatus.STAGE_READY));
+        mockUpdateRestoreJob(payload -> createTestJobWithStatus(jobId, RestoreJobStatus.STAGE_READY));
+        JsonObject payload = new JsonObject();
+        payload.put("status", "STAGE_READY");
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", jobId,
+                                             payload, context, HttpResponseStatus.OK.code());
+        assertThat(Uninterruptibles.awaitUninterruptibly(latch, 5, TimeUnit.SECONDS)).isTrue();
+    }
+
     private RestoreJob createTestNewJob(String jobId)
     {
         return RestoreJob.builder()
@@ -207,6 +239,18 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
                          .keyspace("ks").table("table")
                          .jobAgent("agent")
                          .jobStatus(RestoreJobStatus.SUCCEEDED)
+                         .jobSecrets(SECRETS)
+                         .sstableImportOptions(SSTableImportOptions.defaults())
+                         .build();
+    }
+
+    private RestoreJob createTestJobWithStatus(String jobId, RestoreJobStatus status)
+    {
+        return RestoreJob.builder()
+                         .jobId(UUID.fromString(jobId))
+                         .keyspace("ks").table("table")
+                         .jobAgent("agent")
+                         .jobStatus(status)
                          .jobSecrets(SECRETS)
                          .sstableImportOptions(SSTableImportOptions.defaults())
                          .build();

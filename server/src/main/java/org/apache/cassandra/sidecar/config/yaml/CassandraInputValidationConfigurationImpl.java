@@ -59,6 +59,8 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
     // '+' is included in the allowed characters to support downloading SAI files in snapshots
     public static final String DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME =
     "[a-zA-Z0-9_+\\-]+(\\.db|TOC\\.txt)";
+    public static final String ALLOWED_CHARS_FOR_SNAPSHOT_NAME_PROPERTY = "allowed_chars_for_snapshot_name";
+    public static final String DEFAULT_ALLOWED_CHARS_FOR_SNAPSHOT_NAME = "[a-zA-Z0-9_.+-]{1,255}";
 
     @JsonProperty(value = VALIDATOR_PROPERTY)
     protected final ParameterizedClassConfiguration validatorConfiguration;
@@ -78,6 +80,9 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
     @JsonProperty(value = ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME_PROPERTY)
     protected final String allowedPatternForRestrictedComponentName;
 
+    @JsonProperty(value = ALLOWED_CHARS_FOR_SNAPSHOT_NAME_PROPERTY)
+    protected final String allowedPatternForSnapshotName;
+
     public CassandraInputValidationConfigurationImpl()
     {
         this(DEFAULT_VALIDATOR_CONFIGURATION,
@@ -85,7 +90,8 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
              DEFAULT_ALLOWED_CHARS_FOR_NAME,
              DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME,
              DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME,
-             DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME);
+             DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME,
+             DEFAULT_ALLOWED_CHARS_FOR_SNAPSHOT_NAME);
     }
 
     public CassandraInputValidationConfigurationImpl(ParameterizedClassConfiguration validatorConfiguration,
@@ -93,7 +99,8 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
                                                      String allowedPatternForName,
                                                      String allowedPatternForQuotedName,
                                                      String allowedPatternForComponentName,
-                                                     String allowedPatternForRestrictedComponentName)
+                                                     String allowedPatternForRestrictedComponentName,
+                                                     String allowedPatternForSnapshotName)
     {
         this.validatorConfiguration = validatorConfiguration;
         this.forbiddenKeyspaces = forbiddenKeyspaces;
@@ -101,6 +108,7 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
         this.allowedPatternForQuotedName = allowedPatternForQuotedName;
         this.allowedPatternForComponentName = allowedPatternForComponentName;
         this.allowedPatternForRestrictedComponentName = allowedPatternForRestrictedComponentName;
+        this.allowedPatternForSnapshotName = allowedPatternForSnapshotName;
     }
 
     /**
@@ -161,5 +169,12 @@ public class CassandraInputValidationConfigurationImpl implements CassandraInput
     public String allowedPatternForRestrictedComponentName()
     {
         return allowedPatternForRestrictedComponentName;
+    }
+
+    @Override
+    @JsonProperty(value = ALLOWED_CHARS_FOR_SNAPSHOT_NAME_PROPERTY)
+    public String allowedPatternForSnapshotName()
+    {
+        return allowedPatternForSnapshotName;
     }
 }

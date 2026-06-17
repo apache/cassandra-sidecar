@@ -181,9 +181,8 @@ jobs:
         with:
           name: unit-test-results-java-${{ matrix.java }}
           path: |
-            **/build/test-results/test/**
-            **/build/test-results/containerTest/**
-            **/build/reports/tests/
+            build/test-results/**
+            build/reports/tests/**
           retention-days: 30
 
       - name: Upload static analysis reports
@@ -279,8 +278,8 @@ jobs:
         with:
           name: integration-lightweight-results-java-${{ matrix.java }}-cassandra-${{ matrix.cassandra }}
           path: |
-            **/build/test-results/integrationTest*/**
-            **/build/reports/tests/integrationTest*/
+            build/test-results/**
+            build/reports/tests/**
           retention-days: 30
 
   # Run heavyweight integration tests on full matrix
@@ -373,8 +372,8 @@ jobs:
         with:
           name: integration-heavyweight-results-java-${{ matrix.java }}-cassandra-${{ matrix.cassandra }}
           path: |
-            **/build/test-results/integrationTest*/**
-            **/build/reports/tests/integrationTest*/
+            build/test-results/**
+            build/reports/tests/**
           retention-days: 30
 
   # Run Java 8 client unit tests for client compatibility
@@ -407,8 +406,8 @@ jobs:
         with:
           name: unit-test-results-java-8
           path: |
-            **/build/test-results/test/**
-            **/build/reports/tests/
+            build/test-results/**
+            build/reports/tests/**
           retention-days: 30
 
   # Build and verify Debian package
@@ -433,7 +432,13 @@ jobs:
 
       - name: Build Debian package
         run: |
-          ./gradlew --info clean buildDeb
+          ./gradlew --parallel clean buildDeb \
+            -x test -x integrationTest \
+            -x rat \
+            -x checkstyleMain -x checkstyleTest -x checkstyleTestFixtures \
+            -x spotbugsMain -x spotbugsTest \
+            -x javadoc \
+            -x asciidoctor -x copyDocs
 
       - name: Install Debian package
         run: |
@@ -447,6 +452,22 @@ jobs:
           test -f /opt/apache-cassandra-sidecar/conf/logback.xml
           test -f /opt/apache-cassandra-sidecar/LICENSE.txt
           test -f /opt/apache-cassandra-sidecar/lib/cassandra-sidecar-*.jar
+
+      - name: Verify DEB package version
+        run: |
+          EXPECTED_UPSTREAM=$(grep "^version=" gradle.properties | cut -d'=' -f2 | tr '-' '~')
+          ACTUAL_VERSION=$(dpkg-query -W -f='${Version}' apache-cassandra-sidecar)
+          ACTUAL_UPSTREAM="${ACTUAL_VERSION%-*}"
+          ACTUAL_REVISION="${ACTUAL_VERSION##*-}"
+          echo "DEB: upstream=${ACTUAL_UPSTREAM}, revision=${ACTUAL_REVISION}, expected upstream=${EXPECTED_UPSTREAM}"
+          if [ -z "${ACTUAL_REVISION}" ] || [ "${ACTUAL_REVISION}" = "${ACTUAL_VERSION}" ]; then
+            echo "DEB has no Debian revision — yields trailing '-' style bug"
+            exit 1
+          fi
+          if [ "${ACTUAL_UPSTREAM}" != "${EXPECTED_UPSTREAM}" ]; then
+            echo "DEB upstream version mismatch: expected '${EXPECTED_UPSTREAM}', got '${ACTUAL_UPSTREAM}'"
+            exit 1
+          fi
 
   # Build and verify RPM package
   rpm-build-install:
@@ -470,11 +491,17 @@ jobs:
 
       - name: Install dnf
         run: |
-          sudo apt-get update && sudo apt-get install -y dnf
+          sudo apt-get update && sudo apt-get install -y dnf rpm
 
       - name: Build RPM package
         run: |
-          ./gradlew -i buildRpm
+          ./gradlew --parallel buildRpm \
+            -x test -x integrationTest \
+            -x rat \
+            -x checkstyleMain -x checkstyleTest -x checkstyleTestFixtures \
+            -x spotbugsMain -x spotbugsTest \
+            -x javadoc \
+            -x asciidoctor -x copyDocs
 
       - name: Install RPM package
         run: |
@@ -487,6 +514,23 @@ jobs:
           test -f /opt/apache-cassandra-sidecar/conf/logback.xml
           test -f /opt/apache-cassandra-sidecar/LICENSE.txt
           test -f /opt/apache-cassandra-sidecar/lib/cassandra-sidecar-*.jar
+
+      - name: Verify RPM package version
+        run: |
+          EXPECTED_VERSION=$(grep "^version=" gradle.properties | cut -d'=' -f2 | tr '-' '~')
+          RPM_FILE=$(ls build/distributions/apache-cassandra-sidecar*.rpm | head -n1)
+          echo "Querying: ${RPM_FILE}"
+          ACTUAL_VERSION=$(rpm -qp --queryformat '%{VERSION}' "${RPM_FILE}")
+          ACTUAL_RELEASE=$(rpm -qp --queryformat '%{RELEASE}' "${RPM_FILE}")
+          echo "RPM: version=${ACTUAL_VERSION}, release=${ACTUAL_RELEASE}, expected=${EXPECTED_VERSION}"
+          if [ -z "${ACTUAL_RELEASE}" ] || [ "${ACTUAL_RELEASE}" = "(none)" ]; then
+            echo "RPM Release is empty — yields trailing '-' in 'yum list'"
+            exit 1
+          fi
+          if [ "${ACTUAL_VERSION}" != "${EXPECTED_VERSION}" ]; then
+            echo "RPM Version mismatch: expected '${EXPECTED_VERSION}', got '${ACTUAL_VERSION}'"
+            exit 1
+          fi
 
   # Build Docker image
   docker-build:
@@ -510,7 +554,13 @@ jobs:
 
       - name: Build Docker image with Jib
         run: |
-          ./gradlew --info clean :server:jibDockerBuild
+          IMAGE_CREATED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          VERSION=$(grep "^version=" gradle.properties | cut -d'=' -f2)
+          ./gradlew --info clean :server:jibDockerBuild \
+            "-Doci.image.revision=${{ github.sha }}" \
+            "-Doci.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            "-Doci.image.created=${IMAGE_CREATED}" \
+            "-Doci.image.version=${VERSION}"
 
   # Build documentation
   docs-build:

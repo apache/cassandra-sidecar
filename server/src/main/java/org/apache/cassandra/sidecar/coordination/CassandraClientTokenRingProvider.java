@@ -46,7 +46,6 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.Token;
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.cassandra.sidecar.client.SidecarInstance;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -62,7 +61,6 @@ import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
  * Class for getting token range related information using cassandra client's session.
  * Token ranges are cached to avoid making dns calls when cluster topology has not changed.
  */
-@Singleton
 public class CassandraClientTokenRingProvider extends TokenRingProvider implements LocalTokenRangesProvider
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(CassandraClientTokenRingProvider.class);

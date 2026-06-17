@@ -53,20 +53,19 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-
       - name: Get version
         id: version
         run: |
           VERSION=$(grep "^version=" gradle.properties | cut -d'=' -f2)
           COMMIT_SHORT=$(git rev-parse --short HEAD)
           BUILD_DATE=$(date -u +"%Y%m%d")
+          IMAGE_CREATED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           TEST_VERSION="${VERSION}-test-${BUILD_DATE}-${COMMIT_SHORT}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "test_version=$TEST_VERSION" >> $GITHUB_OUTPUT
           echo "commit_short=$COMMIT_SHORT" >> $GITHUB_OUTPUT
           echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+          echo "image_created=$IMAGE_CREATED" >> $GITHUB_OUTPUT
           echo "Building test artifact version: $TEST_VERSION"
 
       - name: Build distribution tarball
@@ -83,12 +82,19 @@ jobs:
           echo "Created test artifact tarball: $TEST_NAME"
           ls -lh "$TEST_NAME"
 
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
       - name: Build and push Docker image (latest tag)
         run: |
           ./gradlew :server:jib \
             -Djib.to.image=ghcr.io/apache/cassandra-sidecar:latest \
             -Djib.to.auth.username=${{ github.actor }} \
             -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
+            "-Doci.image.revision=${{ github.sha }}" \
+            "-Doci.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            "-Doci.image.created=${{ steps.version.outputs.image_created }}" \
+            "-Doci.image.version=${{ steps.version.outputs.version }}" \
             --stacktrace
         env:
           SKIP_SIGNING: true

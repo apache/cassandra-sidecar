@@ -325,8 +325,11 @@ access_control:
 driver_parameters:
   contact_points:
     - "127.0.0.1:9042"
-  username: cassandra
-  password: cassandra
+  auth_provider:
+    class_name: org.apache.cassandra.sidecar.cluster.auth.ConfigProvider
+    parameters:
+      username: cassandra
+      password: cassandra
   ssl:
     enabled:  false
     keystore:
@@ -434,6 +437,16 @@ cassandra_input_validation:
   allowed_chars_for_quoted_name: "[a-zA-Z_0-9]{1,48}"
   allowed_chars_for_component_name: "[a-zA-Z0-9_-]+(\\.db|\\.cql|\\.json|\\.crc32|TOC\\.txt)"
   allowed_chars_for_restricted_component_name: "[a-zA-Z0-9_-]+(\\.db|TOC\\.txt)"
+  # Pattern used to validate snapshot names. The default below matches the snapshot name
+  # validation Cassandra adopted in CASSANDRA-21389, so that snapshots accepted by Sidecar
+  # are also accepted by Cassandra.
+  #
+  # Prior to CASSANDRA-21389, Cassandra only rejected snapshot names containing the path
+  # separator or a null character. To preserve that permissive behavior, set this pattern
+  # to ".*" and use the RegexBasedCassandraInputValidator implementation; the
+  # FastCassandraInputValidator ignores this setting and always enforces the
+  # CASSANDRA-21389 rules.
+  allowed_chars_for_snapshot_name: "[a-zA-Z0-9_.+-]{1,255}"
 
 blob_restore:
   job_discovery_active_loop_delay: 5m

@@ -253,7 +253,8 @@ public abstract class RangeManager implements Handler<Message<Object>>
             }
             else
             {
-                LOGGER.warn("Failed to release ownership of instance primary range host={} port={} ranges='{}'", instance.hostname(), instance.port(), primaryRanges);
+                LOGGER.warn("Failed to release ownership of instance primary range host={} port={} ranges='{}'",
+                            instance.hostname(), instance.port(), primaryRanges);
             }
         })
         .onFailure(throwable -> LOGGER.warn("Error attempting to release range ownership", throwable));
@@ -286,7 +287,8 @@ public abstract class RangeManager implements Handler<Message<Object>>
             }
             else
             {
-                LOGGER.warn("Failed to gain ownership of instance primary range host={} port={} ranges='{}'", instance.hostname(), instance.port(), primaryRanges);
+                LOGGER.warn("Failed to gain ownership of instance primary range host={} port={} ranges='{}'",
+                            instance.hostname(), instance.port(), primaryRanges);
             }
         })
         .onFailure(throwable -> LOGGER.warn("Error attempting to gain range ownership", throwable));

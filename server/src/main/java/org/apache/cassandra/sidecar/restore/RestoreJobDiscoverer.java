@@ -628,6 +628,43 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         }
     }
 
+    /**
+     * Immediately processes a restore job without waiting for the next discovery loop iteration.
+     * Called by UpdateRestoreJobHandler after a phase signal (STAGE_READY) is written to DB.
+     * This is safe to call concurrently with the discovery loop — the DB write is the durable
+     * source of truth, and duplicate processing is deduplicated by existing idempotency checks.
+     *
+     * <p>The body is gated by the same {@link #isExecuting} CAS used by
+     * {@link #tryExecuteDiscovery()} so the discovery loop and the wake-up path are mutually
+     * exclusive. The CAS provides the happens-before edge that makes the otherwise non-thread-safe
+     * {@link JobIdsByDay} state safe across both entry points. If a slow-loop pass is already
+     * running when a wake-up arrives, the wake-up is skipped — the slow loop or the next wake-up
+     * will pick the transition up.
+     *
+     * @param restoreJob the restore job to process immediately
+     */
+    public void processJobNow(RestoreJob restoreJob)
+    {
+        // Resolve local DC outside the CAS gate; it can block on JMX/CQL and the assignment itself is atomic.
+        initLocalDatacenterMaybe();
+        if (!isExecuting.compareAndSet(false, true))
+        {
+            LOGGER.debug("Another thread is executing the restore job discovery already. Skipping wake-up. jobId={}",
+                         restoreJob.jobId);
+            return;
+        }
+        try
+        {
+            RestoreJobManagerGroup restoreJobManagers = restoreJobManagerGroupSingleton.get();
+            restoreJobManagers.updateRestoreJob(restoreJob);
+            processSidecarManagedJobMaybe(restoreJob);
+        }
+        finally
+        {
+            isExecuting.set(false);
+        }
+    }
+
     @VisibleForTesting
     boolean hasInflightJobs()
     {

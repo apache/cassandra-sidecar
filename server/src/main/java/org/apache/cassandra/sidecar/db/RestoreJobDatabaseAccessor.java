@@ -121,7 +121,28 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
     throws DataObjectMappingException
     {
         sidecarSchema.ensureInitialized();
-        RestoreJob.Builder updateBuilder = RestoreJob.builder();
+        return update(payload, jobId, RestoreJob.builder());
+    }
+
+    /**
+     * Update fields in the restore job and persist. Returns a complete updated job
+     * built from {@code existingJob} with the fields from {@code payload} applied.
+     *
+     * @param payload fields to be updated
+     * @param existingJob existing restore job to be updated
+     * @return the restore job object built from the existingJob and the updated fields
+     * @throws DataObjectMappingException when secrets json cannot be serialized
+     */
+    public RestoreJob update(UpdateRestoreJobRequestPayload payload, RestoreJob existingJob)
+    throws DataObjectMappingException
+    {
+        sidecarSchema.ensureInitialized();
+        return update(payload, existingJob.jobId, existingJob.unbuild());
+    }
+
+    private RestoreJob update(UpdateRestoreJobRequestPayload payload, UUID jobId, RestoreJob.Builder updateBuilder)
+    throws DataObjectMappingException
+    {
         LocalDate createdAt = RestoreJob.toLocalDate(jobId);
         updateBuilder.createdAt(createdAt)
                      .jobId(jobId);

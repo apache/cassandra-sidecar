@@ -1,6 +1,22 @@
+0.5.0
+-----
+ * RPM package is created with wrong version (CASSSIDECAR-472)
+ * Define storage provider interface and Cassandra implementation to support durable job tracking (CASSSIDECAR-373)
+ * Validate snapshot name during list snapshot (CASSSIDECAR-461)
+
 0.4.0
 -----
  * Fix restore job failing with "Keyspace does not exist" for quoted mixed-case keyspace names (CASSSIDECAR-475)
+ * Ability to load Cassandra connection secrets from filesystem (CASSSIDECAR-407)
+ * Sidecar should wake up immediately on the instance receiving a phase signal instead of waiting for the discovery loop (CASSSIDECAR-454)
+ * Fix schema initialization race, CI test reporting, and build stability (CASSSIDECAR-468)
+ * Add FileBasedConfigurationProvider for file-based overlay persistence (CASSSIDECAR-426)
+ * Avoid blocking the event loop in CdcPublisher event-bus handler (CASSSIDECAR-452)
+ * Added validations for Live migration configuration (CASSSIDECAR-470)
+ * Route CDC events to topics by corresponding topic format configuration (CASSSIDECAR-453)
+ * Add Docker Compose setup for local CDC demo (Cassandra → Sidecar → Kafka) (CASSSIDECAR-419)
+ * Scope all CDC dependencies exclusively to CdcModule (CASSSIDECAR-447)
+ * Add ConfigurationProvider interfaces for pluggable overlay storage (CASSSIDECAR-424)
  * Refactor OperationalJob to have data separate from execution logic (CASSSIDECAR-460)
  * Sidecar’s CassandraBridgeFactory FQCN colliding with the Cassandra analytics class (CASSSIDECAR-467)
  * Fix ON_CDC_CACHE_WARMED_UP not fired when schema publisher fails (CASSSIDECAR-459)

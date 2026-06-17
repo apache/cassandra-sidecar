@@ -80,7 +80,7 @@ class MostReplicatedKeyspaceTokenZeroElectorateMembershipIntegrationTest
     private static final SidecarConfigurationImpl CONFIG = new SidecarConfigurationImpl();
     Vertx vertx = Vertx.vertx();
     DriverUtils driverUtils = new DriverUtils();
-    TableSchemaFetcher tableSchemaFetcher = new SidecarSchema(vertx, CONFIG, new SidecarInternalKeyspace(CONFIG));
+    TableSchemaFetcher tableSchemaFetcher = new SidecarSchema(CONFIG, new SidecarInternalKeyspace(CONFIG));
     CassandraVersionProvider cassandraVersionProvider = TestUtils.cassandraVersionProvider(DnsResolvers.DEFAULT, tableSchemaFetcher);
     MetricRegistryFactory metricRegistryProvider = new MetricRegistryFactory("cassandra_sidecar", List.of(), List.of());
 

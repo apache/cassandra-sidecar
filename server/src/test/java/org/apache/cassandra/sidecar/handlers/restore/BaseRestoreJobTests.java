@@ -36,6 +36,7 @@ import com.codahale.metrics.SharedMetricRegistries;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
@@ -73,12 +74,14 @@ import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobFatalException;
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 import org.apache.cassandra.sidecar.handlers.restore.BaseRestoreJobTests.TestModuleOverride.TestRestoreJobDatabaseAccessor;
+import org.apache.cassandra.sidecar.handlers.restore.BaseRestoreJobTests.TestModuleOverride.TestRestoreJobDiscoverer;
 import org.apache.cassandra.sidecar.handlers.restore.BaseRestoreJobTests.TestModuleOverride.TestRestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.handlers.restore.BaseRestoreJobTests.TestModuleOverride.TestRestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.handlers.restore.BaseRestoreJobTests.TestModuleOverride.TestRestoreSliceDatabaseAccessor;
 import org.apache.cassandra.sidecar.handlers.restore.BaseRestoreJobTests.TestModuleOverride.TestRingTopologyRefresher;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
+import org.apache.cassandra.sidecar.restore.RestoreJobDiscoverer;
 import org.apache.cassandra.sidecar.restore.RestoreJobManagerGroup;
 import org.apache.cassandra.sidecar.restore.RestoreJobProgressTracker;
 import org.apache.cassandra.sidecar.restore.RestoreProcessor;
@@ -105,6 +108,7 @@ public abstract class BaseRestoreJobTests
     protected TestRestoreSliceDatabaseAccessor testRestoreSlices;
     protected TestRestoreRangeDatabaseAccessor testRestoreRanges;
     protected TestRestoreJobManagerGroup testRestoreJobManagerGroup;
+    protected TestRestoreJobDiscoverer testRestoreJobDiscoverer;
     protected TestRingTopologyRefresher testRingTopologyRefresher;
 
     @BeforeEach
@@ -123,6 +127,7 @@ public abstract class BaseRestoreJobTests
         testRestoreSlices = (TestRestoreSliceDatabaseAccessor) injector.getInstance(RestoreSliceDatabaseAccessor.class);
         testRestoreRanges = (TestRestoreRangeDatabaseAccessor) injector.getInstance(RestoreRangeDatabaseAccessor.class);
         testRestoreJobManagerGroup = (TestRestoreJobManagerGroup) injector.getInstance(RestoreJobManagerGroup.class);
+        testRestoreJobDiscoverer = (TestRestoreJobDiscoverer) injector.getInstance(RestoreJobDiscoverer.class);
         testRingTopologyRefresher = (TestRingTopologyRefresher) injector.getInstance(RingTopologyRefresher.class);
         server.start()
               .onSuccess(s -> context.completeNow())
@@ -267,6 +272,13 @@ public abstract class BaseRestoreJobTests
             }
 
             @Override
+            public RestoreJob update(UpdateRestoreJobRequestPayload payload,
+                                     RestoreJob existingJob)
+            {
+                return updateFunc.apply(payload);
+            }
+
+            @Override
             public void abort(UUID jobId, String reason)
             {
                 // do nothing
@@ -351,6 +363,35 @@ public abstract class BaseRestoreJobTests
             }
         }
 
+        static class TestRestoreJobDiscoverer extends RestoreJobDiscoverer
+        {
+            Consumer<RestoreJob> processJobNowCallback;
+
+            public TestRestoreJobDiscoverer(SidecarConfiguration config,
+                                            SidecarSchema sidecarSchema,
+                                            RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
+                                            RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor,
+                                            RestoreRangeDatabaseAccessor restoreRangeDatabaseAccessor,
+                                            Provider<RestoreJobManagerGroup> restoreJobManagerGroupProvider,
+                                            InstanceMetadataFetcher instanceMetadataFetcher,
+                                            RingTopologyRefresher ringTopologyRefresher,
+                                            SidecarMetrics metrics)
+            {
+                super(config, sidecarSchema, restoreJobDatabaseAccessor, restoreSliceDatabaseAccessor,
+                      restoreRangeDatabaseAccessor, restoreJobManagerGroupProvider, instanceMetadataFetcher,
+                      ringTopologyRefresher, metrics);
+            }
+
+            @Override
+            public void processJobNow(RestoreJob restoreJob)
+            {
+                if (processJobNowCallback != null)
+                {
+                    processJobNowCallback.accept(restoreJob);
+                }
+            }
+        }
+
         static class TestRingTopologyRefresher extends RingTopologyRefresher
         {
             Supplier<TokenRangeReplicasResponse> topologySupplier;
@@ -400,6 +441,24 @@ public abstract class BaseRestoreJobTests
                                                   instancesMetadata,
                                                   executorPools,
                                                   restoreProcessor);
+        }
+
+        @Provides
+        @Singleton
+        public RestoreJobDiscoverer restoreJobDiscoverer(SidecarConfiguration config,
+                                                         SidecarSchema sidecarSchema,
+                                                         RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
+                                                         RestoreSliceDatabaseAccessor restoreSliceDatabaseAccessor,
+                                                         RestoreRangeDatabaseAccessor restoreRangeDatabaseAccessor,
+                                                         Provider<RestoreJobManagerGroup> restoreJobManagerGroupProvider,
+                                                         InstanceMetadataFetcher instanceMetadataFetcher,
+                                                         RingTopologyRefresher ringTopologyRefresher,
+                                                         SidecarMetrics metrics)
+        {
+            return new TestRestoreJobDiscoverer(config, sidecarSchema, restoreJobDatabaseAccessor,
+                                                restoreSliceDatabaseAccessor, restoreRangeDatabaseAccessor,
+                                                restoreJobManagerGroupProvider, instanceMetadataFetcher,
+                                                ringTopologyRefresher, metrics);
         }
 
         @Provides

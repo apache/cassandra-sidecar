@@ -25,7 +25,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoMap;
-import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
@@ -49,8 +48,7 @@ public class SidecarSchemaModule extends AbstractModule
 
     @Provides
     @Singleton
-    public SidecarSchema sidecarSchema(Vertx vertx,
-                                       SidecarConfiguration configuration,
+    public SidecarSchema sidecarSchema(SidecarConfiguration configuration,
                                        MultiBindingTypeResolver<TableSchema> resolver)
     {
         SidecarInternalKeyspace sidecarInternalKeyspace = new SidecarInternalKeyspace(configuration);
@@ -66,7 +64,7 @@ public class SidecarSchemaModule extends AbstractModule
                 throw new RuntimeException("Failed to register table schema: " + tableSchema, cause);
             }
         });
-        return new SidecarSchema(vertx, configuration, sidecarInternalKeyspace);
+        return new SidecarSchema(configuration, sidecarInternalKeyspace);
     }
 
     @Provides
@@ -88,6 +86,7 @@ public class SidecarSchemaModule extends AbstractModule
                                             cqlSessionProvider,
                                             sidecarSchema.sidecarInternalKeyspace(),
                                             sidecarMetrics.server().schema(),
+                                            sidecarSchema,
                                             clusterLease);
     }
 }

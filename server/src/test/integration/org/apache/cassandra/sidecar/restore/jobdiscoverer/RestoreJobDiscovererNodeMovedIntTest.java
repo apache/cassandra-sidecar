@@ -120,13 +120,18 @@ class RestoreJobDiscovererNodeMovedIntTest extends IntegrationTestBase
                                                new TokenRange(0, 1000),
                                                new TokenRange(2000, Long.MAX_VALUE)));
 
-        // assert that no restore ranges are create
+        // assert that the expected restore range is created.
+        // Wrapped in loopAssert because the STAGE_READY PATCH triggers an asynchronous wake-up
+        // (CASSSIDECAR-454) that races on isExecuting with the synchronous tryExecuteDiscovery above;
+        // ranges may not be visible immediately after either path returns.
         RestoreRangeDatabaseAccessor rangeDatabaseAccessor = injector.getInstance(RestoreRangeDatabaseAccessor.class);
-        List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
-        assertThat(ranges)
-        .describedAs("node 1 and only node 1 should create the restore range")
-        .hasSize(1);
-        assertThat(ranges.get(0).tokenRange()).isEqualTo(new TokenRange(1000, 1600));
+        loopAssert(10, 500, () -> {
+            List<RestoreRange> ranges = rangeDatabaseAccessor.findAll(jobId, bucketId);
+            assertThat(ranges)
+            .describedAs("node 1 and only node 1 should create the restore range")
+            .hasSize(1);
+            assertThat(ranges.get(0).tokenRange()).isEqualTo(new TokenRange(1000, 1600));
+        });
 
         // Move token
         IInstance movingNode = cluster.get(2);

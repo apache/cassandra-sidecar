@@ -54,6 +54,9 @@ import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.CQLSessionProvider;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
+import org.apache.cassandra.sidecar.db.schema.ActiveClusterOpsSchema;
+import org.apache.cassandra.sidecar.db.schema.ClusterOpsNodeStateSchema;
+import org.apache.cassandra.sidecar.db.schema.ClusterOpsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreJobsSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreRangesSchema;
 import org.apache.cassandra.sidecar.db.schema.RestoreSlicesSchema;
@@ -133,7 +136,7 @@ public class SidecarSchemaTest
     {
         sidecarSchemaInitializer.execute(Promise.promise());
         loopAssert(10, 500, () -> {
-            assertThat(interceptedExecStmts.size()).isEqualTo(9);
+            assertThat(interceptedExecStmts.size()).isEqualTo(12);
             assertThat(interceptedExecStmts.get(0)).as("Create keyspace should be executed the first")
                                                    .contains("CREATE KEYSPACE IF NOT EXISTS sidecar_internal");
             assertThat(interceptedExecStmts).as("Create table should be executed for job table")
@@ -152,6 +155,12 @@ public class SidecarSchemaTest
                                             .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.configs"));
             assertThat(interceptedExecStmts).as("Create table should be executed for sidecar_lease_v1 table")
                                             .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.sidecar_lease_v1"));
+            assertThat(interceptedExecStmts).as("Create table should be executed for cluster_ops table")
+                                            .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.cluster_ops"));
+            assertThat(interceptedExecStmts).as("Create table should be executed for active_cluster_ops table")
+                                            .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.active_cluster_ops"));
+            assertThat(interceptedExecStmts).as("Create table should be executed for cluster_ops_node_state table")
+                                            .anyMatch(stmt -> stmt.contains("CREATE TABLE IF NOT EXISTS sidecar_internal.cluster_ops_node_state"));
 
             List<String> expectedPrepStatements = Arrays.asList(
             "INSERT INTO sidecar_internal.restore_job_v6 (  created_at,  job_id,  keyspace_name,  table_name,  " +
@@ -225,7 +234,23 @@ public class SidecarSchemaTest
             "SELECT table_schema FROM sidecar_internal.table_schema_history WHERE keyspace_name = ? AND table_name = ? AND version = ?",
 
             "INSERT INTO sidecar_internal.cdc_state_v2 (job_id, split, start, end, state) VALUES (?, ?, ?, ?, ?) USING TIMESTAMP ?",
-            "SELECT start, end, state FROM sidecar_internal.cdc_state_v2 WHERE job_id = ? AND split = ?"
+            "SELECT start, end, state FROM sidecar_internal.cdc_state_v2 WHERE job_id = ? AND split = ?",
+
+            "INSERT INTO sidecar_internal.cluster_ops (  cluster_name,  operation_id,  operation_type,  status,  start_time,  last_update,  failure_reason,  node_execution_order,  operation_metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "SELECT cluster_name, operation_id, operation_type, status, start_time, last_update, failure_reason, node_execution_order, operation_metadata FROM sidecar_internal.cluster_ops WHERE cluster_name = ? AND operation_id = ?",
+            "UPDATE sidecar_internal.cluster_ops SET status = ?, last_update = ? WHERE cluster_name = ? AND operation_id = ? AND operation_type = ?",
+            "UPDATE sidecar_internal.cluster_ops SET status = ?, last_update = ?, start_time = ? WHERE cluster_name = ? AND operation_id = ? AND operation_type = ?",
+            "UPDATE sidecar_internal.cluster_ops SET status = ?, last_update = ?, failure_reason = ? WHERE cluster_name = ? AND operation_id = ? AND operation_type = ?",
+            "SELECT cluster_name, operation_id, operation_type, status, start_time, last_update, failure_reason, node_execution_order, operation_metadata FROM sidecar_internal.cluster_ops WHERE cluster_name = ? LIMIT ?",
+
+            "INSERT INTO sidecar_internal.active_cluster_ops (cluster_name, datacenter, operation_type, operation_id) VALUES (?, ?, ?, ?) IF NOT EXISTS",
+            "SELECT operation_type, operation_id FROM sidecar_internal.active_cluster_ops WHERE cluster_name = ? AND datacenter = ?",
+            "SELECT operation_id FROM sidecar_internal.active_cluster_ops WHERE cluster_name = ? AND datacenter = ? AND operation_type = ?",
+            "DELETE FROM sidecar_internal.active_cluster_ops WHERE cluster_name = ? AND datacenter = ? AND operation_type = ? IF operation_id = ?",
+
+            "INSERT INTO sidecar_internal.cluster_ops_node_state (  cluster_name,  operation_id,  node_id,  node_status) VALUES (?, ?, ?, ?)",
+            "SELECT node_status FROM sidecar_internal.cluster_ops_node_state WHERE cluster_name = ? AND operation_id = ? AND node_id = ?",
+            "SELECT node_id, node_status FROM sidecar_internal.cluster_ops_node_state WHERE cluster_name = ? AND operation_id = ?"
             );
 
             assertThat(interceptedPrepStmts).as("Intercepted statements match expected statements")
@@ -238,6 +263,9 @@ public class SidecarSchemaTest
             assertTableSchema(sidecarSchema.tableSchema(SidecarLeaseSchema.class), "sidecar_internal.sidecar_lease_v1");
             assertTableSchema(sidecarSchema.tableSchema(SidecarRolePermissionsSchema.class), "sidecar_internal.role_permissions_v1");
             assertTableSchema(sidecarSchema.tableSchema(SystemAuthSchema.class), "system_auth");
+            assertTableSchema(sidecarSchema.tableSchema(ClusterOpsSchema.class), "sidecar_internal.cluster_ops");
+            assertTableSchema(sidecarSchema.tableSchema(ActiveClusterOpsSchema.class), "sidecar_internal.active_cluster_ops");
+            assertTableSchema(sidecarSchema.tableSchema(ClusterOpsNodeStateSchema.class), "sidecar_internal.cluster_ops_node_state");
         });
     }
 

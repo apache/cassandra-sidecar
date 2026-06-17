@@ -36,7 +36,7 @@ echo "${JAVA_HOME}"
 # Setting the env var to build with jdk11.
 export CASSANDRA_USE_JDK11=true
 ant realclean
-ant dtest-jar -Dno-checkstyle=true
+ant dtest-jar -Dno-checkstyle=true -Drat.skip=true
 
 # Install the version that will be shaded
 "${SCRIPT_DIR}/mvnw" install:install-file                            \

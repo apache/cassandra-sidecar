@@ -35,6 +35,7 @@ import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationC
 import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_ALLOWED_CHARS_FOR_NAME;
 import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME;
 import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME;
+import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_ALLOWED_CHARS_FOR_SNAPSHOT_NAME;
 import static org.apache.cassandra.sidecar.config.yaml.CassandraInputValidationConfigurationImpl.DEFAULT_FORBIDDEN_KEYSPACES;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -62,7 +63,8 @@ class FastCassandraInputValidatorTest extends CassandraInputValidatorTest
                                                                                                      DEFAULT_ALLOWED_CHARS_FOR_NAME,
                                                                                                      DEFAULT_ALLOWED_CHARS_FOR_QUOTED_NAME,
                                                                                                      DEFAULT_ALLOWED_CHARS_FOR_COMPONENT_NAME,
-                                                                                                     DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME);
+                                                                                                     DEFAULT_ALLOWED_CHARS_FOR_RESTRICTED_COMPONENT_NAME,
+                                                                                                     DEFAULT_ALLOWED_CHARS_FOR_SNAPSHOT_NAME);
         FastCassandraInputValidator validator = new FastCassandraInputValidator(config);
         assertThat(validator.validTerminations).isEqualTo(List.of(".abc", ".def"));
         assertThat(validator.validRestrictedTerminations).isEqualTo(List.of(".xml"));

@@ -19,13 +19,14 @@
 package org.apache.cassandra.sidecar.config.yaml;
 
 import java.net.InetSocketAddress;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.DriverConfiguration;
+import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 import org.apache.cassandra.sidecar.config.SslConfiguration;
 
 /**
@@ -51,6 +52,9 @@ public class DriverConfigurationImpl implements DriverConfiguration
     @JsonProperty("password")
     private final String password;
 
+    @JsonProperty("auth_provider")
+    private final ParameterizedClassConfiguration authProvider;
+
     @JsonProperty("ssl")
     private final SslConfiguration sslConfiguration;
 
@@ -59,24 +63,19 @@ public class DriverConfigurationImpl implements DriverConfiguration
 
     public DriverConfigurationImpl()
     {
-        this(Collections.emptyList(), null, DEFAULT_NUM_CONNECTIONS, null, null, null, DEFAULT_UNSUPPORTED_TABLE_SCHEMA_REFRESH_TIME);
+        this(builder());
     }
 
-    public DriverConfigurationImpl(List<InetSocketAddress> contactPoints,
-                                   String localDc,
-                                   int numConnections,
-                                   String username,
-                                   String password,
-                                   SslConfiguration sslConfiguration,
-                                   SecondBoundConfiguration unsupportedTableSchemaRefreshTime)
+    private DriverConfigurationImpl(Builder builder)
     {
-        this.contactPoints = contactPoints;
-        this.localDc = localDc;
-        this.numConnections = numConnections;
-        this.username = username;
-        this.password = password;
-        this.sslConfiguration = sslConfiguration;
-        this.unsupportedTableSchemaRefreshTime = unsupportedTableSchemaRefreshTime;
+        contactPoints = builder.contactPoints;
+        localDc = builder.localDc;
+        numConnections = builder.numConnections;
+        username = builder.username;
+        password = builder.password;
+        authProvider = builder.authProvider;
+        sslConfiguration = builder.sslConfiguration;
+        unsupportedTableSchemaRefreshTime = builder.unsupportedTableSchemaRefreshTime;
     }
 
     /**
@@ -112,6 +111,7 @@ public class DriverConfigurationImpl implements DriverConfiguration
     /**
      * {@inheritDoc}
      */
+    @Deprecated
     @Override
     @JsonProperty("username")
     public String username()
@@ -122,11 +122,22 @@ public class DriverConfigurationImpl implements DriverConfiguration
     /**
      * {@inheritDoc}
      */
+    @Deprecated
     @Override
     @JsonProperty("password")
     public String password()
     {
         return password;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty("auth_provider")
+    public ParameterizedClassConfiguration authProvider()
+    {
+        return authProvider;
     }
 
     /**
@@ -147,5 +158,154 @@ public class DriverConfigurationImpl implements DriverConfiguration
     public SecondBoundConfiguration unsupportedTableSchemaRefreshTime()
     {
         return unsupportedTableSchemaRefreshTime;
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    /**
+     * {@code DriverConfigurationImpl} builder static inner class.
+     */
+    public static final class Builder implements DataObjectBuilder<Builder, DriverConfigurationImpl>
+    {
+        private List<InetSocketAddress> contactPoints = List.of();
+        private String localDc;
+        private int numConnections = DEFAULT_NUM_CONNECTIONS;
+        private String username;
+        private String password;
+        private ParameterizedClassConfiguration authProvider;
+        private SslConfiguration sslConfiguration;
+        private SecondBoundConfiguration unsupportedTableSchemaRefreshTime = DEFAULT_UNSUPPORTED_TABLE_SCHEMA_REFRESH_TIME;
+
+        private Builder()
+        {
+        }
+
+        @Override
+        public Builder self()
+        {
+            return this;
+        }
+
+        /**
+         * Sets the {@code contactPoints} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param contactPoints the {@code contactPoints} to set
+         * @return a reference to this Builder
+         */
+        public Builder contactPoints(List<InetSocketAddress> contactPoints)
+        {
+            return update(b -> b.contactPoints = contactPoints);
+        }
+
+        /**
+         * Sets the {@code localDc} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param localDc the {@code localDc} to set
+         * @return a reference to this Builder
+         */
+        public Builder localDc(String localDc)
+        {
+            return update(b -> b.localDc = localDc);
+        }
+
+        /**
+         * Sets the {@code numConnections} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param numConnections the {@code numConnections} to set
+         * @return a reference to this Builder
+         */
+        public Builder numConnections(int numConnections)
+        {
+            return update(b -> b.numConnections = numConnections);
+        }
+
+        /**
+         * Sets the {@code username} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param username the {@code username} to set
+         * @return a reference to this Builder
+         * @deprecated use {@link #authProvider(ParameterizedClassConfiguration)} to supply credentials instead
+         */
+        @Deprecated
+        public Builder username(String username)
+        {
+            return update(b -> b.username = username);
+        }
+
+        /**
+         * Sets the {@code password} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param password the {@code password} to set
+         * @return a reference to this Builder
+         * @deprecated use {@link #authProvider(ParameterizedClassConfiguration)} to supply credentials instead
+         */
+        @Deprecated
+        public Builder password(String password)
+        {
+            return update(b -> b.password = password);
+        }
+
+        /**
+         * Sets the {@code authProvider} and returns a reference to this Builder enabling method chaining.
+         *
+         * <p>The auth provider is the preferred way to configure credentials, replacing the deprecated
+         * {@link #username(String)} and {@link #password(String)} setters. For example:
+         *
+         * <pre>{@code
+         * ParameterizedClassConfiguration authProvider =
+         *     new ParameterizedClassConfigurationImpl("org.apache.cassandra.sidecar.cluster.auth.ConfigProvider",
+         *                                             Map.of(org.apache.cassandra.sidecar.cluster.auth.ConfigProvider.USERNAME_PARAM, "cassandra",
+         *                                                    org.apache.cassandra.sidecar.cluster.auth.ConfigProvider.PASSWORD_PARAM, "cassandra"));
+         *
+         * DriverConfiguration driverConfiguration = DriverConfigurationImpl.builder()
+         *                                                                  .authProvider(authProvider)
+         *                                                                  ...
+         *                                                                  .build();
+         * }</pre>
+         *
+         * @param authProvider the {@code authProvider} to set
+         * @return a reference to this Builder
+         */
+        public Builder authProvider(ParameterizedClassConfiguration authProvider)
+        {
+            return update(b -> b.authProvider = authProvider);
+        }
+
+        /**
+         * Sets the {@code sslConfiguration} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param sslConfiguration the {@code sslConfiguration} to set
+         * @return a reference to this Builder
+         */
+        public Builder sslConfiguration(SslConfiguration sslConfiguration)
+        {
+            return update(b -> b.sslConfiguration = sslConfiguration);
+        }
+
+        /**
+         * Sets the {@code unsupportedTableSchemaRefreshTime} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param unsupportedTableSchemaRefreshTime the {@code unsupportedTableSchemaRefreshTime} to set
+         * @return a reference to this Builder
+         */
+        public Builder unsupportedTableSchemaRefreshTime(SecondBoundConfiguration unsupportedTableSchemaRefreshTime)
+        {
+            return update(b -> b.unsupportedTableSchemaRefreshTime = unsupportedTableSchemaRefreshTime);
+        }
+
+        /**
+         * Returns a {@code DriverConfigurationImpl} built from the parameters previously set.
+         *
+         * @return a {@code DriverConfigurationImpl} built with parameters of this {@code DriverConfigurationImpl.Builder}
+         */
+        @Override
+        public DriverConfigurationImpl build()
+        {
+            return new DriverConfigurationImpl(this);
+        }
     }
 }

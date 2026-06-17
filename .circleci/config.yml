@@ -48,6 +48,27 @@ commands:
           sudo bash -c 'for i in {2..20}; do echo 127.0.0.${i} localhost${i} >> /etc/hosts; done'
           cat /etc/hosts
 
+  restore_gradle_cache:
+    steps:
+      - run:
+          name: Compute Gradle cache key
+          command: |
+            { find . -type f \( -name 'build.gradle' -o -name 'settings.gradle' -o -name 'gradle.properties' \) -not -path '*/build/*' -not -path './.gradle/*' | sort | xargs sha256sum;
+              sha256sum gradle/wrapper/gradle-wrapper.properties; } > .gradle-cache-key
+            cat .gradle-cache-key
+      - restore_cache:
+          keys:
+            - gradle-v1-{{ checksum ".gradle-cache-key" }}
+            - gradle-v1-
+
+  save_gradle_cache:
+    steps:
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-v1-{{ checksum ".gradle-cache-key" }}
+
 jobs:
   # Runs java 8 tests on a docker image
   # We only produce client artifacts for java 8 builds
@@ -80,9 +101,11 @@ jobs:
       - setup_remote_docker
       - install_common
       - checkout
+      - restore_gradle_cache
       - attach_workspace:
           at: dtest-jars
       - run: ./gradlew build -x integrationTest --stacktrace
+      - save_gradle_cache
 
       - store_artifacts:
           path: build/reports
@@ -125,10 +148,12 @@ jobs:
     steps:
       - install_common
       - checkout
+      - restore_gradle_cache
       - attach_workspace:
           at: dtest-jars
       - run: ./scripts/install-shaded-dtest-jar-local.sh
       - run: ./gradlew --no-daemon --max-workers=2 -PdtestVersion=4.0.16 -Dcassandra.sidecar.versions_to_test="4.0" checkstyleIntegrationTest integrationTestLightWeight --stacktrace
+      - save_gradle_cache
 
       - store_artifacts:
           path: build/reports
@@ -152,12 +177,14 @@ jobs:
       - install_common
       - setup_remote_docker
       - checkout
+      - restore_gradle_cache
       - attach_workspace:
           at: dtest-jars
       - attach_workspace:
           at: cassandra-tarballs
       - run: ./scripts/install-shaded-dtest-jar-local.sh
       - run: ./gradlew --no-daemon -PdtestVersion=4.0.16 -PtarballVersion=4.0 -Dcassandra.sidecar.versions_to_test="4.0" jar integrationTestHeavyWeight --stacktrace
+      - save_gradle_cache
 
       - store_artifacts:
           path: build/reports
@@ -180,10 +207,12 @@ jobs:
     steps:
       - install_common
       - checkout
+      - restore_gradle_cache
       - attach_workspace:
           at: dtest-jars
       - run: ./scripts/install-shaded-dtest-jar-local.sh
       - run: ./gradlew --no-daemon --max-workers=2 -PdtestVersion=5.0.3 -Dcassandra.sidecar.versions_to_test="5.0" checkstyleIntegrationTest integrationTestLightWeight --stacktrace
+      - save_gradle_cache
 
       - store_artifacts:
           path: build/reports
@@ -207,12 +236,14 @@ jobs:
       - install_common
       - setup_remote_docker
       - checkout
+      - restore_gradle_cache
       - attach_workspace:
           at: dtest-jars
       - attach_workspace:
           at: cassandra-tarballs
       - run: ./scripts/install-shaded-dtest-jar-local.sh
       - run: ./gradlew --no-daemon -PdtestVersion=5.0.3 -PtarballVersion=5.0 -Dcassandra.sidecar.versions_to_test="5.0" jar integrationTestHeavyWeight --stacktrace
+      - save_gradle_cache
 
       - store_artifacts:
           path: build/reports
@@ -235,10 +266,12 @@ jobs:
     steps:
       - install_common
       - checkout
+      - restore_gradle_cache
       - attach_workspace:
           at: dtest-jars
       - run: ./scripts/install-shaded-dtest-jar-local.sh
       - run: ./gradlew --no-daemon --max-workers=2 -PdtestVersion=5.1 -Dcassandra.sidecar.versions_to_test="5.1" checkstyleIntegrationTest integrationTestLightWeight --stacktrace
+      - save_gradle_cache
 
       - store_artifacts:
           path: build/reports
@@ -262,12 +295,14 @@ jobs:
       - install_common
       - setup_remote_docker
       - checkout
+      - restore_gradle_cache
       - attach_workspace:
           at: dtest-jars
       - attach_workspace:
           at: cassandra-tarballs
       - run: ./scripts/install-shaded-dtest-jar-local.sh
       - run: ./gradlew --no-daemon -PdtestVersion=5.1 -PtarballVersion=5.1 -Dcassandra.sidecar.versions_to_test="5.1" jar integrationTestHeavyWeight --stacktrace
+      - save_gradle_cache
 
       - store_artifacts:
           path: build/reports
@@ -287,29 +322,81 @@ jobs:
     steps:
       - install_common
       - checkout
+      - restore_gradle_cache
       - run: sudo apt --fix-broken install
-      - run: ./gradlew --info clean buildDeb
+      - run:
+          name: Build DEB
+          command: |
+            ./gradlew --parallel clean buildDeb \
+              -x test -x integrationTest \
+              -x rat \
+              -x checkstyleMain -x checkstyleTest -x checkstyleTestFixtures \
+              -x spotbugsMain -x spotbugsTest \
+              -x javadoc \
+              -x asciidoctor -x copyDocs
       - run: DEBIAN_FRONTEND=noninteractive sudo apt install -y ./build/distributions/apache-cassandra-sidecar*.deb
       - run: test -f /opt/apache-cassandra-sidecar/bin/cassandra-sidecar
       - run: test -f /opt/apache-cassandra-sidecar/conf/sidecar.yaml
       - run: test -f /opt/apache-cassandra-sidecar/conf/logback.xml
       - run: test -f /opt/apache-cassandra-sidecar/LICENSE.txt
       - run: test -f /opt/apache-cassandra-sidecar/lib/cassandra-sidecar-*.jar
+      - run:
+          name: Verify DEB package version
+          command: |
+            EXPECTED_UPSTREAM=$(grep "^version=" gradle.properties | cut -d'=' -f2 | tr '-' '~')
+            ACTUAL_VERSION=$(dpkg-query -W -f='${Version}' apache-cassandra-sidecar)
+            ACTUAL_UPSTREAM="${ACTUAL_VERSION%-*}"
+            ACTUAL_REVISION="${ACTUAL_VERSION##*-}"
+            echo "DEB: upstream=${ACTUAL_UPSTREAM}, revision=${ACTUAL_REVISION}, expected upstream=${EXPECTED_UPSTREAM}"
+            if [ -z "${ACTUAL_REVISION}" ] || [ "${ACTUAL_REVISION}" = "${ACTUAL_VERSION}" ]; then
+              echo "DEB has no Debian revision — yields trailing '-' style bug"
+              exit 1
+            fi
+            if [ "${ACTUAL_UPSTREAM}" != "${EXPECTED_UPSTREAM}" ]; then
+              echo "DEB upstream version mismatch: expected '${EXPECTED_UPSTREAM}', got '${ACTUAL_UPSTREAM}'"
+              exit 1
+            fi
 
   # ensures we can build and install rpm packages
   rpm_build_install:
     docker:
       - image: cimg/openjdk:11.0
     steps:
-      - run: sudo apt-get update && sudo apt install dnf
+      - run: sudo apt-get update && sudo apt-get install -y dnf rpm
       - checkout
-      - run: ./gradlew -i buildRpm
+      - restore_gradle_cache
+      - run:
+          name: Build RPM
+          command: |
+            ./gradlew --parallel buildRpm \
+              -x test -x integrationTest \
+              -x rat \
+              -x checkstyleMain -x checkstyleTest -x checkstyleTestFixtures \
+              -x spotbugsMain -x spotbugsTest \
+              -x javadoc \
+              -x asciidoctor -x copyDocs
       - run: sudo dnf install -y ./build/distributions/apache-cassandra-sidecar*.rpm
       - run: test -f /opt/apache-cassandra-sidecar/bin/cassandra-sidecar
       - run: test -f /opt/apache-cassandra-sidecar/conf/sidecar.yaml
       - run: test -f /opt/apache-cassandra-sidecar/conf/logback.xml
       - run: test -f /opt/apache-cassandra-sidecar/LICENSE.txt
       - run: test -f /opt/apache-cassandra-sidecar/lib/cassandra-sidecar-*.jar
+      - run:
+          name: Verify RPM package version
+          command: |
+            EXPECTED_VERSION=$(grep "^version=" gradle.properties | cut -d'=' -f2 | tr '-' '~')
+            RPM_FILE=$(ls build/distributions/apache-cassandra-sidecar*.rpm | head -n1)
+            ACTUAL_VERSION=$(rpm -qp --queryformat '%{VERSION}' "${RPM_FILE}")
+            ACTUAL_RELEASE=$(rpm -qp --queryformat '%{RELEASE}' "${RPM_FILE}")
+            echo "RPM: version=${ACTUAL_VERSION}, release=${ACTUAL_RELEASE}, expected=${EXPECTED_VERSION}"
+            if [ -z "${ACTUAL_RELEASE}" ] || [ "${ACTUAL_RELEASE}" = "(none)" ]; then
+              echo "RPM Release is empty — yields trailing '-' in 'yum list'"
+              exit 1
+            fi
+            if [ "${ACTUAL_VERSION}" != "${EXPECTED_VERSION}" ]; then
+              echo "RPM Version mismatch: expected '${EXPECTED_VERSION}', got '${ACTUAL_VERSION}'"
+              exit 1
+            fi
 
   docker_build:
     docker:

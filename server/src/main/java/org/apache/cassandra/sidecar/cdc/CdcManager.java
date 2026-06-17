@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,28 +128,31 @@ public class CdcManager
 
         try
         {
-            ownedRanges.entrySet().stream()
-                   .flatMap(entry ->
-                            entry.getValue().stream().map(range -> {
-                                Integer instanceId = getInstanceId(entry.getKey());
+            for (Map.Entry<String, Set<TokenRange>> entry : ownedRanges.entrySet())
+            {
+                for (TokenRange range : entry.getValue())
+                {
+                    Integer instanceId = getInstanceId(entry.getKey());
 
-                                // Create unique key: "instanceId:rangeStart:rangeEnd"
-                                String uniqueKey = String.format("%d:%s:%s",
-                                                                 instanceId,
-                                                                 range.startAsBigInt(),
-                                                                 range.endAsBigInt());
+                    // Create unique key: "instanceId:rangeStart:rangeEnd"
+                    String uniqueKey = String.format("%d:%s:%s",
+                                                     instanceId,
+                                                     range.startAsBigInt(),
+                                                     range.endAsBigInt());
 
-                                return uniqueCdcConsumers.computeIfAbsent(uniqueKey, k ->
-                                        buildConsumer(conf.jobId(),
-                                                      instanceId,
-                                                      clusterConfigProvider,
-                                                      eventConsumer,
-                                                      schemaSupplier,
-                                                      () -> org.apache.cassandra.bridge.TokenRange.openClosed(range.startAsBigInt(), range.endAsBigInt()),
-                                                      sidecarCdcClient,
-                                                      cdcStats));
-                            }))
-                   .collect(Collectors.toList());
+                    TokenRangeSupplier tokenRangeSupplier = () -> org.apache.cassandra.bridge.TokenRange.openClosed(range.startAsBigInt(),
+                                                                                                                    range.endAsBigInt());
+                    uniqueCdcConsumers.computeIfAbsent(uniqueKey,
+                                                       k -> buildConsumer(conf.jobId(),
+                                                                          instanceId,
+                                                                          clusterConfigProvider,
+                                                                          eventConsumer,
+                                                                          schemaSupplier,
+                                                                          tokenRangeSupplier,
+                                                                          sidecarCdcClient,
+                                                                          cdcStats));
+                }
+            }
 
             entries = new ArrayList<>(uniqueCdcConsumers.values());
             return entries;
