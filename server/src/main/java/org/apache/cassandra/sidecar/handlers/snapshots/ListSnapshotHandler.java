@@ -154,7 +154,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
                      request, remoteAddress, host, context.request().method(), cause);
         if (cause instanceof FileNotFoundException || cause instanceof NoSuchFileException)
         {
-            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
+            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, "The requested snapshot folder was not found. " + request));
         }
         else
         {
