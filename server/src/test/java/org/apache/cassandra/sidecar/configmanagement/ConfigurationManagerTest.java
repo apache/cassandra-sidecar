@@ -23,15 +23,23 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.jetbrains.annotations.NotNull;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -171,6 +179,406 @@ class ConfigurationManagerTest
         ConfigurationOverlaySnapshot second = manager.getEffectiveConfiguration(instance);
 
         assertThat(second).isSameAs(first);
+    }
+
+    @Test
+    void testPatchAddTopLevelKey()
+    {
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        InstanceMetadata instance = mockInstance(1);
+
+        ConfigurationOverlaySnapshot baseEffective = manager.getEffectiveConfiguration(instance);
+        String baseHash = baseEffective.hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/cassandraYaml/concurrent_reads", 64));
+
+        ConfigurationOverlaySnapshot result = manager.patchConfiguration(instance, baseHash, ops);
+
+        assertThat(result.configuration().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(64);
+        assertThat(result.configuration().cassandraYaml().getString("cluster_name")).isEqualTo("Test Cluster");
+        assertThat(result.hash()).startsWith("sha256:");
+        assertThat(result.hash()).isNotEqualTo(baseHash);
+    }
+
+    @Test
+    void testPatchAddJvmOpt()
+    {
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        InstanceMetadata instance = mockInstance(1);
+        String baseHash = manager.getEffectiveConfiguration(instance).hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/extraJvmOpts/-Xmx", "8g"));
+
+        ConfigurationOverlaySnapshot result = manager.patchConfiguration(instance, baseHash, ops);
+
+        assertThat(result.configuration().extraJvmOpts()).containsEntry("-Xmx", "8g");
+    }
+
+    @Test
+    void testPatchRemoveTopLevelKeyFromOverlay()
+    {
+        InstanceMetadata instance = mockInstance(1);
+
+        JsonObject initialYaml = new JsonObject().put("concurrent_reads", 128);
+        CassandraConfigurationOverlay initial = new CassandraConfigurationOverlay(initialYaml, null);
+        provider.storeOverlay(instance, null, new ConfigurationOverlaySnapshot(Instant.now(), initial));
+
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        String effectiveHash = manager.getEffectiveConfiguration(instance).hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.REMOVE,
+                                               "/configuration/cassandraYaml/concurrent_reads", null));
+
+        ConfigurationOverlaySnapshot result = manager.patchConfiguration(instance, effectiveHash, ops);
+
+        // Falls back to base template value
+        assertThat(result.configuration().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(32);
+    }
+
+    @Test
+    void testPatchRemoveTemplateOnlyKeyFails()
+    {
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        InstanceMetadata instance = mockInstance(1);
+        String baseHash = manager.getEffectiveConfiguration(instance).hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.REMOVE,
+                                               "/configuration/cassandraYaml/cluster_name", null));
+
+        assertThatThrownBy(() -> manager.patchConfiguration(instance, baseHash, ops))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("does not exist in overlay");
+    }
+
+    @Test
+    void testPatchReplaceExistingKey()
+    {
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        InstanceMetadata instance = mockInstance(1);
+        String baseHash = manager.getEffectiveConfiguration(instance).hash();
+
+        // concurrent_reads=32 exists in base template
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.REPLACE,
+                                               "/configuration/cassandraYaml/concurrent_reads", 256));
+
+        ConfigurationOverlaySnapshot result = manager.patchConfiguration(instance, baseHash, ops);
+
+        assertThat(result.configuration().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(256);
+    }
+
+    @Test
+    void testPatchReplaceAbsentKeyFails()
+    {
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        InstanceMetadata instance = mockInstance(1);
+        String baseHash = manager.getEffectiveConfiguration(instance).hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.REPLACE,
+                                               "/configuration/cassandraYaml/nonexistent_key", 42));
+
+        assertThatThrownBy(() -> manager.patchConfiguration(instance, baseHash, ops))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("does not exist in effective config");
+    }
+
+    @Test
+    void testPatchTestMatchingValue()
+    {
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        InstanceMetadata instance = mockInstance(1);
+        String baseHash = manager.getEffectiveConfiguration(instance).hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.TEST,
+                                               "/configuration/cassandraYaml/concurrent_reads", 32),
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/cassandraYaml/concurrent_reads", 128));
+
+        ConfigurationOverlaySnapshot result = manager.patchConfiguration(instance, baseHash, ops);
+
+        assertThat(result.configuration().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(128);
+    }
+
+    @Test
+    void testPatchTestMismatchRejectsEntirePatch()
+    {
+        InstanceMetadata instance = mockInstance(1);
+
+        JsonObject initialYaml = new JsonObject().put("concurrent_reads", 64);
+        CassandraConfigurationOverlay initial = new CassandraConfigurationOverlay(initialYaml, null);
+        provider.storeOverlay(instance, null, new ConfigurationOverlaySnapshot(Instant.now(), initial));
+
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        String effectiveHash = manager.getEffectiveConfiguration(instance).hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.TEST,
+                                               "/configuration/cassandraYaml/concurrent_reads", 999),
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/cassandraYaml/memtable_flush_writers", 16));
+
+        assertThatThrownBy(() -> manager.patchConfiguration(instance, effectiveHash, ops))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("Test failed");
+
+        // Verify no mutation occurred
+        ConfigurationOverlaySnapshot current = manager.getEffectiveConfiguration(instance);
+        assertThat(current.configuration().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(64);
+        assertThat(current.configuration().cassandraYaml().containsKey("memtable_flush_writers")).isFalse();
+    }
+
+    @Test
+    void testPatchConflictStaleHash()
+    {
+        InstanceMetadata instance = mockInstance(1);
+
+        JsonObject initialYaml = new JsonObject().put("concurrent_reads", 64);
+        CassandraConfigurationOverlay initial = new CassandraConfigurationOverlay(initialYaml, null);
+        provider.storeOverlay(instance, null, new ConfigurationOverlaySnapshot(Instant.now(), initial));
+
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        String actualHash = manager.getEffectiveConfiguration(instance).hash();
+        String staleHash = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/cassandraYaml/concurrent_reads", 128));
+
+        assertThatThrownBy(() -> manager.patchConfiguration(instance, staleHash, ops))
+                .isInstanceOf(ConfigurationConflictException.class)
+                .satisfies(e -> {
+                    ConfigurationConflictException conflict = (ConfigurationConflictException) e;
+                    assertThat(conflict.expectedHash()).isEqualTo(staleHash);
+                    assertThat(conflict.actualHash()).isEqualTo(actualHash);
+                });
+
+        // Overlay unchanged
+        assertThat(provider.getOverlay(instance).configuration().cassandraYaml().getInteger("concurrent_reads"))
+                .isEqualTo(64);
+    }
+
+    @Test
+    void testPatchStoreOverlayReturnsFalse()
+    {
+        InstanceMetadata instance = mockInstance(1);
+
+        JsonObject initialYaml = new JsonObject().put("concurrent_reads", 64);
+        CassandraConfigurationOverlay initial = new CassandraConfigurationOverlay(initialYaml, null);
+        ConfigurationOverlaySnapshot initialSnapshot = new ConfigurationOverlaySnapshot(Instant.now(), initial);
+
+        ConfigurationProvider rejectingProvider = new ConfigurationProvider()
+        {
+            private ConfigurationOverlaySnapshot stored = initialSnapshot;
+
+            @Override
+            public ConfigurationOverlaySnapshot getOverlay(InstanceMetadata inst)
+            {
+                return stored;
+            }
+
+            @Override
+            public boolean storeOverlay(InstanceMetadata inst, String originalHash,
+                                        ConfigurationOverlaySnapshot newSnapshot)
+            {
+                return false;
+            }
+        };
+
+        ConfigurationManager manager = new ConfigurationManager(rejectingProvider, BASE_TEMPLATE);
+        String effectiveHash = manager.getEffectiveConfiguration(instance).hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/cassandraYaml/concurrent_reads", 128));
+
+        assertThatThrownBy(() -> manager.patchConfiguration(instance, effectiveHash, ops))
+                .isInstanceOf(ConfigurationManagerException.class)
+                .isNotInstanceOf(ConfigurationConflictException.class)
+                .hasMessageContaining("Provider rejected the overlay store unexpectedly");
+    }
+
+    @Test
+    void testPatchStoreOverlayReturnsFalseWithConflict()
+    {
+        InstanceMetadata instance = mockInstance(1);
+
+        JsonObject initialYaml = new JsonObject().put("concurrent_reads", 64);
+        CassandraConfigurationOverlay initial = new CassandraConfigurationOverlay(initialYaml, null);
+        ConfigurationOverlaySnapshot initialSnapshot = new ConfigurationOverlaySnapshot(Instant.now(), initial);
+
+        // Overlay changes between storeOverlay rejection and re-read
+        JsonObject changedYaml = new JsonObject().put("concurrent_reads", 256);
+        CassandraConfigurationOverlay changed = new CassandraConfigurationOverlay(changedYaml, null);
+        ConfigurationOverlaySnapshot changedSnapshot = new ConfigurationOverlaySnapshot(Instant.now(), changed);
+
+        AtomicInteger getOverlayCallCount = new AtomicInteger(0);
+        ConfigurationProvider conflictingProvider = new ConfigurationProvider()
+        {
+            @Override
+            public ConfigurationOverlaySnapshot getOverlay(InstanceMetadata inst)
+            {
+                // First call returns initial, second call (after store rejection) returns changed
+                return getOverlayCallCount.incrementAndGet() <= 1 ? initialSnapshot : changedSnapshot;
+            }
+
+            @Override
+            public boolean storeOverlay(InstanceMetadata inst, String originalHash,
+                                        ConfigurationOverlaySnapshot newSnapshot)
+            {
+                return false;
+            }
+        };
+
+        ConfigurationManager manager = new ConfigurationManager(conflictingProvider, BASE_TEMPLATE);
+        String effectiveHash = manager.getEffectiveConfiguration(instance).hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/cassandraYaml/concurrent_reads", 128));
+
+        assertThatThrownBy(() -> manager.patchConfiguration(instance, effectiveHash, ops))
+                .isInstanceOf(ConfigurationConflictException.class)
+                .satisfies(e -> {
+                    ConfigurationConflictException conflict = (ConfigurationConflictException) e;
+                    assertThat(conflict.expectedHash()).isEqualTo(effectiveHash);
+                    assertThat(conflict.actualHash()).isNotEqualTo(effectiveHash);
+                });
+    }
+
+    @Test
+    void testPatchProviderFailure()
+    {
+        ConfigurationProvider failingProvider = new ConfigurationProvider()
+        {
+            @Override
+            public ConfigurationOverlaySnapshot getOverlay(InstanceMetadata instance)
+            {
+                throw new UncheckedIOException(new IOException("provider unavailable"));
+            }
+
+            @Override
+            public boolean storeOverlay(InstanceMetadata instance, String originalHash,
+                                        @NotNull ConfigurationOverlaySnapshot newSnapshot)
+            {
+                throw new UnsupportedOperationException();
+            }
+        };
+
+        ConfigurationManager manager = new ConfigurationManager(failingProvider, BASE_TEMPLATE);
+        InstanceMetadata instance = mockInstance(1);
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/cassandraYaml/concurrent_reads", 128));
+
+        assertThatThrownBy(() -> manager.patchConfiguration(instance, "sha256:abc", ops))
+                .isInstanceOf(ConfigurationManagerException.class)
+                .isNotInstanceOf(ConfigurationConflictException.class)
+                .hasMessageContaining("Failed to patch configuration")
+                .hasCauseInstanceOf(UncheckedIOException.class);
+    }
+
+    @Test
+    void testPatchConcurrentSameInstance() throws Exception
+    {
+        InstanceMetadata instance = mockInstance(1);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        String baseHash = manager.getEffectiveConfiguration(instance).hash();
+
+        int threadCount = 10;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger conflictCount = new AtomicInteger(0);
+
+        List<Future<?>> futures = new ArrayList<>();
+        for (int i = 0; i < threadCount; i++)
+        {
+            int value = i;
+            futures.add(executor.submit(() -> {
+                try
+                {
+                    startLatch.await();
+                    List<ConfigurationPatchOperation> ops = List.of(
+                            new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                                           "/configuration/cassandraYaml/concurrent_reads", value));
+                    manager.patchConfiguration(instance, baseHash, ops);
+                    successCount.incrementAndGet();
+                }
+                catch (ConfigurationConflictException e)
+                {
+                    conflictCount.incrementAndGet();
+                }
+                catch (InterruptedException e)
+                {
+                    Thread.currentThread().interrupt();
+                }
+            }));
+        }
+
+        startLatch.countDown();
+        for (Future<?> future : futures)
+        {
+            future.get();
+        }
+        executor.shutdown();
+
+        assertThat(successCount.get()).isEqualTo(1);
+        assertThat(conflictCount.get()).isEqualTo(threadCount - 1);
+    }
+
+    @Test
+    void testPatchDuplicatePathsRejected()
+    {
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        InstanceMetadata instance = mockInstance(1);
+        String baseHash = manager.getEffectiveConfiguration(instance).hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/cassandraYaml/concurrent_reads", 64),
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/cassandraYaml/concurrent_reads", 128));
+
+        assertThatThrownBy(() -> manager.patchConfiguration(instance, baseHash, ops))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("Duplicate path");
+    }
+
+    @Test
+    void testPatchInvalidPathFormat()
+    {
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        InstanceMetadata instance = mockInstance(1);
+        String baseHash = manager.getEffectiveConfiguration(instance).hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/invalid/path", 42));
+
+        assertThatThrownBy(() -> manager.patchConfiguration(instance, baseHash, ops))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("Path must start with");
+    }
+
+    @Test
+    void testPatchEmptyOperationsRejected()
+    {
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        InstanceMetadata instance = mockInstance(1);
+        String baseHash = manager.getEffectiveConfiguration(instance).hash();
+
+        assertThatThrownBy(() -> manager.patchConfiguration(instance, baseHash, List.of()))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("must not be empty");
     }
 
     private static InstanceMetadata mockInstance(int id)

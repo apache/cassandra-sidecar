@@ -39,6 +39,9 @@ import org.jetbrains.annotations.Nullable;
  * <p>The {@code extraJvmOpts} field contains JVM options that are appended to the Cassandra JVM startup
  * command. Each entry maps the full option flag (e.g. {@code -Dcassandra.jmx.local.port}) to its value
  * (e.g. {@code 7199}). These are opaque strings not subject to schema validation.
+ *
+ * <p>This class is immutable. Mutations are performed by {@link ConfigurationPatchApplier} which
+ * constructs a new instance with the desired changes.
  */
 public class CassandraConfigurationOverlay
 {
@@ -114,59 +117,6 @@ public class CassandraConfigurationOverlay
         return new CassandraConfigurationOverlay(cassandraYaml, extraJvmOpts);
     }
 
-    /**
-     * Returns a new overlay with the given updates applied. The current instance is not modified.
-     *
-     * <p>Both parameters follow the same semantics: a {@code null} value for a key removes that entry,
-     * a non-null value upserts it.
-     *
-     * @param cassandraYamlUpdates field-level changes to cassandra.yaml: key = field name, value = new value.
-     *                             A {@code null} value removes the field. Pass {@code null} for no yaml changes.
-     * @param extraJvmOptsUpdates  JVM option changes: key = option name, value = new option value.
-     *                             A {@code null} value removes the option. Pass {@code null} for no changes.
-     * @return a new overlay with the updates applied
-     */
-    @NotNull
-    public CassandraConfigurationOverlay updated(@Nullable Map<String, Object> cassandraYamlUpdates,
-                                                 @Nullable Map<String, String> extraJvmOptsUpdates)
-    {
-        JsonObject mergedYaml = cassandraYaml.copy();
-        if (cassandraYamlUpdates != null)
-        {
-            for (Map.Entry<String, Object> entry : cassandraYamlUpdates.entrySet())
-            {
-                if (entry.getValue() == null)
-                {
-                    mergedYaml.remove(entry.getKey());
-                }
-                else
-                {
-                    mergedYaml.put(entry.getKey(), entry.getValue());
-                }
-            }
-        }
-
-        LinkedHashMap<String, String> mergedOpts = new LinkedHashMap<>(extraJvmOpts);
-        if (extraJvmOptsUpdates != null)
-        {
-            for (Map.Entry<String, String> entry : extraJvmOptsUpdates.entrySet())
-            {
-                if (entry.getValue() == null)
-                {
-                    mergedOpts.remove(entry.getKey());
-                }
-                else
-                {
-                    mergedOpts.put(entry.getKey(), entry.getValue());
-                }
-            }
-        }
-
-        validateNoConflictingBooleanOpts(mergedOpts);
-
-        return new CassandraConfigurationOverlay(mergedYaml, mergedOpts);
-    }
-
     static boolean hasConflictingBooleanOpt(Map<String, String> existing, String key)
     {
         String conflicting = conflictingBooleanOpt(key);
@@ -184,19 +134,6 @@ public class CassandraConfigurationOverlay
             return "-XX:+" + key.substring(5);
         }
         return null;
-    }
-
-    private static void validateNoConflictingBooleanOpts(Map<String, String> opts)
-    {
-        for (String key : opts.keySet())
-        {
-            if (hasConflictingBooleanOpt(opts, key))
-            {
-                String option = key.substring(5);
-                throw new IllegalArgumentException(
-                    "Conflicting boolean JVM options: -XX:+" + option + " and -XX:-" + option);
-            }
-        }
     }
 
     @Override
