@@ -85,7 +85,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
     {
         checkAndReloadReloadCaches();
         Metadata metadata = instancesMetadata.instances().get(0).delegate().metadata();
-        if (keyspace == null || metadata.getKeyspace(keyspace) == null)
+        if (keyspace == null || metadata.getKeyspace(Metadata.quoteIfNecessary(keyspace)) == null)
         {
             throw new NoSuchElementException("Keyspace does not exist. keyspace: " + keyspace);
         }
@@ -254,7 +254,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
             Map<Host, Set<TokenRange>> perHostTokenRanges = new HashMap<>();
             for (Host host : metadata.getAllHosts())
             {
-                Set<TokenRange> tokenRanges = metadata.getTokenRanges(ks.getName(), host)
+                Set<TokenRange> tokenRanges = metadata.getTokenRanges(Metadata.quoteIfNecessary(ks.getName()), host)
                                                       .stream()
                                                       .flatMap(range -> TokenRange.from(range).stream())
                                                       .collect(Collectors.toSet());

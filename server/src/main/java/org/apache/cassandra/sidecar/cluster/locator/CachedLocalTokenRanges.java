@@ -104,7 +104,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
             return Collections.emptyMap();
         }
 
-        if (metadata.getKeyspace(keyspace) == null)
+        if (metadata.getKeyspace(Metadata.quoteIfNecessary(keyspace)) == null)
         {
             throw new NoSuchElementException("Keyspace does not exist. keyspace: " + keyspace);
         }
@@ -147,7 +147,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
 
     public Set<TokenRange> tokenRangesOfHost(Metadata metadata, String keyspace, Host host)
     {
-        return metadata.getTokenRanges(keyspace, host)
+        return metadata.getTokenRanges(Metadata.quoteIfNecessary(keyspace), host)
                        .stream()
                        .flatMap(range -> TokenRange.from(range).stream())
                        .collect(Collectors.toSet());
