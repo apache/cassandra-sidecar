@@ -68,6 +68,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -383,12 +384,45 @@ public class CassandraClientTokenRingProviderTest
             .hasMessageContaining("Keyspace does not exist. keyspace: nonexistent");
     }
 
+    @Test
+    void testLocalTokenRanges_succeedsForUnquotedMixedCaseKeyspace()
+    {
+        // Regression: MyKeyspace created without CQL quotes (Cassandra internal name: mykeyspace).
+        // Sidecar stores MyKeyspace. The raw lookup simulates the driver's case-folding and returns
+        // the keyspace; the quoteIfNecessary fallback must not be reached, because quoteIfNecessary
+        // would look for case-sensitive MyKeyspace (not mykeyspace) and return null.
+        String storedKeyspace = "MyKeyspace";
+        Metadata metadata = getMetadataWithUnquotedKeyspace(storedKeyspace, "mykeyspace");
+        CassandraClientTokenRingProvider provider = new CassandraClientTokenRingProvider(
+            mockInstancesMetadataWithMetadata(metadata),
+            mockInstanceMetadataFetcherWithMetadata(metadata),
+            mockDnsResolver());
+
+        Map<Integer, Set<TokenRange>> result = provider.localTokenRanges(storedKeyspace);
+
+        assertNotNull(result);
+        verify(metadata, never()).getKeyspace(Metadata.quoteIfNecessary(storedKeyspace));
+    }
+
     private static Metadata getMetadataWithKeyspace(String keyspace)
     {
         Metadata metadata = getMetadata();
         KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
         when(keyspaceMetadata.getName()).thenReturn(keyspace);
         when(metadata.getKeyspace(Metadata.quoteIfNecessary(keyspace))).thenReturn(keyspaceMetadata);
+        when(metadata.getKeyspaces()).thenReturn(List.of(keyspaceMetadata));
+        when(metadata.getTokenRanges(any(), any())).thenReturn(Collections.emptySet());
+        return metadata;
+    }
+
+    // storedName: what sidecar has stored (e.g. "MyKeyspace")
+    // internalName: Cassandra's internal name after case-folding (e.g. "mykeyspace")
+    private static Metadata getMetadataWithUnquotedKeyspace(String storedName, String internalName)
+    {
+        Metadata metadata = getMetadata();
+        KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
+        when(keyspaceMetadata.getName()).thenReturn(internalName);
+        when(metadata.getKeyspace(storedName)).thenReturn(keyspaceMetadata);
         when(metadata.getKeyspaces()).thenReturn(List.of(keyspaceMetadata));
         when(metadata.getTokenRanges(any(), any())).thenReturn(Collections.emptySet());
         return metadata;

@@ -43,6 +43,27 @@ public class MetadataUtils
     }
 
     /**
+     * Returns the metadata of a keyspace given its name as stored in sidecar (without CQL quote context).
+     * Tries a raw lookup first (driver folds to lowercase, handles unquoted names), then falls back to a
+     * quoted lookup to handle mixed-case keyspaces created with CQL double-quotes.
+     *
+     * @param metadata the metadata object.
+     * @param keyspace the keyspace name as stored in sidecar.
+     * @return the metadata of the requested keyspace or {@code null} if not found.
+     */
+    public static KeyspaceMetadata keyspace(Metadata metadata, String keyspace)
+    {
+        if (keyspace == null)
+            return null;
+        KeyspaceMetadata ks = metadata.getKeyspace(keyspace);
+        if (ks == null)
+        {
+            ks = metadata.getKeyspace(Metadata.quoteIfNecessary(keyspace));
+        }
+        return ks;
+    }
+
+    /**
      * Returns the metadata for a table contained in this keyspace.
      *
      * @param metadata the metadata object.

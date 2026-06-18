@@ -39,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -83,6 +84,26 @@ public class CachedLocalTokenRangesTest
         assertNotNull(result);
         // Verify the driver was called with the quoted form, not the raw mixed-case string
         verify(metadata).getKeyspace(Metadata.quoteIfNecessary(keyspace));
+    }
+
+    @Test
+    void testLocalTokenRanges_succeedsForUnquotedMixedCaseKeyspace()
+    {
+        // Regression: MyKeyspace created without CQL quotes (Cassandra internal name: mykeyspace).
+        // Sidecar stores MyKeyspace. The raw lookup simulates the driver's case-folding and returns
+        // the keyspace; the quoteIfNecessary fallback must not be reached, because quoteIfNecessary
+        // would look for case-sensitive MyKeyspace (not mykeyspace) and return null.
+        String keyspace = "MyKeyspace";
+        KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
+        when(keyspaceMetadata.getName()).thenReturn("mykeyspace");
+        when(metadata.getKeyspace(keyspace)).thenReturn(keyspaceMetadata);
+        when(metadata.getAllHosts()).thenReturn(Collections.emptySet());
+        when(metadata.getKeyspaces()).thenReturn(Collections.emptyList());
+
+        Map<Integer, Set<TokenRange>> result = cachedLocalTokenRanges.localTokenRanges(keyspace);
+
+        assertNotNull(result);
+        verify(metadata, never()).getKeyspace(Metadata.quoteIfNecessary(keyspace));
     }
 
     @Test
