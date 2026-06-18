@@ -93,7 +93,7 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
         if (cause instanceof IllegalArgumentException &&
             StringUtils.contains(cause.getMessage(), ", does not exist"))
         {
-            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, String.format("The requested keyspace %s was not found. ", keyspace)));
+            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, String.format("The requested keyspace %s was not found.", keyspace)));
             return;
         }
 
