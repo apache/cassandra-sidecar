@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
+import com.datastax.driver.core.TableMetadata;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -30,7 +31,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link MetadataUtils#keyspace(Metadata, String)}
+ * Unit tests for {@link MetadataUtils#keyspace(Metadata, String)} and {@link MetadataUtils#table(KeyspaceMetadata, String)}
  */
 public class MetadataUtilsTest
 {
@@ -85,5 +86,56 @@ public class MetadataUtilsTest
         when(metadata.getKeyspace(Metadata.quoteIfNecessary("nonexistent"))).thenReturn(null);
 
         assertThat(MetadataUtils.keyspace(metadata, "nonexistent")).isNull();
+    }
+
+    @Test
+    void table_quotedMixedCase_findsViaQuotedFallback()
+    {
+        // "MyTable" created with CQL quotes: Cassandra internal name is MyTable (case-preserved).
+        // Sidecar stores MyTable (no quote chars). Raw lookup folds to mytable → not found.
+        // Quoted fallback finds the case-sensitive entry.
+        KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
+        TableMetadata tableMetadata = mock(TableMetadata.class);
+        String table = "MyTable";
+        when(keyspaceMetadata.getTable(table)).thenReturn(null);
+        when(keyspaceMetadata.getTable(Metadata.quoteIfNecessary(table))).thenReturn(tableMetadata);
+
+        assertThat(MetadataUtils.table(keyspaceMetadata, table)).isSameAs(tableMetadata);
+        verify(keyspaceMetadata).getTable(Metadata.quoteIfNecessary(table));
+    }
+
+    @Test
+    void table_unquotedMixedCase_findsViaRawLookupWithoutFallback()
+    {
+        // MyTable created without CQL quotes: Cassandra folds to mytable internally.
+        // Sidecar stores MyTable. The raw lookup succeeds (driver handles case-folding);
+        // the quoted fallback must NOT be reached.
+        KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
+        TableMetadata tableMetadata = mock(TableMetadata.class);
+        String table = "MyTable";
+        when(keyspaceMetadata.getTable(table)).thenReturn(tableMetadata);
+
+        assertThat(MetadataUtils.table(keyspaceMetadata, table)).isSameAs(tableMetadata);
+        verify(keyspaceMetadata, never()).getTable(Metadata.quoteIfNecessary(table));
+    }
+
+    @Test
+    void table_lowercase_findsViaRawLookup()
+    {
+        KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
+        TableMetadata tableMetadata = mock(TableMetadata.class);
+        when(keyspaceMetadata.getTable("mytable")).thenReturn(tableMetadata);
+
+        assertThat(MetadataUtils.table(keyspaceMetadata, "mytable")).isSameAs(tableMetadata);
+    }
+
+    @Test
+    void table_nonExistent_returnsNull()
+    {
+        KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
+        when(keyspaceMetadata.getTable("nonexistent")).thenReturn(null);
+        when(keyspaceMetadata.getTable(Metadata.quoteIfNecessary("nonexistent"))).thenReturn(null);
+
+        assertThat(MetadataUtils.table(keyspaceMetadata, "nonexistent")).isNull();
     }
 }

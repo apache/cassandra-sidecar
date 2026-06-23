@@ -59,7 +59,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class RestoreJobDiscovererPhaseSignalIntTest extends SharedClusterSidecarIntegrationTestBase
 {
-    private static final QualifiedName USER_KEYSPACE_TABLE = new QualifiedName("restore_phase_signal_ks", "t");
+    private static final QualifiedName USER_KEYSPACE_TABLE = new QualifiedName("Restore_phase_signal_ks", "T", true, true);
     private static final QualifiedTableName SIDECAR_QUALIFIED_TABLE =
     new QualifiedTableName(USER_KEYSPACE_TABLE.keyspace(), USER_KEYSPACE_TABLE.table());
 
