@@ -96,7 +96,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
      * time without any internal locking.
      */
     private final ReentrantLock executionLock = new ReentrantLock();
-    final StatusCheckTask statusCheckTask = new StatusCheckTask();
+    private final StatusCheckTask statusCheckTask = new StatusCheckTask();
     // Volatile because it is read by the periodic-task scheduler thread (via scheduleDecision /
     // hasInflightJobs / delay) without holding executionLock. Written under the lock at the end of
     // every slow- and fast-loop pass to the freshly recounted in-flight job count. Reads outside
@@ -286,8 +286,6 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
      */
     void handleStatusTransition(RestoreJob currentJob)
     {
-        // Resolve local DC before acquiring the lock — it can block on JMX/CQL.
-        initLocalDatacenterMaybe();
         executionLock.lock();
         try
         {
@@ -780,6 +778,12 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         return jobDiscoveryRecencyDays;
     }
 
+    @VisibleForTesting
+    StatusCheckTask statusCheckTask()
+    {
+        return statusCheckTask;
+    }
+
     static class RunContext
     {
         long nowMillis = System.currentTimeMillis();
@@ -827,6 +831,10 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         @Override
         public void execute(Promise<Void> promise)
         {
+            // Resolve local DC once per tick before acquiring the lock — the JMX/CQL call may
+            // block, and resolving it inside handleStatusTransition would re-attempt the call
+            // for every in-flight job whenever Cassandra is unavailable.
+            initLocalDatacenterMaybe();
             // tryLock — skip this tick if the slow loop or processJobNow is in. Best-effort by
             // design; the next tick (or the slow loop's next pass) will pick up any transition we
             // miss.

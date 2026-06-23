@@ -554,14 +554,14 @@ class RestoreJobDiscovererTest
     void testStatusCheckTaskSkipsWhenNoInflightJobs()
     {
         when(sidecarSchema.isInitialized()).thenReturn(true);
-        assertThat(loop.statusCheckTask.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
+        assertThat(loop.statusCheckTask().scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
     }
 
     @Test
     void testStatusCheckTaskSkipsWhenSchemaNotInitialized()
     {
         when(sidecarSchema.isInitialized()).thenReturn(false);
-        assertThat(loop.statusCheckTask.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
+        assertThat(loop.statusCheckTask().scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
     }
 
     @Test
@@ -578,7 +578,7 @@ class RestoreJobDiscovererTest
                                        .build();
         when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(List.of(created));
         executeBlocking();
-        assertThat(loop.statusCheckTask.scheduleDecision()).isEqualTo(ScheduleDecision.EXECUTE);
+        assertThat(loop.statusCheckTask().scheduleDecision()).isEqualTo(ScheduleDecision.EXECUTE);
 
         // Flip the DB-side status; the task should point-read each in-flight job and dispatch the transition
         RestoreJob stageReady = created.unbuild().jobStatus(RestoreJobStatus.STAGE_READY).build();
@@ -586,7 +586,7 @@ class RestoreJobDiscovererTest
         Mockito.reset(mockManagers);
 
         Promise<Void> promise = Promise.promise();
-        loop.statusCheckTask.execute(promise);
+        loop.statusCheckTask().execute(promise);
 
         verify(mockJobAccessor).find(jobId);
         verify(mockManagers).updateRestoreJob(stageReady);
@@ -619,7 +619,7 @@ class RestoreJobDiscovererTest
         when(mockJobAccessor.find(failingJobId)).thenThrow(new RuntimeException("db down")); // transient error
 
         Promise<Void> promise = Promise.promise();
-        loop.statusCheckTask.execute(promise);
+        loop.statusCheckTask().execute(promise);
 
         assertThat(promise.future().succeeded())
         .describedAs("a missing or failing job should not abort the whole pass")
@@ -687,7 +687,7 @@ class RestoreJobDiscovererTest
                         sb.set(RestoreJobStatus.STAGE_READY);
                     }
                     Promise<Void> p = Promise.promise();
-                    loop.statusCheckTask.execute(p);
+                    loop.statusCheckTask().execute(p);
                 }
             }
             catch (Throwable t)

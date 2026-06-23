@@ -52,7 +52,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * well within the slow-loop interval. The slow loop is configured to a much larger interval so
  * a positive observation can only be the work of the fast status-check loop.
  */
-class RestoreJobStatusCheckerIntTest extends SharedClusterIntegrationTestBase
+class RestoreJobDiscovererStatusCheckIntTest extends SharedClusterIntegrationTestBase
 {
     private static final QualifiedTableName JOB_TABLE = new QualifiedTableName("ks", "tbl");
 
