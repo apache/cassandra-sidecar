@@ -115,7 +115,7 @@ class ConfigUtilsTest
     }
 
     @Test
-    void testMergeNullOverlayValueKeepsBaseValue()
+    void testMergeNullOverlayValueOverwritesBaseValue()
     {
         JsonObject base = new JsonObject()
                           .put("a", "a")
@@ -128,7 +128,7 @@ class ConfigUtilsTest
         JsonObject result = ConfigUtils.mergeConfigurations(base, overlay);
 
         assertThat(result.getString("a")).isEqualTo("a");
-        assertThat(result.getString("b")).isEqualTo("b");
+        assertThat(result.getValue("b")).isNull();
         assertThat(result.getString("c")).isEqualTo("c");
     }
 

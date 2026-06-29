@@ -107,9 +107,8 @@ public final class ConfigUtils
 
     /**
      * Deep-merges the overlay onto the base configuration. For nested objects both base and overlay
-     * contain, fields are merged recursively. For all other node types (scalars, arrays),
-     * the overlay value replaces the base value. Null overlay values are skipped and the
-     * corresponding base value is preserved. The base node is not modified.
+     * contain, fields are merged recursively. For all other node types (scalars, arrays, nulls),
+     * the overlay value replaces the base value. The base node is not modified.
      *
      * <p>Overlays may introduce keys not present in the base configuration. Such keys are
      * added to the result as-is (scalars, arrays) or merged recursively (nested objects).
@@ -122,51 +121,8 @@ public final class ConfigUtils
     {
         Objects.requireNonNull(base, "base must not be null");
         Objects.requireNonNull(overlay, "overlay must not be null");
-        if (overlay.isEmpty())
-        {
-            return base.copy();
-        }
-
         JsonObject result = base.copy();
-        for (Map.Entry<String, Object> field : overlay)
-        {
-            String fieldName = field.getKey();
-            Object overlayValue = field.getValue();
-            Object baseValue = result.getValue(fieldName);
-
-            if (overlayValue == null)
-            {
-                continue;
-            }
-
-            if (isJsonObject(baseValue) && isJsonObject(overlayValue))
-            {
-                JsonObject merged = mergeConfigurations(
-                        asJsonObject(baseValue),
-                        asJsonObject(overlayValue));
-                result.put(fieldName, merged);
-            }
-            else
-            {
-                result.put(fieldName, overlayValue);
-            }
-        }
+        result.mergeIn(overlay, true);
         return result;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static boolean isJsonObject(Object value)
-    {
-        return value instanceof JsonObject || value instanceof Map;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static JsonObject asJsonObject(Object value)
-    {
-        if (value instanceof JsonObject)
-        {
-            return (JsonObject) value;
-        }
-        return new JsonObject((Map<String, Object>) value);
     }
 }
