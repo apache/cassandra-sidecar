@@ -69,8 +69,7 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
             assertThat(response.statusCode()).isEqualTo(errorCode);
             JsonObject error = response.bodyAsJsonObject();
             assertThat(error.getInteger("code")).isEqualTo(errorCode);
-            assertThat(error.getString("message"))
-            .contains("The requested keyspace Name{unquotedName='unknown_ks', maybeQuotedName='unknown_ks'} was not found.");
+            assertThat(error.getString("message")).contains("The keyspace unknown_ks, does not exist");
             context.completeNow();
         });
     }
