@@ -80,8 +80,8 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
             storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job));
 
             job.asyncResult().onComplete(ar -> {
-                liveJobs.remove(job.jobId());
                 updateTerminalStatus(job);
+                liveJobs.remove(job.jobId());
             });
 
             return job;
