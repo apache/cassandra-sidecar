@@ -55,6 +55,14 @@ public class OperationalJobRecord implements OperationalJobInfo
     private final List<List<UUID>> nodeExecutionOrder;
     @Nullable
     private final Map<String, String> operationMetadata;
+    @NotNull
+    private final List<UUID> nodesPending;
+    @NotNull
+    private final List<UUID> nodesExecuting;
+    @NotNull
+    private final List<UUID> nodesSucceeded;
+    @NotNull
+    private final List<UUID> nodesFailed;
 
     /**
      * Constructs an OperationalJobRecord with the given fields.
@@ -69,7 +77,7 @@ public class OperationalJobRecord implements OperationalJobInfo
     }
 
     /**
-     * Constructs an OperationalJobRecord with all fields.
+     * Constructs an OperationalJobRecord with all fields except per-node status lists.
      *
      * @param jobId             time-based v1 UUID identifying the job
      * @param operationType     the operation type
@@ -87,6 +95,39 @@ public class OperationalJobRecord implements OperationalJobInfo
                                 @Nullable List<List<UUID>> nodeExecutionOrder,
                                 @Nullable Map<String, String> operationMetadata)
     {
+        this(jobId, operationType, status, startTime, lastUpdate, failureReason,
+             nodeExecutionOrder, operationMetadata,
+             Collections.emptyList(), Collections.emptyList(),
+             Collections.emptyList(), Collections.emptyList());
+    }
+
+    /**
+     * Constructs an OperationalJobRecord with all fields including per-node status lists.
+     *
+     * @param jobId              time-based v1 UUID identifying the job
+     * @param operationType      the operation type
+     * @param status             the current status of the job
+     * @param startTime          the timestamp when execution started, or null if not yet started
+     * @param lastUpdate         the timestamp of the last status update, or null for pre-existing rows
+     * @param failureReason      the failure reason if the job failed, or null
+     * @param nodeExecutionOrder the ordered list of parallel node groups for execution, or null
+     * @param operationMetadata  the operation parameters, or null
+     * @param nodesPending       node UUIDs with CREATED status
+     * @param nodesExecuting     node UUIDs with RUNNING status
+     * @param nodesSucceeded     node UUIDs with SUCCEEDED status
+     * @param nodesFailed        node UUIDs with FAILED status
+     */
+    public OperationalJobRecord(UUID jobId, OperationType operationType, OperationalJobStatus status,
+                                @Nullable Instant startTime,
+                                @Nullable Instant lastUpdate,
+                                @Nullable String failureReason,
+                                @Nullable List<List<UUID>> nodeExecutionOrder,
+                                @Nullable Map<String, String> operationMetadata,
+                                @NotNull List<UUID> nodesPending,
+                                @NotNull List<UUID> nodesExecuting,
+                                @NotNull List<UUID> nodesSucceeded,
+                                @NotNull List<UUID> nodesFailed)
+    {
         Preconditions.checkArgument(jobId != null, "jobId must not be null");
         Preconditions.checkArgument(jobId.version() == 1, "jobId must be a time-based (v1) UUID");
         Preconditions.checkArgument(operationType != null, "operationType must not be null");
@@ -100,6 +141,10 @@ public class OperationalJobRecord implements OperationalJobInfo
         this.failureReason = failureReason;
         this.nodeExecutionOrder = nodeExecutionOrder;
         this.operationMetadata = operationMetadata;
+        this.nodesPending = nodesPending;
+        this.nodesExecuting = nodesExecuting;
+        this.nodesSucceeded = nodesSucceeded;
+        this.nodesFailed = nodesFailed;
     }
 
     /**
@@ -202,28 +247,28 @@ public class OperationalJobRecord implements OperationalJobInfo
     @NotNull
     public List<UUID> nodesPending()
     {
-        return Collections.emptyList();
+        return nodesPending;
     }
 
     @Override
     @NotNull
     public List<UUID> nodesExecuting()
     {
-        return Collections.emptyList();
+        return nodesExecuting;
     }
 
     @Override
     @NotNull
     public List<UUID> nodesSucceeded()
     {
-        return Collections.emptyList();
+        return nodesSucceeded;
     }
 
     @Override
     @NotNull
     public List<UUID> nodesFailed()
     {
-        return Collections.emptyList();
+        return nodesFailed;
     }
 
     @Override
@@ -256,6 +301,10 @@ public class OperationalJobRecord implements OperationalJobInfo
                ", failureReason=" + failureReason +
                ", nodeExecutionOrder=" + nodeExecutionOrder +
                ", operationMetadata=" + operationMetadata +
+               ", nodesPending=" + nodesPending +
+               ", nodesExecuting=" + nodesExecuting +
+               ", nodesSucceeded=" + nodesSucceeded +
+               ", nodesFailed=" + nodesFailed +
                '}';
     }
 }

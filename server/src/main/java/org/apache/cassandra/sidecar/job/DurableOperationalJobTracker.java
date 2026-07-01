@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -97,7 +98,12 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
             return liveJob;
         }
 
-        return storageProvider.findJob(jobId);
+        OperationalJobRecord record = storageProvider.findJob(jobId);
+        if (record == null)
+        {
+            return null;
+        }
+        return enrichWithNodeStatuses(record);
     }
 
     @NotNull
@@ -117,6 +123,63 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
                                     (j.status() == OperationalJobStatus.RUNNING ||
                                      j.status() == OperationalJobStatus.CREATED))
                        .collect(Collectors.toList());
+    }
+
+    /**
+     * Enriches an {@link OperationalJobRecord} with per-node status data from storage.
+     * If the record already has non-empty node lists (e.g. populated by a storage provider
+     * that joins the data in a single query), the record is returned as is.
+     */
+    private OperationalJobRecord enrichWithNodeStatuses(OperationalJobRecord record)
+    {
+        if (!record.nodesPending().isEmpty()
+            || !record.nodesExecuting().isEmpty()
+            || !record.nodesSucceeded().isEmpty()
+            || !record.nodesFailed().isEmpty())
+        {
+            return record;
+        }
+
+        Map<UUID, OperationalJobStatus> nodeStatuses =
+        storageProvider.getNodeStatusesForOperation(record.jobId());
+        if (nodeStatuses.isEmpty())
+        {
+            return record;
+        }
+
+        List<UUID> pending = new ArrayList<>();
+        List<UUID> executing = new ArrayList<>();
+        List<UUID> succeeded = new ArrayList<>();
+        List<UUID> failed = new ArrayList<>();
+
+        for (Map.Entry<UUID, OperationalJobStatus> entry : nodeStatuses.entrySet())
+        {
+            switch (entry.getValue())
+            {
+                case CREATED:
+                    pending.add(entry.getKey());
+                    break;
+                case RUNNING:
+                    executing.add(entry.getKey());
+                    break;
+                case SUCCEEDED:
+                    succeeded.add(entry.getKey());
+                    break;
+                case FAILED:
+                    failed.add(entry.getKey());
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        return new OperationalJobRecord(record.jobId(), record.operationType(), record.status(),
+                                        record.startTime(), record.lastUpdate(), record.failureReason(),
+                                        record.nodeExecutionOrder(), record.operationMetadata(),
+                                        Collections.unmodifiableList(pending),
+                                        Collections.unmodifiableList(executing),
+                                        Collections.unmodifiableList(succeeded),
+                                        Collections.unmodifiableList(failed));
     }
 
     /**

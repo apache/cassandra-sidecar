@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +34,7 @@ import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.common.data.OperationType;
+import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
@@ -189,6 +192,7 @@ class DurableOperationalJobTrackerTest
         UUID jobId = UUIDs.timeBased();
         OperationalJobRecord record = new OperationalJobRecord(jobId, OperationType.DECOMMISSION, SUCCEEDED);
         when(storageProvider.findJob(jobId)).thenReturn(record);
+        when(storageProvider.getNodeStatusesForOperation(jobId)).thenReturn(Collections.emptyMap());
 
         OperationalJobInfo result = tracker.get(jobId);
 
@@ -283,6 +287,88 @@ class DurableOperationalJobTrackerTest
         assertThatThrownBy(() -> tracker.get(jobId))
             .isInstanceOf(StorageProviderException.class)
             .hasMessage("Storage unavailable");
+    }
+
+    @Test
+    void testGetEnrichesRecordWithNodeStatuses()
+    {
+        UUID jobId = UUIDs.timeBased();
+        UUID pendingNode = UUIDs.timeBased();
+        UUID runningNode = UUIDs.timeBased();
+        UUID succeededNode = UUIDs.timeBased();
+        UUID failedNode = UUIDs.timeBased();
+
+        OperationalJobRecord record = new OperationalJobRecord(jobId, OperationType.DECOMMISSION, RUNNING);
+        when(storageProvider.findJob(jobId)).thenReturn(record);
+
+        Map<UUID, OperationalJobStatus> nodeStatuses = new HashMap<>();
+        nodeStatuses.put(pendingNode, CREATED);
+        nodeStatuses.put(runningNode, RUNNING);
+        nodeStatuses.put(succeededNode, SUCCEEDED);
+        nodeStatuses.put(failedNode, FAILED);
+        when(storageProvider.getNodeStatusesForOperation(jobId)).thenReturn(nodeStatuses);
+
+        OperationalJobInfo result = tracker.get(jobId);
+
+        assertThat(result).isInstanceOf(OperationalJobRecord.class);
+        assertThat(result.nodesPending()).containsExactly(pendingNode);
+        assertThat(result.nodesExecuting()).containsExactly(runningNode);
+        assertThat(result.nodesSucceeded()).containsExactly(succeededNode);
+        assertThat(result.nodesFailed()).containsExactly(failedNode);
+        verify(storageProvider).getNodeStatusesForOperation(jobId);
+    }
+
+    @Test
+    void testGetSkipsEnrichmentWhenNodeListsAlreadyPopulated()
+    {
+        UUID jobId = UUIDs.timeBased();
+        UUID succeededNode = UUIDs.timeBased();
+
+        OperationalJobRecord record = new OperationalJobRecord(jobId, OperationType.DECOMMISSION, SUCCEEDED,
+                                                                null, null, null, null, null,
+                                                                Collections.emptyList(),
+                                                                Collections.emptyList(),
+                                                                Collections.singletonList(succeededNode),
+                                                                Collections.emptyList());
+        when(storageProvider.findJob(jobId)).thenReturn(record);
+
+        OperationalJobInfo result = tracker.get(jobId);
+
+        assertThat(result).isSameAs(record);
+        assertThat(result.nodesSucceeded()).containsExactly(succeededNode);
+        verify(storageProvider, never()).getNodeStatusesForOperation(any());
+    }
+
+    @Test
+    void testGetReturnsUnenrichedRecordWhenNoNodeStatuses()
+    {
+        UUID jobId = UUIDs.timeBased();
+        OperationalJobRecord record = new OperationalJobRecord(jobId, OperationType.DECOMMISSION, SUCCEEDED);
+        when(storageProvider.findJob(jobId)).thenReturn(record);
+        when(storageProvider.getNodeStatusesForOperation(jobId)).thenReturn(Collections.emptyMap());
+
+        OperationalJobInfo result = tracker.get(jobId);
+
+        assertThat(result).isSameAs(record);
+        assertThat(result.nodesPending()).isEmpty();
+        assertThat(result.nodesExecuting()).isEmpty();
+        assertThat(result.nodesSucceeded()).isEmpty();
+        assertThat(result.nodesFailed()).isEmpty();
+        verify(storageProvider).getNodeStatusesForOperation(jobId);
+    }
+
+    @Test
+    void testGetPropagatesNodeStatusQueryFailure()
+    {
+        UUID jobId = UUIDs.timeBased();
+        OperationalJobRecord record = new OperationalJobRecord(jobId, OperationType.DECOMMISSION, SUCCEEDED);
+        when(storageProvider.findJob(jobId)).thenReturn(record);
+        when(storageProvider.getNodeStatusesForOperation(jobId))
+            .thenThrow(new StorageProviderException("Node state unavailable"));
+
+        assertThatThrownBy(() -> tracker.get(jobId))
+            .isInstanceOf(StorageProviderException.class)
+            .hasMessage("Node state unavailable");
     }
 
     @Test
