@@ -51,7 +51,7 @@ import org.jetbrains.annotations.Nullable;
 public class DurableOperationalJobTracker implements OperationalJobTracker
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(DurableOperationalJobTracker.class);
-    private static final int MAX_STATUS_UPDATE_ATTEMPTS = 2;
+    private static final int MAX_STATUS_UPDATE_ATTEMPTS = 3;
     private static final long RETRY_DELAY_MS = 100;
 
     private final ConcurrentHashMap<UUID, OperationalJob> liveJobs;
