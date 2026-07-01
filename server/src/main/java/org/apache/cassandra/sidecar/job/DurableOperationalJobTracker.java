@@ -74,18 +74,35 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
     @Override
     public OperationalJob computeIfAbsent(UUID jobId, Function<UUID, OperationalJob> mappingFunction)
     {
-        return liveJobs.computeIfAbsent(jobId, id -> {
-            OperationalJob job = mappingFunction.apply(id);
+        if (!storageProvider.isAvailable())
+        {
+            throw new IllegalStateException("Storage provider is not available");
+        }
 
-            storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job));
+        boolean[] created = {false};
+        OperationalJob job = liveJobs.computeIfAbsent(jobId, id -> {
+            created[0] = true;
+            return mappingFunction.apply(id);
+        });
+
+        if (created[0])
+        {
+            executor.executeBlocking(() -> {
+                storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job));
+                return null;
+            }).onFailure(e -> {
+                liveJobs.remove(jobId, job);
+                LOGGER.error("Failed to persist job {} to storage. Job will not be tracked durably.",
+                             jobId, e);
+            });
 
             job.asyncResult().onComplete(ar -> {
                 updateTerminalStatus(job);
                 liveJobs.remove(job.jobId());
             });
+        }
 
-            return job;
-        });
+        return job;
     }
 
     @Nullable

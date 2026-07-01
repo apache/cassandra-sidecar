@@ -77,6 +77,7 @@ class DurableOperationalJobTrackerTest
     void setUp()
     {
         storageProvider = mock(StorageProvider.class);
+        when(storageProvider.isAvailable()).thenReturn(true);
         vertx = Vertx.vertx();
         executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         executorPool = executorPools.internal();
@@ -97,11 +98,13 @@ class DurableOperationalJobTrackerTest
         OperationalJob result = tracker.computeIfAbsent(job.jobId(), id -> job);
 
         assertThat(result).isSameAs(job);
-        verify(storageProvider).persistJob(argThat(record ->
-            record.jobId().equals(job.jobId()) &&
-            record.operationType() == job.operationType() &&
-            record.status() == CREATED
-        ));
+        loopAssert(2, () -> {
+            verify(storageProvider).persistJob(argThat(record ->
+                record.jobId().equals(job.jobId()) &&
+                record.operationType() == job.operationType() &&
+                record.status() == CREATED
+            ));
+        });
     }
 
     @Test
@@ -113,7 +116,9 @@ class DurableOperationalJobTrackerTest
         OperationalJob secondCall = tracker.computeIfAbsent(job.jobId(), id -> createOperationalJob(CREATED));
 
         assertThat(secondCall).isSameAs(job);
-        verify(storageProvider, times(1)).persistJob(any());
+        loopAssert(2, () -> {
+            verify(storageProvider, times(1)).persistJob(any());
+        });
     }
 
     @Test
@@ -267,15 +272,28 @@ class DurableOperationalJobTrackerTest
     }
 
     @Test
-    void testComputeIfAbsentPropagatesPersistenceFailure()
+    void testComputeIfAbsentRemovesJobFromMapOnPersistenceFailure()
     {
         doThrow(new StorageProviderException("Storage unavailable"))
             .when(storageProvider).persistJob(any());
         OperationalJob job = createOperationalJob(CREATED);
 
+        tracker.computeIfAbsent(job.jobId(), id -> job);
+
+        loopAssert(2, () -> {
+            assertThat(tracker.jobsView()).doesNotContainKey(job.jobId());
+        });
+    }
+
+    @Test
+    void testComputeIfAbsentFailsWhenStorageUnavailable()
+    {
+        when(storageProvider.isAvailable()).thenReturn(false);
+        OperationalJob job = createOperationalJob(CREATED);
+
         assertThatThrownBy(() -> tracker.computeIfAbsent(job.jobId(), id -> job))
-            .isInstanceOf(StorageProviderException.class)
-            .hasMessage("Storage unavailable");
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Storage provider is not available");
     }
 
     @Test

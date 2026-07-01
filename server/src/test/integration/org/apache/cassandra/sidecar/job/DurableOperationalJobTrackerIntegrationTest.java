@@ -60,15 +60,17 @@ class DurableOperationalJobTrackerIntegrationTest extends IntegrationTestBase
 
         tracker.computeIfAbsent(jobId1, id -> job1);
 
-        OperationalJobRecord record1 = storageProvider.findJob(jobId1);
-        assertThat(record1)
-            .withFailMessage("Job should be persisted to Cassandra on creation")
-            .isNotNull()
-            .satisfies(r -> {
-                assertThat(r.jobId()).isEqualTo(jobId1);
-                assertThat(r.operationType()).isEqualTo(job1.operationType());
-                assertThat(r.status()).isEqualTo(OperationalJobStatus.CREATED);
-            });
+        loopAssert(2, () -> {
+            OperationalJobRecord record1 = storageProvider.findJob(jobId1);
+            assertThat(record1)
+                .withFailMessage("Job should be persisted to Cassandra on creation")
+                .isNotNull()
+                .satisfies(r -> {
+                    assertThat(r.jobId()).isEqualTo(jobId1);
+                    assertThat(r.operationType()).isEqualTo(job1.operationType());
+                    assertThat(r.status()).isEqualTo(OperationalJobStatus.CREATED);
+                });
+        });
 
         UUID jobId2 = UUIDs.timeBased();
         OperationalJob job2 = OperationalJobTest.createOperationalJob(jobId2, MillisecondBoundConfiguration.parse("50ms"));
