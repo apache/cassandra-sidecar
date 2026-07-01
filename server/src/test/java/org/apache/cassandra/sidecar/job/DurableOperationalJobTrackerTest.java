@@ -199,7 +199,7 @@ class DurableOperationalJobTrackerTest
         assertThat(result).isInstanceOf(OperationalJobRecord.class);
         assertThat(result.jobId()).isEqualTo(jobId);
         assertThat(result.status()).isEqualTo(SUCCEEDED);
-        assertThat(result.name()).isEqualTo(OperationType.DECOMMISSION.name());
+        assertThat(result.name()).isEqualTo(OperationType.DECOMMISSION.name().toLowerCase());
         assertThat(result.operationType()).isEqualTo(OperationType.DECOMMISSION);
         verify(storageProvider).findJob(jobId);
     }

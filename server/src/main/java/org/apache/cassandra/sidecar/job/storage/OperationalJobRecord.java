@@ -234,7 +234,7 @@ public class OperationalJobRecord implements OperationalJobInfo
     @Override
     public String name()
     {
-        return operationType.name();
+        return operationType.name().toLowerCase();
     }
 
     @Override
