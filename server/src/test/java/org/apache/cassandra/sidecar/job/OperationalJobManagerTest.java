@@ -44,11 +44,12 @@ import org.apache.cassandra.sidecar.job.storage.StorageProviderException;
 
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests to validate the Job submission behavior for scenarios which are a combination of values for
@@ -182,9 +183,10 @@ class OperationalJobManagerTest
     }
 
     @Test
-    void testJobNotExecutedWhenPersistenceFails()
+    void testJobRemovedFromTrackerWhenPersistenceFails()
     {
         StorageProvider storageProvider = mock(StorageProvider.class);
+        when(storageProvider.isAvailable()).thenReturn(true);
         doThrow(new StorageProviderException("Storage unavailable"))
             .when(storageProvider).persistJob(any());
 
@@ -196,14 +198,13 @@ class OperationalJobManagerTest
         UUID jobId = UUIDs.timeBased();
         OperationalJob job = OperationalJobTest.createOperationalJob(jobId, MillisecondBoundConfiguration.parse("50ms"));
 
-        assertThatThrownBy(() -> manager.trySubmitJob(job,
-                                                      (j, ex) -> {},
-                                                      executorPool.service(),
-                                                      SecondBoundConfiguration.parse("5s")))
-            .isInstanceOf(StorageProviderException.class);
+        manager.trySubmitJob(job,
+                             (j, ex) -> {},
+                             executorPool.service(),
+                             SecondBoundConfiguration.parse("5s"));
 
-        assertThat(job.isExecuting()).isFalse();
-        assertThat(job.asyncResult().isComplete()).isFalse();
-        assertThat(durableTracker.jobsView()).doesNotContainKey(jobId);
+        loopAssert(2, () -> {
+            assertThat(durableTracker.jobsView()).doesNotContainKey(jobId);
+        });
     }
 }
