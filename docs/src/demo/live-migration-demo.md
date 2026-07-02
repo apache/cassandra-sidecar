@@ -83,7 +83,14 @@ INSERT INTO demo_ks.users (id,name) VALUES (2,'grace');
 INSERT INTO demo_ks.users (id,name) VALUES (3,'linus');
 INSERT INTO demo_ks.users (id,name) VALUES (4,'dennis');"
 
-ccm flush                        # turn memtables into SSTables so there are real files to copy
+# Bulk-load the same table (flush per batch) so the copy has several SSTables to move.
+for batch in $(seq 1 5); do
+  ccm node1 cqlsh -e "$(for i in $(seq $((batch*1000)) $((batch*1000+999))); do
+    echo "INSERT INTO demo_ks.users (id,name) VALUES ($i,'u$i');"; done)"
+  ccm node1 nodetool flush     # each batch -> its own SSTable
+done
+
+ccm flush                        # flush every node so there are real files to copy
 
 # Baseline: read at LOCAL_ONE with TRACING ON. The trace's "Read-repair" /
 # "Reading data from /..." lines should point at /127.0.0.1 (node1 itself
