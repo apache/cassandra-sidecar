@@ -349,6 +349,19 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
     }
 
     /**
+     * Marks the job as failed before it begins executing, for example when it cannot be started due to a
+     * coordination conflict. The execution result is completed exceptionally so the job reports
+     * {@link OperationalJobStatus#FAILED} with the supplied reason, and {@link #executeInternal()} is never invoked.
+     *
+     * @param cause the reason the job could not be started
+     */
+    public void failToStart(Throwable cause)
+    {
+        lastUpdate = Instant.now();
+        executionPromise.tryFail(cause);
+    }
+
+    /**
      * OperationalJob body. The implementation returns a Future representing the job execution.
      */
     protected abstract Future<Void> executeInternal() throws Exception;

@@ -43,6 +43,7 @@ import org.apache.cassandra.sidecar.job.storage.StorageProvider;
 import org.apache.cassandra.sidecar.job.storage.StorageProviderException;
 import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
@@ -248,6 +249,35 @@ class OperationalJobManagerTest
 
         manager.trySubmitJob(job, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
         assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+        OperationalJobInfo tracked = tracker.get(job.jobId());
+        assertThat(tracked).isNotNull();
+        assertThat(tracked.status()).isEqualTo(FAILED);
+        assertThat(tracked.failureReason()).contains("An active operation already exists");
+        assertThat(tracker.inflightJobsByOperation(job.name())).doesNotContain(job);
+    }
+
+    @Test
+    void testCoordinationFailsWhenNoCoordinatorConfigured() throws InterruptedException
+    {
+        OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
+        // No coordinator is wired, yet the job requires coordination.
+        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        OperationalJob job = createCoordinatedJob(UUIDs.timeBased());
+        BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (j, ex) -> {
+            assertThat(ex).isInstanceOf(OperationalJobConflictException.class);
+            assertThat(ex.getMessage()).contains("no OperationalJobCoordinator is configured");
+            latch.countDown();
+        };
+
+        manager.trySubmitJob(job, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+        OperationalJobInfo tracked = tracker.get(job.jobId());
+        assertThat(tracked).isNotNull();
+        assertThat(tracked.status()).isEqualTo(FAILED);
+        assertThat(tracked.failureReason()).contains("no OperationalJobCoordinator is configured");
+        assertThat(tracker.inflightJobsByOperation(job.name())).doesNotContain(job);
     }
 
     @Test

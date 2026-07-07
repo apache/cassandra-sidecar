@@ -28,8 +28,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.vertx.core.Future;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
-import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
@@ -116,19 +116,57 @@ public class OperationalJobManager
         try
         {
             checkConflict(job);
-
-            // Track the job first, then start execution separately
-            OperationalJob tracked = jobTracker.computeIfAbsent(job.jobId(), jobId -> job);
-            if (tracked == job)
-            {
-                tryCoordination(job);
-                internalExecutorPool.executeBlocking(job::execute);
-            }
         }
         catch (OperationalJobConflictException oje)
         {
             onComplete.accept(job, oje);
             return;
+        }
+
+        if (!job.requiresCoordination())
+        {
+            trackAndExecute(job, onComplete, serviceExecutorPool, waitTime);
+            return;
+        }
+
+        // Acquiring the active operation lock might perform blocking storage I/O so it must
+        // run off the event loop
+        acquireActiveOperationLock(job)
+        .onComplete(ar ->
+        {
+            if (ar.succeeded() && Boolean.TRUE.equals(ar.result()))
+            {
+                trackAndExecute(job, onComplete, serviceExecutorPool, waitTime);
+            }
+            else
+            {
+                OperationalJobConflictException conflict = coordinationConflict(job, ar.cause());
+                job.failToStart(conflict);
+                jobTracker.computeIfAbsent(job.jobId(), jobId -> job);
+                onComplete.accept(job, conflict);
+            }
+        });
+    }
+
+    /**
+     * Tracks the job and submits it for asynchronous execution on the internal executor pool, then arranges for
+     * {@code onComplete} to be invoked with the result (or after {@code waitTime} elapses).
+     *
+     * @param job                 the job to track and execute
+     * @param onComplete          callback to invoke when the job completes
+     * @param serviceExecutorPool the executor pool to use for waiting on job completion
+     * @param waitTime            the maximum time to wait for job completion before returning
+     */
+    private void trackAndExecute(OperationalJob job,
+                                 BiConsumer<OperationalJob, OperationalJobConflictException> onComplete,
+                                 TaskExecutorPool serviceExecutorPool,
+                                 DurationSpec waitTime)
+    {
+        // New job is submitted for all cases when we do not have a corresponding downstream job
+        OperationalJob tracked = jobTracker.computeIfAbsent(job.jobId(), jobId -> job);
+        if (tracked == job)
+        {
+            internalExecutorPool.executeBlocking(job::execute);
         }
 
         // Get the result, waiting for the specified wait time for result
@@ -152,24 +190,39 @@ public class OperationalJobManager
     }
 
     /**
-     * For jobs that require cluster-wide coordination, attempts to acquire the active operation lock
-     * via the coordinator. Throws a conflict if another operation is already active.
+     * For jobs that require cluster-wide coordination, attempts to acquire the active operation lock via the
+     * coordinator. The acquisition runs on the internal executor pool because it might performs blocking storage I/O
      *
-     * @param job instance of the job to coordinate
-     * @throws OperationalJobConflictException when the coordinator cannot activate the operation
+     * @param job the job requiring coordination
+     * @return a future resolving to {@code true} if the lock was acquired, {@code false} if another operation
+     *         already holds it, or a failed future if coordination could not be attempted (e.g. no coordinator
+     *         is configured or the storage call failed)
      */
-    private void tryCoordination(OperationalJob job) throws OperationalJobConflictException
+    private Future<Boolean> acquireActiveOperationLock(OperationalJob job)
     {
-        if (job.requiresCoordination())
+        if (coordinator == null)
         {
-            Preconditions.checkState(coordinator != null,
-                                     "Job requires coordination but no OperationalJobCoordinator is configured");
-            boolean activated = coordinator.trySetActive(job.operationType(), job.jobId());
-            if (!activated)
-            {
-                throw new OperationalJobConflictException("An active operation already exists. operationType='"
-                                                         + job.operationType() + '\'');
-            }
+            return Future.failedFuture("Job requires coordination but no OperationalJobCoordinator is configured");
         }
+        return internalExecutorPool.executeBlocking(() -> coordinator.trySetActive(job.operationType(), job.jobId()), false);
+    }
+
+    /**
+     * Builds the conflict exception describing why the active operation lock could not be acquired.
+     *
+     * @param job   the job that could not be coordinated
+     * @param cause the failure cause when coordination could not be attempted, or {@code null} when the lock is
+     *              simply held by another active operation
+     * @return the conflict exception to report to the caller
+     */
+    private OperationalJobConflictException coordinationConflict(OperationalJob job, @Nullable Throwable cause)
+    {
+        if (cause != null)
+        {
+            return new OperationalJobConflictException("Unable to coordinate operation. operationType='"
+                                                       + job.operationType() + "', reason='" + cause.getMessage() + '\'');
+        }
+        return new OperationalJobConflictException("An active operation already exists. operationType='"
+                                                   + job.operationType() + '\'');
     }
 }
