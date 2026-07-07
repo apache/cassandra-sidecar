@@ -136,6 +136,7 @@ public class OperationalJobManager
         {
             if (ar.succeeded() && Boolean.TRUE.equals(ar.result()))
             {
+                job.asyncResult().onComplete(result -> releaseActiveOperationLock(job));
                 trackAndExecute(job, onComplete, serviceExecutorPool, waitTime);
             }
             else
@@ -205,6 +206,24 @@ public class OperationalJobManager
             return Future.failedFuture("Job requires coordination but no OperationalJobCoordinator is configured");
         }
         return internalExecutorPool.executeBlocking(() -> coordinator.trySetActive(job.operationType(), job.jobId()), false);
+    }
+
+    /**
+     * Releases the active operation lock previously acquired for the given job. The release performs
+     * blocking storage I/O, so it runs on the internal executor pool off the event loop. A failure to clear is logged
+     * rather than surfaced, since the job has already completed by this point.
+     *
+     * @param job the job whose active operation lock should be released
+     */
+    private void releaseActiveOperationLock(OperationalJob job)
+    {
+        if (coordinator == null)
+        {
+            return;
+        }
+        internalExecutorPool.executeBlocking(() -> coordinator.clearActive(job.operationType(), job.jobId()), false)
+                            .onFailure(e -> logger.error("Failed to clear active operation lock. jobId={} operationType={}",
+                                                         job.jobId(), job.operationType(), e));
     }
 
     /**

@@ -52,6 +52,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -229,6 +230,7 @@ class OperationalJobManagerTest
         manager.trySubmitJob(job, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
         assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
         verify(coordinator).trySetActive(OperationType.MOVE, job.jobId());
+        verify(coordinator, timeout(5000)).clearActive(OperationType.MOVE, job.jobId());
     }
 
     @Test
@@ -254,6 +256,7 @@ class OperationalJobManagerTest
         assertThat(tracked.status()).isEqualTo(FAILED);
         assertThat(tracked.failureReason()).contains("An active operation already exists");
         assertThat(tracker.inflightJobsByOperation(job.name())).doesNotContain(job);
+        verify(coordinator, never()).clearActive(any(), any());
     }
 
     @Test
