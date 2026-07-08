@@ -90,15 +90,13 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
             executor.executeBlocking(() -> {
                 storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job));
                 return null;
-            }).onFailure(e -> {
+            }).onSuccess(v -> job.asyncResult().onComplete(ar -> {
+                updateTerminalStatus(job);
+                liveJobs.remove(job.jobId());
+            })).onFailure(e -> {
                 liveJobs.remove(jobId, job);
                 LOGGER.error("Failed to persist job {} to storage. Job will not be tracked durably.",
                              jobId, e);
-            });
-
-            job.asyncResult().onComplete(ar -> {
-                updateTerminalStatus(job);
-                liveJobs.remove(job.jobId());
             });
         }
 

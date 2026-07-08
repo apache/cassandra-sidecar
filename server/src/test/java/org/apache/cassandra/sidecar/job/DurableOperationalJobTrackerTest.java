@@ -140,6 +140,25 @@ class DurableOperationalJobTrackerTest
     }
 
     @Test
+    void testTerminalStatusNotUpdatedWhenPersistFails() throws InterruptedException
+    {
+        UUID jobId = UUIDs.timeBased();
+        OperationalJob job = OperationalJobTest.createOperationalJob(jobId, MillisecondBoundConfiguration.parse("50ms"));
+
+        doThrow(new StorageProviderException("persist failed")).when(storageProvider).persistJob(any());
+
+        CountDownLatch completed = new CountDownLatch(1);
+        tracker.computeIfAbsent(jobId, id -> job);
+        executorPool.executeBlocking(job::execute);
+        job.asyncResult().onComplete(ar -> completed.countDown());
+
+        assertThat(completed.await(5, TimeUnit.SECONDS)).isTrue();
+        // The tracker registers its completion handler before this test does, so a stale
+        // updateJobStatus would already have run once the job has completed.
+        verify(storageProvider, never()).updateJobStatus(any(), any(), any(), any());
+    }
+
+    @Test
     void testComputeIfAbsentUpdatesStatusOnFailure() throws InterruptedException
     {
         UUID jobId = UUIDs.timeBased();
