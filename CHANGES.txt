@@ -1,5 +1,7 @@
 0.5.0
 -----
+ * Remove filesystem path from Http response (CASSSIDECAR-477)
+ * Add basic configuration retrieval logic to ConfigurationManager (CASSSIDECAR-427)
  * RPM package is created with wrong version (CASSSIDECAR-472)
  * Define storage provider interface and Cassandra implementation to support durable job tracking (CASSSIDECAR-373)
  * Validate snapshot name during list snapshot (CASSSIDECAR-461)
@@ -7,6 +9,7 @@
 0.4.0
 -----
  * Fix restore job failing with "Keyspace does not exist" for quoted mixed-case keyspace names (CASSSIDECAR-475)
+ * Split RestoreJobDiscoverer into a fast status-check loop and a slow slice-discovery loop (CASSSIDECAR-462)
  * Ability to load Cassandra connection secrets from filesystem (CASSSIDECAR-407)
  * Sidecar should wake up immediately on the instance receiving a phase signal instead of waiting for the discovery loop (CASSSIDECAR-454)
  * Fix schema initialization race, CI test reporting, and build stability (CASSSIDECAR-468)

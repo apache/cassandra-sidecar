@@ -149,7 +149,7 @@ public class SSTableImportHandler extends AbstractHandler<SSTableImportRequestPa
         {
             logger.error("Upload directory not found for request={}, remoteAddress={}, " +
                          "instance={}", request, remoteAddress, host, cause);
-            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
+            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, "SSTable upload directory was not found"));
         }
         else if (cause instanceof IllegalArgumentException)
         {

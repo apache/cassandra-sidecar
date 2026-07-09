@@ -451,6 +451,7 @@ cassandra_input_validation:
 blob_restore:
   job_discovery_active_loop_delay: 5m
   job_discovery_idle_loop_delay: 10m
+  job_discovery_status_check_interval: 1s
   job_discovery_recency_days: 5
   slice_process_max_concurrency: 20
   restore_job_tables_ttl: 90d

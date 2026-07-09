@@ -265,7 +265,7 @@ jobs:
           ./gradlew --no-daemon \
             -PdtestVersion=${{ matrix.dtestVersion }} \
             -Dcassandra.sidecar.versions_to_test="${{ matrix.cassandra }}" \
-            integrationTestLightWeight \
+            spotbugsIntegrationTest integrationTestLightWeight \
             --stacktrace
         env:
           CASSANDRA_DEP_DIR: ${{ github.workspace }}/dtest-jars

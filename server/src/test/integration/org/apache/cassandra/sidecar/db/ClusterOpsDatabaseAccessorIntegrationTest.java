@@ -112,6 +112,9 @@ class ClusterOpsDatabaseAccessorIntegrationTest extends IntegrationTestBase
         Instant firstStartTime = updated.startTime();
         accessor.updateJobStatus(clusterName, jobId1, OperationType.REPAIR, OperationalJobStatus.RUNNING, null);
         OperationalJobRecord afterSecondRunning = accessor.findJob(clusterName, jobId1);
+        assertThat(afterSecondRunning)
+                .withFailMessage("findJob should return the job after second RUNNING update")
+                .isNotNull();
         assertThat(afterSecondRunning.startTime())
                 .withFailMessage("start_time should not change on subsequent RUNNING updates")
                 .isEqualTo(firstStartTime);

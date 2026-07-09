@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.configmanagement;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -96,6 +97,132 @@ class ConfigurationOverlaySnapshotTest
     }
 
     @Test
+    void testOverlayMergesYamlKeys()
+    {
+        JsonObject baseYaml = new JsonObject()
+                              .put("cluster_name", "test")
+                              .put("concurrent_reads", 32);
+        CassandraConfigurationOverlay baseOverlay = new CassandraConfigurationOverlay(baseYaml, null);
+        ConfigurationOverlaySnapshot base = new ConfigurationOverlaySnapshot(Instant.parse("2026-01-01T00:00:00Z"),
+                                                                             baseOverlay);
+
+        JsonObject otherYaml = new JsonObject()
+                               .put("concurrent_reads", 64)
+                               .put("storage_compatibility_mode", "CASSANDRA_5");
+        CassandraConfigurationOverlay otherOverlay = new CassandraConfigurationOverlay(otherYaml, null);
+        ConfigurationOverlaySnapshot other = new ConfigurationOverlaySnapshot(Instant.parse("2026-02-01T00:00:00Z"),
+                                                                              otherOverlay);
+
+        ConfigurationOverlaySnapshot result = base.overlay(other, 1);
+
+        assertThat(result.configuration().cassandraYaml().getString("cluster_name")).isEqualTo("test");
+        assertThat(result.configuration().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(64);
+        assertThat(result.configuration().cassandraYaml().getString("storage_compatibility_mode")).isEqualTo("CASSANDRA_5");
+    }
+
+    @Test
+    void testOverlayMergesJvmOpts()
+    {
+        Map<String, String> baseOpts = new LinkedHashMap<>();
+        baseOpts.put("-Xmx", "4g");
+        baseOpts.put("-Dcassandra.jmx.local.port", "7199");
+        CassandraConfigurationOverlay baseOverlay = new CassandraConfigurationOverlay(null, baseOpts);
+        ConfigurationOverlaySnapshot base = new ConfigurationOverlaySnapshot(Instant.now(), baseOverlay);
+
+        Map<String, String> otherOpts = new LinkedHashMap<>();
+        otherOpts.put("-Xmx", "8g");
+        otherOpts.put("-Dcassandra.ring_delay_ms", "60000");
+        CassandraConfigurationOverlay otherOverlay = new CassandraConfigurationOverlay(null, otherOpts);
+        ConfigurationOverlaySnapshot other = new ConfigurationOverlaySnapshot(Instant.now(), otherOverlay);
+
+        ConfigurationOverlaySnapshot result = base.overlay(other, 1);
+
+        assertThat(result.configuration().extraJvmOpts()).containsEntry("-Xmx", "8g");
+        assertThat(result.configuration().extraJvmOpts()).containsEntry("-Dcassandra.jmx.local.port", "7199");
+        assertThat(result.configuration().extraJvmOpts()).containsEntry("-Dcassandra.ring_delay_ms", "60000");
+    }
+
+    @Test
+    void testOverlayPrefersBaseOnConflictingBooleanJvmOpts()
+    {
+        Map<String, String> baseOpts = new LinkedHashMap<>();
+        baseOpts.put("-XX:+UseG1GC", "");
+        baseOpts.put("-Xmx", "4g");
+        CassandraConfigurationOverlay baseOverlay = new CassandraConfigurationOverlay(null, baseOpts);
+        ConfigurationOverlaySnapshot base = new ConfigurationOverlaySnapshot(Instant.now(), baseOverlay);
+
+        Map<String, String> otherOpts = new LinkedHashMap<>();
+        otherOpts.put("-XX:-UseG1GC", "");
+        otherOpts.put("-Xmx", "8g");
+        CassandraConfigurationOverlay otherOverlay = new CassandraConfigurationOverlay(null, otherOpts);
+        ConfigurationOverlaySnapshot other = new ConfigurationOverlaySnapshot(Instant.now(), otherOverlay);
+
+        ConfigurationOverlaySnapshot result = base.overlay(other, 1);
+
+        assertThat(result.configuration().extraJvmOpts()).containsEntry("-XX:+UseG1GC", "");
+        assertThat(result.configuration().extraJvmOpts()).doesNotContainKey("-XX:-UseG1GC");
+        assertThat(result.configuration().extraJvmOpts()).containsEntry("-Xmx", "8g");
+    }
+
+    @Test
+    void testOverlayUsesMaxLastModified()
+    {
+        Instant older = Instant.parse("2026-01-01T00:00:00Z");
+        Instant newer = Instant.parse("2026-06-01T00:00:00Z");
+
+        CassandraConfigurationOverlay emptyOverlay = new CassandraConfigurationOverlay(null, null);
+
+        ConfigurationOverlaySnapshot baseOlder = new ConfigurationOverlaySnapshot(older, emptyOverlay);
+        ConfigurationOverlaySnapshot otherNewer = new ConfigurationOverlaySnapshot(newer, emptyOverlay);
+        assertThat(baseOlder.overlay(otherNewer, 1).lastModified()).isEqualTo(newer);
+
+        ConfigurationOverlaySnapshot baseNewer = new ConfigurationOverlaySnapshot(newer, emptyOverlay);
+        ConfigurationOverlaySnapshot otherOlder = new ConfigurationOverlaySnapshot(older, emptyOverlay);
+        assertThat(baseNewer.overlay(otherOlder, 1).lastModified()).isEqualTo(newer);
+    }
+
+    @Test
+    void testOverlayDeepMergesNestedObjects()
+    {
+        JsonObject baseConfigs = new JsonObject()
+                                 .put("skiplist", new JsonObject().put("class_name", "SkipListMemtable"))
+                                 .put("default", new JsonObject().put("inherits", "skiplist"));
+        JsonObject baseYaml = new JsonObject()
+                              .put("memtable", new JsonObject().put("configurations", baseConfigs));
+        CassandraConfigurationOverlay baseOverlay = new CassandraConfigurationOverlay(baseYaml, null);
+        ConfigurationOverlaySnapshot base = new ConfigurationOverlaySnapshot(Instant.now(), baseOverlay);
+
+        JsonObject otherConfigs = new JsonObject()
+                                  .put("trie", new JsonObject().put("class_name", "TrieMemtable"))
+                                  .put("default", new JsonObject().put("inherits", "trie"));
+        JsonObject otherYaml = new JsonObject()
+                               .put("memtable", new JsonObject().put("configurations", otherConfigs));
+        CassandraConfigurationOverlay otherOverlay = new CassandraConfigurationOverlay(otherYaml, null);
+        ConfigurationOverlaySnapshot other = new ConfigurationOverlaySnapshot(Instant.now(), otherOverlay);
+
+        ConfigurationOverlaySnapshot result = base.overlay(other, 1);
+
+        JsonObject resultConfigs = result.configuration().cassandraYaml()
+                                         .getJsonObject("memtable")
+                                         .getJsonObject("configurations");
+        assertThat(resultConfigs.getJsonObject("skiplist").getString("class_name")).isEqualTo("SkipListMemtable");
+        assertThat(resultConfigs.getJsonObject("trie").getString("class_name")).isEqualTo("TrieMemtable");
+        assertThat(resultConfigs.getJsonObject("default").getString("inherits")).isEqualTo("trie");
+    }
+
+    @Test
+    void testEmptySnapshot()
+    {
+        ConfigurationOverlaySnapshot snapshot = ConfigurationOverlaySnapshot.emptySnapshot();
+
+        assertThat(snapshot.lastModified()).isEqualTo(Instant.EPOCH);
+        assertThat(snapshot.configuration().cassandraYaml()).isEmpty();
+        assertThat(snapshot.configuration().extraJvmOpts()).isEmpty();
+        assertThat(snapshot.hash()).startsWith("sha256:");
+        assertThat(snapshot.hash()).hasSize(71);
+    }
+
+    @Test
     void testToString()
     {
         JsonObject yaml = new JsonObject().put("concurrent_reads", 32);
@@ -108,7 +235,7 @@ class ConfigurationOverlaySnapshotTest
             "{",
             "  \"hash\" : \"" + snapshot.hash() + "\",",
             "  \"lastModified\" : \"2026-02-20T14:32:18Z\",",
-            "  \"overlay\" : {",
+            "  \"configuration\" : {",
             "    \"cassandraYaml\" : {",
             "      \"concurrent_reads\" : 32",
             "    },",

@@ -19,11 +19,9 @@
 package org.apache.cassandra.sidecar.configmanagement;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 import io.vertx.core.json.JsonObject;
 import org.jetbrains.annotations.NotNull;
@@ -169,27 +167,35 @@ public class CassandraConfigurationOverlay
         return new CassandraConfigurationOverlay(mergedYaml, mergedOpts);
     }
 
+    static boolean hasConflictingBooleanOpt(Map<String, String> existing, String key)
+    {
+        String conflicting = conflictingBooleanOpt(key);
+        return conflicting != null && existing.containsKey(conflicting);
+    }
+
+    static String conflictingBooleanOpt(String key)
+    {
+        if (key.startsWith("-XX:+"))
+        {
+            return "-XX:-" + key.substring(5);
+        }
+        if (key.startsWith("-XX:-"))
+        {
+            return "-XX:+" + key.substring(5);
+        }
+        return null;
+    }
+
     private static void validateNoConflictingBooleanOpts(Map<String, String> opts)
     {
-        Set<String> enabled = new HashSet<>();
-        Set<String> disabled = new HashSet<>();
         for (String key : opts.keySet())
         {
-            if (key.startsWith("-XX:+"))
+            if (hasConflictingBooleanOpt(opts, key))
             {
-                enabled.add(key.substring(5));
+                String option = key.substring(5);
+                throw new IllegalArgumentException(
+                    "Conflicting boolean JVM options: -XX:+" + option + " and -XX:-" + option);
             }
-            else if (key.startsWith("-XX:-"))
-            {
-                disabled.add(key.substring(5));
-            }
-        }
-        enabled.retainAll(disabled);
-        if (!enabled.isEmpty())
-        {
-            String option = enabled.iterator().next();
-            throw new IllegalArgumentException(
-                "Conflicting boolean JVM options: -XX:+" + option + " and -XX:-" + option);
         }
     }
 

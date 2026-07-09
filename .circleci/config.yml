@@ -270,7 +270,7 @@ jobs:
       - attach_workspace:
           at: dtest-jars
       - run: ./scripts/install-shaded-dtest-jar-local.sh
-      - run: ./gradlew --no-daemon --max-workers=2 -PdtestVersion=5.1 -Dcassandra.sidecar.versions_to_test="5.1" checkstyleIntegrationTest integrationTestLightWeight --stacktrace
+      - run: ./gradlew --no-daemon --max-workers=2 -PdtestVersion=5.1 -Dcassandra.sidecar.versions_to_test="5.1" checkstyleIntegrationTest spotbugsIntegrationTest integrationTestLightWeight --stacktrace
       - save_gradle_cache
 
       - store_artifacts:

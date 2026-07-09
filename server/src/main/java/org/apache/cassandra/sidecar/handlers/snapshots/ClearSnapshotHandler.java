@@ -100,7 +100,7 @@ public class ClearSnapshotHandler extends AbstractHandler<SnapshotRequestParam> 
                      requestParams, remoteAddress, host, context.request().method(), cause);
         if (cause instanceof FileNotFoundException || cause instanceof NoSuchFileException)
         {
-            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
+            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, "The requested snapshot was not found"));
         }
         else
         {
