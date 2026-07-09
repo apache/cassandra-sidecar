@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -53,6 +54,7 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
     private static final Logger LOGGER = LoggerFactory.getLogger(DurableOperationalJobTracker.class);
     private static final int MAX_STATUS_UPDATE_ATTEMPTS = 3;
     private static final long RETRY_DELAY_MS = 100;
+    private static final long RETRY_JITTER_MS = 100;
 
     private final ConcurrentHashMap<UUID, OperationalJob> liveJobs;
     private final StorageProvider storageProvider;
@@ -218,8 +220,10 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
                         job.jobId(), attempt, MAX_STATUS_UPDATE_ATTEMPTS, e.getMessage());
             if (attempt < MAX_STATUS_UPDATE_ATTEMPTS)
             {
-                executor.setTimer(RETRY_DELAY_MS * attempt,
-                                  id -> updateTerminalStatus(job, attempt + 1));
+                // Add jitter so that concurrent sidecar processes retrying against the same transient
+                // Cassandra blip do not all retry in lockstep
+                long delay = RETRY_DELAY_MS * attempt + ThreadLocalRandom.current().nextLong(RETRY_JITTER_MS);
+                executor.setTimer(delay, id -> updateTerminalStatus(job, attempt + 1));
             }
             else
             {
