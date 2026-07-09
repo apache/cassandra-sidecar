@@ -43,29 +43,20 @@ public class OperationalJobManager
 {
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final OperationalJobTracker jobTracker;
-    @Nullable
     private final OperationalJobCoordinator coordinator;
     private final TaskExecutorPool internalExecutorPool;
 
     /**
-     * Creates a manager instance without a coordinator.
-     *
-     * @param jobTracker the tracker for the operational jobs
-     */
-    public OperationalJobManager(OperationalJobTracker jobTracker, ExecutorPools executorPools)
-    {
-        this(jobTracker, null, executorPools);
-    }
-
-    /**
-     * Creates a manager instance with a coordinator for cluster-wide operation mutual exclusion.
+     * Creates a manager instance with a coordinator for cluster-wide operation mutual exclusion. Instances that
+     * do not support coordination bind a {@link DisabledOperationalJobCoordinator}, which fails coordination
+     * requests.
      *
      * @param jobTracker  the tracker for the operational jobs
-     * @param coordinator the coordinator for cluster-wide operations, or {@code null} if not needed
+     * @param coordinator the coordinator for cluster-wide operations
      */
     @Inject
     public OperationalJobManager(OperationalJobTracker jobTracker,
-                                 @Nullable OperationalJobCoordinator coordinator,
+                                 OperationalJobCoordinator coordinator,
                                  ExecutorPools executorPools)
     {
         this.jobTracker = jobTracker;
@@ -196,15 +187,11 @@ public class OperationalJobManager
      *
      * @param job the job requiring coordination
      * @return a future resolving to {@code true} if the lock was acquired, {@code false} if another operation
-     *         already holds it, or a failed future if coordination could not be attempted (e.g. no coordinator
-     *         is configured or the storage call failed)
+     *         already holds it, or a failed future if coordination could not be attempted (e.g. coordination is
+     *         disabled on this instance or the storage call failed)
      */
     private Future<Boolean> acquireActiveOperationLock(OperationalJob job)
     {
-        if (coordinator == null)
-        {
-            return Future.failedFuture("Job requires coordination but no OperationalJobCoordinator is configured");
-        }
         return internalExecutorPool.executeBlocking(() -> coordinator.trySetActive(job.operationType(), job.jobId()), false);
     }
 
@@ -217,10 +204,6 @@ public class OperationalJobManager
      */
     private void releaseActiveOperationLock(OperationalJob job)
     {
-        if (coordinator == null)
-        {
-            return;
-        }
         internalExecutorPool.executeBlocking(() -> coordinator.clearActive(job.operationType(), job.jobId()), false)
                             .onFailure(e -> logger.error("Failed to clear active operation lock. jobId={} operationType={}",
                                                          job.jobId(), job.operationType(), e));

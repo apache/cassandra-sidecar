@@ -234,7 +234,7 @@ class RepairJobTest
     {
         // Create a job tracker and manager
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(10);
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
 
         // Mock the storage operations
         StorageOperations storageOperations = mock(StorageOperations.class);

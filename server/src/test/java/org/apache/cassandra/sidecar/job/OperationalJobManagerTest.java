@@ -87,7 +87,7 @@ class OperationalJobManagerTest
     void testWithNoDownstreamJob() throws InterruptedException
     {
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
         OperationalJob testJob = OperationalJobTest.createOperationalJob(SUCCEEDED);
@@ -108,7 +108,7 @@ class OperationalJobManagerTest
     {
         OperationalJob runningJob = OperationalJobTest.createOperationalJob(RUNNING);
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
         BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (job, exception) -> {
@@ -126,7 +126,7 @@ class OperationalJobManagerTest
     {
         UUID jobId = UUIDs.timeBased();
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
         OperationalJob testJob = OperationalJobTest.createOperationalJob(jobId, SecondBoundConfiguration.parse("2s"));
@@ -150,7 +150,7 @@ class OperationalJobManagerTest
     {
         UUID jobId = UUIDs.timeBased();
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
         String msg = "Test Job failed";
@@ -260,17 +260,17 @@ class OperationalJobManagerTest
     }
 
     @Test
-    void testCoordinationFailsWhenNoCoordinatorConfigured() throws InterruptedException
+    void testCoordinationFailsWhenCoordinationDisabled() throws InterruptedException
     {
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
-        // No coordinator is wired, yet the job requires coordination.
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        // Coordination is disabled on this instance, yet the job requires coordination.
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
         OperationalJob job = createCoordinatedJob(UUIDs.timeBased());
         BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (j, ex) -> {
             assertThat(ex).isInstanceOf(OperationalJobConflictException.class);
-            assertThat(ex.getMessage()).contains("no OperationalJobCoordinator is configured");
+            assertThat(ex.getMessage()).contains("coordination is not supported by this Sidecar instance");
             latch.countDown();
         };
 
@@ -279,7 +279,7 @@ class OperationalJobManagerTest
         OperationalJobInfo tracked = tracker.get(job.jobId());
         assertThat(tracked).isNotNull();
         assertThat(tracked.status()).isEqualTo(FAILED);
-        assertThat(tracked.failureReason()).contains("no OperationalJobCoordinator is configured");
+        assertThat(tracked.failureReason()).contains("coordination is not supported by this Sidecar instance");
         assertThat(tracker.inflightJobsByOperation(job.name())).doesNotContain(job);
     }
 
