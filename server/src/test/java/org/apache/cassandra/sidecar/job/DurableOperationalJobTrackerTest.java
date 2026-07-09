@@ -153,8 +153,8 @@ class DurableOperationalJobTrackerTest
         job.asyncResult().onComplete(ar -> completed.countDown());
 
         assertThat(completed.await(5, TimeUnit.SECONDS)).isTrue();
-        // The tracker registers its completion handler before this test does, so a stale
-        // updateJobStatus would already have run once the job has completed.
+        // The tracker only registers its completion handler after a successful persist. Since persist
+        // failed here, the handler is never registered, so updateJobStatus should not run.
         verify(storageProvider, never()).updateJobStatus(any(), any(), any(), any());
     }
 
@@ -448,7 +448,7 @@ class DurableOperationalJobTrackerTest
         assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
         loopAssert(2, () -> {
-            verify(storageProvider, times(2)).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(SUCCEEDED), isNull());
+            verify(storageProvider, times(3)).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(SUCCEEDED), isNull());
             assertThat(tracker.jobsView()).doesNotContainKey(jobId);
         });
     }
