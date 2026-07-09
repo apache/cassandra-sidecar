@@ -49,6 +49,7 @@ import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCC
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -198,7 +199,7 @@ class OperationalJobManagerTest
         DurableOperationalJobTracker durableTracker = new DurableOperationalJobTracker(new ServiceConfigurationImpl(),
                                                                                        storageProvider,
                                                                                        executorPool.service());
-        OperationalJobManager manager = new OperationalJobManager(durableTracker, executorPool);
+        OperationalJobManager manager = new OperationalJobManager(durableTracker, new DisabledOperationalJobCoordinator(), executorPool);
 
         UUID jobId = UUIDs.timeBased();
         OperationalJob job = OperationalJobTest.createOperationalJob(jobId, MillisecondBoundConfiguration.parse("50ms"));
@@ -284,6 +285,29 @@ class OperationalJobManagerTest
     }
 
     @Test
+    void testLockNotReleasedWhenJobOptsOut() throws InterruptedException
+    {
+        OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
+        OperationalJobCoordinator coordinator = mock(OperationalJobCoordinator.class);
+        when(coordinator.trySetActive(any(), any())).thenReturn(true);
+        OperationalJobManager manager = new OperationalJobManager(tracker, coordinator, executorPool);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        // A distributed cluster-wide job that acquires the lock locally but relies on the orchestration
+        // layer to clear it once all nodes finish, so the manager must not auto-release on local completion.
+        OperationalJob job = createNonReleasingCoordinatedJob(UUIDs.timeBased());
+        BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (j, ex) -> {
+            assertThat(ex).isNull();
+            latch.countDown();
+        };
+
+        manager.trySubmitJob(job, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+        verify(coordinator).trySetActive(OperationType.MOVE, job.jobId());
+        verify(coordinator, after(1000).never()).clearActive(any(), any());
+    }
+
+    @Test
     void testCoordinatorNotCalledWhenJobDoesNotRequireCoordination() throws InterruptedException
     {
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
@@ -322,6 +346,42 @@ class OperationalJobManagerTest
             public boolean requiresCoordination()
             {
                 return true;
+            }
+
+            @Override
+            protected Future<Void> executeInternal()
+            {
+                return Future.succeededFuture();
+            }
+        };
+    }
+
+    private static OperationalJob createNonReleasingCoordinatedJob(UUID jobId)
+    {
+        return new OperationalJob(jobId)
+        {
+            @Override
+            public boolean hasConflict(@NotNull List<OperationalJob> sameOperationJobs)
+            {
+                return false;
+            }
+
+            @Override
+            public OperationType operationType()
+            {
+                return OperationType.MOVE;
+            }
+
+            @Override
+            public boolean requiresCoordination()
+            {
+                return true;
+            }
+
+            @Override
+            public boolean releasesOnCompletion()
+            {
+                return false;
             }
 
             @Override

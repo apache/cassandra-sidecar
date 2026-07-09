@@ -183,6 +183,24 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
         return false;
     }
 
+    /**
+     * Whether the manager should release the active operation lock (via
+     * {@link OperationalJobCoordinator#clearActive}) when this job completes locally. Only consulted for jobs that
+     * {@link #requiresCoordination() require coordination}.
+     * <p>
+     * Single-node coordinated jobs return {@code true} (the default): the Sidecar that acquires the lock also
+     * finishes the work, so releasing on local completion is correct. Distributed cluster-wide jobs whose work
+     * finishes on other nodes return {@code false} and rely on the orchestration layer to call
+     * {@link OperationalJobCoordinator#clearActive} once all nodes reach a terminal state.
+     *
+     * @return {@code true} if the manager should release the lock on local completion; {@code false} to defer
+     *         release to the orchestration layer
+     */
+    public boolean releasesOnCompletion()
+    {
+        return true;
+    }
+
     @Override
     public final Void result()
     {
@@ -239,11 +257,6 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
         String simpleName = this.getClass().getSimpleName();
         return simpleName.isEmpty() ? this.getClass().getName() : simpleName;
     }
-
-    /**
-     * @return the type of operation this job performs
-     */
-    public abstract OperationType operationType();
 
     /**
      * {@inheritDoc}

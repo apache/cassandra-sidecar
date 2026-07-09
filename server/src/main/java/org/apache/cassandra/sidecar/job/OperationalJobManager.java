@@ -127,7 +127,12 @@ public class OperationalJobManager
         {
             if (ar.succeeded() && Boolean.TRUE.equals(ar.result()))
             {
-                job.asyncResult().onComplete(result -> releaseActiveOperationLock(job));
+                // Distributed jobs that finish on other nodes opt out of auto-release; the orchestration
+                // layer clears the lock once all nodes reach a terminal state.
+                if (job.releasesOnCompletion())
+                {
+                    job.asyncResult().onComplete(result -> releaseActiveOperationLock(job));
+                }
                 trackAndExecute(job, onComplete, serviceExecutorPool, waitTime);
             }
             else
