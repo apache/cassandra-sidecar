@@ -96,9 +96,11 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
                 updateTerminalStatus(job);
                 liveJobs.remove(job.jobId());
             })).onFailure(e -> {
-                liveJobs.remove(jobId, job);
-                LOGGER.error("Failed to persist job {} to storage. Job will not be tracked durably.",
+                // The persist failed, but the job is already executing on a separate executor. Keep it in
+                // liveJobs so in-process status queries and conflict detection still see it.
+                LOGGER.error("Failed to persist job {} to storage. Job will be tracked in-memory only.",
                              jobId, e);
+                job.asyncResult().onComplete(ar -> liveJobs.remove(job.jobId()));
             });
         }
 

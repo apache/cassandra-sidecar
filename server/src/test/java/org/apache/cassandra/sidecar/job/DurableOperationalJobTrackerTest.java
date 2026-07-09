@@ -291,16 +291,30 @@ class DurableOperationalJobTrackerTest
     }
 
     @Test
-    void testComputeIfAbsentRemovesJobFromMapOnPersistenceFailure()
+    void testComputeIfAbsentKeepsJobInMapOnPersistenceFailureUntilCompletion() throws InterruptedException
     {
+        UUID jobId = UUIDs.timeBased();
+        OperationalJob job = OperationalJobTest.createOperationalJob(jobId, MillisecondBoundConfiguration.parse("200ms"));
+
         doThrow(new StorageProviderException("Storage unavailable"))
             .when(storageProvider).persistJob(any());
-        OperationalJob job = createOperationalJob(CREATED);
 
-        tracker.computeIfAbsent(job.jobId(), id -> job);
+        CountDownLatch completed = new CountDownLatch(1);
+        tracker.computeIfAbsent(jobId, id -> job);
+        executorPool.executeBlocking(job::execute);
+        job.asyncResult().onComplete(ar -> completed.countDown());
 
+        // The persist failed, but the job is already executing, so it must remain in the live map
+        // (durability-degraded) rather than being dropped mid-flight.
         loopAssert(2, () -> {
-            assertThat(tracker.jobsView()).doesNotContainKey(job.jobId());
+            verify(storageProvider).persistJob(any());
+            assertThat(tracker.jobsView()).containsKey(jobId);
+        });
+
+        // Once the job completes, the completion handler removes it from the live map to avoid leaking.
+        assertThat(completed.await(5, TimeUnit.SECONDS)).isTrue();
+        loopAssert(2, () -> {
+            assertThat(tracker.jobsView()).doesNotContainKey(jobId);
         });
     }
 
