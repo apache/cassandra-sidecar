@@ -47,6 +47,16 @@ import org.jetbrains.annotations.Nullable;
  * {@link OperationalJob} references for the current process, since executing jobs
  * with Vert.x promises cannot be reconstituted from storage. Once a job completes,
  * it is removed from the local map, and subsequent lookups are served from storage.
+ *
+ * <p>Storage currently receives only two writes per job: the initial
+ * {@link OperationalJobStatus#CREATED CREATED} record on submission and the terminal status on
+ * completion. As a result, if the sidecar restarts mid-operation, or if the
+ * terminal-status update exhausts its retries (see {@link #updateTerminalStatus}), the persisted
+ * record can remain stuck at {@code CREATED} even though the operation has since progressed or
+ * finished. There is currently no marker distinguishing a record that is genuinely still
+ * {@code CREATED} from one whose true state was simply never recorded; adding such a marker together
+ * with a reconciliation sweep (leveraging {@link StorageProvider#findAllJobs(int)}) is tracked as
+ * follow-up work.
  */
 @Singleton
 public class DurableOperationalJobTracker implements OperationalJobTracker
