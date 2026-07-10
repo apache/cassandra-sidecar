@@ -25,6 +25,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 import static org.apache.cassandra.sidecar.configmanagement.ConfigurationPatchOperation.Op.ADD;
@@ -254,6 +255,60 @@ class ConfigurationPatchApplierTest
         applyOps(effectiveConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(TEST,
                         "/configuration/cassandraYaml/memtable/configurations/trie/class_name", "TrieMemtable"));
+    }
+
+    @Test
+    void testTestObjectValue()
+    {
+        // TEST against an object-valued path. The request handler reads the value via JsonObject.getValue,
+        // so the expected value is a JsonObject - the same type resolveValue returns.
+        applyOps(effectiveConfig, EMPTY_OVERLAY,
+                new ConfigurationPatchOperation(TEST,
+                        "/configuration/cassandraYaml/memtable/configurations/trie",
+                        new JsonObject().put("class_name", "TrieMemtable").put("max_shard_count", 4)));
+    }
+
+    @Test
+    void testTestObjectValueMismatchFails()
+    {
+        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+                new ConfigurationPatchOperation(TEST,
+                        "/configuration/cassandraYaml/memtable/configurations/trie",
+                        new JsonObject().put("class_name", "TrieMemtable").put("max_shard_count", 99))))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("Test failed");
+    }
+
+    @Test
+    void testTestArrayValue()
+    {
+        // TEST against an array-valued path. The expected value is a JsonArray, matching what
+        // resolveValue returns for array values.
+        JsonObject effectiveYaml = effectiveConfig.cassandraYaml().copy()
+                .put("data_file_directories", new JsonArray().add("/data1").add("/data2"));
+        CassandraConfigurationOverlay effective = new CassandraConfigurationOverlay(
+                effectiveYaml, effectiveConfig.extraJvmOpts());
+
+        applyOps(effective, EMPTY_OVERLAY,
+                new ConfigurationPatchOperation(TEST,
+                        "/configuration/cassandraYaml/data_file_directories",
+                        new JsonArray().add("/data1").add("/data2")));
+    }
+
+    @Test
+    void testTestArrayValueMismatchFails()
+    {
+        JsonObject effectiveYaml = effectiveConfig.cassandraYaml().copy()
+                .put("data_file_directories", new JsonArray().add("/data1").add("/data2"));
+        CassandraConfigurationOverlay effective = new CassandraConfigurationOverlay(
+                effectiveYaml, effectiveConfig.extraJvmOpts());
+
+        assertThatThrownBy(() -> applyOps(effective, EMPTY_OVERLAY,
+                new ConfigurationPatchOperation(TEST,
+                        "/configuration/cassandraYaml/data_file_directories",
+                        new JsonArray().add("/data1").add("/other"))))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("Test failed");
     }
 
     @Test

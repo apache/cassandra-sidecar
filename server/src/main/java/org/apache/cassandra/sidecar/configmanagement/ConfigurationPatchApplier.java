@@ -117,7 +117,10 @@ public final class ConfigurationPatchApplier
                     throw new ConfigurationPatchException(
                             "Test failed: path does not exist in effective config: '" + op.path() + "'", op);
                 }
-                if (!valueEquals(actualValue, op.value()))
+                // Both sides are Vert.x JSON types: resolveValue returns JsonObject/JsonArray/scalars,
+                // and op.value() is read from the request via JsonObject.getValue (see
+                // ConfigurationPatchHandler), which wraps objects/arrays the same way.
+                if (!Objects.equals(actualValue, op.value()))
                 {
                     throw new ConfigurationPatchException(
                             "Test failed: expected " + op.value() + " but found " + actualValue
@@ -485,12 +488,4 @@ public final class ConfigurationPatchApplier
         return new JsonObject();
     }
 
-    private static boolean valueEquals(@NotNull Object actual, @Nullable Object expected)
-    {
-        if (actual instanceof JsonObject && expected instanceof Map)
-        {
-            return actual.equals(new JsonObject((Map<String, Object>) expected));
-        }
-        return Objects.equals(actual, expected);
-    }
 }
