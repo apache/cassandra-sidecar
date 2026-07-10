@@ -69,6 +69,12 @@ public final class ConfigurationPatchApplier
             checkPreconditions(parsed, effectiveConfig, currentOverlay);
         }
 
+        // Phase 1b: Reject patches that would leave conflicting boolean JVM options in the
+        // effective configuration (e.g. adding -XX:-UseG1GC while the base already sets -XX:+UseG1GC).
+        // Checking against the effective opts, rather than the overlay alone, ensures the stored
+        // overlay and the returned effective configuration stay consistent.
+        checkResultingJvmOptConflicts(parsedOps, effectiveConfig.extraJvmOpts());
+
         // Phase 2: Apply mutations
         JsonObject updatedYaml = currentOverlay.cassandraYaml().copy();
         Map<String, String> updatedOpts = new LinkedHashMap<>(currentOverlay.extraJvmOpts());
@@ -333,14 +339,53 @@ public final class ConfigurationPatchApplier
         }
         else
         {
-            if (CassandraConfigurationOverlay.hasConflictingBooleanOpt(updatedOpts, key))
-            {
-                String conflicting = CassandraConfigurationOverlay.conflictingBooleanOpt(key);
-                throw new ConfigurationPatchException(
-                        "Conflicting boolean JVM option: '" + key + "' conflicts with existing '"
-                        + conflicting + "'", op);
-            }
+            // Boolean-opt conflicts are validated up-front against the effective configuration
+            // in checkResultingJvmOptConflicts, so the mutation here is unconditional.
             updatedOpts.put(key, String.valueOf(op.value()));
+        }
+    }
+
+    /**
+     * Rejects patches that would leave conflicting boolean JVM options (e.g. both {@code -XX:+UseG1GC}
+     * and {@code -XX:-UseG1GC}) in the effective configuration once applied.
+     *
+     * <p>The check is performed against a projection of the effective options after the patch's
+     * add/remove/replace operations are applied in order. This catches conflicts against options that
+     * originate in the base template (not just the overlay), keeping the stored overlay and the
+     * returned effective configuration consistent.
+     */
+    private static void checkResultingJvmOptConflicts(
+            List<ConfigurationPatchValidator.ParsedPatchOperation> parsedOps,
+            Map<String, String> effectiveOpts)
+    {
+        Map<String, String> projected = new LinkedHashMap<>(effectiveOpts);
+        for (ConfigurationPatchValidator.ParsedPatchOperation parsed : parsedOps)
+        {
+            if (!parsed.section().equals(EXTRA_JVM_OPTS_SECTION))
+            {
+                continue;
+            }
+            ConfigurationPatchOperation op = parsed.operation();
+            String key = parsed.topLevelKey();
+            switch (op.op())
+            {
+                case REMOVE:
+                    projected.remove(key);
+                    break;
+                case ADD:
+                case REPLACE:
+                    if (CassandraConfigurationOverlay.hasConflictingBooleanOpt(projected, key))
+                    {
+                        String conflicting = CassandraConfigurationOverlay.conflictingBooleanOpt(key);
+                        throw new ConfigurationPatchException(
+                                "Conflicting boolean JVM option: '" + key + "' conflicts with existing '"
+                                + conflicting + "' in the effective configuration", op);
+                    }
+                    projected.put(key, String.valueOf(op.value()));
+                    break;
+                case TEST:
+                    break;
+            }
         }
     }
 

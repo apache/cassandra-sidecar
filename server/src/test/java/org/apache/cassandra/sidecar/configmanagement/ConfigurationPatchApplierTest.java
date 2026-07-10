@@ -370,10 +370,31 @@ class ConfigurationPatchApplierTest
     @Test
     void testAddConflictingBooleanJvmOptFails()
     {
+        Map<String, String> effectiveOpts = new LinkedHashMap<>();
+        effectiveOpts.put("-Xmx", "4g");
+        effectiveOpts.put("-XX:+UseG1GC", "");
+        CassandraConfigurationOverlay effective = new CassandraConfigurationOverlay(
+                effectiveConfig.cassandraYaml(), effectiveOpts);
         CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(null,
                 new LinkedHashMap<>(Map.of("-XX:+UseG1GC", "")));
 
-        assertThatThrownBy(() -> applyOps(effectiveConfig, overlay,
+        assertThatThrownBy(() -> applyOps(effective, overlay,
+                new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-XX:-UseG1GC", "")))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("Conflicting boolean JVM option");
+    }
+
+    @Test
+    void testAddConflictingBooleanJvmOptAgainstBaseFails()
+    {
+        // Conflicting option exists only in the effective config (i.e. base template), not the overlay.
+        // The overlay-only check would miss this; the effective-config check must catch it.
+        Map<String, String> effectiveOpts = new LinkedHashMap<>();
+        effectiveOpts.put("-XX:+UseG1GC", "");
+        CassandraConfigurationOverlay effective = new CassandraConfigurationOverlay(
+                effectiveConfig.cassandraYaml(), effectiveOpts);
+
+        assertThatThrownBy(() -> applyOps(effective, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-XX:-UseG1GC", "")))
                 .isInstanceOf(ConfigurationPatchException.class)
                 .hasMessageContaining("Conflicting boolean JVM option");

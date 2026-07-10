@@ -219,6 +219,64 @@ class ConfigurationManagerTest
     }
 
     @Test
+    void testPatchConflictingBooleanJvmOptRejected()
+    {
+        InstanceMetadata instance = mockInstance(1);
+
+        // Existing overlay enables G1GC; a patch that adds the opposite flag must be rejected outright
+        // rather than being stored and silently dropped when merged with the base.
+        Map<String, String> jvmOpts = new LinkedHashMap<>();
+        jvmOpts.put("-XX:+UseG1GC", "");
+        CassandraConfigurationOverlay initial = new CassandraConfigurationOverlay(null, jvmOpts);
+        provider.storeOverlay(instance, null, new ConfigurationOverlaySnapshot(Instant.now(), initial));
+
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        String effectiveHash = manager.getEffectiveConfiguration(instance).hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/extraJvmOpts/-XX:-UseG1GC", ""));
+
+        assertThatThrownBy(() -> manager.patchConfiguration(instance, effectiveHash, ops))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("Conflicting boolean JVM option");
+
+        // Nothing was stored: the overlay still enables G1GC and does not contain the conflicting flag
+        CassandraConfigurationOverlay storedOverlay = provider.getOverlay(instance).configuration();
+        assertThat(storedOverlay.extraJvmOpts()).containsEntry("-XX:+UseG1GC", "");
+        assertThat(storedOverlay.extraJvmOpts()).doesNotContainKey("-XX:-UseG1GC");
+    }
+
+    @Test
+    void testPatchReturnedConfigMatchesStoredConfig()
+    {
+        InstanceMetadata instance = mockInstance(1);
+
+        Map<String, String> jvmOpts = new LinkedHashMap<>();
+        jvmOpts.put("-XX:+UseG1GC", "");
+        CassandraConfigurationOverlay initial = new CassandraConfigurationOverlay(null, jvmOpts);
+        provider.storeOverlay(instance, null, new ConfigurationOverlaySnapshot(Instant.now(), initial));
+
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        String effectiveHash = manager.getEffectiveConfiguration(instance).hash();
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/extraJvmOpts/-Xmx", "8g"));
+
+        ConfigurationOverlaySnapshot returned = manager.patchConfiguration(instance, effectiveHash, ops);
+
+        // The effective config returned to the caller must equal the effective config computed from the
+        // persisted overlay on a subsequent read (no silent divergence between stored and returned state).
+        ConfigurationOverlaySnapshot reread = manager.getEffectiveConfiguration(instance);
+        assertThat(returned.hash()).isEqualTo(reread.hash());
+        assertThat(returned.configuration()).isEqualTo(reread.configuration());
+        assertThat(returned.configuration().extraJvmOpts())
+                .containsEntry("-XX:+UseG1GC", "")
+                .containsEntry("-Xmx", "8g");
+    }
+
+    @Test
     void testPatchRemoveTopLevelKeyFromOverlay()
     {
         InstanceMetadata instance = mockInstance(1);
