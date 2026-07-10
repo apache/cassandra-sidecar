@@ -23,9 +23,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import java.util.Objects;
 import java.util.UUID;
 
 import com.datastax.driver.core.utils.UUIDs;
+import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
@@ -65,86 +67,29 @@ public class OperationalJobRecord implements OperationalJobInfo
     private final List<UUID> nodesFailed;
 
     /**
-     * Constructs an OperationalJobRecord with the given fields.
+     * Constructs an OperationalJobRecord from its {@link Builder}.
      *
-     * @param jobId         time-based v1 UUID identifying the job
-     * @param operationType the operation type
-     * @param status        the current status of the job
+     * @param builder the builder holding the field values
      */
-    public OperationalJobRecord(UUID jobId, OperationType operationType, OperationalJobStatus status)
+    private OperationalJobRecord(Builder builder)
     {
-        this(jobId, operationType, status, null, Instant.now(), null, null, null);
-    }
-
-    /**
-     * Constructs an OperationalJobRecord with all fields except per-node status lists.
-     *
-     * @param jobId             time-based v1 UUID identifying the job
-     * @param operationType     the operation type
-     * @param status            the current status of the job
-     * @param startTime         the timestamp when execution started, or null if not yet started
-     * @param lastUpdate        the timestamp of the last status update, or null for pre-existing rows
-     * @param failureReason     the failure reason if the job failed, or null
-     * @param nodeExecutionOrder        the ordered list of parallel node groups for execution, or null
-     * @param operationMetadata the operation parameters, or null
-     */
-    public OperationalJobRecord(UUID jobId, OperationType operationType, OperationalJobStatus status,
-                                @Nullable Instant startTime,
-                                @Nullable Instant lastUpdate,
-                                @Nullable String failureReason,
-                                @Nullable List<List<UUID>> nodeExecutionOrder,
-                                @Nullable Map<String, String> operationMetadata)
-    {
-        this(jobId, operationType, status, startTime, lastUpdate, failureReason,
-             nodeExecutionOrder, operationMetadata,
-             Collections.emptyList(), Collections.emptyList(),
-             Collections.emptyList(), Collections.emptyList());
-    }
-
-    /**
-     * Constructs an OperationalJobRecord with all fields including per-node status lists.
-     *
-     * @param jobId              time-based v1 UUID identifying the job
-     * @param operationType      the operation type
-     * @param status             the current status of the job
-     * @param startTime          the timestamp when execution started, or null if not yet started
-     * @param lastUpdate         the timestamp of the last status update, or null for pre-existing rows
-     * @param failureReason      the failure reason if the job failed, or null
-     * @param nodeExecutionOrder the ordered list of parallel node groups for execution, or null
-     * @param operationMetadata  the operation parameters, or null
-     * @param nodesPending       node UUIDs with CREATED status
-     * @param nodesExecuting     node UUIDs with RUNNING status
-     * @param nodesSucceeded     node UUIDs with SUCCEEDED status
-     * @param nodesFailed        node UUIDs with FAILED status
-     */
-    public OperationalJobRecord(UUID jobId, OperationType operationType, OperationalJobStatus status,
-                                @Nullable Instant startTime,
-                                @Nullable Instant lastUpdate,
-                                @Nullable String failureReason,
-                                @Nullable List<List<UUID>> nodeExecutionOrder,
-                                @Nullable Map<String, String> operationMetadata,
-                                @NotNull List<UUID> nodesPending,
-                                @NotNull List<UUID> nodesExecuting,
-                                @NotNull List<UUID> nodesSucceeded,
-                                @NotNull List<UUID> nodesFailed)
-    {
-        Preconditions.checkArgument(jobId != null, "jobId must not be null");
-        Preconditions.checkArgument(jobId.version() == 1, "jobId must be a time-based (v1) UUID");
-        Preconditions.checkArgument(operationType != null, "operationType must not be null");
-        Preconditions.checkArgument(status != null, "status must not be null");
-        this.jobId = jobId;
-        this.operationType = operationType;
-        this.status = status;
-        this.creationTimeMillis = UUIDs.unixTimestamp(jobId);
-        this.startTime = startTime;
-        this.lastUpdate = lastUpdate;
-        this.failureReason = failureReason;
-        this.nodeExecutionOrder = nodeExecutionOrder;
-        this.operationMetadata = operationMetadata;
-        this.nodesPending = nodesPending;
-        this.nodesExecuting = nodesExecuting;
-        this.nodesSucceeded = nodesSucceeded;
-        this.nodesFailed = nodesFailed;
+        Preconditions.checkArgument(builder.jobId != null, "jobId must not be null");
+        Preconditions.checkArgument(builder.jobId.version() == 1, "jobId must be a time-based (v1) UUID");
+        Preconditions.checkArgument(builder.operationType != null, "operationType must not be null");
+        Preconditions.checkArgument(builder.status != null, "status must not be null");
+        jobId = builder.jobId;
+        operationType = builder.operationType;
+        status = builder.status;
+        creationTimeMillis = UUIDs.unixTimestamp(builder.jobId);
+        startTime = builder.startTime;
+        lastUpdate = builder.lastUpdate;
+        failureReason = builder.failureReason;
+        nodeExecutionOrder = builder.nodeExecutionOrder;
+        operationMetadata = builder.operationMetadata;
+        nodesPending = builder.nodesPending;
+        nodesExecuting = builder.nodesExecuting;
+        nodesSucceeded = builder.nodesSucceeded;
+        nodesFailed = builder.nodesFailed;
     }
 
     /**
@@ -285,7 +230,11 @@ public class OperationalJobRecord implements OperationalJobInfo
      */
     public static OperationalJobRecord fromOperationalJob(OperationalJob job)
     {
-        return new OperationalJobRecord(job.jobId(), job.operationType(), job.status());
+        return builder().jobId(job.jobId())
+                        .operationType(job.operationType())
+                        .status(job.status())
+                        .lastUpdate(Instant.now())
+                        .build();
     }
 
     @Override
@@ -306,5 +255,107 @@ public class OperationalJobRecord implements OperationalJobInfo
                ", nodesSucceeded=" + nodesSucceeded +
                ", nodesFailed=" + nodesFailed +
                '}';
+    }
+
+    /**
+     * @return a new {@link Builder} for constructing an {@link OperationalJobRecord}
+     */
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    /**
+     * {@link DataObjectBuilder} for {@link OperationalJobRecord}.
+     */
+    public static final class Builder implements DataObjectBuilder<Builder, OperationalJobRecord>
+    {
+        private UUID jobId;
+        private OperationType operationType;
+        private OperationalJobStatus status;
+        private @Nullable Instant startTime;
+        private @Nullable Instant lastUpdate;
+        private @Nullable String failureReason;
+        private @Nullable List<List<UUID>> nodeExecutionOrder;
+        private @Nullable Map<String, String> operationMetadata;
+        private @NotNull List<UUID> nodesPending = Collections.emptyList();
+        private @NotNull List<UUID> nodesExecuting = Collections.emptyList();
+        private @NotNull List<UUID> nodesSucceeded = Collections.emptyList();
+        private @NotNull List<UUID> nodesFailed = Collections.emptyList();
+
+        private Builder()
+        {
+        }
+
+        @Override
+        public Builder self()
+        {
+            return this;
+        }
+
+        public Builder jobId(UUID jobId)
+        {
+            return update(b -> b.jobId = jobId);
+        }
+
+        public Builder operationType(OperationType operationType)
+        {
+            return update(b -> b.operationType = operationType);
+        }
+
+        public Builder status(OperationalJobStatus status)
+        {
+            return update(b -> b.status = status);
+        }
+
+        public Builder startTime(@Nullable Instant startTime)
+        {
+            return update(b -> b.startTime = startTime);
+        }
+
+        public Builder lastUpdate(@Nullable Instant lastUpdate)
+        {
+            return update(b -> b.lastUpdate = lastUpdate);
+        }
+
+        public Builder failureReason(@Nullable String failureReason)
+        {
+            return update(b -> b.failureReason = failureReason);
+        }
+
+        public Builder nodeExecutionOrder(@Nullable List<List<UUID>> nodeExecutionOrder)
+        {
+            return update(b -> b.nodeExecutionOrder = nodeExecutionOrder);
+        }
+
+        public Builder operationMetadata(@Nullable Map<String, String> operationMetadata)
+        {
+            return update(b -> b.operationMetadata = operationMetadata);
+        }
+
+        public Builder nodesPending(@NotNull List<UUID> nodesPending)
+        {
+            return update(b -> b.nodesPending = Objects.requireNonNull(nodesPending, "nodesPending cannot be null"));
+        }
+
+        public Builder nodesExecuting(@NotNull List<UUID> nodesExecuting)
+        {
+            return update(b -> b.nodesExecuting = Objects.requireNonNull(nodesExecuting, "nodesExecuting cannot be null"));
+        }
+
+        public Builder nodesSucceeded(@NotNull List<UUID> nodesSucceeded)
+        {
+            return update(b -> b.nodesSucceeded = Objects.requireNonNull(nodesSucceeded, "nodesSucceeded cannot be null"));
+        }
+
+        public Builder nodesFailed(@NotNull List<UUID> nodesFailed)
+        {
+            return update(b -> b.nodesFailed = Objects.requireNonNull(nodesFailed, "nodesFailed cannot be null"));
+        }
+
+        public OperationalJobRecord build()
+        {
+            return new OperationalJobRecord(this);
+        }
     }
 }

@@ -61,8 +61,14 @@ class ClusterOpsDatabaseAccessorIntegrationTest extends IntegrationTestBase
                 Arrays.asList(UUID.randomUUID())
         );
         Map<String, String> metadata = Map.of("key1", "value1", "key2", "value2");
-        OperationalJobRecord job1 = new OperationalJobRecord(jobId1, OperationType.REPAIR, OperationalJobStatus.CREATED,
-                                                             null, Instant.now(), null, nodeOrder, metadata);
+        OperationalJobRecord job1 = OperationalJobRecord.builder()
+                                                        .jobId(jobId1)
+                                                        .operationType(OperationType.REPAIR)
+                                                        .status(OperationalJobStatus.CREATED)
+                                                        .lastUpdate(Instant.now())
+                                                        .nodeExecutionOrder(nodeOrder)
+                                                        .operationMetadata(metadata)
+                                                        .build();
         accessor.persistJob(clusterName, job1);
 
         OperationalJobRecord found = accessor.findJob(clusterName, jobId1);
@@ -81,7 +87,11 @@ class ClusterOpsDatabaseAccessorIntegrationTest extends IntegrationTestBase
                 });
 
         UUID jobId2 = UUIDs.timeBased();
-        OperationalJobRecord job2 = new OperationalJobRecord(jobId2, OperationType.DECOMMISSION, OperationalJobStatus.CREATED);
+        OperationalJobRecord job2 = OperationalJobRecord.builder()
+                                                        .jobId(jobId2)
+                                                        .operationType(OperationType.DECOMMISSION)
+                                                        .status(OperationalJobStatus.CREATED)
+                                                        .build();
         accessor.persistJob(clusterName, job2);
 
         OperationalJobRecord found2 = accessor.findJob(clusterName, jobId2);
@@ -133,7 +143,11 @@ class ClusterOpsDatabaseAccessorIntegrationTest extends IntegrationTestBase
                 });
 
         UUID jobId3 = UUIDs.timeBased();
-        accessor.persistJob(clusterName, new OperationalJobRecord(jobId3, OperationType.REPAIR, OperationalJobStatus.CREATED));
+        accessor.persistJob(clusterName, OperationalJobRecord.builder()
+                                                             .jobId(jobId3)
+                                                             .operationType(OperationType.REPAIR)
+                                                             .status(OperationalJobStatus.CREATED)
+                                                             .build());
         List<OperationalJobRecord> allJobs = accessor.findAllJobs(clusterName, 10);
         assertThat(allJobs)
                 .withFailMessage("findAllJobs should return every persisted job when the limit exceeds total count")
@@ -148,9 +162,14 @@ class ClusterOpsDatabaseAccessorIntegrationTest extends IntegrationTestBase
                 .withFailMessage("findAllJobs should return the most recently created job first")
                 .isEqualTo(jobId3);
 
-        OperationalJobRecord job1Updated = new OperationalJobRecord(jobId1, OperationType.REPAIR,
-                                                                     OperationalJobStatus.SUCCEEDED,
-                                                                     null, Instant.now(), null, nodeOrder, metadata);
+        OperationalJobRecord job1Updated = OperationalJobRecord.builder()
+                                                               .jobId(jobId1)
+                                                               .operationType(OperationType.REPAIR)
+                                                               .status(OperationalJobStatus.SUCCEEDED)
+                                                               .lastUpdate(Instant.now())
+                                                               .nodeExecutionOrder(nodeOrder)
+                                                               .operationMetadata(metadata)
+                                                               .build();
         accessor.persistJob(clusterName, job1Updated);
         OperationalJobRecord afterUpsert = accessor.findJob(clusterName, jobId1);
         assertThat(afterUpsert)

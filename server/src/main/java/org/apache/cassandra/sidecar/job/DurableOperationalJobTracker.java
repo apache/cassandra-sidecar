@@ -38,6 +38,7 @@ import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.job.storage.OperationalJobRecord;
 import org.apache.cassandra.sidecar.job.storage.StorageProvider;
+import org.apache.cassandra.sidecar.utils.InvocationTrackingFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -92,13 +93,11 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
             throw new IllegalStateException("Storage provider is not available");
         }
 
-        boolean[] created = {false};
-        OperationalJob job = liveJobs.computeIfAbsent(jobId, id -> {
-            created[0] = true;
-            return mappingFunction.apply(id);
-        });
+        InvocationTrackingFunction<UUID, OperationalJob> mappingFunctionTracker =
+        new InvocationTrackingFunction<>(mappingFunction);
+        OperationalJob job = liveJobs.computeIfAbsent(jobId, mappingFunctionTracker);
 
-        if (created[0])
+        if (mappingFunctionTracker.wasInvoked())
         {
             persistInitialRecord(job, 1);
         }
@@ -108,31 +107,30 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
 
     private void persistInitialRecord(OperationalJob job, int attempt)
     {
-        executor.executeBlocking(() -> {
-            storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job));
-            return null;
-        }).onSuccess(v -> job.asyncResult().onComplete(ar -> {
-            updateTerminalStatus(job);
-            liveJobs.remove(job.jobId());
-        })).onFailure(e -> {
-            LOGGER.warn("Failed to persist job {} to storage (attempt {}/{}). error={}",
-                        job.jobId(), attempt, MAX_STORAGE_WRITE_ATTEMPTS, e.getMessage());
-            if (attempt < MAX_STORAGE_WRITE_ATTEMPTS)
-            {
-                // Add jitter so that concurrent sidecar processes retrying against the same transient
-                // Cassandra blip do not all retry in lockstep
-                long delay = RETRY_DELAY_MS * attempt + ThreadLocalRandom.current().nextLong(RETRY_JITTER_MS);
-                executor.setTimer(delay, id -> persistInitialRecord(job, attempt + 1));
-            }
-            else
-            {
-                // Persist exhausted its retries, but the job is already executing on a separate executor.
-                // Keep it in liveJobs so in-process status queries and conflict detection still see it.
-                LOGGER.error("Failed to persist job {} to storage after {} attempts. "
-                             + "Job will be tracked in-memory only.", job.jobId(), MAX_STORAGE_WRITE_ATTEMPTS, e);
-                job.asyncResult().onComplete(ar -> liveJobs.remove(job.jobId()));
-            }
-        });
+        executor.runBlocking(() -> storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job)))
+                .onSuccess(v -> job.asyncResult().onComplete(ar -> {
+                    updateTerminalStatus(job);
+                    liveJobs.remove(job.jobId());
+                }))
+                .onFailure(e -> {
+                    LOGGER.warn("Failed to persist job {} to storage (attempt {}/{}). error={}",
+                                job.jobId(), attempt, MAX_STORAGE_WRITE_ATTEMPTS, e.getMessage());
+                    if (attempt < MAX_STORAGE_WRITE_ATTEMPTS)
+                    {
+                        // Add jitter so that concurrent sidecar processes retrying against the same transient
+                        // Cassandra blip do not all retry in lockstep
+                        long delay = RETRY_DELAY_MS * attempt + ThreadLocalRandom.current().nextLong(RETRY_JITTER_MS);
+                        executor.setTimer(delay, id -> persistInitialRecord(job, attempt + 1));
+                    }
+                    else
+                    {
+                        // Persist exhausted its retries, but the job is already executing on a separate executor.
+                        // Keep it in liveJobs so in-process status queries and conflict detection still see it.
+                        LOGGER.error("Failed to persist job {} to storage after {} attempts. "
+                                     + "Job will be tracked in-memory only.", job.jobId(), MAX_STORAGE_WRITE_ATTEMPTS, e);
+                        job.asyncResult().onComplete(ar -> liveJobs.remove(job.jobId()));
+                    }
+                });
     }
 
     @Nullable
@@ -216,17 +214,24 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
                     failed.add(entry.getKey());
                     break;
                 default:
-                    break;
+                    throw new IllegalStateException("Invalid state = " + entry.getValue());
             }
         }
 
-        return new OperationalJobRecord(record.jobId(), record.operationType(), record.status(),
-                                        record.startTime(), record.lastUpdate(), record.failureReason(),
-                                        record.nodeExecutionOrder(), record.operationMetadata(),
-                                        Collections.unmodifiableList(pending),
-                                        Collections.unmodifiableList(executing),
-                                        Collections.unmodifiableList(succeeded),
-                                        Collections.unmodifiableList(failed));
+        return OperationalJobRecord.builder()
+                                   .jobId(record.jobId())
+                                   .operationType(record.operationType())
+                                   .status(record.status())
+                                   .startTime(record.startTime())
+                                   .lastUpdate(record.lastUpdate())
+                                   .failureReason(record.failureReason())
+                                   .nodeExecutionOrder(record.nodeExecutionOrder())
+                                   .operationMetadata(record.operationMetadata())
+                                   .nodesPending(Collections.unmodifiableList(pending))
+                                   .nodesExecuting(Collections.unmodifiableList(executing))
+                                   .nodesSucceeded(Collections.unmodifiableList(succeeded))
+                                   .nodesFailed(Collections.unmodifiableList(failed))
+                                   .build();
     }
 
     /**

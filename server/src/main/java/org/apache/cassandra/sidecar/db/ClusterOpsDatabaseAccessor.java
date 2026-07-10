@@ -166,12 +166,19 @@ public class ClusterOpsDatabaseAccessor extends DatabaseAccessor<ClusterOpsSchem
             nodeExecutionOrder = null;
         }
         Map<String, String> operationMetadata = row.getMap("operation_metadata", String.class, String.class);
-        if (operationMetadata.isEmpty())
+        if (operationMetadata != null && operationMetadata.isEmpty())
         {
             operationMetadata = null;
         }
-        return new OperationalJobRecord(operationId, operationType, status,
-                                        startTime, lastUpdate, failureReason,
-                                        nodeExecutionOrder, operationMetadata);
+        return OperationalJobRecord.builder()
+                                   .jobId(operationId)
+                                   .operationType(operationType)
+                                   .status(status)
+                                   .startTime(startTime)
+                                   .lastUpdate(lastUpdate)
+                                   .failureReason(failureReason)
+                                   .nodeExecutionOrder(nodeExecutionOrder)
+                                   .operationMetadata(operationMetadata)
+                                   .build();
     }
 }
