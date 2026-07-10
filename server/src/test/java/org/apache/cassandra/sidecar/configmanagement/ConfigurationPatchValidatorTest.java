@@ -283,6 +283,27 @@ class ConfigurationPatchValidatorTest
     }
 
     @Test
+    void testRejectsPathBearingJvmOpts()
+    {
+        // Options that write to arbitrary filesystem paths must be blocked by key, since the value
+        // pattern legitimately permits absolute paths for Cassandra system properties.
+        List<String> blockedPathOpts = List.of(
+                "-XX:ErrorFile", "-XX:HeapDumpPath", "-XX:LogFile",
+                "-XX:FlightRecorderOptions", "-XX:StartFlightRecording",
+                "-Xloggc", "-Xlog", "-Xbootclasspath");
+
+        for (String key : blockedPathOpts)
+        {
+            List<ConfigurationPatchOperation> ops = List.of(
+                    new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/" + key, "/tmp/evil"));
+
+            assertThatThrownBy(() -> ConfigurationPatchValidator.validate(ops))
+                    .isInstanceOf(ConfigurationPatchException.class)
+                    .hasMessage("Blocked extraJvmOpts key '" + key + "': this JVM option is not allowed");
+        }
+    }
+
+    @Test
     void testRejectsKeyWithEqualsSign()
     {
         List<ConfigurationPatchOperation> ops = List.of(
@@ -319,7 +340,7 @@ class ConfigurationPatchValidatorTest
     void testAcceptsJvmOptValueWithAbsolutePath()
     {
         List<ConfigurationPatchOperation> ops = List.of(
-                new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-XX:HeapDumpPath", "/var/log/cassandra"));
+                new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-Dcassandra.logdir", "/var/log/cassandra"));
 
         assertThat(ConfigurationPatchValidator.validate(ops)).hasSize(1);
     }
@@ -328,7 +349,7 @@ class ConfigurationPatchValidatorTest
     void testRejectsJvmOptValueWithPathTraversal()
     {
         List<ConfigurationPatchOperation> ops = List.of(
-                new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-XX:HeapDumpPath", "/tmp/../../etc/cron.d"));
+                new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-Dcassandra.logdir", "/tmp/../../etc/cron.d"));
 
         assertThatThrownBy(() -> ConfigurationPatchValidator.validate(ops))
                 .isInstanceOf(ConfigurationPatchException.class)

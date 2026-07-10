@@ -51,10 +51,22 @@ public final class ConfigurationPatchValidator
     static final Pattern JVM_OPT_KEY_PATTERN = Pattern.compile(
             "^-(D[a-zA-Z][a-zA-Z0-9._-]*|X[a-z][a-zA-Z0-9]*|XX:[+-]?[a-zA-Z][a-zA-Z0-9_]*)$");
 
-    // XX flags that accept arbitrary commands as values
-    static final Set<String> BLOCKED_XX_FLAGS = Set.of(
+    // JVM options that are rejected because they execute arbitrary commands or write to
+    // arbitrary filesystem paths. The value pattern permits absolute paths (Cassandra system
+    // properties legitimately need them), so path-bearing flags must be blocked by key instead.
+    static final Set<String> BLOCKED_JVM_OPTS = Set.of(
+            // Execute arbitrary commands
             "-XX:OnOutOfMemoryError",
-            "-XX:OnError");
+            "-XX:OnError",
+            // Write to arbitrary filesystem paths
+            "-XX:ErrorFile",
+            "-XX:HeapDumpPath",
+            "-XX:LogFile",
+            "-XX:FlightRecorderOptions",
+            "-XX:StartFlightRecording",
+            "-Xloggc",
+            "-Xlog",
+            "-Xbootclasspath");
 
     // Allows: alphanumeric, dots, colons, slashes, @, +, commas, spaces, hyphens (max 512 chars)
     // Rejects: shell metacharacters (;|&$`), quotes, newlines, and other control characters
@@ -181,7 +193,7 @@ public final class ConfigurationPatchValidator
                     "Invalid JVM option key '" + key + "': must be a valid JVM option "
                     + "(-Dproperty.name, -Xflag, or -XX:[+-]Flag)", op);
         }
-        if (BLOCKED_XX_FLAGS.contains(key))
+        if (BLOCKED_JVM_OPTS.contains(key))
         {
             throw new ConfigurationPatchException(
                     "Blocked extraJvmOpts key '" + key + "': this JVM option is not allowed", op);
