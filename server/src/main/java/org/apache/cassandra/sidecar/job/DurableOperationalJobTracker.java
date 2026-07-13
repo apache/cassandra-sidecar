@@ -56,7 +56,8 @@ import org.jetbrains.annotations.Nullable;
  * finished. There is currently no marker distinguishing a record that is genuinely still
  * {@code CREATED} from one whose true state was simply never recorded; adding such a marker together
  * with a reconciliation sweep (leveraging {@link StorageProvider#findAllJobs(int)}) is tracked as
- * follow-up work.
+ * follow-up work in
+ * <a href="https://issues.apache.org/jira/browse/CASSSIDECAR-482">CASSSIDECAR-482</a>.
  */
 @Singleton
 public class DurableOperationalJobTracker implements OperationalJobTracker
