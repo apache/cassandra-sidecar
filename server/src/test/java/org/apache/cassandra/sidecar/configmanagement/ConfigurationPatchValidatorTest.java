@@ -346,6 +346,41 @@ class ConfigurationPatchValidatorTest
     }
 
     @Test
+    void testAcceptsJvmOptValueWithJson()
+    {
+        String jsonValue = "{\"class_name\":\"SizeTieredCompactionStrategy\","
+                           + "\"parameters\":{\"min_threshold\":\"4\",\"max_threshold\":\"32\"}}";
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-Dcassandra.settings.default_compaction",
+                                                jsonValue));
+
+        assertThat(ConfigurationPatchValidator.validate(ops)).hasSize(1);
+    }
+
+    @Test
+    void testAcceptsJvmOptValueWithCommas()
+    {
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-Dcassandra.seed_provider",
+                                                "org.apache.cassandra.locator.SimpleSeedProvider:127.0.0.1,127.0.0.2"));
+
+        assertThat(ConfigurationPatchValidator.validate(ops)).hasSize(1);
+    }
+
+    @Test
+    void testRejectsJvmOptValueWithWhitespace()
+    {
+        // Whitespace is rejected because bin/cassandra word-splits unquoted values during `eval`,
+        // silently truncating a value like "hello world" to "hello".
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-Dfoo", "hello world"));
+
+        assertThatThrownBy(() -> ConfigurationPatchValidator.validate(ops))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("disallowed characters");
+    }
+
+    @Test
     void testRejectsJvmOptValueWithPathTraversal()
     {
         List<ConfigurationPatchOperation> ops = List.of(

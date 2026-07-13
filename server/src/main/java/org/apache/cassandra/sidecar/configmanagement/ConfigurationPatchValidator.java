@@ -68,9 +68,10 @@ public final class ConfigurationPatchValidator
             "-Xlog",
             "-Xbootclasspath");
 
-    // Allows: alphanumeric, dots, colons, slashes, @, +, commas, spaces, hyphens (max 512 chars)
-    // Rejects: shell metacharacters (;|&$`), quotes, newlines, and other control characters
-    static final Pattern JVM_OPT_VALUE_PATTERN = Pattern.compile("^[a-zA-Z0-9._:/@+, -]{0,512}$");
+    // Allows: alphanumeric, dots, colons, slashes, @, +, commas, hyphens, braces, brackets, quotes (max 512 chars).
+    // Quotes/braces/brackets permit JSON values. Whitespace is rejected because the Cassandra launcher
+    // word-splits it; shell metacharacters (;|&$`), newlines and other control characters are also rejected.
+    static final Pattern JVM_OPT_VALUE_PATTERN = Pattern.compile("^[a-zA-Z0-9._:/@+,\"{}\\[\\]-]{0,512}$");
 
     // Matches /../ path traversal sequences (start, middle, or end of path)
     static final Pattern PATH_TRAVERSAL_PATTERN = Pattern.compile("(?:^|/)\\.\\.(?:/|$)");
