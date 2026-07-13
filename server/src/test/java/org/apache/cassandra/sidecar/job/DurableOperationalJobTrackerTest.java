@@ -55,6 +55,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -307,7 +308,7 @@ class DurableOperationalJobTrackerTest
         // The persist failed, but the job is already executing, so it must remain in the live map
         // (durability-degraded) rather than being dropped mid-flight.
         loopAssert(2, () -> {
-            verify(storageProvider).persistJob(any());
+            verify(storageProvider, atLeastOnce()).persistJob(any());
             assertThat(tracker.jobsView()).containsKey(jobId);
         });
 
@@ -463,6 +464,47 @@ class DurableOperationalJobTrackerTest
 
         loopAssert(2, () -> {
             verify(storageProvider, times(3)).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(SUCCEEDED), isNull());
+            assertThat(tracker.jobsView()).doesNotContainKey(jobId);
+        });
+    }
+
+    @Test
+    void testInitialPersistRetrySucceedsAfterTransientFailure() throws InterruptedException
+    {
+        UUID jobId = UUIDs.timeBased();
+        OperationalJob job = OperationalJobTest.createOperationalJob(jobId, MillisecondBoundConfiguration.parse("50ms"));
+
+        doThrow(new StorageProviderException("Transient failure"))
+            .doNothing()
+            .when(storageProvider).persistJob(any());
+
+        tracker.computeIfAbsent(jobId, id -> job);
+        executorPool.executeBlocking(job::execute);
+
+        loopAssert(2, () -> {
+            verify(storageProvider, times(2)).persistJob(any());
+            verify(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(SUCCEEDED), isNull());
+        });
+    }
+
+    @Test
+    void testInitialPersistExhaustsRetriesAndTracksInMemoryOnly() throws InterruptedException
+    {
+        UUID jobId = UUIDs.timeBased();
+        OperationalJob job = OperationalJobTest.createOperationalJob(jobId, MillisecondBoundConfiguration.parse("50ms"));
+
+        doThrow(new StorageProviderException("Persistent failure")).when(storageProvider).persistJob(any());
+
+        CountDownLatch completed = new CountDownLatch(1);
+        tracker.computeIfAbsent(jobId, id -> job);
+        executorPool.executeBlocking(job::execute);
+        job.asyncResult().onComplete(ar -> completed.countDown());
+
+        assertThat(completed.await(5, TimeUnit.SECONDS)).isTrue();
+
+        loopAssert(2, () -> {
+            verify(storageProvider, times(3)).persistJob(any());
+            verify(storageProvider, never()).updateJobStatus(any(), any(), any(), any());
             assertThat(tracker.jobsView()).doesNotContainKey(jobId);
         });
     }

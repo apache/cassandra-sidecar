@@ -62,7 +62,7 @@ import org.jetbrains.annotations.Nullable;
 public class DurableOperationalJobTracker implements OperationalJobTracker
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(DurableOperationalJobTracker.class);
-    private static final int MAX_STATUS_UPDATE_ATTEMPTS = 3;
+    private static final int MAX_STORAGE_WRITE_ATTEMPTS = 3;
     private static final long RETRY_DELAY_MS = 100;
     private static final long RETRY_JITTER_MS = 100;
 
@@ -99,22 +99,39 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
 
         if (created[0])
         {
-            executor.executeBlocking(() -> {
-                storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job));
-                return null;
-            }).onSuccess(v -> job.asyncResult().onComplete(ar -> {
-                updateTerminalStatus(job);
-                liveJobs.remove(job.jobId());
-            })).onFailure(e -> {
-                // The persist failed, but the job is already executing on a separate executor. Keep it in
-                // liveJobs so in-process status queries and conflict detection still see it.
-                LOGGER.error("Failed to persist job {} to storage. Job will be tracked in-memory only.",
-                             jobId, e);
-                job.asyncResult().onComplete(ar -> liveJobs.remove(job.jobId()));
-            });
+            persistInitialRecord(job, 1);
         }
 
         return job;
+    }
+
+    private void persistInitialRecord(OperationalJob job, int attempt)
+    {
+        executor.executeBlocking(() -> {
+            storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job));
+            return null;
+        }).onSuccess(v -> job.asyncResult().onComplete(ar -> {
+            updateTerminalStatus(job);
+            liveJobs.remove(job.jobId());
+        })).onFailure(e -> {
+            LOGGER.warn("Failed to persist job {} to storage (attempt {}/{}). error={}",
+                        job.jobId(), attempt, MAX_STORAGE_WRITE_ATTEMPTS, e.getMessage());
+            if (attempt < MAX_STORAGE_WRITE_ATTEMPTS)
+            {
+                // Add jitter so that concurrent sidecar processes retrying against the same transient
+                // Cassandra blip do not all retry in lockstep
+                long delay = RETRY_DELAY_MS * attempt + ThreadLocalRandom.current().nextLong(RETRY_JITTER_MS);
+                executor.setTimer(delay, id -> persistInitialRecord(job, attempt + 1));
+            }
+            else
+            {
+                // Persist exhausted its retries, but the job is already executing on a separate executor.
+                // Keep it in liveJobs so in-process status queries and conflict detection still see it.
+                LOGGER.error("Failed to persist job {} to storage after {} attempts. "
+                             + "Job will be tracked in-memory only.", job.jobId(), MAX_STORAGE_WRITE_ATTEMPTS, e);
+                job.asyncResult().onComplete(ar -> liveJobs.remove(job.jobId()));
+            }
+        });
     }
 
     @Nullable
@@ -229,8 +246,8 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
         catch (RuntimeException e)
         {
             LOGGER.warn("Failed to update terminal status for job {} (attempt {}/{}). error={}",
-                        job.jobId(), attempt, MAX_STATUS_UPDATE_ATTEMPTS, e.getMessage());
-            if (attempt < MAX_STATUS_UPDATE_ATTEMPTS)
+                        job.jobId(), attempt, MAX_STORAGE_WRITE_ATTEMPTS, e.getMessage());
+            if (attempt < MAX_STORAGE_WRITE_ATTEMPTS)
             {
                 // Add jitter so that concurrent sidecar processes retrying against the same transient
                 // Cassandra blip do not all retry in lockstep
