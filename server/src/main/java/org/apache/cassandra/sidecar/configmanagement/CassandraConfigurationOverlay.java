@@ -62,7 +62,7 @@ public class CassandraConfigurationOverlay
 
     /**
      * Returns the cassandra.yaml overlay as a version-agnostic JSON object. Callers must not mutate the
-     * returned object; use {@link #updated} to produce a new overlay with changes applied.
+     * returned object; use {@link ConfigurationPatchApplier} to produce a new overlay with changes applied.
      *
      * @return the cassandra.yaml overlay as a version-agnostic JSON object
      */
