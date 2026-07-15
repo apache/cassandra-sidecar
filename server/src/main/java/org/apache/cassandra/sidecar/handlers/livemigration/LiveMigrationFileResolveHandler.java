@@ -47,6 +47,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.UnknownMigrationPrefixException;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 import org.apache.cassandra.sidecar.handlers.AccessProtected;
 import org.apache.cassandra.sidecar.handlers.FileStreamHandler;
@@ -151,8 +152,16 @@ public class LiveMigrationFileResolveHandler extends AbstractHandler<Void> imple
         {
             resolved = LiveMigrationInstanceMetadataUtil.resolveLexically(normalizedPath, instanceMeta);
         }
+        catch (UnknownMigrationPrefixException e)
+        {
+            // The URL is well-formed but matches no configured live-migration directory on this
+            // instance, so it addresses no resource here - report it as not found.
+            rc.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, e.getMessage(), e));
+            return;
+        }
         catch (IllegalArgumentException e)
         {
+            // URL must have been malformed, report it as bad request
             rc.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, e.getMessage(), e));
             return;
         }

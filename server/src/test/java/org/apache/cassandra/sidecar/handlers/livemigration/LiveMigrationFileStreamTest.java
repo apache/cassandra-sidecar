@@ -316,10 +316,10 @@ class LiveMigrationFileStreamTest
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
         // dirIndex 100 is greater than the configured data dir count, so the URL doesn't match
-        // any configured prefix — resolveLexically rejects it as a malformed URL (400), not a
-        // missing file (404). The request can never resolve to a file on this server.
+        // any configured prefix - reports it as a missing resource (404), since
+        // the URL is well-formed but addresses no directory configured on this instance.
         shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/100" + filePath,
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
+                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
     }
 
     @Test

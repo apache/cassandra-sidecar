@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.UnknownMigrationPrefixException;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType;
 import org.jetbrains.annotations.NotNull;
 
@@ -306,6 +307,20 @@ public class LiveMigrationInstanceMetadataUtil
         return existing != null ? existing : canonical;
     }
 
+    /**
+     * Lexically resolves a live migration file download URL to a {@link ResolvedPath}. Performs only
+     * string-level validation; the filesystem is not touched and the file is not required to exist.
+     *
+     * @param fileUrl  Live migration file download URL
+     * @param metadata Cassandra instance metadata
+     * @return the lexically-resolved {@link ResolvedPath}
+     * @throws IllegalArgumentException        if the URL is malformed - it contains a relative traversal
+     *                                         segment ({@code /../}) or lexically escapes the configured base directory
+     * @throws UnknownMigrationPrefixException if the URL does not match any configured live-migration directory
+     *                                         prefix; the URL is well-formed but addresses no resource on this
+     *                                         instance. This is a subtype of {@link IllegalArgumentException}, so
+     *                                         callers that only care about "bad URL" need not distinguish it
+     */
     public static ResolvedPath resolveLexically(@NotNull String fileUrl,
                                                 @NotNull InstanceMetadata metadata)
     {
@@ -341,7 +356,7 @@ public class LiveMigrationInstanceMetadataUtil
         }
 
         LOGGER.warn("File url {} does not match any configured live-migration directory prefix.", fileUrl);
-        throw new IllegalArgumentException("File url " + fileUrl + " is unknown.");
+        throw new UnknownMigrationPrefixException("File url " + fileUrl + " is unknown.");
     }
 
     /**

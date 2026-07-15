@@ -185,7 +185,7 @@ public class LiveMigrationFileDigestHandlerTest
         createFile(dummyText, firstInstanceMeta.commitlogDir() + filePath);
 
         String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/commitlog/1" + filePath + "?digestAlgorithm=xxhash32";
-        shouldFail(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 400);
+        shouldFail(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
     }
 
     @Test

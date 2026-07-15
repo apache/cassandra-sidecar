@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.UnknownMigrationPrefixException;
 import org.mockito.Mockito;
 
 import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
@@ -409,6 +410,22 @@ class LiveMigrationInstanceMetadataUtilTest
         assertThatIllegalArgumentException()
         .isThrownBy(() -> resolveLexically(
                           LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/../../etc/passwd", instanceMetadata));
+    }
+
+    @Test
+    public void testResolveLexicallyThrowsForUnknownPrefix()
+    {
+        // A well-formed URL whose prefix matches no configured directory is reported via
+        // UnknownMigrationPrefixException. It is a subtype of IllegalArgumentException (so destination-side
+        // localPath callers keep treating it as a bad argument), while the source-side handler catches this
+        // specific type to answer 404 - "no such resource" - instead of 400 for a malformed URL.
+        String cassandraHomeDir = tempDir.resolve("unknownPrefix").toString();
+        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
+        when(instanceMetadata.cdcDir()).thenReturn(null);
+
+        assertThatExceptionOfType(UnknownMigrationPrefixException.class)
+        .isThrownBy(() -> resolveLexically(LIVE_MIGRATION_CDC_RAW_DIR_PATH + "/0/" + FILE_NAME, instanceMetadata))
+        .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
