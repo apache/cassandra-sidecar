@@ -490,9 +490,9 @@ public class CdcModule extends AbstractModule
 
     @Provides
     @Singleton
-    public CdcOptions cdcOptions(InstanceMetadataFetcher instanceMetadataFetcher)
+    public CdcOptions cdcOptions(InstanceMetadataFetcher instanceMetadataFetcher, CdcConfig conf)
     {
-        return new SidecarCdcOptions(instanceMetadataFetcher);
+        return new SidecarCdcOptions(instanceMetadataFetcher, conf);
     }
 
     @ProvidesIntoMap
