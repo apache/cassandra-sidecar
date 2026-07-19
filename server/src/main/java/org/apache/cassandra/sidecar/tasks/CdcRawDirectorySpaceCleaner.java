@@ -296,7 +296,9 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
                 }
                 else
                 {
-                    LOGGER.debug("Skipping delete for already-reclaimed cdc segment {}", segment);
+                    LOGGER.warn("Skipping delete for already-reclaimed cdc segment {}; a concurrent reclaim "
+                                + "(e.g. Cassandra reclaiming cdc_raw) occurred between the directory scan and "
+                                + "the deletion pass", segment);
                     length = segment.length();
                 }
                 directorySizeBytes -= length;

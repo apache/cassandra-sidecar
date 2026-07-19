@@ -182,7 +182,7 @@ class CdcRawDirectorySpaceCleanerTest
         // Allow +/-1s to tolerate filesystems that store mtime at second granularity.
         cleaner.routineCleanUp();
         int ageAfterValid = cdcMetrics.oldestSegmentAge.metric.getValue();
-        assertThat(ageAfterValid).isBetween(118, 122);
+        assertThat(ageAfterValid).isBetween(119, 121);
 
         // Simulate the oldest segment's timestamp being unavailable (concurrent delete/rotation makes
         // File.lastModified() return 0). Skip on filesystems that do not support a 0 mtime.
