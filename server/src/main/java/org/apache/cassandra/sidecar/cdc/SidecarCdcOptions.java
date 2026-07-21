@@ -30,7 +30,7 @@ import org.apache.cassandra.spark.data.ReplicationFactor;
  * Specific sidecar CDC options, consumed by the CDC read path ({@code SidecarCdc}).
  *
  * <p>Delegates the throughput/backpressure-related knobs to {@link CdcConfig} so that they are
- * live-tunable from the DB-backed "configs" table (via {@link CdcConfigRefresherNotifierTask})
+ * live-tunable from the DB-backed "configs" table (via {@link org.apache.cassandra.sidecar.tasks.CdcConfigRefresherNotifierTask})
  * without a Sidecar restart, instead of silently falling back to the {@link CdcOptions} interface
  * defaults baked into the cassandra-analytics library.
  */
