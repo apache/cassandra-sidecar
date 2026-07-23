@@ -162,7 +162,7 @@ public final class ConfigurationPatchApplier
                         throw new ConfigurationPatchException(
                                 "Add failed: parent path does not exist in effective config: '" + op.path() + "'", op);
                     }
-                    if (parent != null && !(parent instanceof JsonObject) && !(parent instanceof Map))
+                    if (parent != null && !(parent instanceof JsonObject))
                     {
                         throw new ConfigurationPatchException(
                                 "Add failed: parent is not an object at path: '" + op.path() + "'", op);
@@ -459,33 +459,17 @@ public final class ConfigurationPatchApplier
         parent.remove(segments.get(segments.size() - 1));
     }
 
-    @SuppressWarnings("unchecked")
+    // Values are always read via JsonObject.getValue, which wraps nested Maps into JsonObject,
+    // so a raw Map never reaches here; only JsonObject (or a non-object such as JsonArray/scalar).
     @Nullable
     private static JsonObject asJsonObject(@Nullable Object value)
     {
-        if (value instanceof JsonObject)
-        {
-            return (JsonObject) value;
-        }
-        if (value instanceof Map)
-        {
-            return new JsonObject((Map<String, Object>) value);
-        }
-        return null;
+        return value instanceof JsonObject ? (JsonObject) value : null;
     }
 
-    @SuppressWarnings("unchecked")
     private static JsonObject deepCopyValue(@Nullable Object value)
     {
-        if (value instanceof JsonObject)
-        {
-            return ((JsonObject) value).copy();
-        }
-        if (value instanceof Map)
-        {
-            return new JsonObject((Map<String, Object>) value).copy();
-        }
-        return new JsonObject();
+        return value instanceof JsonObject ? ((JsonObject) value).copy() : new JsonObject();
     }
 
 }
