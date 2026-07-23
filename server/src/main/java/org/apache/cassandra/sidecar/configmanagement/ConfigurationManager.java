@@ -28,7 +28,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Manages configuration of Cassandra instances via Sidecar
+ * Manages configuration of Cassandra instances via Sidecar.
+ *
+ * <p>The <em>effective configuration</em> is the result of merging the base cassandra.yaml template
+ * with the instance overlay retrieved from the {@link ConfigurationProvider}. It is what the instance
+ * actually sees; the overlay is only the delta persisted on top of the base template.
  */
 public class ConfigurationManager
 {
@@ -50,8 +54,7 @@ public class ConfigurationManager
     }
 
     /**
-     * Computes the effective configuration for the given instance by merging the base template
-     * with the overlay from the {@link ConfigurationProvider}.
+     * Computes the effective configuration for the given instance.
      *
      * @param instance the Cassandra instance metadata
      * @return a snapshot of the effective configuration with its SHA-256 hash and last modified timestamp
