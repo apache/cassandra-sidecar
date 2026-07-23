@@ -1,5 +1,6 @@
 0.5.0
 -----
+ * Add RFC 6902-inspired JSON Patch support to ConfigurationManager (CASSSIDECAR-429)
  * Implement job coordination for cluster-wide operations (CASSSIDECAR-377)
  * Fix dead/dropped CDC lifecycle metrics and duplicate SidecarCdcStats interface (CASSSIDECAR-489)
  * Wire CDC configs in configs table to SidecarCdcOptions/SidecarStatePersister (CASSSIDECAR-483)
