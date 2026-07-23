@@ -38,6 +38,20 @@ import static org.apache.cassandra.sidecar.configmanagement.ConfigurationPatchVa
  * the entire top-level key value is copied from the effective config into the overlay before applying
  * the leaf change (copy-siblings strategy).
  *
+ * <p>Because copy-siblings captures a snapshot of the whole top-level block into the overlay, and the
+ * overlay is deep-merged over the base ({@link ConfigUtils#mergeConfigurations}), two behaviors follow
+ * that callers should be aware of:
+ * <ul>
+ *   <li><b>Editing a nested leaf pins its sibling leaves against base drift.</b> Every leaf present in
+ *       the top-level block at edit time is copied into the overlay and thereafter shadows the base, so
+ *       later changes to those same leaves in the base template no longer surface in the effective
+ *       configuration. Keys added to the base block <em>after</em> the edit are not pinned - the deep
+ *       merge still surfaces them.</li>
+ *   <li><b>Removing an overlaid leaf reverts it to the current base value.</b> The leaf is deleted from
+ *       the overlay, so the effective value falls back to whatever the base template currently holds,
+ *       which may differ from the value that was in effect when the overlay was written.</li>
+ * </ul>
+ *
  * <p>Operations are applied sequentially (RFC 6902 section 5): each operation is validated and
  * applied against the effective configuration produced by the previous operation, so later
  * operations observe the effects of earlier ones. Mutations target a throwaway copy of the overlay;

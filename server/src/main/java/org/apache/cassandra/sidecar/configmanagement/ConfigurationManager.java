@@ -100,7 +100,9 @@ public class ConfigurationManager
      * For nested paths within a top-level {@code cassandraYaml} key,
      * the entire top-level key value is copied from the effective config into the overlay before
      * applying the leaf change (copy-siblings strategy). This ensures the overlay is always
-     * self-contained at the top-level key granularity.
+     * self-contained at the top-level key granularity. As a consequence, editing a nested leaf pins
+     * its sibling leaves against later base-template drift, and removing an overlaid leaf reverts it to
+     * the current base value; see {@link ConfigurationPatchApplier} for details.
      *
      * <p>All operations are validated atomically: either all succeed or none are applied.
      *

@@ -189,6 +189,57 @@ class ConfigurationPatchApplierTest
     }
 
     @Test
+    void testNestedEditPinsSiblingsAgainstBaseDrift()
+    {
+        // Editing one nested leaf copies the whole top-level block's leaves into the overlay, pinning
+        // the siblings that existed at edit time against later base-template drift. Keys added to the
+        // base block afterwards are not pinned - the deep merge still surfaces them.
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
+                new ConfigurationPatchOperation(REPLACE,
+                        "/configuration/cassandraYaml/memtable/configurations/trie/class_name", "ShardedMemtable"));
+
+        // Base template drifts after the overlay was written: an existing sibling changes value and a
+        // brand-new sibling key appears.
+        JsonObject driftedBaseYaml = baseConfig.cassandraYaml().copy();
+        JsonObject driftedTrie = driftedBaseYaml.getJsonObject("memtable")
+                                                .getJsonObject("configurations").getJsonObject("trie");
+        driftedTrie.put("max_shard_count", 99);       // existing sibling drifts
+        driftedTrie.put("new_base_field", "fromBase"); // new key added to base
+
+        JsonObject effective = ConfigUtils.mergeConfigurations(driftedBaseYaml, newOverlay.cassandraYaml());
+        JsonObject trie = effective.getJsonObject("memtable").getJsonObject("configurations").getJsonObject("trie");
+
+        assertThat(trie.getString("class_name")).isEqualTo("ShardedMemtable"); // the edit
+        assertThat(trie.getInteger("max_shard_count")).isEqualTo(4);           // pinned, not the drifted 99
+        assertThat(trie.getString("new_base_field")).isEqualTo("fromBase");    // new base key still surfaces
+    }
+
+    @Test
+    void testRemoveOverlaidLeafRevertsToCurrentBaseValue()
+    {
+        // trie/max_shard_count is overlaid at 8; removing it from the overlay lets the base value surface
+        // again - and specifically the base value at merge time, not the value the overlay held.
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(new JsonObject()
+                .put("memtable", new JsonObject()
+                        .put("configurations", new JsonObject()
+                                .put("trie", new JsonObject().put("max_shard_count", 8)))), null);
+
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, overlay,
+                new ConfigurationPatchOperation(REMOVE,
+                        "/configuration/cassandraYaml/memtable/configurations/trie/max_shard_count", null));
+
+        // Base drifts to 16 after removal; the effective value tracks the current base, not the removed 8.
+        JsonObject driftedBaseYaml = baseConfig.cassandraYaml().copy();
+        driftedBaseYaml.getJsonObject("memtable").getJsonObject("configurations")
+                       .getJsonObject("trie").put("max_shard_count", 16);
+
+        JsonObject effective = ConfigUtils.mergeConfigurations(driftedBaseYaml, newOverlay.cassandraYaml());
+        JsonObject trie = effective.getJsonObject("memtable").getJsonObject("configurations").getJsonObject("trie");
+
+        assertThat(trie.getInteger("max_shard_count")).isEqualTo(16); // reverted to current base value
+    }
+
+    @Test
     void testMultipleNestedOpsOnSameTopLevelKey()
     {
         CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
