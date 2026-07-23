@@ -24,8 +24,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -40,6 +44,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class ConfigUtils
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigUtils.class);
+
     static final YAMLFactory YAML_FACTORY = new YAMLFactory()
             .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER);
 
@@ -124,5 +130,37 @@ public final class ConfigUtils
         JsonObject result = base.copy();
         result.mergeIn(overlay, true);
         return result;
+    }
+
+    /**
+     * Merges overlay JVM options onto base JVM options, with overlay entries overriding base entries
+     * on key conflict. When an overlay entry conflicts with a base boolean option (e.g. base
+     * {@code -XX:+UseG1GC} and overlay {@code -XX:-UseG1GC}), the base option is preserved and the
+     * overlay entry is skipped, matching {@link ConfigurationOverlaySnapshot#overlay}. Insertion order
+     * is preserved. Neither input map is modified.
+     *
+     * @param base    the base JVM options
+     * @param overlay the overlay JVM options whose values take precedence
+     * @return a new map with the merged result
+     */
+    @NotNull
+    public static Map<String, String> mergeOpts(@NotNull Map<String, String> base,
+                                                @NotNull Map<String, String> overlay)
+    {
+        Objects.requireNonNull(base, "base must not be null");
+        Objects.requireNonNull(overlay, "overlay must not be null");
+        Map<String, String> merged = new LinkedHashMap<>(base);
+        for (Map.Entry<String, String> entry : overlay.entrySet())
+        {
+            if (CassandraConfigurationOverlay.hasConflictingBooleanOpt(merged, entry.getKey()))
+            {
+                LOGGER.warn("Conflicting boolean JVM option '{}' in overlay conflicts with base option '{}'. " +
+                            "Preserving base option and skipping overlay entry.",
+                            entry.getKey(), CassandraConfigurationOverlay.conflictingBooleanOpt(entry.getKey()));
+                continue; // preserve base boolean option, skip conflicting overlay entry
+            }
+            merged.put(entry.getKey(), entry.getValue());
+        }
+        return merged;
     }
 }

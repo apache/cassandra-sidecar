@@ -145,7 +145,7 @@ public class ConfigurationManager
                                                                  ? currentOverlay.configuration()
                                                                  : new CassandraConfigurationOverlay(null, null);
             CassandraConfigurationOverlay updatedOverlay =
-                    ConfigurationPatchApplier.apply(parsedOps, effectiveConfig.configuration(), currentOverlayConfig);
+                    ConfigurationPatchApplier.apply(parsedOps, baseSnapshot.configuration(), currentOverlayConfig);
             ConfigurationOverlaySnapshot newOverlaySnapshot = new ConfigurationOverlaySnapshot(Instant.now(),
                                                                                                updatedOverlay);
 

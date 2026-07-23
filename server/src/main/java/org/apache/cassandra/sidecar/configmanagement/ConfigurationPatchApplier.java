@@ -38,8 +38,11 @@ import static org.apache.cassandra.sidecar.configmanagement.ConfigurationPatchVa
  * the entire top-level key value is copied from the effective config into the overlay before applying
  * the leaf change (copy-siblings strategy).
  *
- * <p>All precondition checks are performed before any mutations, ensuring atomicity:
- * either all operations succeed or none are applied.
+ * <p>Operations are applied sequentially (RFC 6902 section 5): each operation is validated and
+ * applied against the effective configuration produced by the previous operation, so later
+ * operations observe the effects of earlier ones. Mutations target a throwaway copy of the overlay;
+ * if any operation fails, the exception propagates and the copy is discarded, so nothing is
+ * persisted (all-or-nothing atomicity).
  */
 public final class ConfigurationPatchApplier
 {
@@ -51,53 +54,51 @@ public final class ConfigurationPatchApplier
     /**
      * Applies a list of validated patch operations and returns the updated overlay.
      *
-     * @param parsedOps       the validated and parsed operations
-     * @param effectiveConfig the current effective configuration (base + overlay merged)
-     * @param currentOverlay  the current overlay (may be empty)
+     * <p>The effective configuration is re-derived from {@code baseConfig} and the evolving overlay
+     * before each operation, so an operation's preconditions are checked against the state left by the
+     * preceding operations rather than the initial snapshot.
+     *
+     * @param parsedOps      the validated and parsed operations
+     * @param baseConfig     the base configuration (base template) the overlay is applied on top of
+     * @param currentOverlay the current overlay (may be empty)
      * @return the updated overlay with all operations applied
      * @throws ConfigurationPatchException if any precondition check fails
      */
     @NotNull
     public static CassandraConfigurationOverlay apply(
             @NotNull List<ConfigurationPatchValidator.ParsedPatchOperation> parsedOps,
-            @NotNull CassandraConfigurationOverlay effectiveConfig,
+            @NotNull CassandraConfigurationOverlay baseConfig,
             @NotNull CassandraConfigurationOverlay currentOverlay)
     {
-        // Phase 1: Precondition checks (no mutations)
-        for (ConfigurationPatchValidator.ParsedPatchOperation parsed : parsedOps)
-        {
-            checkPreconditions(parsed, effectiveConfig, currentOverlay);
-        }
-
-        // Phase 1b: Reject patches that would leave conflicting boolean JVM options in the
-        // effective configuration (e.g. adding -XX:-UseG1GC while the base already sets -XX:+UseG1GC).
-        // Checking against the effective opts, rather than the overlay alone, ensures the stored
-        // overlay and the returned effective configuration stay consistent.
-        checkResultingJvmOptConflicts(parsedOps, effectiveConfig.extraJvmOpts());
-
-        // Phase 2: Apply mutations
-        JsonObject updatedYaml = currentOverlay.cassandraYaml().copy();
-        Map<String, String> updatedOpts = new LinkedHashMap<>(currentOverlay.extraJvmOpts());
+        JsonObject overlayYaml = currentOverlay.cassandraYaml().copy();
+        Map<String, String> overlayOpts = new LinkedHashMap<>(currentOverlay.extraJvmOpts());
 
         for (ConfigurationPatchValidator.ParsedPatchOperation parsed : parsedOps)
         {
-            applyMutation(parsed, effectiveConfig, updatedYaml, updatedOpts);
+            // Re-derive the effective configuration so each op sees the effects of the previous ones.
+            JsonObject effectiveYaml = ConfigUtils.mergeConfigurations(baseConfig.cassandraYaml(), overlayYaml);
+            Map<String, String> effectiveOpts = ConfigUtils.mergeOpts(baseConfig.extraJvmOpts(), overlayOpts);
+
+            checkPreconditions(parsed, effectiveYaml, effectiveOpts, overlayYaml, overlayOpts);
+            applyMutation(parsed, effectiveYaml, overlayYaml, overlayOpts);
         }
 
-        return new CassandraConfigurationOverlay(updatedYaml, updatedOpts);
+        return new CassandraConfigurationOverlay(overlayYaml, overlayOpts);
     }
 
     private static void checkPreconditions(ConfigurationPatchValidator.ParsedPatchOperation parsed,
-                                           CassandraConfigurationOverlay effectiveConfig,
-                                           CassandraConfigurationOverlay currentOverlay)
+                                           JsonObject effectiveYaml,
+                                           Map<String, String> effectiveOpts,
+                                           JsonObject overlayYaml,
+                                           Map<String, String> overlayOpts)
     {
         if (parsed.section().equals(CASSANDRA_YAML_SECTION))
         {
-            checkYamlPreconditions(parsed, effectiveConfig.cassandraYaml(), currentOverlay.cassandraYaml());
+            checkYamlPreconditions(parsed, effectiveYaml, overlayYaml);
         }
         else if (parsed.section().equals(EXTRA_JVM_OPTS_SECTION))
         {
-            checkJvmOptsPreconditions(parsed, effectiveConfig.extraJvmOpts(), currentOverlay.extraJvmOpts());
+            checkJvmOptsPreconditions(parsed, effectiveOpts, overlayOpts);
         }
     }
 
@@ -238,6 +239,7 @@ public final class ConfigurationPatchApplier
                     throw new ConfigurationPatchException(
                             "Replace failed: key does not exist in effective extraJvmOpts: '" + op.path() + "'", op);
                 }
+                checkNoConflictingBooleanOpt(effectiveOpts, key, op);
                 break;
 
             case REMOVE:
@@ -250,13 +252,28 @@ public final class ConfigurationPatchApplier
                 break;
 
             case ADD:
-                // No precondition — extraJvmOpts is flat, parent always exists
+                // extraJvmOpts is flat, so the parent always exists. Only guard against introducing a
+                // boolean option that conflicts with one already in the effective configuration
+                // (e.g. adding -XX:-UseG1GC while -XX:+UseG1GC is set by the base or a prior op).
+                checkNoConflictingBooleanOpt(effectiveOpts, key, op);
                 break;
         }
     }
 
+    private static void checkNoConflictingBooleanOpt(Map<String, String> effectiveOpts, String key,
+                                                     ConfigurationPatchOperation op)
+    {
+        if (CassandraConfigurationOverlay.hasConflictingBooleanOpt(effectiveOpts, key))
+        {
+            String conflicting = CassandraConfigurationOverlay.conflictingBooleanOpt(key);
+            throw new ConfigurationPatchException(
+                    "Conflicting boolean JVM option: '" + key + "' conflicts with existing '"
+                    + conflicting + "' in the effective configuration", op);
+        }
+    }
+
     private static void applyMutation(ConfigurationPatchValidator.ParsedPatchOperation parsed,
-                                      CassandraConfigurationOverlay effectiveConfig,
+                                      JsonObject effectiveYaml,
                                       JsonObject updatedYaml,
                                       Map<String, String> updatedOpts)
     {
@@ -269,7 +286,7 @@ public final class ConfigurationPatchApplier
 
         if (parsed.section().equals(CASSANDRA_YAML_SECTION))
         {
-            applyYamlMutation(parsed, effectiveConfig.cassandraYaml(), updatedYaml);
+            applyYamlMutation(parsed, effectiveYaml, updatedYaml);
         }
         else if (parsed.section().equals(EXTRA_JVM_OPTS_SECTION))
         {
@@ -342,53 +359,9 @@ public final class ConfigurationPatchApplier
         }
         else
         {
-            // Boolean-opt conflicts are validated up-front against the effective configuration
-            // in checkResultingJvmOptConflicts, so the mutation here is unconditional.
+            // Boolean-opt conflicts are rejected by checkJvmOptsPreconditions against the current
+            // effective configuration, so the mutation here is unconditional.
             updatedOpts.put(key, String.valueOf(op.value()));
-        }
-    }
-
-    /**
-     * Rejects patches that would leave conflicting boolean JVM options (e.g. both {@code -XX:+UseG1GC}
-     * and {@code -XX:-UseG1GC}) in the effective configuration once applied.
-     *
-     * <p>The check is performed against a projection of the effective options after the patch's
-     * add/remove/replace operations are applied in order. This catches conflicts against options that
-     * originate in the base template (not just the overlay), keeping the stored overlay and the
-     * returned effective configuration consistent.
-     */
-    private static void checkResultingJvmOptConflicts(
-            List<ConfigurationPatchValidator.ParsedPatchOperation> parsedOps,
-            Map<String, String> effectiveOpts)
-    {
-        Map<String, String> projected = new LinkedHashMap<>(effectiveOpts);
-        for (ConfigurationPatchValidator.ParsedPatchOperation parsed : parsedOps)
-        {
-            if (!parsed.section().equals(EXTRA_JVM_OPTS_SECTION))
-            {
-                continue;
-            }
-            ConfigurationPatchOperation op = parsed.operation();
-            String key = parsed.topLevelKey();
-            switch (op.op())
-            {
-                case REMOVE:
-                    projected.remove(key);
-                    break;
-                case ADD:
-                case REPLACE:
-                    if (CassandraConfigurationOverlay.hasConflictingBooleanOpt(projected, key))
-                    {
-                        String conflicting = CassandraConfigurationOverlay.conflictingBooleanOpt(key);
-                        throw new ConfigurationPatchException(
-                                "Conflicting boolean JVM option: '" + key + "' conflicts with existing '"
-                                + conflicting + "' in the effective configuration", op);
-                    }
-                    projected.put(key, String.valueOf(op.value()));
-                    break;
-                case TEST:
-                    break;
-            }
         }
     }
 
@@ -452,7 +425,10 @@ public final class ConfigurationPatchApplier
             JsonObject childObj = asJsonObject(child);
             if (childObj == null)
             {
-                return;
+                // Unreachable: the remove precondition already verified the full path exists in the
+                // overlay against the current (post-previous-op) state, so every intermediate is present.
+                throw new IllegalStateException("Overlay path segment '" + segments.get(i)
+                                                + "' is missing or not an object during remove");
             }
             parent = childObj;
         }

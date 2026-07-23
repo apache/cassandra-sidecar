@@ -42,7 +42,7 @@ class ConfigurationPatchApplierTest
 {
     private static final CassandraConfigurationOverlay EMPTY_OVERLAY = new CassandraConfigurationOverlay(null, null);
 
-    private CassandraConfigurationOverlay effectiveConfig;
+    private CassandraConfigurationOverlay baseConfig;
 
     @BeforeEach
     void setUp()
@@ -62,7 +62,7 @@ class ConfigurationPatchApplierTest
         effectiveOpts.put("-Xmx", "4g");
         effectiveOpts.put("-Dcassandra.ring_delay_ms", "60000");
 
-        effectiveConfig = new CassandraConfigurationOverlay(effectiveYaml, effectiveOpts);
+        baseConfig = new CassandraConfigurationOverlay(effectiveYaml, effectiveOpts);
     }
 
     // --- Top-level cassandraYaml operations ---
@@ -70,7 +70,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testAddTopLevelKey()
     {
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, EMPTY_OVERLAY,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(ADD, "/configuration/cassandraYaml/new_key", "new_value"));
 
         assertThat(newOverlay.cassandraYaml().getString("new_key")).isEqualTo("new_value");
@@ -82,7 +82,7 @@ class ConfigurationPatchApplierTest
         CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(
                 new JsonObject().put("concurrent_reads", 64), null);
 
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, overlay,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, overlay,
                 new ConfigurationPatchOperation(ADD, "/configuration/cassandraYaml/concurrent_reads", 256));
 
         assertThat(newOverlay.cassandraYaml().getInteger("concurrent_reads")).isEqualTo(256);
@@ -94,7 +94,7 @@ class ConfigurationPatchApplierTest
         CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(
                 new JsonObject().put("concurrent_reads", 64), null);
 
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, overlay,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, overlay,
                 new ConfigurationPatchOperation(REMOVE, "/configuration/cassandraYaml/concurrent_reads", null));
 
         assertThat(newOverlay.cassandraYaml().containsKey("concurrent_reads")).isFalse();
@@ -103,7 +103,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testRemoveTemplateOnlyKeyFails()
     {
-        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(REMOVE, "/configuration/cassandraYaml/cluster_name", null)))
                 .isInstanceOf(ConfigurationPatchException.class)
                 .hasMessageContaining("does not exist in overlay");
@@ -112,7 +112,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testReplaceExistingKey()
     {
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, EMPTY_OVERLAY,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(REPLACE, "/configuration/cassandraYaml/concurrent_reads", 128));
 
         assertThat(newOverlay.cassandraYaml().getInteger("concurrent_reads")).isEqualTo(128);
@@ -121,7 +121,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testReplaceAbsentKeyFails()
     {
-        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(REPLACE, "/configuration/cassandraYaml/nonexistent", 42)))
                 .isInstanceOf(ConfigurationPatchException.class)
                 .hasMessageContaining("does not exist in effective config");
@@ -130,7 +130,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testTestMatchingValue()
     {
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, EMPTY_OVERLAY,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(TEST, "/configuration/cassandraYaml/concurrent_reads", 32));
 
         assertThat(newOverlay.cassandraYaml()).isEmpty();
@@ -139,7 +139,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testTestMismatchFails()
     {
-        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(TEST, "/configuration/cassandraYaml/concurrent_reads", 999)))
                 .isInstanceOf(ConfigurationPatchException.class)
                 .hasMessageContaining("Test failed: expected 999 but found 32");
@@ -148,7 +148,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testTestAbsentPathFails()
     {
-        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(TEST, "/configuration/cassandraYaml/nonexistent", "x")))
                 .isInstanceOf(ConfigurationPatchException.class)
                 .hasMessageContaining("path does not exist in effective config");
@@ -159,7 +159,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testAddNestedKeyCopiesSiblings()
     {
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, EMPTY_OVERLAY,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(ADD,
                         "/configuration/cassandraYaml/memtable/configurations/trie/compression", "lz4"));
 
@@ -178,7 +178,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testReplaceNestedKeyCopiesSiblings()
     {
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, EMPTY_OVERLAY,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(REPLACE,
                         "/configuration/cassandraYaml/memtable/configurations/trie/class_name", "ShardedMemtable"));
 
@@ -191,7 +191,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testMultipleNestedOpsOnSameTopLevelKey()
     {
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, EMPTY_OVERLAY,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(REPLACE,
                         "/configuration/cassandraYaml/memtable/configurations/trie/class_name", "ShardedMemtable"),
                 new ConfigurationPatchOperation(REPLACE,
@@ -219,7 +219,7 @@ class ConfigurationPatchApplierTest
                                 .put("skiplist", new JsonObject()
                                         .put("class_name", "SkipListMemtable")))), null);
 
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, overlay,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, overlay,
                 new ConfigurationPatchOperation(REMOVE,
                         "/configuration/cassandraYaml/memtable/configurations/trie/max_shard_count", null));
 
@@ -232,7 +232,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testRemoveNestedKeyNotInOverlayFails()
     {
-        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(REMOVE,
                         "/configuration/cassandraYaml/memtable/configurations/trie/class_name", null)))
                 .isInstanceOf(ConfigurationPatchException.class)
@@ -242,7 +242,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testAddNestedKeyParentAbsentFails()
     {
-        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(ADD,
                         "/configuration/cassandraYaml/nonexistent_parent/child/leaf", "value")))
                 .isInstanceOf(ConfigurationPatchException.class)
@@ -252,7 +252,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testTestNestedValue()
     {
-        applyOps(effectiveConfig, EMPTY_OVERLAY,
+        applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(TEST,
                         "/configuration/cassandraYaml/memtable/configurations/trie/class_name", "TrieMemtable"));
     }
@@ -262,7 +262,7 @@ class ConfigurationPatchApplierTest
     {
         // TEST against an object-valued path. The request handler reads the value via JsonObject.getValue,
         // so the expected value is a JsonObject - the same type resolveValue returns.
-        applyOps(effectiveConfig, EMPTY_OVERLAY,
+        applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(TEST,
                         "/configuration/cassandraYaml/memtable/configurations/trie",
                         new JsonObject().put("class_name", "TrieMemtable").put("max_shard_count", 4)));
@@ -271,7 +271,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testTestObjectValueMismatchFails()
     {
-        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(TEST,
                         "/configuration/cassandraYaml/memtable/configurations/trie",
                         new JsonObject().put("class_name", "TrieMemtable").put("max_shard_count", 99))))
@@ -284,10 +284,10 @@ class ConfigurationPatchApplierTest
     {
         // TEST against an array-valued path. The expected value is a JsonArray, matching what
         // resolveValue returns for array values.
-        JsonObject effectiveYaml = effectiveConfig.cassandraYaml().copy()
+        JsonObject effectiveYaml = baseConfig.cassandraYaml().copy()
                 .put("data_file_directories", new JsonArray().add("/data1").add("/data2"));
         CassandraConfigurationOverlay effective = new CassandraConfigurationOverlay(
-                effectiveYaml, effectiveConfig.extraJvmOpts());
+                effectiveYaml, baseConfig.extraJvmOpts());
 
         applyOps(effective, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(TEST,
@@ -298,10 +298,10 @@ class ConfigurationPatchApplierTest
     @Test
     void testTestArrayValueMismatchFails()
     {
-        JsonObject effectiveYaml = effectiveConfig.cassandraYaml().copy()
+        JsonObject effectiveYaml = baseConfig.cassandraYaml().copy()
                 .put("data_file_directories", new JsonArray().add("/data1").add("/data2"));
         CassandraConfigurationOverlay effective = new CassandraConfigurationOverlay(
-                effectiveYaml, effectiveConfig.extraJvmOpts());
+                effectiveYaml, baseConfig.extraJvmOpts());
 
         assertThatThrownBy(() -> applyOps(effective, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(TEST,
@@ -314,7 +314,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testTestNestedValueMismatchFails()
     {
-        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(TEST,
                         "/configuration/cassandraYaml/memtable/configurations/trie/class_name", "WrongValue")))
                 .isInstanceOf(ConfigurationPatchException.class)
@@ -327,7 +327,7 @@ class ConfigurationPatchApplierTest
     void testAddTopLevelArrayValue()
     {
         List<String> directories = List.of("/data1", "/data2");
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, EMPTY_OVERLAY,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(ADD, "/configuration/cassandraYaml/data_file_directories", directories));
 
         assertThat(newOverlay.cassandraYaml().getJsonArray("data_file_directories"))
@@ -337,10 +337,10 @@ class ConfigurationPatchApplierTest
     @Test
     void testReplaceTopLevelArrayValue()
     {
-        JsonObject effectiveYaml = effectiveConfig.cassandraYaml().copy()
+        JsonObject effectiveYaml = baseConfig.cassandraYaml().copy()
                 .put("data_file_directories", List.of("/old_data"));
         CassandraConfigurationOverlay effective = new CassandraConfigurationOverlay(
-                effectiveYaml, effectiveConfig.extraJvmOpts());
+                effectiveYaml, baseConfig.extraJvmOpts());
 
         CassandraConfigurationOverlay newOverlay = applyOps(effective, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(REPLACE, "/configuration/cassandraYaml/data_file_directories",
@@ -353,10 +353,10 @@ class ConfigurationPatchApplierTest
     @Test
     void testNestedPathIntoArrayValueFails()
     {
-        JsonObject effectiveYaml = effectiveConfig.cassandraYaml().copy()
+        JsonObject effectiveYaml = baseConfig.cassandraYaml().copy()
                 .put("seed_provider", List.of(Map.of("class_name", "SimpleSeedProvider")));
         CassandraConfigurationOverlay effective = new CassandraConfigurationOverlay(
-                effectiveYaml, effectiveConfig.extraJvmOpts());
+                effectiveYaml, baseConfig.extraJvmOpts());
 
         assertThatThrownBy(() -> applyOps(effective, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(REPLACE,
@@ -370,7 +370,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testAddJvmOpt()
     {
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, EMPTY_OVERLAY,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-Xms", "2g"));
 
         assertThat(newOverlay.extraJvmOpts()).containsEntry("-Xms", "2g");
@@ -382,7 +382,7 @@ class ConfigurationPatchApplierTest
         CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(null,
                 new LinkedHashMap<>(Map.of("-Xmx", "8g")));
 
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, overlay,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, overlay,
                 new ConfigurationPatchOperation(REMOVE, "/configuration/extraJvmOpts/-Xmx", null));
 
         assertThat(newOverlay.extraJvmOpts()).doesNotContainKey("-Xmx");
@@ -391,7 +391,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testReplaceJvmOptAbsentFails()
     {
-        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(REPLACE, "/configuration/extraJvmOpts/-Xms", "2g")))
                 .isInstanceOf(ConfigurationPatchException.class)
                 .hasMessageContaining("does not exist in effective extraJvmOpts");
@@ -400,14 +400,14 @@ class ConfigurationPatchApplierTest
     @Test
     void testTestJvmOptValue()
     {
-        applyOps(effectiveConfig, EMPTY_OVERLAY,
+        applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(TEST, "/configuration/extraJvmOpts/-Xmx", "4g"));
     }
 
     @Test
     void testTestJvmOptMismatchFails()
     {
-        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(TEST, "/configuration/extraJvmOpts/-Xmx", "16g")))
                 .isInstanceOf(ConfigurationPatchException.class)
                 .hasMessageContaining("Test failed");
@@ -416,7 +416,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testAddInvalidJvmOptKeyFails()
     {
-        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/invalidKey", "value")))
                 .isInstanceOf(ConfigurationPatchException.class)
                 .hasMessageContaining("Invalid JVM option key 'invalidKey'");
@@ -429,7 +429,7 @@ class ConfigurationPatchApplierTest
         effectiveOpts.put("-Xmx", "4g");
         effectiveOpts.put("-XX:+UseG1GC", "");
         CassandraConfigurationOverlay effective = new CassandraConfigurationOverlay(
-                effectiveConfig.cassandraYaml(), effectiveOpts);
+                baseConfig.cassandraYaml(), effectiveOpts);
         CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(null,
                 new LinkedHashMap<>(Map.of("-XX:+UseG1GC", "")));
 
@@ -447,7 +447,7 @@ class ConfigurationPatchApplierTest
         Map<String, String> effectiveOpts = new LinkedHashMap<>();
         effectiveOpts.put("-XX:+UseG1GC", "");
         CassandraConfigurationOverlay effective = new CassandraConfigurationOverlay(
-                effectiveConfig.cassandraYaml(), effectiveOpts);
+                baseConfig.cassandraYaml(), effectiveOpts);
 
         assertThatThrownBy(() -> applyOps(effective, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-XX:-UseG1GC", "")))
@@ -458,16 +458,18 @@ class ConfigurationPatchApplierTest
     @Test
     void testReplaceBooleanJvmOptByRemovingThenAdding()
     {
+        // -XX:+UseG1GC lives only in the overlay (not the base template), so removing it from the
+        // overlay clears it from the effective config, and the subsequent add of -XX:-UseG1GC applies
+        // against the now-conflict-free effective configuration.
         CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(null,
                 new LinkedHashMap<>(Map.of("-XX:+UseG1GC", "")));
 
-        Map<String, String> effectiveOpts = new LinkedHashMap<>();
-        effectiveOpts.put("-Xmx", "4g");
-        effectiveOpts.put("-XX:+UseG1GC", "");
-        CassandraConfigurationOverlay effective = new CassandraConfigurationOverlay(
-                effectiveConfig.cassandraYaml(), effectiveOpts);
+        Map<String, String> baseOpts = new LinkedHashMap<>();
+        baseOpts.put("-Xmx", "4g");
+        CassandraConfigurationOverlay base = new CassandraConfigurationOverlay(
+                baseConfig.cassandraYaml(), baseOpts);
 
-        CassandraConfigurationOverlay newOverlay = applyOps(effective, overlay,
+        CassandraConfigurationOverlay newOverlay = applyOps(base, overlay,
                 new ConfigurationPatchOperation(REMOVE, "/configuration/extraJvmOpts/-XX:+UseG1GC", null),
                 new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-XX:-UseG1GC", ""));
 
@@ -480,7 +482,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testTestFailurePreventsAllMutations()
     {
-        assertThatThrownBy(() -> applyOps(effectiveConfig, EMPTY_OVERLAY,
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(ADD, "/configuration/cassandraYaml/new_key", "value"),
                 new ConfigurationPatchOperation(TEST, "/configuration/cassandraYaml/concurrent_reads", 999)))
                 .isInstanceOf(ConfigurationPatchException.class)
@@ -490,7 +492,7 @@ class ConfigurationPatchApplierTest
     @Test
     void testMultipleOpsAppliedAtomically()
     {
-        CassandraConfigurationOverlay newOverlay = applyOps(effectiveConfig, EMPTY_OVERLAY,
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
                 new ConfigurationPatchOperation(ADD, "/configuration/cassandraYaml/concurrent_writes", 64),
                 new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-Xms", "2g"),
                 new ConfigurationPatchOperation(TEST, "/configuration/cassandraYaml/concurrent_reads", 32));
@@ -499,12 +501,116 @@ class ConfigurationPatchApplierTest
         assertThat(newOverlay.extraJvmOpts()).containsEntry("-Xms", "2g");
     }
 
-    private static CassandraConfigurationOverlay applyOps(CassandraConfigurationOverlay effective,
+    // --- Sequential (RFC 6902 section 5) operation semantics ---
+
+    @Test
+    void testReplaceThenTestSeesUpdatedValue()
+    {
+        // "Change X, then assert X now holds the new value" - the test op must observe the prior replace.
+        applyOps(baseConfig, EMPTY_OVERLAY,
+                new ConfigurationPatchOperation(REPLACE, "/configuration/cassandraYaml/concurrent_reads", 64),
+                new ConfigurationPatchOperation(TEST, "/configuration/cassandraYaml/concurrent_reads", 64));
+    }
+
+    @Test
+    void testTestAgainstStaleValueFails()
+    {
+        // After the replace, the value is 64, so a test for the original 32 must fail.
+        assertThatThrownBy(() -> applyOps(baseConfig, EMPTY_OVERLAY,
+                new ConfigurationPatchOperation(REPLACE, "/configuration/cassandraYaml/concurrent_reads", 64),
+                new ConfigurationPatchOperation(TEST, "/configuration/cassandraYaml/concurrent_reads", 32)))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("Test failed");
+    }
+
+    @Test
+    void testAddObjectThenAddChild()
+    {
+        // Build-up: create a new nested object, then add a child into it in the same patch.
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
+                new ConfigurationPatchOperation(ADD,
+                        "/configuration/cassandraYaml/memtable/configurations/custom", new JsonObject()),
+                new ConfigurationPatchOperation(ADD,
+                        "/configuration/cassandraYaml/memtable/configurations/custom/class_name", "CustomMemtable"));
+
+        JsonObject custom = newOverlay.cassandraYaml().getJsonObject("memtable")
+                                    .getJsonObject("configurations").getJsonObject("custom");
+        assertThat(custom.getString("class_name")).isEqualTo("CustomMemtable");
+    }
+
+    @Test
+    void testAddTopLevelThenReplaceChild()
+    {
+        // Create a new top-level section, then replace a field within it.
+        CassandraConfigurationOverlay newOverlay = applyOps(baseConfig, EMPTY_OVERLAY,
+                new ConfigurationPatchOperation(ADD, "/configuration/cassandraYaml/new_section",
+                        new JsonObject().put("a", 1)),
+                new ConfigurationPatchOperation(REPLACE, "/configuration/cassandraYaml/new_section/a", 2));
+
+        assertThat(newOverlay.cassandraYaml().getJsonObject("new_section").getInteger("a")).isEqualTo(2);
+    }
+
+    @Test
+    void testRemoveThenRemoveChildFails()
+    {
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(new JsonObject()
+                .put("memtable", new JsonObject()
+                        .put("configurations", new JsonObject()
+                                .put("trie", new JsonObject()
+                                        .put("class_name", "ShardedMemtable")
+                                        .put("max_shard_count", 8)))), null);
+
+        // Removing 'trie' first makes the subsequent remove of trie/class_name reference a path that no
+        // longer exists in the overlay - it must fail rather than silently no-op.
+        assertThatThrownBy(() -> applyOps(baseConfig, overlay,
+                new ConfigurationPatchOperation(REMOVE,
+                        "/configuration/cassandraYaml/memtable/configurations/trie", null),
+                new ConfigurationPatchOperation(REMOVE,
+                        "/configuration/cassandraYaml/memtable/configurations/trie/class_name", null)))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("does not exist in overlay");
+    }
+
+    @Test
+    void testRemoveOverlayOnlyTopLevelThenWriteChildFails()
+    {
+        // 'custom_section' exists only in the overlay. Removing it clears it from the effective config,
+        // so replacing a child of it afterwards must fail instead of resurrecting it.
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(new JsonObject()
+                .put("custom_section", new JsonObject().put("a", 1)), null);
+
+        assertThatThrownBy(() -> applyOps(baseConfig, overlay,
+                new ConfigurationPatchOperation(REMOVE, "/configuration/cassandraYaml/custom_section", null),
+                new ConfigurationPatchOperation(REPLACE, "/configuration/cassandraYaml/custom_section/a", 2)))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("does not exist in effective config");
+    }
+
+    @Test
+    void testRemoveOverlayBooleanOptThenAddOppositeStillConflictsAgainstBase()
+    {
+        // +UseG1GC exists in BOTH the base and the overlay. Removing the overlay copy leaves the base's
+        // +UseG1GC in the effective config, so adding -UseG1GC must still be rejected as a conflict.
+        Map<String, String> baseOpts = new LinkedHashMap<>();
+        baseOpts.put("-XX:+UseG1GC", "");
+        CassandraConfigurationOverlay base = new CassandraConfigurationOverlay(
+                baseConfig.cassandraYaml(), baseOpts);
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(null,
+                new LinkedHashMap<>(Map.of("-XX:+UseG1GC", "")));
+
+        assertThatThrownBy(() -> applyOps(base, overlay,
+                new ConfigurationPatchOperation(REMOVE, "/configuration/extraJvmOpts/-XX:+UseG1GC", null),
+                new ConfigurationPatchOperation(ADD, "/configuration/extraJvmOpts/-XX:-UseG1GC", "")))
+                .isInstanceOf(ConfigurationPatchException.class)
+                .hasMessageContaining("Conflicting boolean JVM option");
+    }
+
+    private static CassandraConfigurationOverlay applyOps(CassandraConfigurationOverlay base,
                                                           CassandraConfigurationOverlay overlay,
                                                           ConfigurationPatchOperation... ops)
     {
         List<ConfigurationPatchValidator.ParsedPatchOperation> parsed =
                 ConfigurationPatchValidator.validate(List.of(ops));
-        return ConfigurationPatchApplier.apply(parsed, effective, overlay);
+        return ConfigurationPatchApplier.apply(parsed, base, overlay);
     }
 }
