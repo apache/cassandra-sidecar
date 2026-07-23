@@ -281,7 +281,11 @@ public final class ConfigurationPatchValidator
             return topLevelKey;
         }
 
-        /** Segments after the top-level key; empty for flat paths */
+        /**
+         * Segments after the top-level key; empty for flat paths.
+         * For example, path {@code /configuration/cassandraYaml/memtable/heap_pool} yields top-level key
+         * {@code memtable} and nested segments {@code [heap_pool]}.
+         */
         @NotNull
         public List<String> nestedSegments()
         {
