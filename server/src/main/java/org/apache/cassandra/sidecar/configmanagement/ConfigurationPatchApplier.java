@@ -300,10 +300,10 @@ public final class ConfigurationPatchApplier
             // Nested remove: modify the existing overlay subtree in-place.
             // The precondition check already verified the leaf exists in the overlay.
             // updatedYaml is already a deep copy so in-place mutation is safe.
-            JsonObject topLevel = asJsonObject(updatedYaml.getValue(parsed.topLevelKey()));
-            if (topLevel != null)
+            JsonObject topLevelObject = asJsonObject(updatedYaml.getValue(parsed.topLevelKey()));
+            if (topLevelObject != null)
             {
-                removeAtPath(topLevel, parsed.nestedSegments());
+                removeAtPath(topLevelObject, parsed.nestedSegments());
             }
         }
         else
@@ -312,21 +312,21 @@ public final class ConfigurationPatchApplier
             // If a prior op in this batch already copied the top-level key into the overlay,
             // operate on that copy. Otherwise, copy from effective config to ensure the overlay
             // is self-contained at the top-level key granularity.
-            JsonObject topLevel;
+            JsonObject topLevelObject;
             if (updatedYaml.containsKey(parsed.topLevelKey()))
             {
-                topLevel = asJsonObject(updatedYaml.getValue(parsed.topLevelKey()));
+                topLevelObject = asJsonObject(updatedYaml.getValue(parsed.topLevelKey()));
             }
             else
             {
-                topLevel = deepCopyValue(effectiveYaml.getValue(parsed.topLevelKey()));
+                topLevelObject = deepCopyValue(effectiveYaml.getValue(parsed.topLevelKey()));
             }
-            if (topLevel == null)
+            if (topLevelObject == null)
             {
-                topLevel = new JsonObject();
+                topLevelObject = new JsonObject();
             }
-            setAtPath(topLevel, parsed.nestedSegments(), op.value());
-            updatedYaml.put(parsed.topLevelKey(), topLevel);
+            setAtPath(topLevelObject, parsed.nestedSegments(), op.value());
+            updatedYaml.put(parsed.topLevelKey(), topLevelObject);
         }
     }
 
