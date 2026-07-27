@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -419,9 +420,10 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
         private final File indexFile;
         private final long segmentId;
         private final long len;
-        // Snapshot lastModified at construction so a concurrent delete (e.g. Cassandra
-        // reclaiming cdc_raw) between the directory scan and later reads does not turn
-        // the value into 0L, which would make (now - lastModified) explode to wall-clock time.
+        // Snapshot size and lastModified from a single readAttributes call so a concurrent
+        // change between separate stat fields cannot produce an inconsistent pair (e.g. len > 0
+        // with lastModified == 0). A later delete before the cleanup loop is still handled by
+        // the lastModified > 0 guards.
         private final long lastModified;
 
         CdcRawSegmentFile(File logFile)
@@ -429,9 +431,22 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
             this.file = logFile;
             final String name = logFile.getName();
             this.segmentId = parseSegmentId(name);
-            this.len = logFile.length();
-            this.lastModified = logFile.lastModified();
             this.indexFile = CdcUtil.getIdxFile(logFile);
+            long size = 0L;
+            long mtime = 0L;
+            try
+            {
+                BasicFileAttributes attrs = Files.readAttributes(logFile.toPath(), BasicFileAttributes.class);
+                size = attrs.size();
+                mtime = attrs.lastModifiedTime().toMillis();
+            }
+            catch (IOException e)
+            {
+                // File removed or unreadable between listFiles and construction; len/mtime
+                // stay 0 and the lastModified > 0 guards skip metric emission and deletion.
+            }
+            this.len = size;
+            this.lastModified = mtime;
         }
 
         public boolean exists()
