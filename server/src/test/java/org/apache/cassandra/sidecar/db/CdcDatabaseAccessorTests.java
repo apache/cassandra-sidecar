@@ -226,6 +226,51 @@ class CdcDatabaseAccessorTests
         }
     }
 
+    /**
+     * Regression for restart rewind: when an exact (start, end) row exists, stale overlapping rows
+     * from older range boundaries must not participate in load (they would otherwise win via min-merge).
+     */
+    @Test
+    void testExactMatchIgnoresStaleOverlappingRanges()
+    {
+        Partitioner partitioner = Partitioner.Murmur3Partitioner;
+        MockCdcStateV2 datastore = new MockCdcStateV2();
+        String jobId = UUID.randomUUID().toString();
+        SidecarSchema mockSidecarSchema = mock(SidecarSchema.class);
+        CdcStatesSchema mockCdcStatesSchema = mock(CdcStatesSchema.class, RETURNS_DEEP_STUBS);
+        when(mockSidecarSchema.tableSchema(CdcStatesSchema.class)).thenReturn(mockCdcStatesSchema);
+        // 8 = total storage buckets on the ring (splits 0..7), not the number of rows returned on load.
+        TokenSplitUtil tokenSplitUtil = new TokenSplitUtil(8);
+        Provider<TokenSplitUtil> tokenSplitUtilProvider = () -> tokenSplitUtil;
+
+        CdcDatabaseAccessor db = new CdcDatabaseAccessor(mockSidecarSchema,
+                                                         getMockCQLSessionProvider(datastore, mockCdcStatesSchema),
+                                                         tokenSplitUtilProvider,
+                                                         getMockInstanceMetaDataFetcher());
+
+        List<BigInteger> tokens = TokenSplitUtil.splitTokens(8, partitioner);
+        // ownedRange spans storage buckets 3 and 4: (t[3], t[5]] crosses two of the eight ring slices.
+        BigInteger lower = tokens.get(3);
+        BigInteger upper = tokens.get(5);
+        // staleAdjacentRange overlaps ownedRange but has a different (start, end) clustering key.
+        BigInteger staleLower = tokens.get(4);
+        TokenRange ownedRange = TokenRange.openClosed(lower, upper);
+        TokenRange staleAdjacentRange = TokenRange.openClosed(staleLower, upper);
+
+        ByteBuffer currentState = randomBytes(100);
+        ByteBuffer staleState = randomBytes(200);
+
+        await(db.storeStateAsync(jobId, staleAdjacentRange, staleState, System.currentTimeMillis()).stream());
+        await(db.storeStateAsync(jobId, ownedRange, currentState, System.currentTimeMillis()).stream());
+
+        List<byte[]> loaded = db.loadStateForRange(jobId, ownedRange).collect(Collectors.toList());
+        // persist duplicates the exact-match row into every overlapping storage bucket (3 and 4 here).
+        assertThat(loaded).hasSize(2);
+        // both blobs are the current checkpoint; the stale adjacent row is excluded by exact-match-first load.
+        loaded.forEach(bytes -> assertByteBufferEquals(currentState, bytes));
+        assertThat(loaded).noneMatch(bytes -> Arrays.equals(bytes, toByteArray(staleState)));
+    }
+
     @Test
     void testOverlaps()
     {

@@ -19,6 +19,7 @@
 
 package org.apache.cassandra.sidecar.db;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -144,10 +145,23 @@ public class CdcDatabaseAccessor extends DatabaseAccessor<CdcStatesSchema>
                     Arrays.stream(splits).mapToObj(Integer::toString).collect(Collectors.joining(",")));
         Stream<ResultSetFuture> futures = Arrays.stream(splits)
                                                 .mapToObj(split -> selectCdcRange(jobId, split));
-        Stream<Row> rows = await(futures);
-        return rows.filter(row -> !row.isNull(0) && !row.isNull(1) && !row.isNull(2))
-                   .filter(row -> TokenSplitUtil.overlaps(range, row.getVarint(0), row.getVarint(1)))
-                   .map(row -> ByteBufUtils.getArray(row.getBytes(2)));
+        List<Row> overlappingRows = await(futures)
+                                      .filter(row -> !row.isNull(0) && !row.isNull(1) && !row.isNull(2))
+                                      .filter(row -> TokenSplitUtil.overlaps(range, row.getVarint(0), row.getVarint(1)))
+                                      .collect(Collectors.toList());
+
+        List<Row> exactMatches = overlappingRows.stream()
+                                                .filter(row -> exactRangeMatch(range, row.getVarint(0), row.getVarint(1)))
+                                                .collect(Collectors.toList());
+
+        List<Row> selectedRows = exactMatches.isEmpty() ? overlappingRows : exactMatches;
+
+        return selectedRows.stream().map(row -> ByteBufUtils.getArray(row.getBytes(2)));
+    }
+
+    static boolean exactRangeMatch(TokenRange range, BigInteger start, BigInteger end)
+    {
+        return range.lowerEndpoint().equals(start) && range.upperEndpoint().equals(end);
     }
 
     @NotNull
