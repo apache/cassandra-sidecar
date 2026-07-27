@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -232,8 +233,13 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
         Collections.sort(segmentFiles);
         long nowInMillis = timeProvider.currentTimeMillis();
 
-        // track the age of the oldest commit log segment to give indication of the time-window buffer available
-        cdcMetrics.oldestSegmentAge.metric.setValue((int) MILLISECONDS.toSeconds(nowInMillis - segmentFiles.get(0).lastModified()));
+        // track the age of the oldest commit log segment to give indication of the time-window buffer available.
+        // Skip emission if lastModified is 0 (file was deleted before we could snapshot its lastModified time).
+        long oldestLastModified = segmentFiles.get(0).lastModified();
+        if (oldestLastModified > 0)
+        {
+            cdcMetrics.oldestSegmentAge.metric.setValue((int) MILLISECONDS.toSeconds(nowInMillis - oldestLastModified));
+        }
 
         LOGGER.debug("Cdc data cleaner directorySizeBytes={} maxedUsageBytes={} upperLimitBytes={}",
                      directorySizeBytes, maxUsageBytes, upperLimitBytes);
@@ -254,31 +260,47 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
             while (i < segmentFiles.size() - 1 && directorySizeBytes > upperLimitBytes)
             {
                 CdcRawSegmentFile segment = segmentFiles.get(i);
-                long ageMillis = nowInMillis - segment.lastModified();
-
-                if (ageMillis < criticalMillis)
-                {
-                    LOGGER.error("Insufficient Cdc buffer size to maintain {}-minute window segment={} maxSize={} ageMinutes={}",
-                                 MILLISECONDS.toMinutes(criticalMillis), segment, upperLimitBytes,
-                                 MILLISECONDS.toMinutes(ageMillis));
-                    cdcMetrics.criticalCdcRawSpace.metric.update(1);
-                }
-                else if (ageMillis < lowMillis)
-                {
-                    LOGGER.warn("Insufficient Cdc buffer size to maintain {}-minute window segment={} maxSize={} ageMinutes={}",
-                                MILLISECONDS.toMinutes(lowMillis), segment, upperLimitBytes,
-                                MILLISECONDS.toMinutes(ageMillis));
-                    cdcMetrics.lowCdcRawSpace.metric.update(1);
-                }
+                long segmentLastModified = segment.lastModified();
                 long length = 0;
-                try
+                // When lastModified is 0 the segment was already reclaimed between the directory
+                // Skip the buffer-window alerts and the metrics update but still discount the cached size
+                // from the local budget so the outer loop stops at the right point instead of over-cleaning 
+                // subsequent live segments.
+                if (segmentLastModified > 0)
                 {
-                    length = deleteSegment(segment);
-                    cdcMetrics.deletedSegment.metric.update(length);
+                    long ageMillis = nowInMillis - segmentLastModified;
+
+                    if (ageMillis < criticalMillis)
+                    {
+                        LOGGER.error("Insufficient Cdc buffer size to maintain {}-minute window segment={} maxSize={} ageMinutes={}",
+                                     MILLISECONDS.toMinutes(criticalMillis), segment, upperLimitBytes,
+                                     MILLISECONDS.toMinutes(ageMillis));
+                        cdcMetrics.criticalCdcRawSpace.metric.update(1);
+                    }
+                    else if (ageMillis < lowMillis)
+                    {
+                        LOGGER.warn("Insufficient Cdc buffer size to maintain {}-minute window segment={} maxSize={} ageMinutes={}",
+                                    MILLISECONDS.toMinutes(lowMillis), segment, upperLimitBytes,
+                                    MILLISECONDS.toMinutes(ageMillis));
+                        cdcMetrics.lowCdcRawSpace.metric.update(1);
+                    }
+
+                    try
+                    {
+                        length = deleteSegment(segment);
+                        cdcMetrics.deletedSegment.metric.update(length);
+                    }
+                    catch (IOException e)
+                    {
+                        LOGGER.warn("Failed to delete cdc segment", e);
+                    }
                 }
-                catch (IOException e)
+                else
                 {
-                    LOGGER.warn("Failed to delete cdc segment", e);
+                    LOGGER.warn("Skipping delete for already-reclaimed cdc segment {}; a concurrent reclaim "
+                                + "(e.g. Cassandra reclaiming cdc_raw) occurred between the directory scan and "
+                                + "the deletion pass", segment);
+                    length = segment.length();
                 }
                 directorySizeBytes -= length;
                 i++;
@@ -398,14 +420,33 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
         private final File indexFile;
         private final long segmentId;
         private final long len;
+        // Snapshot size and lastModified from a single readAttributes call so a concurrent
+        // change between separate stat fields cannot produce an inconsistent pair (e.g. len > 0
+        // with lastModified == 0). A later delete before the cleanup loop is still handled by
+        // the lastModified > 0 guards.
+        private final long lastModified;
 
         CdcRawSegmentFile(File logFile)
         {
             this.file = logFile;
             final String name = logFile.getName();
             this.segmentId = parseSegmentId(name);
-            this.len = logFile.length();
             this.indexFile = CdcUtil.getIdxFile(logFile);
+            long size = 0L;
+            long mtime = 0L;
+            try
+            {
+                BasicFileAttributes attrs = Files.readAttributes(logFile.toPath(), BasicFileAttributes.class);
+                size = attrs.size();
+                mtime = attrs.lastModifiedTime().toMillis();
+            }
+            catch (IOException e)
+            {
+                // File removed or unreadable between listFiles and construction; len/mtime
+                // stay 0 and the lastModified > 0 guards skip metric emission and deletion.
+            }
+            this.len = size;
+            this.lastModified = mtime;
         }
 
         public boolean exists()
@@ -430,7 +471,7 @@ public class CdcRawDirectorySpaceCleaner implements PeriodicTask
 
         public long lastModified()
         {
-            return file.lastModified();
+            return lastModified;
         }
 
         public Path path()
