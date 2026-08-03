@@ -126,7 +126,10 @@ public class BasicRetryPolicy extends RetryPolicy
             return;
         }
 
-        if (response.statusCode() == HttpResponseStatus.SERVICE_UNAVAILABLE.code())
+        // SERVICE_UNAVAILABLE and TOO_MANY_REQUESTS both signal the server is temporarily too busy to serve the
+        // request -- retry identically, honoring Retry-After if the server provided one
+        if (response.statusCode() == HttpResponseStatus.SERVICE_UNAVAILABLE.code() ||
+            response.statusCode() == HttpResponseStatus.TOO_MANY_REQUESTS.code())
         {
             if (canRetryOnADifferentHost)
             {

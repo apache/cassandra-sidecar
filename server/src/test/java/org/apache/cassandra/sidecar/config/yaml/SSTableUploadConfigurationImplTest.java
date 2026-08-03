@@ -53,4 +53,22 @@ class SSTableUploadConfigurationImplTest
         SSTableUploadConfigurationImpl config = new SSTableUploadConfigurationImpl(value);
         assertThat(config.filePermissions()).isEqualTo(value);
     }
+
+    @Test
+    void testDefaultRetryAfterSeconds()
+    {
+        SSTableUploadConfigurationImpl config = new SSTableUploadConfigurationImpl();
+        assertThat(config.retryAfterSeconds()).isEqualTo(SSTableUploadConfigurationImpl.DEFAULT_RETRY_AFTER_SECONDS);
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void testDeprecatedThreeArgConstructorDefaultsRetryAfterSeconds()
+    {
+        SSTableUploadConfigurationImpl config = new SSTableUploadConfigurationImpl(42, 15F, "rwxr--r--");
+        assertThat(config.concurrentUploadsLimit()).isEqualTo(42);
+        assertThat(config.minimumSpacePercentageRequired()).isEqualTo(15F);
+        assertThat(config.filePermissions()).isEqualTo("rwxr--r--");
+        assertThat(config.retryAfterSeconds()).isEqualTo(SSTableUploadConfigurationImpl.DEFAULT_RETRY_AFTER_SECONDS);
+    }
 }

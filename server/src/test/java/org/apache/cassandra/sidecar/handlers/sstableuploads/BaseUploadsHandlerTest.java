@@ -110,6 +110,7 @@ class BaseUploadsHandlerTest
         mockSSTableUploadConfiguration = mock(SSTableUploadConfiguration.class);
         when(mockSSTableUploadConfiguration.concurrentUploadsLimit()).thenReturn(3);
         when(mockSSTableUploadConfiguration.minimumSpacePercentageRequired()).thenReturn(0F);
+        when(mockSSTableUploadConfiguration.retryAfterSeconds()).thenReturn(1);
         trafficShapingConfiguration = mock(TrafficShapingConfiguration.class);
         when(trafficShapingConfiguration.inboundGlobalBandwidthBytesPerSecond()).thenReturn(512 * 1024L);
         when(trafficShapingConfiguration.outboundGlobalBandwidthBytesPerSecond())

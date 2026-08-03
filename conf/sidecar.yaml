@@ -108,6 +108,7 @@ sidecar:
   sstable_upload:
     concurrent_upload_limit: 80
     min_free_space_percent: 10
+    retry_after_seconds: 1                        # suggested wait, in seconds, sent to clients via the Retry-After header when the concurrent upload limit is exceeded
     # file_permissions: "rw-r--r--" # when not specified, the default file permissions are owner read & write, group & others read
   # The maximum allowable time skew between the server and the client.
   # Resolution is in minutes. The minimum configurable value is 1 minute.

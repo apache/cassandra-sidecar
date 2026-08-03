@@ -26,6 +26,7 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -139,6 +140,7 @@ public class SSTableUploadHandler extends AbstractHandler<SSTableUploadRequestPa
         {
             String message = String.format("Concurrent upload limit (%d) exceeded", limiter.limit());
             instanceMetrics.uploadSSTable().throttled.metric.update(1);
+            context.response().putHeader(HttpHeaderNames.RETRY_AFTER, String.valueOf(configuration.retryAfterSeconds()));
             context.fail(wrapHttpException(HttpResponseStatus.TOO_MANY_REQUESTS, message));
             return;
         }

@@ -235,6 +235,7 @@ The `sidecar` section of the `sidecar.yaml` file is used to configure the Cassan
 * `sstable_upload`: This subsection manages the configuration for SSTable component uploads by Cassandra Sidecar.
 ** `concurrent_upload_limit`: This defines the maximum number of SSTable components that can be uploaded concurrently. By default, `80`.
 ** `min_free_space_percent`: This defines the minimum percentage of available disk required for SSTable component uploads to proceed. By default, `10`.
+** `retry_after_seconds`: This defines the number of seconds sent in the `Retry-After` header when a request is rejected for exceeding `concurrent_upload_limit`. By default, `1`.
 * `allowable_time_skew`: This defines the maximum allowable time skew between Cassandra Sidecar and clients of Cassandra Sidecar. The minimum resolution is defined in minutes. By default, this is set to 1 hour.
 * `sstable_import`: This subsection manages the configuration for Cassandra Sidecar's SSTable import functionality. The following properties are defined:
 ** `execute_interval`: The interval at which Cassandra Sidecar will execute SSTable import tasks.
