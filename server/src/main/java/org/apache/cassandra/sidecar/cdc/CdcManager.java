@@ -84,6 +84,7 @@ public class CdcManager
     private final ClusterConfigProvider clusterConfigProvider;
     private final SidecarCdcClient sidecarCdcClient;
     private final ICdcStats cdcStats;
+    private final SidecarCdcStats sidecarCdcStats;
     private List<CdcConsumerEntry> entries = new ArrayList<>();
     private final ReplicationFactorSupplier rfSupplier;
     private final CdcOptions cdcOptions;
@@ -99,6 +100,7 @@ public class CdcManager
                       ClusterConfigProvider clusterConfigProvider,
                       SidecarCdcClient sidecarCdcClient,
                       ICdcStats cdcStats,
+                      SidecarCdcStats sidecarCdcStats,
                       TaskExecutorPool taskExecutorPool,
                       CdcDatabaseAccessor cdcDatabaseAccessor,
                       CdcOptions cdcOptions)
@@ -111,6 +113,7 @@ public class CdcManager
         this.clusterConfigProvider = clusterConfigProvider;
         this.sidecarCdcClient = sidecarCdcClient;
         this.cdcStats = cdcStats;
+        this.sidecarCdcStats = sidecarCdcStats;
         this.cdcOptions = cdcOptions;
         this.asyncExecutor = new ExecutorPoolsExecutor(taskExecutorPool);
         this.cassandraClient = new StateSidecarCdcCassandraClient(cdcDatabaseAccessor);
@@ -216,14 +219,14 @@ public class CdcManager
                                          .withReplicationFactorSupplier(rfSupplier)
                                          .withSidecarStatePersister(persister)
                                          .build();
-        return new CdcConsumerEntry(consumer, persister);
+        return new CdcConsumerEntry(consumer, persister, sidecarCdcStats);
     }
 
     private @NotNull SidecarStatePersister getSidecarStatePersister()
     {
         return new SidecarStatePersister(new ConfigBackedPersisterOptions(conf),
                                          cdcOptions,
-                                         SidecarCdcStats.STUB,
+                                         sidecarCdcStats,
                                          cassandraClient,
                                          asyncExecutor);
     }
