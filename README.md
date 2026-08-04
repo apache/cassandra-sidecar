@@ -46,7 +46,7 @@ The latest version of the Sidecar can be found at: https://dlcdn.apache.org/cass
 Build Prerequisites
 -------------------
 We depend on the Cassandra in-jvm dtest framework for testing. 
-Because these jars are not published, you must manually build the dtest jars before you can build the project.
+Because these jars are not published, you must manually build the dtest jars before you can build the project. This can be done using  `build-dtest-jars.sh` from the `scripts/` directory.
 
 The build script supports two parameters:
 - `REPO` - the Cassandra git repository to use for the source files. This is helpful if you need to test with a fork of the Cassandra codebase.
@@ -69,11 +69,11 @@ See Testing for more details on how to choose which Cassandra versions to use wh
 ./scripts/build-dtest-jars.sh
 ```
 
-### macOS network aliases
-
 For multi-node in-jvm dtests, network aliases will need to be setup for each Cassandra node. The tests assume each node's ip address is 127.0.0.x, where x is the node id. 
 
 For example if you populated your cluster with 3 nodes, create interfaces for 127.0.0.2 and 127.0.0.3 (the first node of course uses 127.0.0.1).
+
+### macOS network aliases
 
 To get up and running, create a temporary alias for every node except the first:
 
