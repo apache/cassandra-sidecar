@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,14 +61,6 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholde
 public class LiveMigrationInstanceMetadataUtil
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveMigrationInstanceMetadataUtil.class);
-
-    /**
-     * Caches the canonical (symlinks resolved) form of each base directory keyed by its lexical
-     * path. Base directories come from {@link InstanceMetadata}, which is fixed at startup, so the
-     * canonical form is stable for the process lifetime. The set of distinct base directories is
-     * bounded by configuration (~5–10 per instance), so no eviction is required.
-     */
-    private static final ConcurrentMap<Path, Path> BASE_DIR_CANONICAL = new ConcurrentHashMap<>();
 
     /**
      * Encapsulates all metadata for a specific directory instance in live migration.
@@ -295,18 +285,6 @@ public class LiveMigrationInstanceMetadataUtil
         return resolveLexically(fileUrl, metadata).resolvedPath();
     }
 
-    private static Path canonicalBaseDir(Path baseDir) throws IOException
-    {
-        Path cached = BASE_DIR_CANONICAL.get(baseDir);
-        if (cached != null)
-        {
-            return cached;
-        }
-        Path canonical = baseDir.toRealPath();
-        Path existing = BASE_DIR_CANONICAL.putIfAbsent(baseDir, canonical);
-        return existing != null ? existing : canonical;
-    }
-
     /**
      * Lexically resolves a live migration file download URL to a {@link ResolvedPath}. Performs only
      * string-level validation; the filesystem is not touched and the file is not required to exist.
@@ -381,7 +359,7 @@ public class LiveMigrationInstanceMetadataUtil
 
         /**
          * Verifies that the source-side file represented by this {@code ResolvedPath} exists and
-         * that its canonical (symlinks resolved) path stays inside the canonical base directory.
+         * that its real (symlinks resolved) path stays inside the real base directory path.
          * Use this on the source side after
          * {@link LiveMigrationInstanceMetadataUtil#resolveLexically(String, InstanceMetadata)} to
          * enforce that the file the operator is about to serve cannot escape the configured
@@ -390,13 +368,15 @@ public class LiveMigrationInstanceMetadataUtil
          * and operator-facing logs are configured against the lexical form.
          *
          * <p>Performs blocking filesystem I/O - must be called from a worker thread, not the event
-         * loop. Throws {@link NoSuchFileException} before any canonical-path resolution runs, so
-         * callers can distinguish "file missing" from "path escapes via symlink".
+         * loop. Throws {@link NoSuchFileException} before any real-path resolution runs, so
+         * callers can distinguish "file missing" from "path escapes via symlink". The base directory
+         * is only resolved when the file's real path does not already start with it, so a base
+         * directory that is not itself a symlink costs no extra filesystem calls.
          *
          * @throws NoSuchFileException      if the resolved file does not exist
          * @throws IOException              if {@link Path#toRealPath} fails for an I/O reason
          *                                  other than missing file
-         * @throws IllegalArgumentException if the canonical path escapes the base directory
+         * @throws IllegalArgumentException if the real path escapes the base directory
          */
         public void verifyContainment() throws IOException
         {
@@ -404,8 +384,16 @@ public class LiveMigrationInstanceMetadataUtil
             {
                 throw new NoSuchFileException(resolvedPath.toString());
             }
-            Path canonical = resolvedPath.toRealPath();
-            if (!canonical.startsWith(canonicalBaseDir(baseDir)))
+            Path realPath = resolvedPath.toRealPath();
+            // When the base directory is not itself behind a symlink, the file's real path still
+            // starts with the lexical base directory, which already proves containment.
+            if (realPath.startsWith(baseDir))
+            {
+                return;
+            }
+            // The base directory itself may be a symlink (for example a data dir pointing at a
+            // mounted volume), so compare against its real path before rejecting.
+            if (!realPath.startsWith(baseDir.toRealPath()))
             {
                 LOGGER.error("Resolved path escapes base directory for {}", resolvedPath);
                 throw new IllegalArgumentException("Resolved path escapes base directory");
