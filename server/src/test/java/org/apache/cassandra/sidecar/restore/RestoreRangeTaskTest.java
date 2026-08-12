@@ -343,6 +343,69 @@ class RestoreRangeTaskTest
     }
 
     @Test
+    void testStagingOfFastForwardJobInCreatedStatus()
+    {
+        // A fast forward job stages its slices ahead of the STAGE_READY signal, i.e. while it is still CREATED
+        RestoreJob job = spy(RestoreJobTest.createFastForwardTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED));
+        doReturn(true).when(job).isManagedBySidecar();
+        doReturn(job).when(mockRange).job();
+        doReturn(Paths.get("nonexist")).when(mockRange).stagedObjectPath();
+        HeadObjectResponse headObjectResponse = mock(HeadObjectResponse.class);
+        when(headObjectResponse.contentLength()).thenReturn(1L);
+        when(mockStorageClient.objectExists(mockRange)).thenReturn(CompletableFuture.completedFuture(headObjectResponse));
+        when(mockStorageClient.downloadObjectIfAbsent(eq(mockRange), any(TaskExecutorPool.class)))
+        .thenReturn(Future.succeededFuture(new File(".")));
+        RestoreRangeTask task = createTask(mockRange, job);
+
+        Promise<RestoreRange> promise = Promise.promise();
+        task.handle(promise);
+        getBlocking(promise.future()); // no error is thrown
+
+        verify(mockRange, times(1)).completeStagePhase();
+        verify(mockRange, times(0)).completeImportPhase(); // should not be called in this phase
+        verify(mockRangeAccessor, times(1)).updateStatus(mockRange);
+        assertThat(mockRange.hasStaged()).isTrue();
+        assertThat(mockRange.hasImported()).isFalse();
+    }
+
+    @Test
+    void testImportPhaseOfFastForwardJobInStagedStatus()
+    {
+        // A fast forward job imports its staged slices ahead of the IMPORT_READY signal, i.e. once it is STAGED
+        RestoreJob job = spy(RestoreJobTest.createFastForwardTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED));
+        doReturn(true).when(job).isManagedBySidecar();
+        doReturn(job).when(mockRange).job();
+        doReturn(true).when(mockRange).hasStaged();
+        RestoreRangeTask task = createTask(mockRange, job);
+
+        Promise<RestoreRange> promise = Promise.promise();
+        task.handle(promise);
+        getBlocking(promise.future()); // no error is thrown
+
+        verify(mockRange, times(0)).completeStagePhase(); // should not be called in the phase
+        verify(mockRange, times(1)).completeImportPhase();
+        verify(mockRangeAccessor, times(1)).updateStatus(mockRange);
+        assertThat(mockRange.hasImported()).isTrue();
+    }
+
+    @Test
+    void testFailsWhenJobIsNotReadyToStageOrImport()
+    {
+        // Without fast forward, no phase can start while the job is in CREATED status
+        RestoreJob job = spy(RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED));
+        doReturn(true).when(job).isManagedBySidecar();
+        doReturn(job).when(mockRange).job();
+        RestoreRangeTask task = createTask(mockRange, job);
+
+        Promise<RestoreRange> promise = Promise.promise();
+        task.handle(promise);
+        assertThatThrownBy(() -> getBlocking(promise.future()))
+        .hasMessageContaining("Unexpected restore job status");
+        verify(mockRange, times(0)).completeStagePhase();
+        verify(mockRange, times(0)).completeImportPhase();
+    }
+
+    @Test
     void testImportSSTables(@TempDir Path testFolder)
     {
         // import is successful

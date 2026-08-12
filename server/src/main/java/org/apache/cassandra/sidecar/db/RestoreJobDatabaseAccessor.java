@@ -87,6 +87,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
                                    .consistencyLevel(payload.consistencyConfig().consistencyLevel)
                                    .localDatacenter(payload.consistencyConfig().localDatacenter)
                                    .shouldRestoreToLocalDatacenterOnly(payload.shouldRestoreToLocalDatacenterOnly())
+                                   .fastForwardEnabled(payload.fastForwardEnabled())
                                    .build();
         ByteBuffer secrets = serializeValue(job.secrets, "secrets");
         ByteBuffer importOptions = serializeValue(job.importOptions, "sstable import options");
@@ -103,6 +104,7 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
                                                     job.localDatacenter,
                                                     job.shouldRestoreToLocalDatacenterOnly,
                                                     job.credentialType.name(),
+                                                    job.fastForwardEnabled,
                                                     job.expireAt);
 
         execute(statement);

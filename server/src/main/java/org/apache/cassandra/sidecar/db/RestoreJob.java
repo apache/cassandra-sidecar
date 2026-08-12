@@ -21,6 +21,8 @@ package org.apache.cassandra.sidecar.db;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Date;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -67,6 +69,9 @@ public class RestoreJob
     public final @Nullable String localDatacenter;
     // whether a restore job should restore to the local Cassandra nodes only; default is false
     public final boolean shouldRestoreToLocalDatacenterOnly;
+    // whether the staging and the importing phases of the job are eagerly pipelined, i.e. slices are staged while the
+    // job is in CREATED status and staged slices are imported once the job is in STAGED status; default is false
+    public final boolean fastForwardEnabled;
     public final Manager restoreJobManager;
     public final Long sliceCount;
 
@@ -100,6 +105,7 @@ public class RestoreJob
                .consistencyLevel(consistencyConfig.consistencyLevel)
                .localDatacenter(consistencyConfig.localDatacenter)
                .shouldRestoreToLocalDatacenterOnly(row.getBool("local_datacenter_only"))
+               .fastForwardEnabled(row.getBool("fast_forward_enabled"))
                .sliceCount(row.get("slice_count", Long.class));
 
         return builder.build();
@@ -189,6 +195,7 @@ public class RestoreJob
         this.localDatacenter = builder.localDatacenter;
         this.restoreJobManager = builder.manager;
         this.sliceCount = builder.sliceCount;
+        this.fastForwardEnabled = builder.fastForwardEnabled;
     }
 
     public Builder unbuild()
@@ -217,17 +224,74 @@ public class RestoreJob
     }
 
     /**
+     * Determine whether the restore ranges of the job should be staged now.
+     *
+     * <p>Staging is normally triggered by the {@link RestoreJobStatus#STAGE_READY} signal from the external
+     * controller. When fast forward is enabled, staging starts as soon as the job is created; the individual slices
+     * are already available on the storage cloud as they are uploaded progressively. {@code STAGE_READY} then becomes
+     * a fence, which guarantees that all slices of the job have been uploaded, rather than the trigger of the phase.
+     *
+     * @return true if the ranges of this job can be staged in the current job status
+     */
+    public boolean shouldStageNow()
+    {
+        return status == RestoreJobStatus.STAGE_READY
+               || (fastForwardEnabled && status == RestoreJobStatus.CREATED);
+    }
+
+    /**
+     * Determine whether the staged restore ranges of the job should be imported now.
+     *
+     * <p>Importing is normally triggered by the {@link RestoreJobStatus#IMPORT_READY} signal from the external
+     * controller. When fast forward is enabled, importing starts once the job enters {@link RestoreJobStatus#STAGED},
+     * i.e. all clusters have staged their data and satisfied the consistency requirement of the job.
+     * {@code IMPORT_READY} then becomes a confirmation rather than the trigger of the phase.
+     *
+     * @return true if the staged ranges of this job can be imported in the current job status
+     */
+    public boolean shouldImportNow()
+    {
+        return status == RestoreJobStatus.IMPORT_READY
+               || (fastForwardEnabled && status == RestoreJobStatus.STAGED);
+    }
+
+    /**
      * Determine the expected range status based on the job status
      * @return the expected next range status in order to succeed
      */
     public RestoreRangeStatus expectedNextRangeStatus()
     {
-        Preconditions.checkArgument(status != RestoreJobStatus.CREATED,
+        // Ranges of a fast forward job are already staging while the job is in CREATED status, so their progress can
+        // be examined. For all other jobs, no range exists yet in CREATED status.
+        Preconditions.checkArgument(fastForwardEnabled || status != RestoreJobStatus.CREATED,
                                     "Cannot check progress for restore job in CREATED status. jobId: " + jobId);
 
-        return status == RestoreJobStatus.STAGE_READY || status == RestoreJobStatus.STAGED
+        return status == RestoreJobStatus.CREATED
+               || status == RestoreJobStatus.STAGE_READY
+               || status == RestoreJobStatus.STAGED
                ? RestoreRangeStatus.STAGED
                : RestoreRangeStatus.SUCCEEDED;
+    }
+
+    /**
+     * Determine all the range statuses that satisfy the success criteria derived from the job status, i.e.
+     * {@link #expectedNextRangeStatus()}.
+     *
+     * <p>When fast forward is enabled, a range can advance past the expected status while the job status remains the
+     * same, e.g. a range gets imported while the job is still in {@link RestoreJobStatus#STAGED} status. Those ranges
+     * have already fulfilled the criteria; the later status must count too, otherwise the consistency check of the
+     * staging phase could never conclude once importing has started.
+     *
+     * @return the set of range statuses that satisfy the success criteria
+     */
+    public Set<RestoreRangeStatus> satisfyingRangeStatuses()
+    {
+        RestoreRangeStatus expected = expectedNextRangeStatus();
+        if (fastForwardEnabled && expected == RestoreRangeStatus.STAGED)
+        {
+            return EnumSet.of(RestoreRangeStatus.STAGED, RestoreRangeStatus.SUCCEEDED);
+        }
+        return EnumSet.of(expected);
     }
 
     @Nullable
@@ -245,13 +309,14 @@ public class RestoreJob
                              "createdAt='%s', jobId='%s', keyspaceName='%s', " +
                              "tableName='%s', status='%s', secrets='%s', importOptions='%s', " +
                              "expireAt='%s', bucketCount='%s', consistencyLevel='%s', localDatacenter='%s', " +
-                             "shouldRestoreToLocalDatacenterOnly='%s'}",
+                             "shouldRestoreToLocalDatacenterOnly='%s', fastForwardEnabled='%s'}",
                              createdAt.toString(), jobId.toString(),
                              keyspaceName, tableName,
                              statusText, secrets, importOptions,
                              expireAt, bucketCount,
                              consistencyLevel, localDatacenter,
-                             shouldRestoreToLocalDatacenterOnly);
+                             shouldRestoreToLocalDatacenterOnly,
+                             fastForwardEnabled);
     }
 
     public static LocalDate toLocalDate(UUID jobId)
@@ -291,6 +356,7 @@ public class RestoreJob
         private ConsistencyLevel consistencyLevel;
         private String localDatacenter;
         private boolean shouldRestoreToLocalDatacenterOnly = false;
+        private boolean fastForwardEnabled = false;
         private Manager manager;
         private Long sliceCount;
 
@@ -317,6 +383,7 @@ public class RestoreJob
             this.localDatacenter = restoreJob.localDatacenter;
             this.manager = restoreJob.restoreJobManager;
             this.sliceCount = restoreJob.sliceCount;
+            this.fastForwardEnabled = restoreJob.fastForwardEnabled;
         }
 
         public Builder createdAt(LocalDate createdAt)
@@ -411,6 +478,11 @@ public class RestoreJob
         public Builder shouldRestoreToLocalDatacenterOnly(boolean localDatacenterOnly)
         {
             return update(b -> b.shouldRestoreToLocalDatacenterOnly = localDatacenterOnly);
+        }
+
+        public Builder fastForwardEnabled(boolean fastForwardEnabled)
+        {
+            return update(b -> b.fastForwardEnabled = fastForwardEnabled);
         }
 
         @Override

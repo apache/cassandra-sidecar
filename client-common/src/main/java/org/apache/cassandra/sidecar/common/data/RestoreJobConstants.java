@@ -48,6 +48,16 @@ public class RestoreJobConstants
      * In this case, there is an external coordinator that manges the restore job in each datacenter.
      */
     public static final String JOB_RESTORE_TO_LOCAL_DATA_CENTER_ONLY = "restoreToLocalDatacenterOnly";
+    /**
+     * A boolean field; when fastForwardEnabled is set to true, Sidecar eagerly pipelines the staging and the importing
+     * phases of the restore job, instead of waiting for the phase signals from the external controller. Concretely,
+     * slices are staged while the job is still in {@code CREATED} status, and staged slices are imported once the job
+     * enters {@code STAGED} status. The {@code STAGE_READY} and {@code IMPORT_READY} signals become a fence and a
+     * confirmation, respectively, rather than triggers.
+     * The option should only be enabled by callers that can accept that the imported data becomes immediately visible
+     * and that importing cannot be rolled back.
+     */
+    public static final String JOB_FAST_FORWARD_ENABLED = "fastForwardEnabled";
     public static final String SLICE_ID = "sliceId";
     public static final String BUCKET_ID = "bucketId";
     public static final String SLICE_START_TOKEN = "startToken";

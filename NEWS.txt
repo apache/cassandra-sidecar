@@ -3,6 +3,9 @@
 
 Upgrading
 ---------
+    - In CASSSIDECAR-463, a new internal table (restore_job_v7) is created to track the fastForwardEnabled
+      option of restore jobs. It replaces restore_job_v6. Spark jobs performing S3 restores should be paused
+      during sidecar upgrade to ensure in-flight restore job state is not lost.
     - In CASSSIDECAR-415, a new internal table (restore_job_v6) is created to support IAM credential
       tracking for restore jobs. Spark jobs performing S3 restores should be paused during sidecar
       upgrade to ensure in-flight restore job state is not lost.
@@ -13,6 +16,12 @@ Upgrading
 
 New features
 ------------
+    - Eager pipelining of the staging and the importing phases of coordinated restore jobs
+      (CASSSIDECAR-463). Set fastForwardEnabled to true when creating a restore job so that Sidecar stages
+      slices while the job is still in CREATED status and imports the staged slices once the job enters
+      STAGED status, instead of waiting for the STAGE_READY and IMPORT_READY signals. Only enable it when
+      the caller can accept that the imported data becomes immediately visible and that importing cannot
+      be rolled back.
     - IAM instance profile credential support for S3 restore jobs (CASSSIDECAR-415). Sidecar can now
       resolve AWS credentials automatically from the platform (IMDS/ECS/EKS) without requiring key
       material to be passed by the caller. Set credentialType to IAM when creating a restore job to

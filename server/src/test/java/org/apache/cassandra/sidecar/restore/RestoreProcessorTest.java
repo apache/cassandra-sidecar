@@ -30,12 +30,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.codahale.metrics.SharedMetricRegistries;
+import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.ExecutorPoolsHelper;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
+import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -43,6 +45,8 @@ import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.RestoreJobConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ClusterLease;
+import org.apache.cassandra.sidecar.db.RestoreJob;
+import org.apache.cassandra.sidecar.db.RestoreJobTest;
 import org.apache.cassandra.sidecar.db.RestoreRange;
 import org.apache.cassandra.sidecar.db.RestoreRangeDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
@@ -63,6 +67,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -300,6 +305,34 @@ class RestoreProcessorTest
         });
     }
 
+    @Test
+    void testStagedRangeWaitsForImportSignal()
+    {
+        CountDownLatch readyToFinish = new CountDownLatch(1);
+        RestoreRange range = stagedRange(readyToFinish, RestoreJobTest.createTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED));
+        processor.submit(range);
+        processor.execute(Promise.promise());
+        assertThat(processor.activeTasks())
+        .describedAs("A staged range of a regular job should wait for the IMPORT_READY signal, " +
+                     "even when the job has entered STAGED status")
+        .isZero();
+        readyToFinish.countDown();
+    }
+
+    @Test
+    void testStagedRangeOfFastForwardJobImportsOnceStaged()
+    {
+        CountDownLatch readyToFinish = new CountDownLatch(1);
+        RestoreRange range = stagedRange(readyToFinish, RestoreJobTest.createFastForwardTestingJob(UUIDs.timeBased(), RestoreJobStatus.STAGED));
+        processor.submit(range);
+        processor.execute(Promise.promise());
+        assertThat(processor.activeTasks())
+        .describedAs("A staged range of a fast forward job should import as soon as the job enters STAGED status")
+        .isOne();
+        readyToFinish.countDown();
+        loopAssert(3, () -> assertThat(processor.activeTasks()).isZero());
+    }
+
     private InstanceMetrics instanceMetrics()
     {
         return new InstanceMetricsImpl(registry(1));
@@ -308,6 +341,15 @@ class RestoreProcessorTest
     private RestoreRange mockSlowRestoreRange(CountDownLatch latch)
     {
         return mockSlowRestoreRange(latch, System::nanoTime);
+    }
+
+    // a range that has completed its staging phase and belongs to the given restore job
+    private RestoreRange stagedRange(CountDownLatch latch, RestoreJob job)
+    {
+        RestoreRange range = mockSlowRestoreRange(latch);
+        doReturn(true).when(range).hasStaged();
+        doReturn(job).when(range).job();
+        return range;
     }
 
     private RestoreRange mockSlowRestoreRange(CountDownLatch latch, RestoreRange mockRange)

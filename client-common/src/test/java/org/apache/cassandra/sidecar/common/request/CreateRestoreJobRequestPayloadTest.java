@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestP
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_CONSISTENCY_LEVEL;
+import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_FAST_FORWARD_ENABLED;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_RESTORE_TO_LOCAL_DATA_CENTER_ONLY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -397,5 +398,49 @@ class CreateRestoreJobRequestPayloadTest
         .isInstanceOf(ValueInstantiationException.class)
         .hasCauseInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Static credentials must have all key fields present for writeCredentials");
+    }
+
+    @Test
+    void testFastForwardEnabledSerDeser() throws JsonProcessingException
+    {
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        CreateRestoreJobRequestPayload req = CreateRestoreJobRequestPayload
+                                             .builder(secrets, System.currentTimeMillis() + 10000)
+                                             .jobAgent("agent")
+                                             .consistencyLevel(ConsistencyLevel.QUORUM)
+                                             .fastForwardEnabled(true)
+                                             .build();
+        assertThat(req.fastForwardEnabled()).isTrue();
+
+        String json = MAPPER.writeValueAsString(req);
+        assertThat(json).contains("\"" + JOB_FAST_FORWARD_ENABLED + "\":true");
+        assertThat(MAPPER.readValue(json, CreateRestoreJobRequestPayload.class).fastForwardEnabled()).isTrue();
+    }
+
+    @Test
+    void testFastForwardDisabledByDefault() throws JsonProcessingException
+    {
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        CreateRestoreJobRequestPayload req = CreateRestoreJobRequestPayload
+                                             .builder(secrets, System.currentTimeMillis() + 10000)
+                                             .consistencyLevel(ConsistencyLevel.QUORUM)
+                                             .build();
+        assertThat(req.fastForwardEnabled()).isFalse();
+        assertThat(MAPPER.writeValueAsString(req))
+        .describedAs("Default value fields should be excluded")
+        .doesNotContain(JOB_FAST_FORWARD_ENABLED);
+    }
+
+    @Test
+    void testFastForwardEnabledWithoutConsistencyLevelFails()
+    {
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        // fast forward only applies to Sidecar-managed jobs, i.e. the jobs that declare a consistency level
+        assertThatThrownBy(() -> CreateRestoreJobRequestPayload
+                                 .builder(secrets, System.currentTimeMillis() + 10000)
+                                 .fastForwardEnabled(true)
+                                 .build())
+        .isExactlyInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Must specify a " + JOB_CONSISTENCY_LEVEL + " when fastForwardEnabled is true");
     }
 }

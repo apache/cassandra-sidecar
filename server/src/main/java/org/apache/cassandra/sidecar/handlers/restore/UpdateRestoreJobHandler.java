@@ -168,7 +168,8 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
 
     private void notifyPhaseSignalMaybe(RestoreJob updatedJob)
     {
-        if (updatedJob.status != RestoreJobStatus.IMPORT_READY && updatedJob.status != RestoreJobStatus.STAGE_READY)
+        // For a fast forward job, STAGED starts the importing phase, hence it is a phase signal too
+        if (updatedJob.status != RestoreJobStatus.STAGE_READY && !updatedJob.shouldImportNow())
         {
             return;
         }
