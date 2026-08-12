@@ -266,9 +266,9 @@ public class RestoreJob
         Preconditions.checkArgument(fastForwardEnabled || status != RestoreJobStatus.CREATED,
                                     "Cannot check progress for restore job in CREATED status. jobId: " + jobId);
 
-        return status == RestoreJobStatus.CREATED
-               || status == RestoreJobStatus.STAGE_READY
-               || status == RestoreJobStatus.STAGED
+        // While the job is still staging, or has just staged, the ranges are expected to reach STAGED.
+        // Note that shouldStageNow() covers the CREATED status of a fast forward job.
+        return shouldStageNow() || status == RestoreJobStatus.STAGED
                ? RestoreRangeStatus.STAGED
                : RestoreRangeStatus.SUCCEEDED;
     }

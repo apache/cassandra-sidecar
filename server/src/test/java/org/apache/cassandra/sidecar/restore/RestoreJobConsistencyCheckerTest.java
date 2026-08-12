@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.restore;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -202,6 +203,34 @@ class RestoreJobConsistencyCheckerTest
         replicaStatus.put("i-4", RestoreRangeStatus.DISCARDED); // i-4 worked on the range, but discards it since it loses the ownership
         range = range.unbuild().replicaStatus(replicaStatus).build();
         assertThat(concludeOneRangeUnsafe(topology, localQuorumVerifier, RestoreRangeStatus.STAGED, range))
+        .isEqualTo(ConsistencyVerificationResult.SATISFIED);
+    }
+
+    @Test
+    void testConcludeOneRangeWithMultipleSuccessCriteria()
+    {
+        RestoreRange range = RestoreRangeTest.createTestRange(1, 10);
+        TokenRangeReplicasResponse topology = mock(TokenRangeReplicasResponse.class);
+        ReplicaInfo r1 = new ReplicaInfo("0", "15", replicaByDc(1, 3));
+        when(topology.writeReplicas()).thenReturn(Collections.singletonList(r1));
+
+        ConsistencyVerifier localQuorumVerifier = ConsistencyVerifiers.forConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM, "dc-1");
+
+        // a fast forward job imports its staged ranges while it is still in STAGED status, hence a replica can report
+        // SUCCEEDED while the staging phase is being verified
+        Map<String, RestoreRangeStatus> replicaStatus = new HashMap<>();
+        replicaStatus.put("i-1", RestoreRangeStatus.STAGED);
+        replicaStatus.put("i-2", RestoreRangeStatus.SUCCEEDED);
+        replicaStatus.put("i-3", RestoreRangeStatus.CREATED);
+        range = range.unbuild().replicaStatus(replicaStatus).build();
+
+        assertThat(concludeOneRangeUnsafe(topology, localQuorumVerifier, RestoreRangeStatus.STAGED, range))
+        .describedAs("The imported replica does not count when STAGED is the only satisfying status")
+        .isEqualTo(ConsistencyVerificationResult.PENDING);
+
+        assertThat(concludeOneRangeUnsafe(topology, localQuorumVerifier,
+                                          EnumSet.of(RestoreRangeStatus.STAGED, RestoreRangeStatus.SUCCEEDED), range))
+        .describedAs("The imported replica has fulfilled the staging criteria too, hence local quorum is reached")
         .isEqualTo(ConsistencyVerificationResult.SATISFIED);
     }
 

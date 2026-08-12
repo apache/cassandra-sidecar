@@ -39,7 +39,9 @@ New features
       slices while the job is still in CREATED status and imports the staged slices once the job enters
       STAGED status, instead of waiting for the STAGE_READY and IMPORT_READY signals. Only enable it when
       the caller can accept that the imported data becomes immediately visible and that importing cannot
-      be rolled back.
+      be rolled back. Slices uploaded while the job is in CREATED status are picked up by the periodic job
+      discovery, and, until all the declared slices are found, by every job progress poll; set sliceCount
+      when creating the job and poll the progress to keep staging close to the uploads.
     - IAM instance profile credential support for S3 restore jobs (CASSSIDECAR-415). Sidecar can now
       resolve AWS credentials automatically from the platform (IMDS/ECS/EKS) without requiring key
       material to be passed by the caller. Set credentialType to IAM when creating a restore job to

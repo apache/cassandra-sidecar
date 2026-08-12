@@ -232,6 +232,40 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
         assertThat(Uninterruptibles.awaitUninterruptibly(latch, 5, TimeUnit.SECONDS)).isTrue();
     }
 
+    @Test
+    void testUpdateToStagedNotifiesDiscovererForFastForwardJob(VertxTestContext context) throws Throwable
+    {
+        String jobId = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
+        CountDownLatch latch = new CountDownLatch(1);
+        testRestoreJobDiscoverer.processJobNowCallback = job -> latch.countDown();
+        mockLookupRestoreJob(id -> createTestFastForwardJobWithStatus(jobId, RestoreJobStatus.STAGE_READY));
+        mockUpdateRestoreJob(payload -> createTestFastForwardJobWithStatus(jobId, RestoreJobStatus.STAGED));
+        JsonObject payload = new JsonObject();
+        payload.put("status", "STAGED");
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", jobId,
+                                             payload, context, HttpResponseStatus.OK.code());
+        assertThat(Uninterruptibles.awaitUninterruptibly(latch, 5, TimeUnit.SECONDS))
+        .describedAs("STAGED starts the importing phase of a fast forward job, hence it is a phase signal")
+        .isTrue();
+    }
+
+    @Test
+    void testUpdateToStagedDoesNotNotifyDiscovererForRegularJob(VertxTestContext context) throws Throwable
+    {
+        String jobId = "8e5799a4-d277-11ed-8d85-6916bb9b8056";
+        CountDownLatch latch = new CountDownLatch(1);
+        testRestoreJobDiscoverer.processJobNowCallback = job -> latch.countDown();
+        mockLookupRestoreJob(id -> createTestJobWithStatus(jobId, RestoreJobStatus.STAGE_READY));
+        mockUpdateRestoreJob(payload -> createTestJobWithStatus(jobId, RestoreJobStatus.STAGED));
+        JsonObject payload = new JsonObject();
+        payload.put("status", "STAGED");
+        sendUpdateRestoreJobRequestAndVerify("ks", "table", jobId,
+                                             payload, context, HttpResponseStatus.OK.code());
+        assertThat(Uninterruptibles.awaitUninterruptibly(latch, 1, TimeUnit.SECONDS))
+        .describedAs("A regular job still waits for the IMPORT_READY signal, so STAGED is not a phase signal")
+        .isFalse();
+    }
+
     private RestoreJob createTestNewJob(String jobId)
     {
         return RestoreJob.builder()
@@ -254,6 +288,11 @@ class UpdateRestoreJobHandlerTest extends BaseRestoreJobTests
                          .jobSecrets(SECRETS)
                          .sstableImportOptions(SSTableImportOptions.defaults())
                          .build();
+    }
+
+    private RestoreJob createTestFastForwardJobWithStatus(String jobId, RestoreJobStatus status)
+    {
+        return createTestJobWithStatus(jobId, status).unbuild().fastForwardEnabled(true).build();
     }
 
     private JsonObject getRequestPayload()

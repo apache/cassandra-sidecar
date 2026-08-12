@@ -56,6 +56,10 @@ public class RestoreJobConstants
      * confirmation, respectively, rather than triggers.
      * The option should only be enabled by callers that can accept that the imported data becomes immediately visible
      * and that importing cannot be rolled back.
+     * Slices that are uploaded while the job is in {@code CREATED} status are picked up by the periodic restore job
+     * discovery of Sidecar, and, until all the declared slices are found, by every poll of the job progress endpoint.
+     * A caller that wants the staging to keep up with its uploads should therefore set {@code sliceCount} when
+     * creating the job and poll the job progress, rather than relying on the discovery loop alone.
      */
     public static final String JOB_FAST_FORWARD_ENABLED = "fastForwardEnabled";
     public static final String SLICE_ID = "sliceId";

@@ -168,8 +168,9 @@ public class UpdateRestoreJobHandler extends AbstractHandler<UpdateRestoreJobReq
 
     private void notifyPhaseSignalMaybe(RestoreJob updatedJob)
     {
-        // For a fast forward job, STAGED starts the importing phase, hence it is a phase signal too
-        if (updatedJob.status != RestoreJobStatus.STAGE_READY && !updatedJob.shouldImportNow())
+        // A phase signal is any status that lets Sidecar start staging or importing. For a fast forward job, that
+        // includes STAGED, which starts the importing phase.
+        if (!updatedJob.shouldStageNow() && !updatedJob.shouldImportNow())
         {
             return;
         }

@@ -338,6 +338,25 @@ class RestoreJobDiscovererTest
         verify(mockSliceAccessor, times(1)).selectByJobByBucketByTokenRange(any(), anyShort(), any());
     }
 
+    @Test
+    void testDiscoveringSlicesOfFastForwardJobInStagedStatusIsNotRepeated() throws Exception
+    {
+        UUID jobId = UUIDs.timeBased();
+        RestoreJob job = createTestingJob(jobId, RestoreJobStatus.STAGED, ConsistencyLevel.QUORUM)
+                         .unbuild()
+                         .fastForwardEnabled(true)
+                         .build();
+        mockSidecarManagedJobDiscovery(job);
+
+        executeBlocking();
+        // on entering STAGED, the ranges are discovered and submitted, so that the staged ones can be imported
+        verify(mockSliceAccessor, times(1)).selectByJobByBucketByTokenRange(any(), anyShort(), any());
+
+        executeBlocking();
+        // all slices are uploaded by the time the job is STAGED, so the expensive discovery is not repeated
+        verify(mockSliceAccessor, times(1)).selectByJobByBucketByTokenRange(any(), anyShort(), any());
+    }
+
     private UUID discoverSidecarManagedJob(boolean isJobFailed) throws Exception
     {
         UUID jobId = UUIDs.timeBased();

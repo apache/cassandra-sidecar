@@ -245,8 +245,7 @@ public class RestoreJobConsistencyChecker
                                                                   Map<String, RestoreRangeStatus> statusByReplica)
     {
         Map<RestoreRangeStatus, Set<String>> groupByStatus = groupReplicaByStatus(statusByReplica);
-        Set<String> succeeded = new HashSet<>();
-        successCriteria.forEach(status -> succeeded.addAll(groupByStatus.getOrDefault(status, Collections.emptySet())));
+        Set<String> succeeded = succeededReplicas(groupByStatus, successCriteria);
         Set<String> failed = groupByStatus.getOrDefault(RestoreRangeStatus.FAILED, Collections.emptySet());
         InstanceSetByDc replicaSet = replicaSetForRange(range, replicasByRange);
         if (replicaSet == null) // cannot proceed to verify yet. Return pending
@@ -264,6 +263,20 @@ public class RestoreJobConsistencyChecker
             default:
                 return ConsistencyVerificationResult.SATISFIED;
         }
+    }
+
+    // Collect the replicas whose range status fulfills any of the success criteria
+    private static Set<String> succeededReplicas(Map<RestoreRangeStatus, Set<String>> groupByStatus,
+                                                 Set<RestoreRangeStatus> successCriteria)
+    {
+        if (successCriteria.size() == 1) // the common case; avoid copying into a new set
+        {
+            return groupByStatus.getOrDefault(successCriteria.iterator().next(), Collections.emptySet());
+        }
+
+        Set<String> succeeded = new HashSet<>();
+        successCriteria.forEach(status -> succeeded.addAll(groupByStatus.getOrDefault(status, Collections.emptySet())));
+        return succeeded;
     }
 
     private static Map<RestoreRangeStatus, Set<String>> groupReplicaByStatus(Map<String, RestoreRangeStatus> statusMap)
@@ -315,7 +328,16 @@ public class RestoreJobConsistencyChecker
                                                                 RestoreRangeStatus successCriteria,
                                                                 RestoreRange range)
     {
-        return concludeOneRange(populateReplicas(topology), verifier, EnumSet.of(successCriteria),
+        return concludeOneRangeUnsafe(topology, verifier, EnumSet.of(successCriteria), range);
+    }
+
+    @VisibleForTesting
+    static ConsistencyVerificationResult concludeOneRangeUnsafe(TokenRangeReplicasResponse topology,
+                                                                ConsistencyVerifier verifier,
+                                                                Set<RestoreRangeStatus> successCriteria,
+                                                                RestoreRange range)
+    {
+        return concludeOneRange(populateReplicas(topology), verifier, successCriteria,
                                 range.tokenRange().range, range.statusByReplica());
     }
 
