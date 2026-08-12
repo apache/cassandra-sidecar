@@ -29,6 +29,7 @@ import org.apache.cassandra.sidecar.exceptions.CassandraInputException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Test validation methods.
@@ -132,14 +133,19 @@ abstract class CassandraInputValidatorTest
         testCommon_testInvalidFileName("TOC.txt");
     }
 
-    @Test
-    void testValidateSnapshotName_validSnapshotNames_expectNoException()
+    @ParameterizedTest(name = "[{0}]")
+    @ValueSource(strings = { "valid-snapshot-name", "valid.snapshot.name", "valid_snapshot_name",
+                             "valid+snapshot+name", "valid..snapshot..name", "valid1snapshot2name",
+                             "snap.2026-05-20" })
+    void testValidateSnapshotName_validSnapshotNames_expectNoException(String name)
     {
-        instance.validateSnapshotName("valid-snapshot-name");
-        instance.validateSnapshotName("valid\\snapshot\\name");
-        instance.validateSnapshotName("valid:snapshot:name");
-        instance.validateSnapshotName("valid$snapshot$name");
-        instance.validateSnapshotName("valid snapshot name");
+        instance.validateSnapshotName(name);
+    }
+
+    @Test
+    void testValidateSnapshotName_lengthLimit_expectNoException()
+    {
+        instance.validateSnapshotName("a".repeat(255));
     }
 
     @Test
@@ -156,6 +162,23 @@ abstract class CassandraInputValidatorTest
         String testSnapName = "valid" + '\0' + "snapshotname";
         assertThatExceptionOfType(CassandraInputException.class).isThrownBy(() -> instance.validateSnapshotName(testSnapName))
                                                                 .withMessage("Invalid characters in snapshot name: " + testSnapName);
+    }
+
+    @ParameterizedTest(name = "[{0}]")
+    @ValueSource(strings = { ".", ".." })
+    void testValidateSnapshotName_snapshotNameWithReservedChar_expectException(String reserved)
+    {
+        assertThatExceptionOfType(CassandraInputException.class).isThrownBy(() -> instance.validateSnapshotName(reserved))
+                                                                .withMessage("Snapshot name '" + reserved + "' is reserved");
+    }
+
+    @Test
+    void testValidateSnapshotName_snapshotNameExceedsLength_expectException()
+    {
+        assertThatThrownBy(() -> instance.validateSnapshotName("a".repeat(256)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageMatching("snapshot name must not be more than 255 characters long \\(got 256 characters for.*|" +
+                            "Invalid pattern for snapshot name: .*");
     }
 
     @Test

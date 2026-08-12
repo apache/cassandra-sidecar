@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.handlers.validations;
 
 import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.TableMetadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -35,6 +36,7 @@ import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpException;
@@ -106,7 +108,7 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
                 return;
             }
 
-            TableMetadata tableMetadata = keyspaceMetadata.getTable(table);
+            TableMetadata tableMetadata = MetadataUtils.table(keyspaceMetadata, table);
             boolean tableExists = tableMetadata != null || unparseableSchema != null;
             if (!tableExists)
             {
@@ -128,10 +130,10 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
 
     private Future<KeyspaceMetadata> getKeyspaceMetadata(String host, String keyspace)
     {
-        return executorPools.service().executeBlocking(() -> metadataFetcher.instance(host)
-                                                                            .delegate()
-                                                                            .metadata()
-                                                                            .getKeyspace(keyspace));
+        return executorPools.service().executeBlocking(() -> {
+            Metadata metadata = metadataFetcher.instance(host).delegate().metadata();
+            return MetadataUtils.keyspace(metadata, keyspace);
+        });
     }
 
     private Future<String> unsupportedSchema(String keyspace, String table)

@@ -55,6 +55,7 @@ import org.apache.cassandra.sidecar.common.server.cluster.locator.Partitioners;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.MetadataUtils;
 
 
 /**
@@ -83,11 +84,12 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
     {
         checkAndReloadReloadCaches();
         Metadata metadata = instancesMetadata.instances().get(0).delegate().metadata();
-        if (keyspace == null || metadata.getKeyspace(keyspace) == null)
+        KeyspaceMetadata ksMetadata = MetadataUtils.keyspace(metadata, keyspace);
+        if (ksMetadata == null)
         {
             throw new NoSuchElementException("Keyspace does not exist. keyspace: " + keyspace);
         }
-        return perKeySpaceTokenRangesOfAllInstances(metadata).get(keyspace)
+        return perKeySpaceTokenRangesOfAllInstances(metadata).get(ksMetadata.getName())
                                                              .entrySet()
                                                              .stream()
                                                              .filter(entry -> localHostsCache.containsKey(entry.getKey()))
@@ -252,7 +254,7 @@ public class CassandraClientTokenRingProvider extends TokenRingProvider implemen
             Map<Host, Set<TokenRange>> perHostTokenRanges = new HashMap<>();
             for (Host host : metadata.getAllHosts())
             {
-                Set<TokenRange> tokenRanges = metadata.getTokenRanges(ks.getName(), host)
+                Set<TokenRange> tokenRanges = metadata.getTokenRanges(Metadata.quoteIfNecessary(ks.getName()), host)
                                                       .stream()
                                                       .flatMap(range -> TokenRange.from(range).stream())
                                                       .collect(Collectors.toSet());

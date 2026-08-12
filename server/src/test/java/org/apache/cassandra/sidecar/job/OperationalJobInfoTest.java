@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -97,6 +98,12 @@ class OperationalJobInfoTest
         }
 
         @Override
+        public OperationType operationType()
+        {
+            return OperationType.DRAIN;
+        }
+
+        @Override
         protected Future<Void> executeInternal()
         {
             return Future.succeededFuture();
@@ -111,6 +118,12 @@ class OperationalJobInfoTest
             public boolean hasConflict(List<OperationalJob> sameOperationJobs)
             {
                 return false;
+            }
+
+            @Override
+            public OperationType operationType()
+            {
+                return OperationType.DRAIN;
             }
 
             @Override
@@ -130,6 +143,12 @@ class OperationalJobInfoTest
             public boolean hasConflict(List<OperationalJob> sameOperationJobs)
             {
                 return false;
+            }
+
+            @Override
+            public OperationType operationType()
+            {
+                return OperationType.DRAIN;
             }
 
             @Override

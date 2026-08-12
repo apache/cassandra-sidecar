@@ -30,6 +30,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -79,6 +80,12 @@ class OperationalJobTest
             }
 
             @Override
+            public OperationType operationType()
+            {
+                return OperationType.DRAIN;
+            }
+
+            @Override
             public String name()
             {
                 return name;
@@ -106,6 +113,12 @@ class OperationalJobTest
             public OperationalJobStatus status()
             {
                 return jobStatus;
+            }
+
+            @Override
+            public OperationType operationType()
+            {
+                return OperationType.DRAIN;
             }
 
             @Override
@@ -147,6 +160,12 @@ class OperationalJobTest
             }
 
             @Override
+            public OperationType operationType()
+            {
+                return OperationType.DRAIN;
+            }
+
+            @Override
             public String name()
             {
                 return "Operation X";
@@ -183,6 +202,12 @@ class OperationalJobTest
             public boolean hasConflict(List<OperationalJob> jobs)
             {
                 return false;
+            }
+
+            @Override
+            public OperationType operationType()
+            {
+                return OperationType.DRAIN;
             }
 
             @Override

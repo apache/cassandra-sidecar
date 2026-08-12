@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.cdc;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.cdc.sidecar.ReplicationFactorSupplier;
 import org.apache.cassandra.cdc.sidecar.SidecarCdc;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
+import org.apache.cassandra.cdc.sidecar.SidecarCdcOptions;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
 import org.apache.cassandra.cdc.sidecar.SidecarStatePersister;
 import org.apache.cassandra.cdc.stats.ICdcStats;
@@ -82,6 +84,7 @@ public class CdcManager
     private final ClusterConfigProvider clusterConfigProvider;
     private final SidecarCdcClient sidecarCdcClient;
     private final ICdcStats cdcStats;
+    private final SidecarCdcStats sidecarCdcStats;
     private List<CdcConsumerEntry> entries = new ArrayList<>();
     private final ReplicationFactorSupplier rfSupplier;
     private final CdcOptions cdcOptions;
@@ -97,6 +100,7 @@ public class CdcManager
                       ClusterConfigProvider clusterConfigProvider,
                       SidecarCdcClient sidecarCdcClient,
                       ICdcStats cdcStats,
+                      SidecarCdcStats sidecarCdcStats,
                       TaskExecutorPool taskExecutorPool,
                       CdcDatabaseAccessor cdcDatabaseAccessor,
                       CdcOptions cdcOptions)
@@ -109,6 +113,7 @@ public class CdcManager
         this.clusterConfigProvider = clusterConfigProvider;
         this.sidecarCdcClient = sidecarCdcClient;
         this.cdcStats = cdcStats;
+        this.sidecarCdcStats = sidecarCdcStats;
         this.cdcOptions = cdcOptions;
         this.asyncExecutor = new ExecutorPoolsExecutor(taskExecutorPool);
         this.cassandraClient = new StateSidecarCdcCassandraClient(cdcDatabaseAccessor);
@@ -214,15 +219,48 @@ public class CdcManager
                                          .withReplicationFactorSupplier(rfSupplier)
                                          .withSidecarStatePersister(persister)
                                          .build();
-        return new CdcConsumerEntry(consumer, persister);
+        return new CdcConsumerEntry(consumer, persister, sidecarCdcStats);
     }
 
     private @NotNull SidecarStatePersister getSidecarStatePersister()
     {
-        return new SidecarStatePersister(org.apache.cassandra.cdc.sidecar.SidecarCdcOptions.DEFAULT,
+        return new SidecarStatePersister(new ConfigBackedPersisterOptions(conf),
                                          cdcOptions,
-                                         SidecarCdcStats.STUB,
+                                         sidecarCdcStats,
                                          cassandraClient,
                                          asyncExecutor);
+    }
+
+    /**
+     * Adapts the DB-backed {@link CdcConfig} to the cassandra-analytics-cdc-sidecar
+     * {@link SidecarCdcOptions} interface consumed by {@link SidecarStatePersister}, which only
+     * ever calls {@link SidecarCdcOptions#persistDelay()} on it.
+     *
+     * <p>Previously {@link SidecarStatePersister} was built with {@code SidecarCdcOptions.DEFAULT},
+     * which pinned {@code persistDelay()} to its hardcoded 1000ms interface default regardless of
+     * what operators configured in the "configs" table.
+     *
+     * <p>This is a separate, minimal implementation rather than reusing this class's own
+     * {@code SidecarCdcOptions} (the {@link CdcOptions} implementation consumed by the CDC read
+     * path): the two interfaces have different call sites and no requirement to be backed by the
+     * same object, so keeping them independent avoids one implementation growing overrides it
+     * doesn't need to satisfy the other's contract.
+     */
+    @VisibleForTesting
+    static final class ConfigBackedPersisterOptions implements SidecarCdcOptions
+    {
+        private final CdcConfig conf;
+
+        @VisibleForTesting
+        ConfigBackedPersisterOptions(CdcConfig conf)
+        {
+            this.conf = conf;
+        }
+
+        @Override
+        public Duration persistDelay()
+        {
+            return Duration.ofMillis(conf.persistDelay().toMillis());
+        }
     }
 }

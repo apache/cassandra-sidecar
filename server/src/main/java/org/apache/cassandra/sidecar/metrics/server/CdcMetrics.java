@@ -41,6 +41,7 @@ public class CdcMetrics
     public final NamedMetric<DefaultSettableGauge<Integer>> oldestSegmentAge;
     public final NamedMetric<DeltaGauge> totalConsumedCdcBytes;
     public final NamedMetric<DefaultSettableGauge<Long>> totalCdcSpaceUsed;
+    public final NamedMetric<DefaultSettableGauge<Long>> maxCdcSpaceConfigured;
     public final NamedMetric<DeltaGauge> deletedSegment;
     public final NamedMetric<DeltaGauge> lowCdcRawSpace;
     public final NamedMetric<DeltaGauge> criticalCdcRawSpace;
@@ -51,6 +52,10 @@ public class CdcMetrics
         this.cdcRawCleanerFailed = createMetric("CleanerFailed", name -> metricRegistry.gauge(name, DeltaGauge::new));
         this.totalConsumedCdcBytes = createMetric("TotalConsumedBytes", name -> metricRegistry.gauge(name, DeltaGauge::new));
         this.totalCdcSpaceUsed = createMetric("TotalSpaceUsed", name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)));
+        // Configured cdc_total_space limit (CdcRawDirectorySpaceCleaner.maxUsageBytes()), so a
+        // dashboard can show capacity alongside TotalSpaceUsed. Peak usage, if ever needed, can be
+        // derived from TotalSpaceUsed with stat=max instead of a dedicated gauge.
+        this.maxCdcSpaceConfigured = createMetric("MaxSpaceConfigured", name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0L)));
         this.orphanedIdx = createMetric("OrphanedIdxFile", name -> metricRegistry.gauge(name, DeltaGauge::new));
         this.deletedSegment = createMetric("DeletedSegment", name -> metricRegistry.gauge(name, DeltaGauge::new));
         this.oldestSegmentAge = createMetric("OldestSegmentAgeSeconds", name -> metricRegistry.gauge(name, () -> new DefaultSettableGauge<>(0)));

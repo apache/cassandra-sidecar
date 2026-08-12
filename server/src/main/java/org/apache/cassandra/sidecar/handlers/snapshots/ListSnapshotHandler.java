@@ -154,7 +154,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
                      request, remoteAddress, host, context.request().method(), cause);
         if (cause instanceof FileNotFoundException || cause instanceof NoSuchFileException)
         {
-            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));
+            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, "The requested snapshot was not found"));
         }
         else
         {
@@ -173,7 +173,7 @@ public class ListSnapshotHandler extends AbstractHandler<SnapshotRequestParam> i
 
         return SnapshotRequestParam.builder()
                                    .qualifiedTableName(qualifiedTableName(context))
-                                   .snapshotName(context.pathParam("snapshot"))
+                                   .snapshotName(validator.validateSnapshotName(context.pathParam("snapshot")))
                                    .includeSecondaryIndexFiles(includeSecondaryIndexFiles)
                                    .build();
     }

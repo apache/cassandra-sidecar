@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.jetbrains.annotations.NotNull;
@@ -81,6 +82,15 @@ public class NodeMoveJob extends OperationalJob
         }
 
         return Future.succeededFuture();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public OperationType operationType()
+    {
+        return OperationType.MOVE;
     }
 
     /**

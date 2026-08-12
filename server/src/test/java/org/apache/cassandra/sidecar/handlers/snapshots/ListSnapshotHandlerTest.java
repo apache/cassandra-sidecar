@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +33,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +64,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.apache.cassandra.sidecar.snapshots.SnapshotUtils.mockInstancesMetadata;
+import static org.apache.cassandra.sidecar.utils.FastCassandraInputValidator.FILENAME_LENGTH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -203,6 +207,25 @@ class ListSnapshotHandlerTest
               })));
     }
 
+    @ParameterizedTest(name = "{index} => snapshot name={0}")
+    @MethodSource("invalidSnapshotNames")
+    void testRouteInvalidSnapshotNameCharacters(String invalidSnapshotName, int expectedStatusCode, String expectedError) throws Throwable
+    {
+        VertxTestContext context = new VertxTestContext();
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/keyspaces/keyspace1/tables/table1/snapshots/" + invalidSnapshotName;
+        client.get(server.actualPort(), "localhost", testRoute)
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(expectedStatusCode);
+                  assertThat(response.bodyAsJsonObject().getString("message"))
+                  .startsWith(expectedError);
+                  context.completeNow();
+              })));
+        assertThat(context.awaitCompletion(30, TimeUnit.SECONDS)).isTrue();
+        if (context.failed())
+            throw context.causeOfFailure();
+    }
+
     @Test
     void failsWhenKeyspaceContainsInvalidCharacters(VertxTestContext context)
     {
@@ -266,5 +289,20 @@ class ListSnapshotHandlerTest
             when(mockDelegate.tableOperations()).thenReturn(mockTableOperations);
             return mockInstancesMetadata(vertx, canonicalTemporaryPath, mockDelegate, mockSession1);
         }
+    }
+
+    static Stream<Arguments> invalidSnapshotNames()
+    {
+        return Stream.of(
+        Arguments.of("..%2F..%2Fetc%2Fpasswd", BAD_REQUEST.code(), "Invalid characters in snapshot name: ../../etc/passwd"),
+        Arguments.of("i_❤_u", BAD_REQUEST.code(), "Invalid pattern for snapshot name: i_â¤_u"),
+        Arguments.of("important!", BAD_REQUEST.code(), "Invalid pattern for snapshot name: important!"),
+        Arguments.of("backup*", BAD_REQUEST.code(), "Invalid pattern for snapshot name: backup*"),
+        Arguments.of("o'snap", BAD_REQUEST.code(), "Invalid pattern for snapshot name: o'snap"),
+        Arguments.of("snap(1)", BAD_REQUEST.code(), "Invalid pattern for snapshot name: snap(1)"),
+        Arguments.of("a%20tag", BAD_REQUEST.code(), "Invalid pattern for snapshot name: a tag"),
+        Arguments.of("a:tag", BAD_REQUEST.code(), "Invalid pattern for snapshot name: a:tag"),
+        Arguments.of("a".repeat(FILENAME_LENGTH + 1), BAD_REQUEST.code(), "Invalid pattern for snapshot name: " + "a".repeat(FILENAME_LENGTH + 1) + ".")
+        );
     }
 }

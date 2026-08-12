@@ -31,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>The provider stores version-agnostic overlays and does not perform version-specific
  * validation or merge logic. Validation against a version-aware schema and computing updated
- * overlays (via {@link CassandraConfigurationOverlay#updated}) are the responsibility of the
+ * overlays (via {@link ConfigurationPatchApplier}) are the responsibility of the
  * Configuration Manager.
  */
 public interface ConfigurationProvider
@@ -50,8 +50,8 @@ public interface ConfigurationProvider
      * subject to hash-based optimistic concurrency control.
      *
      * <p>The caller is responsible for computing the new snapshot (via
-     * {@link CassandraConfigurationOverlay#updated}). The provider only validates
-     * the original hash against the currently stored version and persists the result.
+     * {@link ConfigurationPatchApplier}). The provider only validates the original
+     * hash against the currently stored version and persists the result.
      *
      * @param instance     the Cassandra instance metadata
      * @param originalHash the overlay hash from the previously read snapshot,

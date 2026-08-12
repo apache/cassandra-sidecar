@@ -18,7 +18,11 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.io.File;
+import java.util.Objects;
+
 import org.apache.cassandra.sidecar.common.server.data.Name;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.exceptions.CassandraInputException;
 import org.jetbrains.annotations.NotNull;
 
@@ -57,7 +61,23 @@ public interface CassandraInputValidator
      * @throws NullPointerException    when the {@code snapshotName} is {@code null}
      * @throws CassandraInputException when the {@code snapshotName} contains invalid characters in the name
      */
-    String validateSnapshotName(@NotNull String snapshotName);
+    default String validateSnapshotName(@NotNull String snapshotName)
+    {
+        Objects.requireNonNull(snapshotName, "snapshotName must not be null");
+        Preconditions.checkArgument(!snapshotName.isEmpty(), "snapshotName must be provided");
+
+        if (".".equals(snapshotName) || "..".equals(snapshotName))
+            throw new CassandraInputException("Snapshot name '" + snapshotName + "' is reserved");
+
+        //  most UNIX systems only disallow file separator and null characters for directory names
+        for (int i = 0; i < snapshotName.length(); i++)
+        {
+            char c = snapshotName.charAt(i);
+            if (c == File.separatorChar || c == '\0')
+                throw new CassandraInputException("Invalid characters in snapshot name: " + snapshotName);
+        }
+        return snapshotName;
+    }
 
     /**
      * Validates that the {@code componentName} is not {@code null}, and it contains allowed names for the
@@ -94,7 +114,17 @@ public interface CassandraInputValidator
      *
      * @param tableId the table identifier to validate
      */
-    void validateTableId(String tableId);
+    default void validateTableId(String tableId)
+    {
+        Objects.requireNonNull(tableId, "tableId must not be null");
+        Preconditions.checkArgument(tableId.length() <= 32, "tableId cannot be longer than 32 characters");
+        for (int i = 0; i < tableId.length(); i++)
+        {
+            char c = tableId.charAt(i);
+            if (!isHex(c))
+                throw new CassandraInputException("Invalid characters in table id: " + tableId);
+        }
+    }
 
     /**
      * Validates that the {@code name} matches the name pattern
@@ -104,4 +134,13 @@ public interface CassandraInputValidator
      * @throws CassandraInputException when the {@code unquotedInput} does not match the pattern
      */
     void validateNamePattern(Name name, String exceptionHint);
+
+    /**
+     * @param c the character to test
+     * @return {@code true} if the input {@code c} is valid hexadecimal, {@code false} otherwise
+     */
+    static boolean isHex(char c)
+    {
+        return (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F');
+    }
 }

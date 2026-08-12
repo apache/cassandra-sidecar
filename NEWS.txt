@@ -1,3 +1,21 @@
+0.5
+===
+
+Upgrading
+---------
+    - In CASSSIDECAR-461, the list snapshot endpoint now validates the snapshot name, aligned with
+      the validation introduced by CASSANDRA-21389. A new cassandra_input_validation.allowed_chars_for_snapshot_name
+      setting in sidecar.yaml controls the accepted pattern; the default is "[a-zA-Z0-9_.+-]{1,255}".
+      Operators with snapshots whose names do not match this pattern should override the setting
+      (for example, ".*") to preserve the prior permissive behavior. When using the
+      FastCassandraInputValidator implementation, the validation will always take place and will be
+      aligned with CASSANDRA-21389.
+
+New features
+------------
+    - Snapshot name validation on the list snapshot endpoint (CASSSIDECAR-461), with a configurable
+      allowed_chars_for_snapshot_name pattern under cassandra_input_validation in sidecar.yaml.
+
 0.4
 ===
 

@@ -32,15 +32,30 @@ import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.apache.cassandra.sidecar.TestResourceReaper;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.OperationalJobConflictException;
+import org.apache.cassandra.sidecar.job.storage.StorageProvider;
+import org.apache.cassandra.sidecar.job.storage.StorageProviderException;
+import org.jetbrains.annotations.NotNull;
 
+import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.after;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests to validate the Job submission behavior for scenarios which are a combination of values for
@@ -73,7 +88,7 @@ class OperationalJobManagerTest
     void testWithNoDownstreamJob() throws InterruptedException
     {
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
         OperationalJob testJob = OperationalJobTest.createOperationalJob(SUCCEEDED);
@@ -94,7 +109,7 @@ class OperationalJobManagerTest
     {
         OperationalJob runningJob = OperationalJobTest.createOperationalJob(RUNNING);
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
         BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (job, exception) -> {
@@ -112,7 +127,7 @@ class OperationalJobManagerTest
     {
         UUID jobId = UUIDs.timeBased();
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
         OperationalJob testJob = OperationalJobTest.createOperationalJob(jobId, SecondBoundConfiguration.parse("2s"));
@@ -136,7 +151,7 @@ class OperationalJobManagerTest
     {
         UUID jobId = UUIDs.timeBased();
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
-        OperationalJobManager manager = new OperationalJobManager(tracker, executorPool);
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
         String msg = "Test Job failed";
@@ -146,6 +161,12 @@ class OperationalJobManagerTest
             public boolean hasConflict(List<OperationalJob> jobs)
             {
                 return false;
+            }
+
+            @Override
+            public OperationType operationType()
+            {
+                return OperationType.DRAIN;
             }
 
             @Override
@@ -165,5 +186,209 @@ class OperationalJobManagerTest
         manager.trySubmitJob(failingJob, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
         assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
         assertThat(tracker.get(jobId)).isNotNull();
+    }
+
+    @Test
+    void testJobRemovedFromTrackerWhenPersistenceFails()
+    {
+        StorageProvider storageProvider = mock(StorageProvider.class);
+        when(storageProvider.isAvailable()).thenReturn(true);
+        doThrow(new StorageProviderException("Storage unavailable"))
+            .when(storageProvider).persistJob(any());
+
+        DurableOperationalJobTracker durableTracker = new DurableOperationalJobTracker(new ServiceConfigurationImpl(),
+                                                                                       storageProvider,
+                                                                                       executorPool.service());
+        OperationalJobManager manager = new OperationalJobManager(durableTracker, new DisabledOperationalJobCoordinator(), executorPool);
+
+        UUID jobId = UUIDs.timeBased();
+        OperationalJob job = OperationalJobTest.createOperationalJob(jobId, MillisecondBoundConfiguration.parse("50ms"));
+
+        manager.trySubmitJob(job,
+                             (j, ex) -> {},
+                             executorPool.service(),
+                             SecondBoundConfiguration.parse("5s"));
+
+        loopAssert(2, () -> {
+            assertThat(durableTracker.jobsView()).doesNotContainKey(jobId);
+        });
+    }
+
+    void testCoordinatorCalledWhenJobRequiresCoordination() throws InterruptedException
+    {
+        OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
+        OperationalJobCoordinator coordinator = mock(OperationalJobCoordinator.class);
+        when(coordinator.trySetActive(any(), any())).thenReturn(true);
+        OperationalJobManager manager = new OperationalJobManager(tracker, coordinator, executorPool);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        OperationalJob job = createCoordinatedJob(UUIDs.timeBased());
+        BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (j, ex) -> {
+            assertThat(ex).isNull();
+            latch.countDown();
+        };
+
+        manager.trySubmitJob(job, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+        verify(coordinator).trySetActive(OperationType.MOVE, job.jobId());
+        verify(coordinator, timeout(5000)).clearActive(OperationType.MOVE, job.jobId());
+    }
+
+    @Test
+    void testConflictWhenCoordinatorReturnsFalse() throws InterruptedException
+    {
+        OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
+        OperationalJobCoordinator coordinator = mock(OperationalJobCoordinator.class);
+        when(coordinator.trySetActive(any(), any())).thenReturn(false);
+        OperationalJobManager manager = new OperationalJobManager(tracker, coordinator, executorPool);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        OperationalJob job = createCoordinatedJob(UUIDs.timeBased());
+        BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (j, ex) -> {
+            assertThat(ex).isInstanceOf(OperationalJobConflictException.class);
+            assertThat(ex.getMessage()).contains("An active operation already exists");
+            latch.countDown();
+        };
+
+        manager.trySubmitJob(job, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+        OperationalJobInfo tracked = tracker.get(job.jobId());
+        assertThat(tracked).isNotNull();
+        assertThat(tracked.status()).isEqualTo(FAILED);
+        assertThat(tracked.failureReason()).contains("An active operation already exists");
+        assertThat(tracker.inflightJobsByOperation(job.name())).doesNotContain(job);
+        verify(coordinator, never()).clearActive(any(), any());
+    }
+
+    @Test
+    void testCoordinationFailsWhenCoordinationDisabled() throws InterruptedException
+    {
+        OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
+        // Coordination is disabled on this instance, yet the job requires coordination.
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        OperationalJob job = createCoordinatedJob(UUIDs.timeBased());
+        BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (j, ex) -> {
+            assertThat(ex).isInstanceOf(OperationalJobConflictException.class);
+            assertThat(ex.getMessage()).contains("coordination is not supported by this Sidecar instance");
+            latch.countDown();
+        };
+
+        manager.trySubmitJob(job, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+        OperationalJobInfo tracked = tracker.get(job.jobId());
+        assertThat(tracked).isNotNull();
+        assertThat(tracked.status()).isEqualTo(FAILED);
+        assertThat(tracked.failureReason()).contains("coordination is not supported by this Sidecar instance");
+        assertThat(tracker.inflightJobsByOperation(job.name())).doesNotContain(job);
+    }
+
+    @Test
+    void testLockNotReleasedWhenJobOptsOut() throws InterruptedException
+    {
+        OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
+        OperationalJobCoordinator coordinator = mock(OperationalJobCoordinator.class);
+        when(coordinator.trySetActive(any(), any())).thenReturn(true);
+        OperationalJobManager manager = new OperationalJobManager(tracker, coordinator, executorPool);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        // A distributed cluster-wide job that acquires the lock locally but relies on the orchestration
+        // layer to clear it once all nodes finish, so the manager must not auto-release on local completion.
+        OperationalJob job = createNonReleasingCoordinatedJob(UUIDs.timeBased());
+        BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (j, ex) -> {
+            assertThat(ex).isNull();
+            latch.countDown();
+        };
+
+        manager.trySubmitJob(job, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+        verify(coordinator).trySetActive(OperationType.MOVE, job.jobId());
+        verify(coordinator, after(1000).never()).clearActive(any(), any());
+    }
+
+    @Test
+    void testCoordinatorNotCalledWhenJobDoesNotRequireCoordination() throws InterruptedException
+    {
+        OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
+        OperationalJobCoordinator coordinator = mock(OperationalJobCoordinator.class);
+        OperationalJobManager manager = new OperationalJobManager(tracker, coordinator, executorPool);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        OperationalJob job = OperationalJobTest.createOperationalJob(SUCCEEDED);
+        BiConsumer<OperationalJob, OperationalJobConflictException> onComplete = (j, ex) -> {
+            assertThat(ex).isNull();
+            latch.countDown();
+        };
+
+        manager.trySubmitJob(job, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
+        assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+        verify(coordinator, never()).trySetActive(any(), any());
+    }
+
+    private static OperationalJob createCoordinatedJob(UUID jobId)
+    {
+        return new OperationalJob(jobId)
+        {
+            @Override
+            public boolean hasConflict(@NotNull List<OperationalJob> sameOperationJobs)
+            {
+                return false;
+            }
+
+            @Override
+            public OperationType operationType()
+            {
+                return OperationType.MOVE;
+            }
+
+            @Override
+            public boolean requiresCoordination()
+            {
+                return true;
+            }
+
+            @Override
+            protected Future<Void> executeInternal()
+            {
+                return Future.succeededFuture();
+            }
+        };
+    }
+
+    private static OperationalJob createNonReleasingCoordinatedJob(UUID jobId)
+    {
+        return new OperationalJob(jobId)
+        {
+            @Override
+            public boolean hasConflict(@NotNull List<OperationalJob> sameOperationJobs)
+            {
+                return false;
+            }
+
+            @Override
+            public OperationType operationType()
+            {
+                return OperationType.MOVE;
+            }
+
+            @Override
+            public boolean requiresCoordination()
+            {
+                return true;
+            }
+
+            @Override
+            public boolean releasesOnCompletion()
+            {
+                return false;
+            }
+
+            @Override
+            protected Future<Void> executeInternal()
+            {
+                return Future.succeededFuture();
+            }
+        };
     }
 }

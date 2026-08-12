@@ -61,7 +61,9 @@ import org.apache.cassandra.sidecar.handlers.TokenRangeReplicaMapHandler;
 import org.apache.cassandra.sidecar.handlers.cassandra.NodeSettingsHandler;
 import org.apache.cassandra.sidecar.handlers.v2.cassandra.V2NodeSettingsHandler;
 import org.apache.cassandra.sidecar.handlers.validations.ValidateTableExistenceHandler;
+import org.apache.cassandra.sidecar.job.DisabledOperationalJobCoordinator;
 import org.apache.cassandra.sidecar.job.InMemoryOperationalJobTracker;
+import org.apache.cassandra.sidecar.job.OperationalJobCoordinator;
 import org.apache.cassandra.sidecar.job.OperationalJobTracker;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
@@ -83,6 +85,7 @@ public class CassandraOperationsModule extends AbstractModule
     protected void configure()
     {
         bind(OperationalJobTracker.class).to(InMemoryOperationalJobTracker.class);
+        bind(OperationalJobCoordinator.class).to(DisabledOperationalJobCoordinator.class);
     }
 
     @ProvidesIntoMap

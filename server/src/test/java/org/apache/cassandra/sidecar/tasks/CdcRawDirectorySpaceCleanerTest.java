@@ -131,6 +131,8 @@ class CdcRawDirectorySpaceCleanerTest
         assertThat(cdcMetrics.criticalCdcRawSpace.metric.getValue()).isOne();
         assertThat(cdcMetrics.orphanedIdx.metric.getValue()).isOne();
         assertThat(cdcMetrics.totalCdcSpaceUsed.metric.getValue()).isGreaterThan(2097152L);
+        // matches the "cdc_total_space": "1MiB" setting stubbed above
+        assertThat(cdcMetrics.maxCdcSpaceConfigured.metric.getValue()).isEqualTo(1024L * 1024L);
         assertThat(cdcMetrics.deletedSegment.metric.getValue()).isGreaterThan(2097152L);
         assertThat(cdcMetrics.oldestSegmentAge.metric.getValue()).isZero();
 
@@ -138,6 +140,9 @@ class CdcRawDirectorySpaceCleanerTest
         // We do not expect all CDC file to be cleaned up in a running system. But test it for robustness.
         Files.deleteIfExists(Paths.get(tempDir.toString(), CdcRawDirectorySpaceCleaner.CDC_DIR_NAME, TEST_INTACT_SEGMENT_FILE_NAME));
         cleaner.routineCleanUp(); // it should run fine.
+
+        // configured limit is unaffected by usage dropping after the final cleanup
+        assertThat(cdcMetrics.maxCdcSpaceConfigured.metric.getValue()).isEqualTo(1024L * 1024L);
     }
 
     @Test

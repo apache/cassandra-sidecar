@@ -22,12 +22,14 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,10 +40,12 @@ import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.cdc.sidecar.SidecarCdc;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
+import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
 import org.apache.cassandra.cdc.sidecar.SidecarStatePersister;
 import org.apache.cassandra.cdc.stats.ICdcStats;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
@@ -84,6 +88,8 @@ public class CdcManagerTest
     @Mock
     private ICdcStats cdcStats;
     @Mock
+    private SidecarCdcStats sidecarCdcStats;
+    @Mock
     private TaskExecutorPool taskExecutorPool;
     @Mock
     private CdcDatabaseAccessor cdcDatabaseAccessor;
@@ -106,6 +112,7 @@ public class CdcManagerTest
             clusterConfigProvider,
             sidecarCdcClient,
             cdcStats,
+            sidecarCdcStats,
             taskExecutorPool,
             cdcDatabaseAccessor,
             cdcOptions
@@ -149,7 +156,7 @@ public class CdcManagerTest
         when(cdcConfig.jobId()).thenReturn("test-job");
 
         CdcManager spyManager = spy(cdcManager);
-        CdcConsumerEntry mockEntry = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class));
+        CdcConsumerEntry mockEntry = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class), mock(SidecarCdcStats.class));
         doReturn(mockEntry).when(spyManager).buildConsumer(
             any(), anyInt(), any(), any(), any(), any(), any(), any()
         );
@@ -180,8 +187,8 @@ public class CdcManagerTest
         when(cdcConfig.jobId()).thenReturn("test-job");
 
         CdcManager spyManager = spy(cdcManager);
-        CdcConsumerEntry mockEntry1 = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class));
-        CdcConsumerEntry mockEntry2 = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class));
+        CdcConsumerEntry mockEntry1 = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class), mock(SidecarCdcStats.class));
+        CdcConsumerEntry mockEntry2 = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class), mock(SidecarCdcStats.class));
         doReturn(mockEntry1, mockEntry2).when(spyManager).buildConsumer(
             any(), anyInt(), any(), any(), any(), any(), any(), any()
         );
@@ -215,8 +222,8 @@ public class CdcManagerTest
         when(cdcConfig.jobId()).thenReturn("test-job");
 
         CdcManager spyManager = spy(cdcManager);
-        CdcConsumerEntry mockEntry1 = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class));
-        CdcConsumerEntry mockEntry2 = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class));
+        CdcConsumerEntry mockEntry1 = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class), mock(SidecarCdcStats.class));
+        CdcConsumerEntry mockEntry2 = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class), mock(SidecarCdcStats.class));
         doReturn(mockEntry1, mockEntry2).when(spyManager).buildConsumer(
             any(), anyInt(), any(), any(), any(), any(), any(), any()
         );
@@ -248,7 +255,7 @@ public class CdcManagerTest
         when(cdcConfig.jobId()).thenReturn("test-job");
 
         CdcManager spyManager = spy(cdcManager);
-        CdcConsumerEntry mockEntry = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class));
+        CdcConsumerEntry mockEntry = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class), mock(SidecarCdcStats.class));
         doReturn(mockEntry).when(spyManager).buildConsumer(
             any(), anyInt(), any(), any(), any(), any(), any(), any()
         );
@@ -272,7 +279,7 @@ public class CdcManagerTest
 
         // Spy to mock buildConsumer - will be called with instanceId = -1
         CdcManager spyManager = spy(cdcManager);
-        CdcConsumerEntry mockEntry = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class));
+        CdcConsumerEntry mockEntry = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class), mock(SidecarCdcStats.class));
         doReturn(mockEntry).when(spyManager).buildConsumer(
             any(), anyInt(), any(), any(), any(), any(), any(), any()
         );
@@ -318,7 +325,7 @@ public class CdcManagerTest
         when(cdcConfig.jobId()).thenReturn("test-job");
 
         CdcManager spyManager = spy(cdcManager);
-        CdcConsumerEntry mockEntry = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class));
+        CdcConsumerEntry mockEntry = new CdcConsumerEntry(mock(SidecarCdc.class), mock(SidecarStatePersister.class), mock(SidecarCdcStats.class));
         doReturn(mockEntry).when(spyManager).buildConsumer(
                 any(), anyInt(), any(), any(), any(), any(), any(), any()
         );
@@ -367,6 +374,25 @@ public class CdcManagerTest
             .thenThrow(new NoSuchCassandraInstanceException("Instance not found: " + unknownIp));
 
         assertThat(cdcManager.getInstanceId(unknownIp)).isEqualTo(-1);
+    }
+
+    /**
+     * Regression guard: {@code SidecarStatePersister} was previously built with the
+     * cassandra-analytics-cdc-sidecar {@code SidecarCdcOptions.DEFAULT}, which pinned
+     * {@code persistDelay()} to its hardcoded 1000ms interface default regardless of what
+     * operators configured in the "configs" table. {@link CdcManager.ConfigBackedPersisterOptions}
+     * fixes this by delegating {@code persistDelay()} straight to {@link CdcConfig}; this test
+     * uses a value that differs from both the interface default (1000ms) and the
+     * {@code CdcConfigImpl} default (also 1000ms) so a pass proves real delegation.
+     */
+    @Test
+    void configBackedPersisterOptionsDelegatesPersistDelayToCdcConfig()
+    {
+        when(cdcConfig.persistDelay()).thenReturn(new MillisecondBoundConfiguration(2500, TimeUnit.MILLISECONDS));
+
+        CdcManager.ConfigBackedPersisterOptions persisterOptions = new CdcManager.ConfigBackedPersisterOptions(cdcConfig);
+
+        assertThat(persisterOptions.persistDelay()).isEqualTo(Duration.ofMillis(2500));
     }
 
     // Helper methods

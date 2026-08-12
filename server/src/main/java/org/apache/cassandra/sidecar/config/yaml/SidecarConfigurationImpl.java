@@ -45,6 +45,7 @@ import org.apache.cassandra.sidecar.config.InstanceConfiguration;
 import org.apache.cassandra.sidecar.config.LifecycleConfiguration;
 import org.apache.cassandra.sidecar.config.LiveMigrationConfiguration;
 import org.apache.cassandra.sidecar.config.MetricsConfiguration;
+import org.apache.cassandra.sidecar.config.OperationalJobConfiguration;
 import org.apache.cassandra.sidecar.config.PeriodicTaskConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.S3ClientConfiguration;
@@ -122,6 +123,9 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
     @JsonProperty("lifecycle")
     private LifecycleConfiguration lifecycleConfiguration;
 
+    @JsonProperty("operational_job")
+    private OperationalJobConfiguration operationalJobConfiguration;
+
     public SidecarConfigurationImpl()
     {
         this(builder());
@@ -147,6 +151,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         schemaReportingConfiguration = builder.schemaReportingConfiguration;
         liveMigrationConfiguration = builder.liveMigrationConfiguration;
         lifecycleConfiguration = builder.lifecycleConfiguration;
+        operationalJobConfiguration = builder.operationalJobConfiguration;
     }
 
     /**
@@ -327,6 +332,12 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         return lifecycleConfiguration;
     }
 
+    @Override
+    @JsonProperty("operational_job")
+    public OperationalJobConfiguration operationalJobConfiguration()
+    {
+        return operationalJobConfiguration;
+    }
 
     public static SidecarConfigurationImpl readYamlConfiguration(Path yamlConfigurationPath) throws IOException
     {
@@ -444,6 +455,7 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         private SchemaReportingConfiguration schemaReportingConfiguration = new SchemaReportingConfigurationImpl();
         private LiveMigrationConfiguration liveMigrationConfiguration = new LiveMigrationConfigurationImpl();
         private LifecycleConfiguration lifecycleConfiguration = new LifecycleConfigurationImpl();
+        private OperationalJobConfiguration operationalJobConfiguration = new OperationalJobConfigurationImpl();
 
         protected Builder()
         {
@@ -657,6 +669,11 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         public Builder lifecycleConfiguration(LifecycleConfiguration lifecycleConfiguration)
         {
             return update(b -> b.lifecycleConfiguration = lifecycleConfiguration);
+        }
+
+        public Builder operationalJobConfiguration(OperationalJobConfiguration operationalJobConfiguration)
+        {
+            return update(b -> b.operationalJobConfiguration = operationalJobConfiguration);
         }
 
         /**

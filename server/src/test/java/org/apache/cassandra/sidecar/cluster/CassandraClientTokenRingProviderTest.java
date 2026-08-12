@@ -25,10 +25,12 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -40,6 +42,7 @@ import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Host;
+import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.ProtocolVersion;
 import com.datastax.driver.core.Token;
@@ -58,11 +61,15 @@ import org.jetbrains.annotations.NotNull;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 
@@ -344,6 +351,98 @@ public class CassandraClientTokenRingProviderTest
         when(instanceMetadata.delegate().version()).thenReturn(SimpleCassandraVersion.create("4.0.0.68"));
         when(instanceMetadata.delegate().metadata()).thenReturn(metadata);
         return instanceMetadata;
+    }
+
+    @Test
+    void testLocalTokenRanges_succeedsForMixedCaseKeyspace()
+    {
+        String keyspace = "MyKeyspace";
+        Metadata metadata = getMetadataWithKeyspace(keyspace);
+        CassandraClientTokenRingProvider provider = new CassandraClientTokenRingProvider(
+            mockInstancesMetadataWithMetadata(metadata),
+            mockInstanceMetadataFetcherWithMetadata(metadata),
+            mockDnsResolver());
+
+        Map<Integer, Set<TokenRange>> result = provider.localTokenRanges(keyspace);
+
+        assertNotNull(result);
+        verify(metadata).getKeyspace(Metadata.quoteIfNecessary(keyspace));
+    }
+
+    @Test
+    void testLocalTokenRanges_throwsForNonExistentKeyspace()
+    {
+        Metadata metadata = getMetadata();
+        when(metadata.getKeyspace(Metadata.quoteIfNecessary("nonexistent"))).thenReturn(null);
+        CassandraClientTokenRingProvider provider = new CassandraClientTokenRingProvider(
+            mockInstancesMetadataWithMetadata(metadata),
+            mockInstanceMetadataFetcherWithMetadata(metadata),
+            mockDnsResolver());
+
+        assertThatThrownBy(() -> provider.localTokenRanges("nonexistent"))
+            .isInstanceOf(NoSuchElementException.class)
+            .hasMessageContaining("Keyspace does not exist. keyspace: nonexistent");
+    }
+
+    @Test
+    void testLocalTokenRanges_succeedsForUnquotedMixedCaseKeyspace()
+    {
+        // Regression: MyKeyspace created without CQL quotes (Cassandra internal name: mykeyspace).
+        // Sidecar stores MyKeyspace. The raw lookup simulates the driver's case-folding and returns
+        // the keyspace; the quoteIfNecessary fallback must not be reached, because quoteIfNecessary
+        // would look for case-sensitive MyKeyspace (not mykeyspace) and return null.
+        String storedKeyspace = "MyKeyspace";
+        Metadata metadata = getMetadataWithUnquotedKeyspace(storedKeyspace, "mykeyspace");
+        CassandraClientTokenRingProvider provider = new CassandraClientTokenRingProvider(
+            mockInstancesMetadataWithMetadata(metadata),
+            mockInstanceMetadataFetcherWithMetadata(metadata),
+            mockDnsResolver());
+
+        Map<Integer, Set<TokenRange>> result = provider.localTokenRanges(storedKeyspace);
+
+        assertNotNull(result);
+        verify(metadata, never()).getKeyspace(Metadata.quoteIfNecessary(storedKeyspace));
+    }
+
+    private static Metadata getMetadataWithKeyspace(String keyspace)
+    {
+        Metadata metadata = getMetadata();
+        KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
+        when(keyspaceMetadata.getName()).thenReturn(keyspace);
+        when(metadata.getKeyspace(Metadata.quoteIfNecessary(keyspace))).thenReturn(keyspaceMetadata);
+        when(metadata.getKeyspaces()).thenReturn(List.of(keyspaceMetadata));
+        when(metadata.getTokenRanges(any(), any())).thenReturn(Collections.emptySet());
+        return metadata;
+    }
+
+    // storedName: what sidecar has stored (e.g. "MyKeyspace")
+    // internalName: Cassandra's internal name after case-folding (e.g. "mykeyspace")
+    private static Metadata getMetadataWithUnquotedKeyspace(String storedName, String internalName)
+    {
+        Metadata metadata = getMetadata();
+        KeyspaceMetadata keyspaceMetadata = mock(KeyspaceMetadata.class);
+        when(keyspaceMetadata.getName()).thenReturn(internalName);
+        when(metadata.getKeyspace(storedName)).thenReturn(keyspaceMetadata);
+        when(metadata.getKeyspaces()).thenReturn(List.of(keyspaceMetadata));
+        when(metadata.getTokenRanges(any(), any())).thenReturn(Collections.emptySet());
+        return metadata;
+    }
+
+    private InstancesMetadata mockInstancesMetadataWithMetadata(Metadata metadata)
+    {
+        InstancesMetadata instancesMetadata = mock(InstancesMetadata.class);
+        InstanceMetadata instance1 = getMockInstanceMetaData(101000101, "localhost", metadata);
+        InstanceMetadata instance2 = getMockInstanceMetaData(101000201, "localhost2", metadata);
+        InstanceMetadata instance3 = getMockInstanceMetaData(101000301, "localhost3", metadata);
+        when(instancesMetadata.instances()).thenReturn(List.of(instance1, instance2, instance3));
+        return instancesMetadata;
+    }
+
+    private InstanceMetadataFetcher mockInstanceMetadataFetcherWithMetadata(Metadata metadata)
+    {
+        InstanceMetadataFetcher fetcher = mock(InstanceMetadataFetcher.class);
+        when(fetcher.callOnFirstAvailableInstance(any())).thenReturn(metadata);
+        return fetcher;
     }
 
     private InstanceMetadataFetcher mockInstanceMetadataFetcher()

@@ -45,6 +45,7 @@ import org.apache.cassandra.cdc.kafka.KafkaOptions;
 import org.apache.cassandra.cdc.schemastore.SchemaStore;
 import org.apache.cassandra.cdc.schemastore.SchemaStorePublisherFactory;
 import org.apache.cassandra.cdc.schemastore.TableSchemaPublisher;
+import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
 import org.apache.cassandra.sidecar.db.TableHistoryDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.tasks.CassandraClusterSchemaMonitor;
@@ -179,7 +180,11 @@ public class CachingSchemaStore implements SchemaStore
                     metadata.put(METADATA_NAME_KEY, cqlTable.table());
                     metadata.put(METADATA_NAMESPACE_KEY, cqlTable.keyspace());
                     publisher.publishSchema(mergedSchema.toString(false), metadata);
-                    sidecarCdcStats.capturePublishedSchema();
+                    // TODO: capturePublishedSchema() now lives on the canonical
+                    // org.apache.cassandra.cdc.sidecar.SidecarCdcStats (cassandra-analytics-cdc-sidecar),
+                    // which cassandra-sidecar consumes as a published artifact. Re-wire
+                    // sidecarCdcStats.capturePublishedSchema() here once that artifact is released
+                    // with this method included.
                 }
                 return new SchemaCacheEntry(cqlTable, payloadSchema);
             });

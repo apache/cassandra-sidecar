@@ -41,6 +41,7 @@ import org.apache.cassandra.cdc.kafka.KafkaProducerFactory;
 import org.apache.cassandra.cdc.kafka.TopicSupplier;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
+import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
 import org.apache.cassandra.cdc.stats.ICdcStats;
 import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -156,6 +157,49 @@ public class CdcPublisherTests
 
         assertThat(result).isNotNull();
         assertThat(result).isInstanceOf(CdcEventConsumer.class);
+    }
+
+    /**
+     * Verifies that construction captures the Cdc enabled/disabled lifecycle stat depending on
+     * {@link CdcConfig#cdcEnabled()} at the time the {@link CdcPublisher} is built, mirroring the
+     * javadoc contract on {@link SidecarCdcStats#captureCdcDisabled()}: "Cdc disabled and CdcPublisher
+     * will not be started."
+     */
+    @Test
+    void testConstructorCapturesCdcEnabledWhenConfigEnablesCdc()
+    {
+        CdcConfig enabledConfig = mock(CdcConfig.class, RETURNS_DEEP_STUBS);
+        when(enabledConfig.cdcEnabled()).thenReturn(true);
+        // setUp()'s own CdcPublisher construction already recorded a call against the shared
+        // sidecarCdcStats mock (cdcConfig defaults to cdcEnabled() == false) — use a fresh mock
+        // here so this test only observes the constructor call under test.
+        SidecarCdcStats freshSidecarCdcStats = mock(SidecarCdcStats.class);
+
+        new CdcPublisher(
+            vertx, executorPools, clusterConfigProvider, schemaSupplier, instanceMetadataFetcher,
+            enabledConfig, databaseAccessor, cdcStats, systemViews, freshSidecarCdcStats, rangeManager,
+            cassandraBridgeFactory, () -> sidecarCdcClient, schemaStore, kafkaProducerFactory, cdcOptions
+        );
+
+        verify(freshSidecarCdcStats).captureCdcEnabled();
+        verify(freshSidecarCdcStats, never()).captureCdcDisabled();
+    }
+
+    @Test
+    void testConstructorCapturesCdcDisabledWhenConfigDisablesCdc()
+    {
+        CdcConfig disabledConfig = mock(CdcConfig.class, RETURNS_DEEP_STUBS);
+        when(disabledConfig.cdcEnabled()).thenReturn(false);
+        SidecarCdcStats freshSidecarCdcStats = mock(SidecarCdcStats.class);
+
+        new CdcPublisher(
+            vertx, executorPools, clusterConfigProvider, schemaSupplier, instanceMetadataFetcher,
+            disabledConfig, databaseAccessor, cdcStats, systemViews, freshSidecarCdcStats, rangeManager,
+            cassandraBridgeFactory, () -> sidecarCdcClient, schemaStore, kafkaProducerFactory, cdcOptions
+        );
+
+        verify(freshSidecarCdcStats).captureCdcDisabled();
+        verify(freshSidecarCdcStats, never()).captureCdcEnabled();
     }
 
     /**

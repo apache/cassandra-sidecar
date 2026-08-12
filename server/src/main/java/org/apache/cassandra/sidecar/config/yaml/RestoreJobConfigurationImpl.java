@@ -42,6 +42,11 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     MillisecondBoundConfiguration.parse("5m");
     private static final MillisecondBoundConfiguration DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY =
     MillisecondBoundConfiguration.parse("10m");
+    // Caps the wake-up latency on peer Sidecars for a phase transition: the Sidecar that
+    // receives the HTTP phase signal reacts immediately, peers learn via DB point-read on
+    // this interval (vs. the 5m/10m slow loop). Costs N reads/sec where N is in-flight jobs.
+    private static final MillisecondBoundConfiguration DEFAULT_JOB_DISCOVERY_STATUS_CHECK_INTERVAL =
+    MillisecondBoundConfiguration.parse("1s");
     private static final int DEFAULT_JOB_DISCOVERY_MINIMUM_RECENCY_DAYS = 5;
     private static final int DEFAULT_PROCESS_MAX_CONCURRENCY = 20; // process at most 20 slices concurrently
     private static final SecondBoundConfiguration DEFAULT_RESTORE_JOB_TABLES_TTL =
@@ -55,6 +60,8 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     protected MillisecondBoundConfiguration jobDiscoveryActiveLoopDelay;
 
     protected MillisecondBoundConfiguration jobDiscoveryIdleLoopDelay;
+
+    protected MillisecondBoundConfiguration jobDiscoveryStatusCheckInterval;
 
     @JsonProperty(value = "job_discovery_minimum_recency_days")
     protected final int jobDiscoveryMinimumRecencyDays;
@@ -79,6 +86,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     {
         this.jobDiscoveryActiveLoopDelay = builder.jobDiscoveryActiveLoopDelay;
         this.jobDiscoveryIdleLoopDelay = builder.jobDiscoveryIdleLoopDelay;
+        this.jobDiscoveryStatusCheckInterval = builder.jobDiscoveryStatusCheckInterval;
         this.jobDiscoveryMinimumRecencyDays = builder.jobDiscoveryMinimumRecencyDays;
         this.processMaxConcurrency = builder.processMaxConcurrency;
         this.restoreJobTablesTtl = builder.restoreJobTablesTtl;
@@ -161,6 +169,22 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     {
         LOGGER.warn("'job_discovery_idle_loop_delay_millis' is deprecated, use 'job_discovery_idle_loop_delay' instead");
         setJobDiscoveryIdleLoopDelay(new MillisecondBoundConfiguration(jobDiscoveryIdleLoopDelayMillis, TimeUnit.MILLISECONDS));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = "job_discovery_status_check_interval")
+    public MillisecondBoundConfiguration jobDiscoveryStatusCheckInterval()
+    {
+        return jobDiscoveryStatusCheckInterval;
+    }
+
+    @JsonProperty(value = "job_discovery_status_check_interval")
+    public void setJobDiscoveryStatusCheckInterval(MillisecondBoundConfiguration jobDiscoveryStatusCheckInterval)
+    {
+        this.jobDiscoveryStatusCheckInterval = jobDiscoveryStatusCheckInterval;
     }
 
     /**
@@ -314,6 +338,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         private SecondBoundConfiguration slowTaskReportDelay = DEFAULT_RESTORE_JOB_SLOW_TASK_REPORT_DELAY;
         private MillisecondBoundConfiguration jobDiscoveryActiveLoopDelay = DEFAULT_JOB_DISCOVERY_ACTIVE_LOOP_DELAY;
         private MillisecondBoundConfiguration jobDiscoveryIdleLoopDelay = DEFAULT_JOB_DISCOVERY_IDLE_LOOP_DELAY;
+        private MillisecondBoundConfiguration jobDiscoveryStatusCheckInterval = DEFAULT_JOB_DISCOVERY_STATUS_CHECK_INTERVAL;
         private int jobDiscoveryMinimumRecencyDays = DEFAULT_JOB_DISCOVERY_MINIMUM_RECENCY_DAYS;
         private int processMaxConcurrency = DEFAULT_PROCESS_MAX_CONCURRENCY;
         private SecondBoundConfiguration restoreJobTablesTtl = DEFAULT_RESTORE_JOB_TABLES_TTL;
@@ -351,6 +376,18 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         public Builder jobDiscoveryIdleLoopDelay(MillisecondBoundConfiguration jobDiscoveryIdleLoopDelay)
         {
             return update(b -> b.jobDiscoveryIdleLoopDelay = jobDiscoveryIdleLoopDelay);
+        }
+
+        /**
+         * Sets the {@code jobDiscoveryStatusCheckInterval} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param jobDiscoveryStatusCheckInterval the {@code jobDiscoveryStatusCheckInterval} to set
+         * @return a reference to this Builder
+         */
+        public Builder jobDiscoveryStatusCheckInterval(MillisecondBoundConfiguration jobDiscoveryStatusCheckInterval)
+        {
+            return update(b -> b.jobDiscoveryStatusCheckInterval = jobDiscoveryStatusCheckInterval);
         }
 
         /**

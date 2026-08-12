@@ -38,6 +38,7 @@ import org.apache.cassandra.cdc.kafka.KafkaPublisher;
 import org.apache.cassandra.cdc.kafka.TopicSupplier;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
+import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
 import org.apache.cassandra.cdc.stats.ICdcStats;
 import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -120,12 +121,17 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
 
         if (conf.cdcEnabled())
         {
+            sidecarCdcStats.captureCdcEnabled();
             vertx.eventBus().localConsumer(RangeManager.RangeManagerEvents.ON_TOKEN_RANGE_CHANGED.address(), this);
             vertx.eventBus().localConsumer(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_GAINED.address(), this);
             vertx.eventBus().localConsumer(RangeManager.LeadershipEvents.ON_TOKEN_RANGE_LOST.address(), this);
             vertx.eventBus().localConsumer(ON_SERVER_STOP.address(), this);
             vertx.eventBus().localConsumer(ON_CDC_CACHE_WARMED_UP.address(), this);
             vertx.eventBus().localConsumer(ON_CDC_CONFIGURATION_CHANGED.address(), new ConfigChangedHandler());
+        }
+        else
+        {
+            sidecarCdcStats.captureCdcDisabled();
         }
     }
 
@@ -146,7 +152,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
                                                     conf.failOnRecordTooLargeError(),
                                                     conf.failOnKafkaError(),
                                                     CdcLogMode.FULL);
-        return new CdcEventConsumer(kafkaPublisher);
+        return new CdcEventConsumer(kafkaPublisher, sidecarCdcStats);
     }
 
     /**
@@ -220,6 +226,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
                                         clusterConfigProvider,
                                         sidecarCdcClientProvider.get(),
                                         cdcStats,
+                                        sidecarCdcStats,
                                         this.executorPools,
                                         databaseAccessor,
                                         cdcOptions);

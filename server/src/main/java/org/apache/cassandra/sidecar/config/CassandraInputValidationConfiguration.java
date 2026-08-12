@@ -58,4 +58,9 @@ public interface CassandraInputValidationConfiguration
      * @return a regular expression to an allowed pattern for a subset of component names
      */
     String allowedPatternForRestrictedComponentName();
+
+    /**
+     * @return a regular expression to validate the name of a snapshot
+     */
+    String allowedPatternForSnapshotName();
 }

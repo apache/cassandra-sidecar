@@ -70,7 +70,6 @@ class RingHandlerIntegrationTest extends IntegrationTestBase
             JsonObject error = response.bodyAsJsonObject();
             assertThat(error.getInteger("code")).isEqualTo(errorCode);
             assertThat(error.getString("message")).contains("The keyspace unknown_ks, does not exist");
-
             context.completeNow();
         });
     }

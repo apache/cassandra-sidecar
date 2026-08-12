@@ -47,6 +47,7 @@ import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.apache.cassandra.sidecar.TestModule;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.response.ListOperationalJobsResponse;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.job.OperationalJob;
@@ -155,6 +156,12 @@ class ListOperationalJobsHandlerTest
         public boolean hasConflict(List<OperationalJob> jobs)
         {
             return false;
+        }
+
+        @Override
+        public OperationType operationType()
+        {
+            return OperationType.DRAIN;
         }
 
         @Override

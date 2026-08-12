@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.server.exceptions.OperationalJobException;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -182,6 +183,24 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
         return false;
     }
 
+    /**
+     * Whether the manager should release the active operation lock (via
+     * {@link OperationalJobCoordinator#clearActive}) when this job completes locally. Only consulted for jobs that
+     * {@link #requiresCoordination() require coordination}.
+     * <p>
+     * Single-node coordinated jobs return {@code true} (the default): the Sidecar that acquires the lock also
+     * finishes the work, so releasing on local completion is correct. Distributed cluster-wide jobs whose work
+     * finishes on other nodes return {@code false} and rely on the orchestration layer to call
+     * {@link OperationalJobCoordinator#clearActive} once all nodes reach a terminal state.
+     *
+     * @return {@code true} if the manager should release the lock on local completion; {@code false} to defer
+     *         release to the orchestration layer
+     */
+    public boolean releasesOnCompletion()
+    {
+        return true;
+    }
+
     @Override
     public final Void result()
     {
@@ -238,6 +257,12 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
         String simpleName = this.getClass().getSimpleName();
         return simpleName.isEmpty() ? this.getClass().getName() : simpleName;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract OperationType operationType();
 
     /**
      * Determines the status of the job. OperationalJob subclasses could choose to override the method.
@@ -334,6 +359,19 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
                          // otherwise, the result of the job is available
                          return resultFut;
                      });
+    }
+
+    /**
+     * Marks the job as failed before it begins executing, for example when it cannot be started due to a
+     * coordination conflict. The execution result is completed exceptionally so the job reports
+     * {@link OperationalJobStatus#FAILED} with the supplied reason, and {@link #executeInternal()} is never invoked.
+     *
+     * @param cause the reason the job could not be started
+     */
+    public void failToStart(Throwable cause)
+    {
+        lastUpdate = Instant.now();
+        executionPromise.tryFail(cause);
     }
 
     /**

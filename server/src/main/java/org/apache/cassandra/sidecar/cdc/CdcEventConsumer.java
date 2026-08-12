@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 import org.apache.cassandra.cdc.api.EventConsumer;
 import org.apache.cassandra.cdc.kafka.KafkaPublisher;
 import org.apache.cassandra.cdc.msg.CdcEvent;
+import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -31,10 +32,12 @@ import org.jetbrains.annotations.NotNull;
 public class CdcEventConsumer implements EventConsumer
 {
     private final transient KafkaPublisher kafka;
+    private final SidecarCdcStats sidecarCdcStats;
 
-    public CdcEventConsumer(KafkaPublisher kafka)
+    public CdcEventConsumer(KafkaPublisher kafka, SidecarCdcStats sidecarCdcStats)
     {
         this.kafka = kafka;
+        this.sidecarCdcStats = sidecarCdcStats;
     }
 
     public void accept(CdcEvent cdcEvent)
@@ -45,7 +48,9 @@ public class CdcEventConsumer implements EventConsumer
     @Override
     public void flush() throws InterruptedException
     {
+        long startNanos = System.nanoTime();
         kafka.flush();
+        sidecarCdcStats.captureKafkaFlushTime(System.nanoTime() - startNanos);
     }
 
     public @NotNull Consumer<CdcEvent> andThen(@NotNull Consumer<? super CdcEvent> after)

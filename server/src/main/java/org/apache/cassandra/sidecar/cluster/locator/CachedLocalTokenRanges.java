@@ -46,6 +46,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
+import org.apache.cassandra.sidecar.utils.MetadataUtils;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -104,7 +105,7 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
             return Collections.emptyMap();
         }
 
-        if (metadata.getKeyspace(keyspace) == null)
+        if (MetadataUtils.keyspace(metadata, keyspace) == null)
         {
             throw new NoSuchElementException("Keyspace does not exist. keyspace: " + keyspace);
         }
@@ -147,7 +148,9 @@ public class CachedLocalTokenRanges implements LocalTokenRangesProvider
 
     public Set<TokenRange> tokenRangesOfHost(Metadata metadata, String keyspace, Host host)
     {
-        return metadata.getTokenRanges(keyspace, host)
+        KeyspaceMetadata ks = MetadataUtils.keyspace(metadata, keyspace);
+        String resolvedName = ks != null ? Metadata.quoteIfNecessary(ks.getName()) : keyspace;
+        return metadata.getTokenRanges(resolvedName, host)
                        .stream()
                        .flatMap(range -> TokenRange.from(range).stream())
                        .collect(Collectors.toSet());

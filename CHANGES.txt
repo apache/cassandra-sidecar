@@ -1,6 +1,21 @@
+0.5.0
+-----
+ * Add RFC 6902-inspired JSON Patch support to ConfigurationManager (CASSSIDECAR-429)
+ * Implement job coordination for cluster-wide operations (CASSSIDECAR-377)
+ * Fix dead/dropped CDC lifecycle metrics and duplicate SidecarCdcStats interface (CASSSIDECAR-489)
+ * Wire CDC configs in configs table to SidecarCdcOptions/SidecarStatePersister (CASSSIDECAR-483)
+ * Implement durable operational job tracker (CASSSIDECAR-374)
+ * Remove filesystem path from Http response (CASSSIDECAR-477)
+ * Add basic configuration retrieval logic to ConfigurationManager (CASSSIDECAR-427)
+ * RPM package is created with wrong version (CASSSIDECAR-472)
+ * Define storage provider interface and Cassandra implementation to support durable job tracking (CASSSIDECAR-373)
+ * Validate snapshot name during list snapshot (CASSSIDECAR-461)
+
 0.4.0
 -----
  * Add fast_forward_enabled flag to enable eager pipelining of staging and importing in coordinated writes (CASSSIDECAR-463)
+ * Fix restore job failing with "Keyspace does not exist" for quoted mixed-case keyspace names (CASSSIDECAR-475)
+ * Split RestoreJobDiscoverer into a fast status-check loop and a slow slice-discovery loop (CASSSIDECAR-462)
  * Ability to load Cassandra connection secrets from filesystem (CASSSIDECAR-407)
  * Sidecar should wake up immediately on the instance receiving a phase signal instead of waiting for the discovery loop (CASSSIDECAR-454)
  * Fix schema initialization race, CI test reporting, and build stability (CASSSIDECAR-468)
