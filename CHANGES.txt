@@ -1,5 +1,6 @@
 0.5.0
 -----
+  * CachingSchemaStore should be reloaded when Schemastore kafka configs are changed (CASSSIDECAR-493)
  * Support retrying on HTTP 429 responses and fix duplicate immediate execution in RequestExecutor retry scheduling (CASSSIDECAR-465)
  * Add RFC 6902-inspired JSON Patch support to ConfigurationManager (CASSSIDECAR-429)
  * Implement job coordination for cluster-wide operations (CASSSIDECAR-377)

@@ -23,7 +23,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -39,7 +41,9 @@ import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.cdc.api.TableIdLookup;
 import org.apache.cassandra.cdc.avro.AvroSchemas;
 import org.apache.cassandra.cdc.avro.CqlToAvroSchemaConverter;
+import org.apache.cassandra.cdc.kafka.KafkaOptions;
 import org.apache.cassandra.cdc.schemastore.SchemaStorePublisherFactory;
+import org.apache.cassandra.cdc.schemastore.TableSchemaPublisher;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
 import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.db.TableHistoryDatabaseAccessor;
@@ -50,10 +54,14 @@ import org.apache.cassandra.spark.data.CqlTable;
 import org.apache.cassandra.spark.data.ReplicationFactor;
 import org.apache.cassandra.spark.data.partitioner.Partitioner;
 
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CDC_CONFIGURATION_CHANGED;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_START;
+import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatRuntimeException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -268,6 +276,55 @@ public class CachingSchemaStoreTest
         assertNotEquals(schema1, schema2);
         assertNotEquals(reader1, reader2);
         assertNotEquals(writer1, writer2);
+    }
+
+    /**
+     * A bad/missing Schema Store config at boot leaves {@code publisher} null (the failure is
+     * logged and swallowed, per {@code reloadPublisherAndPublishSchemas}). Regression test for
+     * the gap where fixing the {@code configs} table alone never re-triggered the load — only an
+     * unrelated CQL schema change did. Reacting to {@code ON_CDC_CONFIGURATION_CHANGED} closes
+     * that gap.
+     */
+    @Test
+    void testOnCdcConfigurationChangedReloadsSchemaStorePublisher() throws InterruptedException
+    {
+        setupForVersion(CassandraVersion.FOURZERO);
+        when(mockCdcConfig.cdcEnabled()).thenReturn(true);
+
+        AtomicInteger buildPublisherCalls = new AtomicInteger(0);
+        SchemaStorePublisherFactory countingPublisherFactory = kafkaOptions -> {
+            buildPublisherCalls.incrementAndGet();
+            return mock(TableSchemaPublisher.class);
+        };
+
+        Set<CqlTable> tables = cqlTables(CREATE_STATEMENT);
+        mockCassandraClusterSchemaMonitor = createMockClusterSchema(tables);
+
+        Vertx testVertx = Vertx.vertx();
+        try
+        {
+            cachingSchemaStore = new CachingSchemaStore(testVertx, mockCassandraClusterSchemaMonitor,
+                                                        spyTableHistoryDatabaseAccessor, mockCdcConfig,
+                                                        mockSidecarCdcStats, mockSidecarSchema,
+                                                        cqlToAvroSchemaConverter, countingPublisherFactory);
+
+            // configureSidecarServerEventListeners() only registers its consumers once
+            // ON_SERVER_START fires, mirroring real startup ordering.
+            testVertx.eventBus().publish(ON_SERVER_START.address(), "server started");
+            loopAssert(5, () -> assertThat(buildPublisherCalls.get()).isEqualTo(0));
+
+            testVertx.eventBus().publish(ON_CDC_CONFIGURATION_CHANGED.address(), "Cdc Configuration Changed");
+            loopAssert(5, () -> assertThat(buildPublisherCalls.get()).isEqualTo(1));
+
+            // A second config-change signal (e.g. an operator fixing a bad configs table entry)
+            // must trigger another reload — this is the retry the fix restores.
+            testVertx.eventBus().publish(ON_CDC_CONFIGURATION_CHANGED.address(), "Cdc Configuration Changed");
+            loopAssert(5, () -> assertThat(buildPublisherCalls.get()).isEqualTo(2));
+        }
+        finally
+        {
+            testVertx.close();
+        }
     }
 
     public Set<CqlTable> cqlTables(String createStatement)
