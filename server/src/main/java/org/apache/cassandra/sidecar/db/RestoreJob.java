@@ -21,10 +21,10 @@ package org.apache.cassandra.sidecar.db;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
 
+import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -282,16 +282,16 @@ public class RestoreJob
      * have already fulfilled the criteria; the later status must count too, otherwise the consistency check of the
      * staging phase could never conclude once importing has started.
      *
-     * @return the set of range statuses that satisfy the success criteria
+     * @return the immutable set of range statuses that satisfy the success criteria
      */
     public Set<RestoreRangeStatus> satisfyingRangeStatuses()
     {
         RestoreRangeStatus expected = expectedNextRangeStatus();
         if (fastForwardEnabled && expected == RestoreRangeStatus.STAGED)
         {
-            return EnumSet.of(RestoreRangeStatus.STAGED, RestoreRangeStatus.SUCCEEDED);
+            return Sets.immutableEnumSet(RestoreRangeStatus.STAGED, RestoreRangeStatus.SUCCEEDED);
         }
-        return EnumSet.of(expected);
+        return Sets.immutableEnumSet(expected);
     }
 
     @Nullable

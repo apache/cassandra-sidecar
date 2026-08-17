@@ -3,6 +3,9 @@
 
 Upgrading
 ---------
+    - In CASSSIDECAR-463, a new internal table (restore_job_v7) is created to track the fastForwardEnabled
+      option of restore jobs. It replaces restore_job_v6. Spark jobs performing S3 restores should be paused
+      during sidecar upgrade to ensure in-flight restore job state is not lost.
     - In CASSSIDECAR-461, the list snapshot endpoint now validates the snapshot name, aligned with
       the validation introduced by CASSANDRA-21389. A new cassandra_input_validation.allowed_chars_for_snapshot_name
       setting in sidecar.yaml controls the accepted pattern; the default is "[a-zA-Z0-9_.+-]{1,255}".
@@ -10,27 +13,6 @@ Upgrading
       (for example, ".*") to preserve the prior permissive behavior. When using the
       FastCassandraInputValidator implementation, the validation will always take place and will be
       aligned with CASSANDRA-21389.
-
-New features
-------------
-    - Snapshot name validation on the list snapshot endpoint (CASSSIDECAR-461), with a configurable
-      allowed_chars_for_snapshot_name pattern under cassandra_input_validation in sidecar.yaml.
-
-0.4
-===
-
-Upgrading
----------
-    - In CASSSIDECAR-463, a new internal table (restore_job_v7) is created to track the fastForwardEnabled
-      option of restore jobs. It replaces restore_job_v6. Spark jobs performing S3 restores should be paused
-      during sidecar upgrade to ensure in-flight restore job state is not lost.
-    - In CASSSIDECAR-415, a new internal table (restore_job_v6) is created to support IAM credential
-      tracking for restore jobs. Spark jobs performing S3 restores should be paused during sidecar
-      upgrade to ensure in-flight restore job state is not lost.
-    - In CASSSIDECAR-407, the driver_parameters.username and driver_parameters.password settings in
-      sidecar.yaml are now nested under a pluggable driver_parameters.auth_provider. The top-level
-      username/password keys remain as a deprecated fallback. Update sidecar.yaml to configure
-      auth_provider with the ConfigProvider (or FileProvider) implementation during the upgrade.
 
 New features
 ------------
@@ -42,6 +24,24 @@ New features
       be rolled back. Slices uploaded while the job is in CREATED status are picked up by the periodic job
       discovery, and, until all the declared slices are found, by every job progress poll; set sliceCount
       when creating the job and poll the progress to keep staging close to the uploads.
+    - Snapshot name validation on the list snapshot endpoint (CASSSIDECAR-461), with a configurable
+      allowed_chars_for_snapshot_name pattern under cassandra_input_validation in sidecar.yaml.
+
+0.4
+===
+
+Upgrading
+---------
+    - In CASSSIDECAR-415, a new internal table (restore_job_v6) is created to support IAM credential
+      tracking for restore jobs. Spark jobs performing S3 restores should be paused during sidecar
+      upgrade to ensure in-flight restore job state is not lost.
+    - In CASSSIDECAR-407, the driver_parameters.username and driver_parameters.password settings in
+      sidecar.yaml are now nested under a pluggable driver_parameters.auth_provider. The top-level
+      username/password keys remain as a deprecated fallback. Update sidecar.yaml to configure
+      auth_provider with the ConfigProvider (or FileProvider) implementation during the upgrade.
+
+New features
+------------
     - IAM instance profile credential support for S3 restore jobs (CASSSIDECAR-415). Sidecar can now
       resolve AWS credentials automatically from the platform (IMDS/ECS/EKS) without requiring key
       material to be passed by the caller. Set credentialType to IAM when creating a restore job to

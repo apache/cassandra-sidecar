@@ -66,7 +66,6 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTask;
 import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * {@link RestoreJobDiscoverer} handles background restore job discovery and handling it according to job status
@@ -400,7 +399,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
     private void processOneJob(RestoreJob job, RestoreJobManagerGroup restoreJobManagers, RunContext context)
     {
         // read the status seen from the prior run before shouldLogJob records the current one
-        boolean statusChanged = jobIdsByDay.lastSeenStatus(job) != job.status;
+        boolean statusChanged = jobIdsByDay.getKnownStatus(job.jobId, job.createdAt.getDaysSinceEpoch()) != job.status;
         if (jobIdsByDay.shouldLogJob(job))
         {
             LOGGER.info("Found job. jobId={} job={}", job.jobId, job);
@@ -679,18 +678,6 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
             Map<UUID, RestoreJobStatus> jobs = jobsByDay.computeIfAbsent(day, key -> new HashMap<>());
             RestoreJobStatus oldStatus = jobs.put(job.jobId, job.status);
             return oldStatus == null || job.status == RestoreJobStatus.CREATED || oldStatus != job.status;
-        }
-
-        /**
-         * Look up the status of the job seen from the prior run, without recording the current one.
-         *
-         * @return the status of the job seen from the prior run, or null if the job has not been seen
-         */
-        @Nullable
-        RestoreJobStatus lastSeenStatus(RestoreJob job)
-        {
-            return jobsByDay.getOrDefault(job.createdAt.getDaysSinceEpoch(), Collections.emptyMap())
-                            .get(job.jobId);
         }
 
         void markSlicesDiscovered(RestoreJob job)
