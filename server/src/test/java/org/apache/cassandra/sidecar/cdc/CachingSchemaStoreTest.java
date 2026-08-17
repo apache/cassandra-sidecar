@@ -307,16 +307,20 @@ public class CachingSchemaStoreTest
                                                         mockSidecarCdcStats, mockSidecarSchema,
                                                         cqlToAvroSchemaConverter, countingPublisherFactory);
 
-            // configureSidecarServerEventListeners() only registers its consumers once
-            // ON_SERVER_START fires, mirroring real startup ordering.
+            // ON_SERVER_START registers the ON_CDC_CONFIGURATION_CHANGED consumer, mirroring real startup.
             testVertx.eventBus().publish(ON_SERVER_START.address(), "server started");
-            loopAssert(5, () -> assertThat(buildPublisherCalls.get()).isEqualTo(0));
+            assertThat(buildPublisherCalls.get()).isEqualTo(0);
 
-            testVertx.eventBus().publish(ON_CDC_CONFIGURATION_CHANGED.address(), "Cdc Configuration Changed");
-            loopAssert(5, () -> assertThat(buildPublisherCalls.get()).isEqualTo(1));
+            // Registration above is async, so retry the publish until the consumer picks it up.
+            loopAssert(5, () -> {
+                if (buildPublisherCalls.get() == 0)
+                {
+                    testVertx.eventBus().publish(ON_CDC_CONFIGURATION_CHANGED.address(), "Cdc Configuration Changed");
+                }
+                assertThat(buildPublisherCalls.get()).isEqualTo(1);
+            });
 
-            // A second config-change signal (e.g. an operator fixing a bad configs table entry)
-            // must trigger another reload — this is the retry the fix restores.
+            // Consumer is registered now, so a second config-change event should trigger another reload.
             testVertx.eventBus().publish(ON_CDC_CONFIGURATION_CHANGED.address(), "Cdc Configuration Changed");
             loopAssert(5, () -> assertThat(buildPublisherCalls.get()).isEqualTo(2));
         }
