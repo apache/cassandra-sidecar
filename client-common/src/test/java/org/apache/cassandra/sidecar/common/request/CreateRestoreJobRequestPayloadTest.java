@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.CredentialType;
@@ -95,17 +94,21 @@ class CreateRestoreJobRequestPayloadTest
     }
 
     @Test
-    void testReadFromJsonFailsWithUnknownFields() throws JsonProcessingException
+    void testReadFromJsonIgnoresUnknownFields() throws JsonProcessingException
     {
         String uuid = "e870e5dc-d25e-11ed-afa1-0242ac120002";
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        // "status" is not a field of the create payload; it is ignored, so that a newer client that sends fields
+        // unknown to this version can still be served. Note that the status of a created job is always CREATED.
         String json = "{\"jobId\":\"" + uuid + "\"," +
                       "\"jobAgent\":\"Spark Bulk Analytics\"," +
                       "\"status\":\"Completed\"," +
                       "\"expireAt\":" + (System.currentTimeMillis() + 1000) +
-                      ",\"secrets\":" + MAPPER.writeValueAsString(RestoreJobSecretsGen.genRestoreJobSecrets()) + "}";
-        assertThatThrownBy(() -> MAPPER.readValue(json, CreateRestoreJobRequestPayload.class))
-        .isInstanceOf(UnrecognizedPropertyException.class)
-        .hasMessageContaining("Unrecognized field \"status\"");
+                      ",\"secrets\":" + MAPPER.writeValueAsString(secrets) + "}";
+        CreateRestoreJobRequestPayload payload = MAPPER.readValue(json, CreateRestoreJobRequestPayload.class);
+        assertThat(payload.jobId()).hasToString(uuid);
+        assertThat(payload.jobAgent()).isEqualTo("Spark Bulk Analytics");
+        assertThat(payload.secrets()).isEqualTo(secrets);
     }
 
     @Test
