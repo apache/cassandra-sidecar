@@ -49,6 +49,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_IMPLEMENTED;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
+import static io.netty.handler.codec.http.HttpResponseStatus.TOO_MANY_REQUESTS;
 import static org.apache.cassandra.sidecar.common.http.SidecarHttpResponseStatus.CHECKSUM_MISMATCH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -167,6 +168,23 @@ class BasicRetryPolicyTest
         testWithRetries(mockRequest, mockResponse, null, 5, 300, canRetryOnADifferentHost);
     }
 
+    @ParameterizedTest(name = "{index} => canRetryOnADifferentHost={0}")
+    @ValueSource(booleans = { true, false })
+    void testRetriesWithTooManyRequestsStatusCode(boolean canRetryOnADifferentHost)
+    {
+        when(mockResponse.statusCode()).thenReturn(TOO_MANY_REQUESTS.code());
+        testWithRetries(mockRequest, mockResponse, null, 5, 300, canRetryOnADifferentHost);
+    }
+
+    @Test
+    void testRetriesWithTooManyRequestsStatusCodeWithRetryAfterHeader()
+    {
+        when(mockResponse.statusCode()).thenReturn(TOO_MANY_REQUESTS.code());
+        headersMap.put("Retry-After", Collections.singletonList("5")); // 5 seconds -> 5,000 millis
+        testWithRetries(mockRequest, mockResponse, null, 5, 1000, 5000, false);
+        testWithRetries(mockRequest, mockResponse, null, 5, 1000, 0, true);
+    }
+
     @Test
     void testRetriesWithServiceUnavailableStatusCodeWithRetryAfterHeader()
     {
@@ -217,7 +235,8 @@ class BasicRetryPolicyTest
     {
         return IntStream.range(400, 500)
                         .filter(statusCode -> statusCode != NOT_FOUND.code()
-                                              && statusCode != CHECKSUM_MISMATCH.code())
+                                              && statusCode != CHECKSUM_MISMATCH.code()
+                                              && statusCode != TOO_MANY_REQUESTS.code())
                         .boxed()
                         .map(Arguments::of);
     }

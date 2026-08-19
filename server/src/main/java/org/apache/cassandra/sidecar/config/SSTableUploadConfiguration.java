@@ -45,4 +45,15 @@ public interface SSTableUploadConfiguration
      * @return the String representation of a set of posix file permissions used during an SSTable file upload
      */
     String filePermissions();
+
+    /**
+     * @return the number of seconds a client should wait before retrying, when this service is rejecting requests
+     * because the concurrent upload limit has been reached
+     */
+    default int retryAfterSeconds()
+    {
+        // default kept here (matching SSTableUploadConfigurationImpl.DEFAULT_RETRY_AFTER_SECONDS) so that adding
+        // this method doesn't break pre-existing implementers of this interface
+        return 1;
+    }
 }

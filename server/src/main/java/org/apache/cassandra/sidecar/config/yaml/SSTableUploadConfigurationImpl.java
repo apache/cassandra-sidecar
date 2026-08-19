@@ -37,6 +37,9 @@ public class SSTableUploadConfigurationImpl implements SSTableUploadConfiguratio
     public static final String FILE_PERMISSIONS_PROPERTY = "file_permissions";
     public static final String DEFAULT_FILE_PERMISSIONS = "rw-r--r--";
 
+    public static final String RETRY_AFTER_SECONDS_PROPERTY = "retry_after_seconds";
+    public static final int DEFAULT_RETRY_AFTER_SECONDS = 1;
+
     @JsonProperty(value = CONCURRENT_UPLOAD_LIMIT_PROPERTY)
     protected final int concurrentUploadsLimit;
 
@@ -45,33 +48,54 @@ public class SSTableUploadConfigurationImpl implements SSTableUploadConfiguratio
 
     protected String filePermissions;
 
+    @JsonProperty(value = RETRY_AFTER_SECONDS_PROPERTY)
+    protected final int retryAfterSeconds;
+
     public SSTableUploadConfigurationImpl()
     {
-        this(DEFAULT_CONCURRENT_UPLOAD_LIMIT, DEFAULT_MIN_FREE_SPACE_PERCENT, DEFAULT_FILE_PERMISSIONS);
+        this(DEFAULT_CONCURRENT_UPLOAD_LIMIT, DEFAULT_MIN_FREE_SPACE_PERCENT, DEFAULT_FILE_PERMISSIONS,
+             DEFAULT_RETRY_AFTER_SECONDS);
     }
 
     public SSTableUploadConfigurationImpl(int concurrentUploadsLimit)
     {
-        this(concurrentUploadsLimit, DEFAULT_MIN_FREE_SPACE_PERCENT, DEFAULT_FILE_PERMISSIONS);
+        this(concurrentUploadsLimit, DEFAULT_MIN_FREE_SPACE_PERCENT, DEFAULT_FILE_PERMISSIONS,
+             DEFAULT_RETRY_AFTER_SECONDS);
     }
 
     public SSTableUploadConfigurationImpl(float minimumSpacePercentageRequired)
     {
-        this(DEFAULT_CONCURRENT_UPLOAD_LIMIT, minimumSpacePercentageRequired, DEFAULT_FILE_PERMISSIONS);
+        this(DEFAULT_CONCURRENT_UPLOAD_LIMIT, minimumSpacePercentageRequired, DEFAULT_FILE_PERMISSIONS,
+             DEFAULT_RETRY_AFTER_SECONDS);
     }
 
     public SSTableUploadConfigurationImpl(String filePermissions)
     {
-        this(DEFAULT_CONCURRENT_UPLOAD_LIMIT, DEFAULT_MIN_FREE_SPACE_PERCENT, filePermissions);
+        this(DEFAULT_CONCURRENT_UPLOAD_LIMIT, DEFAULT_MIN_FREE_SPACE_PERCENT, filePermissions,
+             DEFAULT_RETRY_AFTER_SECONDS);
     }
 
     public SSTableUploadConfigurationImpl(int concurrentUploadsLimit,
                                           float minimumSpacePercentageRequired,
-                                          String filePermissions)
+                                          String filePermissions,
+                                          int retryAfterSeconds)
     {
         this.concurrentUploadsLimit = concurrentUploadsLimit;
         this.minimumSpacePercentageRequired = minimumSpacePercentageRequired;
+        this.retryAfterSeconds = retryAfterSeconds;
         setFilePermissions(filePermissions);
+    }
+
+    /**
+     * @deprecated use {@link #SSTableUploadConfigurationImpl(int, float, String, int)} instead; kept for
+     * backwards compatibility with callers built against the pre-{@code retryAfterSeconds} constructor
+     */
+    @Deprecated
+    public SSTableUploadConfigurationImpl(int concurrentUploadsLimit,
+                                          float minimumSpacePercentageRequired,
+                                          String filePermissions)
+    {
+        this(concurrentUploadsLimit, minimumSpacePercentageRequired, filePermissions, DEFAULT_RETRY_AFTER_SECONDS);
     }
 
     /**
@@ -125,5 +149,15 @@ public class SSTableUploadConfigurationImpl implements SSTableUploadConfiguratio
         {
             this.filePermissions = null;
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = RETRY_AFTER_SECONDS_PROPERTY)
+    public int retryAfterSeconds()
+    {
+        return retryAfterSeconds;
     }
 }

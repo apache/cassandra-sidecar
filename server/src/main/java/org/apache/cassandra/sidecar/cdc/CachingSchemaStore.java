@@ -53,6 +53,7 @@ import org.apache.cassandra.spark.data.CqlTable;
 import org.apache.cassandra.spark.utils.TableIdentifier;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CDC_CACHE_WARMED_UP;
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CDC_CONFIGURATION_CHANGED;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_START;
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SIDECAR_SCHEMA_INITIALIZED;
 
@@ -149,17 +150,37 @@ public class CachingSchemaStore implements SchemaStore
                         return v;
                     });
                 }
-                try
-                {
-                    loadPublisher();
-                    publishSchemas();
-                }
-                catch (Exception e)
-                {
-                    LOGGER.error("Failed to publish schemas to Kafka during initialization, CDC will still start", e);
-                }
+                reloadPublisherAndPublishSchemas("initialization");
+            });
+
+            // Retry on config fix, not just on schema change. Without this listener, the only
+            // retry trigger was onSchemaChanged() (a CQL change) — unrelated to the `configs`
+            // table, so a bad Schema Store config stayed broken on a schema-stable cluster even
+            // after being corrected, until the next CQL change or a restart. Mirrors how
+            // CdcPublisher already reacts to this same event to restart CDC consumers.
+            eventBus.localConsumer(ON_CDC_CONFIGURATION_CHANGED.address(), message -> {
+                LOGGER.info("Cdc configuration changed, reloading Schema Store publisher");
+                reloadPublisherAndPublishSchemas("configuration change");
             });
         });
+    }
+
+    /**
+     * Rebuilds {@link #publisher} from the current Kafka config and republishes every CDC
+     * table's merged schema. Failures are logged and swallowed — a broken Schema Store config
+     * must never block CDC from starting/running.
+     */
+    private void reloadPublisherAndPublishSchemas(String trigger)
+    {
+        try
+        {
+            loadPublisher();
+            publishSchemas();
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("Failed to publish schemas to Kafka during {}, CDC will still start", trigger, e);
+        }
     }
 
     private void publishSchemas()
@@ -221,15 +242,7 @@ public class CachingSchemaStore implements SchemaStore
                 return v;
             });
         }
-        try
-        {
-            loadPublisher();
-            publishSchemas();
-        }
-        catch (Exception e)
-        {
-            LOGGER.error("Failed to publish schemas to Kafka, CDC will still start", e);
-        }
+        reloadPublisherAndPublishSchemas("schema change");
         // Remove any old schema entries for deleted tables, this operation can be done in the end as this is
         // only for removing stale entries and no one is going to use these entries once the table is removed.
         // This doesn't have to be an atomic operation.
