@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.db;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -151,30 +153,20 @@ public class RestoreJobTest
     void testExpectedNextRangeStatusOfFastForwardJob()
     {
         UUID jobId = UUIDs.timeBased();
-        RestoreJob job = createFastForwardTestingJob(jobId, RestoreJobStatus.CREATED);
-        assertThat(job.expectedNextRangeStatus())
-        .describedAs("Expecting the ranges in a CREATED fast forward job to enter STAGED, " +
-                     "since they are staged ahead of the STAGE_READY signal")
-        .isEqualTo(RestoreRangeStatus.STAGED);
-    }
+        // The expected range status of a fast forward job per job status. It differs from the normal flow in the
+        // CREATED status, where the ranges are staged ahead of the STAGE_READY signal, and in the STAGED status,
+        // where importing has already started instead of waiting for the IMPORT_READY signal.
+        Map<RestoreJobStatus, RestoreRangeStatus> expectedByJobStatus = new EnumMap<>(RestoreJobStatus.class);
+        expectedByJobStatus.put(RestoreJobStatus.CREATED, RestoreRangeStatus.STAGED);
+        expectedByJobStatus.put(RestoreJobStatus.STAGE_READY, RestoreRangeStatus.STAGED);
+        expectedByJobStatus.put(RestoreJobStatus.STAGED, RestoreRangeStatus.SUCCEEDED);
+        expectedByJobStatus.put(RestoreJobStatus.IMPORT_READY, RestoreRangeStatus.SUCCEEDED);
 
-    @Test
-    void testSatisfyingRangeStatuses()
-    {
-        UUID jobId = UUIDs.timeBased();
-        assertThat(createTestingJob(jobId, RestoreJobStatus.STAGE_READY).satisfyingRangeStatuses())
-        .containsExactly(RestoreRangeStatus.STAGED);
-        assertThat(createTestingJob(jobId, RestoreJobStatus.IMPORT_READY).satisfyingRangeStatuses())
-        .containsExactly(RestoreRangeStatus.SUCCEEDED);
-        assertThat(createFastForwardTestingJob(jobId, RestoreJobStatus.IMPORT_READY).satisfyingRangeStatuses())
-        .containsExactly(RestoreRangeStatus.SUCCEEDED);
-        // ranges of a fast forward job can advance to SUCCEEDED while the job status remains the same
-        assertThat(createFastForwardTestingJob(jobId, RestoreJobStatus.CREATED).satisfyingRangeStatuses())
-        .describedAs("An imported range of a CREATED fast forward job has fulfilled the staging criteria")
-        .containsExactlyInAnyOrder(RestoreRangeStatus.STAGED, RestoreRangeStatus.SUCCEEDED);
-        assertThat(createFastForwardTestingJob(jobId, RestoreJobStatus.STAGED).satisfyingRangeStatuses())
-        .describedAs("An imported range of a STAGED fast forward job has fulfilled the staging criteria")
-        .containsExactlyInAnyOrder(RestoreRangeStatus.STAGED, RestoreRangeStatus.SUCCEEDED);
+        expectedByJobStatus.forEach((jobStatus, expectedRangeStatus) ->
+                                    assertThat(createFastForwardTestingJob(jobId, jobStatus).expectedNextRangeStatus())
+                                    .describedAs("Expecting the ranges of a fast forward job in " + jobStatus +
+                                                 " status to enter " + expectedRangeStatus)
+                                    .isEqualTo(expectedRangeStatus));
     }
 
     @Test

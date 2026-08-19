@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
@@ -66,6 +67,8 @@ import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_S
  * type is rejected at construction time to surface misconfigurations before they reach the AWS SDK.
  */
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+// Ignore the unknown fields, so that a newer client can talk to an older server that does not know all the fields yet
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class CreateRestoreJobRequestPayload
 {
     private final UUID jobId;

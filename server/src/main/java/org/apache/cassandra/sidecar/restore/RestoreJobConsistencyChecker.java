@@ -19,7 +19,6 @@
 package org.apache.cassandra.sidecar.restore;
 
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -41,7 +40,6 @@ import org.apache.cassandra.sidecar.cluster.ConsistencyVerifiers;
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
 import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
-import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
@@ -76,7 +74,9 @@ public class RestoreJobConsistencyChecker
     private final RestoreRangeDatabaseAccessor rangeDatabaseAccessor;
     private final TaskExecutorPool taskExecutorPool;
     private final RestoreMetrics restoreMetrics;
-    private volatile boolean firstTimeSinceImportReady = true;
+    // Set to false after the first consistency check of the importing phase, which starts at IMPORT_READY normally
+    // and at STAGED when the job has fast forward enabled
+    private volatile boolean firstCheckOfImportPhase = true;
 
     @Inject
     public RestoreJobConsistencyChecker(RingTopologyRefresher ringTopologyRefresher,
@@ -99,7 +99,7 @@ public class RestoreJobConsistencyChecker
                                     || StringUtils.isNotEmpty(restoreJob.localDatacenter),
                                     "When using local consistency level, localDatacenter must present");
         RestoreJobProgressCollector collector = RestoreJobProgressCollectors.create(restoreJob, fetchPolicy);
-        Set<RestoreRangeStatus> successCriteria = restoreJob.satisfyingRangeStatuses();
+        RestoreRangeStatus successCriteria = restoreJob.expectedNextRangeStatus();
         ConsistencyVerifier verifier = ConsistencyVerifiers.forConsistencyLevel(restoreJob.consistencyLevel, restoreJob.localDatacenter);
         LOGGER.info("Checking restore job progress. jobId={} fetchPolicy={} successCriteria={}", restoreJob.jobId, fetchPolicy, successCriteria);
         Future<RestoreJobProgress> future = ringTopologyRefresher
@@ -109,7 +109,7 @@ public class RestoreJobConsistencyChecker
     }
 
     private Future<RestoreJobProgress> findRangesAndConclude(RestoreJob restoreJob,
-                                                             Set<RestoreRangeStatus> successCriteria,
+                                                             RestoreRangeStatus successCriteria,
                                                              TokenRangeReplicasResponse topology,
                                                              ConsistencyVerifier verifier,
                                                              RestoreJobProgressCollector collector)
@@ -141,11 +141,12 @@ public class RestoreJobConsistencyChecker
             return true;
         }
 
-        if (restoreJob.status == RestoreJobStatus.IMPORT_READY && firstTimeSinceImportReady)
+        if (restoreJob.shouldImportNow() && firstCheckOfImportPhase)
         {
-            firstTimeSinceImportReady = false;
-            LOGGER.info("First time checking consistency of the restore job after import_ready. " +
-                        "Mark the progress as pending and force restore job discover run. jobId={}", restoreJob.jobId);
+            firstCheckOfImportPhase = false;
+            LOGGER.info("First time checking consistency of the restore job after the importing phase has started. " +
+                        "Mark the progress as pending and force restore job discover run. jobId={} status={}",
+                        restoreJob.jobId, restoreJob.status);
             return true;
         }
         return false;
@@ -155,7 +156,7 @@ public class RestoreJobConsistencyChecker
     private static void concludeRanges(List<RestoreRange> ranges,
                                        TokenRangeReplicasResponse topology,
                                        ConsistencyVerifier verifier,
-                                       Set<RestoreRangeStatus> successCriteria,
+                                       RestoreRangeStatus successCriteria,
                                        RestoreJobProgressCollector collector)
     {
         RangeMap<Token, InstanceSetByDc> replicasPerRange = populateReplicas(topology);
@@ -232,7 +233,7 @@ public class RestoreJobConsistencyChecker
      *
      * @param replicasByRange replica set of each token range
      * @param verifier check whether the replicas status can satisfy the consistency level
-     * @param successCriteria the {@link RestoreRangeStatus} of replicas that fulfill the expectation
+     * @param successCriteria the expected {@link RestoreRangeStatus} for replicas
      * @param range range to check
      * @param statusByReplica restore progress of each instance
      * @return result of the consistency verification
@@ -240,12 +241,12 @@ public class RestoreJobConsistencyChecker
     @SuppressWarnings("UnstableApiUsage")
     private static ConsistencyVerificationResult concludeOneRange(RangeMap<Token, InstanceSetByDc> replicasByRange,
                                                                   ConsistencyVerifier verifier,
-                                                                  Set<RestoreRangeStatus> successCriteria,
+                                                                  RestoreRangeStatus successCriteria,
                                                                   Range<Token> range,
                                                                   Map<String, RestoreRangeStatus> statusByReplica)
     {
         Map<RestoreRangeStatus, Set<String>> groupByStatus = groupReplicaByStatus(statusByReplica);
-        Set<String> succeeded = succeededReplicas(groupByStatus, successCriteria);
+        Set<String> succeeded = groupByStatus.getOrDefault(successCriteria, Collections.emptySet());
         Set<String> failed = groupByStatus.getOrDefault(RestoreRangeStatus.FAILED, Collections.emptySet());
         InstanceSetByDc replicaSet = replicaSetForRange(range, replicasByRange);
         if (replicaSet == null) // cannot proceed to verify yet. Return pending
@@ -263,20 +264,6 @@ public class RestoreJobConsistencyChecker
             default:
                 return ConsistencyVerificationResult.SATISFIED;
         }
-    }
-
-    // Collect the replicas whose range status fulfills any of the success criteria
-    private static Set<String> succeededReplicas(Map<RestoreRangeStatus, Set<String>> groupByStatus,
-                                                 Set<RestoreRangeStatus> successCriteria)
-    {
-        if (successCriteria.size() == 1) // the common case; avoid copying into a new set
-        {
-            return groupByStatus.getOrDefault(successCriteria.iterator().next(), Collections.emptySet());
-        }
-
-        Set<String> succeeded = new HashSet<>();
-        successCriteria.forEach(status -> succeeded.addAll(groupByStatus.getOrDefault(status, Collections.emptySet())));
-        return succeeded;
     }
 
     private static Map<RestoreRangeStatus, Set<String>> groupReplicaByStatus(Map<String, RestoreRangeStatus> statusMap)
@@ -326,15 +313,6 @@ public class RestoreJobConsistencyChecker
     static ConsistencyVerificationResult concludeOneRangeUnsafe(TokenRangeReplicasResponse topology,
                                                                 ConsistencyVerifier verifier,
                                                                 RestoreRangeStatus successCriteria,
-                                                                RestoreRange range)
-    {
-        return concludeOneRangeUnsafe(topology, verifier, EnumSet.of(successCriteria), range);
-    }
-
-    @VisibleForTesting
-    static ConsistencyVerificationResult concludeOneRangeUnsafe(TokenRangeReplicasResponse topology,
-                                                                ConsistencyVerifier verifier,
-                                                                Set<RestoreRangeStatus> successCriteria,
                                                                 RestoreRange range)
     {
         return concludeOneRange(populateReplicas(topology), verifier, successCriteria,

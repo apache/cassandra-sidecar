@@ -474,7 +474,7 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         if (shouldFindSlicesAndSubmit(job))
         {
             findSlicesAndSubmit(job);
-            if (!isEagerStagingPhase(job))
+            if (job.status != RestoreJobStatus.CREATED)
             {
                 // Mark the flag. It prevents finding slices (which is expensive) until the flag is unset.
                 // The flag is not marked while a fast forward job is still in CREATED status, since its slices are
@@ -521,21 +521,10 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
 
     private boolean shouldFindSlicesAndSubmit(RestoreJob job)
     {
-        // A fast forward job stages its slices while it is still in CREATED status. The slices are uploaded
-        // progressively, so the discovery is repeated on every run, i.e. it does not consult the discovered flag.
-        if (isEagerStagingPhase(job))
-        {
-            return true;
-        }
-
-        return (job.status == RestoreJobStatus.STAGE_READY || job.shouldImportNow())
+        // Note that the discovered flag is never marked while a fast forward job is in CREATED status, since its
+        // slices are uploaded progressively. The discovery therefore repeats on every run of that phase.
+        return (job.shouldStageNow() || job.shouldImportNow())
                && !jobIdsByDay.isSliceDiscovered(job);
-    }
-
-    // Whether the job is a fast forward job that has started staging ahead of the STAGE_READY signal
-    private boolean isEagerStagingPhase(RestoreJob job)
-    {
-        return job.fastForwardEnabled && job.status == RestoreJobStatus.CREATED;
     }
 
     private void finalizeJob(RestoreJobManagerGroup restoreJobManagers, RestoreJob job)

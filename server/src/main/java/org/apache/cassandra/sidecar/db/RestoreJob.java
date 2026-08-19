@@ -21,10 +21,8 @@ package org.apache.cassandra.sidecar.db;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Date;
-import java.util.Set;
 import java.util.UUID;
 
-import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -266,32 +264,13 @@ public class RestoreJob
         Preconditions.checkArgument(fastForwardEnabled || status != RestoreJobStatus.CREATED,
                                     "Cannot check progress for restore job in CREATED status. jobId: " + jobId);
 
-        // While the job is still staging, or has just staged, the ranges are expected to reach STAGED.
-        // Note that shouldStageNow() covers the CREATED status of a fast forward job.
-        return shouldStageNow() || status == RestoreJobStatus.STAGED
+        // The job is still staging its ranges when shouldStageNow() holds, i.e. in CREATED status for a fast forward
+        // job and in STAGE_READY status for any job.
+        // The STAGED status maps to STAGED as well, but only in the normal flow, where importing waits for the
+        // IMPORT_READY signal. With fast forward, importing has already started in STAGED status, hence SUCCEEDED.
+        return shouldStageNow() || (status == RestoreJobStatus.STAGED && !fastForwardEnabled)
                ? RestoreRangeStatus.STAGED
                : RestoreRangeStatus.SUCCEEDED;
-    }
-
-    /**
-     * Determine all the range statuses that satisfy the success criteria derived from the job status, i.e.
-     * {@link #expectedNextRangeStatus()}.
-     *
-     * <p>When fast forward is enabled, a range can advance past the expected status while the job status remains the
-     * same, e.g. a range gets imported while the job is still in {@link RestoreJobStatus#STAGED} status. Those ranges
-     * have already fulfilled the criteria; the later status must count too, otherwise the consistency check of the
-     * staging phase could never conclude once importing has started.
-     *
-     * @return the immutable set of range statuses that satisfy the success criteria
-     */
-    public Set<RestoreRangeStatus> satisfyingRangeStatuses()
-    {
-        RestoreRangeStatus expected = expectedNextRangeStatus();
-        if (fastForwardEnabled && expected == RestoreRangeStatus.STAGED)
-        {
-            return Sets.immutableEnumSet(RestoreRangeStatus.STAGED, RestoreRangeStatus.SUCCEEDED);
-        }
-        return Sets.immutableEnumSet(expected);
     }
 
     @Nullable
