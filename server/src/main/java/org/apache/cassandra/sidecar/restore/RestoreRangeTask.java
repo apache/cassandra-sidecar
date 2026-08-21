@@ -193,7 +193,8 @@ public class RestoreRangeTask implements RestoreRangeHandler
                 else
                 {
                     String msg = "Unexpected restore job status. Expected the job to be ready to stage or to import " +
-                                 "when processing active slices. Found status: " + job.statusWithOptionalDescription();
+                                 "when processing active slices. Found status: " + job.statusWithOptionalDescription() +
+                                 " and fast forward: " + (job.fastForwardEnabled ? "enabled" : "disabled");
                     Exception unexpectedState = new IllegalStateException(msg);
                     return Future.failedFuture(RestoreJobExceptions.ofFatal("Unexpected restore job status",
                                                                             range, unexpectedState));
