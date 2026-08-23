@@ -38,6 +38,7 @@ import org.apache.cassandra.distributed.shared.JMXUtil;
 import org.apache.cassandra.sidecar.adapters.base.CassandraFactory;
 import org.apache.cassandra.sidecar.adapters.cassandra41.Cassandra41Factory;
 import org.apache.cassandra.sidecar.adapters.cassandra50.Cassandra50Factory;
+import org.apache.cassandra.sidecar.adapters.cassandra60.Cassandra60Factory;
 import org.apache.cassandra.sidecar.cluster.CQLSessionProviderImpl;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
@@ -132,6 +133,7 @@ public class CassandraSidecarTestContext implements AutoCloseable
                .add(new CassandraFactory(dnsResolver, driverUtils, tableSchemaFetcher))
                .add(new Cassandra41Factory(dnsResolver, driverUtils, tableSchemaFetcher))
                .add(new Cassandra50Factory(dnsResolver, driverUtils, tableSchemaFetcher))
+               .add(new Cassandra60Factory(dnsResolver, driverUtils, tableSchemaFetcher))
                .build();
     }
 

@@ -124,7 +124,7 @@ public class CassandraStorageOperations implements StorageOperations
                                         @Nullable Map<String, String> options)
     {
         requireNonNull(tag, "snapshot tag must be non-null");
-        requireNonNull(keyspace, "keyspace for the  must be non-null");
+        requireNonNull(keyspace, "keyspace must be non-null");
         requireNonNull(table, "table must be non-null");
         try
         {
@@ -133,34 +133,57 @@ public class CassandraStorageOperations implements StorageOperations
         }
         catch (IOException e)
         {
-            // post-5.0, IOExceptions are thrown when previously something else like
-            // an IllegalArgumentException was thrown. First, try to unwrap the IOException and throw
-            // the original cause, which we will process correctly in CreateSnapshotHandler
-            // if the exception was an IllegalArgumentException
-            IllegalArgumentException iex = ThrowableUtils.getCause(e, IllegalArgumentException.class);
-            if (iex != null)
-            {
-                throw iex;
-            }
-            String errorMessage = e.getMessage();
-            if (errorMessage != null)
-            {
-                if (errorMessage.contains("Snapshot " + tag + " already exists") ||
-                    errorMessage.contains("Snapshot " + tag + " for " + keyspace + "." + table + " already exists"))
-                {
-                    throw new SnapshotAlreadyExistsException(e);
-                }
-                else if (errorMessage.contains("Keyspace " + keyspace + " does not exist"))
-                {
-                    throw new IllegalArgumentException(e);
-                }
-                else if (errorMessage.contains("Cannot snapshot until bootstrap completes"))
-                {
-                    throw new NodeBootstrappingException(e);
-                }
-            }
-            throw new RuntimeException(e);
+            throw translateSnapshotFailure(e, tag, keyspace, table);
         }
+    }
+
+    /**
+     * @return the exception to throw for a snapshot JMX failure
+     */
+    protected RuntimeException translateSnapshotFailure(@NotNull IOException e,
+                                                       @NotNull String tag,
+                                                       @NotNull String keyspace,
+                                                       @NotNull String table)
+    {
+        RuntimeException translated = classifySnapshotFailure(e, tag, keyspace, table);
+        return translated != null ? translated : new RuntimeException(e);
+    }
+
+    /**
+     * @return the exception that the snapshot handlers map to a response, or {@code null} when the failure
+     * matches no known snapshot failure, which lets the caller decide what to throw
+     */
+    protected @Nullable RuntimeException classifySnapshotFailure(@NotNull Exception e,
+                                                                @NotNull String tag,
+                                                                @NotNull String keyspace,
+                                                                @NotNull String table)
+    {
+        // post-5.0 wraps in IOException what earlier releases threw directly, so unwrap first
+        IllegalArgumentException iex = ThrowableUtils.getCause(e, IllegalArgumentException.class);
+        if (iex != null)
+        {
+            return iex;
+        }
+        // 6.0 wraps a snapshot task failure without carrying its message forward, so search the whole chain
+        if (messageContains(e, "Snapshot " + tag + " already exists") ||
+            messageContains(e, "Snapshot " + tag + " for " + keyspace + "." + table + " already exists"))
+        {
+            return new SnapshotAlreadyExistsException(e);
+        }
+        else if (messageContains(e, "Keyspace " + keyspace + " does not exist"))
+        {
+            return new IllegalArgumentException(e);
+        }
+        else if (messageContains(e, "Cannot snapshot until bootstrap completes"))
+        {
+            return new NodeBootstrappingException(e);
+        }
+        return null;
+    }
+
+    private static boolean messageContains(@NotNull Throwable throwable, @NotNull String text)
+    {
+        return ThrowableUtils.getCause(throwable, t -> t.getMessage() != null && t.getMessage().contains(text)) != null;
     }
 
     /**

@@ -137,10 +137,20 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
 
     public EventConsumer eventConsumer(CdcConfig conf)
     {
-        CassandraVersion version = cassandraBridgeFactory.get(
-            instanceMetadataFetcher.callOnFirstAvailableInstance(instance ->
-                instance.delegate().nodeSettings()).releaseVersion()
-        ).getVersion();
+        String releaseVersion = instanceMetadataFetcher.callOnFirstAvailableInstance(instance ->
+            instance.delegate().nodeSettings()).releaseVersion();
+        CassandraVersion version;
+        try
+        {
+            version = cassandraBridgeFactory.get(releaseVersion).getVersion();
+        }
+        catch (RuntimeException e)
+        {
+            // cassandra-analytics ships one commit log bridge per supported release, and has none for 6.0. It rejects
+            // an unsupported release with IllegalArgumentException and a pre-release version with RuntimeException
+            throw new UnsupportedOperationException("CDC does not support Cassandra release version "
+                                                    + releaseVersion + ". Disable CDC on this node.", e);
+        }
         this.kafkaPublisher = KafkaPublisher.create(version,
                                                     buildTopicSupplier(conf),
                                                     conf.kafkaConfigs(),

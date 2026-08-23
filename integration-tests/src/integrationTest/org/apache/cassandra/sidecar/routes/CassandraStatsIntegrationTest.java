@@ -270,9 +270,19 @@ class CassandraStatsIntegrationTest extends SharedClusterSidecarIntegrationTestB
                     assertThat(stat.clientOptions()).isNotNull();
                     assertThat(stat.clientOptions().containsKey("CQL_VERSION")).isTrue();
                 }
+                if (majorVersion.compareTo(SimpleCassandraVersion.create("6.0.0")) >= 0)
+                {
+                    // 6.0 added authentication_mode to system_views.clients, and the test cluster runs
+                    // AllowAllAuthenticator, which reports AuthenticationMode.UNAUTHENTICATED
+                    assertThat(stat.authenticationMode()).isEqualTo("Unauthenticated");
+                }
+                else
+                {
+                    // the column does not exist below 6.0
+                    assertThat(stat.authenticationMode()).isNull();
+                }
             }
 
-            // TODO: Add validations for fields in trunk once dtest jars can advance beyond TCM commit
             if (usingKeyspace
                 && majorVersion.compareTo(SimpleCassandraVersion.create("5.0.0")) >= 0)
             {

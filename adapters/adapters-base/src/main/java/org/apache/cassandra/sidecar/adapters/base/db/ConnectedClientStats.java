@@ -55,7 +55,8 @@ public class ConnectedClientStats
     {
         this.address = row.getInet("address").getHostAddress();
         this.port = row.getInt("port");
-        this.hostname = row.getString("hostname");
+        // Cassandra 6.0 removed the hostname column under CASSANDRA-21539 to avoid a DNS lookup per row
+        this.hostname = getStringFieldIfExists(row, "hostname");
         this.username = row.getString("username");
         this.connectionStage = row.getString("connection_stage");
         this.protocolVersion = Integer.toString(row.getInt("protocol_version"));

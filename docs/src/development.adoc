@@ -25,6 +25,41 @@ Implementation of ICassandraAdapter and related classes for different Cassandra 
 
 Implementation of ICassandraAdapter and related classes for Cassandra 4.0.
 
+#### adapters/adapters-cassandra41, adapters/adapters-cassandra50, adapters/adapters-cassandra60
+
+One module per release line that changes a surface the Sidecar uses.  Each module extends the module
+below it and overrides only the operations that the release changed.  `CassandraVersionProvider`
+selects the module whose `@MinimumVersion` is the highest one at or below the release version that the
+node reports.
+
+Cassandra 6.0 changes four surfaces that the Sidecar reads:
+
+* Snapshot methods on `StorageServiceMBean` are deprecated in favour of the
+  `org.apache.cassandra.service.snapshot:type=SnapshotManager` MBean, so `Cassandra60StorageOperations`
+  routes `takeSnapshot` and `clearSnapshot` there.  That MBean wraps a failed `takeSnapshot` in an
+  `IOException` but leaves a failed `clearSnapshot` as a `RuntimeException`, so the 6.0 class classifies
+  both.  Only `CassandraDaemon` registers that MBean, and the in-JVM dtest node does not, so
+  `Cassandra60StorageOperations` catches `InstanceNotFoundException` and uses the deprecated Storage Service
+  MBean methods instead.
+* CASSANDRA-21539 removed the `hostname` column from `system_views.clients`, to avoid one DNS lookup per
+  row.  `ConnectedClientStats` reads that column only when it is present, so its `hostname` is null on 6.0.
+  The connected clients response never carried that value, so API consumers see no change.
+* 6.0 adds the `authentication_mode` column to `system_views.clients`, so the connected clients response
+  carries that field on 6.0 and null below it.
+* Under CEP-21, `Gossiper` takes the gossiped release version from cluster metadata rather than from the
+  build property.  Cluster metadata holds a parsed version, so a pre-release renders differently: a node
+  built as `6.0-alpha3-SNAPSHOT` gossips `6.0.0-alpha3.SNAPSHOT`.  The gossip response carries that form,
+  and a released version is unaffected.  The node settings response still carries the build property.
+
+Two more notes for API consumers.  Since Cassandra 5.0.6, the `system_views.settings` virtual table
+renders collection and map values as JSON, so those values reach consumers as JSON in the node settings
+response; set `cassandra.virtual_table_complex_settings_format_json=false` on the node to restore the old
+form.  `EndpointSnitchInfoMBean` is deprecated at type level in 6.0 under CASSANDRA-19488.  It still
+works, and `RingProvider` and `TokenRangeReplicaProvider` still use it.
+
+Change data capture has no Cassandra 6.0 support.  cassandra-analytics ships one commit log bridge per
+release line, and no 6.0 bridge exists yet, so CDC must stay disabled on a 6.0 node.
+
 ### Cassandra Integration Tests
 
 Cassandra integration tests leverage the in-jvm dtest framework to create Cassandra nodes and test the different implementations of the ICassandraAdapters against real C* nodes.

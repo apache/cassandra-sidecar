@@ -134,8 +134,8 @@ jobs:
 
             All tests passed before creating these artifacts:
             - ✅ Unit tests (Java 11, 17, 21)
-            - ✅ Lightweight integration tests (Java 11, 17, 21 × Cassandra 4.0, 4.1, 5.0, 5.1)
-            - ✅ Heavyweight integration tests (Java 11, 17, 21 × Cassandra 4.0, 4.1, 5.0, 5.1)
+            - ✅ Lightweight integration tests (Java 11, 17, 21 × Cassandra 4.0, 4.1, 5.0, 6.0)
+            - ✅ Heavyweight integration tests (Java 11, 17, 21 × Cassandra 4.0, 4.1, 5.0, 6.0)
             - ✅ Static analysis (SpotBugs, Apache RAT, JaCoCo)
 
             ### Artifacts

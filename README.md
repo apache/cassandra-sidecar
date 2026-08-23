@@ -30,7 +30,7 @@ We use the [Sidecar for Apache Cassandra JIRA](https://issues.apache.org/jira/pr
 Requirements
 ------------
   1. Java >= 11<sup>1</sup> (OpenJDK or Oracle)
-  2. Apache Cassandra 4.0.  We depend on virtual tables which is a 4.0 only feature.
+  2. Apache Cassandra 4.0 through 6.0.  We depend on virtual tables, which arrived in 4.0.
   3. [Docker](https://www.docker.com/products/docker-desktop/) for running integration tests.
 
 Build Prerequisites
@@ -46,9 +46,9 @@ The build script supports two parameters:
 - `REPO` - the Cassandra git repository to use for the source files. This is helpful if you need to test with a fork of the Cassandra codebase.
     - default: `git@github.com:apache/cassandra.git`
 - `BRANCHES` - a space-delimited list of branches to build.
-  -default: `"cassandra-4.1 trunk"`
+  -default: `"cassandra-4.0 cassandra-4.1 cassandra-5.0 cassandra-6.0"`
 
-Remove any versions you may not want to test with. We recommend at least the latest (released) 4.X series and `trunk`.
+Remove any versions you may not want to test with. We recommend at least the latest (released) 4.X series and `cassandra-6.0`.
 See Testing for more details on how to choose which Cassandra versions to use while testing.
 
 For multi-node in-jvm dtests, network aliases will need to be setup for each Cassandra node. The tests assume each node's 
@@ -298,9 +298,9 @@ While Sidecar includes a built-in schema store, you can integrate with external 
 Testing
 -------
 
-The test framework is set up to run 4.1 and 5.1 (Trunk) tests (see `TestVersionSupplier.java`) by default.
+The test framework is set up to run 4.1 and 6.0 tests (see `TestVersionSupplier.java`) by default.
 You can change this via the Java property `cassandra.sidecar.versions_to_test` by supplying a comma-delimited string.
-For example, `-Dcassandra.sidecar.versions_to_test=4.0,4.1,5.1`.
+For example, `-Dcassandra.sidecar.versions_to_test=4.0,4.1,6.0`.
 
 CircleCI Testing
 -----------------
