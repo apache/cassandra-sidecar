@@ -27,6 +27,7 @@ import io.vertx.ext.web.client.HttpResponse;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.HealthResponse;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
+import org.apache.cassandra.sidecar.utils.SimpleCassandraVersion;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.apache.cassandra.testing.utils.AssertionUtils.getBlocking;
@@ -67,14 +68,11 @@ class RoutesIntegrationTest extends SharedClusterSidecarIntegrationTestBase
         assertThat(gossipInfo.generation()).isNotNull();
         assertThat(gossipInfo.heartbeat()).isNotNull();
         assertThat(gossipInfo.hostId()).isNotNull();
-        String releaseVersion = cluster.getFirstRunningInstance().getReleaseVersionString();
-        releaseVersion = stripSnapshot(releaseVersion);
-        assertThat(gossipInfo.releaseVersion()).startsWith(releaseVersion);
-    }
-
-    private String stripSnapshot(String version)
-    {
-        return version.replace("-SNAPSHOT", "");
+        // 6.0 takes the gossiped release version from cluster metadata, which renders 6.0-alpha3-SNAPSHOT as
+        // 6.0.0-alpha3.SNAPSHOT, so compare the parsed versions rather than the strings
+        SimpleCassandraVersion expected
+        = SimpleCassandraVersion.create(cluster.getFirstRunningInstance().getReleaseVersionString());
+        assertThat(SimpleCassandraVersion.create(gossipInfo.releaseVersion())).isEqualTo(expected);
     }
 
     @Test

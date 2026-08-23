@@ -223,7 +223,7 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
         );
         String cassandraVersion = testVersion.version();
 
-        // Check MAJOR_COMPACTION rejected with Cassandra 4.x, accepted with 5.x
+        // Check MAJOR_COMPACTION rejected with Cassandra 4.x, accepted from 5.0 onwards
         if (cassandraVersion.startsWith("4."))
         {
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.BAD_REQUEST.code());
@@ -238,17 +238,12 @@ class CompactionStopIntegrationTest extends SharedClusterSidecarIntegrationTestB
                     msg -> assertThat(msg).contains("MAJOR_COMPACTION")
                 );
         }
-        else if (cassandraVersion.startsWith("5."))
+        else
         {
             assertThat(response.statusCode()).isEqualTo(HttpResponseStatus.OK.code());
             CompactionStopResponse stopResponse = response.bodyAsJson(CompactionStopResponse.class);
             assertThat(stopResponse.status()).isEqualTo(CompactionStopStatus.SUBMITTED);
             assertThat(stopResponse.compactionType()).isEqualTo("MAJOR_COMPACTION");
-        }
-        else
-        {
-            // Unknown Cassandra version
-            throw new AssertionError("Unexpected Cassandra version: " + cassandraVersion);
         }
     }
 

@@ -76,7 +76,8 @@ public class CassandraNodeOperationsIntegrationTest extends SharedClusterSidecar
         trustedClient().put(serverWrapper.serverPort, "localhost", ApiEndpointsV1.NODE_DRAIN_ROUTE)
                        .send());
 
-        assertThat(drainResponse.statusCode()).isEqualTo(OK.code());
+        // the handler answers 202 while the job still runs, which 6.0 reaches because its drain does more work
+        assertThat(drainResponse.statusCode()).isIn(OK.code(), ACCEPTED.code());
 
         JsonObject responseBody = drainResponse.bodyAsJsonObject();
         assertThat(responseBody).isNotNull();

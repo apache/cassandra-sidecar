@@ -30,7 +30,7 @@ We use the [Sidecar for Apache Cassandra JIRA](https://issues.apache.org/jira/pr
 Requirements
 ------------
   1. Java >= 11<sup>1</sup> (OpenJDK or Oracle)
-  2. Apache Cassandra >= 4.0.  We depend on virtual tables which is a 4.0+ only feature.
+  2. Apache Cassandra 4.0 through 6.0.  We depend on virtual tables, which arrived in 4.0.
   3. [Docker](https://www.docker.com/products/docker-desktop/) for running integration tests.
 
 Running the Sidecar from the binaries
@@ -52,7 +52,7 @@ The build script supports two parameters:
 - `REPO` - the Cassandra git repository to use for the source files. This is helpful if you need to test with a fork of the Cassandra codebase.
     - default: `git@github.com:apache/cassandra.git`
 - `BRANCHES` - a space-delimited list of branches to build.
-  -default: `"cassandra-4.1 trunk"`
+  -default: `"cassandra-4.0 cassandra-4.1 cassandra-5.0 cassandra-6.0"`
 
 If you have difficulty in getting the build process to use the crrect version of Java, you can also override the `JAVACMD` variable.
 
@@ -62,7 +62,7 @@ export JAVACMD="/Users/flynn/.jenv/shims/java"
 export BRANCHES="cassandra-5.0"
 ```
 
-Remove any versions you may not want to test with. We recommend at least the latest (released) 4.X series and `trunk`.
+Remove any versions you may not want to test with. We recommend at least the latest (released) 4.X series and `cassandra-6.0`.
 See Testing for more details on how to choose which Cassandra versions to use while testing.
 
 ```shell

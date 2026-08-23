@@ -19,6 +19,7 @@
 package org.apache.cassandra.sidecar.utils;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -105,6 +106,9 @@ public class CassandraVersionProvider
             {
                 throw new IllegalStateException("At least one ICassandraFactory is required");
             }
+            // cassandra() seeds its answer with the first element and only moves upward, so sort here rather than
+            // require every registration site to add its factories in ascending order
+            versions.sort(Comparator.comparing(SimpleCassandraVersion::create));
             return new CassandraVersionProvider(versions);
         }
 

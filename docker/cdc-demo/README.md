@@ -184,7 +184,7 @@ http://localhost:8080/ui/clusters/local/schemas/cdc-mutations-value
 
 ## Supported Cassandra Versions
 
-CDC is supported for **4.0, 4.1, 5.0, 5.1**. To use a different version:
+CDC is supported for **4.0, 4.1, 5.0**. To use a different version:
 
 ```bash
 CASSANDRA_VERSION=4.1 ./scripts/start.sh
