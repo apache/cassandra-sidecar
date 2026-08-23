@@ -107,7 +107,8 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<Name> implement
                                   SocketAddress remoteAddress,
                                   Name keyspace)
     {
-        if (cause instanceof AssertionError &&
+        // Cassandra raises an AssertionError up to 5.0, and an IllegalArgumentException from 6.0 onwards
+        if ((cause instanceof AssertionError || cause instanceof IllegalArgumentException) &&
             StringUtils.contains(cause.getMessage(), "Unknown keyspace"))
         {
             context.fail(HttpExceptions.wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage()));

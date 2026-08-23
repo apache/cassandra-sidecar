@@ -60,12 +60,12 @@ import static org.assertj.core.api.Assumptions.assumeThat;
  * CDC-specific configuration and setup, including:
  * - CDC-enabled Cassandra cluster configuration
  * - TestCdcPublisher with TestCdcEventConsumer
- * - Cassandra 4.0 through 5.0 version support (analytics 0.4.0 does not support 5.1+)
+ * - Cassandra 4.0 through 5.0 version support (analytics 0.4.0 has no bridge above 5.0)
  * - Helper methods to access CDC components
  */
 public abstract class SharedClusterCdcSidecarIntegrationTestBase extends SharedClusterIntegrationTestBase
 {
-    // Analytics 0.4.0 supports up to Cassandra 5.0 (majorVersion=50). Cassandra 5.1+ requires a newer analytics version.
+    // Analytics 0.4.0 supports up to Cassandra 5.0. A later release requires a newer analytics version.
     private static final SimpleCassandraVersion MAX_SUPPORTED_CDC_VERSION = SimpleCassandraVersion.create("5.0.99");
 
     @Override

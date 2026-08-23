@@ -19,7 +19,9 @@
 package org.apache.cassandra.sidecar.cdc;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.cdc.api.CdcOptions;
@@ -59,12 +61,38 @@ public class SidecarCdcOptions implements CdcOptions
         return instanceMetadataFetcher.callOnFirstAvailableInstance(instance-> instance.delegate().nodeSettings().datacenter());
     }
 
+    /**
+     * Resolve the commit log format from the release version that the local node reports.
+     *
+     * <p>A release without a cassandra-analytics bridge fails here, rather than reading its commit logs with a
+     * bridge for another format. cassandra-analytics {@code 0.4.0} has no 6.0 bridge, so CDC is unavailable on 6.0.
+     */
     @Override
     public CassandraVersion version()
     {
         String releaseVersion = instanceMetadataFetcher.callOnFirstAvailableInstance(
                 instance -> instance.delegate().nodeSettings().releaseVersion());
-        return CassandraVersion.fromVersion(releaseVersion).orElse(CassandraVersion.FOURZERO);
+        // fromVersion rejects a pre-release version such as 6.0-alpha3-SNAPSHOT by throwing, and returns an empty
+        // Optional for a release it has no bridge for, so both outcomes carry the same message
+        try
+        {
+            return CassandraVersion.fromVersion(releaseVersion)
+                                   .orElseThrow(() -> unsupportedRelease(releaseVersion, null));
+        }
+        catch (RuntimeException e)
+        {
+            throw e instanceof UnsupportedOperationException ? e : unsupportedRelease(releaseVersion, e);
+        }
+    }
+
+    private static UnsupportedOperationException unsupportedRelease(String releaseVersion, Throwable cause)
+    {
+        String supported = Arrays.stream(CassandraVersion.values())
+                                 .map(CassandraVersion::versionName)
+                                 .collect(Collectors.joining(", "));
+        return new UnsupportedOperationException("CDC does not support Cassandra release version " + releaseVersion
+                                                 + ". Supported versions are " + supported
+                                                 + ". Disable CDC on this node.", cause);
     }
 
     /**

@@ -65,6 +65,20 @@ public class ConnectedClientStatsTest
         assertThat(stats.clientOptions).isNull();
     }
 
+    @Test
+    public void connectedClientStatsWithoutHostnameTest()
+    {
+        // Cassandra 6.0 removed the hostname column from system_views.clients under CASSANDRA-21539
+        setupMockData(mockRow, false);
+        when(mockRow.getColumnDefinitions().contains(anyString()))
+        .thenAnswer(i -> !"hostname".equals(i.getArgument(0, String.class)));
+
+        ConnectedClientStats stats = new ConnectedClientStats(mockRow);
+        assertThat(stats.hostname).isNull();
+        assertThat(stats.username).isEqualTo("u1");
+        assertThat(stats.authenticationMode).isEqualTo("password");
+    }
+
     private void setupMockData(Row mockRow, boolean isMissingFields)
     {
         ColumnDefinitions mockColumnDefinitions = mock(ColumnDefinitions.class);
