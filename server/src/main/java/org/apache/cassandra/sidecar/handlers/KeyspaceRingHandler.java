@@ -31,6 +31,8 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.common.response.RingResponse;
+import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -75,9 +77,38 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
     {
         StorageOperations operations = metadataFetcher.delegate(host).storageOperations();
         executorPools.service()
-                     .executeBlocking(() -> operations.ring(keyspace))
+                     .executeBlocking(() -> withSidecarInstanceIds(operations.ring(keyspace)))
                      .onSuccess(context::json)
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
+    }
+
+    /**
+     * Enriches each ring entry with the id of the local Sidecar instance managing the node, so that clients
+     * behind a load balancer can route per-instance requests via the {@code instanceId} query parameter.
+     * Nodes not managed by this Sidecar retain a {@code null} id.
+     */
+    private RingResponse withSidecarInstanceIds(RingResponse response)
+    {
+        RingResponse enriched = new RingResponse(response.size());
+        for (RingEntry entry : response)
+        {
+            Integer sidecarInstanceId = metadataFetcher.sidecarInstanceId(entry.address());
+            enriched.add(new RingEntry.Builder()
+                         .datacenter(entry.datacenter())
+                         .address(entry.address())
+                         .port(entry.port())
+                         .rack(entry.rack())
+                         .status(entry.status())
+                         .state(entry.state())
+                         .load(entry.load())
+                         .owns(entry.owns())
+                         .token(entry.token())
+                         .fqdn(entry.fqdn())
+                         .hostId(entry.hostId())
+                         .sidecarInstanceId(sidecarInstanceId)
+                         .build());
+        }
+        return enriched;
     }
 
     /**

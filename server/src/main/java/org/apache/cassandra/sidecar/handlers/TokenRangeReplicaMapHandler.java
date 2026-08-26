@@ -19,6 +19,8 @@
 package org.apache.cassandra.sidecar.handlers;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -33,6 +35,8 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.ReplicaMetadata;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -84,9 +88,33 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<Name> implement
         NodeSettings nodeSettings = delegate.nodeSettings();
         StorageOperations operations = delegate.storageOperations();
         executorPools.service()
-                     .executeBlocking(() -> operations.tokenRangeReplicas(keyspace, nodeSettings.partitioner()))
+                     .executeBlocking(() -> withSidecarInstanceIds(operations.tokenRangeReplicas(keyspace, nodeSettings.partitioner())))
                      .onSuccess(context::json)
                      .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
+    }
+
+    /**
+     * Enriches the replica metadata with the id of the local Sidecar instance managing each replica, so that
+     * clients behind a load balancer can route per-replica requests via the {@code instanceId} query parameter.
+     * Replicas not managed by this Sidecar retain a {@code null} id.
+     */
+    private TokenRangeReplicasResponse withSidecarInstanceIds(TokenRangeReplicasResponse response)
+    {
+        Map<String, ReplicaMetadata> replicaMetadata = response.replicaMetadata();
+        Map<String, ReplicaMetadata> enriched = new LinkedHashMap<>(replicaMetadata.size());
+        for (Map.Entry<String, ReplicaMetadata> entry : replicaMetadata.entrySet())
+        {
+            ReplicaMetadata metadata = entry.getValue();
+            Integer sidecarInstanceId = metadataFetcher.sidecarInstanceId(metadata.address());
+            enriched.put(entry.getKey(), new ReplicaMetadata(metadata.state(),
+                                                             metadata.status(),
+                                                             metadata.fqdn(),
+                                                             metadata.address(),
+                                                             metadata.port(),
+                                                             metadata.datacenter(),
+                                                             sidecarInstanceId));
+        }
+        return new TokenRangeReplicasResponse(response.writeReplicas(), response.readReplicas(), enriched);
     }
 
     @Override

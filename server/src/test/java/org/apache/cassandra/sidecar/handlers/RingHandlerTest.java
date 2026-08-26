@@ -54,6 +54,7 @@ import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
+import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.mockito.stubbing.Answer;
@@ -61,6 +62,7 @@ import org.mockito.stubbing.Answer;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -152,6 +154,14 @@ class RingHandlerTest
                       assertThat(entry.state()).isEqualTo("Normal");
                       assertThat(entry.status()).isEqualTo("Up");
                       assertThat(entry.token()).isEqualTo(String.valueOf(i));
+                      if (i == 1)
+                      {
+                          assertThat(entry.sidecarInstanceId()).isEqualTo(100);
+                      }
+                      else
+                      {
+                          assertThat(entry.sidecarInstanceId()).isNull();
+                      }
                   }
 
                   context.completeNow();
@@ -223,7 +233,14 @@ class RingHandlerTest
             InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
             when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
             when(mockInstancesMetadata.instanceFromId(instanceId)).thenReturn(instanceMetadata);
-            when(mockInstancesMetadata.instanceFromHost(host)).thenReturn(instanceMetadata);
+            when(mockInstancesMetadata.instanceFromHost(anyString())).thenAnswer(invocation -> {
+                String requestedHost = invocation.getArgument(0);
+                if (host.equals(requestedHost))
+                {
+                    return instanceMetadata;
+                }
+                throw new NoSuchCassandraInstanceException("Instance with host address '" + requestedHost + "' not found");
+            });
 
             return mockInstancesMetadata;
         }

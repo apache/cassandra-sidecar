@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 
@@ -77,6 +78,31 @@ public class InstanceMetadataFetcher
     public InstanceMetadata instance(int instanceId) throws NoSuchCassandraInstanceException
     {
         return instancesMetadata.instanceFromId(instanceId);
+    }
+
+    /**
+     * Returns the id of the local Sidecar instance that manages the Cassandra node at the given {@code host},
+     * or {@code null} when this Sidecar does not manage that node.
+     *
+     * <p>This is used to enrich ring/token-range responses so that clients behind a load balancer can route
+     * per-instance requests via the {@code instanceId} query parameter. In a topology where a single Sidecar
+     * configuration knows all instances, every replica resolves to an id; in a one-Sidecar-per-node topology,
+     * only the locally managed node resolves and the rest are {@code null}.
+     *
+     * @param host the Cassandra node hostname or IP address
+     * @return the managing Sidecar instance id, or {@code null} when not managed locally
+     */
+    @Nullable
+    public Integer sidecarInstanceId(@NotNull String host)
+    {
+        try
+        {
+            return instancesMetadata.instanceFromHost(host).id();
+        }
+        catch (NoSuchCassandraInstanceException e)
+        {
+            return null;
+        }
     }
 
     /**
