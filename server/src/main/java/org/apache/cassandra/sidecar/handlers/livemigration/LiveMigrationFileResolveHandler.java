@@ -147,24 +147,7 @@ public class LiveMigrationFileResolveHandler extends AbstractHandler<Void> imple
         InstanceMetadata instanceMeta = metadataFetcher.instance(host);
         String normalizedPath = rc.normalizedPath();
 
-        ResolvedPath resolved;
-        try
-        {
-            resolved = LiveMigrationInstanceMetadataUtil.resolveLexically(normalizedPath, instanceMeta);
-        }
-        catch (UnknownMigrationPrefixException e)
-        {
-            // The URL is well-formed but matches no configured live-migration directory on this
-            // instance, so it addresses no resource here - report it as not found.
-            rc.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, e.getMessage(), e));
-            return;
-        }
-        catch (IllegalArgumentException e)
-        {
-            // URL must have been malformed, report it as bad request
-            rc.fail(wrapHttpException(HttpResponseStatus.BAD_REQUEST, e.getMessage(), e));
-            return;
-        }
+        ResolvedPath resolved = LiveMigrationInstanceMetadataUtil.resolveLexically(normalizedPath, instanceMeta);
 
         // Only the filesystem-touching checks (verifyContainment, isDirectory, isExcluded) run on
         // the worker thread; the lexical resolve above is pure string work and stays on the event
@@ -181,6 +164,19 @@ public class LiveMigrationFileResolveHandler extends AbstractHandler<Void> imple
                          rc.next();
                      })
                      .onFailure(cause -> processFailure(cause, rc, host, remoteAddress, request));
+    }
+
+    @Override
+    protected void processFailure(Throwable cause, RoutingContext context, String host, SocketAddress remoteAddress, Void request)
+    {
+        if (cause instanceof UnknownMigrationPrefixException)
+        {
+            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, cause.getMessage(), cause));
+        }
+        else
+        {
+            super.processFailure(cause, context, host, remoteAddress, request);
+        }
     }
 
     private void validate(ResolvedPath resolved, InstanceMetadata instanceMeta)
