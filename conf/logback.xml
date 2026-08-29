@@ -73,6 +73,7 @@
   </root>
 
 
+  <logger name="io.netty" level="INFO" />
   <logger name="com.datastax.driver.core" level="ERROR" />
   <logger name="com.datastax.driver.core.ControlConnection" level="OFF" />
 </configuration>

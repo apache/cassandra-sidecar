@@ -1,5 +1,6 @@
 0.5.0
 -----
+ * Disable Netty wire logging on the HTTP server (CASSSIDECAR-496)
  * Tighten path containment in Live Migration file route (CASSSIDECAR-479)
  * Add fast_forward_enabled flag to enable eager pipelining of staging and importing in coordinated writes (CASSSIDECAR-463)
  * CachingSchemaStore should be reloaded when Schemastore kafka configs are changed (CASSSIDECAR-493)
