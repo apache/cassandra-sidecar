@@ -44,7 +44,7 @@ dependencies {
     testFixturesCompileOnly(files("${dtestJarFullPath}"))
     testFixturesApi("org.apache.cassandra:dtest-api:0.0.18")
     // required by in-jvm-dtest class loader, specifically for dtest-4.0.*
-    testFixturesImplementation('org.javassist:javassist:3.28.0-GA')
+    testFixturesImplementation('org.javassist:javassist:3.30.2-GA')
 
     // Bouncycastle dependencies for test certificate provisioning
     testFixturesImplementation(group: 'org.bouncycastle', name: 'bcprov-jdk18on', version: '1.78')
