@@ -24,6 +24,7 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.request.TokenRangeReplicasRequest;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Class response for the {@link TokenRangeReplicasRequest}
@@ -173,13 +174,16 @@ public class TokenRangeReplicasResponse
         private final String address;
         private final int port;
         private final String datacenter;
+        @Nullable
+        private final Integer sidecarInstanceId;
 
         public ReplicaMetadata(@JsonProperty("state") String state,
                                @JsonProperty("status") String status,
                                @JsonProperty("fqdn") String fqdn,
                                @JsonProperty("address") String address,
                                @JsonProperty("port") int port,
-                               @JsonProperty("datacenter") String datacenter)
+                               @JsonProperty("datacenter") String datacenter,
+                               @JsonProperty("sidecarInstanceId") @Nullable Integer sidecarInstanceId)
         {
             this.state = state;
             this.status = status;
@@ -187,6 +191,7 @@ public class TokenRangeReplicasResponse
             this.address = address;
             this.port = port;
             this.datacenter = datacenter;
+            this.sidecarInstanceId = sidecarInstanceId;
         }
 
         /**
@@ -244,6 +249,18 @@ public class TokenRangeReplicasResponse
         }
 
         /**
+         * @return the id of the Sidecar instance that manages this replica, or {@code null} when the Sidecar
+         * serving the request does not manage this replica. Clients use it to route per-replica requests
+         * through a load balancer via the {@code instanceId} query parameter.
+         */
+        @JsonProperty("sidecarInstanceId")
+        @Nullable
+        public Integer sidecarInstanceId()
+        {
+            return sidecarInstanceId;
+        }
+
+        /**
          * {@inheritDoc}
          */
         public String toString()
@@ -255,6 +272,7 @@ public class TokenRangeReplicasResponse
                    ", address='" + address + '\'' +
                    ", port='" + port + '\'' +
                    ", datacenter='" + datacenter + '\'' +
+                   ", sidecarInstanceId=" + sidecarInstanceId +
                    '}';
         }
     }

@@ -166,7 +166,10 @@ public class TokenRangeReplicaProvider
                                                                                           fqdn,
                                                                                           hap.getHost(),
                                                                                           hap.getPort(),
-                                                                                          datacenter));
+                                                                                          datacenter,
+                                                                                          // Sidecar instance id is resolved by the server handler,
+                                                                                          // which has access to the local instances configuration
+                                                                                          null));
                              }
                              catch (UnknownHostException e)
                              {

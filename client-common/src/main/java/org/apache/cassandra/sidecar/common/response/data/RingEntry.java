@@ -22,6 +22,7 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A class representing an entry in the Cassandra Ring
@@ -39,6 +40,8 @@ public class RingEntry
     private final String token;
     private final String fqdn;
     private final String hostId;
+    @Nullable
+    private final Integer sidecarInstanceId;
 
     @JsonCreator
     public RingEntry(
@@ -52,7 +55,8 @@ public class RingEntry
     @JsonProperty("owns") String owns,
     @JsonProperty("token") String token,
     @JsonProperty("fqdn") String fqdn,
-    @JsonProperty("hostId") String hostId)
+    @JsonProperty("hostId") String hostId,
+    @JsonProperty("sidecarInstanceId") @Nullable Integer sidecarInstanceId)
     {
         this.datacenter = datacenter;
         this.address = address;
@@ -65,6 +69,7 @@ public class RingEntry
         this.token = token;
         this.fqdn = fqdn;
         this.hostId = hostId;
+        this.sidecarInstanceId = sidecarInstanceId;
     }
 
     private RingEntry(Builder builder)
@@ -80,6 +85,7 @@ public class RingEntry
         token = builder.token;
         fqdn = builder.fqdn;
         hostId = builder.hostId;
+        sidecarInstanceId = builder.sidecarInstanceId;
     }
 
     /**
@@ -183,6 +189,18 @@ public class RingEntry
     }
 
     /**
+     * @return the id of the Sidecar instance that manages this node, or {@code null} when the Sidecar
+     * serving the request does not manage this node. Clients use it to route per-instance requests
+     * through a load balancer via the {@code instanceId} query parameter.
+     */
+    @JsonProperty("sidecarInstanceId")
+    @Nullable
+    public Integer sidecarInstanceId()
+    {
+        return sidecarInstanceId;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -200,6 +218,7 @@ public class RingEntry
                ", token='" + token + '\'' +
                ", fqdn='" + fqdn + '\'' +
                ", hostId='" + hostId + '\'' +
+               ", sidecarInstanceId=" + sidecarInstanceId +
                '}';
     }
 
@@ -222,7 +241,8 @@ public class RingEntry
                && Objects.equals(owns, ringEntry.owns)
                && Objects.equals(token, ringEntry.token)
                && Objects.equals(fqdn, ringEntry.fqdn)
-               && Objects.equals(hostId, ringEntry.hostId);
+               && Objects.equals(hostId, ringEntry.hostId)
+               && Objects.equals(sidecarInstanceId, ringEntry.sidecarInstanceId);
     }
 
     /**
@@ -231,7 +251,8 @@ public class RingEntry
     @Override
     public int hashCode()
     {
-        return Objects.hash(datacenter, address, port, rack, status, state, load, owns, token, fqdn, hostId);
+        return Objects.hash(datacenter, address, port, rack, status, state, load, owns, token, fqdn, hostId,
+                            sidecarInstanceId);
     }
 
     /**
@@ -250,6 +271,7 @@ public class RingEntry
         private String token;
         private String fqdn;
         private String hostId;
+        private Integer sidecarInstanceId;
 
         /**
          * Sets the {@code datacenter} and returns a reference to this Builder enabling method chaining.
@@ -381,6 +403,18 @@ public class RingEntry
         public Builder hostId(String hostId)
         {
             this.hostId = hostId;
+            return this;
+        }
+
+        /**
+         * Sets the {@code sidecarInstanceId} and returns a reference to this Builder enabling method chaining.
+         *
+         * @param sidecarInstanceId the {@code sidecarInstanceId} to set
+         * @return a reference to this Builder
+         */
+        public Builder sidecarInstanceId(@Nullable Integer sidecarInstanceId)
+        {
+            this.sidecarInstanceId = sidecarInstanceId;
             return this;
         }
 
