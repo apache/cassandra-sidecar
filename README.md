@@ -21,7 +21,7 @@
 # Apache Cassandra Sidecar
 
 This is a Sidecar for the highly scalable Apache Cassandra database.
-For more information, see [the Apache Cassandra web site](http://cassandra.apache.org/) and [CIP-1](https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=95652224).
+For more information, see [the Apache Cassandra web site](http://cassandra.apache.org/) and [CEP-1](https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=95652224).
 
 We use the [Sidecar for Apache Cassandra JIRA](https://issues.apache.org/jira/projects/CASSSIDECAR) to track issues.
 
@@ -30,17 +30,23 @@ We use the [Sidecar for Apache Cassandra JIRA](https://issues.apache.org/jira/pr
 Requirements
 ------------
   1. Java >= 11<sup>1</sup> (OpenJDK or Oracle)
-  2. Apache Cassandra 4.0.  We depend on virtual tables which is a 4.0 only feature.
+  2. Apache Cassandra >= 4.0.  We depend on virtual tables which is a 4.0+ only feature.
   3. [Docker](https://www.docker.com/products/docker-desktop/) for running integration tests.
+
+Running the Sidecar from the binaries
+-------------------------------------
+The latest version of the Sidecar can be found at: https://dlcdn.apache.org/cassandra/cassandra-sidecar/
+
+ - Download the Sidecar from the link above.
+ - Untar: `tar -zxvf apache-cassandra-sidecar-0.4.0.tar.gz`
+ - Adjust the `conf/sidecar.yaml` file.
+ - Run: `bin/cassandra-sidecar`
+
 
 Build Prerequisites
 -------------------
 We depend on the Cassandra in-jvm dtest framework for testing. 
-Because these jars are not published, you must manually build the dtest jars before you can build the project.
-
-```shell
-./scripts/build-dtest-jars.sh
-```
+Because these jars are not published, you must manually build the dtest jars before you can build the project. This can be done using  `build-dtest-jars.sh` from the `scripts/` directory.
 
 The build script supports two parameters:
 - `REPO` - the Cassandra git repository to use for the source files. This is helpful if you need to test with a fork of the Cassandra codebase.
@@ -48,15 +54,27 @@ The build script supports two parameters:
 - `BRANCHES` - a space-delimited list of branches to build.
   -default: `"cassandra-4.1 trunk"`
 
+If you have difficulty in getting the build process to use the crrect version of Java, you can also override the `JAVACMD` variable.
+
+The above mentioned parameters can also be defined as environment variables:
+```shell
+export JAVACMD="/Users/flynn/.jenv/shims/java"
+export BRANCHES="cassandra-5.0"
+```
+
 Remove any versions you may not want to test with. We recommend at least the latest (released) 4.X series and `trunk`.
 See Testing for more details on how to choose which Cassandra versions to use while testing.
 
-For multi-node in-jvm dtests, network aliases will need to be setup for each Cassandra node. The tests assume each node's 
-ip address is 127.0.0.x, where x is the node id. 
+```shell
+./scripts/build-dtest-jars.sh
+```
+
+For multi-node in-jvm dtests, network aliases will need to be setup for each Cassandra node. The tests assume each node's ip address is 127.0.0.x, where x is the node id. 
 
 For example if you populated your cluster with 3 nodes, create interfaces for 127.0.0.2 and 127.0.0.3 (the first node of course uses 127.0.0.1).
 
 ### macOS network aliases
+
 To get up and running, create a temporary alias for every node except the first:
 
 ```
@@ -72,11 +90,12 @@ Integration tests open many sockets and kqueue selectors via Netty. The default 
 ulimit -n 65536
 ```
 
-Getting started: Running The Sidecar
+Getting started: Running the build
 --------------------------------------
 
-After you clone the git repo, you can use the gradle wrapper to build and run the project. Make sure you have 
-Apache Cassandra running on the host & port specified in `conf/sidecar.yaml`.
+You can use the gradle wrapper to build and run the project. Make sure you have Apache Cassandra running on the host & port specified in `conf/sidecar.yaml`. You should also take a moment to ensure that `storage_dir`, `staging_dir`, `cassandra_conf_dir`, and `cassandra_log_dir` are set correctly.
+
+Additionally, you may need to provide additional host aliases in the `/etc/hosts` file.
 
     $ ./gradlew run
 
