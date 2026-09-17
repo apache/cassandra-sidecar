@@ -42,6 +42,7 @@ class CQLSchemaAccessorTest
 {
     static final Name KEYSPACE = new Name("keyspace1");
     static final Name TABLE = new Name("table1");
+    static final String VIRTUAL_KEYSPACE = "system_views";
     static final String SCHEMA = "CREATE TABLE keyspace1.table1 (a int, b int, PRIMARY KEY (a));";
 
     CQLSchemaAccessor schemaAccessor;
@@ -71,6 +72,27 @@ class CQLSchemaAccessorTest
         assertThat(schemaAccessor.getTableSchema(KEYSPACE, new Name("unknown"))).isNull();
     }
 
+    @Test
+    void testGetExistingKeyspace()
+    {
+        // the keyspace and every object it contains are rendered as one statement per element
+        assertThat(schemaAccessor.getKeyspaceSchema(KEYSPACE))
+        .containsExactly(createKeyspaceStatement(KEYSPACE.name()), SCHEMA);
+    }
+
+    @Test
+    void testGetNotExistingKeyspace()
+    {
+        assertThat(schemaAccessor.getKeyspaceSchema(new Name("unknown"))).isNull();
+    }
+
+    @Test
+    void testGetKeyspaceWithoutSchema()
+    {
+        // Cassandra renders no statement for some keyspaces, such as the virtual ones
+        assertThat(schemaAccessor.getKeyspaceSchema(new Name(VIRTUAL_KEYSPACE))).isEmpty();
+    }
+
     static CQLSessionProvider mockCQLSessionProvider(String keyspace, String table, String schema)
     {
         Session session = mock(Session.class, RETURNS_DEEP_STUBS);
@@ -92,10 +114,49 @@ class CQLSchemaAccessorTest
             return resultSet;
         });
 
+        // note the trailing space, so that the DESCRIBE KEYSPACES statement stubbed above is not matched
+        when(session.execute(startsWith("DESCRIBE KEYSPACE "))).thenThrow(new InvalidQueryException("Unknown keyspace"));
+
+        String describeKeyspace = String.format("DESCRIBE KEYSPACE %s", keyspace);
+        when(session.execute(eq(describeKeyspace))).then(invocation -> {
+            ResultSet resultSet = mock(ResultSet.class);
+            // DESCRIBE KEYSPACE renders the keyspace and every object it contains, one statement per row
+            when(resultSet.all()).thenReturn(List.of(mockRow(Map.of("create_statement", createKeyspaceStatement(keyspace))),
+                                                     mockRow(Map.of("create_statement", schema))));
+            return resultSet;
+        });
+
+        // Cassandra renders no statement for some keyspaces, such as the virtual ones
+        when(session.execute(eq(String.format("DESCRIBE KEYSPACE %s", VIRTUAL_KEYSPACE)))).then(invocation -> {
+            ResultSet resultSet = mock(ResultSet.class);
+            when(resultSet.all()).thenReturn(List.of());
+            return resultSet;
+        });
+
         CQLSessionProvider cqlSession = mock(CQLSessionProvider.class);
         when(cqlSession.get()).thenReturn(session);
 
         return cqlSession;
+    }
+
+    /**
+     * @param keyspace the unquoted keyspace name
+     * @return the {@code CREATE KEYSPACE} statement Cassandra is mocked to render
+     */
+    static String createKeyspaceStatement(String keyspace)
+    {
+        return String.format("CREATE KEYSPACE %s WITH replication = {'class': 'SimpleStrategy',"
+                             + " 'replication_factor': '1'}  AND durable_writes = true;", keyspace);
+    }
+
+    /**
+     * @param keyspace the unquoted keyspace name
+     * @param schema   the schema of the single object the keyspace contains
+     * @return the schema of the keyspace Cassandra is mocked to render
+     */
+    static String keyspaceSchema(String keyspace, String schema)
+    {
+        return createKeyspaceStatement(keyspace) + "\n\n" + schema;
     }
 
     static Row mockRow(Map<String, String> values)

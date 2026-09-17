@@ -25,17 +25,17 @@ import com.datastax.driver.core.Metadata;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
+import org.apache.cassandra.sidecar.db.SchemaCache;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.MetadataUtils;
@@ -49,7 +49,7 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements AccessProtected
 {
-    private final DriverUnsupportedSchemaCache driverUnsupportedSchemaCache;
+    private final SchemaCache schemaCache;
 
     /**
      * Constructs a handler with the provided {@code metadataFetcher}
@@ -57,16 +57,16 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
      * @param metadataFetcher the interface to retrieve metadata
      * @param executorPools   executor pools for blocking executions
      * @param validator       a validator instance to validate Cassandra-specific input
-     * @param driverUnsupportedSchemaCache cache of unparseable table schemas by Java driver
+     * @param schemaCache cache of CQL schema read from Cassandra
      */
     @Inject
     protected KeyspaceSchemaHandler(InstanceMetadataFetcher metadataFetcher,
                                     ExecutorPools executorPools,
                                     CassandraInputValidator validator,
-                                    DriverUnsupportedSchemaCache driverUnsupportedSchemaCache)
+                                    SchemaCache schemaCache)
     {
         super(metadataFetcher, executorPools, validator);
-        this.driverUnsupportedSchemaCache = driverUnsupportedSchemaCache;
+        this.schemaCache = schemaCache;
     }
 
     @Override
@@ -85,84 +85,68 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
                                SocketAddress remoteAddress,
                                Name keyspace)
     {
-        Future.all(metadata(host), unsupportedSchema(keyspace))
-              .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace))
-              .onSuccess(future -> handleWithMetadata(context, keyspace, future));
+        describeSchema(host, keyspace)
+                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace))
+                     .onSuccess(context::json);
+    }
+
+    private Future<SchemaResponse> describeSchema(String host, Name keyspace)
+    {
+        return executorPools.service()
+                            .executeBlocking(() -> {
+                                if (keyspace == null)
+                                {
+                                    String schema = schemaCache.getSchema();
+                                    if (schema.isEmpty())
+                                    {
+                                        // the cache serves an empty schema when it could not read it from Cassandra
+                                        // at least once, a reachable Cassandra always describes its system keyspaces
+                                        throw schemaNotAvailable();
+                                    }
+                                    return new SchemaResponse(schema);
+                                }
+
+                                String keyspaceSchema = schemaCache.getKeyspaceSchema(resolveKeyspace(host, keyspace));
+                                if (keyspaceSchema == null)
+                                {
+                                    // keyspace has been dropped after its name was resolved
+                                    throw keyspaceDoesNotExist(keyspace);
+                                }
+                                return new SchemaResponse(keyspace.name(), keyspaceSchema);
+                            });
     }
 
     /**
-     * Handles the request with the Cassandra {@link Metadata metadata}.
+     * Resolves the keyspace name as stored by Cassandra, which is what the {@code SchemaCache} is keyed by. Java driver
+     * {@link Metadata metadata} is used for the lookup, because it folds the case of unquoted names.
      *
-     * @param context  the event to handle
+     * @param host     the Cassandra instance host
      * @param keyspace the keyspace parsed from the request
-     * @param future   composite future containing result of:
-     *                 - the metadata on the connected cluster, including known nodes and schema definitions
-     *                 - additional schema which could not be parsed by Java driver
+     * @return the keyspace name as stored by Cassandra
+     * @throws HttpException when the keyspace does not exist
      */
-    private void handleWithMetadata(RoutingContext context, Name keyspace, CompositeFuture future)
+    private String resolveKeyspace(String host, Name keyspace)
     {
-        Metadata metadata = future.resultAt(0);
-        String unparseableSchema = future.resultAt(1);
-        if (keyspace == null)
-        {
-            String fullSchema = DriverUnsupportedSchemaCache.concatSchemas(metadata.exportSchemaAsString(),
-                                                                           unparseableSchema);
-            SchemaResponse schemaResponse = new SchemaResponse(fullSchema);
-            context.json(schemaResponse);
-            return;
-        }
-
-        // retrieve keyspace metadata
+        // metadata can block so we need to run in a blocking thread
+        Metadata metadata = metadataFetcher.delegate(host).metadata();
         KeyspaceMetadata ksMetadata = MetadataUtils.keyspace(metadata, keyspace);
-
         if (ksMetadata == null)
         {
-            // set request as failed and return
-            // keyspace does not exist
-            String errorMessage = String.format("Keyspace '%s' does not exist.", keyspace);
-            context.fail(wrapHttpException(HttpResponseStatus.NOT_FOUND, errorMessage));
-            return;
+            throw keyspaceDoesNotExist(keyspace);
         }
-
-        String keyspaceSchema = DriverUnsupportedSchemaCache.concatSchemas(ksMetadata.exportAsString(),
-                                                                           unparseableSchema);
-        SchemaResponse schemaResponse = new SchemaResponse(keyspace.name(), keyspaceSchema);
-        context.json(schemaResponse);
+        return ksMetadata.getName();
     }
 
-    /**
-     * Gets cluster metadata asynchronously.
-     *
-     * @param host the Cassandra instance host
-     * @return {@link Future} containing {@link Metadata}
-     */
-    private Future<Metadata> metadata(String host)
+    private HttpException keyspaceDoesNotExist(Name keyspace)
     {
-        return executorPools.service().executeBlocking(() -> {
-            // metadata can block so we need to run in a blocking thread
-            return metadataFetcher.delegate(host).metadata();
-        });
+        String errorMessage = String.format("Keyspace '%s' does not exist.", keyspace);
+        return wrapHttpException(HttpResponseStatus.NOT_FOUND, errorMessage);
     }
 
-    /**
-     * Get CQL schema not parseable by Java driver (and therefore not present in {@link Metadata}).
-     *
-     * @param keyspace optional keyspace name, {@code null} includes schema for all keyspaces
-     * @return {@link Future} containing CQL schema
-     */
-    private Future<String> unsupportedSchema(Name keyspace)
+    private HttpException schemaNotAvailable()
     {
-        return executorPools.service().executeBlocking(() -> {
-            // schema cache can block if it was not successfully initialized at least once
-            if (keyspace == null)
-            {
-                return driverUnsupportedSchemaCache.getFullSchema();
-            }
-            else
-            {
-                return driverUnsupportedSchemaCache.getKeyspaceSchema(keyspace);
-            }
-        });
+        return wrapHttpException(HttpResponseStatus.SERVICE_UNAVAILABLE,
+                                 "Schema is not available yet, Cassandra could not be reached.");
     }
 
     /**

@@ -59,7 +59,7 @@ import org.apache.cassandra.sidecar.config.JmxConfiguration;
 import org.apache.cassandra.sidecar.config.ParameterizedClassConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
-import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
+import org.apache.cassandra.sidecar.db.SchemaCache;
 import org.apache.cassandra.sidecar.db.schema.TableSchemaFetcher;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
@@ -172,11 +172,11 @@ public class ConfigurationModule extends AbstractModule
 
     @Provides
     @Singleton
-    DriverUnsupportedSchemaCache driverUnsupportedSchemaCache(Vertx vertx,
-                                                              SidecarConfiguration sidecarConfiguration,
-                                                              CQLSessionProvider cqlSessionProvider)
+    SchemaCache schemaCache(Vertx vertx,
+                            SidecarConfiguration sidecarConfiguration,
+                            CQLSessionProvider cqlSessionProvider)
     {
-        DriverUnsupportedSchemaCache schemaCache = new DriverUnsupportedSchemaCache(sidecarConfiguration, cqlSessionProvider);
+        SchemaCache schemaCache = new SchemaCache(sidecarConfiguration, cqlSessionProvider);
         // trigger immediate cache population once Sidecar connects to Cassandra node
         EventBusUtils.onceLocalConsumer(vertx.eventBus(),
                                         ON_CASSANDRA_CQL_READY.address(),
@@ -188,8 +188,8 @@ public class ConfigurationModule extends AbstractModule
     }
 
     @ProvidesIntoMap
-    @KeyClassMapKey(PeriodicTaskMapKeys.UnsupportedSchemaCacheTaskKey.class)
-    PeriodicTask driverUnsupportedSchemaCachePeriodicTask(DriverUnsupportedSchemaCache schemaCache)
+    @KeyClassMapKey(PeriodicTaskMapKeys.SchemaCacheTaskKey.class)
+    PeriodicTask schemaCachePeriodicTask(SchemaCache schemaCache)
     {
         return schemaCache;
     }

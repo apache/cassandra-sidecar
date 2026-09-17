@@ -18,10 +18,15 @@
 
 package org.apache.cassandra.sidecar.routes;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
 import io.vertx.core.http.HttpResponseExpectation;
 import org.apache.cassandra.sidecar.common.response.SchemaResponse;
 import org.apache.cassandra.sidecar.testing.SharedClusterSidecarIntegrationTestBase;
@@ -103,5 +108,54 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
         assertThat(response).isNotNull();
         assertThat(response.keyspace()).isEqualTo("keyspace");
         assertThat(response.schema()).isNotNull();
+    }
+
+    @Test
+    void testSchemaResponseForEachKeyspace()
+    {
+        for (String keyspace : List.of("testkeyspace", "\"Cycling\"", "\"keyspace\""))
+        {
+            String testRoute = "/api/v1/schema/keyspaces/" + keyspace;
+            SchemaResponse response = getBlocking(trustedClient()
+                                                  .get(serverWrapper.serverPort, "localhost", testRoute)
+                                                  .send()
+                                                  .expecting(HttpResponseExpectation.SC_OK))
+                                      .bodyAsJson(SchemaResponse.class);
+            assertThat(response.schema())
+            .describedAs("Schema of %s must be the schema rendered by Cassandra", keyspace)
+            .isEqualTo(describeKeyspace(keyspace));
+        }
+    }
+
+    @Test
+    void testAllKeyspacesPresentInFullSchema()
+    {
+        // test keyspaces are created before Sidecar starts, so they are cached by the time it serves requests
+        String testRoute = "/api/v1/schema/keyspaces";
+        SchemaResponse response = getBlocking(trustedClient()
+                                              .get(serverWrapper.serverPort, "localhost", testRoute)
+                                              .send()
+                                              .expecting(HttpResponseExpectation.SC_OK))
+                                  .bodyAsJson(SchemaResponse.class);
+        assertThat(response.schema()).contains(describeKeyspace("testkeyspace"))
+                                     .contains(describeKeyspace("\"Cycling\""))
+                                     .contains(describeKeyspace("\"keyspace\""))
+                                     // system keyspaces are served as well
+                                     .contains("CREATE KEYSPACE system_traces");
+    }
+
+    String describeKeyspace(String maybeQuotedKeyspace)
+    {
+        try (Cluster driverCluster = createDriverCluster(cluster.delegate());
+             Session session = driverCluster.connect())
+        {
+            List<String> statements = new ArrayList<>();
+            for (Row row : session.execute("DESCRIBE KEYSPACE " + maybeQuotedKeyspace).all())
+            {
+                statements.add(row.getString("create_statement"));
+            }
+            assertThat(statements).isNotEmpty();
+            return String.join("\n\n", statements);
+        }
     }
 }

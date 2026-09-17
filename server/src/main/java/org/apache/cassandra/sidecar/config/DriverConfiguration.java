@@ -76,8 +76,7 @@ public interface DriverConfiguration
     SslConfiguration sslConfiguration();
 
     /**
-     * @return Refresh interval of table schemas not supported by Java driver's metadata
-     * (not parseable, e.g. including vector type).
+     * @return Refresh interval of schema cache
      */
-    SecondBoundConfiguration unsupportedTableSchemaRefreshTime();
+    SecondBoundConfiguration schemaRefreshTime();
 }
