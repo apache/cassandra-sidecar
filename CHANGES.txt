@@ -1,5 +1,6 @@
 0.5.0
 -----
+ * Use describe statement to fetch schema instead of Java driver (CASSSIDECAR-505)
  * Make the CDC CassandraBridge injectable (CASSSIDECAR-511)
  * Introduce server-side configuration to enforce allowed credential modes for restore jobs (CASSSIDECAR-501)
  * Sanitize/Nullify Cloud Credentials on RestoreJob Completion (CASSSIDECAR-500)

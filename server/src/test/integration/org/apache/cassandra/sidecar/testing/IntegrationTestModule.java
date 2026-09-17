@@ -135,7 +135,7 @@ public class IntegrationTestModule extends AbstractModule
         DriverConfiguration driverConfiguration = DriverConfigurationImpl.builder()
                                                                          .localDc("dc1")
                                                                          .numConnections(1)
-                                                                         .unsupportedTableSchemaRefreshTime(new SecondBoundConfiguration(3, TimeUnit.SECONDS))
+                                                                         .schemaRefreshTime(new SecondBoundConfiguration(3, TimeUnit.SECONDS))
                                                                          .authProvider(authProvider)
                                                                          .build();
 

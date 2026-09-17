@@ -83,7 +83,7 @@ import org.apache.cassandra.sidecar.coordination.TokenRingProvider;
 import org.apache.cassandra.sidecar.db.CdcConfigAccessor;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.CdcSystemViewsDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
+import org.apache.cassandra.sidecar.db.SchemaCache;
 import org.apache.cassandra.sidecar.db.KafkaConfigAccessor;
 import org.apache.cassandra.sidecar.db.TokenSplitConfigAccessor;
 import org.apache.cassandra.sidecar.db.schema.CdcStatesSchema;

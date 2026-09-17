@@ -53,14 +53,14 @@ import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.utils.IOUtils;
-import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
+import org.apache.cassandra.sidecar.db.SchemaCache;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpResponseStatus.SERVICE_UNAVAILABLE;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -71,17 +71,22 @@ import static org.mockito.Mockito.when;
 class SchemaHandlerTest
 {
     static final Logger LOGGER = LoggerFactory.getLogger(SchemaHandlerTest.class);
+    static final String TEST_KEYSPACE = "testKeyspace";
     Vertx vertx;
     Server server;
     @TempDir
     File instanceDir;
     String testKeyspaceSchema;
+    SchemaCache mockSchemaCache;
 
     @BeforeEach
     void before() throws InterruptedException, IOException
     {
         ClassLoader cl = getClass().getClassLoader();
         testKeyspaceSchema = IOUtils.readFully(cl.getResourceAsStream("schema/test_keyspace_schema.cql"));
+        mockSchemaCache = mock(SchemaCache.class);
+        when(mockSchemaCache.getSchema()).thenReturn("MOCK SCHEMA");
+        when(mockSchemaCache.getKeyspaceSchema(TEST_KEYSPACE)).thenReturn(testKeyspaceSchema);
 
         Injector injector;
         injector = Guice.createInjector(Modules.override(SidecarModules.all())
@@ -119,7 +124,23 @@ class SchemaHandlerTest
                   JsonObject jsonObject = response.bodyAsJsonObject();
                   assertThat(jsonObject.getString("keyspace")).isNull();
                   assertThat(jsonObject.getString("schema"))
-                  .isEqualTo("FULL SCHEMA");
+                  .isEqualTo("MOCK SCHEMA");
+                  context.completeNow();
+              })));
+    }
+
+    @Test
+    void testSchemaNotAvailable(VertxTestContext context)
+    {
+        // the cache serves an empty schema when it could not read it from Cassandra at least once
+        when(mockSchemaCache.getSchema()).thenReturn("");
+
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/schema/keyspaces";
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
+              .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(SERVICE_UNAVAILABLE.code());
                   context.completeNow();
               })));
     }
@@ -134,9 +155,26 @@ class SchemaHandlerTest
               .send(context.succeeding(response -> context.verify(() -> {
                   assertThat(response.statusCode()).isEqualTo(OK.code());
                   JsonObject jsonObject = response.bodyAsJsonObject();
-                  assertThat(jsonObject.getString("keyspace")).isEqualTo("testKeyspace");
+                  assertThat(jsonObject.getString("keyspace")).isEqualTo(TEST_KEYSPACE);
                   assertThat(jsonObject.getString("schema"))
-                  .isEqualTo(testKeyspaceSchema.trim());
+                  .isEqualTo(testKeyspaceSchema);
+                  context.completeNow();
+              })));
+    }
+
+    @Test
+    void testKeyspaceSchemaNotAvailable(VertxTestContext context)
+    {
+        // keyspace is known to Java driver, but Cassandra did not describe it, for example because it
+        // has been dropped in the meanwhile
+        when(mockSchemaCache.getKeyspaceSchema(TEST_KEYSPACE)).thenReturn(null);
+
+        WebClient client = WebClient.create(vertx);
+        String testRoute = "/api/v1/schema/keyspaces/testKeyspace";
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
+              .expect(ResponsePredicate.SC_NOT_FOUND)
+              .send(context.succeeding(response -> context.verify(() -> {
+                  assertThat(response.statusCode()).isEqualTo(NOT_FOUND.code());
                   context.completeNow();
               })));
     }
@@ -175,9 +213,8 @@ class SchemaHandlerTest
             when(instanceMetadata.delegate()).thenReturn(mockCassandraAdapterDelegate);
             Metadata mockMetadata = mock(Metadata.class);
             KeyspaceMetadata mockKeyspaceMetadata = mock(KeyspaceMetadata.class);
-            when(mockMetadata.exportSchemaAsString()).thenReturn("FULL SCHEMA");
-            when(mockMetadata.getKeyspace("testKeyspace")).thenReturn(mockKeyspaceMetadata);
-            when(mockKeyspaceMetadata.exportAsString()).thenReturn(testKeyspaceSchema);
+            when(mockMetadata.getKeyspace(TEST_KEYSPACE)).thenReturn(mockKeyspaceMetadata);
+            when(mockKeyspaceMetadata.getName()).thenReturn(TEST_KEYSPACE);
 
             when(mockCassandraAdapterDelegate.metadata()).thenReturn(mockMetadata);
 
@@ -191,12 +228,9 @@ class SchemaHandlerTest
 
         @Provides
         @Singleton
-        public DriverUnsupportedSchemaCache driverUnsupportedSchemaCache()
+        public SchemaCache schemaCache()
         {
-            DriverUnsupportedSchemaCache schemaAccessor = mock(DriverUnsupportedSchemaCache.class);
-            when(schemaAccessor.getFullSchema()).thenReturn("");
-            when(schemaAccessor.getKeyspaceSchema(any())).thenReturn("");
-            return schemaAccessor;
+            return mockSchemaCache;
         }
     }
 }
