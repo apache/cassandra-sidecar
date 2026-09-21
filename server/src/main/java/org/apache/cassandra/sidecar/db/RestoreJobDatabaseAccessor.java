@@ -157,13 +157,20 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         // all updates are going to the same partition. We use unlogged explicitly.
         // Cassandra internally combine those updates into the same mutation.
         BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
-        ByteBuffer wrappedSecrets;
-        if (secrets != null)
+        boolean transitioningToFinalStatus = status != null && status.isFinal();
+        if (transitioningToFinalStatus)
+        {
+            // Once a job reaches a terminal status it is never replayed, so the stored credentials
+            // no longer serve any purpose. Redact them regardless of what the request asked for.
+            batchStatement.add(tableSchema.updateBlobSecrets().bind(createdAt, jobId, null));
+            updateBuilder.jobSecrets(null);
+        }
+        else if (secrets != null)
         {
             try
             {
                 byte[] secretBytes = MAPPER.writeValueAsBytes(secrets);
-                wrappedSecrets = ByteBuffer.wrap(secretBytes);
+                ByteBuffer wrappedSecrets = ByteBuffer.wrap(secretBytes);
                 batchStatement.add(tableSchema.updateBlobSecrets()
                                               .bind(createdAt, jobId, wrappedSecrets));
             }
@@ -208,9 +215,12 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         {
             status = status + ": " + reason;
         }
-        BoundStatement statement = tableSchema.updateStatus()
-                                              .bind(createdAt, jobId, status);
-        execute(statement);
+        BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
+        batchStatement.add(tableSchema.updateStatus().bind(createdAt, jobId, status));
+        // ABORTED is a terminal status, so the stored
+        // credentials no longer serve any purpose and are redacted here.
+        batchStatement.add(tableSchema.updateBlobSecrets().bind(createdAt, jobId, null));
+        execute(batchStatement);
     }
 
     public RestoreJob find(UUID jobId)

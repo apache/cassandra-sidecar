@@ -68,21 +68,22 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
         UpdateRestoreJobRequestPayload markSucceeded
         = new UpdateRestoreJobRequestPayload(null, null, RestoreJobStatus.SUCCEEDED, null, null);
         accessor.update(markSucceeded, jobId);
-        assertJob(accessor.find(jobId), jobId, RestoreJobStatus.SUCCEEDED, expiresAtMillis, secrets);
+        // secrets are redacted once the job reaches a terminal status
+        assertJob(accessor.find(jobId), jobId, RestoreJobStatus.SUCCEEDED, expiresAtMillis, null);
 
         // abort this job with reason
         jobId = createJob(accessor);
         foundJobs = accessor.findAllRecent(now, 3);
         assertThat(foundJobs).hasSize(2);
         accessor.abort(jobId, "Reason");
-        assertJob(accessor.find(jobId), jobId, RestoreJobStatus.ABORTED, expiresAtMillis, secrets, "Reason");
+        assertJob(accessor.find(jobId), jobId, RestoreJobStatus.ABORTED, expiresAtMillis, null, "Reason");
 
         // abort this job w/o reason
         jobId = createJob(accessor);
         foundJobs = accessor.findAllRecent(now, 3);
         assertThat(foundJobs).hasSize(3);
         accessor.abort(jobId, null);
-        assertJob(accessor.find(jobId), jobId, RestoreJobStatus.ABORTED, expiresAtMillis, secrets, null);
+        assertJob(accessor.find(jobId), jobId, RestoreJobStatus.ABORTED, expiresAtMillis, null, null);
 
         // create job that restoreToLocalDatacenterOnly
         UUID restoreToLocalDcOnlyJobId = createJob(accessor, true);
@@ -165,6 +166,38 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
         RestoreJob found = accessor.find(jobId);
         assertThat(found).isNotNull();
         assertThat(found.credentialType).isEqualTo(CredentialType.STATIC);
+    }
+
+    @CassandraIntegrationTest
+    void testSecretsRedactedOnTerminalStatus()
+    {
+        waitForSchemaReady(30, TimeUnit.SECONDS);
+
+        RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
+
+        // a status update carrying fresh secrets alongside a terminal status still redacts:
+        // the job will never be replayed, so there is no meaningful use for the new secrets either
+        UUID jobId = createJob(accessor);
+        RestoreJobSecrets freshSecrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        UpdateRestoreJobRequestPayload markSucceededWithSecrets
+        = new UpdateRestoreJobRequestPayload(null, freshSecrets, RestoreJobStatus.SUCCEEDED, null, null);
+        RestoreJob updated = accessor.update(markSucceededWithSecrets, jobId);
+        assertThat(updated.secrets).isNull();
+        RestoreJob found = accessor.find(jobId);
+        assertThat(found.secrets).isNull();
+        // non-sensitive metadata is preserved for auditing
+        assertThat(found.status).isEqualTo(RestoreJobStatus.SUCCEEDED);
+        assertThat(found.credentialType).isEqualTo(CredentialType.STATIC);
+        assertThat(found.jobAgent).isEqualTo("agent");
+        assertThat(found.keyspaceName).isEqualTo("ks");
+        assertThat(found.tableName).isEqualTo("tbl");
+
+        // a non-terminal status update leaves secrets untouched
+        jobId = createJob(accessor);
+        UpdateRestoreJobRequestPayload markStaged
+        = new UpdateRestoreJobRequestPayload(null, null, RestoreJobStatus.STAGED, null, null);
+        accessor.update(markStaged, jobId);
+        assertThat(accessor.find(jobId).secrets).isEqualTo(secrets);
     }
 
     private UUID createJob(RestoreJobDatabaseAccessor accessor)
