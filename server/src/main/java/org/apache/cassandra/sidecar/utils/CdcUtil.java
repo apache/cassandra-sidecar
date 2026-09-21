@@ -209,6 +209,39 @@ public final class CdcUtil
         return createStmts;
     }
 
+    /**
+     * Unlike {@link #extractCdcTables}, this is not restricted to tables with {@code cdc = true} —
+     * it returns every table in the schema, since callers such as {@code SchemaSupplier#getTables()}
+     * need the complete schema (see its javadoc for why).
+     *
+     * @param schemaStr full cluster schema text.
+     * @return map of keyspace/table identifier to table create statements, for every table.
+     */
+    public static Map<TableIdentifier, String> extractAllTables(@NotNull String schemaStr)
+    {
+        String cleaned = cleanCql(schemaStr);
+        Pattern pattern = Pattern.compile("CREATE TABLE \"?(\\w+)\"?\\.\"?(\\w+)\"?[^;]*;");
+        Matcher matcher = pattern.matcher(cleaned);
+        Map<TableIdentifier, String> createStmts = new HashMap<>();
+        while (matcher.find())
+        {
+            String keyspace = matcher.group(1);
+            String table = matcher.group(2);
+            createStmts.put(TableIdentifier.of(keyspace, table), extractCleanedTableSchema(cleaned, keyspace, table));
+        }
+        return createStmts;
+    }
+
+    /**
+     * @param tableSchema a table's create statement, as returned by {@link #extractCleanedTableSchema}
+     *                    (or {@link #extractAllTables}/{@link #extractCdcTables}).
+     * @return true if the table schema has {@code cdc = true} set.
+     */
+    public static boolean isCdcEnabled(@NotNull String tableSchema)
+    {
+        return tableSchema.contains("cdc = true");
+    }
+
     public static String cleanCql(@NotNull final String cql)
     {
         return cql.replaceAll("(\\\\r|\\\\n|\\\\r\\n)+", "\n")

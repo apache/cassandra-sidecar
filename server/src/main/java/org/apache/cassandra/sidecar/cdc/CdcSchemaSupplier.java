@@ -27,8 +27,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.cassandra.bridge.CassandraBridge;
-import org.apache.cassandra.bridge.CdcBridge;
-import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
@@ -44,26 +42,18 @@ import org.jetbrains.annotations.NotNull;
 
 
 /**
- * Supplies schema information for CDC (Change Data Capture) enabled tables in a Cassandra cluster.
+ * Supplies schema information for tables in a Cassandra cluster, for CDC (Change Data Capture) processing.
  *
  * <p>This class is responsible for:
  * <ul>
  *   <li>Retrieving and parsing the complete schema from Cassandra instances</li>
- *   <li>Identifying tables that have CDC enabled</li>
- *   <li>Building {@link CqlTable} representations with appropriate metadata</li>
+ *   <li>Building {@link CqlTable} representations, with each table's CDC-enabled flag, UDTs,
+ *       replication factor, and partitioner</li>
  *   <li>Caching table IDs to optimize repeated lookups</li>
- *   <li>Extracting User Defined Types (UDTs) and replication factors</li>
- *   <li>Updating the CDC bridge with schema information</li>
  * </ul>
  *
- * <p>The schema supplier works by:
- * <ol>
- *   <li>Fetching the full schema export from any available Cassandra instance</li>
- *   <li>Parsing CREATE TABLE statements to identify CDC-enabled tables</li>
- *   <li>Extracting keyspace-specific UDTs and replication settings</li>
- *   <li>Building complete {@link CqlTable} objects with partitioner information</li>
- *   <li>Coordinating with the CDC bridge to maintain schema consistency</li>
- * </ol>
+ * <p>{@link #getTables()} returns every table; the CDC-enabled subset
+ * that callers actually care about is obtained via {@link SchemaSupplier#getCDCEnabledTables()}.
  *
  * @see SchemaSupplier
  * @see CqlTable
@@ -86,40 +76,34 @@ public class CdcSchemaSupplier implements SchemaSupplier
         this.cdcDatabaseAccessor = cdcDatabaseAccessor;
     }
 
-    public CompletableFuture<Set<CqlTable>> getCdcEnabledTables()
+    /**
+     * The CDC library uses this to keep its bridge schema complete, so that deserializing a commit log
+     * mutation for a CDC-disabled table co-located with CDC-enabled tables never throws
+     * {@code UnknownTableException}. Callers that only want CDC-enabled tables should use
+     * {@link SchemaSupplier#getCDCEnabledTables()} instead of filtering this result themselves.
+     */
+    @Override
+    public CompletableFuture<Set<CqlTable>> getTables()
     {
         String schema = instanceMetadataFetcher.callOnFirstAvailableInstance(instance-> instance.delegate().metadata().exportSchemaAsString());
         NodeSettings nodeSettings = instanceMetadataFetcher.callOnFirstAvailableInstance(instance-> instance.delegate().nodeSettings());
         CassandraBridge cassandraBridge = cassandraBridgeFactory.get(nodeSettings.releaseVersion());
-        CdcBridge cdcBridge = CdcBridgeFactory.getCdcBridge(cassandraBridge);
 
-        Set<CqlTable> cqlTables = buildCdcTables(schema,
-                                                 cdcDatabaseAccessor.partitioner(),
-                                                 tableIdCache,
-                                                 cdcDatabaseAccessor::getTableId,
-                                                 cassandraBridge);
-        cdcBridge.updateCdcSchema(cqlTables, getPartitioner(nodeSettings),
-                                  ((keyspace, table) -> tableIdCache.get(TableIdentifier.of(keyspace, table))));
+        Set<CqlTable> cqlTables = buildTables(schema,
+                                              cdcDatabaseAccessor.partitioner(),
+                                              tableIdCache,
+                                              cdcDatabaseAccessor::getTableId,
+                                              cassandraBridge);
         return CompletableFuture.completedFuture(cqlTables);
     }
 
-    private Partitioner getPartitioner(NodeSettings nodeSettings)
+    private static Set<CqlTable> buildTables(@NotNull String fullSchema,
+                                              @NotNull Partitioner partitioner,
+                                              @NotNull ConcurrentHashMap<TableIdentifier, UUID> tableIdCache,
+                                              @NotNull Function<TableIdentifier, UUID> tableIdLoaderFunction,
+                                              @NotNull CassandraBridge cassandraBridge)
     {
-        if (nodeSettings.partitioner().contains("."))
-        {
-            String[] splitPartitionerName = nodeSettings.partitioner().split("\\.");
-            return Partitioner.valueOf(splitPartitionerName[splitPartitionerName.length - 1]);
-        }
-        return Partitioner.valueOf(nodeSettings.partitioner());
-    }
-
-    private static Set<CqlTable> buildCdcTables(@NotNull String fullSchema,
-                                                @NotNull Partitioner partitioner,
-                                                @NotNull ConcurrentHashMap<TableIdentifier, UUID> tableIdCache,
-                                                @NotNull Function<TableIdentifier, UUID> tableIdLoaderFunction,
-                                                @NotNull CassandraBridge cassandraBridge)
-    {
-        Map<TableIdentifier, String> createStmts = CdcUtil.extractCdcTables(fullSchema);
+        Map<TableIdentifier, String> createStmts = CdcUtil.extractAllTables(fullSchema);
         Map<String, Set<String>> udtsPerKeyspace = createStmts.keySet()
                                                               .stream()
                                                               .map(TableIdentifier::keyspace)
@@ -136,11 +120,12 @@ public class CdcSchemaSupplier implements SchemaSupplier
                           .map(e ->
                                {
                                    TableIdentifier id = e.getKey();
+                                   String createStmt = e.getValue();
                                    ReplicationFactor rf = CqlUtils.extractReplicationFactor(fullSchema, id.keyspace());
 
-                                   return cassandraBridge.buildSchema(e.getValue(), id.keyspace(), rf,
+                                   return cassandraBridge.buildSchema(createStmt, id.keyspace(), rf,
                                                                       partitioner, udtsPerKeyspace.get(id.keyspace()),
-                                                                      tableIds.get(id), 0, true);
+                                                                      tableIds.get(id), 0, CdcUtil.isCdcEnabled(createStmt));
                                })
                           .collect(Collectors.toSet());
     }

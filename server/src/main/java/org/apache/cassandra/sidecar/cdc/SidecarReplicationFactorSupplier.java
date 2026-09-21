@@ -60,7 +60,7 @@ public class SidecarReplicationFactorSupplier implements ReplicationFactorSuppli
     public ReplicationFactor getMaximalReplicationFactor()
     {
         String dc = cdcOptions.dc();
-        Set<CqlTable> tables = FutureUtils.get(schemaSupplier.getCdcEnabledTables());
+        Set<CqlTable> tables = FutureUtils.get(schemaSupplier.getCDCEnabledTables());
         return tables.stream()
                      .map(CqlTable::replicationFactor)
                      .filter(rf -> rf.getOptions().containsKey(dc))
