@@ -1,5 +1,6 @@
 0.5.0
 -----
+ * Sanitize/Nullify Cloud Credentials on RestoreJob Completion (CASSSIDECAR-500)
  * Disable Netty wire logging on the HTTP server (CASSSIDECAR-496)
  * Tighten path containment in Live Migration file route (CASSSIDECAR-479)
  * Add fast_forward_enabled flag to enable eager pipelining of staging and importing in coordinated writes (CASSSIDECAR-463)
