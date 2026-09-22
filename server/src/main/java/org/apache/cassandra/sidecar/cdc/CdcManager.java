@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +47,9 @@ import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.utils.AsyncExecutor;
+import org.apache.cassandra.spark.utils.TableIdentifier;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
 
@@ -90,6 +93,7 @@ public class CdcManager
     private final CdcOptions cdcOptions;
     private final AsyncExecutor asyncExecutor;
     private final StateSidecarCdcCassandraClient cassandraClient;
+    private final CdcDatabaseAccessor cdcDatabaseAccessor;
 
 
     public CdcManager(EventConsumer eventConsumer,
@@ -117,6 +121,7 @@ public class CdcManager
         this.cdcOptions = cdcOptions;
         this.asyncExecutor = new ExecutorPoolsExecutor(taskExecutorPool);
         this.cassandraClient = new StateSidecarCdcCassandraClient(cdcDatabaseAccessor);
+        this.cdcDatabaseAccessor = cdcDatabaseAccessor;
         this.rfSupplier = new SidecarReplicationFactorSupplier(cdcOptions, schemaSupplier);
     }
 
@@ -218,8 +223,30 @@ public class CdcManager
                                          .withExecutor(asyncExecutor)
                                          .withReplicationFactorSupplier(rfSupplier)
                                          .withSidecarStatePersister(persister)
+                                         .withTableIdLookup(this::lookupTableId)
                                          .build();
         return new CdcConsumerEntry(consumer, persister, sidecarCdcStats);
+    }
+
+    /**
+     * Backs the {@code TableIdLookup} the CDC bridge uses to register each table's real internal
+     * table ID in {@code Schema.instance} (see {@code CdcBridge#internalTableIdLookup}). Left
+     * unset, it defaults to {@code TableIdLookup.STUB}, which always returns {@code null} —
+     * every commit-log mutation then fails to match any registered table and is silently
+     * dropped, with schema build and consumer startup otherwise succeeding normally.
+     */
+    @Nullable
+    private UUID lookupTableId(String keyspace, String table)
+    {
+        try
+        {
+            return cdcDatabaseAccessor.getTableId(TableIdentifier.of(keyspace, table));
+        }
+        catch (Exception exception)
+        {
+            LOGGER.warn("Unable to resolve table ID for {}.{}", keyspace, table, exception);
+            return null;
+        }
     }
 
     private @NotNull SidecarStatePersister getSidecarStatePersister()

@@ -211,11 +211,15 @@ public final class CdcUtil
 
     /**
      * Unlike {@link #extractCdcTables}, this is not restricted to tables with {@code cdc = true} —
-     * it returns every table in the schema, since callers such as {@code SchemaSupplier#getTables()}
-     * need the complete schema (see its javadoc for why).
+     * it returns every user table in the schema, since callers such as {@code SchemaSupplier#getTables()}
+     * need the complete schema (see its javadoc for why). System, virtual, and sidecar-internal
+     * keyspaces are excluded: they never carry {@code cdc = true} tables (so are irrelevant to the
+     * schema-completeness concern this method exists for), and their tables aren't resolvable via
+     * the driver-backed table ID lookup that callers such as {@link org.apache.cassandra.sidecar.db.CdcDatabaseAccessor}
+     * perform against every table this method returns.
      *
      * @param schemaStr full cluster schema text.
-     * @return map of keyspace/table identifier to table create statements, for every table.
+     * @return map of keyspace/table identifier to table create statements, for every non-system user table.
      */
     public static Map<TableIdentifier, String> extractAllTables(@NotNull String schemaStr)
     {
@@ -227,9 +231,23 @@ public final class CdcUtil
         {
             String keyspace = matcher.group(1);
             String table = matcher.group(2);
+            if (isSystemOrInternalKeyspace(keyspace))
+            {
+                continue;
+            }
             createStmts.put(TableIdentifier.of(keyspace, table), extractCleanedTableSchema(cleaned, keyspace, table));
         }
         return createStmts;
+    }
+
+    /**
+     * @param keyspace keyspace name
+     * @return true if the keyspace is a Cassandra system/virtual keyspace, or the sidecar's own
+     *         internal keyspace — mirrors {@code SchemaReporter.neitherVirtualNorSystem}.
+     */
+    private static boolean isSystemOrInternalKeyspace(@NotNull String keyspace)
+    {
+        return keyspace.equals("system") || keyspace.startsWith("system_") || keyspace.equals("sidecar_internal");
     }
 
     /**

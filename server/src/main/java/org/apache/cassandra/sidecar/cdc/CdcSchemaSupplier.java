@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.cdc;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -25,6 +26,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
@@ -62,6 +66,8 @@ import org.jetbrains.annotations.NotNull;
  */
 public class CdcSchemaSupplier implements SchemaSupplier
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CdcSchemaSupplier.class);
+
     private final InstanceMetadataFetcher instanceMetadataFetcher;
     private final CassandraBridgeFactory cassandraBridgeFactory;
     private final CdcDatabaseAccessor cdcDatabaseAccessor;
@@ -111,22 +117,28 @@ public class CdcSchemaSupplier implements SchemaSupplier
                                                               .collect(Collectors.toMap(Function.identity(),
                                                                                         keyspace -> CqlUtils.extractUdts(fullSchema, keyspace)));
 
-        Map<TableIdentifier, UUID> tableIds = createStmts.keySet()
-                                                         .stream()
-                                                         .collect(Collectors.toMap(Function.identity(),
-                                                                                   id -> tableIdCache.computeIfAbsent(id, tableIdLoaderFunction)));
-
-        return createStmts.entrySet().stream()
-                          .map(e ->
-                               {
-                                   TableIdentifier id = e.getKey();
-                                   String createStmt = e.getValue();
-                                   ReplicationFactor rf = CqlUtils.extractReplicationFactor(fullSchema, id.keyspace());
-
-                                   return cassandraBridge.buildSchema(createStmt, id.keyspace(), rf,
-                                                                      partitioner, udtsPerKeyspace.get(id.keyspace()),
-                                                                      tableIds.get(id), 0, CdcUtil.isCdcEnabled(createStmt));
-                               })
-                          .collect(Collectors.toSet());
+        // Built one table at a time (rather than as a stream) so a single table that fails to
+        // resolve (e.g. a table ID lookup miss) is skipped instead of failing schema refresh for
+        // the whole cluster.
+        Set<CqlTable> tables = new HashSet<>();
+        for (Map.Entry<TableIdentifier, String> entry : createStmts.entrySet())
+        {
+            TableIdentifier id = entry.getKey();
+            String createStmt = entry.getValue();
+            try
+            {
+                UUID tableId = tableIdCache.computeIfAbsent(id, tableIdLoaderFunction);
+                ReplicationFactor rf = CqlUtils.extractReplicationFactor(fullSchema, id.keyspace());
+                tables.add(cassandraBridge.buildSchema(createStmt, id.keyspace(), rf,
+                                                       partitioner, udtsPerKeyspace.get(id.keyspace()),
+                                                       tableId, 0, CdcUtil.isCdcEnabled(createStmt)));
+            }
+            catch (Exception exception)
+            {
+                LOGGER.warn("Skipping table '{}.{}' while building CDC schema; it could not be resolved",
+                           id.keyspace(), id.table(), exception);
+            }
+        }
+        return tables;
     }
 }
