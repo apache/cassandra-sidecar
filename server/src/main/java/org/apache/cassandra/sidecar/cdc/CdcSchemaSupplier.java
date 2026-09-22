@@ -117,9 +117,6 @@ public class CdcSchemaSupplier implements SchemaSupplier
                                                               .collect(Collectors.toMap(Function.identity(),
                                                                                         keyspace -> CqlUtils.extractUdts(fullSchema, keyspace)));
 
-        // Built one table at a time (rather than as a stream) so a single table that fails to
-        // resolve (e.g. a table ID lookup miss) is skipped instead of failing schema refresh for
-        // the whole cluster.
         Set<CqlTable> tables = new HashSet<>();
         for (Map.Entry<TableIdentifier, String> entry : createStmts.entrySet())
         {

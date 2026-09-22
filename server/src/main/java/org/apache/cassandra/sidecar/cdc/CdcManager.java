@@ -230,10 +230,7 @@ public class CdcManager
 
     /**
      * Backs the {@code TableIdLookup} the CDC bridge uses to register each table's real internal
-     * table ID in {@code Schema.instance} (see {@code CdcBridge#internalTableIdLookup}). Left
-     * unset, it defaults to {@code TableIdLookup.STUB}, which always returns {@code null} —
-     * every commit-log mutation then fails to match any registered table and is silently
-     * dropped, with schema build and consumer startup otherwise succeeding normally.
+     * table ID in {@code Schema.instance} (see {@code CdcBridge#internalTableIdLookup}).
      */
     @Nullable
     private UUID lookupTableId(String keyspace, String table)

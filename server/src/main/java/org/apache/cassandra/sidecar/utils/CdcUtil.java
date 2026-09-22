@@ -210,13 +210,7 @@ public final class CdcUtil
     }
 
     /**
-     * Unlike {@link #extractCdcTables}, this is not restricted to tables with {@code cdc = true} —
-     * it returns every user table in the schema, since callers such as {@code SchemaSupplier#getTables()}
-     * need the complete schema (see its javadoc for why). System, virtual, and sidecar-internal
-     * keyspaces are excluded: they never carry {@code cdc = true} tables (so are irrelevant to the
-     * schema-completeness concern this method exists for), and their tables aren't resolvable via
-     * the driver-backed table ID lookup that callers such as {@link org.apache.cassandra.sidecar.db.CdcDatabaseAccessor}
-     * perform against every table this method returns.
+     * Returns every user table in the schema.
      *
      * @param schemaStr full cluster schema text.
      * @return map of keyspace/table identifier to table create statements, for every non-system user table.
@@ -251,8 +245,7 @@ public final class CdcUtil
     }
 
     /**
-     * @param tableSchema a table's create statement, as returned by {@link #extractCleanedTableSchema}
-     *                    (or {@link #extractAllTables}/{@link #extractCdcTables}).
+     * @param tableSchema a table's create statement.
      * @return true if the table schema has {@code cdc = true} set.
      */
     public static boolean isCdcEnabled(@NotNull String tableSchema)
