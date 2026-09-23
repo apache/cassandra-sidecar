@@ -33,9 +33,12 @@ import io.vertx.core.net.SocketAddress;
 import io.vertx.ext.auth.authorization.Authorization;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
+import org.apache.cassandra.sidecar.common.data.CredentialType;
 import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestPayload;
 import org.apache.cassandra.sidecar.common.response.data.CreateRestoreJobResponsePayload;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.RestoreJob;
 import org.apache.cassandra.sidecar.db.RestoreJobDatabaseAccessor;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
@@ -55,15 +58,18 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 public class CreateRestoreJobHandler extends AbstractHandler<CreateRestoreJobRequestPayload> implements AccessProtected
 {
     private final RestoreJobDatabaseAccessor restoreJobDatabaseAccessor;
+    private final RestoreJobConfiguration restoreJobConfiguration;
 
     @Inject
     public CreateRestoreJobHandler(ExecutorPools executorPools,
                                    InstanceMetadataFetcher instanceMetadataFetcher,
                                    RestoreJobDatabaseAccessor restoreJobDatabaseAccessor,
-                                   CassandraInputValidator validator)
+                                   CassandraInputValidator validator,
+                                   SidecarConfiguration sidecarConfiguration)
     {
         super(instanceMetadataFetcher, executorPools, validator);
         this.restoreJobDatabaseAccessor = restoreJobDatabaseAccessor;
+        this.restoreJobConfiguration = sidecarConfiguration.restoreJobConfiguration();
     }
 
     @Override
@@ -116,6 +122,18 @@ public class CreateRestoreJobHandler extends AbstractHandler<CreateRestoreJobReq
 
     private Future<CreateRestoreJobRequestPayload> validatePayload(CreateRestoreJobRequestPayload createRestoreJobRequestPayload)
     {
+        CredentialType credentialType = createRestoreJobRequestPayload.credentialType();
+        Set<CredentialType> allowedCredentialTypes = restoreJobConfiguration.allowedCredentialTypes();
+        if (!allowedCredentialTypes.contains(credentialType))
+        {
+            logger.warn("Rejected restore job request using disallowed credentialType. credentialType={} allowed={}",
+                        credentialType, allowedCredentialTypes);
+            return Future.failedFuture(
+            wrapHttpException(HttpResponseStatus.BAD_REQUEST,
+                              "credentialType '" + credentialType + "' is not allowed by server policy. Allowed types: "
+                              + allowedCredentialTypes));
+        }
+
         UUID jobId = createRestoreJobRequestPayload.jobId();
         if (jobId == null)
         {

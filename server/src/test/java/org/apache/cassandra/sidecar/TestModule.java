@@ -82,6 +82,13 @@ public class TestModule extends AbstractModule
 
     public TestCassandraAdapterDelegate delegate;
 
+    private RestoreJobConfiguration restoreJobConfigurationOverride;
+
+    public void restoreJobConfiguration(RestoreJobConfiguration restoreJobConfiguration)
+    {
+        this.restoreJobConfigurationOverride = restoreJobConfiguration;
+    }
+
     @Singleton
     @Provides
     public CassandraAdapterDelegate delegate(Vertx vertx)
@@ -128,12 +135,14 @@ public class TestModule extends AbstractModule
                                 .cdcConfiguration(cdcConfiguration)
                                 .build();
         RestoreJobConfiguration restoreJobConfiguration =
-        RestoreJobConfigurationImpl.builder()
-                                   .restoreJobTablesTtl(SecondBoundConfiguration.parse((TimeUnit.DAYS.toSeconds(14) + 1) + "s"))
-                                   .processMaxConcurrency(RESTORE_MAX_CONCURRENCY)
-                                   .slowTaskThreshold(SecondBoundConfiguration.parse("10s"))
-                                   .slowTaskReportDelay(SecondBoundConfiguration.parse("2m"))
-                                   .build();
+        restoreJobConfigurationOverride != null
+        ? restoreJobConfigurationOverride
+        : RestoreJobConfigurationImpl.builder()
+                                     .restoreJobTablesTtl(SecondBoundConfiguration.parse((TimeUnit.DAYS.toSeconds(14) + 1) + "s"))
+                                     .processMaxConcurrency(RESTORE_MAX_CONCURRENCY)
+                                     .slowTaskThreshold(SecondBoundConfiguration.parse("10s"))
+                                     .slowTaskReportDelay(SecondBoundConfiguration.parse("2m"))
+                                     .build();
         PeriodicTaskConfiguration healthCheckConfiguration
         = new PeriodicTaskConfigurationImpl(true,
                                             MillisecondBoundConfiguration.parse("200ms"),
