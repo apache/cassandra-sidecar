@@ -135,6 +135,7 @@ sidecar:
     config_refresh_time: 10s
     table_schema_refresh_time: 60s
     segment_hardlink_cache_expiry: 1m
+    batch_statements_enabled: true
 ```
 
 **Configuration Parameters:**
@@ -143,6 +144,7 @@ sidecar:
 - `cdc.config_refresh_time`: How frequently CDC configuration is refreshed from the database.
 - `cdc.table_schema_refresh_time`: How frequently table schemas are refreshed for CDC-enabled tables.
 - `cdc.segment_hardlink_cache_expiry`: Cache expiration time for CDC segment hard links.
+- `cdc.batch_statements_enabled` *(default `false`)*: whether the sidecar should assume the workload may issue `BEGIN BATCH` statements writing to multiple tables in the same keyspace under a shared partition key. When `false` (the default), the sidecar registers CDC-enabled tables only (the cheapest option), on the assumption the workload never issues such batches — if that assumption is wrong, affected mutations are silently dropped entirely. Set to `true` if your workload may issue such batches: the sidecar then analyzes the schema at each refresh to find non-CDC tables that share partition-key structure (types, not names) with a CDC-enabled table in the same keyspace — the only tables that could ever be co-located with a CDC-enabled table's update in the same commit-log mutation — and registers only those alongside CDC-enabled tables. This avoids `UnknownTableException` on such batches while skipping registration (and the deserialization cost that comes with it) for tables that could never actually be batched with a CDC-enabled table.
 
 #### 3. Enable CDC on Tables
 

@@ -87,41 +87,70 @@ public class CdcUtilTest
     }
 
     @Test
-    public void testExtractCdcTables()
+    public void testExtractAllTablesWithCdcFlag()
     {
-        // Test with single CDC-enabled table
+        // Single CDC-enabled table
         String singleTableSchema = "CREATE TABLE test_ks.cdc_table (id uuid PRIMARY KEY, data text) WITH cdc = true;";
-        Map<TableIdentifier, String> result = CdcUtil.extractCdcTables(singleTableSchema);
+        Map<TableIdentifier, CdcUtil.TableSchema> result = CdcUtil.extractAllTablesWithCdcFlag(singleTableSchema);
         assertEquals(1, result.size());
-        assertTrue(result.containsKey(TableIdentifier.of("test_ks", "cdc_table")));
+        TableIdentifier cdcTableId = TableIdentifier.of("test_ks", "cdc_table");
+        assertTrue(result.containsKey(cdcTableId));
+        assertTrue(result.get(cdcTableId).cdc);
 
-        // Test with multiple CDC-enabled tables
-        String multipleTablesSchema = 
-            "CREATE TABLE ks1.table1 (id uuid PRIMARY KEY, data text) WITH cdc = true;" +
-            "CREATE TABLE ks2.table2 (id uuid PRIMARY KEY, value int) WITH cdc = true;" +
-            "CREATE TABLE ks3.table3 (id uuid PRIMARY KEY, info text) WITH cdc = false;";
-        result = CdcUtil.extractCdcTables(multipleTablesSchema);
+        // Single CDC-disabled table (explicit cdc = false) — this method must still return the
+        // table, just with cdc=false, since the whole point of this method is to return every
+        // table so Schema.instance can be built completely.
+        String singleNonCdcSchema = "CREATE TABLE test_ks.regular_table (id uuid PRIMARY KEY, data text) WITH cdc = false;";
+        result = CdcUtil.extractAllTablesWithCdcFlag(singleNonCdcSchema);
+        assertEquals(1, result.size());
+        TableIdentifier regularTableId = TableIdentifier.of("test_ks", "regular_table");
+        assertTrue(result.containsKey(regularTableId));
+        assertFalse(result.get(regularTableId).cdc);
+
+        // Table with no cdc option at all — must also be returned, with cdc=false.
+        String noCdcOptionSchema = "CREATE TABLE test_ks.plain_table (id uuid PRIMARY KEY, data text);";
+        result = CdcUtil.extractAllTablesWithCdcFlag(noCdcOptionSchema);
+        assertEquals(1, result.size());
+        TableIdentifier plainTableId = TableIdentifier.of("test_ks", "plain_table");
+        assertTrue(result.containsKey(plainTableId));
+        assertFalse(result.get(plainTableId).cdc);
+
+        // Mixed CDC/non-CDC tables in the SAME keyspace — this is the exact schema shape
+        // that BEGIN BATCH mixing CDC-enabled and CDC-disabled tables produces a single
+        // Mutation for. Both tables must come back, with correct individual cdc flags.
+        String mixedSameKeyspaceSchema =
+            "CREATE TABLE shared_ks.cdc_table (id uuid PRIMARY KEY, data text) WITH cdc = true;" +
+            "CREATE TABLE shared_ks.non_cdc_table (id uuid PRIMARY KEY, data text) WITH cdc = false;";
+        result = CdcUtil.extractAllTablesWithCdcFlag(mixedSameKeyspaceSchema);
         assertEquals(2, result.size());
-        assertTrue(result.containsKey(TableIdentifier.of("ks1", "table1")));
-        assertTrue(result.containsKey(TableIdentifier.of("ks2", "table2")));
-        assertFalse(result.containsKey(TableIdentifier.of("ks3", "table3")));
+        TableIdentifier sharedCdcId = TableIdentifier.of("shared_ks", "cdc_table");
+        TableIdentifier sharedNonCdcId = TableIdentifier.of("shared_ks", "non_cdc_table");
+        assertTrue(result.get(sharedCdcId).cdc);
+        assertFalse(result.get(sharedNonCdcId).cdc);
 
-        // Test with quoted keyspace and table names
-        String quotedNamesSchema = 
+        // Mixed CDC/non-CDC tables across DIFFERENT keyspaces — every table across every
+        // keyspace must be returned with its own correct flag.
+        String mixedAcrossKeyspacesSchema =
+            "CREATE TABLE ks1.table1 (id uuid PRIMARY KEY, data text) WITH cdc = true;" +
+            "CREATE TABLE ks2.table2 (id uuid PRIMARY KEY, value int) WITH cdc = false;" +
+            "CREATE TABLE ks3.table3 (id uuid PRIMARY KEY, info text);";
+        result = CdcUtil.extractAllTablesWithCdcFlag(mixedAcrossKeyspacesSchema);
+        assertEquals(3, result.size());
+        assertTrue(result.get(TableIdentifier.of("ks1", "table1")).cdc);
+        assertFalse(result.get(TableIdentifier.of("ks2", "table2")).cdc);
+        assertFalse(result.get(TableIdentifier.of("ks3", "table3")).cdc);
+
+        // Quoted keyspace and table names
+        String quotedNamesSchema =
             "CREATE TABLE \"my_keyspace\".\"my_table\" (id uuid PRIMARY KEY, data text) WITH cdc = true;";
-        result = CdcUtil.extractCdcTables(quotedNamesSchema);
+        result = CdcUtil.extractAllTablesWithCdcFlag(quotedNamesSchema);
         assertEquals(1, result.size());
-        assertTrue(result.containsKey(TableIdentifier.of("my_keyspace", "my_table")));
+        TableIdentifier quotedId = TableIdentifier.of("my_keyspace", "my_table");
+        assertTrue(result.containsKey(quotedId));
+        assertTrue(result.get(quotedId).cdc);
 
-        // Test with no CDC-enabled tables
-        String noCdcSchema = 
-            "CREATE TABLE test_ks.regular_table (id uuid PRIMARY KEY, data text);" +
-            "CREATE TABLE test_ks.another_table (id uuid PRIMARY KEY, value int) WITH cdc = false;";
-        result = CdcUtil.extractCdcTables(noCdcSchema);
-        assertTrue(result.isEmpty());
-
-        // Test with complex schema including clustering and additional options
-        String complexSchema = 
+        // Complex schema including clustering and additional WITH options
+        String complexSchema =
             "CREATE TABLE events.user_activity (" +
             "user_id uuid, " +
             "timestamp timestamp, " +
@@ -131,12 +160,33 @@ public class CdcUtilTest
             "AND bloom_filter_fp_chance = 0.01 " +
             "AND cdc = true " +
             "AND comment = 'User activity tracking';";
-        result = CdcUtil.extractCdcTables(complexSchema);
+        result = CdcUtil.extractAllTablesWithCdcFlag(complexSchema);
         assertEquals(1, result.size());
-        assertTrue(result.containsKey(TableIdentifier.of("events", "user_activity")));
+        TableIdentifier activityId = TableIdentifier.of("events", "user_activity");
+        assertTrue(result.containsKey(activityId));
+        assertTrue(result.get(activityId).cdc);
 
-        // Test with empty schema
-        result = CdcUtil.extractCdcTables("");
+        // createStatement is populated (not just the cdc flag) for a downstream-usable schema
+        assertTrue(result.get(activityId).createStatement.contains("user_activity"));
+
+        // Empty schema
+        result = CdcUtil.extractAllTablesWithCdcFlag("");
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void testExtractPartitionKeySignatureWithQuotedColumnNameContainingSpace()
+    {
+        // A quoted partition-key column name containing a space must not be misparsed as if
+        // the space inside the quotes were the name/type separator — that would corrupt the
+        // column name lookup and force the signature to indeterminate instead of "uuid".
+        String schema =
+            "CREATE TABLE test_ks.quoted_col_table (\"my col\" uuid PRIMARY KEY, data text) WITH cdc = true;";
+        Map<TableIdentifier, CdcUtil.TableSchema> result = CdcUtil.extractAllTablesWithCdcFlag(schema);
+        TableIdentifier id = TableIdentifier.of("test_ks", "quoted_col_table");
+        assertTrue(result.containsKey(id));
+        CdcUtil.PartitionKeySignature signature = result.get(id).partitionKeySignature;
+        assertFalse(signature.indeterminate);
+        assertEquals(java.util.List.of("uuid"), signature.columnTypes);
     }
 }

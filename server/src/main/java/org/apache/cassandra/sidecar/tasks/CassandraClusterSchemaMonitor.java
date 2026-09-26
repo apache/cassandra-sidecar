@@ -20,13 +20,12 @@
 package org.apache.cassandra.sidecar.tasks;
 
 import java.util.Collections;
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -38,25 +37,37 @@ import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CdcBridge;
 import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
+import org.apache.cassandra.sidecar.cdc.CdcSchemaUtils;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
-import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.CqlTable;
-import org.apache.cassandra.spark.data.ReplicationFactor;
 import org.apache.cassandra.spark.data.partitioner.Partitioner;
-import org.apache.cassandra.spark.utils.CqlUtils;
 import org.apache.cassandra.spark.utils.TableIdentifier;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Central schema management component for Cassandra cluster schema monitoring and CDC table tracking.
  * This class provides comprehensive schema management functionality for Cassandra Sidecar, specifically
  * focused on CDC (Change Data Capture) operations. It maintains real-time awareness of schema changes
  * in the Cassandra cluster and manages CDC-enabled table metadata.
+ *
+ * <p><b>Sole owner of live table un-registration:</b> a separate, independent schema-refresh
+ * loop also exists inside every {@code SidecarCdc} consumer instance (started by
+ * {@code CdcManager}/{@code CdcPublisher}; see {@code org.apache.cassandra.cdc.Cdc#refreshSchema}
+ * in cassandra-analytics), on its own cadence ({@code CdcOptions#schemaRefreshDelay()}, not tied
+ * to {@link #delay()} here). Both loops source their table set from the same
+ * {@code CdcSchemaSupplier} / {@link org.apache.cassandra.sidecar.cdc.CdcBatchRiskAnalyzer}
+ * computation and call {@code CdcBridge#updateCdcSchema} — but only <em>this</em> class calls
+ * {@code CdcBridge#unregisterNonCdcTables} to remove a table once it's no longer at risk of a CDC
+ * batch. This is intentional, not an oversight: {@code Cdc.refreshSchema()} is shared code used
+ * by non-sidecar CDC consumers that have no equivalent monitor, so it was left register-only.
+ * In a normal sidecar deployment both loops run, and re-registration by the other loop never
+ * produces an incorrect result (a CDC-enabled table is never touched by unregistration) — but it
+ * does mean the deserialization-cost savings from unregistering a now-safe table only fully
+ * materialize once this class's loop is the one steering steady-state registration.
  */
 public class CassandraClusterSchemaMonitor implements PeriodicTask
 {
@@ -65,6 +76,7 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
 
     private final AtomicReference<String> currSchemaText = new AtomicReference<>("");
     private final AtomicReference<Set<CqlTable>> cdcTables = new AtomicReference<>(Collections.emptySet());
+    private final AtomicReference<Set<TableIdentifier>> lastRegisteredTables = new AtomicReference<>(Collections.emptySet());
     private final ConcurrentHashMap<TableIdentifier, UUID> tableIdCache = new ConcurrentHashMap<>();
     private final CdcDatabaseAccessor databaseAccessor;
     private final DriverUnsupportedSchemaCache driverUnsupportedSchemaCache;
@@ -107,15 +119,72 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
             {
                 LOGGER.info("Schema change detected, refreshing CDC tables");
                 currSchemaText.set(fullSchemaText);
-                Set<CqlTable> updatedCdcTables = buildCdcTables(fullSchemaText, databaseAccessor, tableIdCache, cassandraBridge);
-                LOGGER.info("Cdc enabled tables tables='{}'", 
+
+                // Build the set of user tables that need to be registered (CDC-enabled tables
+                // plus any non-CDC table that shares partition-key structure with one, when
+                // batch statements are possible — see CdcBatchRiskAnalyzer). CDC-only tables
+                // are derived by filtering on CqlTable.cdc() — avoids a separate schema parse
+                // pass.
+                boolean batchStatementsEnabled = sidecarConfiguration.serviceConfiguration().cdcConfiguration().batchStatementsEnabled();
+                Set<CqlTable> tablesToRegisterForCDC = CdcSchemaUtils.buildTablesToRegisterForCDC(fullSchemaText,
+                                                                                getPartitioner(nodeSettings),
+                                                                                tableIdCache,
+                                                                                databaseAccessor::getTableId,
+                                                                                cassandraBridge,
+                                                                                batchStatementsEnabled);
+                Set<CqlTable> updatedCdcTables = tablesToRegisterForCDC.stream()
+                                                                       .filter(CqlTable::cdc)
+                                                                       .collect(Collectors.toSet());
+                LOGGER.info("Cdc enabled tables tables='{}'",
                             updatedCdcTables.stream()
                                             .map(m -> String.format("%s.%s", m.keyspace(), m.table()))
                                             .collect(Collectors.joining(",")));
                 cdcTables.set(updatedCdcTables);
 
-                cdcBridge.updateCdcSchema(updatedCdcTables, getPartitioner(nodeSettings),
+                // Pass the computed table set to updateCdcSchema so Schema.instance has enough
+                // tables to deserialize commit log mutations without throwing
+                // UnknownTableException — how much of the schema that covers depends on
+                // batchStatementsEnabled (see above).
+                cdcBridge.updateCdcSchema(tablesToRegisterForCDC, getPartitioner(nodeSettings),
                                           ((keyspace, table) -> tableIdCache.get(TableIdentifier.of(keyspace, table))));
+
+                // Unregister any table that was registered by a previous refresh but is no
+                // longer needed (e.g. the CDC-enabled table it was at risk of batching with was
+                // dropped, or either table's partition key was altered so they no longer share
+                // structure). Always register/update BEFORE unregistering, so there is never a
+                // window where a still-needed table is missing from Schema.instance.
+                Set<TableIdentifier> newlyRegisteredIds = tablesToRegisterForCDC.stream()
+                                                                                .map(t -> TableIdentifier.of(t.keyspace(), t.table()))
+                                                                                .collect(Collectors.toSet());
+                Set<TableIdentifier> staleIds = new HashSet<>(lastRegisteredTables.get());
+                staleIds.removeAll(newlyRegisteredIds);
+                if (!staleIds.isEmpty())
+                {
+                    LOGGER.info("Unregistering tables no longer at risk of a CDC batch tables='{}'",
+                                staleIds.stream()
+                                        .map(id -> String.format("%s.%s", id.keyspace(), id.table()))
+                                        .collect(Collectors.joining(",")));
+                    try
+                    {
+                        cdcBridge.unregisterNonCdcTables(staleIds);
+                    }
+                    catch (Throwable t)
+                    {
+                        // Don't lose track of tables we failed to unregister — if we recorded
+                        // lastRegisteredTables as newlyRegisteredIds regardless, a permanently
+                        // stale table would never be retried on a future refresh (staleIds is
+                        // computed as a diff against lastRegisteredTables). Keep staleIds in the
+                        // tracked set instead, so the next refresh attempts them again.
+                        LOGGER.warn("Failed to unregister stale CDC batch tables, will retry on next refresh tables='{}'",
+                                    staleIds.stream()
+                                            .map(id -> String.format("%s.%s", id.keyspace(), id.table()))
+                                            .collect(Collectors.joining(",")), t);
+                        newlyRegisteredIds = new HashSet<>(newlyRegisteredIds);
+                        newlyRegisteredIds.addAll(staleIds);
+                    }
+                }
+                lastRegisteredTables.set(newlyRegisteredIds);
+
                 schemaChangeListeners.forEach(Runnable::run);
             }
         }
@@ -134,6 +203,18 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
     public Set<CqlTable> getCdcTables()
     {
         return cdcTables.get();
+    }
+
+    /**
+     * @return the full set of tables currently registered in the CDC bridge's schema as of the
+     * last refresh — CDC-enabled tables plus any non-CDC table at risk of a batch with one (see
+     * {@link org.apache.cassandra.sidecar.cdc.CdcBatchRiskAnalyzer}). Exposed primarily for
+     * tests to assert on what is/isn't registered without a CDC bridge reference of their own.
+     */
+    @VisibleForTesting
+    public Set<TableIdentifier> getRegisteredTables()
+    {
+        return lastRegisteredTables.get();
     }
 
     private Partitioner getPartitioner(NodeSettings nodeSettings)
@@ -177,62 +258,4 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
         return ScheduleDecision.SKIP;
     }
 
-    @VisibleForTesting
-    static Set<CqlTable> buildCdcTables(CdcDatabaseAccessor cdcDatabaseAccessor,
-                                        DriverUnsupportedSchemaCache driverUnsupportedSchemaCache,
-                                        ConcurrentHashMap<TableIdentifier, UUID> tableIdCache,
-                                        @NotNull final CassandraBridge cassandraBridge)
-    {
-        String fullSchema = DriverUnsupportedSchemaCache.concatSchemas(cdcDatabaseAccessor.fullSchema(),
-                                                                       driverUnsupportedSchemaCache.getFullSchema());
-        return buildCdcTables(fullSchema,
-                              cdcDatabaseAccessor.partitioner(),
-                              tableIdCache,
-                              cdcDatabaseAccessor::getTableId,
-                              cassandraBridge);
-    }
-
-    private static Set<CqlTable> buildCdcTables(@NotNull String fullSchema,
-                                                @NotNull CdcDatabaseAccessor cdcDatabaseAccessor,
-                                                @NotNull ConcurrentHashMap<TableIdentifier, UUID> tableIdCache,
-                                                @NotNull final CassandraBridge cassandraBridge)
-    {
-        return buildCdcTables(fullSchema,
-                              cdcDatabaseAccessor.partitioner(),
-                              tableIdCache,
-                              cdcDatabaseAccessor::getTableId,
-                              cassandraBridge);
-    }
-
-    private static Set<CqlTable> buildCdcTables(@NotNull String fullSchema,
-                                                @NotNull Partitioner partitioner,
-                                                @NotNull ConcurrentHashMap<TableIdentifier, UUID> tableIdCache,
-                                                @NotNull Function<TableIdentifier, UUID> tableIdLoaderFunction,
-                                                @NotNull CassandraBridge cassandraBridge)
-    {
-        Map<TableIdentifier, String> createStmts = CdcUtil.extractCdcTables(fullSchema);
-        Map<String, Set<String>> udtsPerKeyspace = createStmts.keySet()
-                                                              .stream()
-                                                              .map(TableIdentifier::keyspace)
-                                                              .distinct() // remove duplicated keyspace strings
-                                                              .collect(Collectors.toMap(Function.identity(),
-                                                                                        keyspace -> CqlUtils.extractUdts(fullSchema, keyspace)));
-
-        Map<TableIdentifier, UUID> tableIds = createStmts.keySet()
-                                                         .stream()
-                                                         .collect(Collectors.toMap(Function.identity(),
-                                                                                   id -> tableIdCache.computeIfAbsent(id, tableIdLoaderFunction)));
-
-        return createStmts.entrySet().stream()
-                          .map(e ->
-                               {
-                                   TableIdentifier id = e.getKey();
-                                   ReplicationFactor rf = CqlUtils.extractReplicationFactor(fullSchema, id.keyspace());
-
-                                   return cassandraBridge.buildSchema(e.getValue(), id.keyspace(), rf,
-                                                                      partitioner, udtsPerKeyspace.get(id.keyspace()),
-                                                                      tableIds.get(id), 0, true);
-                               })
-                          .collect(Collectors.toSet());
-    }
 }

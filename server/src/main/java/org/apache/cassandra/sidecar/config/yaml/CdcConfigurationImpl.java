@@ -66,6 +66,9 @@ public class CdcConfigurationImpl implements CdcConfiguration
     public static final String CDC_CACHE_MAX_USAGE_DURATION = "cdc_raw_cache_max_usage_duration";
     public static final SecondBoundConfiguration DEFAULT_CDC_CACHE_MAX_USAGE_DURATION = SecondBoundConfiguration.parse("15m");
 
+    public static final String BATCH_STATEMENTS_ENABLED_PROPERTY = "batch_statements_enabled";
+    public static final boolean DEFAULT_BATCH_STATEMENTS_ENABLED = false;
+
     @JsonProperty(value = IS_ENABLED_PROPERTY)
     private final boolean isEnabled;
     @JsonProperty(value = CONFIGURATION_REFRESH_TIME_PROPERTY)
@@ -88,6 +91,8 @@ public class CdcConfigurationImpl implements CdcConfiguration
     private SecondBoundConfiguration cdcRawLowBufferWindow;
     @JsonProperty(value = CDC_CACHE_MAX_USAGE_DURATION)
     private SecondBoundConfiguration cacheMaxUsage;
+    @JsonProperty(value = BATCH_STATEMENTS_ENABLED_PROPERTY)
+    private boolean batchStatementsEnabled;
 
     public CdcConfigurationImpl()
     {
@@ -102,6 +107,7 @@ public class CdcConfigurationImpl implements CdcConfiguration
         this.cdcRawCriticalBufferWindow = DEFAULT_CDC_RAW_MAX_CRITICAL_BUFFER_WINDOW;
         this.cdcRawLowBufferWindow = DEFAULT_CDC_RAW_MAX_LOW_BUFFER_WINDOW;
         this.cacheMaxUsage = DEFAULT_CDC_CACHE_MAX_USAGE_DURATION;
+        this.batchStatementsEnabled = DEFAULT_BATCH_STATEMENTS_ENABLED;
     }
 
     public CdcConfigurationImpl(boolean isEnabled,
@@ -146,6 +152,7 @@ public class CdcConfigurationImpl implements CdcConfiguration
         this.cdcRawCriticalBufferWindow = cdcRawCriticalBufferWindow;
         this.cdcRawLowBufferWindow = cdcRawLowBufferWindow;
         this.cacheMaxUsage = cacheMaxUsage;
+        this.batchStatementsEnabled = DEFAULT_BATCH_STATEMENTS_ENABLED;
     }
 
     @Override
@@ -301,5 +308,141 @@ public class CdcConfigurationImpl implements CdcConfiguration
     public void setCacheMaxUsage(SecondBoundConfiguration cacheMaxUsage)
     {
         this.cacheMaxUsage = cacheMaxUsage;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = BATCH_STATEMENTS_ENABLED_PROPERTY)
+    public boolean batchStatementsEnabled()
+    {
+        return batchStatementsEnabled;
+    }
+
+    @JsonProperty(value = BATCH_STATEMENTS_ENABLED_PROPERTY)
+    public void setBatchStatementsEnabled(boolean batchStatementsEnabled)
+    {
+        this.batchStatementsEnabled = batchStatementsEnabled;
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
+    }
+
+    /**
+     * {@code CdcConfigurationImpl} builder static inner class. Convenience for programmatic
+     * construction (e.g. tests) — Jackson-based YAML deserialization does not use this and is
+     * unaffected by it; it continues to construct via the no-arg constructor and this class's
+     * {@code @JsonProperty}-annotated fields/setters as before.
+     */
+    public static final class Builder
+    {
+        private boolean isEnabled = DEFAULT_IS_ENABLED;
+        private MillisecondBoundConfiguration cdcConfigRefreshTime = DEFAULT_CDC_CONFIG_REFRESH_TIME;
+        private SecondBoundConfiguration tableSchemaRefreshTime = DEFAULT_TABLE_SCHEMA_REFRESH_TIME;
+        private SecondBoundConfiguration segmentHardLinkCacheExpiry = DEFAULT_SEGMENT_HARD_LINK_CACHE_EXPIRY;
+        private SecondBoundConfiguration cdcRawCleanerFrequency = DEFAULT_CDC_RAW_CLEANER_FREQUENCY;
+        private boolean enableCdcRawCleaner = DEFAULT_ENABLE_CDC_RAW_CLEANER_PROPERTY;
+        private long cdcRawMaxDirectorySize = DEFAULT_FALLBACK_CDC_RAW_MAX_DIRECTORY_SIZE_BYTES;
+        private float cdcRawMaxPercent = DEFAULT_CDC_RAW_MAX_DIRECTORY_MAX_PERCENT;
+        private SecondBoundConfiguration cdcRawCriticalBufferWindow = DEFAULT_CDC_RAW_MAX_CRITICAL_BUFFER_WINDOW;
+        private SecondBoundConfiguration cdcRawLowBufferWindow = DEFAULT_CDC_RAW_MAX_LOW_BUFFER_WINDOW;
+        private SecondBoundConfiguration cacheMaxUsage = DEFAULT_CDC_CACHE_MAX_USAGE_DURATION;
+        private boolean batchStatementsEnabled = DEFAULT_BATCH_STATEMENTS_ENABLED;
+
+        private Builder()
+        {
+        }
+
+        public Builder isEnabled(boolean isEnabled)
+        {
+            this.isEnabled = isEnabled;
+            return this;
+        }
+
+        public Builder cdcConfigRefreshTime(MillisecondBoundConfiguration cdcConfigRefreshTime)
+        {
+            this.cdcConfigRefreshTime = cdcConfigRefreshTime;
+            return this;
+        }
+
+        public Builder tableSchemaRefreshTime(SecondBoundConfiguration tableSchemaRefreshTime)
+        {
+            this.tableSchemaRefreshTime = tableSchemaRefreshTime;
+            return this;
+        }
+
+        public Builder segmentHardLinkCacheExpiry(SecondBoundConfiguration segmentHardLinkCacheExpiry)
+        {
+            this.segmentHardLinkCacheExpiry = segmentHardLinkCacheExpiry;
+            return this;
+        }
+
+        public Builder cdcRawCleanerFrequency(SecondBoundConfiguration cdcRawCleanerFrequency)
+        {
+            this.cdcRawCleanerFrequency = cdcRawCleanerFrequency;
+            return this;
+        }
+
+        public Builder enableCdcRawCleaner(boolean enableCdcRawCleaner)
+        {
+            this.enableCdcRawCleaner = enableCdcRawCleaner;
+            return this;
+        }
+
+        public Builder cdcRawMaxDirectorySize(long cdcRawMaxDirectorySize)
+        {
+            this.cdcRawMaxDirectorySize = cdcRawMaxDirectorySize;
+            return this;
+        }
+
+        public Builder cdcRawMaxPercent(float cdcRawMaxPercent)
+        {
+            this.cdcRawMaxPercent = cdcRawMaxPercent;
+            return this;
+        }
+
+        public Builder cdcRawCriticalBufferWindow(SecondBoundConfiguration cdcRawCriticalBufferWindow)
+        {
+            this.cdcRawCriticalBufferWindow = cdcRawCriticalBufferWindow;
+            return this;
+        }
+
+        public Builder cdcRawLowBufferWindow(SecondBoundConfiguration cdcRawLowBufferWindow)
+        {
+            this.cdcRawLowBufferWindow = cdcRawLowBufferWindow;
+            return this;
+        }
+
+        public Builder cacheMaxUsage(SecondBoundConfiguration cacheMaxUsage)
+        {
+            this.cacheMaxUsage = cacheMaxUsage;
+            return this;
+        }
+
+        public Builder batchStatementsEnabled(boolean batchStatementsEnabled)
+        {
+            this.batchStatementsEnabled = batchStatementsEnabled;
+            return this;
+        }
+
+        public CdcConfigurationImpl build()
+        {
+            CdcConfigurationImpl config = new CdcConfigurationImpl(isEnabled,
+                                                                    cdcConfigRefreshTime,
+                                                                    tableSchemaRefreshTime,
+                                                                    segmentHardLinkCacheExpiry,
+                                                                    cdcRawCleanerFrequency,
+                                                                    enableCdcRawCleaner,
+                                                                    cdcRawMaxDirectorySize,
+                                                                    cdcRawMaxPercent,
+                                                                    cdcRawCriticalBufferWindow,
+                                                                    cdcRawLowBufferWindow,
+                                                                    cacheMaxUsage);
+            config.setBatchStatementsEnabled(batchStatementsEnabled);
+            return config;
+        }
     }
 }

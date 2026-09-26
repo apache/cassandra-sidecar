@@ -69,7 +69,7 @@ public class SidecarReplicationFactorSupplierTest
         CqlTable t1 = tableWithNtsRf(Map.of(DC, 2));
         CqlTable t2 = tableWithNtsRf(Map.of(DC, 5));
         CqlTable t3 = tableWithNtsRf(Map.of(DC, 3));
-        when(schemaSupplier.getCdcEnabledTables()).thenReturn(CompletableFuture.completedFuture(Set.of(t1, t2, t3)));
+        when(schemaSupplier.getTables()).thenReturn(CompletableFuture.completedFuture(Set.of(t1, t2, t3)));
 
         ReplicationFactor result = supplier.getMaximalReplicationFactor();
 
@@ -80,7 +80,7 @@ public class SidecarReplicationFactorSupplierTest
     void getMaximalReplicationFactorFallsBackToSimpleStrategy1WhenNoDcMatch()
     {
         CqlTable table = tableWithNtsRf(Map.of("other_dc", 5));
-        when(schemaSupplier.getCdcEnabledTables()).thenReturn(CompletableFuture.completedFuture(Set.of(table)));
+        when(schemaSupplier.getTables()).thenReturn(CompletableFuture.completedFuture(Set.of(table)));
 
         ReplicationFactor result = supplier.getMaximalReplicationFactor();
 
@@ -90,16 +90,32 @@ public class SidecarReplicationFactorSupplierTest
     @Test
     void getMaximalReplicationFactorFallsBackToSimpleStrategy1WhenNoTablesPresent()
     {
-        when(schemaSupplier.getCdcEnabledTables()).thenReturn(CompletableFuture.completedFuture(Set.of()));
+        when(schemaSupplier.getTables()).thenReturn(CompletableFuture.completedFuture(Set.of()));
 
         ReplicationFactor result = supplier.getMaximalReplicationFactor();
 
         assertThat(result).isEqualTo(ReplicationFactor.simpleStrategy(3));
     }
 
+    @Test
+    void getMaximalReplicationFactorIgnoresNonCdcTables()
+    {
+        CqlTable cdcTable = tableWithNtsRf(Map.of(DC, 2));
+        CqlTable nonCdcTable = tableWithNtsRf(Map.of(DC, 9));
+        when(nonCdcTable.cdc()).thenReturn(false);
+        when(schemaSupplier.getTables()).thenReturn(CompletableFuture.completedFuture(Set.of(cdcTable, nonCdcTable)));
+
+        ReplicationFactor result = supplier.getMaximalReplicationFactor();
+
+        // the non-CDC table's higher RF must not be considered, since getTables() can return
+        // a mix of CDC and non-CDC tables (see CqlTable#cdc())
+        assertThat(result.getOptions().get(DC)).isEqualTo(2);
+    }
+
     private static CqlTable tableWithNtsRf(Map<String, Integer> dcOptions)
     {
         CqlTable table = mock(CqlTable.class);
+        when(table.cdc()).thenReturn(true);
         when(table.replicationFactor()).thenReturn(
             new ReplicationFactor(ReplicationFactor.ReplicationStrategy.NetworkTopologyStrategy, dcOptions));
         return table;

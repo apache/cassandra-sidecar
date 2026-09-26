@@ -144,6 +144,8 @@ allprojects {
         mavenLocal()
         // Confluent Schema Registry artifacts (kafka-avro-serializer)
         maven { url "https://packages.confluent.io/maven/" }
+        // Apache snapshots (e.g. cassandra-analytics SNAPSHOT versions)
+        maven { url "https://repository.apache.org/content/repositories/snapshots/" }
     }
 
     checkstyle {

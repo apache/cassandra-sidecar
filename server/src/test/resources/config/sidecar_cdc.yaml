@@ -61,6 +61,7 @@ sidecar:
     enabled: true
     config_refresh_time: 10s
     table_schema_refresh_time: 60s
+    batch_statements_enabled: false
   jmx:
     max_retries: 1
     retry_delay: 1234ms
