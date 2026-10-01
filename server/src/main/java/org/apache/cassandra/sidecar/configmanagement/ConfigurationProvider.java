@@ -29,6 +29,10 @@ import org.jetbrains.annotations.Nullable;
  * Configuration Manager. Implementations may persist overlays locally (files), remotely
  * (etcd, Consul, HTTP APIs), or in-memory (for testing).
  *
+ * <p>Implementations that cannot reach their backing store may throw
+ * {@link ConfigurationProviderUnavailableException} to signal an outage explicitly; see
+ * {@link FailurePolicyWrapper#isUnavailable(Throwable)} for how other exception types are classified.
+ *
  * <p>The provider stores version-agnostic overlays and does not perform version-specific
  * validation or merge logic. Validation against a version-aware schema and computing updated
  * overlays (via {@link ConfigurationPatchApplier}) are the responsibility of the
