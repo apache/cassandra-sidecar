@@ -62,6 +62,36 @@ class GossipInfoParserTest
             .isFalse();
     }
 
+    @Test
+    void testIpv6GossipInfoHostHeaderCheck()
+    {
+        assertThat(GossipInfoParser.isGossipInfoHostHeader("/[0:0:0:0:0:0:0:1]:7000"))
+        .as("should parse format /[IPV6]:PORT")
+        .isTrue();
+        assertThat(GossipInfoParser.isGossipInfoHostHeader("optional_hostname/[fe80:0:0:0:0:0:0:1]:7000"))
+        .as("should parse format HOSTNAME/[IPV6]:PORT")
+        .isTrue();
+        assertThat(GossipInfoParser.isGossipInfoHostHeader("/0:0:0:0:0:0:0:1"))
+        .as("should parse format /IPV6")
+        .isTrue();
+    }
+
+    @Test
+    void testParseIpv6GossipInfo()
+    {
+        GossipInfoResponse result = GossipInfoParser.parse(SAMPLE_IPV6_GOSSIP_INFO);
+        assertThat(result).containsKey("/[0:0:0:0:0:0:0:1]:7000")
+                          .containsKey("localhost2/[0:0:0:0:0:0:0:2]:7000")
+                          .containsKey("/[fe80:0:0:0:0:0:0:1]:7000");
+        GossipInfoResponse.GossipInfo gossipInfo = result.get("[0:0:0:0:0:0:0:1]:7000");
+        assertThat(gossipInfo).isNotNull();
+        assertThat(gossipInfo.generation()).isEqualTo("1668100877");
+        assertThat(gossipInfo.heartbeat()).isEqualTo("242");
+        assertThat(gossipInfo.statusWithPort()).isEqualTo("NORMAL,-9223372036854775808");
+        assertThat(result.get("[fe80:0:0:0:0:0:0:1]:7000").statusWithPort())
+        .isEqualTo("BOOT_REPLACE,-3074457345618258603");
+    }
+
     private static final String SAMPLE_GOSSIP_INFO =
         "/127.0.0.3\n" +
         "  generation:1668100877\n" +
@@ -85,4 +115,27 @@ class GossipInfoParserTest
         "  SSTABLE_VERSIONS:6:big-nb\n" +
         "  TOKENS:18:<hidden>\n" +
         "  INDEX_STATUS:2198:{\"ks.tbl_idx\":\"BUILD_SUCCEEDED\"}";
+
+    private static final String SAMPLE_IPV6_GOSSIP_INFO =
+        "/[fe80:0:0:0:0:0:0:1]:7000\n" +
+        "  generation:1668100877\n" +
+        "  heartbeat:248\n" +
+        "  LOAD:217:88883.0\n" +
+        "  STATUS_WITH_PORT:71:BOOT_REPLACE,-3074457345618258603\n" +
+        "  SSTABLE_VERSIONS:6:big-nb\n" +
+        "  TOKENS:70:<hidden>\n" +
+        "localhost2/[0:0:0:0:0:0:0:2]:7000\n" +
+        "  generation:1668100877\n" +
+        "  heartbeat:243\n" +
+        "  LOAD:211:83702.0\n" +
+        "  STATUS_WITH_PORT:19:NORMAL,-3074457345618258603\n" +
+        "  SSTABLE_VERSIONS:6:big-nb\n" +
+        "  TOKENS:18:<hidden>\n" +
+        "/[0:0:0:0:0:0:0:1]:7000\n" +
+        "  generation:1668100877\n" +
+        "  heartbeat:242\n" +
+        "  LOAD:211:88971.0\n" +
+        "  STATUS_WITH_PORT:19:NORMAL,-9223372036854775808\n" +
+        "  SSTABLE_VERSIONS:6:big-nb\n" +
+        "  TOKENS:18:<hidden>";
 }

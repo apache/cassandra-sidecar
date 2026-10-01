@@ -36,10 +36,15 @@ public class GossipInfoParser
     {
     } // util, do not instantiate
 
-    private static final String IPV4_PATTERN = "(?:[0-9]{1,3}.){3}[0-9]{1,3}";
+    private static final String IPV4_PATTERN = "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}";
     private static final String IPV6_PATTERN = "(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}";
+    // Cassandra wraps an IPv6 literal in square brackets before appending the port, so that the address and
+    // the port can be told apart, i.e. '/[2001:db8:0:0:0:0:0:1]:7000'. The brackets are absent when the
+    // gossip info is retrieved without ports. See org.apache.cassandra.locator.InetAddressAndPort#toString(InetAddress, int)
+    private static final String BRACKETED_IPV6_PATTERN = String.format("\\[%s\\]", IPV6_PATTERN);
     // Pattern text matching both IPv4 and IPv6
-    private static final String IP_PATTERN = String.format("((%s)|(%s))", IPV4_PATTERN, IPV6_PATTERN);
+    private static final String IP_PATTERN = String.format("((%s)|(%s)|(%s))",
+                                                           IPV4_PATTERN, BRACKETED_IPV6_PATTERN, IPV6_PATTERN);
     // Pattern text matching IP with port optionally present.
     // Technically, [0-9]{1,5} represents a larger range for valid ports. It is fine for parsing the gossip info output.
     private static final String IP_WITH_PORT_PATTERN = String.format("%s(:[0-9]{1,5})?", IP_PATTERN);
@@ -78,7 +83,9 @@ public class GossipInfoParser
             }
             else
             {
-                assert gossipInfo != null; // the host line appears before the rest. gossipInfo map must be initialized
+                Preconditions.checkState(gossipInfo != null,
+                                         "Expected a gossip host header before the gossip fields. " +
+                                         "Unrecognized line: %s", line);
                 final List<String> splitLine = GOSSIP_INFO_FIELD_SPLITTER.splitToList(line);
                 Preconditions.checkState(splitLine.size() == 2 || splitLine.size() == 3,
                                          "A gossip field should be split into two or three parts. %s",
