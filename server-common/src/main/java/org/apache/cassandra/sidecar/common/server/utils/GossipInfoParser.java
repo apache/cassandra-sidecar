@@ -39,7 +39,7 @@ public class GossipInfoParser
     private static final String IPV4_PATTERN = "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}";
     private static final String IPV6_PATTERN = "(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}";
     // Cassandra wraps an IPv6 literal in square brackets before appending the port, so that the address and
-    // the port can be told apart, i.e. '/[2001:db8:0:0:0:0:0:1]:7000'. The brackets are absent when the
+    // the port can be told apart, e.g. '/[2001:db8:0:0:0:0:0:1]:7000'. The brackets are absent when the
     // gossip info is retrieved without ports. See org.apache.cassandra.locator.InetAddressAndPort#toString(InetAddress, int)
     private static final String BRACKETED_IPV6_PATTERN = String.format("\\[%s\\]", IPV6_PATTERN);
     // Pattern text matching both IPv4 and IPv6
