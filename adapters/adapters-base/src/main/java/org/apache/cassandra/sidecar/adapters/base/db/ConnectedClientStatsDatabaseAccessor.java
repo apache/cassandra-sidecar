@@ -24,6 +24,7 @@ import java.util.stream.StreamSupport;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
+import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
 import org.apache.cassandra.sidecar.common.server.ICassandraAdapter;
 import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.db.LocalDatabaseAccessor;
@@ -45,7 +46,7 @@ public class ConnectedClientStatsDatabaseAccessor extends LocalDatabaseAccessor<
      */
     public ConnectedClientStatsSummary summary()
     {
-        Preconditions.checkState(tableSchema.isInitialized(), () -> tableSchema.getClass().getSimpleName() + " is not initialized yet");
+        ensureSchemaAvailable();
         BoundStatement statement = tableSchema.connectionsByUser().bind();
         ResultSet resultSet = execute(statement);
         return ConnectedClientStatsSummary.from(resultSet);
@@ -57,10 +58,20 @@ public class ConnectedClientStatsDatabaseAccessor extends LocalDatabaseAccessor<
      */
     public Stream<ConnectedClientStats> stats()
     {
-        Preconditions.checkState(tableSchema.isInitialized(), () -> tableSchema.getClass().getSimpleName() + " is not initialized yet");
+        ensureSchemaAvailable();
         BoundStatement statement = tableSchema.stats().bind();
         ResultSet resultSet = execute(statement);
         return StreamSupport.stream(resultSet.spliterator(), false)
                             .map(ConnectedClientStats::from);
+    }
+
+    private void ensureSchemaAvailable()
+    {
+        // Null when sidecar schema is disabled
+        if (tableSchema == null)
+        {
+            throw new OperationUnavailableException("Sidecar schema is required for the operation but it is disabled");
+        }
+        Preconditions.checkState(tableSchema.isInitialized(), () -> tableSchema.getClass().getSimpleName() + " is not initialized yet");
     }
 }

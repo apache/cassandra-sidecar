@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.adapters.base;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.sidecar.adapters.base.exception.OperationUnavailableException;
 import org.apache.cassandra.sidecar.adapters.base.jmx.CounterMetricsJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.GaugeMetricsJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.MeterMetricsJmxOperations;
@@ -122,5 +123,18 @@ class CassandraMetricsOperationsTest
         assertThatThrownBy(() -> metricsOperations.getCompletedCompactionsRate())
         .isInstanceOf(RuntimeException.class)
         .hasMessage("JMX connection failed");
+    }
+
+    @Test
+    void testConnectedClientStatsFailureSchemaDisabled()
+    {
+        // TableSchemaFetcher mock returns a null schema, as when sidecar schema is disabled
+        assertThatThrownBy(() -> metricsOperations.connectedClientStats(true))
+        .isInstanceOf(OperationUnavailableException.class)
+        .hasMessage("Sidecar schema is required for the operation but it is disabled");
+
+        assertThatThrownBy(() -> metricsOperations.connectedClientStats(false))
+        .isInstanceOf(OperationUnavailableException.class)
+        .hasMessage("Sidecar schema is required for the operation but it is disabled");
     }
 }
