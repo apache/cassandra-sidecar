@@ -1,5 +1,6 @@
 0.5.0
 -----
+ * CDC log_only mode should not require Kafka producer configuration (CASSSIDECAR-492)
  * Report unknown node status as "Unknown" instead of "?" in ring and token range replica responses (CASSSIDECAR-506)
  * Remove unused Instance Metadata Fetcher from CdcDatabaseAccessor (CASSSIDECAR-497)
  * Fix IPV6 regex to recognize bracketed addresses in gossip info host headers (CASSSIDECAR-503)

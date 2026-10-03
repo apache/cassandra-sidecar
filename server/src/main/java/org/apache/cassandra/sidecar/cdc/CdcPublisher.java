@@ -141,6 +141,14 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
             instanceMetadataFetcher.callOnFirstAvailableInstance(instance ->
                 instance.delegate().nodeSettings()).releaseVersion()
         ).getVersion();
+
+        if (conf.logOnly())
+        {
+            LOGGER.warn("CDC log_only is set; mutations will be logged and not published to Kafka");
+            CdcLogMode.init(key -> TypeCache.get(version).getType(key.keyspace, key.type));
+            return event -> CdcLogMode.FULL.info(LOGGER, "CDC log_only", event, null);
+        }
+
         this.kafkaPublisher = KafkaPublisher.create(version,
                                                     buildTopicSupplier(conf),
                                                     conf.kafkaConfigs(),

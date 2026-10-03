@@ -141,6 +141,38 @@ class CdcConfigImplTest
         assertThat(cdcConfig.persistDelay()).isEqualTo(new MillisecondBoundConfiguration(5, TimeUnit.SECONDS));
     }
 
+    /**
+     * With {@code log_only} set there is no Kafka producer configuration to load, so readiness must
+     * not require it. Note that {@link CdcConfigImpl#isConfigReady()} has no production caller — it
+     * is not an enforced gate, and this pins the policy rather than any behaviour.
+     */
+    @Test
+    void testIsConfigReadyWithoutKafkaConfigsWhenLogOnly() throws InterruptedException
+    {
+        // Dedicated Vertx instance so the codec registration does not depend on test ordering
+        Vertx testVertx = Vertx.vertx();
+        try
+        {
+            CdcConfigAccessor cdcConfigAccessor = mockCdcConfigAccessor();
+            CdcConfigRefresherNotifierTask.ConfigMappings configMappings = new CdcConfigRefresherNotifierTask.ConfigMappings();
+            // Kafka mappings deliberately left empty, mirroring a broker-less deployment
+            configMappings.setCdcConfigMappings(Map.of("log_only", "true",
+                                                       "datacenter", "DC1"));
+
+            CdcConfigImpl cdcConfig = new CdcConfigImpl(testVertx, cdcConfigAccessor);
+            testVertx.eventBus().registerDefaultCodec(CdcConfigRefresherNotifierTask.ConfigMappings.class, CdcConfigMappingsCodec.INSTANCE);
+            testVertx.eventBus().publish(ON_CDC_CONFIG_MAPPINGS_CHANGED.address(), configMappings);
+
+            loopAssert(5, () -> assertThat(cdcConfig.logOnly()).isTrue());
+            assertThat(cdcConfig.kafkaConfigs()).isEmpty();
+            assertThat(cdcConfig.isConfigReady()).isTrue();
+        }
+        finally
+        {
+            testVertx.close();
+        }
+    }
+
     @Test
     void testConfigChanged() throws InterruptedException
     {
