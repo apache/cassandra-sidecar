@@ -341,25 +341,23 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
 
     public static SidecarConfigurationImpl readYamlConfiguration(Path yamlConfigurationPath) throws IOException
     {
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
-                              .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
-                              .configure(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS, true)
-                              .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                              .registerModule(resolveYamlTypeMappings());
-
-        return mapper.readValue(yamlConfigurationPath.toFile(), SidecarConfigurationImpl.class);
+        return yamlMapper().readValue(yamlConfigurationPath.toFile(), SidecarConfigurationImpl.class);
     }
 
     @VisibleForTesting
     public static SidecarConfigurationImpl fromYamlString(String yaml) throws IOException
     {
+        return yamlMapper().readValue(yaml, SidecarConfigurationImpl.class);
+    }
+
+    private static ObjectMapper yamlMapper() throws IOException {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
                               .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
                               .configure(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS, true)
                               .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-                              .registerModule(resolveYamlTypeMappings());
-
-        return mapper.readValue(yaml, SidecarConfigurationImpl.class);
+                              .registerModule(resolveYamlTypeMappings())
+                              .registerModule(validatingModule());
+        return mapper;
     }
 
     private static SimpleModule resolveYamlTypeMappings() throws IOException
@@ -418,6 +416,12 @@ public class SidecarConfigurationImpl implements SidecarConfiguration
         {
             throw new IllegalStateException("Found unimplemented configuration class(es): " + unimplemented);
         }
+        return module;
+    }
+
+    private static SimpleModule validatingModule() {
+        SimpleModule module = new SimpleModule();
+        module.setDeserializerModifier(new ValidatingBeanDeserializerModifier());
         return module;
     }
 
