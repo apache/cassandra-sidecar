@@ -124,7 +124,7 @@ public class CreateRestoreJobHandler extends AbstractHandler<CreateRestoreJobReq
     {
         CredentialType credentialType = createRestoreJobRequestPayload.credentialType();
         Set<CredentialType> allowedCredentialTypes = restoreJobConfiguration.allowedCredentialTypes();
-        if (!allowedCredentialTypes.contains(credentialType))
+        if (allowedCredentialTypes != null && !allowedCredentialTypes.contains(credentialType))
         {
             logger.warn("Rejected restore job request using disallowed credentialType. credentialType={} allowed={}",
                         credentialType, allowedCredentialTypes);

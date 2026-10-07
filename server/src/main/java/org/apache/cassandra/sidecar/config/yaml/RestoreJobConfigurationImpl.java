@@ -22,6 +22,7 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -349,6 +350,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     @JsonProperty(value = "allowed_credential_types")
     public void setAllowedCredentialTypes(Set<CredentialType> allowedCredentialTypes)
     {
+        Preconditions.checkArgument(allowedCredentialTypes != null && allowedCredentialTypes.size() > 0, () -> "Invalid allowed_credential_types value: " + allowedCredentialTypes);
         this.allowedCredentialTypes = allowedCredentialTypes;
     }
 
