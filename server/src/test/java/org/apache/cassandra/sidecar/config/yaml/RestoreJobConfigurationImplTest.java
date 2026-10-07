@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.config.yaml;
 import java.io.IOException;
 import java.util.EnumSet;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +30,7 @@ import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
@@ -50,12 +52,25 @@ class RestoreJobConfigurationImplTest
     void testParsesAllowedCredentialTypesFromYaml() throws IOException
     {
         String yaml = "blob_restore:\n" +
-                      "  allowed_credential_types: [IAM]";
+                "  allowed_credential_types: [IAM]";
 
         SidecarConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml);
         RestoreJobConfiguration restoreJobConfig = config.restoreJobConfiguration();
         assertThat(restoreJobConfig).isNotNull();
         assertThat(restoreJobConfig.allowedCredentialTypes()).containsExactly(CredentialType.IAM);
+    }
+
+    @DisplayName("Parses 'allowed_credential_types' from the 'blob_restore' configuration")
+    @Test
+    void testParsesInvalidAllowedCredentialTypesFromYaml() throws IOException
+    {
+        String yaml = "blob_restore:\n" +
+                "  allowed_credential_types: []";
+
+        assertThatExceptionOfType(JsonMappingException.class)
+                .isThrownBy(() -> SidecarConfigurationImpl.fromYamlString(yaml))
+                .withMessageContaining("Invalid allowed_credential_types value: []");
+
     }
 
     @DisplayName("Rejects an empty 'allowed_credential_types' set")
@@ -68,4 +83,17 @@ class RestoreJobConfigurationImplTest
                                                       .build())
         .withMessageContaining("allowedCredentialTypes must not be empty");
     }
+
+    @DisplayName("Rejects an empty 'allowed_credential_types' set once built")
+    @Test
+    void testRejectsEmptyAllowedCredentialTypes2()
+    {
+        RestoreJobConfigurationImpl config = RestoreJobConfigurationImpl.builder()
+                .build();
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> config.setAllowedCredentialTypes(EnumSet.noneOf(CredentialType.class)))
+                .withMessageContaining("Invalid allowed_credential_types value");
+    }
+
 }
