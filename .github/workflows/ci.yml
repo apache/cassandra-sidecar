@@ -85,14 +85,14 @@ jobs:
           ./scripts/build-dtest-jars.sh
 
       - name: Upload dtest jars artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: dtest-jars
           path: dtest-jars/
           retention-days: 90
 
       - name: Upload cassandra tarballs artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: cassandra-tarballs
           path: cassandra-tarballs/
@@ -177,7 +177,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: unit-test-results-java-${{ matrix.java }}
           path: |
@@ -187,7 +187,7 @@ jobs:
 
       - name: Upload static analysis reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: static-analysis-reports-java-${{ matrix.java }}
           path: |
@@ -274,7 +274,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: integration-lightweight-results-java-${{ matrix.java }}-cassandra-${{ matrix.cassandra }}
           path: |
@@ -368,7 +368,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: integration-heavyweight-results-java-${{ matrix.java }}-cassandra-${{ matrix.cassandra }}
           path: |
