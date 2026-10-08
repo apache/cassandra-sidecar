@@ -302,7 +302,7 @@ class SchemaCacheTest
         .isEqualTo(KEYSPACE_SCHEMA + "\n\n" + SCHEMA);
     }
 
-    static SidecarConfiguration mockSidecarConfiguration()
+    private SidecarConfiguration mockSidecarConfiguration()
     {
         SidecarConfiguration sidecarConfiguration = mock(SidecarConfiguration.class);
         DriverConfiguration driverConfiguration = mock(DriverConfiguration.class);
@@ -311,7 +311,7 @@ class SchemaCacheTest
         return sidecarConfiguration;
     }
 
-    static void mockPreparedQuery(Session session, String statement, List<Map<String, String>> rows)
+    private void mockPreparedQuery(Session session, String statement, List<Map<String, String>> rows)
     {
         PreparedStatement preparedStatement = mock(PreparedStatement.class);
         BoundStatement boundStatement = mock(BoundStatement.class);
@@ -320,7 +320,7 @@ class SchemaCacheTest
         when(session.execute(eq(boundStatement))).then(invocation -> mockResultSet(rows));
     }
 
-    static void mockDescribeKeyspace(Session session, String keyspace, String schema)
+    private void mockDescribeKeyspace(Session session, String keyspace, String schema)
     {
         mockQuery(session,
                   "DESCRIBE KEYSPACE " + keyspace,
@@ -328,19 +328,19 @@ class SchemaCacheTest
                           Map.of("create_statement", schema)));
     }
 
-    static void mockDescribeTable(Session session, String keyspace, String table, String schema)
+    private void mockDescribeTable(Session session, String keyspace, String table, String schema)
     {
         mockQuery(session,
                   String.format("DESCRIBE TABLE %s.%s", keyspace, table),
                   List.of(Map.of("create_statement", schema)));
     }
 
-    static void mockQuery(Session session, String statement, List<Map<String, String>> rows)
+    private void mockQuery(Session session, String statement, List<Map<String, String>> rows)
     {
         when(session.execute(eq(statement))).then(invocation -> mockResultSet(rows));
     }
 
-    static KeyspaceMetadata mockKeyspaceMetadata(String keyspace, String table)
+    private KeyspaceMetadata mockKeyspaceMetadata(String keyspace, String table)
     {
         TableMetadata tableMetadata = mock(TableMetadata.class);
         when(tableMetadata.getName()).thenReturn(table);
@@ -350,7 +350,7 @@ class SchemaCacheTest
         return keyspaceMetadata;
     }
 
-    static ResultSet mockResultSet(List<Map<String, String>> rows)
+    private ResultSet mockResultSet(List<Map<String, String>> rows)
     {
         ResultSet resultSet = mock(ResultSet.class);
         List<Row> mockRows = new ArrayList<>();
