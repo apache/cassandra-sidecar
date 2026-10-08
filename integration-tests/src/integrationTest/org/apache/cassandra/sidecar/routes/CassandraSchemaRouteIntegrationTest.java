@@ -116,10 +116,9 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
         for (String keyspace : List.of("testkeyspace", "\"Cycling\"", "\"keyspace\""))
         {
             String testRoute = "/api/v1/schema/keyspaces/" + keyspace;
-            SchemaResponse response = getBlocking(trustedClient()
-                                                  .get(serverWrapper.serverPort, "localhost", testRoute)
-                                                  .send()
-                                                  .expecting(HttpResponseExpectation.SC_OK))
+            SchemaResponse response = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", testRoute)
+                                                                 .send()
+                                                                 .expecting(HttpResponseExpectation.SC_OK))
                                       .bodyAsJson(SchemaResponse.class);
             assertThat(response.schema())
             .describedAs("Schema of %s must be the schema rendered by Cassandra", keyspace)
@@ -130,18 +129,15 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
     @Test
     void testAllKeyspacesPresentInFullSchema()
     {
-        // test keyspaces are created before Sidecar starts, so they are cached by the time it serves requests
         String testRoute = "/api/v1/schema/keyspaces";
-        SchemaResponse response = getBlocking(trustedClient()
-                                              .get(serverWrapper.serverPort, "localhost", testRoute)
-                                              .send()
-                                              .expecting(HttpResponseExpectation.SC_OK))
+        SchemaResponse response = getBlocking(trustedClient().get(serverWrapper.serverPort, "localhost", testRoute)
+                                                             .send()
+                                                             .expecting(HttpResponseExpectation.SC_OK))
                                   .bodyAsJson(SchemaResponse.class);
-        assertThat(response.schema()).contains(describeKeyspace("testkeyspace"))
-                                     .contains(describeKeyspace("\"Cycling\""))
-                                     .contains(describeKeyspace("\"keyspace\""))
-                                     // system keyspaces are served as well
-                                     .contains("CREATE KEYSPACE system_traces");
+        assertThat(response.schema()).contains(describeKeyspace("testkeyspace"));
+        assertThat(response.schema()).contains(describeKeyspace("\"Cycling\""));
+        assertThat(response.schema()).contains(describeKeyspace("\"keyspace\""));
+        assertThat(response.schema()).contains("CREATE KEYSPACE system_traces");
     }
 
     String describeKeyspace(String maybeQuotedKeyspace)
