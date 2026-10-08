@@ -58,7 +58,7 @@ import org.jetbrains.annotations.VisibleForTesting;
  * provided by Java driver could be partial as it drops objects it cannot parse. It also stores driver unparseable
  * table level schemas, used for table existence checks.
  * <p>
- * Cache is regularly refreshed, but schema changes applied between refreshes are may not be immediately visible
+ * Cache is regularly refreshed, but schema changes applied between refreshes may not be immediately visible
  */
 @Singleton
 public class SchemaCache implements PeriodicTask
