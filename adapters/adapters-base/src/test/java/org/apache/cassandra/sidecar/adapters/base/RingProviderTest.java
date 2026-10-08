@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.adapters.base;
 
-import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -55,9 +54,7 @@ class RingProviderTest
     @Test
     void testStateOfNodeNeitherJoiningLeavingNorMovingIsNormal()
     {
-        RingProvider.State state = new RingProvider.State(Collections.emptyList(),
-                                                          Collections.emptyList(),
-                                                          Collections.emptyList());
+        RingProvider.State state = new RingProvider.State(List.of(), List.of(), List.of());
 
         assertThat(state.of(UNCLASSIFIED_NODE)).isEqualTo("Normal");
     }
