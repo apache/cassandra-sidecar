@@ -353,6 +353,8 @@ The `driver_parameters` section of the `sidecar.yaml` file is used to configure 
 * `ssl`: This defines how the Cassandra driver can connect to Cassandra over SSL. See the above <<ssl, SSL/TLS Configuration>> section for more information.
 * `num_connections`: This defines the number of connections that the Cassandra driver will open to each Cassandra instance. By default, 2.
 * `local_dc`: This configures the local data center of the Cassandra driver. Ensure that this is the same value as the data center of the Cassandra nodes which this Cassandra Sidecar manages.
+* `schema_refresh_time`: This defines how frequently Cassandra Sidecar refreshes its cache of the schema read from Cassandra. Defaults to 5 minutes (`5m`).
+* `unsupported_table_schema_refresh_time`: Deprecated in favor of `schema_refresh_time`, which falls back to this property when it is the only one configured.
 
 [[healthcheck]]
 ### healthcheck

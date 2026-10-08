@@ -27,7 +27,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.acl.authorization.BasicPermissions;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
+import org.apache.cassandra.sidecar.db.SchemaCache;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
@@ -43,15 +43,15 @@ public class SchemaHandler extends KeyspaceSchemaHandler
      * @param metadataFetcher the interface to retrieve metadata
      * @param executorPools   executor pools for blocking executions
      * @param validator       a validator instance to validate Cassandra-specific input
-     * @param driverUnsupportedSchemaCache cache of unparseable table schemas by Java driver
+     * @param schemaCache     cache of schemas retrieved by describe stmt call
      */
     @Inject
     protected SchemaHandler(InstanceMetadataFetcher metadataFetcher,
                             ExecutorPools executorPools,
                             CassandraInputValidator validator,
-                            DriverUnsupportedSchemaCache driverUnsupportedSchemaCache)
+                            SchemaCache schemaCache)
     {
-        super(metadataFetcher, executorPools, validator, driverUnsupportedSchemaCache);
+        super(metadataFetcher, executorPools, validator, schemaCache);
     }
 
     @Override

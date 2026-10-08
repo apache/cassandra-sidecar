@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,14 +43,15 @@ class CQLSchemaAccessorTest
 {
     static final Name KEYSPACE = new Name("keyspace1");
     static final Name TABLE = new Name("table1");
-    static final String SCHEMA = "CREATE TABLE keyspace1.table1 (a int, b int, PRIMARY KEY (a));";
+    static final String VIRTUAL_KEYSPACE = "system_views";
+    static final String TABLE_SCHEMA = "CREATE TABLE keyspace1.table1 (a int, b int, PRIMARY KEY (a));";
 
     CQLSchemaAccessor schemaAccessor;
 
     @BeforeEach
     void setUp()
     {
-        CQLSessionProvider sessionProvider = mockCQLSessionProvider(KEYSPACE.name(), TABLE.name(), SCHEMA);
+        CQLSessionProvider sessionProvider = mockCQLSessionProvider(KEYSPACE.name(), TABLE.name(), TABLE_SCHEMA);
         schemaAccessor = new CQLSchemaAccessor(sessionProvider);
     }
 
@@ -62,7 +64,7 @@ class CQLSchemaAccessorTest
     @Test
     void testGetExistingTable()
     {
-        assertThat(schemaAccessor.getTableSchema(KEYSPACE, TABLE)).containsExactly(SCHEMA);
+        assertThat(schemaAccessor.getTableSchema(KEYSPACE, TABLE)).containsExactly(TABLE_SCHEMA);
     }
 
     @Test
@@ -71,7 +73,26 @@ class CQLSchemaAccessorTest
         assertThat(schemaAccessor.getTableSchema(KEYSPACE, new Name("unknown"))).isNull();
     }
 
-    static CQLSessionProvider mockCQLSessionProvider(String keyspace, String table, String schema)
+    @Test
+    void testGetExistingKeyspace()
+    {
+        assertThat(schemaAccessor.getKeyspaceSchema(KEYSPACE))
+        .containsExactly(createKeyspaceStatement(KEYSPACE.name()), TABLE_SCHEMA);
+    }
+
+    @Test
+    void testGetNotExistingKeyspace()
+    {
+        assertThat(schemaAccessor.getKeyspaceSchema(new Name("unknown"))).isNull();
+    }
+
+    @Test
+    void testGetKeyspaceWithoutSchema()
+    {
+        assertThat(schemaAccessor.getKeyspaceSchema(new Name(VIRTUAL_KEYSPACE))).isEmpty();
+    }
+
+    static CQLSessionProvider mockCQLSessionProvider(String keyspace, String table, String tableSchema)
     {
         Session session = mock(Session.class, RETURNS_DEEP_STUBS);
 
@@ -87,8 +108,24 @@ class CQLSchemaAccessorTest
         String describeTable = String.format("DESCRIBE TABLE %s.%s", keyspace, table);
         when(session.execute(eq(describeTable))).then(invocation -> {
             ResultSet resultSet = mock(ResultSet.class);
-            Row row = mockRow(Map.of("create_statement", schema));
+            Row row = mockRow(Map.of("create_statement", tableSchema));
             when(resultSet.all()).thenReturn(List.of(row));
+            return resultSet;
+        });
+
+        when(session.execute(startsWith("DESCRIBE KEYSPACE "))).thenThrow(new InvalidQueryException("Unknown keyspace"));
+
+        String describeKeyspace = String.format("DESCRIBE KEYSPACE %s", keyspace);
+        when(session.execute(eq(describeKeyspace))).then(invocation -> {
+            ResultSet resultSet = mock(ResultSet.class);
+            doReturn(List.of(mockRow(Map.of("create_statement", createKeyspaceStatement(keyspace))),
+                             mockRow(Map.of("create_statement", tableSchema)))).when(resultSet).all();
+            return resultSet;
+        });
+
+        when(session.execute(eq(String.format("DESCRIBE KEYSPACE %s", VIRTUAL_KEYSPACE)))).then(invocation -> {
+            ResultSet resultSet = mock(ResultSet.class);
+            when(resultSet.all()).thenReturn(List.of());
             return resultSet;
         });
 
@@ -96,6 +133,17 @@ class CQLSchemaAccessorTest
         when(cqlSession.get()).thenReturn(session);
 
         return cqlSession;
+    }
+
+    static String createKeyspaceStatement(String keyspace)
+    {
+        return String.format("CREATE KEYSPACE %s WITH replication = {'class': 'SimpleStrategy',"
+                             + " 'replication_factor': '1'}  AND durable_writes = true;", keyspace);
+    }
+
+    static String keyspaceSchema(String keyspace, String schema)
+    {
+        return createKeyspaceStatement(keyspace) + "\n\n" + schema;
     }
 
     static Row mockRow(Map<String, String> values)
